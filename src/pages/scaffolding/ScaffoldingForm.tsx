@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Calculator, CheckCircle, Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
@@ -19,9 +20,6 @@ const dimensionsSchema = z.object({
 
 export default function ScaffoldingForm() {
   const [searchParams] = useSearchParams();
-  const [length, setLength] = useState('');
-  const [width, setWidth] = useState('');
-  const [height, setHeight] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -31,6 +29,26 @@ export default function ScaffoldingForm() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Use persistent form hook
+  const { 
+    updateField, 
+    clearForm, 
+    getField, 
+    isLoaded 
+  } = useFormPersistence(`scaffolding-${type}`, {
+    length: '',
+    width: '',
+    height: ''
+  });
+
+  const length = getField('length');
+  const width = getField('width');  
+  const height = getField('height');
+
+  const setLength = (value: string) => updateField('length', value);
+  const setWidth = (value: string) => updateField('width', value);
+  const setHeight = (value: string) => updateField('height', value);
 
   useEffect(() => {
     if (!type || !['with-materials', 'without-materials'].includes(type)) {
@@ -98,6 +116,10 @@ export default function ScaffoldingForm() {
 
       setRequestData(data);
       setSubmitted(true);
+      
+      // Clear saved form data after successful submission
+      clearForm();
+      
       toast({
         title: 'درخواست ثبت شد',
         description: 'درخواست شما با موفقیت ثبت شد',
@@ -121,10 +143,8 @@ export default function ScaffoldingForm() {
   const handleNewRequest = () => {
     setSubmitted(false);
     setRequestData(null);
-    setLength('');
-    setWidth('');
-    setHeight('');
     setErrors({});
+    clearForm();
   };
 
   if (submitted && requestData) {
@@ -248,6 +268,7 @@ export default function ScaffoldingForm() {
                       value={length}
                       onChange={(e) => setLength(e.target.value)}
                       className={errors.length ? 'border-destructive' : ''}
+                      disabled={!isLoaded}
                       required
                     />
                     {errors.length && (
@@ -269,6 +290,7 @@ export default function ScaffoldingForm() {
                       value={width}
                       onChange={(e) => setWidth(e.target.value)}
                       className={errors.width ? 'border-destructive' : ''}
+                      disabled={!isLoaded}
                       required
                     />
                     {errors.width && (
@@ -290,6 +312,7 @@ export default function ScaffoldingForm() {
                       value={height}
                       onChange={(e) => setHeight(e.target.value)}
                       className={errors.height ? 'border-destructive' : ''}
+                      disabled={!isLoaded}
                       required
                     />
                     {errors.height && (
