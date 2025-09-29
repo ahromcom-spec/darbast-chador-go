@@ -34,34 +34,25 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background">
-      {/* Header */}
-      <header className="bg-card/80 backdrop-blur-sm border-b shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Building2 className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-xl font-bold text-primary">خدمات ساختمانی</h1>
-              <p className="text-sm text-muted-foreground">سامانه سفارش آنلاین</p>
-            </div>
+    <div className="bg-gradient-to-br from-background via-secondary/30 to-background">
+      {/* User Welcome Bar */}
+      <div className="bg-card/50 border-b">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="text-right">
+            <p className="text-sm font-medium">خوش آمدید</p>
+            <p className="text-xs text-muted-foreground">{user?.email}</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium">خوش آمدید</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleSignOut}
-              className="gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              خروج
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleSignOut}
+            className="gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            خروج
+          </Button>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">

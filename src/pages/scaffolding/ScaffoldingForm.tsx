@@ -129,7 +129,7 @@ export default function ScaffoldingForm() {
 
   if (submitted && requestData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background">
+      <div className="bg-gradient-to-br from-background via-secondary/30 to-background min-h-screen pt-8">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-2xl mx-auto">
             <Card className="shadow-elegant text-center">
@@ -199,7 +199,7 @@ export default function ScaffoldingForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background">
+    <div className="bg-gradient-to-br from-background via-secondary/30 to-background min-h-screen pt-8">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Back Button */}
