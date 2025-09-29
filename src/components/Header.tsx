@@ -20,7 +20,7 @@ const Header = () => {
               title="شماره اصلی"
             >
               <Phone className="h-3 w-3 group-hover:animate-pulse" />
-              <span className="text-sm font-medium">90000319</span>
+              <span className="text-sm font-medium">تلفن خدماتی اهرم: 90000319</span>
             </a>
             
             {/* Contact Us Dropdown */}
@@ -84,7 +84,7 @@ const Header = () => {
               title="شماره اصلی"
             >
               <Phone className="h-4 w-4 group-hover:animate-pulse" />
-              <span className="text-base font-medium">90000319</span>
+              <span className="text-base font-medium">تلفن خدماتی اهرم: 90000319</span>
             </a>
             
             {/* Contact Us Dropdown - Mobile */}
