@@ -61,10 +61,10 @@ export default function Home() {
           <Card className="text-center shadow-elegant persian-slide">
             <CardHeader className="pb-4">
               <CardTitle className="text-3xl font-bold primary-gradient bg-clip-text text-transparent">
-                انتخاب خدمت
+                انتخاب خدمات
               </CardTitle>
               <CardDescription className="text-lg">
-                خدمت مورد نظر خود را انتخاب کنید
+                خدمات مورد نظر خود را انتخاب کنید
               </CardDescription>
             </CardHeader>
           </Card>
@@ -74,7 +74,7 @@ export default function Home() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wrench className="h-5 w-5 text-construction" />
-                انتخاب نوع خدمت
+                انتخاب نوع خدمات
               </CardTitle>
               <CardDescription>
                 از میان خدمات زیر یکی را انتخاب کنید
@@ -82,7 +82,7 @@ export default function Home() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <label className="text-sm font-medium text-foreground">نوع خدمت:</label>
+                <label className="text-sm font-medium text-foreground">نوع خدمات:</label>
                 <Select value={selectedService} onValueChange={setSelectedService}>
                   <SelectTrigger className="w-full text-right">
                     <SelectValue placeholder="انتخاب کنید..." />
@@ -140,7 +140,7 @@ export default function Home() {
                     variant="outline"
                     className="w-full opacity-60"
                   >
-                    این خدمت به زودی اضافه خواهد شد
+                    این خدمات به زودی اضافه خواهد شد
                   </Button>
                 </div>
               )}

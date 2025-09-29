@@ -169,7 +169,7 @@ export default function ScaffoldingForm() {
                   <h3 className="font-semibold text-primary mb-3">خلاصه درخواست:</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-muted-foreground">نوع خدمت:</span>
+                      <span className="text-muted-foreground">نوع خدمات:</span>
                       <div className="font-medium">خدمات داربست فلزی</div>
                     </div>
                     <div>
