@@ -2,41 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Persian RTL Design System - Inspired by traditional Persian architecture and modern construction */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core colors inspired by Persian architecture */
+    --background: 45 15% 97%;
+    --foreground: 220 15% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 45 25% 98%;
+    --card-foreground: 220 15% 15%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 45 25% 98%;
+    --popover-foreground: 220 15% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Deep blue inspired by Persian tiles */
+    --primary: 215 85% 25%;
+    --primary-foreground: 45 25% 98%;
+    --primary-light: 215 75% 45%;
+    --primary-glow: 215 85% 65%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary: Warm terracotta */
+    --secondary: 25 65% 88%;
+    --secondary-foreground: 220 15% 15%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Construction orange accent */
+    --accent: 30 95% 55%;
+    --accent-foreground: 45 25% 98%;
+    --accent-light: 30 85% 75%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --muted: 45 15% 92%;
+    --muted-foreground: 220 10% 55%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 45 25% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 45 25% 88%;
+    --input: 45 25% 95%;
+    --ring: 215 85% 25%;
 
-    --radius: 0.5rem;
+    /* Persian gold for highlights */
+    --gold: 45 85% 55%;
+    --gold-light: 45 75% 75%;
+
+    /* Construction theme colors */
+    --construction: 30 95% 55%;
+    --construction-light: 30 85% 75%;
+    --construction-dark: 30 95% 35%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(215 85% 25%), hsl(215 75% 45%));
+    --gradient-construction: linear-gradient(135deg, hsl(30 95% 55%), hsl(45 85% 55%));
+    --gradient-subtle: linear-gradient(180deg, hsl(45 25% 98%), hsl(45 15% 95%));
+
+    /* Shadows with Persian blue glow */
+    --shadow-elegant: 0 10px 30px -10px hsl(215 85% 25% / 0.2);
+    --shadow-construction: 0 8px 25px -8px hsl(30 95% 55% / 0.3);
+    --shadow-glow: 0 0 40px hsl(215 85% 65% / 0.4);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -56,41 +84,61 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Dark mode with Persian midnight theme */
+    --background: 220 25% 8%;
+    --foreground: 45 25% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 25% 10%;
+    --card-foreground: 45 25% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 25% 10%;
+    --popover-foreground: 45 25% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 215 85% 65%;
+    --primary-foreground: 220 25% 8%;
+    --primary-light: 215 75% 75%;
+    --primary-glow: 215 85% 85%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 45 25% 95%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 30 95% 65%;
+    --accent-foreground: 220 25% 8%;
+    --accent-light: 30 85% 85%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --muted: 220 15% 15%;
+    --muted-foreground: 45 15% 65%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 75% 65%;
+    --destructive-foreground: 220 25% 8%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 220 15% 20%;
+    --input: 220 15% 15%;
+    --ring: 215 85% 65%;
+
+    --gold: 45 85% 65%;
+    --gold-light: 45 75% 85%;
+
+    --construction: 30 95% 65%;
+    --construction-light: 30 85% 85%;
+    --construction-dark: 30 95% 45%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(215 85% 45%), hsl(215 75% 65%));
+    --gradient-construction: linear-gradient(135deg, hsl(30 95% 65%), hsl(45 85% 65%));
+    --gradient-subtle: linear-gradient(180deg, hsl(220 25% 10%), hsl(220 15% 8%));
+
+    --shadow-elegant: 0 10px 30px -10px hsl(215 85% 45% / 0.3);
+    --shadow-construction: 0 8px 25px -8px hsl(30 95% 65% / 0.4);
+    --shadow-glow: 0 0 40px hsl(215 85% 75% / 0.5);
+
+    --sidebar-background: 220 25% 8%;
+    --sidebar-foreground: 45 25% 95%;
+    --sidebar-primary: 215 85% 65%;
+    --sidebar-primary-foreground: 220 25% 8%;
+    --sidebar-accent: 220 15% 15%;
+    --sidebar-accent-foreground: 45 25% 95%;
+    --sidebar-border: 220 15% 20%;
+    --sidebar-ring: 215 85% 65%;
   }
 }
 
@@ -100,6 +148,66 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-vazir;
+    direction: rtl;
+  }
+
+  /* RTL Support */
+  [dir="rtl"] {
+    text-align: right;
+  }
+
+  /* Persian number support */
+  .persian-numbers {
+    font-feature-settings: "ss01" 1;
+  }
+
+  /* Construction-themed animations */
+  @keyframes construction-pulse {
+    0%, 100% { 
+      transform: scale(1);
+      box-shadow: 0 0 0 0 hsl(var(--construction) / 0.7);
+    }
+    50% { 
+      transform: scale(1.05);
+      box-shadow: 0 0 0 10px hsl(var(--construction) / 0);
+    }
+  }
+
+  @keyframes persian-slide-in {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes glow-construction {
+    0%, 100% {
+      box-shadow: 0 0 20px hsl(var(--construction) / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 30px hsl(var(--construction) / 0.8);
+    }
+  }
+
+  /* Utility classes for construction theme */
+  .construction-gradient {
+    background: var(--gradient-construction);
+  }
+
+  .primary-gradient {
+    background: var(--gradient-primary);
+  }
+
+  .construction-glow {
+    animation: glow-construction 2s ease-in-out infinite;
+  }
+
+  .persian-slide {
+    animation: persian-slide-in 0.6s ease-out;
   }
 }
