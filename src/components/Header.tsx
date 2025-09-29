@@ -8,17 +8,17 @@ const Header = () => {
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo - Left side in RTL */}
-          <div className="flex-shrink-0">
+          {/* Logo - Center */}
+          <div className="flex-1 flex justify-center">
             <img 
               src={ahromLogo} 
               alt="لوگوی اهرم" 
-              className="h-16 w-auto object-contain"
+              className="h-20 w-auto object-contain"
             />
           </div>
 
-          {/* Company Name - Center */}
-          <div className="flex-1 text-center">
+          {/* Company Name - Right side */}
+          <div className="flex-shrink-0">
             <h1 className="text-2xl md:text-4xl font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               خدمات ساختمانی اهرم
             </h1>
