@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,16 @@ export default function Home() {
       description: 'خدمات چادر برزنتی به زودی اضافه خواهد شد',
     });
   };
+
+  // Persist selected service in session storage to avoid reset
+  useEffect(() => {
+    const saved = sessionStorage.getItem('selected-service');
+    if (saved) setSelectedService(saved);
+  }, []);
+
+  useEffect(() => {
+    if (selectedService) sessionStorage.setItem('selected-service', selectedService);
+  }, [selectedService]);
 
   return (
     <div className="bg-gradient-to-br from-background via-secondary/30 to-background">
