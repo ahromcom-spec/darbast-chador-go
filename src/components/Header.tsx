@@ -100,17 +100,28 @@ const Header = () => {
         
         {/* Mobile Layout */}
         <div className="md:hidden mt-4 pt-4 border-t border-border/50">
-          <div className="flex flex-col items-center space-y-4">
-            {/* Primary Phone - Mobile */}
+          <div className="flex items-center justify-between">
+            {/* Logo and Company Name - Left side on mobile */}
+            <div className="flex items-center gap-3">
+              <img 
+                src={ahromLogo} 
+                alt="لوگوی اهرم" 
+                className="h-12 w-auto object-contain"
+              />
+              <h1 className="text-lg font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                خدمات ساختمانی اهرم
+              </h1>
+            </div>
+            
+            {/* Primary Phone - Right side on mobile */}
             <a 
               href="tel:90000319" 
-              className="flex items-center gap-3 px-6 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all duration-300 group border border-primary/20 w-full max-w-xs justify-center"
+              className="flex items-center gap-2 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all duration-300 group border border-primary/20"
               title="تماس فوری"
             >
-              <Phone className="h-5 w-5 group-hover:animate-pulse" />
-              <div className="text-center">
-                <div className="text-sm font-medium">تلفن خدماتی اهرم</div>
-                <div className="text-lg font-bold">90000319</div>
+              <Phone className="h-4 w-4 group-hover:animate-pulse" />
+              <div className="text-right">
+                <div className="text-xs font-medium">90000319</div>
               </div>
             </a>
           </div>
