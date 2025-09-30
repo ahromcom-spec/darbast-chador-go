@@ -65,13 +65,13 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
     try {
       mapboxgl.accessToken = mapboxToken;
 
-      // فعال‌سازی RTL Text Plugin برای فارسی
+      // فعال‌سازی RTL Text Plugin برای فارسی (غیرفعال کردن lazy تا شکل‌دهی حروف از ابتدا اعمال شود)
       mapboxgl.setRTLTextPlugin(
         'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js',
         (error) => {
           if (error) console.error('Error loading RTL plugin:', error);
         },
-        true // lazy load
+        false
       );
 
       map.current = new mapboxgl.Map({
@@ -82,9 +82,21 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
         attributionControl: false,
       });
 
-      // اضافه کردن پلاگین زبان فارسی
+      // اطمینان از رندر صحیح هنگام نمایش داخل layout های واکنش‌گرا
+      map.current.on('load', () => {
+        map.current?.resize();
+      });
+
+      // اضافه کردن پلاگین زبان فارسی و اعمال آن پس از بارگذاری استایل
       const language = new MapboxLanguage({ defaultLanguage: 'fa' });
-      map.current.addControl(language);
+      map.current.addControl(language as any);
+      map.current.on('style.load', () => {
+        try {
+          (language as any).setLanguage('fa');
+        } catch (e) {
+          console.warn('Failed to set map language to fa', e);
+        }
+      });
 
       // اضافه کردن کنترل‌های ناوبری
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
