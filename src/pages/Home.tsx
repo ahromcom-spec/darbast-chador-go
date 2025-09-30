@@ -42,15 +42,12 @@ export default function Home() {
     });
   };
 
-  // Persist selected service in session storage to avoid reset
+  // Reset selected service when component mounts
   useEffect(() => {
-    const saved = sessionStorage.getItem('selected-service');
-    if (saved) setSelectedService(saved);
+    setSelectedService('');
+    // Clear any stored service selection
+    sessionStorage.removeItem('selected-service');
   }, []);
-
-  useEffect(() => {
-    if (selectedService) sessionStorage.setItem('selected-service', selectedService);
-  }, [selectedService]);
 
   return (
     <div className="bg-gradient-to-br from-background via-secondary/30 to-background">
