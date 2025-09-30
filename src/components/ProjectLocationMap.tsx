@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { MapPin, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,7 +20,7 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
-  const [mapboxToken, setMapboxToken] = useState('');
+  const mapboxToken = 'pk.eyJ1Ijoia2hhZGFtYXRlLWFocm9tIiwiYSI6ImNtZzZ4ajQ3cTBicHEybW9oazdhd3d5NHUifQ.NYnEZq8GrqvL6ACcYR1fag';
   const [isMapInitialized, setIsMapInitialized] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{
     address: string;
@@ -147,36 +145,10 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!isMapInitialized && (
-          <div className="space-y-2">
-            <Label htmlFor="mapbox-token">Mapbox Public Token</Label>
-            <Input
-              id="mapbox-token"
-              type="text"
-              placeholder="pk.eyJ1IjoieW91ci11c2VybmFtZSIsImEiOiJ..."
-              value={mapboxToken}
-              onChange={(e) => setMapboxToken(e.target.value)}
-              dir="ltr"
-            />
-            <p className="text-sm text-muted-foreground">
-              برای استفاده از نقشه، لطفاً توکن Mapbox خود را وارد کنید.{' '}
-              <a
-                href="https://mapbox.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                دریافت توکن رایگان
-              </a>
-            </p>
-          </div>
-        )}
-
         {/* نقشه */}
         <div
           ref={mapContainer}
           className="w-full h-[400px] rounded-lg border border-border"
-          style={{ display: isMapInitialized ? 'block' : 'none' }}
         />
 
         {/* اطلاعات موقعیت انتخاب شده */}
