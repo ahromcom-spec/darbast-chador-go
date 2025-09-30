@@ -21,13 +21,28 @@ serve(async (req) => {
       );
     }
 
-    // Generate 5-digit OTP code
-    const code = Math.floor(10000 + Math.random() * 90000).toString();
-
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Check rate limit
+    const { data: rateLimitOk, error: rateLimitError } = await supabase
+      .rpc('check_otp_rate_limit', { _phone_number: phone_number });
+
+    if (rateLimitError) {
+      console.error('Rate limit check error:', rateLimitError);
+    }
+
+    if (!rateLimitOk) {
+      return new Response(
+        JSON.stringify({ error: 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً 5 دقیقه صبر کنید' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Generate 5-digit OTP code
+    const code = Math.floor(10000 + Math.random() * 90000).toString();
 
     // Save OTP to database (expires in 5 minutes)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);

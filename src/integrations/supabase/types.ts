@@ -150,6 +150,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_otp_rate_limit: {
+        Args: { _phone_number: string }
+        Returns: boolean
+      }
       cleanup_expired_otps: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -159,6 +163,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      verify_otp_code: {
+        Args: { _code: string; _phone_number: string }
         Returns: boolean
       }
     }

@@ -26,20 +26,22 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check OTP code
-    const { data: otpData, error: otpError } = await supabase
-      .from('otp_codes')
-      .select('*')
-      .eq('phone_number', phone_number)
-      .eq('code', code)
-      .eq('verified', false)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Verify OTP using secure function
+    const { data: isValid, error: verifyError } = await supabase
+      .rpc('verify_otp_code', { 
+        _phone_number: phone_number, 
+        _code: code 
+      });
 
-    if (otpError || !otpData) {
-      console.error('Invalid or expired OTP:', otpError);
+    if (verifyError) {
+      console.error('OTP verification error:', verifyError);
+      return new Response(
+        JSON.stringify({ error: 'خطا در تایید کد' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!isValid) {
       return new Response(
         JSON.stringify({ error: 'کد تایید نامعتبر یا منقضی شده است' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -50,7 +52,8 @@ serve(async (req) => {
     await supabase
       .from('otp_codes')
       .update({ verified: true })
-      .eq('id', otpData.id);
+      .eq('phone_number', phone_number)
+      .eq('code', code);
 
     // Check if user exists with this phone number
     const { data: existingUser } = await supabase.auth.admin.listUsers();
