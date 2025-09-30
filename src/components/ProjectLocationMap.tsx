@@ -3,7 +3,8 @@ import mapboxgl from 'mapbox-gl';
 import MapboxLanguage from '@mapbox/mapbox-gl-language';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, Navigation } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MapPin, Navigation, Map, Satellite } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProjectLocationMapProps {
@@ -22,6 +23,7 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
   const map = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const mapboxToken = 'pk.eyJ1Ijoia2hhZGFtYXRlLWFocm9tIiwiYSI6ImNtZzZ4ajQ3cTBicHEybW9oazdhd3d5NHUifQ.NYnEZq8GrqvL6ACcYR1fag';
+  const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('satellite');
   const [selectedLocation, setSelectedLocation] = useState<{
     address: string;
     coordinates: [number, number];
@@ -100,7 +102,9 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
 
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
+        style: mapStyle === 'satellite' 
+          ? 'mapbox://styles/mapbox/satellite-streets-v12'  // نقشه ماهواره‌ای با لیبل خیابان‌ها
+          : 'mapbox://styles/mapbox/streets-v12',
         center: QOM_CENTER,
         zoom: 12,
         attributionControl: false,
@@ -183,6 +187,35 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
     };
   }, []); // فقط یکبار در mount اجرا شود
 
+  // تغییر استایل نقشه
+  const toggleMapStyle = () => {
+    if (!map.current) return;
+    
+    const newStyle = mapStyle === 'streets' ? 'satellite' : 'streets';
+    const styleUrl = newStyle === 'satellite'
+      ? 'mapbox://styles/mapbox/satellite-streets-v12'
+      : 'mapbox://styles/mapbox/streets-v12';
+    
+    map.current.setStyle(styleUrl);
+    setMapStyle(newStyle);
+
+    // اضافه مجدد مارکرها پس از تغییر استایل
+    map.current.once('style.load', () => {
+      // مارکر کارگاه
+      new mapboxgl.Marker({ color: '#10b981' })
+        .setLngLat(QOM_CENTER)
+        .setPopup(new mapboxgl.Popup().setHTML('<strong>کارگاه</strong><br>قم'))
+        .addTo(map.current!);
+
+      // مارکر موقعیت انتخابی
+      if (selectedLocation) {
+        markerRef.current = new mapboxgl.Marker({ color: '#f59e0b' })
+          .setLngLat(selectedLocation.coordinates)
+          .addTo(map.current!);
+      }
+    });
+  };
+
   return (
     <Card className="shadow-elegant persian-slide">
       <CardHeader>
@@ -195,6 +228,28 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* دکمه تغییر نوع نقشه */}
+        <div className="flex justify-end gap-2">
+          <Button
+            variant={mapStyle === 'streets' ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleMapStyle}
+            className="gap-2"
+          >
+            <Map className="h-4 w-4" />
+            نقشه معمولی
+          </Button>
+          <Button
+            variant={mapStyle === 'satellite' ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleMapStyle}
+            className="gap-2"
+          >
+            <Satellite className="h-4 w-4" />
+            تصویر ماهواره‌ای
+          </Button>
+        </div>
+
         {/* نقشه */}
         <div
           ref={mapContainer}
