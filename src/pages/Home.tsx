@@ -72,12 +72,18 @@ export default function Home() {
         <div className="bg-card/50 border-b">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium">خوش آمدید</p>
-                <p className="text-xs text-muted-foreground">
-                  {profile?.full_name || user?.email || 'کاربر'}
-                </p>
-              </div>
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/profile')}
+                className="text-right p-2 hover:bg-primary/10 rounded-lg transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-medium">خوش آمدید</p>
+                  <p className="text-xs text-muted-foreground">
+                    {profile?.full_name || user?.email || 'کاربر'}
+                  </p>
+                </div>
+              </Button>
               {isAdmin && (
                 <Button 
                   variant="outline" 

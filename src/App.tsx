@@ -9,6 +9,7 @@ import { AdminRoute } from "@/components/AdminRoute";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminOrders from "@/pages/admin/AdminOrders";
+import UserProfile from "@/pages/user/UserProfile";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 import Login from "./pages/auth/Login";
@@ -34,6 +35,11 @@ const App = () => (
               <Route path="/scaffolding/form" element={
                 <ProtectedRoute>
                   <ScaffoldingForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <UserProfile />
                 </ProtectedRoute>
               } />
               <Route path="/admin" element={
