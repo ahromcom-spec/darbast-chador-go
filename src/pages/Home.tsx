@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function Home() {
   const [selectedService, setSelectedService] = useState<string>('');
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdminRole();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -67,9 +68,22 @@ export default function Home() {
       {user && (
         <div className="bg-card/50 border-b">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="text-right">
-              <p className="text-sm font-medium">خوش آمدید</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm font-medium">خوش آمدید</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              </div>
+              {isAdmin && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate('/admin')}
+                  className="gap-2"
+                >
+                  <Shield className="h-4 w-4" />
+                  پنل مدیریت
+                </Button>
+              )}
             </div>
             <Button 
               variant="outline" 

@@ -107,6 +107,11 @@ export default function ScaffoldingForm() {
           length: numLength,
           width: numWidth,
           height: numHeight,
+          location_address: projectLocation?.address,
+          location_coordinates: projectLocation?.coordinates 
+            ? `(${projectLocation.coordinates[0]},${projectLocation.coordinates[1]})`
+            : null,
+          location_distance: projectLocation?.distance,
         })
         .select()
         .single();
