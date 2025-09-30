@@ -122,16 +122,14 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
   };
 
   useEffect(() => {
-    if (mapboxToken && !isMapInitialized) {
-      initializeMap();
-    }
+    initializeMap();
 
     return () => {
       if (map.current) {
         map.current.remove();
       }
     };
-  }, [mapboxToken, isMapInitialized]);
+  }, []); // فقط یکبار در mount اجرا شود
 
   return (
     <Card className="shadow-elegant persian-slide">
