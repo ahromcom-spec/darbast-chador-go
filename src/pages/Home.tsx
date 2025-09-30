@@ -15,11 +15,20 @@ export default function Home() {
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    await signOut();
-    toast({
-      title: 'خروج موفق',
-      description: 'با موفقیت از سامانه خارج شدید',
-    });
+    try {
+      await signOut();
+      toast({
+        title: 'خروج موفق',
+        description: 'با موفقیت از سامانه خارج شدید',
+      });
+      navigate('/auth/login');
+    } catch (error) {
+      toast({
+        title: 'خطا در خروج',
+        description: 'مشکلی در خروج از سامانه پیش آمد',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleScaffoldingTypeSelect = (type: 'with-materials' | 'without-materials') => {
