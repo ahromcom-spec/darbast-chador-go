@@ -73,27 +73,14 @@ export default function Home() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto space-y-8">
-          {/* Welcome Card */}
-          <Card className="text-center shadow-elegant persian-slide">
-            <CardHeader className="pb-4">
+          {/* Combined Service Selection Card */}
+          <Card className="shadow-elegant persian-slide">
+            <CardHeader className="text-center pb-4">
               <CardTitle className="text-3xl font-bold primary-gradient bg-clip-text text-transparent">
                 انتخاب خدمات
               </CardTitle>
               <CardDescription className="text-lg">
                 خدمات مورد نظر خود را انتخاب کنید
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          {/* Service Selection */}
-          <Card className="shadow-elegant">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-construction" />
-                انتخاب نوع خدمات
-              </CardTitle>
-              <CardDescription>
-                از میان خدمات زیر یکی را انتخاب کنید
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
