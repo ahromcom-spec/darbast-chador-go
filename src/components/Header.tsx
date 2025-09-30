@@ -6,8 +6,78 @@ import ahromLogo from "@/assets/ahrom-logo.png";
 const Header = () => {
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
-      <div className="container mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+        {/* Mobile & Tablet Layout */}
+        <div className="flex md:hidden items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img 
+              src={ahromLogo} 
+              alt="لوگوی اهرم" 
+              className="h-12 sm:h-14 w-auto object-contain"
+            />
+            <h1 className="text-base sm:text-lg font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              خدمات ساختمانی اهرم
+            </h1>
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
+              >
+                <Phone className="h-4 w-4" />
+                <span className="hidden sm:inline">تماس</span>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-sm border shadow-xl z-50 min-w-[200px]">
+              <div className="p-2">
+                <div className="text-xs text-muted-foreground mb-2 text-center">راه‌های تماس</div>
+                <DropdownMenuItem asChild>
+                  <a 
+                    href="tel:90000319" 
+                    className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                  >
+                    <Phone className="h-4 w-4 text-primary" />
+                    <div className="text-right">
+                      <div className="font-medium">تلفن خدماتی اهرم</div>
+                      <div className="text-sm text-muted-foreground">90000319</div>
+                    </div>
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a 
+                    href="tel:09125511494" 
+                    className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                  >
+                    <Smartphone className="h-4 w-4 text-primary" />
+                    <div className="text-right">
+                      <div className="font-medium">موبایل</div>
+                      <div className="text-sm text-muted-foreground">09125511494</div>
+                    </div>
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a 
+                    href="tel:02538865040" 
+                    className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                  >
+                    <Building className="h-4 w-4 text-primary" />
+                    <div className="text-right">
+                      <div className="font-medium">دفتر</div>
+                      <div className="text-sm text-muted-foreground">02538865040</div>
+                    </div>
+                  </a>
+                </DropdownMenuItem>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden md:flex items-center justify-between">
           {/* Logo - Left side */}
           <div className="flex-shrink-0">
             <img 
@@ -27,7 +97,7 @@ const Header = () => {
           {/* Contact Section - Right side */}
           <div className="flex items-center gap-6">
             {/* Primary Phone - Desktop */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <a 
                 href="tel:90000319" 
                 className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all duration-300 group border border-primary/20 hover:border-primary/40"
@@ -95,35 +165,6 @@ const Header = () => {
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        </div>
-        
-        {/* Mobile Layout */}
-        <div className="md:hidden mt-4 pt-4 border-t border-border/50">
-          <div className="flex items-center justify-between">
-            {/* Logo and Company Name - Left side on mobile */}
-            <div className="flex items-center gap-3">
-              <img 
-                src={ahromLogo} 
-                alt="لوگوی اهرم" 
-                className="h-12 w-auto object-contain"
-              />
-              <h1 className="text-lg font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                خدمات ساختمانی اهرم
-              </h1>
-            </div>
-            
-            {/* Primary Phone - Right side on mobile */}
-            <a 
-              href="tel:90000319" 
-              className="flex items-center gap-2 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all duration-300 group border border-primary/20"
-              title="تماس فوری"
-            >
-              <Phone className="h-4 w-4 group-hover:animate-pulse" />
-              <div className="text-right">
-                <div className="text-xs font-medium">90000319</div>
-              </div>
-            </a>
           </div>
         </div>
       </div>
