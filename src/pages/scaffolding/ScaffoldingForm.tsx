@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
+import ProjectLocationMap from '@/components/ProjectLocationMap';
 
 const dimensionsSchema = z.object({
   length: z.number().min(0.1, { message: 'طول باید حداقل 0.1 متر باشد' }),
@@ -24,6 +25,11 @@ export default function ScaffoldingForm() {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [requestData, setRequestData] = useState<any>(null);
+  const [projectLocation, setProjectLocation] = useState<{
+    address: string;
+    coordinates: [number, number];
+    distance: number;
+  } | null>(null);
   
   const type = searchParams.get('type') as 'with-materials' | 'without-materials';
   const { user } = useAuth();
@@ -354,6 +360,9 @@ export default function ScaffoldingForm() {
               </CardContent>
             </form>
           </Card>
+
+          {/* Project Location Map */}
+          <ProjectLocationMap onLocationSelect={setProjectLocation} />
         </div>
       </div>
     </div>

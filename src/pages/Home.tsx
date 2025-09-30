@@ -7,15 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { LogOut, Wrench, Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import ProjectLocationMap from '@/components/ProjectLocationMap';
+
 
 export default function Home() {
   const [selectedService, setSelectedService] = useState<string>('');
-  const [projectLocation, setProjectLocation] = useState<{
-    address: string;
-    coordinates: [number, number];
-    distance: number;
-  } | null>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -155,9 +150,6 @@ export default function Home() {
               )}
             </CardContent>
           </Card>
-
-          {/* نقشه انتخاب موقعیت پروژه */}
-          <ProjectLocationMap onLocationSelect={setProjectLocation} />
         </div>
       </main>
     </div>
