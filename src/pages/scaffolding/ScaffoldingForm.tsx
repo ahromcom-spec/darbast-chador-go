@@ -160,25 +160,25 @@ export default function ScaffoldingForm() {
 
   if (submitted && requestData) {
     return (
-      <div className="bg-gradient-to-br from-background via-secondary/30 to-background min-h-screen pt-8">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-2xl mx-auto">
-            <Card className="shadow-elegant text-center">
-              <CardHeader className="pb-4">
-                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                </div>
-                <CardTitle className="text-2xl font-bold text-green-600">
-                  درخواست ثبت شد!
-                </CardTitle>
-                <CardDescription>
-                  درخواست شما با موفقیت در سامانه ثبت شد
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="bg-secondary/50 p-4 rounded-lg space-y-3">
-                  <h3 className="font-semibold text-primary mb-3">خلاصه درخواست:</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+    <div className="bg-gradient-to-br from-background via-secondary/30 to-background min-h-screen pt-4 md:pt-8">
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="max-w-2xl mx-auto">
+          <Card className="shadow-elegant text-center">
+            <CardHeader className="pb-3 md:pb-4 p-4 md:p-6">
+              <div className="mx-auto w-12 h-12 md:w-16 md:h-16 bg-green-100 rounded-full flex items-center justify-center mb-3 md:mb-4">
+                <CheckCircle className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
+              </div>
+              <CardTitle className="text-xl md:text-2xl font-bold text-green-600">
+                درخواست ثبت شد!
+              </CardTitle>
+              <CardDescription className="text-sm md:text-base">
+                درخواست شما با موفقیت در سامانه ثبت شد
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 md:space-y-6 p-3 md:p-6">
+              <div className="bg-secondary/50 p-3 md:p-4 rounded-lg space-y-2 md:space-y-3">
+                <h3 className="font-semibold text-primary mb-2 md:mb-3 text-sm md:text-base">خلاصه درخواست:</h3>
+                <div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
                     <div>
                       <span className="text-muted-foreground">نوع خدمات:</span>
                       <div className="font-medium">خدمات داربست فلزی</div>
@@ -213,11 +213,11 @@ export default function ScaffoldingForm() {
                   </div>
                 </div>
                 
-                <div className="flex gap-3">
-                  <Button onClick={handleBack} variant="outline" className="flex-1">
+                <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+                  <Button onClick={handleBack} variant="outline" className="flex-1 text-sm">
                     بازگشت به صفحه اصلی
                   </Button>
-                  <Button onClick={handleNewRequest} className="flex-1 construction-gradient">
+                  <Button onClick={handleNewRequest} className="flex-1 construction-gradient text-sm">
                     درخواست جدید
                   </Button>
                 </div>
@@ -230,14 +230,14 @@ export default function ScaffoldingForm() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-background via-secondary/30 to-background min-h-screen pt-8">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-6">
+    <div className="bg-gradient-to-br from-background via-secondary/30 to-background min-h-screen pt-4 md:pt-8">
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="max-w-2xl mx-auto space-y-4 md:space-y-6">
           {/* Back Button */}
           <Button 
             onClick={handleBack}
             variant="outline" 
-            className="gap-2 mb-6"
+            className="gap-2 mb-4 md:mb-6 text-sm"
           >
             <ArrowRight className="h-4 w-4" />
             بازگشت
@@ -245,29 +245,29 @@ export default function ScaffoldingForm() {
 
           {/* Form Card */}
           <Card className="shadow-elegant">
-            <CardHeader className="text-center pb-4">
-              <div className="flex items-center justify-center gap-3 mb-3">
-                <Building2 className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl font-bold text-primary">
+            <CardHeader className="text-center pb-3 md:pb-4 p-4 md:p-6">
+              <div className="flex items-center justify-center gap-2 md:gap-3 mb-2 md:mb-3">
+                <Building2 className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+                <CardTitle className="text-lg md:text-2xl font-bold text-primary">
                   ثبت ابعاد داربست
                 </CardTitle>
               </div>
               <Badge 
                 variant={getTypeBadgeVariant(type)} 
-                className="mx-auto"
+                className="mx-auto text-xs md:text-sm"
               >
                 داربست فلزی {getTypeLabel(type)}
               </Badge>
-              <CardDescription className="mt-2">
+              <CardDescription className="mt-2 text-xs md:text-sm">
                 ابعاد مورد نیاز برای داربست را وارد کنید
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-6">
-                <div className="grid gap-6 sm:grid-cols-3">
+              <CardContent className="space-y-4 md:space-y-6 p-3 md:p-6">
+                <div className="grid gap-4 md:gap-6 sm:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="length" className="flex items-center gap-2">
-                      <Calculator className="h-4 w-4 text-construction" />
+                    <Label htmlFor="length" className="flex items-center gap-2 text-sm md:text-base">
+                      <Calculator className="h-3 w-3 md:h-4 md:w-4 text-construction" />
                       طول (متر)
                     </Label>
                     <Input
@@ -288,8 +288,8 @@ export default function ScaffoldingForm() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="width" className="flex items-center gap-2">
-                      <Calculator className="h-4 w-4 text-construction" />
+                    <Label htmlFor="width" className="flex items-center gap-2 text-sm md:text-base">
+                      <Calculator className="h-3 w-3 md:h-4 md:w-4 text-construction" />
                       عرض (متر)
                     </Label>
                     <Input
@@ -310,8 +310,8 @@ export default function ScaffoldingForm() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="height" className="flex items-center gap-2">
-                      <Calculator className="h-4 w-4 text-construction" />
+                    <Label htmlFor="height" className="flex items-center gap-2 text-sm md:text-base">
+                      <Calculator className="h-3 w-3 md:h-4 md:w-4 text-construction" />
                       ارتفاع (متر)
                     </Label>
                     <Input
@@ -334,9 +334,9 @@ export default function ScaffoldingForm() {
 
                 {/* Volume Preview */}
                 {length && width && height && (
-                  <div className="p-4 bg-secondary/50 rounded-lg border-2 border-construction/20">
-                    <h3 className="font-semibold text-primary mb-2">پیش‌نمایش محاسبات:</h3>
-                    <div className="text-sm space-y-1">
+                  <div className="p-3 md:p-4 bg-secondary/50 rounded-lg border-2 border-construction/20">
+                    <h3 className="font-semibold text-primary mb-2 text-sm md:text-base">پیش‌نمایش محاسبات:</h3>
+                    <div className="text-xs md:text-sm space-y-1">
                       <div>حجم کل: {(parseFloat(length) * parseFloat(width) * parseFloat(height)).toFixed(2)} متر مکعب</div>
                       <div className="text-muted-foreground">
                         {parseFloat(length)} × {parseFloat(width)} × {parseFloat(height)} = حجم کل
@@ -345,18 +345,18 @@ export default function ScaffoldingForm() {
                   </div>
                 )}
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-2 md:gap-3 pt-3 md:pt-4">
                   <Button 
                     type="button"
                     onClick={handleBack}
                     variant="outline" 
-                    className="flex-1"
+                    className="flex-1 text-sm"
                   >
                     انصراف
                   </Button>
                   <Button 
                     type="submit" 
-                    className="flex-1 construction-gradient hover:opacity-90"
+                    className="flex-1 construction-gradient hover:opacity-90 text-sm"
                     disabled={loading}
                   >
                     {loading ? 'در حال ثبت...' : 'ثبت ابعاد'}

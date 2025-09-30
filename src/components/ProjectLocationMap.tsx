@@ -255,46 +255,46 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
 
   return (
     <Card className="shadow-elegant persian-slide">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-construction" />
+      <CardHeader className="p-4 md:p-6">
+        <CardTitle className="flex items-center gap-2 text-base md:text-2xl">
+          <MapPin className="h-4 w-4 md:h-5 md:w-5 text-construction" />
           انتخاب موقعیت پروژه
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs md:text-sm">
           روی نقشه کلیک کنید تا موقعیت پروژه خود را مشخص کنید
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 md:space-y-4 p-3 md:p-6">
         {/* دکمه‌های کنترل نقشه */}
-        <div className="flex justify-between items-center gap-2">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={goToUserLocation}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             <Locate className="h-4 w-4" />
-            موقعیت من
+            <span className="text-sm">موقعیت من</span>
           </Button>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               variant={mapStyle === 'streets' ? 'default' : 'outline'}
               size="sm"
               onClick={toggleMapStyle}
-              className="gap-2"
+              className="gap-2 flex-1 sm:flex-none"
             >
               <Map className="h-4 w-4" />
-              نقشه معمولی
+              <span className="text-xs sm:text-sm">نقشه معمولی</span>
             </Button>
             <Button
               variant={mapStyle === 'satellite' ? 'default' : 'outline'}
               size="sm"
               onClick={toggleMapStyle}
-              className="gap-2"
+              className="gap-2 flex-1 sm:flex-none"
             >
               <Satellite className="h-4 w-4" />
-              تصویر ماهواره‌ای
+              <span className="text-xs sm:text-sm">تصویر ماهواره‌ای</span>
             </Button>
           </div>
         </div>
@@ -302,28 +302,28 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
         {/* نقشه */}
         <div
           ref={mapContainer}
-          className="w-full h-[400px] rounded-lg border border-border"
+          className="w-full h-[300px] sm:h-[350px] md:h-[400px] rounded-lg border border-border"
         />
 
         {/* اطلاعات موقعیت انتخاب شده */}
         {selectedLocation && (
-          <div className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">
+          <div className="space-y-2 md:space-y-3 p-3 md:p-4 bg-muted/50 rounded-lg border border-border">
             <div className="flex items-start gap-2">
-              <MapPin className="h-5 w-5 text-construction mt-0.5 flex-shrink-0" />
+              <MapPin className="h-4 w-4 md:h-5 md:w-5 text-construction mt-0.5 flex-shrink-0" />
               <div className="flex-1 space-y-1">
-                <p className="text-sm font-medium">آدرس انتخاب شده:</p>
-                <p className="text-sm text-muted-foreground">{selectedLocation.address}</p>
+                <p className="text-xs md:text-sm font-medium">آدرس انتخاب شده:</p>
+                <p className="text-xs md:text-sm text-muted-foreground break-words">{selectedLocation.address}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Navigation className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium">
+            <div className="flex items-start gap-2">
+              <Navigation className="h-4 w-4 md:h-5 md:w-5 text-primary mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-xs md:text-sm font-medium">
                   فاصله جاده‌ای از کارگاه: <span className="text-construction">{selectedLocation.distance} کیلومتر</span>
                 </p>
               </div>
             </div>
-            <div className="text-xs text-muted-foreground" dir="ltr">
+            <div className="text-xs text-muted-foreground break-all" dir="ltr">
               {selectedLocation.coordinates[1].toFixed(6)}, {selectedLocation.coordinates[0].toFixed(6)}
             </div>
           </div>
