@@ -106,7 +106,7 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
           ? 'mapbox://styles/mapbox/satellite-streets-v12'  // نقشه ماهواره‌ای با لیبل خیابان‌ها
           : 'mapbox://styles/mapbox/streets-v12',
         center: QOM_CENTER,
-        zoom: 12,
+        zoom: 17,
         attributionControl: false,
       });
 
