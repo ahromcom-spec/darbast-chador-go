@@ -48,26 +48,28 @@ serve(async (req) => {
       );
     }
 
-    // Send SMS via Parsgreen
+    // Send SMS via Parsgreen using SOAP-style REST API
     const apiKey = Deno.env.get('PARSGREEN_API_KEY');
     const message = `کد تایید شما برای ورود به سایت اهـــــرم | ahrom: ${code}`;
 
-    const smsResponse = await fetch('https://api.parsgreen.com/api/v1/sms/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        to: phone_number,
-        text: message,
-      }),
+    // Parsgreen uses their webservice endpoint
+    const smsResponse = await fetch(`https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2?Signature=${apiKey}&PhoneNumber=${phone_number}&Message=${encodeURIComponent(message)}`, {
+      method: 'GET',
     });
 
-    const smsData = await smsResponse.json();
+    const responseText = await smsResponse.text();
 
     if (!smsResponse.ok) {
-      console.error('Error sending SMS:', smsData);
+      console.error('Error sending SMS:', responseText);
+      return new Response(
+        JSON.stringify({ error: 'خطا در ارسال پیامک' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if response contains error
+    if (responseText.includes('Error') || responseText.includes('خطا')) {
+      console.error('SMS API returned error:', responseText);
       return new Response(
         JSON.stringify({ error: 'خطا در ارسال پیامک' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
