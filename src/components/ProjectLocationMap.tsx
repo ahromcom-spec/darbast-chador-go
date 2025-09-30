@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
+import MapboxLanguage from '@mapbox/mapbox-gl-language';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapPin, Navigation } from 'lucide-react';
@@ -64,6 +65,15 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
     try {
       mapboxgl.accessToken = mapboxToken;
 
+      // فعال‌سازی RTL Text Plugin برای فارسی
+      mapboxgl.setRTLTextPlugin(
+        'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js',
+        (error) => {
+          if (error) console.error('Error loading RTL plugin:', error);
+        },
+        true // lazy load
+      );
+
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v12',
@@ -71,6 +81,10 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
         zoom: 12,
         attributionControl: false,
       });
+
+      // اضافه کردن پلاگین زبان فارسی
+      const language = new MapboxLanguage({ defaultLanguage: 'fa' });
+      map.current.addControl(language);
 
       // اضافه کردن کنترل‌های ناوبری
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
