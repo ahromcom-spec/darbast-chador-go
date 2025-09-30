@@ -53,7 +53,7 @@ serve(async (req) => {
     const message = `کد تایید شما برای ورود به سایت اهـــــرم | ahrom: ${code}`;
 
     // Parsgreen uses their webservice endpoint
-    const smsResponse = await fetch(`https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2?Signature=${apiKey}&PhoneNumber=${phone_number}&Message=${encodeURIComponent(message)}`, {
+    const smsResponse = await fetch(`https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2?Signature=${apiKey}&PhoneNumber=${phone_number}&Message=${encodeURIComponent(message)}&SenderNumber=90000319`, {
       method: 'GET',
     });
 
