@@ -26,11 +26,7 @@ const App = () => (
             <Routes>
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              } />
+              <Route path="/" element={<Home />} />
               <Route path="/scaffolding/form" element={
                 <ProtectedRoute>
                   <ScaffoldingForm />
