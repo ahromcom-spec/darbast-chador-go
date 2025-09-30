@@ -15,8 +15,8 @@ interface ProjectLocationMapProps {
   }) => void;
 }
 
-// مختصات مرکز قم (کارگاه)
-const QOM_CENTER: [number, number] = [50.8764, 34.6416];
+// مختصات مرکز شهر قم
+const QOM_CENTER: [number, number] = [50.8764, 34.6400];
 
 const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelect }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
