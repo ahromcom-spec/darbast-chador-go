@@ -5,8 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  sendOTP: (phoneNumber: string) => Promise<{ error: any }>;
+  verifyOTP: (phoneNumber: string, code: string, fullName?: string) => Promise<{ error: any; session?: Session | null }>;
   signOut: () => Promise<void>;
   loading: boolean;
 }
@@ -50,28 +50,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-        }
+  const sendOTP = async (phoneNumber: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-otp', {
+        body: { phone_number: phoneNumber }
+      });
+
+      if (error) {
+        console.error('Error sending OTP:', error);
+        return { error };
       }
-    });
-    return { error };
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      return { error };
+    }
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+  const verifyOTP = async (phoneNumber: string, code: string, fullName?: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-otp', {
+        body: { 
+          phone_number: phoneNumber,
+          code,
+          full_name: fullName 
+        }
+      });
+
+      if (error) {
+        console.error('Error verifying OTP:', error);
+        return { error, session: null };
+      }
+
+      if (data?.session) {
+        await supabase.auth.setSession(data.session);
+        setSession(data.session);
+        setUser(data.session.user);
+      }
+
+      return { error: null, session: data?.session };
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      return { error, session: null };
+    }
   };
 
   const signOut = async () => {
@@ -95,8 +117,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value = {
     user,
     session,
-    signUp,
-    signIn,
+    sendOTP,
+    verifyOTP,
     signOut,
     loading,
   };
