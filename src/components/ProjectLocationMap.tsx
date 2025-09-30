@@ -4,7 +4,7 @@ import MapboxLanguage from '@mapbox/mapbox-gl-language';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Map, Satellite } from 'lucide-react';
+import { MapPin, Navigation, Map, Satellite, Locate } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProjectLocationMapProps {
@@ -216,6 +216,43 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
     });
   };
 
+  // رفتن به موقعیت فعلی کاربر
+  const goToUserLocation = () => {
+    if (!map.current) return;
+    
+    if (!navigator.geolocation) {
+      toast.error('مرورگر شما از GPS پشتیبانی نمی‌کند');
+      return;
+    }
+
+    toast.info('در حال دریافت موقعیت شما...');
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const userCoords: [number, number] = [longitude, latitude];
+        
+        // انتقال نقشه به موقعیت کاربر
+        map.current?.flyTo({
+          center: userCoords,
+          zoom: 15,
+          duration: 2000
+        });
+
+        toast.success('موقعیت شما یافت شد');
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        toast.error('خطا در دریافت موقعیت شما');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      }
+    );
+  };
+
   return (
     <Card className="shadow-elegant persian-slide">
       <CardHeader>
@@ -228,26 +265,38 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* دکمه تغییر نوع نقشه */}
-        <div className="flex justify-end gap-2">
+        {/* دکمه‌های کنترل نقشه */}
+        <div className="flex justify-between items-center gap-2">
           <Button
-            variant={mapStyle === 'streets' ? 'default' : 'outline'}
+            variant="outline"
             size="sm"
-            onClick={toggleMapStyle}
+            onClick={goToUserLocation}
             className="gap-2"
           >
-            <Map className="h-4 w-4" />
-            نقشه معمولی
+            <Locate className="h-4 w-4" />
+            موقعیت من
           </Button>
-          <Button
-            variant={mapStyle === 'satellite' ? 'default' : 'outline'}
-            size="sm"
-            onClick={toggleMapStyle}
-            className="gap-2"
-          >
-            <Satellite className="h-4 w-4" />
-            تصویر ماهواره‌ای
-          </Button>
+          
+          <div className="flex gap-2">
+            <Button
+              variant={mapStyle === 'streets' ? 'default' : 'outline'}
+              size="sm"
+              onClick={toggleMapStyle}
+              className="gap-2"
+            >
+              <Map className="h-4 w-4" />
+              نقشه معمولی
+            </Button>
+            <Button
+              variant={mapStyle === 'satellite' ? 'default' : 'outline'}
+              size="sm"
+              onClick={toggleMapStyle}
+              className="gap-2"
+            >
+              <Satellite className="h-4 w-4" />
+              تصویر ماهواره‌ای
+            </Button>
+          </div>
         </div>
 
         {/* نقشه */}
