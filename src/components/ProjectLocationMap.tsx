@@ -28,8 +28,32 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
     distance: number;
   } | null>(null);
 
-  // محاسبه فاصله بین دو نقطه (به کیلومتر)
-  const calculateDistance = (coord1: [number, number], coord2: [number, number]): number => {
+  // محاسبه فاصله جاده‌ای واقعی با استفاده از Mapbox Directions API
+  const calculateRoadDistance = async (coord1: [number, number], coord2: [number, number]): Promise<number> => {
+    try {
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coord1[0]},${coord1[1]};${coord2[0]},${coord2[1]}?access_token=${mapboxToken}&geometries=geojson`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.routes && data.routes.length > 0) {
+        // فاصله به متر است، تبدیل به کیلومتر
+        const distanceInKm = data.routes[0].distance / 1000;
+        return distanceInKm;
+      }
+      
+      // اگر مسیری پیدا نشد، از فاصله هوایی استفاده کن
+      console.warn('No route found, using straight-line distance');
+      return calculateStraightLineDistance(coord1, coord2);
+    } catch (error) {
+      console.error('Error calculating road distance:', error);
+      // در صورت خطا از فاصله هوایی استفاده کن
+      return calculateStraightLineDistance(coord1, coord2);
+    }
+  };
+
+  // محاسبه فاصله هوایی (خط مستقیم) بین دو نقطه
+  const calculateStraightLineDistance = (coord1: [number, number], coord2: [number, number]): number => {
     const R = 6371; // شعاع زمین به کیلومتر
     const dLat = (coord2[1] - coord1[1]) * Math.PI / 180;
     const dLon = (coord2[0] - coord1[0]) * Math.PI / 180;
@@ -122,8 +146,12 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
           .setLngLat(coordinates)
           .addTo(map.current!);
 
-        // محاسبه فاصله
-        const distance = calculateDistance(QOM_CENTER, coordinates);
+        // محاسبه فاصله جاده‌ای واقعی
+        toast.info('در حال محاسبه فاصله جاده‌ای...', {
+          duration: 2000,
+        });
+        
+        const distance = await calculateRoadDistance(QOM_CENTER, coordinates);
 
         // دریافت آدرس
         const address = await getAddressFromCoordinates(lng, lat);
@@ -140,7 +168,7 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
         }
 
         toast.success('موقعیت انتخاب شد', {
-          description: `فاصله از کارگاه: ${location.distance} کیلومتر`,
+          description: `فاصله جاده‌ای از کارگاه: ${location.distance} کیلومتر`,
         });
       });
     } catch (error) {
@@ -187,7 +215,7 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
               <Navigation className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-medium">
-                  فاصله از کارگاه: <span className="text-construction">{selectedLocation.distance} کیلومتر</span>
+                  فاصله جاده‌ای از کارگاه: <span className="text-construction">{selectedLocation.distance} کیلومتر</span>
                 </p>
               </div>
             </div>
