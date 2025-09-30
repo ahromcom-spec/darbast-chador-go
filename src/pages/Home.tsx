@@ -8,12 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { LogOut, Wrench, Building2, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 
 export default function Home() {
   const [selectedService, setSelectedService] = useState<string>('');
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminRole();
+  const { profile } = useUserProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -72,7 +74,9 @@ export default function Home() {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm font-medium">خوش آمدید</p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
+                <p className="text-xs text-muted-foreground">
+                  {profile?.full_name || user?.email || 'کاربر'}
+                </p>
               </div>
               {isAdmin && (
                 <Button 
