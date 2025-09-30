@@ -21,7 +21,6 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
   const map = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const mapboxToken = 'pk.eyJ1Ijoia2hhZGFtYXRlLWFocm9tIiwiYSI6ImNtZzZ4ajQ3cTBicHEybW9oazdhd3d5NHUifQ.NYnEZq8GrqvL6ACcYR1fag';
-  const [isMapInitialized, setIsMapInitialized] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{
     address: string;
     coordinates: [number, number];
@@ -59,70 +58,69 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
   };
 
   // راه‌اندازی نقشه
-  const initializeMap = () => {
-    if (!mapContainer.current || !mapboxToken || isMapInitialized) return;
-
-    mapboxgl.accessToken = mapboxToken;
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: QOM_CENTER,
-      zoom: 12,
-      attributionControl: false,
-    });
-
-    // اضافه کردن کنترل‌های ناوبری
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-    // اضافه کردن مارکر برای کارگاه (قم)
-    new mapboxgl.Marker({ color: '#10b981' })
-      .setLngLat(QOM_CENTER)
-      .setPopup(new mapboxgl.Popup().setHTML('<strong>کارگاه</strong><br>قم'))
-      .addTo(map.current);
-
-    // رویداد کلیک روی نقشه
-    map.current.on('click', async (e) => {
-      const { lng, lat } = e.lngLat;
-      const coordinates: [number, number] = [lng, lat];
-
-      // حذف مارکر قبلی
-      if (markerRef.current) {
-        markerRef.current.remove();
-      }
-
-      // اضافه کردن مارکر جدید
-      markerRef.current = new mapboxgl.Marker({ color: '#f59e0b' })
-        .setLngLat(coordinates)
-        .addTo(map.current!);
-
-      // محاسبه فاصله
-      const distance = calculateDistance(QOM_CENTER, coordinates);
-
-      // دریافت آدرس
-      const address = await getAddressFromCoordinates(lng, lat);
-
-      const location = {
-        address,
-        coordinates,
-        distance: Math.round(distance * 10) / 10, // گرد کردن به یک رقم اعشار
-      };
-
-      setSelectedLocation(location);
-      if (onLocationSelect) {
-        onLocationSelect(location);
-      }
-
-      toast.success('موقعیت انتخاب شد', {
-        description: `فاصله از کارگاه: ${location.distance} کیلومتر`,
-      });
-    });
-
-    setIsMapInitialized(true);
-  };
-
   useEffect(() => {
-    initializeMap();
+    if (!mapContainer.current || map.current) return;
+
+    try {
+      mapboxgl.accessToken = mapboxToken;
+
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: QOM_CENTER,
+        zoom: 12,
+        attributionControl: false,
+      });
+
+      // اضافه کردن کنترل‌های ناوبری
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+      // اضافه کردن مارکر برای کارگاه (قم)
+      new mapboxgl.Marker({ color: '#10b981' })
+        .setLngLat(QOM_CENTER)
+        .setPopup(new mapboxgl.Popup().setHTML('<strong>کارگاه</strong><br>قم'))
+        .addTo(map.current);
+
+      // رویداد کلیک روی نقشه
+      map.current.on('click', async (e) => {
+        const { lng, lat } = e.lngLat;
+        const coordinates: [number, number] = [lng, lat];
+
+        // حذف مارکر قبلی
+        if (markerRef.current) {
+          markerRef.current.remove();
+        }
+
+        // اضافه کردن مارکر جدید
+        markerRef.current = new mapboxgl.Marker({ color: '#f59e0b' })
+          .setLngLat(coordinates)
+          .addTo(map.current!);
+
+        // محاسبه فاصله
+        const distance = calculateDistance(QOM_CENTER, coordinates);
+
+        // دریافت آدرس
+        const address = await getAddressFromCoordinates(lng, lat);
+
+        const location = {
+          address,
+          coordinates,
+          distance: Math.round(distance * 10) / 10,
+        };
+
+        setSelectedLocation(location);
+        if (onLocationSelect) {
+          onLocationSelect(location);
+        }
+
+        toast.success('موقعیت انتخاب شد', {
+          description: `فاصله از کارگاه: ${location.distance} کیلومتر`,
+        });
+      });
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      toast.error('خطا در بارگذاری نقشه');
+    }
 
     return () => {
       if (map.current) {
