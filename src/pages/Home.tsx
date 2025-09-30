@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Wrench, Building2 } from 'lucide-react';
+import { LogOut, Wrench, Building2, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAdminRole } from '@/hooks/useAdminRole';
 
 
 export default function Home() {

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, Users, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -9,7 +9,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +22,7 @@ const menuItems = [
 ];
 
 export function AdminSidebar() {
-  const { collapsed } = useSidebar();
+  const { open } = useSidebar();
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
 
@@ -36,13 +35,13 @@ export function AdminSidebar() {
     isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted/50';
 
   return (
-    <Sidebar className={collapsed ? 'w-14' : 'w-60'} collapsible>
+    <Sidebar className={open ? 'w-60' : 'w-14'} collapsible="icon">
       <SidebarContent>
         <div className="p-4">
-          <h2 className={collapsed ? 'text-xs text-center' : 'text-lg font-bold'}>
-            {collapsed ? 'پنل' : 'پنل مدیریت'}
+          <h2 className={open ? 'text-lg font-bold' : 'text-xs text-center'}>
+            {open ? 'پنل مدیریت' : 'پنل'}
           </h2>
-          {!collapsed && user?.email && (
+          {open && user?.email && (
             <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
           )}
         </div>
@@ -58,7 +57,7 @@ export function AdminSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
                       <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      {open && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -74,7 +73,7 @@ export function AdminSidebar() {
             onClick={handleSignOut}
           >
             <LogOut className="h-4 w-4" />
-            {!collapsed && <span className="mr-2">خروج</span>}
+            {open && <span className="mr-2">خروج</span>}
           </Button>
         </div>
       </SidebarContent>

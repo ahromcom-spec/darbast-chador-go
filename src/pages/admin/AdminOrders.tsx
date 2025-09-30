@@ -55,7 +55,7 @@ export default function AdminOrders() {
         .from('service_requests')
         .select(`
           *,
-          profiles!inner (
+          profiles (
             full_name,
             user_id
           )
@@ -64,8 +64,8 @@ export default function AdminOrders() {
 
       if (error) throw error;
 
-      setOrders(data || []);
-      setFilteredOrders(data || []);
+      setOrders(data as any || []);
+      setFilteredOrders(data as any || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast.error('خطا در دریافت سفارشات');

@@ -84,7 +84,15 @@ export type Database = {
           user_id?: string
           width?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_service_requests_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
