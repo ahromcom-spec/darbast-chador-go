@@ -90,9 +90,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (data?.session) {
-        await supabase.auth.setSession(data.session);
-        setSession(data.session);
-        setUser(data.session.user);
+        // Correctly set session using access and refresh tokens
+        const access_token = data.session.access_token as string | undefined;
+        const refresh_token = data.session.refresh_token as string | undefined;
+        if (access_token && refresh_token) {
+          const { data: setData, error: setErr } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          if (!setErr) {
+            setSession(setData.session);
+            setUser(setData.session?.user ?? null);
+          } else {
+            console.error('Error setting session:', setErr);
+          }
+        }
       }
 
       return { error: null, session: data?.session };
