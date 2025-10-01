@@ -21,6 +21,20 @@ serve(async (req) => {
       );
     }
 
+    // Normalize Iranian phone number to 98XXXXXXXXXX format
+    const normalizeIranPhone = (input: string) => {
+      let digits = input.replace(/[^0-9+]/g, '');
+      if (digits.startsWith('+98')) digits = digits.slice(1);
+      if (digits.startsWith('0098')) digits = digits.slice(2);
+      if (digits.startsWith('098')) digits = digits.slice(1);
+      if (digits.startsWith('98')) return digits;
+      if (digits.startsWith('0') && digits.length === 11) return '98' + digits.slice(1);
+      if (digits.length === 10 && digits.startsWith('9')) return '98' + digits;
+      return digits;
+    };
+
+    const normalizedPhone = normalizeIranPhone(phone_number);
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -28,7 +42,7 @@ serve(async (req) => {
 
     // Check rate limit
     const { data: rateLimitOk, error: rateLimitError } = await supabase
-      .rpc('check_otp_rate_limit', { _phone_number: phone_number });
+      .rpc('check_otp_rate_limit', { _phone_number: normalizedPhone });
 
     if (rateLimitError) {
       console.error('Rate limit check error:', rateLimitError);
@@ -49,7 +63,7 @@ serve(async (req) => {
     const { error: dbError } = await supabase
       .from('otp_codes')
       .insert({
-        phone_number,
+        phone_number: normalizedPhone,
         code,
         expires_at: expiresAt.toISOString(),
         verified: false,
@@ -68,7 +82,7 @@ serve(async (req) => {
     const message = `کد تایید شما برای ورود به سایت اهـــــرم | ahrom: ${code}`;
 
     // Parsgreen uses their webservice endpoint
-    const smsResponse = await fetch(`https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2?Signature=${apiKey}&PhoneNumber=${phone_number}&Message=${encodeURIComponent(message)}&SenderNumber=90000319`, {
+    const smsResponse = await fetch(`https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2?Signature=${apiKey}&PhoneNumber=${normalizedPhone}&Message=${encodeURIComponent(message)}&SenderNumber=90000319`, {
       method: 'GET',
     });
 
@@ -91,7 +105,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('OTP sent successfully to:', phone_number);
+    console.log('OTP sent successfully to:', normalizedPhone);
 
     return new Response(
       JSON.stringify({ success: true, message: 'کد تایید با موفقیت ارسال شد' }),

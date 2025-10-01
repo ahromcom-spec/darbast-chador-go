@@ -21,6 +21,20 @@ serve(async (req) => {
       );
     }
 
+    // Normalize Iranian phone number to 98XXXXXXXXXX format
+    const normalizeIranPhone = (input: string) => {
+      let digits = input.replace(/[^0-9+]/g, '');
+      if (digits.startsWith('+98')) digits = digits.slice(1);
+      if (digits.startsWith('0098')) digits = digits.slice(2);
+      if (digits.startsWith('098')) digits = digits.slice(1);
+      if (digits.startsWith('98')) return digits;
+      if (digits.startsWith('0') && digits.length === 11) return '98' + digits.slice(1);
+      if (digits.length === 10 && digits.startsWith('9')) return '98' + digits;
+      return digits;
+    };
+
+    const normalizedPhone = normalizeIranPhone(phone_number);
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -29,7 +43,7 @@ serve(async (req) => {
     // Verify OTP using secure function
     const { data: isValid, error: verifyError } = await supabase
       .rpc('verify_otp_code', { 
-        _phone_number: phone_number, 
+        _phone_number: normalizedPhone, 
         _code: code 
       });
 
@@ -52,19 +66,19 @@ serve(async (req) => {
     await supabase
       .from('otp_codes')
       .update({ verified: true })
-      .eq('phone_number', phone_number)
+      .eq('phone_number', normalizedPhone)
       .eq('code', code);
 
     // Check if user exists with this phone number
     const { data: existingUser } = await supabase.auth.admin.listUsers();
-    const userWithPhone = existingUser.users.find(u => u.phone === phone_number);
+    const userWithPhone = existingUser.users.find(u => u.phone === normalizedPhone);
 
     let session;
     
     if (userWithPhone) {
       // User exists, sign them in
       const { data, error } = await supabase.auth.signInWithPassword({
-        phone: phone_number,
+        phone: normalizedPhone,
         password: code, // Using OTP as temporary password
       });
 
@@ -76,7 +90,7 @@ serve(async (req) => {
         
         // Try signing in again
         const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-          phone: phone_number,
+          phone: normalizedPhone,
           password: code,
         });
 
@@ -94,12 +108,12 @@ serve(async (req) => {
     } else {
       // User doesn't exist, create new user
       const { data, error } = await supabase.auth.admin.createUser({
-        phone: phone_number,
+        phone: normalizedPhone,
         password: code,
         phone_confirm: true,
         user_metadata: {
           full_name: full_name || '',
-          phone_number: phone_number,
+          phone_number: normalizedPhone,
         },
       });
 
@@ -113,7 +127,7 @@ serve(async (req) => {
 
       // Sign in the new user
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        phone: phone_number,
+        phone: normalizedPhone,
         password: code,
       });
 
