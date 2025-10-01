@@ -39,6 +39,8 @@ serve(async (req) => {
       ? '+98' + normalizedPhone.slice(1) 
       : '+98' + normalizedPhone;
 
+    const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -85,48 +87,84 @@ serve(async (req) => {
       .eq('phone_number', normalizedPhone)
       .eq('code', normalizedCode);
 
-    // Check if user exists with this phone number
+    // Check if user exists with this phone number or derived email
     const { data: existingUser } = await supabase.auth.admin.listUsers();
     const userWithPhone = existingUser.users.find(u => u.phone === authPhone);
+    const userWithEmail = existingUser.users.find(u => u.email === derivedEmail);
 
     let session;
-    
+
+    // Helper to sign in with email, updating password if needed
+    const signInWithEmail = async (email: string) => {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: normalizedCode,
+      });
+      if (error) {
+        // Ensure password, then retry
+        const target = existingUser.users.find(u => u.email === email);
+        if (target) {
+          await supabase.auth.admin.updateUserById(target.id, {
+            password: normalizedCode,
+          });
+          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+            email,
+            password: normalizedCode,
+          });
+          if (retryError) {
+            console.error('Error signing in with email:', retryError);
+            return { session: null, error: retryError };
+          }
+          return { session: retryData.session, error: null };
+        }
+        return { session: null, error };
+      }
+      return { session: data.session, error: null };
+    };
+
     if (userWithPhone) {
-      // User exists, sign them in
+      // Try phone sign-in first (may fail if phone provider disabled)
       const { data, error } = await supabase.auth.signInWithPassword({
         phone: authPhone,
-        password: normalizedCode, // Using OTP as temporary password
+        password: normalizedCode,
       });
 
       if (error) {
-        // If password doesn't match, update it
+        // Fallback: attach an email to this user and sign in via email
         await supabase.auth.admin.updateUserById(userWithPhone.id, {
           password: normalizedCode,
+          email: derivedEmail,
+          email_confirm: true,
+          user_metadata: { ...(userWithPhone.user_metadata || {}), phone_number: normalizedPhone },
         });
-        
-        // Try signing in again
-        const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-          phone: authPhone,
-          password: normalizedCode,
-        });
-
-        if (retryError) {
-          console.error('Error signing in:', retryError);
+        const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
+        if (emailErr) {
+          console.error('Error signing in (email fallback):', emailErr);
           return new Response(
             JSON.stringify({ error: 'خطا در ورود به سیستم' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        session = retryData.session;
+        session = sess;
       } else {
         session = data.session;
       }
+    } else if (userWithEmail) {
+      // Existing email-mapped user
+      const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
+      if (emailErr) {
+        return new Response(
+          JSON.stringify({ error: 'خطا در ورود به سیستم' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      session = sess;
     } else {
-      // User doesn't exist, create new user
+      // Create new user with derived email (no phone provider needed)
       const { data, error } = await supabase.auth.admin.createUser({
-        phone: authPhone,
+        email: derivedEmail,
         password: normalizedCode,
-        phone_confirm: true,
+        email_confirm: true,
         user_metadata: {
           full_name: full_name || '',
           phone_number: normalizedPhone,
@@ -134,27 +172,23 @@ serve(async (req) => {
       });
 
       if (error) {
-        console.error('Error creating user:', error);
+        console.error('Error creating user (email-based):', error);
         return new Response(
           JSON.stringify({ error: 'خطا در ایجاد حساب کاربری' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Sign in the new user
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        phone: authPhone,
-        password: normalizedCode,
-      });
-
-      if (signInError) {
-        console.error('Error signing in new user:', signInError);
+      // Sign in the new user via email
+      const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
+      if (emailErr) {
+        console.error('Error signing in new user (email-based):', emailErr);
         return new Response(
           JSON.stringify({ error: 'خطا در ورود به سیستم' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      session = signInData.session;
+      session = sess;
     }
 
     // Clean up old OTP codes
