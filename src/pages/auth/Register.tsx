@@ -12,8 +12,8 @@ import { z } from 'zod';
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'نام و نام خانوادگی باید حداقل 2 کاراکتر باشد' }),
   phone: z.string()
-    .min(10, { message: 'شماره تلفن نامعتبر است' })
-    .regex(/^(\+98|0098|098|98|0)?9\d{9}$/, { message: 'فرمت صحیح: 09123456789 یا +989123456789' }),
+    .length(11, { message: 'شماره موبایل باید 11 رقم باشد' })
+    .regex(/^09\d{9}$/, { message: 'فرمت صحیح: 09125511494' }),
   email: z.string().email({ message: 'ایمیل نامعتبر است' }).optional().or(z.literal('')),
 });
 
@@ -150,11 +150,12 @@ export default function Register() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+989123456789 یا 09123456789"
+                  placeholder="09125511494"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
+                  maxLength={11}
                   dir="ltr"
-                  className={`text-center ${errors.phone ? 'border-destructive' : ''}`}
+                  className={errors.phone ? 'border-destructive' : ''}
                 />
                 {errors.phone && (
                   <p className="text-sm text-destructive">{errors.phone}</p>
