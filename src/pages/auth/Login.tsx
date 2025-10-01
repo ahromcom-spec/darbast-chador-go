@@ -12,7 +12,7 @@ import { z } from 'zod';
 const phoneSchema = z.object({
   phone: z.string()
     .length(11, { message: 'شماره موبایل باید 11 رقم باشد' })
-    .regex(/^09\d{9}$/, { message: 'فرمت صحیح: 09125511494' }),
+    .regex(/^09\d{9}$/, { message: 'فرمت صحیح: 09123456789' }),
 });
 
 export default function Login() {
@@ -128,7 +128,7 @@ export default function Login() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="09125511494"
+                  placeholder="09123456789"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   maxLength={11}

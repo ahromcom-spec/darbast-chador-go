@@ -13,7 +13,7 @@ const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'نام و نام خانوادگی باید حداقل 2 کاراکتر باشد' }),
   phone: z.string()
     .length(11, { message: 'شماره موبایل باید 11 رقم باشد' })
-    .regex(/^09\d{9}$/, { message: 'فرمت صحیح: 09125511494' }),
+    .regex(/^09\d{9}$/, { message: 'فرمت صحیح: 09123456789' }),
   email: z.string().email({ message: 'ایمیل نامعتبر است' }).optional().or(z.literal('')),
 });
 
@@ -150,7 +150,7 @@ export default function Register() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="09125511494"
+                  placeholder="09123456789"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   maxLength={11}
