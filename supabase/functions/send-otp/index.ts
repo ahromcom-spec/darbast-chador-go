@@ -77,30 +77,66 @@ serve(async (req) => {
       );
     }
 
-    // Send SMS via Parsgreen using SOAP-style REST API
+    // Send SMS via Parsgreen using POST method
     const apiKey = Deno.env.get('PARSGREEN_API_KEY');
-    const message = `کد تایید شما برای ورود به سایت اهـــــرم | ahrom: ${code}`;
-
-    // Parsgreen uses their webservice endpoint
-    const smsResponse = await fetch(`https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2?Signature=${apiKey}&PhoneNumber=${normalizedPhone}&Message=${encodeURIComponent(message)}&SenderNumber=90000319`, {
-      method: 'GET',
-    });
-
-    const responseText = await smsResponse.text();
-
-    if (!smsResponse.ok) {
-      console.error('Error sending SMS:', responseText);
+    
+    if (!apiKey) {
+      console.error('PARSGREEN_API_KEY is not set');
       return new Response(
-        JSON.stringify({ error: 'خطا در ارسال پیامک' }),
+        JSON.stringify({ error: 'خطا در تنظیمات سرویس پیامک' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    const message = `کد تایید شما برای ورود به سایت اهـــــرم | ahrom: ${code}`;
 
-    // Check if response contains error
-    if (responseText.includes('Error') || responseText.includes('خطا')) {
-      console.error('SMS API returned error:', responseText);
+    try {
+      // Try POST method first
+      const smsResponse = await fetch('https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          'Signature': apiKey,
+          'PhoneNumber': normalizedPhone,
+          'Message': message,
+          'SenderNumber': '90000319'
+        }),
+      });
+
+      const responseText = await smsResponse.text();
+      console.log('SMS API Response:', responseText);
+
+      if (!smsResponse.ok) {
+        console.error('Error sending SMS via POST:', responseText);
+        
+        // Fallback to GET method
+        const fallbackResponse = await fetch(`https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2?Signature=${apiKey}&PhoneNumber=${normalizedPhone}&Message=${encodeURIComponent(message)}&SenderNumber=90000319`, {
+          method: 'GET',
+        });
+
+        const fallbackText = await fallbackResponse.text();
+        console.log('SMS API Fallback Response:', fallbackText);
+
+        if (!fallbackResponse.ok || fallbackText.includes('Error') || fallbackText.includes('خطا')) {
+          console.error('Both POST and GET methods failed:', fallbackText);
+          return new Response(
+            JSON.stringify({ error: 'خطا در ارسال پیامک - لطفا API Key را بررسی کنید' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else if (responseText.includes('Error') || responseText.includes('خطا')) {
+        console.error('SMS API returned error via POST:', responseText);
+        return new Response(
+          JSON.stringify({ error: 'خطا در ارسال پیامک - API Key نامعتبر است' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch (fetchError) {
+      console.error('Network error sending SMS:', fetchError);
       return new Response(
-        JSON.stringify({ error: 'خطا در ارسال پیامک' }),
+        JSON.stringify({ error: 'خطا در اتصال به سرویس پیامک' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
