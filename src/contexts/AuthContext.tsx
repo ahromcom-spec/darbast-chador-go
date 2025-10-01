@@ -79,14 +79,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       });
 
-      if (error) {
-        console.error('Error verifying OTP:', error);
-        return { error, session: null };
-      }
-
-      // Check if response contains an error
+      // Check if response contains an error message (even with HTTP error)
       if (data?.error) {
         return { error: { message: data.error }, session: null };
+      }
+
+      // Check for network/HTTP errors
+      if (error) {
+        console.error('Error verifying OTP:', error);
+        // Try to extract error message from response
+        const errorMessage = error.message || 'کد تایید نامعتبر است.';
+        return { error: { message: errorMessage }, session: null };
       }
 
       if (data?.session) {
