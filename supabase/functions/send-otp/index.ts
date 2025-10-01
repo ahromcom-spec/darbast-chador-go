@@ -21,20 +21,19 @@ serve(async (req) => {
       );
     }
 
-    // Normalize Iranian mobile to +98XXXXXXXXXX format
+    // Normalize to Iranian mobile format: 09XXXXXXXXX (for Parsgreen)
     const normalizeIranPhone = (input: string) => {
       // Keep only digits
       let raw = input.replace(/[^0-9]/g, '');
       // Remove common country prefixes
-      if (raw.startsWith('0098')) raw = raw.slice(4);
-      else if (raw.startsWith('098')) raw = raw.slice(3);
-      else if (raw.startsWith('98')) raw = raw.slice(2);
-      // Remove leading zero for national format
-      if (raw.length === 11 && raw.startsWith('0')) raw = raw.slice(1);
-      // If 10 digits and starts with 9, it's a valid mobile
-      if (raw.length === 10 && raw.startsWith('9')) return '+98' + raw;
-      // Fallback: try to coerce to +98 format
-      return '+98' + raw.replace(/^0+/, '');
+      if (raw.startsWith('0098')) raw = '0' + raw.slice(4);
+      else if (raw.startsWith('098')) raw = '0' + raw.slice(3);
+      else if (raw.startsWith('98')) raw = '0' + raw.slice(2);
+      else if (raw.startsWith('+98')) raw = '0' + raw.slice(3);
+      // If 10 digits starting with 9, add leading zero
+      if (raw.length === 10 && raw.startsWith('9')) raw = '0' + raw;
+      // Return 11-digit format: 09XXXXXXXXX
+      return raw;
     };
 
     const normalizedPhone = normalizeIranPhone(phone_number);
@@ -81,7 +80,7 @@ serve(async (req) => {
       );
     }
 
-    // Send SMS via Parsgreen using POST method
+    // Send SMS via Parsgreen UrlService (HTTP method)
     const apiKey = Deno.env.get('PARSGREEN_API_KEY');
     
     if (!apiKey) {
@@ -92,51 +91,35 @@ serve(async (req) => {
       );
     }
     
-    const message = `کد تایید شما برای ورود به سایت اهـــــرم | ahrom: ${code}`;
+    const message = `کد تایید شما: ${code}`;
+    const senderNumber = '90000319';
 
     try {
-      // Try POST method first
-      const smsResponse = await fetch('https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          'Signature': apiKey,
-          'PhoneNumber': normalizedPhone,
-          'Message': message,
-          'SenderNumber': '90000319'
-        }),
+      // Use Parsgreen UrlService method
+      const smsUrl = `http://sms.parsgreen.ir/UrlService/sendSMS.ashx?` +
+        `from=${encodeURIComponent(senderNumber)}` +
+        `&to=${encodeURIComponent(normalizedPhone)}` +
+        `&text=${encodeURIComponent(message)}` +
+        `&signature=${encodeURIComponent(apiKey)}`;
+
+      console.log('Sending SMS to:', normalizedPhone);
+      
+      const smsResponse = await fetch(smsUrl, {
+        method: 'GET',
       });
 
       const responseText = await smsResponse.text();
-      console.log('SMS API Response:', responseText);
+      console.log('Parsgreen Response:', responseText);
 
-      if (!smsResponse.ok) {
-        console.error('Error sending SMS via POST:', responseText);
-        
-        // Fallback to GET method
-        const fallbackResponse = await fetch(`https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2?Signature=${apiKey}&PhoneNumber=${encodeURIComponent(normalizedPhone)}&Message=${encodeURIComponent(message)}&SenderNumber=90000319`, {
-          method: 'GET',
-        });
-
-        const fallbackText = await fallbackResponse.text();
-        console.log('SMS API Fallback Response:', fallbackText);
-
-        if (!fallbackResponse.ok || fallbackText.includes('Error') || fallbackText.includes('خطا')) {
-          console.error('Both POST and GET methods failed:', fallbackText);
-          return new Response(
-            JSON.stringify({ error: 'خطا در ارسال پیامک - لطفا API Key را بررسی کنید' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      } else if (responseText.includes('Error') || responseText.includes('خطا')) {
-        console.error('SMS API returned error via POST:', responseText);
+      // Check for errors in response
+      if (!smsResponse.ok || responseText.includes('Error') || responseText.includes('خطا')) {
+        console.error('SMS send failed:', responseText);
         return new Response(
-          JSON.stringify({ error: 'خطا در ارسال پیامک - API Key نامعتبر است' }),
+          JSON.stringify({ error: 'خطا در ارسال پیامک - لطفا تنظیمات پنل را بررسی کنید' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
     } catch (fetchError) {
       console.error('Network error sending SMS:', fetchError);
       return new Response(
