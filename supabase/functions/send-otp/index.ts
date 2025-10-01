@@ -21,16 +21,20 @@ serve(async (req) => {
       );
     }
 
-    // Normalize Iranian phone number to 98XXXXXXXXXX format
+    // Normalize Iranian mobile to +98XXXXXXXXXX format
     const normalizeIranPhone = (input: string) => {
-      let digits = input.replace(/[^0-9+]/g, '');
-      if (digits.startsWith('+98')) digits = digits.slice(1);
-      if (digits.startsWith('0098')) digits = digits.slice(2);
-      if (digits.startsWith('098')) digits = digits.slice(1);
-      if (digits.startsWith('98')) return digits;
-      if (digits.startsWith('0') && digits.length === 11) return '98' + digits.slice(1);
-      if (digits.length === 10 && digits.startsWith('9')) return '98' + digits;
-      return digits;
+      // Keep only digits
+      let raw = input.replace(/[^0-9]/g, '');
+      // Remove common country prefixes
+      if (raw.startsWith('0098')) raw = raw.slice(4);
+      else if (raw.startsWith('098')) raw = raw.slice(3);
+      else if (raw.startsWith('98')) raw = raw.slice(2);
+      // Remove leading zero for national format
+      if (raw.length === 11 && raw.startsWith('0')) raw = raw.slice(1);
+      // If 10 digits and starts with 9, it's a valid mobile
+      if (raw.length === 10 && raw.startsWith('9')) return '+98' + raw;
+      // Fallback: try to coerce to +98 format
+      return '+98' + raw.replace(/^0+/, '');
     };
 
     const normalizedPhone = normalizeIranPhone(phone_number);
@@ -112,7 +116,7 @@ serve(async (req) => {
         console.error('Error sending SMS via POST:', responseText);
         
         // Fallback to GET method
-        const fallbackResponse = await fetch(`https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2?Signature=${apiKey}&PhoneNumber=${normalizedPhone}&Message=${encodeURIComponent(message)}&SenderNumber=90000319`, {
+        const fallbackResponse = await fetch(`https://login.parsgreen.com/Api/SendSMS.asmx/SendSms2?Signature=${apiKey}&PhoneNumber=${encodeURIComponent(normalizedPhone)}&Message=${encodeURIComponent(message)}&SenderNumber=90000319`, {
           method: 'GET',
         });
 
