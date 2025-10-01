@@ -44,11 +44,23 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Normalize OTP code to ASCII digits (handles Persian/Arabic numerals)
+    const normalizeOtpCode = (input: string) => {
+      const persian = '۰۱۲۳۴۵۶۷۸۹';
+      const arabic = '٠١٢٣٤٥٦٧٨٩';
+      return String(input ?? '')
+        .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
+        .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)))
+        .replace(/[^0-9]/g, '')
+        .slice(0, 6);
+    };
+    const normalizedCode = normalizeOtpCode(code);
+
     // Verify OTP using secure function
     const { data: isValid, error: verifyError } = await supabase
       .rpc('verify_otp_code', { 
         _phone_number: normalizedPhone, 
-        _code: code 
+        _code: normalizedCode 
       });
 
     if (verifyError) {
@@ -71,7 +83,7 @@ serve(async (req) => {
       .from('otp_codes')
       .update({ verified: true })
       .eq('phone_number', normalizedPhone)
-      .eq('code', code);
+      .eq('code', normalizedCode);
 
     // Check if user exists with this phone number
     const { data: existingUser } = await supabase.auth.admin.listUsers();
@@ -83,19 +95,19 @@ serve(async (req) => {
       // User exists, sign them in
       const { data, error } = await supabase.auth.signInWithPassword({
         phone: authPhone,
-        password: code, // Using OTP as temporary password
+        password: normalizedCode, // Using OTP as temporary password
       });
 
       if (error) {
         // If password doesn't match, update it
         await supabase.auth.admin.updateUserById(userWithPhone.id, {
-          password: code,
+          password: normalizedCode,
         });
         
         // Try signing in again
         const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
           phone: authPhone,
-          password: code,
+          password: normalizedCode,
         });
 
         if (retryError) {
@@ -113,7 +125,7 @@ serve(async (req) => {
       // User doesn't exist, create new user
       const { data, error } = await supabase.auth.admin.createUser({
         phone: authPhone,
-        password: code,
+        password: normalizedCode,
         phone_confirm: true,
         user_metadata: {
           full_name: full_name || '',
@@ -132,7 +144,7 @@ serve(async (req) => {
       // Sign in the new user
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         phone: authPhone,
-        password: code,
+        password: normalizedCode,
       });
 
       if (signInError) {
