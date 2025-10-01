@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { phone_number, code, full_name } = await req.json();
+    const { phone_number, code, full_name, is_registration } = await req.json();
 
     if (!phone_number || !code) {
       return new Response(
@@ -91,6 +91,24 @@ serve(async (req) => {
     const { data: existingUser } = await supabase.auth.admin.listUsers();
     const userWithPhone = existingUser.users.find(u => u.phone === authPhone);
     const userWithEmail = existingUser.users.find(u => u.email === derivedEmail);
+    
+    const userExists = userWithPhone || userWithEmail;
+
+    // If this is a login attempt and user doesn't exist, return error
+    if (!is_registration && !userExists) {
+      return new Response(
+        JSON.stringify({ error: 'شماره موبایل ثبت نشده است. لطفا ابتدا ثبت نام کنید.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If this is a registration attempt and user already exists, return error
+    if (is_registration && userExists) {
+      return new Response(
+        JSON.stringify({ error: 'این شماره قبلاً ثبت نام کرده است. لطفا وارد شوید.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let session;
 

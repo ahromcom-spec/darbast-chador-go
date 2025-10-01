@@ -81,17 +81,18 @@ export default function Login() {
 
     setLoading(true);
 
-    const { error } = await verifyOTP(phoneNumber, otpCode);
+    const { error } = await verifyOTP(phoneNumber, otpCode, undefined, false);
     
     setLoading(false);
 
     if (error) {
+      const errorMessage = error.message || 'کد تایید نامعتبر است.';
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: 'کد تایید نامعتبر است.',
+        description: errorMessage,
       });
-      setErrors({ otp: 'کد تایید نامعتبر است' });
+      setErrors({ otp: errorMessage });
       return;
     }
 

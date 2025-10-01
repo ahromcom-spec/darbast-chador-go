@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   sendOTP: (phoneNumber: string) => Promise<{ error: any }>;
-  verifyOTP: (phoneNumber: string, code: string, fullName?: string) => Promise<{ error: any; session?: Session | null }>;
+  verifyOTP: (phoneNumber: string, code: string, fullName?: string, isRegistration?: boolean) => Promise<{ error: any; session?: Session | null }>;
   signOut: () => Promise<void>;
   loading: boolean;
 }
@@ -68,19 +68,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const verifyOTP = async (phoneNumber: string, code: string, fullName?: string) => {
+  const verifyOTP = async (phoneNumber: string, code: string, fullName?: string, isRegistration: boolean = false) => {
     try {
       const { data, error } = await supabase.functions.invoke('verify-otp', {
         body: { 
           phone_number: phoneNumber,
           code,
-          full_name: fullName 
+          full_name: fullName,
+          is_registration: isRegistration
         }
       });
 
       if (error) {
         console.error('Error verifying OTP:', error);
         return { error, session: null };
+      }
+
+      // Check if response contains an error
+      if (data?.error) {
+        return { error: { message: data.error }, session: null };
       }
 
       if (data?.session) {
