@@ -70,6 +70,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const verifyOTP = async (phoneNumber: string, code: string, fullName?: string, isRegistration: boolean = false) => {
     try {
+      console.log('Calling verify-otp with:', { phoneNumber, code, fullName, isRegistration });
+      
       const { data, error } = await supabase.functions.invoke('verify-otp', {
         body: { 
           phone_number: phoneNumber,
@@ -78,6 +80,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           is_registration: isRegistration
         }
       });
+
+      console.log('verify-otp response:', { data, error });
 
       // Check if response contains an error message (even with HTTP error)
       if (data?.error) {
