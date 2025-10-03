@@ -61,8 +61,8 @@ serve(async (req) => {
     // Generate 5-digit OTP code
     const code = Math.floor(10000 + Math.random() * 90000).toString();
 
-    // Save OTP to database (expires in 5 minutes)
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    // Save OTP to database (expires in 9 seconds)
+    const expiresAt = new Date(Date.now() + 9 * 1000);
     const { error: dbError } = await supabase
       .from('otp_codes')
       .insert({
