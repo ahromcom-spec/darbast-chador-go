@@ -21,6 +21,7 @@ export default function Login() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ phone?: string; otp?: string }>({});
+  const [countdown, setCountdown] = useState(90);
   
   const { user, sendOTP, verifyOTP } = useAuth();
   const { toast } = useToast();
@@ -34,6 +35,18 @@ export default function Login() {
       navigate(from, { replace: true });
     }
   }, [user, navigate, from]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (step === 'otp' && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [step, countdown]);
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +80,7 @@ export default function Login() {
       title: 'موفق',
       description: 'کد تایید به شماره شما ارسال شد.',
     });
+    setCountdown(90);
     setStep('otp');
   };
 
@@ -108,6 +122,7 @@ export default function Login() {
     setStep('phone');
     setOtpCode('');
     setErrors({});
+    setCountdown(90);
   };
 
   return (
@@ -180,6 +195,15 @@ export default function Login() {
                     </InputOTPGroup>
                   </InputOTP>
                 </div>
+                {countdown > 0 ? (
+                  <p className="text-sm text-center text-muted-foreground">
+                    زمان باقی‌مانده: <span className="font-bold text-primary">{countdown}</span> ثانیه
+                  </p>
+                ) : (
+                  <p className="text-sm text-center text-destructive">
+                    کد تایید منقضی شده است. لطفا مجددا درخواست کنید.
+                  </p>
+                )}
                 {errors.otp && (
                   <p className="text-sm text-destructive text-center">{errors.otp}</p>
                 )}
