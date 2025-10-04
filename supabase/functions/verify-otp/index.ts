@@ -112,6 +112,22 @@ serve(async (req) => {
       );
     }
 
+    // If this is a login attempt and user doesn't exist, return error
+    if (!is_registration && !userExists) {
+      return new Response(
+        JSON.stringify({ error: 'شماره موبایل ثبت نشده است. لطفا ابتدا ثبت نام کنید.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If this is a registration attempt and user already exists, return error
+    if (is_registration && userExists) {
+      return new Response(
+        JSON.stringify({ error: 'این شماره قبلاً ثبت نام کرده است. لطفا وارد شوید.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     let session;
 
     // Helper to sign in with email, updating password if needed
