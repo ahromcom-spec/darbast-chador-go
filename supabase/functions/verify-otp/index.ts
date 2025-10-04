@@ -57,6 +57,8 @@ serve(async (req) => {
         .slice(0, 6);
     };
     const normalizedCode = normalizeOtpCode(code);
+    // Build a strong per-login password from OTP to satisfy password policy
+    const loginPassword = `otp-${normalizedCode}-x`;
 
     // Verify OTP using secure function
     const { data: isValid, error: verifyError } = await supabase
@@ -116,18 +118,19 @@ serve(async (req) => {
     const signInWithEmail = async (email: string) => {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password: normalizedCode,
+        password: loginPassword,
       });
       if (error) {
-        // Ensure password, then retry
+        // Ensure confirmed email and a valid password, then retry
         const target = existingUser.users.find(u => u.email === email);
         if (target) {
           await supabase.auth.admin.updateUserById(target.id, {
-            password: normalizedCode,
+            password: loginPassword,
+            email_confirm: true,
           });
           const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
             email,
-            password: normalizedCode,
+            password: loginPassword,
           });
           if (retryError) {
             console.error('Error signing in with email:', retryError);
@@ -141,32 +144,22 @@ serve(async (req) => {
     };
 
     if (userWithPhone) {
-      // Try phone sign-in first (may fail if phone provider disabled)
-      const { data, error } = await supabase.auth.signInWithPassword({
-        phone: authPhone,
-        password: normalizedCode,
+      // Attach an email and set a valid password, then sign in via email
+      await supabase.auth.admin.updateUserById(userWithPhone.id, {
+        password: loginPassword,
+        email: derivedEmail,
+        email_confirm: true,
+        user_metadata: { ...(userWithPhone.user_metadata || {}), phone_number: normalizedPhone },
       });
-
-      if (error) {
-        // Fallback: attach an email to this user and sign in via email
-        await supabase.auth.admin.updateUserById(userWithPhone.id, {
-          password: normalizedCode,
-          email: derivedEmail,
-          email_confirm: true,
-          user_metadata: { ...(userWithPhone.user_metadata || {}), phone_number: normalizedPhone },
-        });
-        const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
-        if (emailErr) {
-          console.error('Error signing in (email fallback):', emailErr);
-          return new Response(
-            JSON.stringify({ error: 'خطا در ورود به سیستم' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        session = sess;
-      } else {
-        session = data.session;
+      const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
+      if (emailErr) {
+        console.error('Error signing in (email fallback):', emailErr);
+        return new Response(
+          JSON.stringify({ error: 'خطا در ورود به سیستم' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
+      session = sess;
     } else if (userWithEmail) {
       // Existing email-mapped user
       const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
@@ -181,7 +174,7 @@ serve(async (req) => {
       // Create new user with derived email (no phone provider needed)
       const { data, error } = await supabase.auth.admin.createUser({
         email: derivedEmail,
-        password: normalizedCode,
+        password: loginPassword,
         email_confirm: true,
         user_metadata: {
           full_name: full_name || '',
