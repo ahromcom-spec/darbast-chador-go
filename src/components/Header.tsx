@@ -1,15 +1,18 @@
 import { Phone, Smartphone, Building, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useNavigate } from "react-router-dom";
 import ahromLogo from "@/assets/ahrom-logo.png";
 
 const Header = () => {
+  const navigate = useNavigate();
+
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
         {/* Mobile & Tablet Layout */}
         <div className="flex md:hidden items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
             <img 
               src={ahromLogo} 
               alt="لوگوی اهرم" 
@@ -79,7 +82,7 @@ const Header = () => {
         {/* Desktop Layout */}
         <div className="hidden md:flex items-center justify-between">
           {/* Logo - Left side */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
             <img 
               src={ahromLogo} 
               alt="لوگوی اهرم" 
