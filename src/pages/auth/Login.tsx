@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Download, X } from 'lucide-react';
 import { z } from 'zod';
 
 const phoneSchema = z.object({
@@ -22,6 +24,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ phone?: string; otp?: string }>({});
   const [countdown, setCountdown] = useState(90);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   
   const { user, sendOTP, verifyOTP } = useAuth();
   const { toast } = useToast();
@@ -35,6 +39,20 @@ export default function Login() {
       navigate(from, { replace: true });
     }
   }, [user, navigate, from]);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallPrompt(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -125,9 +143,60 @@ export default function Login() {
     setCountdown(90);
   };
 
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      toast({
+        title: 'راهنما',
+        description: 'برای نصب اپلیکیشن، از منوی مرورگر خود گزینه "نصب" یا "Add to Home Screen" را انتخاب کنید.',
+      });
+      return;
+    }
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      toast({
+        title: 'موفق',
+        description: 'اپلیکیشن با موفقیت نصب شد.',
+      });
+    }
+    
+    setDeferredPrompt(null);
+    setShowInstallPrompt(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary p-4">
-      <Card className="w-full max-w-md shadow-elegant">
+      <div className="w-full max-w-md space-y-4">
+        {showInstallPrompt && (
+          <Alert className="border-primary bg-primary/5">
+            <Download className="h-5 w-5 text-primary" />
+            <AlertDescription className="flex items-center justify-between gap-2">
+              <span className="text-sm">
+                برای دسترسی آسان‌تر، این برنامه را روی گوشی خود نصب کنید
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleInstallClick}
+                  className="construction-gradient hover:opacity-90"
+                >
+                  نصب
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowInstallPrompt(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        <Card className="shadow-elegant">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-2xl font-bold text-primary">ورود به سامانه</CardTitle>
           <CardDescription>
@@ -228,7 +297,8 @@ export default function Login() {
             </CardFooter>
           </form>
         )}
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
