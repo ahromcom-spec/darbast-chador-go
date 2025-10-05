@@ -182,7 +182,7 @@ export default function Home() {
                     >
                       <div className="space-y-1">
                         <div className="font-semibold">داربست بدون اجناس</div>
-                        <div className="text-xs opacity-75">فقط نصب و راه‌اندازی</div>
+                        <div className="text-xs opacity-75">فقط نصب و فک داربست</div>
                       </div>
                     </Button>
                   </div>
