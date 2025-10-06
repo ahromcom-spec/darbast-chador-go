@@ -7,7 +7,8 @@ import ahromLogo from "@/assets/ahrom-logo.png";
 
 const Header = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const auth = useAuth();
+  const user = auth?.user || null;
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
