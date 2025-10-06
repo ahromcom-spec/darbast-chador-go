@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, Upload, X, FileImage, FileVideo } from "lucide-react";
+import { ArrowRight, Upload, X, FileImage, FileVideo, MessageSquare, XCircle } from "lucide-react";
 
 interface ServiceRequest {
   id: string;
@@ -112,8 +112,26 @@ const NewTicket = () => {
 
     if (!department || !subject || !message) {
       toast({
-        title: "خطا",
+        title: "خطا در ثبت تیکت",
         description: "لطفاً تمام فیلدهای ضروری را پر کنید",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (subject.trim().length < 5) {
+      toast({
+        title: "خطا در موضوع تیکت",
+        description: "موضوع تیکت باید حداقل 5 کاراکتر باشد",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (message.trim().length < 20) {
+      toast({
+        title: "خطا در پیام",
+        description: "پیام شما باید حداقل 20 کاراکتر باشد",
         variant: "destructive"
       });
       return;
@@ -145,8 +163,8 @@ const NewTicket = () => {
       }
 
       toast({
-        title: "تیکت ثبت شد",
-        description: "تیکت شما با موفقیت ثبت شد و به زودی بررسی خواهد شد"
+        title: "✓ تیکت با موفقیت ثبت شد",
+        description: "تیکت شما ثبت شد و به زودی توسط تیم پشتیبانی بررسی خواهد شد. از طریق صفحه تیکت‌ها می‌توانید وضعیت آن را پیگیری کنید."
       });
 
       navigate("/tickets");
@@ -182,40 +200,62 @@ const NewTicket = () => {
         بازگشت به لیست تیکت‌ها
       </Button>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">ایجاد تیکت جدید</CardTitle>
-          <CardDescription>
-            برای ارتباط با بخش‌های مختلف، تیکت خود را ثبت کنید
-          </CardDescription>
+      <Card className="shadow-lg">
+        <CardHeader className="space-y-3 border-b">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <MessageSquare className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl">ایجاد تیکت جدید</CardTitle>
+              <CardDescription>
+                برای ارتباط با بخش‌های مختلف شرکت، تیکت خود را ثبت کنید
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="department">بخش مورد نظر *</Label>
-              <Select value={department} onValueChange={setDepartment}>
-                <SelectTrigger id="department">
-                  <SelectValue placeholder="انتخاب بخش..." />
+              <Label htmlFor="department" className="text-base font-semibold">
+                بخش مورد نظر *
+              </Label>
+              <Select value={department} onValueChange={setDepartment} required>
+                <SelectTrigger id="department" className="h-11">
+                  <SelectValue placeholder="لطفاً بخش مورد نظر را انتخاب کنید..." />
                 </SelectTrigger>
                 <SelectContent>
                   {departments.map((dept) => (
                     <SelectItem key={dept.value} value={dept.value}>
-                      {dept.label}
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                        {dept.label}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                تیکت شما به بخش انتخاب شده ارسال می‌شود
+              </p>
             </div>
 
             {serviceRequests.length > 0 && (
               <div className="space-y-2">
-                <Label htmlFor="serviceRequest">پروژه/سفارش مرتبط (اختیاری)</Label>
+                <Label htmlFor="serviceRequest" className="text-base font-semibold">
+                  پروژه/سفارش مرتبط (اختیاری)
+                </Label>
                 <Select value={serviceRequestId} onValueChange={setServiceRequestId}>
-                  <SelectTrigger id="serviceRequest">
-                    <SelectValue placeholder="انتخاب پروژه..." />
+                  <SelectTrigger id="serviceRequest" className="h-11">
+                    <SelectValue placeholder="می‌توانید یکی از پروژه‌های خود را انتخاب کنید..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">بدون انتخاب</SelectItem>
+                    <SelectItem value="">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <XCircle className="h-4 w-4" />
+                        بدون انتخاب پروژه
+                      </div>
+                    </SelectItem>
                     {serviceRequests.map((sr) => (
                       <SelectItem key={sr.id} value={sr.id}>
                         {sr.service_type} - {new Date(sr.created_at).toLocaleDateString("fa-IR")}
@@ -223,38 +263,64 @@ const NewTicket = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  اگر تیکت شما مربوط به یکی از پروژه‌های ثبت شده است، آن را انتخاب کنید
+                </p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="subject">موضوع تیکت *</Label>
+              <Label htmlFor="subject" className="text-base font-semibold">
+                موضوع تیکت *
+              </Label>
               <Input
                 id="subject"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="خلاصه‌ای از موضوع تیکت..."
+                placeholder="مثال: مشکل در اجرای پروژه، سوال درباره صورتحساب و..."
                 maxLength={200}
+                required
+                className="h-11"
               />
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-muted-foreground">
+                  یک موضوع واضح و مختصر وارد کنید
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {subject.length}/200
+                </p>
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="message">پیام شما *</Label>
+              <Label htmlFor="message" className="text-base font-semibold">
+                پیام شما *
+              </Label>
               <Textarea
                 id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="توضیحات کامل درخواست یا مشکل خود را بنویسید..."
-                rows={6}
+                placeholder="لطفاً توضیحات کامل درخواست، مشکل یا سوال خود را با جزئیات بنویسید. هر چه اطلاعات بیشتری ارائه دهید، پاسخگویی سریع‌تر و دقیق‌تر خواهد بود."
+                rows={8}
                 maxLength={2000}
+                required
+                className="resize-none"
               />
-              <p className="text-sm text-muted-foreground text-left">
-                {message.length}/2000
-              </p>
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-muted-foreground">
+                  حداقل 20 کاراکتر نوشته شود
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {message.length}/2000
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="files">پیوست فایل (عکس یا فیلم)</Label>
-              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors">
+            <div className="space-y-3">
+              <Label htmlFor="files" className="text-base font-semibold">
+                پیوست فایل (اختیاری)
+              </Label>
+              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
                 <input
                   type="file"
                   id="files"
@@ -264,13 +330,23 @@ const NewTicket = () => {
                   className="hidden"
                 />
                 <label htmlFor="files" className="cursor-pointer">
-                  <Upload className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground mb-1">
-                    کلیک کنید یا فایل‌ها را بکشید و رها کنید
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    حداکثر 70 مگابایت برای تمام فایل‌ها
-                  </p>
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-14 w-14 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+                      <Upload className="h-7 w-7 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground mb-1">
+                        کلیک کنید یا فایل‌ها را بکشید و رها کنید
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        فرمت‌های مجاز: تصویر، ویدیو یا PDF
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                      <span>حداکثر حجم: 70 مگابایت</span>
+                    </div>
+                  </div>
                 </label>
               </div>
 
@@ -314,14 +390,29 @@ const NewTicket = () => {
               )}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-4">
               <Button
                 type="submit"
-                disabled={loading}
-                className="flex-1"
+                disabled={loading || !department || !subject || !message || message.length < 20}
+                className="flex-1 h-12 shadow-lg hover:shadow-xl transition-all"
                 size="lg"
               >
-                {uploading ? "در حال آپلود فایل‌ها..." : loading ? "در حال ثبت..." : "ثبت تیکت"}
+                {uploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2" />
+                    در حال آپلود فایل‌ها...
+                  </>
+                ) : loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2" />
+                    در حال ثبت تیکت...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="h-5 w-5 ml-2" />
+                    ارسال تیکت
+                  </>
+                )}
               </Button>
               <Button
                 type="button"
@@ -329,6 +420,7 @@ const NewTicket = () => {
                 onClick={() => navigate("/tickets")}
                 disabled={loading}
                 size="lg"
+                className="h-12"
               >
                 انصراف
               </Button>
