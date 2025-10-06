@@ -202,6 +202,39 @@ export type Database = {
           },
         ]
       }
+      projects: {
+        Row: {
+          created_at: string
+          id: string
+          location_address: string
+          project_name: string
+          service_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location_address: string
+          project_name: string
+          service_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location_address?: string
+          project_name?: string
+          service_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       service_requests: {
         Row: {
           created_at: string
@@ -211,6 +244,7 @@ export type Database = {
           location_address: string | null
           location_coordinates: unknown | null
           location_distance: number | null
+          project_id: string | null
           service_type: string
           status: string
           sub_type: string | null
@@ -226,6 +260,7 @@ export type Database = {
           location_address?: string | null
           location_coordinates?: unknown | null
           location_distance?: number | null
+          project_id?: string | null
           service_type: string
           status?: string
           sub_type?: string | null
@@ -241,6 +276,7 @@ export type Database = {
           location_address?: string | null
           location_coordinates?: unknown | null
           location_distance?: number | null
+          project_id?: string | null
           service_type?: string
           status?: string
           sub_type?: string | null
@@ -255,6 +291,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "service_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
           },
         ]
       }

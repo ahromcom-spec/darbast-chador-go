@@ -103,6 +103,15 @@ export default function Home() {
               <Button 
                 variant="outline" 
                 size="sm" 
+                onClick={() => navigate('/projects')}
+                className="gap-2"
+              >
+                <Building2 className="h-4 w-4" />
+                کارتابل پروژه‌ها
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
                 onClick={() => navigate('/contractor/dashboard')}
                 className="gap-2"
               >

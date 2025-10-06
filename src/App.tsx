@@ -21,6 +21,8 @@ import NewTicket from "./pages/tickets/NewTicket";
 import TicketDetail from "./pages/tickets/TicketDetail";
 import ContractorRegister from "./pages/contractor/ContractorRegister";
 import ContractorDashboard from "./pages/contractor/ContractorDashboard";
+import ProjectsBoard from "./pages/projects/ProjectsBoard";
+import ProjectDetail from "./pages/projects/ProjectDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +53,16 @@ const App = () => (
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<NewTicket />} />
               <Route path="/tickets/:id" element={<TicketDetail />} />
+              <Route path="/projects" element={
+                <ProtectedRoute>
+                  <ProjectsBoard />
+                </ProtectedRoute>
+              } />
+              <Route path="/projects/:id" element={
+                <ProtectedRoute>
+                  <ProjectDetail />
+                </ProtectedRoute>
+              } />
               <Route path="/contractor/register" element={<ContractorRegister />} />
               <Route path="/contractor/dashboard" element={
                 <ProtectedRoute>
