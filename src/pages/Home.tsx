@@ -67,10 +67,10 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="bg-gradient-to-br from-background via-secondary/30 to-background">
+    <div className="min-h-screen flex flex-col">
       {/* User Welcome Bar - Only show if logged in */}
       {user && (
-        <div className="bg-card/50 border-b">
+        <div className="bg-card/80 backdrop-blur-sm border-b">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
@@ -112,7 +112,7 @@ export default function Home() {
 
       {/* Login/Register buttons - Only show if NOT logged in */}
       {!user && (
-        <div className="bg-card/50 border-b">
+        <div className="bg-card/80 backdrop-blur-sm border-b">
           <div className="container mx-auto px-4 py-3 flex items-center justify-end gap-3">
             {/* Contact Dropdown */}
             <DropdownMenu>
@@ -199,11 +199,11 @@ export default function Home() {
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-8">
-          {/* Combined Service Selection Card */}
-          <Card className="shadow-elegant persian-slide">
+      {/* Main Content - Only service selection card */}
+      <main className="flex-1 flex items-start justify-center pt-12 pb-8 px-4">
+        <div className="w-full max-w-2xl">
+          {/* Service Selection Card */}
+          <Card className="shadow-elegant persian-slide bg-card/90 backdrop-blur-sm">
             <CardHeader className="text-center pb-4">
               <CardTitle className="text-3xl font-bold primary-gradient bg-clip-text text-transparent">
                 انتخاب خدمات
