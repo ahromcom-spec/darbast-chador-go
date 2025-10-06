@@ -36,7 +36,7 @@ export default function Home() {
     }
   };
 
-  const handleScaffoldingTypeSelect = (type: 'with-materials' | 'without-materials') => {
+  const handleScaffoldingSelect = () => {
     // Check if user is logged in
     if (!user) {
       toast({
@@ -45,10 +45,10 @@ export default function Home() {
         variant: 'default',
       });
       // Redirect to login with return path
-      navigate('/auth/login', { state: { from: `/scaffolding/form?type=${type}` } });
+      navigate('/auth/login', { state: { from: '/scaffolding/form' } });
       return;
     }
-    navigate(`/scaffolding/form?type=${type}`);
+    navigate('/scaffolding/form');
   };
 
   const handleTarpaulinSelect = () => {
@@ -163,29 +163,17 @@ export default function Home() {
                 <div className="space-y-4 p-4 bg-secondary/50 rounded-lg border-2 border-construction/20">
                   <div className="flex items-center gap-2 mb-3">
                     <Building2 className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-primary">انواع خدمات داربست فلزی</h3>
+                    <h3 className="font-semibold text-primary">خدمات داربست فلزی انتخاب شد</h3>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Button
-                      onClick={() => handleScaffoldingTypeSelect('with-materials')}
-                      className="h-auto p-4 construction-gradient hover:opacity-90 text-right justify-start"
-                    >
-                      <div className="space-y-1">
-                        <div className="font-semibold">داربست به همراه اجناس</div>
-                        <div className="text-xs opacity-90">شامل تمام مواد و ابزار</div>
-                      </div>
-                    </Button>
-                    <Button
-                      onClick={() => handleScaffoldingTypeSelect('without-materials')}
-                      variant="outline"
-                      className="h-auto p-4 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground text-right justify-start"
-                    >
-                      <div className="space-y-1">
-                        <div className="font-semibold">داربست بدون اجناس</div>
-                        <div className="text-xs opacity-75">فقط نصب و فک داربست</div>
-                      </div>
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={handleScaffoldingSelect}
+                    className="w-full h-auto p-4 construction-gradient hover:opacity-90"
+                  >
+                    <div className="space-y-1">
+                      <div className="font-semibold">ادامه به فرم درخواست</div>
+                      <div className="text-xs opacity-90">برای ثبت درخواست داربست کلیک کنید</div>
+                    </div>
+                  </Button>
                 </div>
               )}
 

@@ -1,0 +1,324 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { ArrowRight, Plus, Trash2, AlertCircle } from 'lucide-react';
+import ProjectLocationMap from '@/components/ProjectLocationMap';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+// Schema for dimension validation
+const dimensionSchema = z.object({
+  length: z.number().positive({ message: 'طول باید بیشتر از صفر باشد' }),
+  height: z.number().positive({ message: 'ارتفاع باید بیشتر از صفر باشد' }),
+});
+
+interface Dimension {
+  id: string;
+  length: string;
+  height: string;
+}
+
+export default function ScaffoldingFacadeForm() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
+  const [projectAddress, setProjectAddress] = useState('');
+  const [dimensions, setDimensions] = useState<Dimension[]>([
+    { id: '1', length: '', height: '' }
+  ]);
+  const [durationMonths, setDurationMonths] = useState<string>('');
+  const [projectLocation, setProjectLocation] = useState<{
+    address: string;
+    coordinates: [number, number];
+    distance: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const addDimension = () => {
+    const newId = (dimensions.length + 1).toString();
+    setDimensions([...dimensions, { id: newId, length: '', height: '' }]);
+  };
+
+  const removeDimension = (id: string) => {
+    if (dimensions.length > 1) {
+      setDimensions(dimensions.filter(d => d.id !== id));
+    }
+  };
+
+  const updateDimension = (id: string, field: 'length' | 'height', value: string) => {
+    setDimensions(dimensions.map(d => 
+      d.id === id ? { ...d, [field]: value } : d
+    ));
+  };
+
+  const calculateTotalArea = (): number => {
+    return dimensions.reduce((total, dim) => {
+      const length = parseFloat(dim.length) || 0;
+      const height = parseFloat(dim.height) || 0;
+      return total + (length * height);
+    }, 0);
+  };
+
+  const calculatePrice = (area: number, months: string): number => {
+    const monthsPricing = {
+      '1': { base50: 3200000, base100: 4200000, perMeter: 45000 },
+      '2': { base50: 3000000, base100: 4000000, perMeter: 42000 },
+      '3+': { base50: 2800000, base100: 3800000, perMeter: 39000 },
+    };
+
+    const pricing = monthsPricing[months as keyof typeof monthsPricing];
+    if (!pricing) return 0;
+
+    if (area <= 50) {
+      return pricing.base50;
+    } else if (area <= 100) {
+      return pricing.base100;
+    } else {
+      return area * pricing.perMeter;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const newErrors: { [key: string]: string } = {};
+
+    if (!projectAddress.trim()) {
+      newErrors.projectAddress = 'آدرس پروژه الزامی است';
+    }
+
+    if (!durationMonths) {
+      newErrors.durationMonths = 'انتخاب مدت زمان الزامی است';
+    }
+
+    // Validate all dimensions
+    dimensions.forEach((dim, index) => {
+      const length = parseFloat(dim.length);
+      const height = parseFloat(dim.height);
+      
+      if (!dim.length || !dim.height) {
+        newErrors[`dimension${dim.id}`] = 'لطفاً طول و ارتفاع را وارد کنید';
+      } else {
+        try {
+          dimensionSchema.parse({ length, height });
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            newErrors[`dimension${dim.id}`] = error.errors[0].message;
+          }
+        }
+      }
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast({
+        title: 'خطا در اعتبارسنجی',
+        description: 'لطفاً تمام فیلدها را به درستی پر کنید',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const totalArea = calculateTotalArea();
+      const estimatedPrice = calculatePrice(totalArea, durationMonths);
+
+      const { error } = await supabase.from('service_requests').insert({
+        user_id: user?.id,
+        service_type: 'scaffolding',
+        sub_type: 'facade_with_materials',
+        length: totalArea,
+        width: 0,
+        height: 0,
+        location_address: projectAddress,
+        location_coordinates: projectLocation 
+          ? `(${projectLocation.coordinates[1]},${projectLocation.coordinates[0]})`
+          : null,
+        location_distance: projectLocation?.distance || null,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'درخواست ثبت شد',
+        description: `درخواست شما با موفقیت ثبت شد. قیمت تخمینی: ${estimatedPrice.toLocaleString('fa-IR')} تومان`,
+      });
+
+      navigate('/');
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      toast({
+        title: 'خطا در ثبت درخواست',
+        description: 'مشکلی در ثبت درخواست پیش آمد',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalArea = calculateTotalArea();
+  const estimatedPrice = durationMonths ? calculatePrice(totalArea, durationMonths) : 0;
+
+  return (
+    <Card className="shadow-elegant">
+      <CardHeader>
+        <CardTitle className="text-xl">فرم درخواست داربست نما و سطحی</CardTitle>
+        <CardDescription>لطفاً اطلاعات پروژه خود را با دقت وارد کنید</CardDescription>
+      </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Project Address */}
+              <div className="space-y-2">
+                <Label htmlFor="projectAddress">آدرس محل پروژه *</Label>
+                <Input
+                  id="projectAddress"
+                  value={projectAddress}
+                  onChange={(e) => setProjectAddress(e.target.value)}
+                  placeholder="آدرس کامل پروژه را وارد کنید"
+                  className={errors.projectAddress ? 'border-destructive' : ''}
+                />
+                {errors.projectAddress && (
+                  <p className="text-sm text-destructive">{errors.projectAddress}</p>
+                )}
+              </div>
+
+              {/* Dimensions */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>ابعاد داربست (برای محاسبه متراژ)</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addDimension}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    افزودن ابعاد
+                  </Button>
+                </div>
+
+                {dimensions.map((dim, index) => (
+                  <Card key={dim.id} className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>طول داربست (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.length}
+                            onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
+                            placeholder="مثال: 6"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>ارتفاع داربست (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.height}
+                            onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
+                            placeholder="مثال: 9"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-sm text-muted-foreground">متراژ</span>
+                        <span className="font-bold text-primary">
+                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م²
+                        </span>
+                        {dimensions.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeDimension(dim.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {errors[`dimension${dim.id}`] && (
+                      <p className="text-sm text-destructive mt-2">{errors[`dimension${dim.id}`]}</p>
+                    )}
+                  </Card>
+                ))}
+
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    جمع متراژ داربست: <strong>{totalArea.toFixed(2)} متر مربع</strong>
+                  </AlertDescription>
+                </Alert>
+              </div>
+
+              {/* Duration */}
+              <div className="space-y-2">
+                <Label htmlFor="durationMonths">شرایط تعداد ماه *</Label>
+                <Select value={durationMonths} onValueChange={setDurationMonths}>
+                  <SelectTrigger className={errors.durationMonths ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="انتخاب کنید..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="1">به شرط یک ماه</SelectItem>
+                    <SelectItem value="2">به شرط دو ماه</SelectItem>
+                    <SelectItem value="3+">به شرط سه ماه و بیشتر</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.durationMonths && (
+                  <p className="text-sm text-destructive">{errors.durationMonths}</p>
+                )}
+              </div>
+
+              {/* Price Estimate */}
+              {estimatedPrice > 0 && (
+                <Alert className="bg-primary/10 border-primary">
+                  <AlertDescription className="text-lg font-semibold">
+                    قیمت تخمینی: {estimatedPrice.toLocaleString('fa-IR')} تومان
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Project Location */}
+              <div className="space-y-2">
+                <Label>موقعیت پروژه (اختیاری)</Label>
+                <ProjectLocationMap onLocationSelect={setProjectLocation} />
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex gap-4 pt-4">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 construction-gradient"
+                >
+                  {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/')}
+                >
+                  انصراف
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+  );
+}
