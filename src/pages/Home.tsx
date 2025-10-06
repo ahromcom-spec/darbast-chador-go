@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToast } from '@/hooks/use-toast';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 
 
 export default function Home() {
@@ -21,7 +22,6 @@ export default function Home() {
   const { toast } = useToast();
   
   // Auto-assign projects to contractors
-  const { useAutoAssignProjects } = require('@/hooks/useAutoAssignProjects');
   useAutoAssignProjects();
 
   const handleSignOut = async () => {

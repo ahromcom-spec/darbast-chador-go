@@ -11,6 +11,8 @@ import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import UserProfile from "@/pages/user/UserProfile";
+import ProjectsDashboard from "@/pages/user/ProjectsDashboard";
+import ProjectDetail from "@/pages/user/ProjectDetail";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 import Login from "./pages/auth/Login";
@@ -21,8 +23,6 @@ import NewTicket from "./pages/tickets/NewTicket";
 import TicketDetail from "./pages/tickets/TicketDetail";
 import ContractorRegister from "./pages/contractor/ContractorRegister";
 import ContractorDashboard from "./pages/contractor/ContractorDashboard";
-import ProjectsBoard from "./pages/projects/ProjectsBoard";
-import ProjectDetail from "./pages/projects/ProjectDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,12 +50,9 @@ const App = () => (
                   <UserProfile />
                 </ProtectedRoute>
               } />
-              <Route path="/tickets" element={<TicketList />} />
-              <Route path="/tickets/new" element={<NewTicket />} />
-              <Route path="/tickets/:id" element={<TicketDetail />} />
               <Route path="/projects" element={
                 <ProtectedRoute>
-                  <ProjectsBoard />
+                  <ProjectsDashboard />
                 </ProtectedRoute>
               } />
               <Route path="/projects/:id" element={
@@ -63,6 +60,9 @@ const App = () => (
                   <ProjectDetail />
                 </ProtectedRoute>
               } />
+              <Route path="/tickets" element={<TicketList />} />
+              <Route path="/tickets/new" element={<NewTicket />} />
+              <Route path="/tickets/:id" element={<TicketDetail />} />
               <Route path="/contractor/register" element={<ContractorRegister />} />
               <Route path="/contractor/dashboard" element={
                 <ProtectedRoute>
