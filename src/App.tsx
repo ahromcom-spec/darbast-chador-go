@@ -19,6 +19,8 @@ import ScaffoldingForm from "./pages/scaffolding/ScaffoldingForm";
 import TicketList from "./pages/tickets/TicketList";
 import NewTicket from "./pages/tickets/NewTicket";
 import TicketDetail from "./pages/tickets/TicketDetail";
+import ContractorRegister from "./pages/contractor/ContractorRegister";
+import ContractorDashboard from "./pages/contractor/ContractorDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +51,12 @@ const App = () => (
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<NewTicket />} />
               <Route path="/tickets/:id" element={<TicketDetail />} />
+              <Route path="/contractor/register" element={<ContractorRegister />} />
+              <Route path="/contractor/dashboard" element={
+                <ProtectedRoute>
+                  <ContractorDashboard />
+                </ProtectedRoute>
+              } />
               <Route path="/admin" element={
                 <AdminRoute>
                   <AdminLayout />

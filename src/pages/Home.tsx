@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Wrench, Building2, Shield, Phone, ChevronDown, Smartphone, MessageSquare } from 'lucide-react';
+import { LogOut, Wrench, Building2, Shield, Phone, ChevronDown, Smartphone, MessageSquare, Briefcase } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -19,6 +19,10 @@ export default function Home() {
   const { profile } = useUserProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Auto-assign projects to contractors
+  const { useAutoAssignProjects } = require('@/hooks/useAutoAssignProjects');
+  useAutoAssignProjects();
 
   const handleSignOut = async () => {
     try {
@@ -96,6 +100,15 @@ export default function Home() {
                   پنل مدیریت
                 </Button>
               )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/contractor/dashboard')}
+                className="gap-2"
+              >
+                <Briefcase className="h-4 w-4" />
+                کارتابل پیمانکار
+              </Button>
             </div>
             <Button 
               variant="outline" 

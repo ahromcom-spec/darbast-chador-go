@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      contractor_services: {
+        Row: {
+          contractor_id: string
+          created_at: string
+          id: string
+          service_type: string
+          sub_type: string | null
+        }
+        Insert: {
+          contractor_id: string
+          created_at?: string
+          id?: string
+          service_type: string
+          sub_type?: string | null
+        }
+        Update: {
+          contractor_id?: string
+          created_at?: string
+          id?: string
+          service_type?: string
+          sub_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_services_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contractors: {
+        Row: {
+          address: string | null
+          company_name: string
+          contact_person: string
+          created_at: string
+          description: string | null
+          email: string
+          experience_years: number | null
+          id: string
+          is_active: boolean
+          is_approved: boolean
+          phone_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          company_name: string
+          contact_person: string
+          created_at?: string
+          description?: string | null
+          email: string
+          experience_years?: number | null
+          id?: string
+          is_active?: boolean
+          is_approved?: boolean
+          phone_number: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          company_name?: string
+          contact_person?: string
+          created_at?: string
+          description?: string | null
+          email?: string
+          experience_years?: number | null
+          id?: string
+          is_active?: boolean
+          is_approved?: boolean
+          phone_number?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       otp_codes: {
         Row: {
           code: string
@@ -67,6 +147,60 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      project_assignments: {
+        Row: {
+          accepted_at: string | null
+          assigned_at: string
+          completed_at: string | null
+          contractor_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          service_request_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          assigned_at?: string
+          completed_at?: string | null
+          contractor_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          service_request_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          assigned_at?: string
+          completed_at?: string | null
+          contractor_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          service_request_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_assignments_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_assignments_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_requests: {
         Row: {
@@ -291,7 +425,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "contractor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -419,7 +553,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "contractor"],
     },
   },
 } as const
