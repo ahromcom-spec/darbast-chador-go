@@ -37,11 +37,21 @@ serve(async (req) => {
     };
 
     const normalizedPhone = normalizeIranPhone(phone_number);
+    const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Check if user exists
+    const { data: existingUser } = await supabase.auth.admin.listUsers();
+    const authPhone = normalizedPhone.startsWith('0') 
+      ? '+98' + normalizedPhone.slice(1) 
+      : '+98' + normalizedPhone;
+    const userWithPhone = existingUser.users.find(u => u.phone === authPhone);
+    const userWithEmail = existingUser.users.find(u => u.email === derivedEmail);
+    const userExists = userWithPhone || userWithEmail;
 
     // Check rate limit
     const { data: rateLimitOk, error: rateLimitError } = await supabase
@@ -131,7 +141,11 @@ serve(async (req) => {
     console.log('OTP sent successfully to:', normalizedPhone);
 
     return new Response(
-      JSON.stringify({ success: true, message: 'کد تایید با موفقیت ارسال شد' }),
+      JSON.stringify({ 
+        success: true, 
+        message: 'کد تایید با موفقیت ارسال شد',
+        user_exists: userExists
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

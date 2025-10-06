@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  sendOTP: (phoneNumber: string) => Promise<{ error: any }>;
+  sendOTP: (phoneNumber: string) => Promise<{ error: any; userExists?: boolean }>;
   verifyOTP: (phoneNumber: string, code: string, fullName?: string, isRegistration?: boolean) => Promise<{ error: any; session?: Session | null }>;
   signOut: () => Promise<void>;
   loading: boolean;
@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error };
       }
 
-      return { error: null };
+      return { error: null, userExists: data?.user_exists };
     } catch (error) {
       console.error('Error sending OTP:', error);
       return { error };

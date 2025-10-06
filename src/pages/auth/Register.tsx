@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Home } from 'lucide-react';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -22,19 +24,40 @@ export default function Register() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  const [step, setStep] = useState<'info' | 'otp'>('info');
+  const [step, setStep] = useState<'info' | 'otp' | 'already-registered'>('info');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ fullName?: string; phone?: string; email?: string; otp?: string }>({});
+  const [countdown, setCountdown] = useState(90);
   
   const { user, sendOTP, verifyOTP } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Pre-fill phone from login redirect
+  useEffect(() => {
+    if (location.state?.phone) {
+      setPhoneNumber(location.state.phone);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     if (user) {
       navigate('/', { replace: true });
     }
   }, [user, navigate]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (step === 'otp' && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [step, countdown]);
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +80,7 @@ export default function Register() {
 
     setLoading(true);
 
-    const { error } = await sendOTP(phoneNumber);
+    const { error, userExists } = await sendOTP(phoneNumber);
     
     setLoading(false);
 
@@ -70,11 +93,46 @@ export default function Register() {
       return;
     }
 
+    // اگر کاربر قبلاً ثبت‌نام کرده، نمایش پیام
+    if (userExists) {
+      setStep('already-registered');
+      toast({
+        title: 'کاربر موجود',
+        description: 'این شماره قبلاً ثبت‌نام کرده است. کد تایید برای ورود ارسال شد.',
+      });
+      setCountdown(90);
+      return;
+    }
+
     toast({
       title: 'موفق',
       description: 'کد تایید به شماره شما ارسال شد.',
     });
+    setCountdown(90);
     setStep('otp');
+  };
+
+  const handleResendOTP = async () => {
+    setLoading(true);
+    const { error } = await sendOTP(phoneNumber);
+    setLoading(false);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در ارسال مجدد کد تایید.',
+      });
+      return;
+    }
+
+    toast({
+      title: 'موفق',
+      description: 'کد تایید مجدد ارسال شد.',
+    });
+    setCountdown(90);
+    setOtpCode('');
+    setErrors({});
   };
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
@@ -115,6 +173,7 @@ export default function Register() {
     setStep('info');
     setOtpCode('');
     setErrors({});
+    setCountdown(90);
   };
 
   return (
@@ -125,10 +184,128 @@ export default function Register() {
           <CardDescription>
             {step === 'info' 
               ? 'اطلاعات خود را وارد کنید' 
+              : step === 'already-registered'
+              ? 'حساب کاربری موجود است'
               : 'کد تایید ارسال شده را وارد کنید'}
           </CardDescription>
         </CardHeader>
-        {step === 'info' ? (
+        {step === 'already-registered' ? (
+          <>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertDescription className="text-center">
+                  شماره موبایل <span className="font-bold">{phoneNumber}</span> قبلاً در سامانه ثبت شده است.
+                  <br />
+                  کد تایید برای ورود به حساب شما ارسال شد.
+                </AlertDescription>
+              </Alert>
+              <div className="space-y-2">
+                <Label>کد تایید</Label>
+                <div className="flex justify-center" dir="ltr">
+                  <InputOTP
+                    maxLength={5}
+                    value={otpCode}
+                    onChange={(value) => setOtpCode(value)}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+                {countdown > 0 ? (
+                  <p className="text-sm text-center text-muted-foreground">
+                    زمان باقی‌مانده: <span className="font-bold text-primary">{countdown}</span> ثانیه
+                  </p>
+                ) : (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertDescription className="text-center">
+                      کد تایید منقضی شده است. لطفا مجدداً درخواست کنید.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {errors.otp && (
+                  <p className="text-sm text-destructive text-center">{errors.otp}</p>
+                )}
+                <p className="text-sm text-center text-muted-foreground">
+                  کد تایید باید 5 رقم باشد
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-3">
+              <Button 
+                onClick={async (e) => {
+                  e.preventDefault();
+                  setErrors({});
+
+                  if (otpCode.length !== 5) {
+                    setErrors({ otp: 'کد تایید باید 5 رقم باشد' });
+                    return;
+                  }
+
+                  setLoading(true);
+                  // For already registered users, use login flow
+                  const { error } = await verifyOTP(phoneNumber, otpCode, undefined, false);
+                  setLoading(false);
+
+                  if (error) {
+                    const errorMessage = error.message || 'کد تایید نامعتبر است.';
+                    toast({
+                      variant: 'destructive',
+                      title: 'خطا',
+                      description: errorMessage,
+                    });
+                    setErrors({ otp: errorMessage });
+                    return;
+                  }
+
+                  toast({
+                    title: 'خوش آمدید',
+                    description: 'با موفقیت وارد شدید.',
+                  });
+                  navigate('/', { replace: true });
+                }}
+                className="w-full construction-gradient hover:opacity-90" 
+                disabled={loading || countdown === 0}
+              >
+                {loading ? 'در حال بررسی...' : 'تایید و ورود'}
+              </Button>
+              {countdown === 0 && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={handleResendOTP}
+                  disabled={loading}
+                >
+                  {loading ? 'در حال ارسال...' : 'ارسال مجدد کد تایید'}
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleBackToInfo}
+              >
+                تغییر شماره موبایل
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                asChild
+              >
+                <Link to="/">
+                  <Home className="ml-2 h-4 w-4" />
+                  بازگشت به صفحه نخست
+                </Link>
+              </Button>
+            </CardFooter>
+          </>
+        ) : step === 'info' ? (
           <form onSubmit={handleSendOTP}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -179,13 +356,24 @@ export default function Register() {
                 )}
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
+            <CardFooter className="flex flex-col space-y-3">
               <Button 
                 type="submit" 
                 className="w-full construction-gradient hover:opacity-90" 
                 disabled={loading}
               >
                 {loading ? 'در حال ارسال...' : 'ارسال کد تایید'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                asChild
+              >
+                <Link to="/">
+                  <Home className="ml-2 h-4 w-4" />
+                  بازگشت به صفحه نخست
+                </Link>
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 قبلاً ثبت نام کرده‌اید؟{' '}
@@ -218,19 +406,44 @@ export default function Register() {
                     </InputOTPGroup>
                   </InputOTP>
                 </div>
+                {countdown > 0 ? (
+                  <p className="text-sm text-center text-muted-foreground">
+                    زمان باقی‌مانده: <span className="font-bold text-primary">{countdown}</span> ثانیه
+                  </p>
+                ) : (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertDescription className="text-center">
+                      کد تایید منقضی شده است. لطفا مجدداً درخواست کنید.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {errors.otp && (
                   <p className="text-sm text-destructive text-center">{errors.otp}</p>
                 )}
+                <p className="text-sm text-center text-muted-foreground">
+                  کد تایید باید 5 رقم باشد
+                </p>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
+            <CardFooter className="flex flex-col space-y-3">
               <Button 
                 type="submit" 
                 className="w-full construction-gradient hover:opacity-90" 
-                disabled={loading}
+                disabled={loading || countdown === 0}
               >
                 {loading ? 'در حال بررسی...' : 'تایید و ثبت نام'}
               </Button>
+              {countdown === 0 && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={handleResendOTP}
+                  disabled={loading}
+                >
+                  {loading ? 'در حال ارسال...' : 'ارسال مجدد کد تایید'}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -238,6 +451,17 @@ export default function Register() {
                 onClick={handleBackToInfo}
               >
                 بازگشت به اطلاعات
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                asChild
+              >
+                <Link to="/">
+                  <Home className="ml-2 h-4 w-4" />
+                  بازگشت به صفحه نخست
+                </Link>
               </Button>
             </CardFooter>
           </form>
