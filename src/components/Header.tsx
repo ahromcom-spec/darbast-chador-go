@@ -1,11 +1,13 @@
-import { Phone, Smartphone, Building, ChevronDown } from "lucide-react";
+import { Phone, Smartphone, Building, ChevronDown, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import ahromLogo from "@/assets/ahrom-logo.png";
 
 const Header = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
@@ -23,8 +25,21 @@ const Header = () => {
             </h1>
           </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <div className="flex items-center gap-2">
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/tickets")}
+                className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">تیکت‌ها</span>
+              </Button>
+            )}
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
               <Button 
                 variant="outline" 
                 size="sm"
@@ -77,6 +92,7 @@ const Header = () => {
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
 
         {/* Desktop Layout */}
@@ -97,8 +113,18 @@ const Header = () => {
             </h1>
           </div>
           
-          {/* Contact Section - Right side */}
-          <div className="flex items-center gap-6">
+          {/* Contact & Tickets Section - Right side */}
+          <div className="flex items-center gap-4">
+            {user && (
+              <Button
+                variant="outline"
+                onClick={() => navigate("/tickets")}
+                className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>تیکت‌های پشتیبانی</span>
+              </Button>
+            )}
             {/* Primary Phone - Desktop */}
             <div className="flex items-center gap-3">
               <a 

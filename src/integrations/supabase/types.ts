@@ -124,6 +124,88 @@ export type Database = {
           },
         ]
       }
+      ticket_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_attachments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          created_at: string
+          department: string
+          id: string
+          message: string
+          service_request_id: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          department: string
+          id?: string
+          message: string
+          service_request_id?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          id?: string
+          message?: string
+          service_request_id?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
