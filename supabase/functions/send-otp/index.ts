@@ -91,7 +91,7 @@ serve(async (req) => {
       );
     }
     
-    const message = `کد تایید شما برای ورود به سایت اهـــــرم | Ahrom: ${code}\nلغو11`;
+    const message = `کد تایید شما: ${code} برای ورود به سایت اهـــــرم | Ahrom\nلغو11`;
     const senderNumber = '90000319';
 
     try {
