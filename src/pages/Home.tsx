@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Wrench, Building2, Shield } from 'lucide-react';
+import { LogOut, Wrench, Building2, Shield, Phone, ChevronDown, Smartphone, MessageSquare } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -113,6 +114,73 @@ export default function Home() {
       {!user && (
         <div className="bg-card/50 border-b">
           <div className="container mx-auto px-4 py-3 flex items-center justify-end gap-3">
+            {/* Contact Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
+                >
+                  <Phone className="h-4 w-4" />
+                  تماس با ما
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-sm border shadow-xl z-50 min-w-[200px]">
+                <div className="p-2">
+                  <div className="text-xs text-muted-foreground mb-2 text-center">راه‌های تماس</div>
+                  <DropdownMenuItem asChild>
+                    <a 
+                      href="tel:90000319" 
+                      className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                    >
+                      <Phone className="h-4 w-4 text-primary" />
+                      <div className="text-right">
+                        <div className="font-medium">تلفن خدماتی اهرم</div>
+                        <div className="text-sm text-muted-foreground">90000319</div>
+                      </div>
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a 
+                      href="tel:09125511494" 
+                      className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                    >
+                      <Smartphone className="h-4 w-4 text-primary" />
+                      <div className="text-right">
+                        <div className="font-medium">موبایل</div>
+                        <div className="text-sm text-muted-foreground">09125511494</div>
+                      </div>
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a 
+                      href="tel:02538865040" 
+                      className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                    >
+                      <Building2 className="h-4 w-4 text-primary" />
+                      <div className="text-right">
+                        <div className="font-medium">دفتر</div>
+                        <div className="text-sm text-muted-foreground">02538865040</div>
+                      </div>
+                    </a>
+                  </DropdownMenuItem>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Tickets Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/tickets")}
+              className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
+            >
+              <MessageSquare className="h-4 w-4" />
+              تیکت‌های پشتیبانی
+            </Button>
+            
             <Button 
               variant="outline" 
               size="sm" 
