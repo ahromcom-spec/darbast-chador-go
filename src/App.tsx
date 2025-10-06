@@ -46,21 +46,9 @@ const App = () => (
                   <UserProfile />
                 </ProtectedRoute>
               } />
-              <Route path="/tickets" element={
-                <ProtectedRoute>
-                  <TicketList />
-                </ProtectedRoute>
-              } />
-              <Route path="/tickets/new" element={
-                <ProtectedRoute>
-                  <NewTicket />
-                </ProtectedRoute>
-              } />
-              <Route path="/tickets/:id" element={
-                <ProtectedRoute>
-                  <TicketDetail />
-                </ProtectedRoute>
-              } />
+              <Route path="/tickets" element={<TicketList />} />
+              <Route path="/tickets/new" element={<NewTicket />} />
+              <Route path="/tickets/:id" element={<TicketDetail />} />
               <Route path="/admin" element={
                 <AdminRoute>
                   <AdminLayout />
