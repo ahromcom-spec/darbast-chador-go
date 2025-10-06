@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { 
   ArrowRight, 
   MessageSquare, 
@@ -15,7 +18,9 @@ import {
   FileVideo, 
   Download,
   Calendar,
-  Building2
+  Building2,
+  Send,
+  User
 } from "lucide-react";
 
 interface Ticket {
@@ -38,6 +43,16 @@ interface Attachment {
   created_at: string;
 }
 
+interface TicketMessage {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  message: string;
+  is_admin: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 const departmentLabels: Record<string, string> = {
   order: "ثبت سفارش",
   execution: "اجرایی",
@@ -56,15 +71,57 @@ const TicketDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [messages, setMessages] = useState<TicketMessage[]>([]);
+  const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile } = useUserProfile();
 
   useEffect(() => {
     if (id) {
       fetchTicketDetails();
+      subscribeToMessages();
     }
+    
+    return () => {
+      // Cleanup subscription
+      supabase.channel('ticket-messages').unsubscribe();
+    };
   }, [id]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const subscribeToMessages = () => {
+    const channel = supabase
+      .channel('ticket-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ticket_messages',
+          filter: `ticket_id=eq.${id}`
+        },
+        (payload) => {
+          console.log('New message received:', payload);
+          setMessages((current) => [...current, payload.new as TicketMessage]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
 
   const fetchTicketDetails = async () => {
     try {
@@ -94,6 +151,16 @@ const TicketDetail = () => {
 
       if (attachmentsError) throw attachmentsError;
       setAttachments(attachmentsData || []);
+
+      // Fetch messages
+      const { data: messagesData, error: messagesError } = await supabase
+        .from("ticket_messages")
+        .select("*")
+        .eq("ticket_id", id)
+        .order("created_at", { ascending: true });
+
+      if (messagesError) throw messagesError;
+      setMessages(messagesData || []);
     } catch (error: any) {
       toast({
         title: "خطا در بارگذاری تیکت",
@@ -103,6 +170,41 @@ const TicketDetail = () => {
       navigate("/tickets");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !id) return;
+
+    setSending(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("کاربر وارد نشده است");
+
+      const { error } = await supabase
+        .from("ticket_messages")
+        .insert({
+          ticket_id: id,
+          user_id: user.id,
+          message: newMessage.trim(),
+          is_admin: false
+        });
+
+      if (error) throw error;
+
+      setNewMessage("");
+      toast({
+        title: "پیام ارسال شد",
+        description: "پیام شما با موفقیت ثبت شد"
+      });
+    } catch (error: any) {
+      toast({
+        title: "خطا در ارسال پیام",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -223,21 +325,123 @@ const TicketDetail = () => {
           </CardHeader>
         </Card>
 
-        {/* Message Card */}
+        {/* Chat Messages Card */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-primary" />
-              پیام شما
+              گفتگو با پشتیبانی
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-foreground leading-relaxed whitespace-pre-wrap">
-              {ticket.message}
-            </p>
+          <CardContent className="space-y-4">
+            {/* Initial message */}
+            <div className="flex gap-3">
+              <div className="flex-shrink-0">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="bg-muted p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-semibold text-sm">
+                      {profile?.full_name || "شما"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(ticket.created_at).toLocaleDateString("fa-IR", {
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-foreground leading-relaxed whitespace-pre-wrap">
+                    {ticket.message}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex gap-3 ${msg.is_admin ? "flex-row-reverse" : ""}`}
+                  >
+                    <div className="flex-shrink-0">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                        msg.is_admin ? "bg-accent" : "bg-primary/10"
+                      }`}>
+                        <User className={`h-4 w-4 ${msg.is_admin ? "text-accent-foreground" : "text-primary"}`} />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className={`p-4 rounded-lg ${
+                        msg.is_admin 
+                          ? "bg-accent text-accent-foreground" 
+                          : "bg-muted"
+                      }`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-sm">
+                            {msg.is_admin ? "پشتیبانی اهرم" : (profile?.full_name || "شما")}
+                          </span>
+                          <span className="text-xs opacity-70">
+                            {new Date(msg.created_at).toLocaleDateString("fa-IR", {
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </span>
+                        </div>
+                        <p className="leading-relaxed whitespace-pre-wrap">
+                          {msg.message}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* Message input */}
+            <div className="flex gap-2">
+              <Textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="پیام خود را بنویسید..."
+                className="resize-none"
+                rows={3}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+              />
+              <Button
+                onClick={sendMessage}
+                disabled={!newMessage.trim() || sending}
+                className="px-8"
+              >
+                {sending ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 ml-2" />
+                    ارسال
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
+        {/* Message Card - Old version removed */}
         {/* Attachments Card */}
         {attachments.length > 0 && (
           <Card>
