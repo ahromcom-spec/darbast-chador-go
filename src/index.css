@@ -150,6 +150,24 @@
   body {
     @apply bg-background text-foreground font-vazir;
     direction: rtl;
+    position: relative;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/background-building.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    filter: blur(3px);
+    opacity: 0.15;
+    z-index: -1;
   }
 
   /* RTL Support */
