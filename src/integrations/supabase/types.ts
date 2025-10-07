@@ -44,6 +44,13 @@ export type Database = {
             referencedRelation: "contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contractor_services_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "public_verified_contractors"
+            referencedColumns: ["id"]
+          },
         ]
       }
       contractors: {
@@ -191,6 +198,13 @@ export type Database = {
             columns: ["contractor_id"]
             isOneToOne: false
             referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_assignments_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "public_verified_contractors"
             referencedColumns: ["id"]
           },
           {
@@ -444,7 +458,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_verified_contractors: {
+        Row: {
+          address: string | null
+          company_name: string | null
+          contact_person: string | null
+          created_at: string | null
+          description: string | null
+          experience_years: number | null
+          id: string | null
+          is_approved: boolean | null
+        }
+        Insert: {
+          address?: string | null
+          company_name?: string | null
+          contact_person?: string | null
+          created_at?: string | null
+          description?: string | null
+          experience_years?: number | null
+          id?: string | null
+          is_approved?: boolean | null
+        }
+        Update: {
+          address?: string | null
+          company_name?: string | null
+          contact_person?: string | null
+          created_at?: string | null
+          description?: string | null
+          experience_years?: number | null
+          id?: string | null
+          is_approved?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_otp_rate_limit: {
