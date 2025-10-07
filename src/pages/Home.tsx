@@ -71,10 +71,22 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div 
+      className="min-h-screen flex flex-col relative"
+      style={{
+        backgroundImage: 'url(/background-city.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      {/* Overlay for better text readability */}
+      <div className="absolute inset-0 bg-black/40 z-0" />
+      
       {/* User Welcome Bar - Only show if logged in */}
       {user && (
-        <div className="bg-card/80 backdrop-blur-sm border-b">
+        <div className="bg-card/90 backdrop-blur-md border-b relative z-10">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
@@ -134,7 +146,7 @@ export default function Home() {
 
       {/* Login/Register buttons - Only show if NOT logged in */}
       {!user && (
-        <div className="bg-card/80 backdrop-blur-sm border-b">
+        <div className="bg-card/90 backdrop-blur-md border-b relative z-10">
           <div className="container mx-auto px-4 py-3 flex items-center justify-end gap-3">
 
             {/* Tickets Button */}
@@ -167,10 +179,10 @@ export default function Home() {
       )}
 
       {/* Main Content - Only service selection card */}
-      <main className="flex-1 flex items-start justify-center pt-12 pb-8 px-4">
+      <main className="flex-1 flex items-center justify-center py-8 px-4 relative z-10">
         <div className="w-full max-w-2xl">
           {/* Service Selection Card */}
-          <Card className="shadow-elegant persian-slide bg-card/90 backdrop-blur-sm">
+          <Card className="shadow-2xl persian-slide bg-card/95 backdrop-blur-md border-2">
             <CardHeader className="text-center pb-4">
               <CardTitle className="text-3xl font-bold primary-gradient bg-clip-text text-transparent">
                 انتخاب خدمات
@@ -186,7 +198,7 @@ export default function Home() {
                   <SelectTrigger className="w-full text-right">
                     <SelectValue placeholder="انتخاب کنید..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
+                  <SelectContent className="bg-popover border-2 z-[100]">
                     <SelectItem value="scaffolding">خدمات داربست فلزی</SelectItem>
                     <SelectItem value="tarpaulin">خدمات چادر برزنتی</SelectItem>
                   </SelectContent>
