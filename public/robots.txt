@@ -1,14 +1,47 @@
+# robots.txt for خدمات داربست فلزی اهرم
+# https://darbast-chador-go.lovable.app
+
+User-agent: *
+Allow: /
+Allow: /auth/
+Allow: /scaffolding/
+Allow: /projects/
+Allow: /tickets/
+Allow: /profile/
+Disallow: /admin/
+Disallow: /api/
+
+# Specific crawler rules
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 0
 
 User-agent: Bingbot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Yandex
+Allow: /
+Crawl-delay: 1
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 1
+
+User-agent: facebookexternalhit
 Allow: /
 
 User-agent: Twitterbot
 Allow: /
 
-User-agent: facebookexternalhit
+User-agent: LinkedInBot
 Allow: /
 
-User-agent: *
+User-agent: ia_archiver
 Allow: /
+
+# Sitemap location
+Sitemap: https://darbast-chador-go.lovable.app/sitemap.xml
+
+# Host
+Host: https://darbast-chador-go.lovable.app

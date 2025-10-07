@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- صفحه اصلی -->
+  <url>
+    <loc>https://darbast-chador-go.lovable.app/</loc>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://darbast-chador-go.lovable.app/assets/ahrom-logo.png</image:loc>
+      <image:title>لوگو خدمات ساختمانی اهرم</image:title>
+      <image:caption>خدمات داربست فلزی اهرم</image:caption>
+    </image:image>
+  </url>
+  
+  <!-- صفحه ثبت نام -->
+  <url>
+    <loc>https://darbast-chador-go.lovable.app/auth/register</loc>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- صفحه ورود -->
+  <url>
+    <loc>https://darbast-chador-go.lovable.app/auth/login</loc>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- صفحه خدمات داربست فلزی -->
+  <url>
+    <loc>https://darbast-chador-go.lovable.app/scaffolding/form</loc>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- صفحه پروژه‌ها -->
+  <url>
+    <loc>https://darbast-chador-go.lovable.app/projects</loc>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- صفحه تیکت‌های پشتیبانی -->
+  <url>
+    <loc>https://darbast-chador-go.lovable.app/tickets</loc>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- صفحه پروفایل کاربری -->
+  <url>
+    <loc>https://darbast-chador-go.lovable.app/profile</loc>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- صفحه داشبورد پیمانکار -->
+  <url>
+    <loc>https://darbast-chador-go.lovable.app/contractor/dashboard</loc>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+</urlset>
