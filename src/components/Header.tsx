@@ -15,17 +15,15 @@ const Header = () => {
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
         {/* Mobile & Tablet Layout */}
         <div className="flex md:hidden items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="bg-card/95 backdrop-blur-sm rounded-lg p-2">
-              <img 
-                src={ahromLogo} 
-                alt="لوگوی اهرم" 
-                width="140"
-                height="80"
-                className="h-12 sm:h-14 w-auto object-contain"
-                loading="eager"
-              />
-            </div>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+            <img 
+              src={ahromLogo} 
+              alt="لوگوی اهرم" 
+              width="140"
+              height="80"
+              className="h-12 sm:h-14 w-auto object-contain"
+              loading="eager"
+            />
             <h1 className="text-base sm:text-lg font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               خدمات ساختمانی اهرم
             </h1>
@@ -105,16 +103,14 @@ const Header = () => {
         <div className="hidden md:flex items-center justify-between">
           {/* Logo - Left side */}
           <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="bg-card/95 backdrop-blur-sm rounded-lg p-3">
-              <img 
-                src={ahromLogo} 
-                alt="لوگوی اهرم" 
-                width="140"
-                height="80"
-                className="h-20 w-auto object-contain"
-                loading="eager"
-              />
-            </div>
+            <img 
+              src={ahromLogo} 
+              alt="لوگوی اهرم" 
+              width="140"
+              height="80"
+              className="h-20 w-auto object-contain"
+              loading="eager"
+            />
           </div>
 
           {/* Company Name - Center */}
