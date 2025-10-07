@@ -165,9 +165,17 @@
     </script>
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json?v=2" />
-    <meta name="theme-color" content="#D4AF37" />
-    <link rel="apple-touch-icon" href="/icon-512-large.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#000000" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    
+    <!-- iOS -->
+    <link rel="apple-touch-icon" href="/icons/apple-touch-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="اهرم" />
 
     <!-- Persian/RTL Font - Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -181,5 +189,16 @@
   <body dir="rtl">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registered'))
+            .catch(err => console.log('Service Worker registration failed'));
+        });
+      }
+    </script>
   </body>
 </html>
