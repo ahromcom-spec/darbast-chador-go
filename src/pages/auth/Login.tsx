@@ -200,8 +200,20 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary p-4">
-      <div className="w-full max-w-md space-y-4">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative"
+      style={{
+        backgroundImage: 'url(/login-background.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      {/* Overlay for better readability */}
+      <div className="absolute inset-0 bg-black/40 z-0" />
+      
+      <div className="w-full max-w-md space-y-4 relative z-10">
         {showInstallPrompt && (
           <Alert className="border-primary bg-primary/5">
             <Download className="h-5 w-5 text-primary" />
@@ -229,7 +241,7 @@ export default function Login() {
           </Alert>
         )}
         
-        <Card className="shadow-elegant">
+        <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-2xl font-bold text-primary">ورود به سامانه</CardTitle>
           <CardDescription>
