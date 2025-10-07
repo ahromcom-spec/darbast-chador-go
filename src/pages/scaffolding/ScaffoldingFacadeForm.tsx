@@ -172,7 +172,7 @@ export default function ScaffoldingFacadeForm() {
   const estimatedPrice = durationMonths ? calculatePrice(totalArea, durationMonths) : 0;
 
   return (
-    <Card className="shadow-elegant">
+    <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
       <CardHeader>
         <CardTitle className="text-xl">فرم درخواست داربست نما و سطحی</CardTitle>
         <CardDescription>لطفاً اطلاعات پروژه خود را با دقت وارد کنید</CardDescription>
@@ -211,7 +211,7 @@ export default function ScaffoldingFacadeForm() {
                 </div>
 
                 {dimensions.map((dim, index) => (
-                  <Card key={dim.id} className="p-4">
+                  <Card key={dim.id} className="p-4 bg-card/90 backdrop-blur-sm">
                     <div className="flex items-center gap-4">
                       <div className="flex-1 grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -274,7 +274,7 @@ export default function ScaffoldingFacadeForm() {
                   <SelectTrigger className={errors.durationMonths ? 'border-destructive' : ''}>
                     <SelectValue placeholder="انتخاب کنید..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
+                  <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
                     <SelectItem value="1">به شرط یک ماه</SelectItem>
                     <SelectItem value="2">به شرط دو ماه</SelectItem>
                     <SelectItem value="3+">به شرط سه ماه و بیشتر</SelectItem>

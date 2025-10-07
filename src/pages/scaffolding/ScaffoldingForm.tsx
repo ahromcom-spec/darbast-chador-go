@@ -14,8 +14,20 @@ export default function ScaffoldingForm() {
   const [serviceType, setServiceType] = useState<ServiceType>('facade');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background py-8">
-      <div className="container mx-auto px-4 max-w-6xl">
+    <div 
+      className="min-h-screen py-8 relative"
+      style={{
+        backgroundImage: 'url(/background-building.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      {/* Overlay for better readability */}
+      <div className="absolute inset-0 bg-black/50 z-0" />
+      
+      <div className="container mx-auto px-4 max-w-6xl relative z-10">
         <div className="space-y-6">
           {/* Back Button */}
           <Button
@@ -28,7 +40,7 @@ export default function ScaffoldingForm() {
           </Button>
 
           {/* Main Selection Card */}
-          <Card className="shadow-elegant">
+          <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl flex items-center justify-center gap-2">
                 <Building2 className="h-6 w-6 text-primary" />
