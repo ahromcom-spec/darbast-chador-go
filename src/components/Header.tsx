@@ -19,7 +19,10 @@ const Header = () => {
             <img 
               src={ahromLogo} 
               alt="لوگوی اهرم" 
+              width="140"
+              height="80"
               className="h-12 sm:h-14 w-auto object-contain"
+              loading="eager"
             />
             <h1 className="text-base sm:text-lg font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               خدمات ساختمانی اهرم
@@ -103,7 +106,10 @@ const Header = () => {
             <img 
               src={ahromLogo} 
               alt="لوگوی اهرم" 
+              width="140"
+              height="80"
               className="h-20 w-auto object-contain"
+              loading="eager"
             />
           </div>
 
