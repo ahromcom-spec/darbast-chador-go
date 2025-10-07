@@ -184,9 +184,9 @@ export default function Home() {
           {/* Service Selection Card */}
           <Card className="shadow-2xl persian-slide bg-card/95 backdrop-blur-md border-2">
             <CardHeader className="text-center pb-4">
-              <CardTitle className="text-3xl font-bold primary-gradient bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold leading-none tracking-tight primary-gradient bg-clip-text text-transparent">
                 انتخاب خدمات
-              </CardTitle>
+              </h1>
               <CardDescription className="text-lg">
                 خدمات مورد نظر خود را انتخاب کنید
               </CardDescription>
