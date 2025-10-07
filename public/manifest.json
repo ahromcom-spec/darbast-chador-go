@@ -1,7 +1,7 @@
 {
-  "name": "داربست و چادر اهرم",
-  "short_name": "اهرم",
-  "description": "سامانه آنلاین سفارش خدمات داربست فلزی و چادر برزنتی",
+  "name": "اهرُم",
+  "short_name": "اهرُم",
+  "description": "خدمات ساختمانی اهرم",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
