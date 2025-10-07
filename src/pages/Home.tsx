@@ -215,7 +215,7 @@ export default function Home() {
                   خدمات داربست فلزی و ساختمانی اهرم
                 </h2>
                 <CardDescription className="text-sm sm:text-base md:text-lg">
-                  خدمات داربست فلزی حرفه‌ای در قم و سراسر ایران - سیستم هوشمند ثبت سفارش
+                  خدمات داربست و ساختمانی در قم و سراسر ایران
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-5 md:space-y-6 px-4 sm:px-6 pb-6 sm:pb-8">
