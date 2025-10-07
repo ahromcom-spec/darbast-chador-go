@@ -21,7 +21,7 @@ const Header = () => {
               alt="لوگوی اهرم" 
               width="140"
               height="80"
-              className="h-12 sm:h-14 w-auto object-contain"
+              className="h-12 sm:h-14 w-auto object-contain drop-shadow-lg"
               loading="eager"
             />
             <h1 className="text-base sm:text-lg font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
@@ -108,7 +108,7 @@ const Header = () => {
               alt="لوگوی اهرم" 
               width="140"
               height="80"
-              className="h-20 w-auto object-contain"
+              className="h-20 w-auto object-contain drop-shadow-lg"
               loading="eager"
             />
           </div>
