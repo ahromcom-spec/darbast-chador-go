@@ -71,18 +71,19 @@ export default function Home() {
   }, []);
 
   return (
-    <div 
-      className="min-h-screen flex flex-col relative"
-      style={{
-        backgroundImage: 'url(/background-city.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed'
-      }}
-    >
+    <div className="min-h-screen flex flex-col relative bg-background">
+      {/* Background Image */}
+      <div 
+        className="fixed inset-0 z-0 md:block"
+        style={{
+          backgroundImage: 'url(/background-city.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      />
       {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-black/40 z-0" />
+      <div className="fixed inset-0 bg-black/40 z-0" />
       
       {/* User Welcome Bar - Only show if logged in */}
       {user && (
@@ -179,19 +180,19 @@ export default function Home() {
       )}
 
       {/* Main Content - Only service selection card */}
-      <main className="flex-1 flex items-center justify-center py-8 px-4 relative z-10">
-        <div className="w-full max-w-2xl">
+      <main className="flex-1 flex items-start md:items-center justify-center py-4 md:py-8 px-4 relative z-10">
+        <div className="w-full max-w-2xl mt-4 md:mt-0">
           {/* Service Selection Card */}
           <Card className="shadow-2xl persian-slide bg-card/95 backdrop-blur-md border-2">
-            <CardHeader className="text-center pb-4">
-              <h1 className="text-3xl font-bold leading-none tracking-tight primary-gradient bg-clip-text text-transparent">
+            <CardHeader className="text-center pb-3 md:pb-4">
+              <h1 className="text-2xl md:text-3xl font-bold leading-none tracking-tight primary-gradient bg-clip-text text-transparent">
                 انتخاب خدمات
               </h1>
-              <CardDescription className="text-lg">
+              <CardDescription className="text-base md:text-lg">
                 خدمات مورد نظر خود را انتخاب کنید
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 md:space-y-6">
               <div className="space-y-3">
                 <label className="text-sm font-medium text-foreground">نوع خدمات:</label>
                 <Select value={selectedService} onValueChange={setSelectedService}>
