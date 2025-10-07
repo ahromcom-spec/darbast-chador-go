@@ -227,10 +227,10 @@ export default function Home() {
                     </SelectTrigger>
                     <SelectContent className="bg-popover border-2 z-[100]">
                       <SelectItem value="scaffolding" className="text-sm sm:text-base">
-                        خدمات داربست فلزی - نصب و اجرای داربست ساختمانی
+                        خدمات داربست فلزی
                       </SelectItem>
                       <SelectItem value="tarpaulin" className="text-sm sm:text-base">
-                        خدمات چادر برزنتی - پوشش ساختمانی
+                        خدمات چادر برزنتی
                       </SelectItem>
                     </SelectContent>
                   </Select>
