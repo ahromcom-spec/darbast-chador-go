@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, Users, LogOut, HardHat } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -18,7 +18,6 @@ import { Separator } from '@/components/ui/separator';
 const menuItems = [
   { title: 'داشبورد', url: '/admin', icon: LayoutDashboard },
   { title: 'سفارشات', url: '/admin/orders', icon: Package },
-  { title: 'پیمانکاران', url: '/admin/contractors', icon: HardHat },
   { title: 'کاربران', url: '/admin/users', icon: Users },
 ];
 

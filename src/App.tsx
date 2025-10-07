@@ -10,7 +10,6 @@ import { AdminRoute } from "@/components/AdminRoute";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminOrders from "@/pages/admin/AdminOrders";
-import AdminContractors from "@/pages/admin/AdminContractors";
 import UserProfile from "@/pages/user/UserProfile";
 import ProjectsDashboard from "@/pages/user/ProjectsDashboard";
 import ProjectDetail from "@/pages/user/ProjectDetail";
@@ -24,7 +23,6 @@ import NewTicket from "./pages/tickets/NewTicket";
 import TicketDetail from "./pages/tickets/TicketDetail";
 import ContractorRegister from "./pages/contractor/ContractorRegister";
 import ContractorDashboard from "./pages/contractor/ContractorDashboard";
-import ContractorsList from "./pages/ContractorsList";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,7 +69,6 @@ const App = () => (
                   <ContractorDashboard />
                 </ProtectedRoute>
               } />
-              <Route path="/contractors" element={<ContractorsList />} />
               <Route path="/admin" element={
                 <AdminRoute>
                   <AdminLayout />
@@ -79,7 +76,6 @@ const App = () => (
               }>
                 <Route index element={<AdminDashboard />} />
                 <Route path="orders" element={<AdminOrders />} />
-                <Route path="contractors" element={<AdminContractors />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
