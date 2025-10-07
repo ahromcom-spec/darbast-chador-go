@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Package, MapPin, ArrowRight, Edit2, Save, X } from 'lucide-react';
+import { User, Package, MapPin, ArrowRight, Edit2, Save, X, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -26,7 +26,7 @@ interface UserOrder {
 }
 
 export default function UserProfile() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,6 +109,16 @@ export default function UserProfile() {
     setEditMode(false);
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('با موفقیت از سامانه خارج شدید');
+      navigate('/auth/login');
+    } catch (error) {
+      toast.error('خطا در خروج از سامانه');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { label: 'در انتظار', variant: 'default' as const },
@@ -137,14 +147,25 @@ export default function UserProfile() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="gap-2 mb-4"
-          >
-            <ArrowRight className="h-4 w-4" />
-            بازگشت به صفحه اصلی
-          </Button>
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/')}
+              className="gap-2"
+            >
+              <ArrowRight className="h-4 w-4" />
+              بازگشت به صفحه اصلی
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSignOut}
+              className="gap-2 md:hidden"
+            >
+              <LogOut className="h-4 w-4" />
+              خروج
+            </Button>
+          </div>
           <h1 className="text-3xl font-bold">پنل کاربری</h1>
           <p className="text-muted-foreground mt-2">مدیریت اطلاعات و سفارشات خود</p>
         </div>

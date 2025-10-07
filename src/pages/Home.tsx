@@ -135,7 +135,7 @@ export default function Home() {
               variant="outline" 
               size="sm" 
               onClick={handleSignOut}
-              className="gap-2"
+              className="gap-2 hidden md:flex"
             >
               <LogOut className="h-4 w-4" />
               خروج
