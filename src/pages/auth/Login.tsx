@@ -353,6 +353,7 @@ export default function Login() {
                     maxLength={5}
                     value={otpCode}
                     onChange={(value) => setOtpCode(value)}
+                    inputMode="numeric"
                   >
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
