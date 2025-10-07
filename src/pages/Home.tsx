@@ -195,7 +195,7 @@ export default function Home() {
               <div className="space-y-3">
                 <label className="text-sm font-medium text-foreground">نوع خدمات:</label>
                 <Select value={selectedService} onValueChange={setSelectedService}>
-                  <SelectTrigger className="w-full text-right">
+                  <SelectTrigger className="w-full text-right" aria-label="انتخاب نوع خدمات">
                     <SelectValue placeholder="انتخاب کنید..." />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border-2 z-[100]">
