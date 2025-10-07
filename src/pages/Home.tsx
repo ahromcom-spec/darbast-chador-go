@@ -177,9 +177,9 @@ export default function Home() {
 
       {/* Login/Register buttons - Only show if NOT logged in */}
       {!user && <div className="bg-card/95 backdrop-blur-md border-b relative z-10 shadow-sm fade-in">
-          <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 space-y-2">
-            {/* First Row - Login/Register buttons */}
-            <div className="flex items-center justify-end gap-2 sm:gap-3">
+          <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+            {/* All buttons in one row */}
+            <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
               {/* Tickets Button */}
               <Button variant="outline" size="sm" onClick={() => navigate("/tickets")} className="gap-1.5 sm:gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary text-xs sm:text-sm smooth-hover">
                 <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -187,19 +187,17 @@ export default function Home() {
                 <span className="sm:hidden">تیکت</span>
               </Button>
               
+              {/* Contractor Registration */}
+              <Button variant="outline" size="sm" onClick={() => navigate('/contractor/register')} className="gap-1.5 sm:gap-2 border-gold/30 hover:border-gold bg-gold/5 hover:bg-gold/10 text-gold-light text-xs sm:text-sm smooth-hover">
+                <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>ثبت نام پیمانکاران</span>
+              </Button>
+              
               <Button variant="outline" size="sm" onClick={() => navigate('/auth/register')} className="text-xs sm:text-sm smooth-hover">
                 ثبت نام
               </Button>
               <Button size="sm" onClick={() => navigate('/auth/login')} className="construction-gradient text-xs sm:text-sm">
                 ورود
-              </Button>
-            </div>
-
-            {/* Second Row - Contractor Registration */}
-            <div className="flex items-center justify-center">
-              <Button variant="outline" size="sm" onClick={() => navigate('/contractor/register')} className="gap-1.5 sm:gap-2 border-gold/30 hover:border-gold bg-gold/5 hover:bg-gold/10 text-gold-light text-xs sm:text-sm smooth-hover">
-                <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span>ثبت نام پیمانکاران</span>
               </Button>
             </div>
           </div>
