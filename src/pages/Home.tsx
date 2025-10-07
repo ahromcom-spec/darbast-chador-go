@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Wrench, Building2, Shield, Phone, ChevronDown, Smartphone, MessageSquare, Briefcase } from 'lucide-react';
+import { LogOut, Wrench, Building2, Shield, Phone, ChevronDown, Smartphone, MessageSquare, Briefcase, Download, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -15,6 +15,8 @@ import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 
 export default function Home() {
   const [selectedService, setSelectedService] = useState<string>('');
+  const [showInstallCard, setShowInstallCard] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminRole();
   const { profile } = useUserProfile();
@@ -69,6 +71,44 @@ export default function Home() {
     // Clear any stored service selection
     sessionStorage.removeItem('selected-service');
   }, []);
+
+  // Handle PWA install prompt
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallCard(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) {
+      toast({
+        title: 'راهنمای نصب',
+        description: 'برای نصب اپلیکیشن، از منوی مرورگر خود گزینه "نصب" یا "Add to Home Screen" را انتخاب کنید.',
+      });
+      return;
+    }
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      toast({
+        title: 'نصب موفق',
+        description: 'اپلیکیشن با موفقیت نصب شد و به صفحه اصلی گوشی شما اضافه گردید.',
+      });
+      setShowInstallCard(false);
+    }
+    
+    setDeferredPrompt(null);
+  };
 
   return (
     <>
@@ -301,6 +341,73 @@ export default function Home() {
             </Card>
           </article>
         </main>
+        
+        {/* PWA Install Card */}
+        {showInstallCard && (
+          <div className="relative z-10 container mx-auto px-4 sm:px-6 pb-6">
+            <Card className="max-w-2xl mx-auto shadow-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card/95 to-secondary/20 backdrop-blur-md fade-in">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-xl bg-primary/20 construction-pulse">
+                      <Smartphone className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                        نصب اپلیکیشن
+                        <Sparkles className="h-4 w-4 text-gold-light animate-pulse" />
+                      </CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        دسترسی سریع‌تر و راحت‌تر به خدمات
+                      </CardDescription>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    با نصب اپلیکیشن اهرم روی گوشی خود:
+                  </p>
+                  <ul className="text-xs sm:text-sm space-y-1.5 mr-4">
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      دسترسی آسان و سریع از صفحه اصلی گوشی
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      تجربه کاربری بهتر و روان‌تر
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      دریافت اعلان‌های مهم پروژه‌ها
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      استفاده آفلاین از برخی امکانات
+                    </li>
+                  </ul>
+                </div>
+                <div className="flex gap-2 sm:gap-3 pt-2">
+                  <Button
+                    onClick={handleInstallApp}
+                    className="flex-1 construction-gradient hover:opacity-90 gap-2 h-11 sm:h-12 text-sm sm:text-base smooth-hover"
+                  >
+                    <Download className="h-4 w-4" />
+                    نصب اپلیکیشن
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowInstallCard(false)}
+                    className="text-xs sm:text-sm"
+                  >
+                    بعداً
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         
         {/* Footer with SEO-rich content */}
         <footer className="relative z-10 bg-card/95 backdrop-blur-md border-t mt-auto" role="contentinfo">
