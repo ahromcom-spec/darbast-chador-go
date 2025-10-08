@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Package, MapPin, ArrowRight, Edit2, Save, X, LogOut } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { MainLayout } from '@/components/layouts/MainLayout';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { PageHeader } from '@/components/common/PageHeader';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { ProfileForm } from '@/components/profile/ProfileForm';
 import { StaffRegistrationButton } from '@/components/staff/StaffRegistrationButton';
 import { StaffRequestDialog } from '@/components/staff/StaffRequestDialog';
+import { StatusBadge } from '@/components/common/StatusBadge';
+import { EmptyState } from '@/components/common/EmptyState';
 
 interface UserOrder {
   id: string;
@@ -28,19 +30,18 @@ interface UserOrder {
 }
 
 export default function UserProfile() {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+  usePageTitle('پروفایل کاربری');
+  const { user } = useAuth();
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editMode, setEditMode] = useState(false);
   const [fullName, setFullName] = useState('');
-  const [originalName, setOriginalName] = useState('');
-  const [saving, setSaving] = useState(false);
   const [staffDialogOpen, setStaffDialogOpen] = useState(false);
 
   useEffect(() => {
-    fetchUserData();
-    fetchOrders();
+    if (user) {
+      fetchUserData();
+      fetchOrders();
+    }
   }, [user]);
 
   const fetchUserData = async () => {
@@ -54,10 +55,7 @@ export default function UserProfile() {
         .maybeSingle();
 
       if (error) throw error;
-
-      const name = data?.full_name || '';
-      setFullName(name);
-      setOriginalName(name);
+      setFullName(data?.full_name || '');
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -74,7 +72,6 @@ export default function UserProfile() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
       setOrders(data || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -84,286 +81,104 @@ export default function UserProfile() {
     }
   };
 
-  const handleSaveProfile = async () => {
-    if (!user) return;
-
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ full_name: fullName })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setOriginalName(fullName);
-      setEditMode(false);
-      toast.success('اطلاعات با موفقیت ذخیره شد');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error('خطا در ذخیره اطلاعات');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setFullName(originalName);
-    setEditMode(false);
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast.success('با موفقیت از سامانه خارج شدید');
-      navigate('/auth/login');
-    } catch (error) {
-      toast.error('خطا در خروج از سامانه');
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { label: 'در انتظار', variant: 'default' as const },
-      processing: { label: 'در حال انجام', variant: 'secondary' as const },
-      completed: { label: 'تکمیل شده', variant: 'outline' as const },
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+  const handleProfileUpdate = (newName: string) => {
+    setFullName(newName);
   };
 
   const getTypeLabel = (type: string) => {
     return type === 'with-materials' ? 'به همراه اجناس' : 'بدون اجناس';
   };
 
-  if (loading) {
+  if (loading || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" text="در حال بارگذاری..." />
+        </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="bg-gradient-to-br from-background via-secondary/30 to-background min-h-screen">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/')}
-              className="gap-2"
-            >
-              <ArrowRight className="h-4 w-4" />
-              بازگشت به صفحه اصلی
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSignOut}
-              className="gap-2 md:hidden"
-            >
-              <LogOut className="h-4 w-4" />
-              خروج
-            </Button>
-          </div>
-          <h1 className="text-3xl font-bold">پنل کاربری</h1>
-          <p className="text-muted-foreground mt-2">مدیریت اطلاعات و سفارشات خود</p>
-        </div>
+    <MainLayout>
+      <PageHeader title="پروفایل کاربری" />
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="profile">اطلاعات حساب</TabsTrigger>
+      <div className="space-y-6">
+        {/* Profile Header */}
+        <ProfileHeader user={user} fullName={fullName} />
+
+        {/* Tabs */}
+        <Tabs defaultValue="info" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="info">اطلاعات کاربری</TabsTrigger>
             <TabsTrigger value="orders">سفارشات من</TabsTrigger>
           </TabsList>
 
-          {/* Profile Tab */}
-          <TabsContent value="profile">
-            <Card className="shadow-elegant">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  اطلاعات حساب کاربری
-                </CardTitle>
-                <CardDescription>مشاهده و ویرایش اطلاعات شخصی</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">آدرس ایمیل</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={user?.email || ''}
-                      disabled
-                      className="bg-muted"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      ایمیل قابل تغییر نیست
-                    </p>
-                  </div>
+          {/* Profile Info Tab */}
+          <TabsContent value="info" className="space-y-4">
+            <ProfileForm
+              userId={user.id}
+              initialFullName={fullName}
+              onUpdate={handleProfileUpdate}
+            />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">نام و نام خانوادگی</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="fullName"
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        disabled={!editMode}
-                        className={!editMode ? 'bg-muted' : ''}
-                      />
-                      {!editMode ? (
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setEditMode(true)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <>
-                          <Button
-                            variant="default"
-                            size="icon"
-                            onClick={handleSaveProfile}
-                            disabled={saving}
-                          >
-                            <Save className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={handleCancelEdit}
-                            disabled={saving}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t space-y-4">
-                    <h3 className="font-medium mb-2">آمار کلی</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-secondary/50 rounded-lg">
-                        <p className="text-sm text-muted-foreground">کل سفارشات</p>
-                        <p className="text-2xl font-bold">{orders.length}</p>
-                      </div>
-                      <div className="p-4 bg-secondary/50 rounded-lg">
-                        <p className="text-sm text-muted-foreground">در انتظار</p>
-                        <p className="text-2xl font-bold">
-                          {orders.filter((o) => o.status === 'pending').length}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-4 border-t">
-                      <h3 className="font-medium mb-3">درخواست نقش سازمانی</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        اگر عضو پرسنل هستید، می‌توانید درخواست دسترسی به پنل مدیریت را ثبت کنید.
-                      </p>
-                      <StaffRegistrationButton onClick={() => setStaffDialogOpen(true)} />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Staff Registration */}
+            <div className="flex justify-center pt-4">
+              <StaffRegistrationButton onClick={() => setStaffDialogOpen(true)} />
+            </div>
           </TabsContent>
 
           {/* Orders Tab */}
           <TabsContent value="orders">
-            <Card className="shadow-elegant">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  سفارشات من
-                </CardTitle>
-                <CardDescription>لیست سفارشات ثبت شده</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {orders.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">هنوز سفارشی ثبت نکرده‌اید</p>
-                    <Button
-                      className="mt-4"
-                      onClick={() => navigate('/')}
-                    >
-                      ثبت سفارش جدید
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>شماره</TableHead>
-                          <TableHead>نوع</TableHead>
-                          <TableHead>ابعاد (م)</TableHead>
-                          <TableHead>حجم (م³)</TableHead>
-                          <TableHead>آدرس</TableHead>
-                          <TableHead>فاصله</TableHead>
-                          <TableHead>وضعیت</TableHead>
-                          <TableHead>تاریخ</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {orders.map((order, index) => (
-                          <TableRow key={order.id}>
-                            <TableCell className="font-medium">
-                              {orders.length - index}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{getTypeLabel(order.sub_type)}</Badge>
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {order.length} × {order.width} × {order.height}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {(order.length * order.width * order.height).toFixed(2)}
-                            </TableCell>
-                            <TableCell className="max-w-xs truncate">
-                              {order.location_address ? (
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3 text-muted-foreground" />
-                                  <span className="text-xs">{order.location_address}</span>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground text-xs">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {order.location_distance ? (
-                                <span className="text-sm">{order.location_distance} کم</span>
-                              ) : (
-                                <span className="text-muted-foreground text-xs">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(order.status)}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {new Date(order.created_at).toLocaleDateString('fa-IR')}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {orders.length === 0 ? (
+              <EmptyState
+                icon={Package}
+                title="سفارشی یافت نشد"
+                description="شما هنوز هیچ سفارشی ثبت نکرده‌اید"
+              />
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>تاریخ ثبت</TableHead>
+                      <TableHead>نوع خدمات</TableHead>
+                      <TableHead>ابعاد (متر)</TableHead>
+                      <TableHead>وضعیت</TableHead>
+                      <TableHead>آدرس</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell>
+                          {new Date(order.created_at).toLocaleDateString('fa-IR')}
+                        </TableCell>
+                        <TableCell>{getTypeLabel(order.sub_type)}</TableCell>
+                        <TableCell dir="ltr">
+                          {order.length} × {order.width} × {order.height}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={order.status} />
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {order.location_address || '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
-        
-        <StaffRequestDialog
-          open={staffDialogOpen}
-          onOpenChange={setStaffDialogOpen}
-        />
       </div>
-    </div>
+
+      {/* Staff Request Dialog */}
+      <StaffRequestDialog
+        open={staffDialogOpen}
+        onOpenChange={setStaffDialogOpen}
+      />
+    </MainLayout>
   );
 }
