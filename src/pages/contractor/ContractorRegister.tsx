@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight, Building2, Briefcase } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const serviceOptions = [
   { id: "scaffolding-metal", label: "داربست فلزی", type: "scaffolding", subType: "metal" },
@@ -18,6 +21,7 @@ const serviceOptions = [
 ];
 
 export default function ContractorRegister() {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     companyName: "",
     contactPerson: "",
@@ -29,8 +33,48 @@ export default function ContractorRegister() {
   });
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // بررسی لاگین و بارگذاری اطلاعات کاربر
+  useEffect(() => {
+    const checkAuthAndLoadProfile = async () => {
+      if (!user) {
+        toast({
+          title: "نیاز به ورود",
+          description: "برای ثبت‌نام پیمانکار، لطفاً ابتدا وارد حساب کاربری خود شوید",
+          variant: "destructive"
+        });
+        navigate("/auth/login");
+        return;
+      }
+
+      try {
+        // دریافت اطلاعات پروفایل کاربر
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('full_name, phone_number')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!error && profile) {
+          setFormData(prev => ({
+            ...prev,
+            contactPerson: profile.full_name || "",
+            phoneNumber: profile.phone_number || "",
+            email: user.email || "",
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    checkAuthAndLoadProfile();
+  }, [user, navigate, toast]);
 
   const handleServiceToggle = (serviceId: string) => {
     setSelectedServices(prev =>
@@ -128,6 +172,18 @@ export default function ContractorRegister() {
     }
   };
 
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // کاربر در useEffect هدایت می‌شود
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <Button
@@ -156,6 +212,14 @@ export default function ContractorRegister() {
         
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* اعلان اطلاعات بارگذاری شده */}
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                اطلاعات شخصی شما از پروفایل کاربری بارگذاری شده است. در صورت نیاز می‌توانید آنها را ویرایش کنید.
+              </AlertDescription>
+            </Alert>
+
             {/* Company Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
