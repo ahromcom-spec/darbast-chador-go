@@ -101,14 +101,15 @@ serve(async (req) => {
       );
     }
     
-    // Build Web OTP binding using request origin host for Android Chrome autofill
-    const originHeader = req.headers.get('Origin') || req.headers.get('origin') || '';
+    // Build Web OTP binding using request origin/referrer host for Android Chrome autofill
+    const originHeader = req.headers.get('Origin') || req.headers.get('origin') || req.headers.get('Referer') || req.headers.get('referer') || '';
     let host = 'ahrom.org';
     try {
       host = originHeader ? new URL(originHeader).host : host;
     } catch {}
-    const webOtpLine = `@${host} #${code}`;
-    const message = `<#> کد تایید شما: ${code} برای ورود به اهرم\n${webOtpLine}\nلغو11`;
+    const webOtpBinding = `@${host} #${code}`;
+    // Put the binding LAST line as recommended by Web OTP spec
+    const message = `<#> کد تایید شما: ${code} برای ورود به اهرم\nلغو11\n${webOtpBinding}`;
     const senderNumber = '90000319';
 
     try {
