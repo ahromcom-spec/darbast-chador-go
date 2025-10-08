@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { ProjectProgressBar } from "@/components/projects/ProjectProgressBar";
+import { AssignmentsList } from "@/components/projects/AssignmentsList";
 import {
   ArrowRight,
   MapPin,
@@ -38,6 +40,8 @@ export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+  const [stages, setStages] = useState<any[]>([]);
+  const [canManageProject, setCanManageProject] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -76,6 +80,26 @@ export default function ProjectDetail() {
 
       if (requestsError) throw requestsError;
       setServiceRequests(requestsData || []);
+
+      // Fetch project stages
+      const { data: stagesData, error: stagesError } = await supabase
+        .from("project_progress_stages")
+        .select("*")
+        .eq("project_id", id)
+        .order("order_index", { ascending: true });
+
+      if (stagesError) throw stagesError;
+      setStages(stagesData || []);
+
+      // Check if user can manage project (operations_manager or scaffold_supervisor)
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .in("role", ["operations_manager", "scaffold_supervisor", "admin", "general_manager"]);
+
+      setCanManageProject(!!rolesData && rolesData.length > 0);
+
     } catch (error: any) {
       toast({
         title: "خطا در بارگذاری پروژه",
@@ -216,6 +240,53 @@ export default function ProjectDetail() {
             </div>
           )}
         </div>
+
+        {/* Project Progress */}
+        {stages.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>پیشرفت پروژه</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProjectProgressBar
+                stages={stages}
+                canEdit={canManageProject}
+                onStageClick={async (stage) => {
+                  if (!canManageProject) return;
+                  
+                  try {
+                    const { error } = await supabase
+                      .from("project_progress_stages")
+                      .update({
+                        is_completed: !stage.is_completed,
+                        completed_at: !stage.is_completed ? new Date().toISOString() : null,
+                      })
+                      .eq("id", stage.id);
+
+                    if (error) throw error;
+
+                    toast({
+                      title: "موفق",
+                      description: `مرحله "${stage.stage_title}" بروزرسانی شد`,
+                    });
+
+                    // Refresh stages
+                    fetchProjectDetails();
+                  } catch (error: any) {
+                    toast({
+                      title: "خطا",
+                      description: error.message,
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Assignments */}
+        <AssignmentsList projectId={project.id} canAssign={canManageProject} />
       </div>
     </div>
   );
