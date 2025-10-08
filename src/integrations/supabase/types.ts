@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      addresses: {
+        Row: {
+          city: string
+          country: string
+          created_at: string
+          customer_id: string
+          geo_lat: number | null
+          geo_lng: number | null
+          id: string
+          line1: string
+          line2: string | null
+          normalized_hash: string | null
+          postal_code: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          city: string
+          country?: string
+          created_at?: string
+          customer_id: string
+          geo_lat?: number | null
+          geo_lng?: number | null
+          id?: string
+          line1: string
+          line2?: string | null
+          normalized_hash?: string | null
+          postal_code?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          country?: string
+          created_at?: string
+          customer_id?: string
+          geo_lat?: number | null
+          geo_lng?: number | null
+          id?: string
+          line1?: string
+          line2?: string | null
+          normalized_hash?: string | null
+          postal_code?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       assignments: {
         Row: {
           assigned_by_user_id: string
@@ -187,6 +235,130 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_items: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          qty_on_hand: number | null
+          qty_reserved: number | null
+          sku: string
+          tracking: Database["public"]["Enums"]["inventory_tracking"] | null
+          unit: string | null
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          qty_on_hand?: number | null
+          qty_reserved?: number | null
+          sku: string
+          tracking?: Database["public"]["Enums"]["inventory_tracking"] | null
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          qty_on_hand?: number | null
+          qty_reserved?: number | null
+          sku?: string
+          tracking?: Database["public"]["Enums"]["inventory_tracking"] | null
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      inventory_reservations: {
+        Row: {
+          created_at: string
+          id: string
+          qty: number
+          service_id: string
+          sku: string
+          status: Database["public"]["Enums"]["reservation_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          qty: number
+          service_id: string
+          sku: string
+          status?: Database["public"]["Enums"]["reservation_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          qty?: number
+          service_id?: string
+          sku?: string
+          status?: Database["public"]["Enums"]["reservation_status"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_reservations_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          created_at: string
+          currency: string | null
+          due_at: string | null
+          id: string
+          issued_at: string | null
+          number: string
+          service_id: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          due_at?: string | null
+          id?: string
+          issued_at?: string | null
+          number: string
+          service_id: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          total: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          due_at?: string | null
+          id?: string
+          issued_at?: string | null
+          number?: string
+          service_id?: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: true
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string
@@ -246,6 +418,47 @@ export type Database = {
           verified?: boolean | null
         }
         Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string
+          paid_at: string | null
+          provider: string | null
+          reference: string | null
+          status: Database["public"]["Enums"]["payment_status_enum"]
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          paid_at?: string | null
+          provider?: string | null
+          reference?: string | null
+          status?: Database["public"]["Enums"]["payment_status_enum"]
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          paid_at?: string | null
+          provider?: string | null
+          reference?: string | null
+          status?: Database["public"]["Enums"]["payment_status_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -418,6 +631,142 @@ export type Database = {
         }
         Relationships: []
       }
+      projects_v2: {
+        Row: {
+          address_id: string
+          archived_at: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          service_type_id: string
+          status: Database["public"]["Enums"]["project_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          address_id: string
+          archived_at?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          service_type_id: string
+          status?: Database["public"]["Enums"]["project_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          address_id?: string
+          archived_at?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          service_type_id?: string
+          status?: Database["public"]["Enums"]["project_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_v2_address_id_fkey"
+            columns: ["address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_v2_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_line_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          qty: number
+          service_id: string
+          sku: string
+          source: Database["public"]["Enums"]["service_line_source"] | null
+          tax_rate: number | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          qty: number
+          service_id: string
+          sku: string
+          source?: Database["public"]["Enums"]["service_line_source"] | null
+          tax_rate?: number | null
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          qty?: number
+          service_id?: string
+          sku?: string
+          source?: Database["public"]["Enums"]["service_line_source"] | null
+          tax_rate?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_line_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_media: {
+        Row: {
+          checksum: string | null
+          id: string
+          metadata: Json | null
+          service_id: string
+          type: Database["public"]["Enums"]["media_type"]
+          uploaded_at: string
+          uploaded_by: string | null
+          url: string
+        }
+        Insert: {
+          checksum?: string | null
+          id?: string
+          metadata?: Json | null
+          service_id: string
+          type?: Database["public"]["Enums"]["media_type"]
+          uploaded_at?: string
+          uploaded_by?: string | null
+          url: string
+        }
+        Update: {
+          checksum?: string | null
+          id?: string
+          metadata?: Json | null
+          service_id?: string
+          type?: Database["public"]["Enums"]["media_type"]
+          uploaded_at?: string
+          uploaded_by?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_media_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_requests: {
         Row: {
           created_at: string
@@ -480,6 +829,161 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_requests_v2: {
+        Row: {
+          address_id: string | null
+          created_at: string
+          customer_id: string
+          details: Json | null
+          id: string
+          merged_into_service_id: string | null
+          requested_for_at: string | null
+          service_type_id: string
+          source: Database["public"]["Enums"]["request_source"]
+        }
+        Insert: {
+          address_id?: string | null
+          created_at?: string
+          customer_id: string
+          details?: Json | null
+          id?: string
+          merged_into_service_id?: string | null
+          requested_for_at?: string | null
+          service_type_id: string
+          source?: Database["public"]["Enums"]["request_source"]
+        }
+        Update: {
+          address_id?: string | null
+          created_at?: string
+          customer_id?: string
+          details?: Json | null
+          id?: string
+          merged_into_service_id?: string | null
+          requested_for_at?: string | null
+          service_type_id?: string
+          source?: Database["public"]["Enums"]["request_source"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_requests_v2_address_id_fkey"
+            columns: ["address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_v2_merged_into_service_id_fkey"
+            columns: ["merged_into_service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_v2_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_types: {
+        Row: {
+          code: string
+          created_at: string
+          default_bom: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          requires_permit: boolean | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          default_bom?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          requires_permit?: boolean | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          default_bom?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          requires_permit?: boolean | null
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          completion_date: string | null
+          contractor_id: string | null
+          created_at: string
+          id: string
+          install_end_at: string | null
+          install_start_at: string | null
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          priority: number | null
+          project_id: string
+          status: Database["public"]["Enums"]["service_status"]
+          updated_at: string
+        }
+        Insert: {
+          completion_date?: string | null
+          contractor_id?: string | null
+          created_at?: string
+          id?: string
+          install_end_at?: string | null
+          install_start_at?: string | null
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          priority?: number | null
+          project_id: string
+          status?: Database["public"]["Enums"]["service_status"]
+          updated_at?: string
+        }
+        Update: {
+          completion_date?: string | null
+          contractor_id?: string | null
+          created_at?: string
+          id?: string
+          install_end_at?: string | null
+          install_start_at?: string | null
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          priority?: number | null
+          project_id?: string
+          status?: Database["public"]["Enums"]["service_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "public_contractors_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v2"
             referencedColumns: ["id"]
           },
         ]
@@ -703,6 +1207,50 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_tasks: {
+        Row: {
+          assignee_role: Database["public"]["Enums"]["app_role"] | null
+          created_at: string
+          due_at: string | null
+          id: string
+          payload: Json | null
+          service_id: string
+          status: Database["public"]["Enums"]["task_status"]
+          type: Database["public"]["Enums"]["task_type"]
+          updated_at: string
+        }
+        Insert: {
+          assignee_role?: Database["public"]["Enums"]["app_role"] | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          payload?: Json | null
+          service_id: string
+          status?: Database["public"]["Enums"]["task_status"]
+          type: Database["public"]["Enums"]["task_type"]
+          updated_at?: string
+        }
+        Update: {
+          assignee_role?: Database["public"]["Enums"]["app_role"] | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          payload?: Json | null
+          service_id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          type?: Database["public"]["Enums"]["task_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_tasks_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       public_contractors_directory: {
@@ -818,6 +1366,37 @@ export type Database = {
         | "general_manager"
         | "warehouse_manager"
         | "security_manager"
+      inventory_tracking: "NONE" | "SN" | "SN_LOT"
+      invoice_status: "DRAFT" | "SENT" | "PAID" | "VOID"
+      media_type:
+        | "INSTALLATION_PROOF"
+        | "INSPECTION"
+        | "INVOICE_ATTACHMENT"
+        | "OTHER"
+      notification_channel: "EMAIL" | "SMS" | "INAPP" | "WHATSAPP" | "WEBHOOK"
+      payment_status: "UNBILLED" | "INVOICED" | "PARTIAL" | "SETTLED"
+      payment_status_enum: "PENDING" | "PAID" | "FAILED" | "REFUNDED"
+      project_status: "ACTIVE" | "ARCHIVED"
+      request_source: "PORTAL" | "AGENT" | "API"
+      reservation_status: "RESERVED" | "PICKED" | "RETURNED"
+      service_line_source: "BOM" | "ADHOC"
+      service_status:
+        | "NEW"
+        | "SCHEDULED"
+        | "IN_PROGRESS"
+        | "DONE_PENDING_QC"
+        | "DONE"
+        | "CLOSED"
+        | "UNDER_REVIEW"
+        | "CANCELLED"
+      task_status: "OPEN" | "IN_PROGRESS" | "DONE" | "BLOCKED"
+      task_type:
+        | "execution_schedule"
+        | "contractor_assignment"
+        | "warehouse_pick"
+        | "procurement"
+        | "qc"
+        | "finance"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -958,6 +1537,40 @@ export const Constants = {
         "general_manager",
         "warehouse_manager",
         "security_manager",
+      ],
+      inventory_tracking: ["NONE", "SN", "SN_LOT"],
+      invoice_status: ["DRAFT", "SENT", "PAID", "VOID"],
+      media_type: [
+        "INSTALLATION_PROOF",
+        "INSPECTION",
+        "INVOICE_ATTACHMENT",
+        "OTHER",
+      ],
+      notification_channel: ["EMAIL", "SMS", "INAPP", "WHATSAPP", "WEBHOOK"],
+      payment_status: ["UNBILLED", "INVOICED", "PARTIAL", "SETTLED"],
+      payment_status_enum: ["PENDING", "PAID", "FAILED", "REFUNDED"],
+      project_status: ["ACTIVE", "ARCHIVED"],
+      request_source: ["PORTAL", "AGENT", "API"],
+      reservation_status: ["RESERVED", "PICKED", "RETURNED"],
+      service_line_source: ["BOM", "ADHOC"],
+      service_status: [
+        "NEW",
+        "SCHEDULED",
+        "IN_PROGRESS",
+        "DONE_PENDING_QC",
+        "DONE",
+        "CLOSED",
+        "UNDER_REVIEW",
+        "CANCELLED",
+      ],
+      task_status: ["OPEN", "IN_PROGRESS", "DONE", "BLOCKED"],
+      task_type: [
+        "execution_schedule",
+        "contractor_assignment",
+        "warehouse_pick",
+        "procurement",
+        "qc",
+        "finance",
       ],
     },
   },
