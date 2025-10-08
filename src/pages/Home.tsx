@@ -186,89 +186,38 @@ export default function Home() {
                   </section>
                 )}
 
-                {/* Quick Access Buttons */}
-                <div className="pt-4 space-y-3 border-t">
-                  <ResponsiveGrid cols={{ default: 1, sm: 2 }} gap={3}>
-                    <QuickActionCard
-                      title="تیکت‌های پشتیبانی"
-                      description="دریافت پشتیبانی و ثبت درخواست"
-                      icon={MessageSquare}
-                      onClick={goToTickets}
-                      variant="default"
-                    />
-                    <QuickActionCard
-                      title="ثبت‌نام پیمانکاران"
-                      description="عضویت به عنوان پیمانکار"
-                      icon={Briefcase}
-                      onClick={() => navigate('/contractor/register')}
-                      variant="secondary"
-                    />
-                  </ResponsiveGrid>
-                  
-                  <div className="grid grid-cols-2 gap-2 pt-2">
-                    <Button 
-                      variant="outline" 
-                      className="w-full" 
-                      onClick={goToLogin}
-                    >
-                      ورود
-                    </Button>
-                    <Button 
-                      className="w-full construction-gradient" 
-                      onClick={goToRegister}
-                    >
-                      ثبت‌نام
-                    </Button>
-                  </div>
-                </div>
+                {/* No Quick Access Buttons - moved to user profile */}
               </CardContent>
             </Card>
           </article>
         </main>
         
-        {/* PWA Install Card */}
-        {showInstallCard && (
-          <div className="relative z-10 container mx-auto px-4 sm:px-6 pb-6">
-            <Card className="max-w-2xl mx-auto shadow-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card/95 to-secondary/20 backdrop-blur-md fade-in">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-primary/20 construction-pulse">
-                      <Smartphone className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-                        نصب اپلیکیشن
-                        <Sparkles className="h-4 w-4 text-gold-light animate-pulse" />
-                      </CardTitle>
-                      <CardDescription className="text-xs sm:text-sm">
-                        دسترسی سریع‌تر و راحت‌تر به خدمات
-                      </CardDescription>
-                    </div>
+        {/* PWA Install Card - Always visible */}
+        <div className="relative z-10 container mx-auto px-4 sm:px-6 pb-4">
+          <Card className="max-w-2xl mx-auto shadow-xl border-2 border-primary/20 bg-card/90 backdrop-blur-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Smartphone className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-sm">نصب اپلیکیشن اهرم</h3>
+                    <p className="text-xs text-muted-foreground">دسترسی سریع‌تر به خدمات</p>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2 sm:gap-3">
-                  <Button 
-                    onClick={handleInstallApp} 
-                    className="flex-1 construction-gradient hover:opacity-90 gap-2 h-11 sm:h-12 text-sm sm:text-base smooth-hover"
-                  >
-                    <Download className="h-4 w-4" />
-                    نصب اپلیکیشن
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowInstallCard(false)} 
-                    className="text-xs sm:text-sm"
-                  >
-                    بعداً
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                <Button 
+                  onClick={handleInstallApp} 
+                  size="sm"
+                  className="construction-gradient"
+                >
+                  <Download className="h-4 w-4 ml-1" />
+                  نصب
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Footer */}
         <footer className="relative z-10 border-t bg-card/80 backdrop-blur-md py-4 px-4">

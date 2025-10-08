@@ -113,19 +113,12 @@ export default function UserProfile() {
 
         {/* Tabs */}
         <Tabs defaultValue="info" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="info">اطلاعات کاربری</TabsTrigger>
             <TabsTrigger value="orders">سفارشات من</TabsTrigger>
-            <TabsTrigger value="support">
-              <MessageSquare className="h-4 w-4 ml-2" />
-              پشتیبانی
+            <TabsTrigger value="actions">
+              دسترسی سریع
             </TabsTrigger>
-            {!isContractor && (
-              <TabsTrigger value="contractor">
-                <Briefcase className="h-4 w-4 ml-2" />
-                همکاری
-              </TabsTrigger>
-            )}
           </TabsList>
 
           {/* Profile Info Tab */}
@@ -186,20 +179,31 @@ export default function UserProfile() {
             )}
           </TabsContent>
 
-          {/* Support Tab */}
-          <TabsContent value="support" className="space-y-4">
-            <TicketForm userId={user.id} />
-          </TabsContent>
+          {/* Quick Actions Tab */}
+          <TabsContent value="actions" className="space-y-6">
+            {/* Support Ticket Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                ثبت تیکت پشتیبانی
+              </h3>
+              <TicketForm userId={user.id} />
+            </div>
 
-          {/* Contractor Registration Tab */}
-          {!isContractor && (
-            <TabsContent value="contractor" className="space-y-4">
-              <ContractorForm 
-                userId={user.id} 
-                userEmail={user.email || ''} 
-              />
-            </TabsContent>
-          )}
+            {/* Contractor Registration Section */}
+            {!isContractor && (
+              <div className="space-y-4 pt-6 border-t">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Briefcase className="h-5 w-5 text-primary" />
+                  ثبت‌نام پیمانکاران
+                </h3>
+                <ContractorForm 
+                  userId={user.id} 
+                  userEmail={user.email || ''} 
+                />
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
 
