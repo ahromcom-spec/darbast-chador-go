@@ -8,6 +8,11 @@ interface StaffProfile {
   status: 'pending' | 'approved' | 'rejected';
   rejection_reason?: string;
   created_at: string;
+  province?: string;
+  staff_category?: string;
+  staff_subcategory?: string;
+  staff_position?: string;
+  description?: string;
 }
 
 export const useStaffProfile = () => {
@@ -44,7 +49,16 @@ export const useStaffProfile = () => {
     }
   };
 
-  const requestRole = async (role: string) => {
+  const requestRole = async (
+    role: string,
+    additionalData?: {
+      province?: string;
+      staff_category?: string;
+      staff_subcategory?: string;
+      staff_position?: string;
+      description?: string;
+    }
+  ) => {
     if (!user) return { error: 'کاربر وارد نشده است' };
 
     try {
@@ -53,7 +67,8 @@ export const useStaffProfile = () => {
         .insert([{
           user_id: user.id,
           requested_role: role as any,
-          status: 'pending'
+          status: 'pending',
+          ...additionalData
         }])
         .select()
         .single();

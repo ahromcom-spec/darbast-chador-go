@@ -14,6 +14,15 @@ import { useStaffProfile } from '@/hooks/useStaffProfile';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface StaffRequestDialogProps {
   open: boolean;
@@ -32,16 +41,66 @@ const ROLE_LABELS: Record<string, string> = {
   security_manager: 'مدیر حراست',
 };
 
+// تعریف ساختار لیست‌های کشویی پرسنل
+type PersonnelStructure = {
+  [category: string]: {
+    [subcategory: string]: string[];
+  };
+};
+
+const PERSONNEL_STRUCTURE: PersonnelStructure = {
+  'پرسنل اهرم': {
+    'کارمندان': ['مدیر اجرایی', 'حسابدار', 'مدیر فروش', 'حراست', 'پشتیبانی', 'مدیریت', 'انبار دار'],
+    'نیروها': [],
+  },
+  'خدمات داربست': {
+    'نیروی داربست فلزی': [],
+    'سرپرست داربست': [],
+  },
+};
+
+const PROVINCES = ['کل ایران', 'استان قم'];
+
 export const StaffRequestDialog = ({ open, onOpenChange }: StaffRequestDialogProps) => {
   const { allowedRole } = useStaffWhitelist();
   const { staffProfile, requestRole, refetch } = useStaffProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [province, setProvince] = useState('');
+  const [staffCategory, setStaffCategory] = useState('');
+  const [staffSubcategory, setStaffSubcategory] = useState('');
+  const [staffPosition, setStaffPosition] = useState('');
+  const [description, setDescription] = useState('');
 
   const handleSubmit = async () => {
     if (!allowedRole) return;
 
+    // اعتبارسنجی فیلدهای اجباری
+    if (!province) {
+      toast({
+        title: 'خطا',
+        description: 'لطفاً محل خدمات را انتخاب کنید',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!staffCategory || !staffSubcategory) {
+      toast({
+        title: 'خطا',
+        description: 'لطفاً نوع پرسنل را کامل انتخاب کنید',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
-    const { error } = await requestRole(allowedRole);
+    const { error } = await requestRole(allowedRole, {
+      province,
+      staff_category: staffCategory,
+      staff_subcategory: staffSubcategory,
+      staff_position: staffPosition || undefined,
+      description: description || undefined,
+    });
 
     if (error) {
       toast({
@@ -108,14 +167,114 @@ export const StaffRequestDialog = ({ open, onOpenChange }: StaffRequestDialogPro
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          شمارهٔ موبایل شما در لیست پرسنل مجاز ثبت شده است. می‌توانید درخواست نقش سازمانی خود را ثبت کنید.
+          شمارهٔ موبایل شما در لیست پرسنل مجاز ثبت شده است. لطفاً اطلاعات زیر را تکمیل کنید.
         </p>
+        
         <div className="rounded-lg border p-4 bg-muted/50">
           <p className="text-sm font-medium mb-2">نقش مجاز شما:</p>
           <Badge variant="secondary" className="text-base">
             {allowedRole && ROLE_LABELS[allowedRole]}
           </Badge>
         </div>
+
+        {/* محل خدمات */}
+        <div className="space-y-2">
+          <Label htmlFor="province">محل خدمات *</Label>
+          <Select value={province} onValueChange={setProvince}>
+            <SelectTrigger id="province">
+              <SelectValue placeholder="انتخاب استان" />
+            </SelectTrigger>
+            <SelectContent>
+              {PROVINCES.map((prov) => (
+                <SelectItem key={prov} value={prov}>
+                  {prov}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* نوع پرسنل - سطح اول */}
+        <div className="space-y-2">
+          <Label htmlFor="category">نوع پرسنل *</Label>
+          <Select 
+            value={staffCategory} 
+            onValueChange={(value) => {
+              setStaffCategory(value);
+              setStaffSubcategory('');
+              setStaffPosition('');
+            }}
+          >
+            <SelectTrigger id="category">
+              <SelectValue placeholder="انتخاب دسته" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.keys(PERSONNEL_STRUCTURE).map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* نوع پرسنل - سطح دوم */}
+        {staffCategory && (
+          <div className="space-y-2">
+            <Label htmlFor="subcategory">زیرگروه *</Label>
+            <Select 
+              value={staffSubcategory} 
+              onValueChange={(value) => {
+                setStaffSubcategory(value);
+                setStaffPosition('');
+              }}
+            >
+              <SelectTrigger id="subcategory">
+                <SelectValue placeholder="انتخاب زیرگروه" />
+              </SelectTrigger>
+              <SelectContent>
+                {staffCategory && Object.keys(PERSONNEL_STRUCTURE[staffCategory] || {}).map((subcategory) => (
+                  <SelectItem key={subcategory} value={subcategory}>
+                    {subcategory}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* نوع پرسنل - سطح سوم (فقط برای کارمندان) */}
+        {staffCategory && staffSubcategory && 
+         PERSONNEL_STRUCTURE[staffCategory]?.[staffSubcategory]?.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="position">سمت *</Label>
+            <Select value={staffPosition} onValueChange={setStaffPosition}>
+              <SelectTrigger id="position">
+                <SelectValue placeholder="انتخاب سمت" />
+              </SelectTrigger>
+              <SelectContent>
+                {PERSONNEL_STRUCTURE[staffCategory][staffSubcategory].map((position: string) => (
+                  <SelectItem key={position} value={position}>
+                    {position}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* توضیحات */}
+        <div className="space-y-2">
+          <Label htmlFor="description">توضیحات</Label>
+          <Textarea
+            id="description"
+            placeholder="توضیحات تکمیلی خود را وارد کنید..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+          />
+        </div>
+
         <Alert>
           <AlertDescription>
             پس از ثبت درخواست، مدیریت کل آن را بررسی و تأیید خواهد کرد. پس از تأیید، به امکانات مربوط به نقش خود دسترسی خواهید داشت.

@@ -489,9 +489,14 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string | null
+          description: string | null
           id: string
+          province: string | null
           rejection_reason: string | null
           requested_role: Database["public"]["Enums"]["app_role"]
+          staff_category: string | null
+          staff_position: string | null
+          staff_subcategory: string | null
           status: string
           updated_at: string | null
           user_id: string
@@ -500,9 +505,14 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
+          province?: string | null
           rejection_reason?: string | null
           requested_role: Database["public"]["Enums"]["app_role"]
+          staff_category?: string | null
+          staff_position?: string | null
+          staff_subcategory?: string | null
           status?: string
           updated_at?: string | null
           user_id: string
@@ -511,9 +521,14 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
+          province?: string | null
           rejection_reason?: string | null
           requested_role?: Database["public"]["Enums"]["app_role"]
+          staff_category?: string | null
+          staff_position?: string | null
+          staff_subcategory?: string | null
           status?: string
           updated_at?: string | null
           user_id?: string
