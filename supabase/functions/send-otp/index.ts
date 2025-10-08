@@ -108,8 +108,8 @@ serve(async (req) => {
       host = originHeader ? new URL(originHeader).host : host;
     } catch {}
     const webOtpBinding = `@${host} #${code}`;
-    // Put the binding LAST line as recommended by Web OTP spec
-    const message = `کد تایید: ${code}\nاهرم\nلغو11\n${webOtpBinding}`;
+    // Minimal content to avoid operator filtration
+    const message = `کد تایید: ${code}`;
     const senderNumber = '90000319';
 
     try {
