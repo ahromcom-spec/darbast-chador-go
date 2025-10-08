@@ -2,7 +2,7 @@
   "name": "اهرم",
   "short_name": "اهرم",
   "description": "خدمات ساختمانی اهرم",
-  "start_url": "/?source=pwa",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
