@@ -11,13 +11,13 @@
   "lang": "fa",
   "icons": [
     {
-      "src": "/icon-512-large.png",
+      "src": "/icon-512-white-bg.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512-maskable.png",
+      "src": "/icon-512-maskable-white.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
