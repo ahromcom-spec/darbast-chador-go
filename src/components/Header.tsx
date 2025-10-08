@@ -174,8 +174,19 @@ const Header = () => {
               </h1>
             </div>
             
-            {/* Notification Bell - Left side (RTL) */}
-            <div className="flex items-center">
+            {/* Primary Phone & Notification Bell - Left side (RTL) */}
+            <div className="flex items-center gap-4">
+              <a 
+                href="tel:90000319" 
+                className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all duration-300 group border border-primary/20 hover:border-primary/40"
+                title="تماس فوری"
+              >
+                <Phone className="h-4 w-4 group-hover:animate-pulse" />
+                <div className="text-right">
+                  <div className="text-xs text-muted-foreground">تلفن خدماتی اهرم</div>
+                  <div className="font-bold">90000319</div>
+                </div>
+              </a>
               {user && <NotificationBell />}
             </div>
           </div>
@@ -218,19 +229,6 @@ const Header = () => {
                 </Button>
               </>
             )}
-
-            {/* Primary Phone */}
-            <a 
-              href="tel:90000319" 
-              className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all duration-300 group border border-primary/20 hover:border-primary/40"
-              title="تماس فوری"
-            >
-              <Phone className="h-4 w-4 group-hover:animate-pulse" />
-              <div className="text-right">
-                <div className="text-xs text-muted-foreground">تلفن خدماتی اهرم</div>
-                <div className="font-bold">90000319</div>
-              </div>
-            </a>
 
             {/* Contact Us Dropdown */}
             <DropdownMenu>
