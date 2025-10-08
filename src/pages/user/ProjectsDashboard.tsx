@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { MainLayout } from "@/components/layouts/MainLayout";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import {
   FolderOpen,
   MapPin,
@@ -35,6 +37,7 @@ interface ServiceRequest {
 }
 
 export default function ProjectsDashboard() {
+  usePageTitle('پروژه‌های من');
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -84,14 +87,14 @@ export default function ProjectsDashboard() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <MainLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-3">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             <p className="text-muted-foreground">در حال بارگذاری...</p>
           </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
@@ -99,7 +102,7 @@ export default function ProjectsDashboard() {
   const completedProjects = projects.filter(p => p.status === 'completed');
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <MainLayout>
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -108,10 +111,6 @@ export default function ProjectsDashboard() {
               مدیریت پروژه‌ها بر اساس آدرس و نوع خدمات
             </p>
           </div>
-          <Button onClick={() => navigate("/")} variant="outline">
-            <ArrowRight className="h-4 w-4 ml-2" />
-            بازگشت
-          </Button>
         </div>
 
         {/* Statistics */}
@@ -121,7 +120,7 @@ export default function ProjectsDashboard() {
               <CardTitle className="text-sm font-medium">پروژه‌های فعال</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{activeProjects.length}</div>
+              <div className="text-2xl font-bold text-primary">{activeProjects.length}</div>
             </CardContent>
           </Card>
           
@@ -200,6 +199,6 @@ export default function ProjectsDashboard() {
           ))}
         </div>
       )}
-    </div>
+    </MainLayout>
   );
 }
