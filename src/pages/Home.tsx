@@ -8,14 +8,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useNavigation } from '@/hooks/useNavigation';
-import { QuickActionCard } from '@/components/common/QuickActionCard';
-import { ResponsiveGrid } from '@/components/common/ResponsiveGrid';
+//
+import usePWAInstall from '@/hooks/usePWAInstall';
 
 export default function Home() {
   usePageTitle('صفحه اصلی');
   const [selectedService, setSelectedService] = useState<string>('');
-  const [showInstallCard, setShowInstallCard] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
   const { goToScaffoldingForm, goToLogin, goToRegister, goToTickets, navigate } = useNavigation();
 
@@ -39,37 +38,35 @@ export default function Home() {
     sessionStorage.removeItem('selected-service');
   }, []);
 
-  // Handle PWA install prompt
-  useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallCard(true);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-    };
-  }, []);
 
   const handleInstallApp = async () => {
-    if (!deferredPrompt) {
-      toast({
-        title: 'راهنمای نصب',
-        description: 'برای نصب اپلیکیشن، از منوی مرورگر خود گزینه "نصب" یا "Add to Home Screen" را انتخاب کنید.'
-      });
+    if (canInstall) {
+      const { outcome } = await promptInstall();
+      if (outcome === 'accepted') {
+        toast({
+          title: 'نصب موفق',
+          description: 'اپلیکیشن با موفقیت نصب شد و به صفحه اصلی گوشی شما اضافه گردید.'
+        });
+      } else {
+        toast({
+          title: 'نصب لغو شد',
+          description: 'فرآیند نصب توسط کاربر لغو شد'
+        });
+      }
       return;
     }
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
+
+    if (isIOS) {
       toast({
-        title: 'نصب موفق',
-        description: 'اپلیکیشن با موفقیت نصب شد و به صفحه اصلی گوشی شما اضافه گردید.'
+        title: 'نصب روی iOS',
+        description: 'در Safari روی دکمه اشتراک‌گذاری بزنید و گزینه "Add to Home Screen" را انتخاب کنید.'
       });
-      setShowInstallCard(false);
+    } else {
+      toast({
+        title: 'راهنمای نصب',
+        description: 'از منوی مرورگر گزینه "Install" یا "Add to Home Screen" را انتخاب کنید.'
+      });
     }
-    setDeferredPrompt(null);
   };
 
   return (
