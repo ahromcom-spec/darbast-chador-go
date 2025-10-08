@@ -1,4 +1,4 @@
-import { Phone, Smartphone, Building, ChevronDown, MessageSquare } from "lucide-react";
+import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
@@ -6,12 +6,31 @@ import { useAuth } from "@/contexts/AuthContext";
 import ahromLogo from "@/assets/ahrom-logo.png";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useGeneralManagerRole } from "@/hooks/useGeneralManagerRole";
+import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
   const navigate = useNavigate();
   const auth = useAuth();
   const user = auth?.user || null;
   const { isGeneralManager } = useGeneralManagerRole();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await auth?.signOut();
+      toast({
+        title: 'خروج موفق',
+        description: 'با موفقیت از سامانه خارج شدید'
+      });
+      navigate('/');
+    } catch (error) {
+      toast({
+        title: 'خطا در خروج',
+        description: 'مشکلی در خروج از سامانه پیش آمد',
+        variant: 'destructive'
+      });
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
@@ -33,27 +52,44 @@ const Header = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            {user && (
+            {user ? (
               <>
                 <NotificationBell />
-                {isGeneralManager && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate("/general-manager")}
-                    className="gap-2 border-purple-500/30 hover:border-purple-500 bg-purple-500/5 hover:bg-purple-500/10 text-purple-600"
-                  >
-                    <span className="hidden sm:inline">پنل مدیریت</span>
-                  </Button>
-                )}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate("/tickets")}
+                  onClick={() => navigate("/profile")}
                   className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
                 >
-                  <MessageSquare className="h-4 w-4" />
-                  <span className="hidden sm:inline">تیکت‌ها</span>
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">پروفایل</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">خروج</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/auth/login")}
+                  className="gap-2"
+                >
+                  <span>ورود</span>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => navigate("/auth/register")}
+                  className="gap-2"
+                >
+                  <span>ثبت‌نام</span>
                 </Button>
               </>
             )}
@@ -138,25 +174,40 @@ const Header = () => {
           
           {/* Contact & Tickets Section - Right side */}
           <div className="flex items-center gap-4">
-            {user && (
+            {user ? (
               <>
                 <NotificationBell />
-                {isGeneralManager && (
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate("/general-manager")}
-                    className="gap-2 border-purple-500/30 hover:border-purple-500 bg-purple-500/5 hover:bg-purple-500/10 text-purple-600 font-medium"
-                  >
-                    <span>پنل مدیریت کل</span>
-                  </Button>
-                )}
                 <Button
                   variant="outline"
-                  onClick={() => navigate("/tickets")}
+                  onClick={() => navigate("/profile")}
                   className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
                 >
-                  <MessageSquare className="h-4 w-4" />
-                  <span>تیکت‌های پشتیبانی</span>
+                  <User className="h-4 w-4" />
+                  <span>پروفایل کاربری</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSignOut}
+                  className="gap-2 font-medium"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>خروج از حساب</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/auth/login")}
+                  className="gap-2 font-medium"
+                >
+                  <span>ورود به حساب</span>
+                </Button>
+                <Button
+                  onClick={() => navigate("/auth/register")}
+                  className="gap-2 font-medium"
+                >
+                  <span>ثبت‌نام</span>
                 </Button>
               </>
             )}
