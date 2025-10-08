@@ -284,7 +284,7 @@ export const StaffRequestDialog = ({ open, onOpenChange }: StaffRequestDialogPro
     );
   };
 
-  const canSubmit = allowedRole && !staffProfile;
+  const canSubmit = allowedRole && (!staffProfile || staffProfile.status === 'rejected');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
