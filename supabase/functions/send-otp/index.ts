@@ -109,7 +109,7 @@ serve(async (req) => {
     } catch {}
     const webOtpBinding = `@${host} #${code}`;
     // Put the binding LAST line as recommended by Web OTP spec
-    const message = `<#> کد تایید شما: ${code} برای ورود به اهرم\nلغو11\n${webOtpBinding}`;
+    const message = `کد تایید: ${code}\nاهرم\nلغو11\n${webOtpBinding}`;
     const senderNumber = '90000319';
 
     try {
