@@ -12,19 +12,19 @@
   "lang": "fa",
   "icons": [
     {
-      "src": "/icons/icon-192-white.png",
+      "src": "/ahrom-app-icon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512-white-bg.png",
+      "src": "/ahrom-app-icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512-maskable-white.png",
+      "src": "/ahrom-app-icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
