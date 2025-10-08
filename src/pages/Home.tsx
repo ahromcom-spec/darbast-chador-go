@@ -299,30 +299,7 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    با نصب اپلیکیشن اهرم روی گوشی خود:
-                  </p>
-                  <ul className="text-xs sm:text-sm space-y-1.5 mr-4">
-                    <li className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      دسترسی آسان و سریع از صفحه اصلی گوشی
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      تجربه کاربری بهتر و روان‌تر
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      دریافت اعلان‌های مهم پروژه‌ها
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      استفاده آفلاین از برخی امکانات
-                    </li>
-                  </ul>
-                </div>
-                <div className="flex gap-2 sm:gap-3 pt-2">
+                <div className="flex gap-2 sm:gap-3">
                   <Button onClick={handleInstallApp} className="flex-1 construction-gradient hover:opacity-90 gap-2 h-11 sm:h-12 text-sm sm:text-base smooth-hover">
                     <Download className="h-4 w-4" />
                     نصب اپلیکیشن
