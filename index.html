@@ -197,6 +197,23 @@
 
   <body dir="rtl">
     <div id="root"></div>
+    <script>
+      // Early capture of PWA install events before React mounts
+      (function () {
+        try {
+          window.__deferredPrompt = window.__deferredPrompt || null;
+          window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            window.__deferredPrompt = e;
+          });
+          window.addEventListener('appinstalled', function () {
+            window.__deferredPrompt = null;
+          });
+        } catch (err) {
+          // no-op
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     
     <!-- Service Worker Registration -->
