@@ -12,6 +12,7 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import { StaffRequests } from "@/pages/admin/StaffRequests";
 import { WhitelistManagement } from "@/pages/admin/WhitelistManagement";
+import { GeneralManagerDashboard } from "@/pages/admin/GeneralManagerDashboard";
 import UserProfile from "@/pages/user/UserProfile";
 import ProjectsDashboard from "@/pages/user/ProjectsDashboard";
 import ProjectDetail from "@/pages/user/ProjectDetail";
@@ -81,6 +82,11 @@ const App = () => (
                 <Route path="staff-requests" element={<StaffRequests />} />
                 <Route path="whitelist" element={<WhitelistManagement />} />
               </Route>
+              <Route path="/general-manager" element={
+                <ProtectedRoute>
+                  <GeneralManagerDashboard />
+                </ProtectedRoute>
+              } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -5,11 +5,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ahromLogo from "@/assets/ahrom-logo.png";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useGeneralManagerRole } from "@/hooks/useGeneralManagerRole";
 
 const Header = () => {
   const navigate = useNavigate();
   const auth = useAuth();
   const user = auth?.user || null;
+  const { isGeneralManager } = useGeneralManagerRole();
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
@@ -34,6 +36,16 @@ const Header = () => {
             {user && (
               <>
                 <NotificationBell />
+                {isGeneralManager && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/general-manager")}
+                    className="gap-2 border-purple-500/30 hover:border-purple-500 bg-purple-500/5 hover:bg-purple-500/10 text-purple-600"
+                  >
+                    <span className="hidden sm:inline">پنل مدیریت</span>
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -129,6 +141,15 @@ const Header = () => {
             {user && (
               <>
                 <NotificationBell />
+                {isGeneralManager && (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/general-manager")}
+                    className="gap-2 border-purple-500/30 hover:border-purple-500 bg-purple-500/5 hover:bg-purple-500/10 text-purple-600 font-medium"
+                  >
+                    <span>پنل مدیریت کل</span>
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => navigate("/tickets")}
