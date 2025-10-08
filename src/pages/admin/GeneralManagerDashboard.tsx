@@ -149,22 +149,29 @@ export const GeneralManagerDashboard = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm text-muted-foreground">آدرس ایمیل</label>
-            <div className="mt-1 p-3 bg-muted rounded-md font-medium direction-ltr text-right">
-              {profile?.phone_number ? `phone-${profile.phone_number}@ahrom.exam` : user?.email}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">ایمیل قابل تغییر نیست</p>
-          </div>
-
-          <div>
-            <label className="text-sm text-muted-foreground">نام و نام خانوادگی</label>
-            <div className="mt-1 p-3 bg-muted rounded-md font-medium flex items-center justify-between">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">نام و نام خانوادگی</label>
+            <div className="p-3 bg-muted rounded-md font-medium flex items-center justify-between">
               <span>{profile?.full_name || 'نام ثبت نشده'}</span>
               <Button variant="ghost" size="sm">
                 <span className="text-lg">✏️</span>
               </Button>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">شماره موبایل</label>
+            <div className="p-3 bg-muted rounded-md font-medium direction-ltr text-right">
+              {profile?.phone_number || 'ثبت نشده'}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">آدرس ایمیل</label>
+            <div className="p-3 bg-muted rounded-md text-sm direction-ltr text-right break-all">
+              {user?.email || 'ثبت نشده'}
+            </div>
+            <p className="text-xs text-muted-foreground">ایمیل قابل تغییر نیست</p>
           </div>
         </CardContent>
       </Card>
