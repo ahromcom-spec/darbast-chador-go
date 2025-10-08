@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string | null
+          entity: string
+          entity_id: string | null
+          id: string
+          meta: Json | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          entity: string
+          entity_id?: string | null
+          id?: string
+          meta?: Json | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          meta?: Json | null
+        }
+        Relationships: []
+      }
       contractor_services: {
         Row: {
           contractor_id: string
@@ -97,6 +127,39 @@ export type Database = {
           is_approved?: boolean
           phone_number?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          link: string | null
+          read_at: string | null
+          title: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string | null
           user_id?: string
         }
         Relationships: []
@@ -314,6 +377,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      staff_profiles: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          rejection_reason: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          rejection_reason?: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          rejection_reason?: string | null
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      staff_whitelist: {
+        Row: {
+          allowed_role: Database["public"]["Enums"]["app_role"]
+          created_at: string | null
+          created_by: string | null
+          id: string
+          note: string | null
+          phone: string
+        }
+        Insert: {
+          allowed_role: Database["public"]["Enums"]["app_role"]
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          phone: string
+        }
+        Update: {
+          allowed_role?: Database["public"]["Enums"]["app_role"]
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          phone?: string
+        }
+        Relationships: []
       }
       ticket_attachments: {
         Row: {
