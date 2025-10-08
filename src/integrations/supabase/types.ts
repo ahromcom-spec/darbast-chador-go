@@ -716,12 +716,41 @@ export type Database = {
           is_approved: boolean | null
           services: Json | null
         }
+        Insert: {
+          address?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          experience_years?: number | null
+          id?: string | null
+          is_approved?: boolean | null
+          services?: never
+        }
+        Update: {
+          address?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          experience_years?: number | null
+          id?: string | null
+          is_approved?: boolean | null
+          services?: never
+        }
         Relationships: []
       }
     }
     Functions: {
       check_otp_rate_limit: {
         Args: { _phone_number: string }
+        Returns: boolean
+      }
+      check_rate_limit: {
+        Args: {
+          _action: string
+          _limit: number
+          _user_id: string
+          _window: unknown
+        }
         Returns: boolean
       }
       check_staff_whitelist: {
@@ -734,6 +763,14 @@ export type Database = {
       cleanup_expired_otps: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_contractor_contact_info: {
+        Args: { _contractor_id: string }
+        Returns: {
+          contact_person: string
+          email: string
+          phone_number: string
+        }[]
       }
       has_role: {
         Args: {
