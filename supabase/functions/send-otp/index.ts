@@ -137,16 +137,12 @@ serve(async (req) => {
       const responseText = await smsResponse.text();
       console.log('Parsgreen Response:', responseText);
 
-      // Check for errors in response (Parsgreen returns a numeric ID on success)
-      const textLower = responseText.toLowerCase().trim();
-      const isNumericId = /^[0-9]+$/.test(textLower);
-      if (
-        !smsResponse.ok ||
-        textLower.includes('error') ||
-        textLower.includes('request not valid') ||
-        textLower.includes('خطا') ||
-        !isNumericId
-      ) {
+      // پارس‌گرین پاسخ را به فرمت "شماره;وضعیت;شناسه" برمی‌گرداند
+      // وضعیت=1 یعنی موفق، وضعیت=0 یعنی خطا
+      const parts = responseText.split(';');
+      const isSuccess = parts.length === 3 && parts[1] === '1';
+      
+      if (!smsResponse.ok || !isSuccess) {
         console.error('SMS send failed:', responseText);
         return new Response(
           JSON.stringify({ error: 'خطا در ارسال پیامک - لطفا تنظیمات پنل را بررسی کنید' }),
