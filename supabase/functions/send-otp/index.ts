@@ -113,16 +113,20 @@ serve(async (req) => {
     const senderNumber = Deno.env.get('PARSGREEN_SENDER') || '90000319';
 
     try {
-      // Use Parsgreen UrlService method
-      const smsUrl = `http://sms.parsgreen.ir/UrlService/sendSMS.ashx?` +
-        `from=${encodeURIComponent(senderNumber)}` +
-        `&to=${encodeURIComponent(normalizedPhone)}` +
-        `&text=${encodeURIComponent(message)}` +
-        `&signature=${encodeURIComponent(apiKey)}`;
+      // Use Parsgreen correct API format
+      const apiUrl = 'http://sms.parsgreen.ir/UrlService/sendSMS.ashx';
+      
+      const params = new URLSearchParams({
+        from: senderNumber,
+        to: normalizedPhone,
+        text: message,
+        signature: apiKey
+      });
 
       console.log('Sending SMS to:', normalizedPhone);
+      console.log('SMS URL:', `${apiUrl}?${params.toString()}`);
       
-      const smsResponse = await fetch(smsUrl, {
+      const smsResponse = await fetch(`${apiUrl}?${params.toString()}`, {
         method: 'GET',
       });
 
