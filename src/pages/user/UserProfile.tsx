@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Package, MapPin, ArrowRight, Edit2, Save, X, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { StaffRegistrationButton } from '@/components/staff/StaffRegistrationButton';
+import { StaffRequestDialog } from '@/components/staff/StaffRequestDialog';
 
 interface UserOrder {
   id: string;
@@ -34,6 +36,7 @@ export default function UserProfile() {
   const [fullName, setFullName] = useState('');
   const [originalName, setOriginalName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [staffDialogOpen, setStaffDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchUserData();
@@ -244,7 +247,7 @@ export default function UserProfile() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t">
+                  <div className="pt-4 border-t space-y-4">
                     <h3 className="font-medium mb-2">آمار کلی</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="p-4 bg-secondary/50 rounded-lg">
@@ -257,6 +260,14 @@ export default function UserProfile() {
                           {orders.filter((o) => o.status === 'pending').length}
                         </p>
                       </div>
+                    </div>
+                    
+                    <div className="pt-4 border-t">
+                      <h3 className="font-medium mb-3">درخواست نقش سازمانی</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        اگر عضو پرسنل هستید، می‌توانید درخواست دسترسی به پنل مدیریت را ثبت کنید.
+                      </p>
+                      <StaffRegistrationButton onClick={() => setStaffDialogOpen(true)} />
                     </div>
                   </div>
                 </div>
@@ -347,6 +358,11 @@ export default function UserProfile() {
             </Card>
           </TabsContent>
         </Tabs>
+        
+        <StaffRequestDialog
+          open={staffDialogOpen}
+          onOpenChange={setStaffDialogOpen}
+        />
       </div>
     </div>
   );
