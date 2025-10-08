@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package } from 'lucide-react';
+import { Package, MessageSquare, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -15,6 +15,9 @@ import { StaffRegistrationButton } from '@/components/staff/StaffRegistrationBut
 import { StaffRequestDialog } from '@/components/staff/StaffRequestDialog';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { EmptyState } from '@/components/common/EmptyState';
+import { TicketForm } from '@/components/profile/TicketForm';
+import { ContractorForm } from '@/components/profile/ContractorForm';
+import { useContractorRole } from '@/hooks/useContractorRole';
 
 interface UserOrder {
   id: string;
@@ -32,6 +35,7 @@ interface UserOrder {
 export default function UserProfile() {
   usePageTitle('پروفایل کاربری');
   const { user } = useAuth();
+  const { isContractor } = useContractorRole();
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState('');
@@ -109,9 +113,19 @@ export default function UserProfile() {
 
         {/* Tabs */}
         <Tabs defaultValue="info" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="info">اطلاعات کاربری</TabsTrigger>
             <TabsTrigger value="orders">سفارشات من</TabsTrigger>
+            <TabsTrigger value="support">
+              <MessageSquare className="h-4 w-4 ml-2" />
+              پشتیبانی
+            </TabsTrigger>
+            {!isContractor && (
+              <TabsTrigger value="contractor">
+                <Briefcase className="h-4 w-4 ml-2" />
+                همکاری
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Profile Info Tab */}
@@ -171,6 +185,21 @@ export default function UserProfile() {
               </div>
             )}
           </TabsContent>
+
+          {/* Support Tab */}
+          <TabsContent value="support" className="space-y-4">
+            <TicketForm userId={user.id} />
+          </TabsContent>
+
+          {/* Contractor Registration Tab */}
+          {!isContractor && (
+            <TabsContent value="contractor" className="space-y-4">
+              <ContractorForm 
+                userId={user.id} 
+                userEmail={user.email || ''} 
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 
