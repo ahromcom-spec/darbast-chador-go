@@ -111,7 +111,7 @@ export default function Home() {
                   خدمات ساختمانی خود را انتخاب کنید
                 </h2>
                 <CardDescription className="text-sm sm:text-base md:text-lg">
-                  خدمات داربست و ساختمانی در قم و سراسر ایران
+                  خدمات ساختمانی و داربست در قم و سراسر ایران
                 </CardDescription>
               </CardHeader>
               
