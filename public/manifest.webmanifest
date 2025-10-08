@@ -1,13 +1,13 @@
 {
-  "name": "اهرم",
+  "name": "اهرم - خدمات ساختمانی",
   "short_name": "اهرم",
-  "description": "خدمات ساختمانی اهرم",
+  "description": "سامانه مدیریت خدمات ساختمانی اهرم - داربست و چادر برزنتی",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#FFFFFF",
-  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "dir": "rtl",
   "lang": "fa",
   "icons": [
@@ -30,5 +30,8 @@
       "purpose": "maskable"
     }
   ],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "display_override": ["standalone", "fullscreen"],
+  "categories": ["business", "productivity"],
+  "shortcuts": []
 }

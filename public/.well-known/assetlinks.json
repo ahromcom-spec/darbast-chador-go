@@ -1,0 +1,7 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "web",
+    "site": "https://bfa4c6de-cf21-4ecc-9938-b0bf973b63e2.lovableproject.com"
+  }
+}]
