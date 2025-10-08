@@ -110,11 +110,15 @@ serve(async (req) => {
     const webOtpBinding = `@${host} #${code}`;
     // Simple format to avoid validation errors
     const message = `کد تایید شما: ${code} برای ورود به اهرم\n\n@${host} #${code}\nلغو11`;
-    const senderNumber = Deno.env.get('PARSGREEN_SENDER') || '90000319';
+    const rawSender = Deno.env.get('PARSGREEN_SENDER') || '';
+    const senderNumber = /^[0-9]+$/.test(rawSender) ? rawSender : '90000319';
+    if (rawSender && !/^[0-9]+$/.test(rawSender)) {
+      console.warn('PARSGREEN_SENDER is not numeric; falling back to default 90000319');
+    }
 
     try {
       // Use Parsgreen correct API format
-      const apiUrl = 'http://sms.parsgreen.ir/UrlService/sendSMS.ashx';
+      const apiUrl = 'https://sms.parsgreen.ir/UrlService/sendSMS.ashx';
       
       const params = new URLSearchParams({
         from: senderNumber,
@@ -133,8 +137,16 @@ serve(async (req) => {
       const responseText = await smsResponse.text();
       console.log('Parsgreen Response:', responseText);
 
-      // Check for errors in response
-      if (!smsResponse.ok || responseText.includes('Error') || responseText.includes('خطا')) {
+      // Check for errors in response (Parsgreen returns a numeric ID on success)
+      const textLower = responseText.toLowerCase().trim();
+      const isNumericId = /^[0-9]+$/.test(textLower);
+      if (
+        !smsResponse.ok ||
+        textLower.includes('error') ||
+        textLower.includes('request not valid') ||
+        textLower.includes('خطا') ||
+        !isNumericId
+      ) {
         console.error('SMS send failed:', responseText);
         return new Response(
           JSON.stringify({ error: 'خطا در ارسال پیامک - لطفا تنظیمات پنل را بررسی کنید' }),
