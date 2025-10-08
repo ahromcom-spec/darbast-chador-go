@@ -67,6 +67,36 @@ export default function Login() {
     };
   }, [step, countdown]);
 
+  // Web OTP API: auto-read SMS and autofill/submit the code on supported browsers
+  useEffect(() => {
+    // @ts-ignore - OTPCredential is not in TS lib yet
+    if (step !== 'otp' || !('OTPCredential' in window) || typeof navigator.credentials?.get !== 'function') return;
+    // @ts-ignore
+    const ac = new AbortController();
+    const options: any = { otp: { transport: ['sms'] }, signal: ac.signal };
+    (navigator as any).credentials.get(options).then((cred: any) => {
+      const code = cred?.code || '';
+      if (code && code.length === 5) {
+        setOtpCode(code);
+        (async () => {
+          setLoading(true);
+          const { error } = await verifyOTP(phoneNumber, code, undefined, false);
+          setLoading(false);
+          if (error) {
+            const errorMessage = error.message || 'کد تایید نامعتبر است.';
+            setErrors({ otp: errorMessage });
+          } else {
+            toast({ title: 'خوش آمدید', description: 'با موفقیت وارد شدید.' });
+            navigate(from, { replace: true });
+          }
+        })();
+      }
+    }).catch(() => {
+      // ignore (user denied or timeout)
+    });
+    return () => ac.abort();
+  }, [step, phoneNumber]);
+
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});

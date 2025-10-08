@@ -101,7 +101,14 @@ serve(async (req) => {
       );
     }
     
-    const message = `کد تایید شما: ${code} برای ورود به سایت اهـــــرم | Ahrom\nلغو11`;
+    // Build Web OTP binding using request origin host for Android Chrome autofill
+    const originHeader = req.headers.get('Origin') || req.headers.get('origin') || '';
+    let host = 'ahrom.org';
+    try {
+      host = originHeader ? new URL(originHeader).host : host;
+    } catch {}
+    const webOtpLine = `@${host} #${code}`;
+    const message = `<#> کد تایید شما: ${code} برای ورود به اهرم\n${webOtpLine}\nلغو11`;
     const senderNumber = '90000319';
 
     try {
