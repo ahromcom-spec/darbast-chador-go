@@ -4,16 +4,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ahromLogo from "@/assets/ahrom-logo.png";
-import { StaffRegistrationButton } from "@/components/staff/StaffRegistrationButton";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { useState } from "react";
-import { StaffRequestDialog } from "@/components/staff/StaffRequestDialog";
 
 const Header = () => {
   const navigate = useNavigate();
   const auth = useAuth();
   const user = auth?.user || null;
-  const [staffDialogOpen, setStaffDialogOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
@@ -38,7 +34,6 @@ const Header = () => {
             {user && (
               <>
                 <NotificationBell />
-                <StaffRegistrationButton onClick={() => setStaffDialogOpen(true)} />
                 <Button
                   variant="outline"
                   size="sm"
@@ -134,7 +129,6 @@ const Header = () => {
             {user && (
               <>
                 <NotificationBell />
-                <StaffRegistrationButton onClick={() => setStaffDialogOpen(true)} />
                 <Button
                   variant="outline"
                   onClick={() => navigate("/tickets")}
@@ -217,9 +211,6 @@ const Header = () => {
           </div>
         </div>
       </div>
-      
-      {/* Staff Request Dialog */}
-      <StaffRequestDialog open={staffDialogOpen} onOpenChange={setStaffDialogOpen} />
     </header>
   );
 };
