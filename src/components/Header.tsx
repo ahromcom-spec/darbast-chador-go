@@ -34,9 +34,9 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
-      <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+      <div className="container mx-auto px-4 sm:px-6">
         {/* Mobile & Tablet Layout */}
-        <div className="flex md:hidden items-center justify-between">
+        <div className="flex md:hidden items-center justify-between py-3 sm:py-4">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
             <img 
               src={ahromLogo} 
@@ -151,32 +151,39 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Desktop Layout */}
-        <div className="hidden md:flex items-center justify-between">
-          {/* Logo - Left side */}
-          <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
-            <img 
-              src={ahromLogo} 
-              alt="لوگوی اهرم" 
-              width="140"
-              height="80"
-              className="h-20 w-auto object-contain"
-              loading="eager"
-            />
+        {/* Desktop Layout - Two Rows */}
+        <div className="hidden md:block">
+          {/* First Row: Logo and Company Name */}
+          <div className="flex items-center justify-between py-4 border-b border-border/50">
+            {/* Logo - Right side (RTL) */}
+            <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
+              <img 
+                src={ahromLogo} 
+                alt="لوگوی اهرم" 
+                width="140"
+                height="80"
+                className="h-20 w-auto object-contain"
+                loading="eager"
+              />
+            </div>
+
+            {/* Company Name - Center */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+              <h1 className="text-2xl md:text-4xl font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                خدمات ساختمانی اهرم
+              </h1>
+            </div>
+            
+            {/* Notification Bell - Left side (RTL) */}
+            <div className="flex items-center">
+              {user && <NotificationBell />}
+            </div>
           </div>
 
-          {/* Company Name - Center */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
-            <h1 className="text-2xl md:text-4xl font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              خدمات ساختمانی اهرم
-            </h1>
-          </div>
-          
-          {/* Contact & Tickets Section - Right side */}
-          <div className="flex items-center gap-4">
+          {/* Second Row: Login/Register and Contact */}
+          <div className="flex items-center justify-center gap-4 py-3">
             {user ? (
               <>
-                <NotificationBell />
                 <Button
                   variant="outline"
                   onClick={() => navigate("/profile")}
@@ -211,20 +218,19 @@ const Header = () => {
                 </Button>
               </>
             )}
-            {/* Primary Phone - Desktop */}
-            <div className="flex items-center gap-3">
-              <a 
-                href="tel:90000319" 
-                className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all duration-300 group border border-primary/20 hover:border-primary/40"
-                title="تماس فوری"
-              >
-                <Phone className="h-4 w-4 group-hover:animate-pulse" />
-                <div className="text-right">
-                  <div className="text-xs text-muted-foreground">تلفن خدماتی اهرم</div>
-                  <div className="font-bold">90000319</div>
-                </div>
-              </a>
-            </div>
+
+            {/* Primary Phone */}
+            <a 
+              href="tel:90000319" 
+              className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all duration-300 group border border-primary/20 hover:border-primary/40"
+              title="تماس فوری"
+            >
+              <Phone className="h-4 w-4 group-hover:animate-pulse" />
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground">تلفن خدماتی اهرم</div>
+                <div className="font-bold">90000319</div>
+              </div>
+            </a>
 
             {/* Contact Us Dropdown */}
             <DropdownMenu>
