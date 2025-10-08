@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Wrench, Building2, Smartphone, Download, Sparkles } from 'lucide-react';
+import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useNavigation } from '@/hooks/useNavigation';
+import { QuickActionCard } from '@/components/common/QuickActionCard';
+import { ResponsiveGrid } from '@/components/common/ResponsiveGrid';
 
 export default function Home() {
   usePageTitle('صفحه اصلی');
@@ -15,7 +17,7 @@ export default function Home() {
   const [showInstallCard, setShowInstallCard] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const { toast } = useToast();
-  const { goToScaffoldingForm, goToLogin, goToRegister } = useNavigation();
+  const { goToScaffoldingForm, goToLogin, goToRegister, goToTickets, navigate } = useNavigation();
 
   // Auto-assign projects to contractors
   useAutoAssignProjects();
@@ -185,21 +187,39 @@ export default function Home() {
                 )}
 
                 {/* Quick Access Buttons */}
-                <div className="pt-4 space-y-2 border-t">
-                  <Button 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={goToLogin}
-                  >
-                    ورود به سیستم
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full text-sm" 
-                    onClick={goToRegister}
-                  >
-                    ثبت‌نام در سیستم
-                  </Button>
+                <div className="pt-4 space-y-3 border-t">
+                  <ResponsiveGrid cols={{ default: 1, sm: 2 }} gap={3}>
+                    <QuickActionCard
+                      title="تیکت‌های پشتیبانی"
+                      description="دریافت پشتیبانی و ثبت درخواست"
+                      icon={MessageSquare}
+                      onClick={goToTickets}
+                      variant="default"
+                    />
+                    <QuickActionCard
+                      title="ثبت‌نام پیمانکاران"
+                      description="عضویت به عنوان پیمانکار"
+                      icon={Briefcase}
+                      onClick={() => navigate('/contractor/register')}
+                      variant="secondary"
+                    />
+                  </ResponsiveGrid>
+                  
+                  <div className="grid grid-cols-2 gap-2 pt-2">
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={goToLogin}
+                    >
+                      ورود
+                    </Button>
+                    <Button 
+                      className="w-full construction-gradient" 
+                      onClick={goToRegister}
+                    >
+                      ثبت‌نام
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

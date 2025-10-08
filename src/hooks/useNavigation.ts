@@ -25,7 +25,7 @@ export function useNavigation() {
   const goToHome = () => navigate('/');
   const goToProfile = () => navigateWithAuth('/profile');
   const goToProjects = () => navigateWithAuth('/projects');
-  const goToTickets = () => navigate('/tickets'); // tickets don't require auth
+  const goToTickets = () => navigate('/tickets');
   const goToScaffoldingForm = () => navigateWithAuth('/scaffolding/form');
   const goToContractorDashboard = () => navigateWithAuth('/contractor/dashboard');
   const goToAdminDashboard = () => navigateWithAuth('/admin');
@@ -33,6 +33,7 @@ export function useNavigation() {
   const goToRegister = () => navigate('/auth/register');
 
   return {
+    navigate,
     navigateWithAuth,
     goToHome,
     goToProfile,

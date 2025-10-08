@@ -7,6 +7,7 @@ import { AppSidebar } from '@/components/navigation/AppSidebar';
 import { LogOut, Menu } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useMediaQuery } from '@/hooks/useResponsive';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -18,6 +19,7 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   const handleSignOut = async () => {
     try {
@@ -98,8 +100,10 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
           </header>
 
           {/* Page Content */}
-          <main className="flex-1 container py-6 px-4">
-            {children}
+          <main className="flex-1 w-full">
+            <div className="container mx-auto py-4 sm:py-6 px-4">
+              {children}
+            </div>
           </main>
         </div>
       </div>
