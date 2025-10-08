@@ -137,12 +137,24 @@ serve(async (req) => {
       const responseText = await smsResponse.text();
       console.log('Parsgreen Response:', responseText);
 
-      // پارس‌گرین پاسخ را به فرمت "شماره;وضعیت;شناسه" برمی‌گرداند
-      // وضعیت=1 یعنی موفق، وضعیت=0 یعنی خطا
-      const parts = responseText.split(';');
-      const isSuccess = parts.length === 3 && parts[1] === '1';
+      // Parsgreen returns different formats:
+      // Success: شناسه عددی (numeric ID)
+      // Or semicolon format: number;status;id where status could be 0 (queued) or 1 (sent)
+      // Error: text message like "FilterationNotAllow" or other error strings
       
-      if (!smsResponse.ok || !isSuccess) {
+      const trimmedResponse = responseText.trim();
+      const parts = trimmedResponse.split(';');
+      
+      // Check if it's a pure error message (contains text errors)
+      const isError = trimmedResponse.toLowerCase().includes('error') || 
+                      trimmedResponse.toLowerCase().includes('filteration') ||
+                      trimmedResponse.includes('خطا') ||
+                      trimmedResponse.toLowerCase().includes('request not valid');
+      
+      // If it has semicolons, check status (0 or 1 both mean SMS is processing/sent)
+      const hasValidFormat = parts.length === 3 && /^[0-9;]+$/.test(trimmedResponse);
+      
+      if (!smsResponse.ok || (isError && !hasValidFormat)) {
         console.error('SMS send failed:', responseText);
         return new Response(
           JSON.stringify({ error: 'خطا در ارسال پیامک - لطفا تنظیمات پنل را بررسی کنید' }),
