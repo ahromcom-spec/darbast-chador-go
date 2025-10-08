@@ -1255,39 +1255,23 @@ export type Database = {
     Views: {
       public_contractors_directory: {
         Row: {
-          address: string | null
           company_name: string | null
           created_at: string | null
           description: string | null
           experience_years: number | null
+          general_location: string | null
           id: string | null
           is_approved: boolean | null
           services: Json | null
-        }
-        Insert: {
-          address?: string | null
-          company_name?: string | null
-          created_at?: string | null
-          description?: string | null
-          experience_years?: number | null
-          id?: string | null
-          is_approved?: boolean | null
-          services?: never
-        }
-        Update: {
-          address?: string | null
-          company_name?: string | null
-          created_at?: string | null
-          description?: string | null
-          experience_years?: number | null
-          id?: string | null
-          is_approved?: boolean | null
-          services?: never
         }
         Relationships: []
       }
     }
     Functions: {
+      check_directory_rate_limit: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       check_otp_rate_limit: {
         Args: { _phone_number: string }
         Returns: boolean
@@ -1299,6 +1283,10 @@ export type Database = {
           _user_id: string
           _window: unknown
         }
+        Returns: boolean
+      }
+      check_service_request_rate_limit: {
+        Args: { _user_id: string }
         Returns: boolean
       }
       check_staff_whitelist: {
