@@ -603,6 +603,13 @@ export type Database = {
         Args: { _phone_number: string }
         Returns: boolean
       }
+      check_staff_whitelist: {
+        Args: { _phone: string }
+        Returns: {
+          allowed_role: Database["public"]["Enums"]["app_role"]
+          is_whitelisted: boolean
+        }[]
+      }
       cleanup_expired_otps: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -613,6 +620,26 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_audit: {
+        Args: {
+          _action: string
+          _actor_user_id: string
+          _entity: string
+          _entity_id: string
+          _meta?: Json
+        }
+        Returns: string
+      }
+      send_notification: {
+        Args: {
+          _body: string
+          _link?: string
+          _title: string
+          _type?: string
+          _user_id: string
+        }
+        Returns: string
       }
       verify_otp_code: {
         Args: { _code: string; _phone_number: string }
