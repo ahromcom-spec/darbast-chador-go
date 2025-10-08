@@ -1,9 +1,16 @@
-const CACHE_NAME = 'ahrom-v3';
+const CACHE_NAME = 'ahrom-v4';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/manifest.webmanifest'
+  '/manifest.webmanifest',
+  '/icons/icon-192-white.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-touch-icon.png',
+  '/icon-512-white-bg.png',
+  '/icon-512-maskable-white.png',
+  '/ahrom-logo-original.png'
 ];
 
 // Install event - cache essential files
