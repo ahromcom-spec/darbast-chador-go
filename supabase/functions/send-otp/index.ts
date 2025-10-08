@@ -108,9 +108,9 @@ serve(async (req) => {
       host = originHeader ? new URL(originHeader).host : host;
     } catch {}
     const webOtpBinding = `@${host} #${code}`;
-    // Minimal content to avoid operator filtration
-    const message = `کد تایید: ${code}`;
-    const senderNumber = '90000319';
+    // Web OTP compliant format: origin-bound code on last line
+    const message = `<#> # کد تایید شما: ${code} برای ورود به اهرم\n\n${webOtpBinding}\nلغو11`;
+    const senderNumber = Deno.env.get('PARSGREEN_SENDER') || '90000319';
 
     try {
       // Use Parsgreen UrlService method
