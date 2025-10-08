@@ -108,8 +108,8 @@ serve(async (req) => {
       host = originHeader ? new URL(originHeader).host : host;
     } catch {}
     const webOtpBinding = `@${host} #${code}`;
-    // Web OTP compliant format: origin-bound code on last line
-    const message = `<#> # کد تایید شما: ${code} برای ورود به اهرم\n\n${webOtpBinding}\nلغو11`;
+    // Simple format to avoid validation errors
+    const message = `کد تایید شما: ${code} برای ورود به اهرم\n\n@${host} #${code}\nلغو11`;
     const senderNumber = Deno.env.get('PARSGREEN_SENDER') || '90000319';
 
     try {
