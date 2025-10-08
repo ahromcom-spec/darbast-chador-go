@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
 import { Navigate } from 'react-router-dom';
 import {
   Card,
@@ -61,6 +62,7 @@ interface StaffRequest {
 
 export const StaffRequests = () => {
   const { isAdmin, loading: adminLoading } = useAdminRole();
+  const { isGeneralManager, loading: gmLoading } = useGeneralManagerRole();
   const [requests, setRequests] = useState<StaffRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<StaffRequest | null>(null);
@@ -68,12 +70,14 @@ export const StaffRequests = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [processing, setProcessing] = useState(false);
 
+  const hasAccess = isAdmin || isGeneralManager;
+
   useEffect(() => {
-    if (isAdmin) {
+    if (hasAccess) {
       fetchRequests();
       subscribeToChanges();
     }
-  }, [isAdmin]);
+  }, [hasAccess]);
 
   const fetchRequests = async () => {
     try {
@@ -177,7 +181,7 @@ export const StaffRequests = () => {
     }
   };
 
-  if (adminLoading) {
+  if (adminLoading || gmLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -185,7 +189,7 @@ export const StaffRequests = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return <Navigate to="/" replace />;
   }
 

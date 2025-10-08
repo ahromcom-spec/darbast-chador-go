@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AdminRouteProps {
@@ -8,7 +9,11 @@ interface AdminRouteProps {
 
 export const AdminRoute = ({ children }: AdminRouteProps) => {
   const { user } = useAuth();
-  const { isAdmin, loading } = useAdminRole();
+  const { isAdmin, loading: adminLoading } = useAdminRole();
+  const { isGeneralManager, loading: gmLoading } = useGeneralManagerRole();
+
+  const loading = adminLoading || gmLoading;
+  const hasAccess = isAdmin || isGeneralManager;
 
   if (loading) {
     return (
@@ -22,7 +27,7 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
     return <Navigate to="/auth/login" replace />;
   }
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return <Navigate to="/" replace />;
   }
 

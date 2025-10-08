@@ -19,7 +19,7 @@ const menuItems = [
   { title: 'داشبورد', url: '/admin', icon: LayoutDashboard },
   { title: 'سفارشات', url: '/admin/orders', icon: Package },
   { title: 'درخواست‌های پرسنل', url: '/admin/staff-requests', icon: UserPlus },
-  { title: 'کاربران', url: '/admin/users', icon: Users },
+  { title: 'مدیریت لیست مجاز', url: '/admin/whitelist', icon: Users },
 ];
 
 export function AdminSidebar() {
