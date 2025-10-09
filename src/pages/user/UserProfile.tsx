@@ -105,18 +105,22 @@ export default function UserProfile() {
 
   return (
     <MainLayout>
-      <PageHeader title="پروفایل کاربری" />
+      <div className="container max-w-6xl mx-auto px-4 py-6 space-y-6">
+        <PageHeader title="پروفایل کاربری" />
 
-      <div className="space-y-6">
         {/* Profile Header */}
         <ProfileHeader user={user} fullName={fullName} />
 
         {/* Tabs */}
         <Tabs defaultValue="info" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="info">اطلاعات کاربری</TabsTrigger>
-            <TabsTrigger value="orders">سفارشات من</TabsTrigger>
-            <TabsTrigger value="actions">
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
+            <TabsTrigger value="info" className="text-sm sm:text-base py-2">
+              اطلاعات کاربری
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="text-sm sm:text-base py-2">
+              سفارشات من
+            </TabsTrigger>
+            <TabsTrigger value="actions" className="text-sm sm:text-base py-2">
               دسترسی سریع
             </TabsTrigger>
           </TabsList>
@@ -136,7 +140,7 @@ export default function UserProfile() {
           </TabsContent>
 
           {/* Orders Tab */}
-          <TabsContent value="orders">
+          <TabsContent value="orders" className="mt-4">
             {orders.length === 0 ? (
               <EmptyState
                 icon={Package}
@@ -144,48 +148,52 @@ export default function UserProfile() {
                 description="شما هنوز هیچ سفارشی ثبت نکرده‌اید"
               />
             ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>تاریخ ثبت</TableHead>
-                      <TableHead>نوع خدمات</TableHead>
-                      <TableHead>ابعاد (متر)</TableHead>
-                      <TableHead>وضعیت</TableHead>
-                      <TableHead>آدرس</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell>
-                          {new Date(order.created_at).toLocaleDateString('fa-IR')}
-                        </TableCell>
-                        <TableCell>{getTypeLabel(order.sub_type)}</TableCell>
-                        <TableCell dir="ltr">
-                          {order.length} × {order.width} × {order.height}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={order.status} />
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {order.location_address || '-'}
-                        </TableCell>
+              <div className="rounded-md border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">تاریخ ثبت</TableHead>
+                        <TableHead className="whitespace-nowrap">نوع خدمات</TableHead>
+                        <TableHead className="whitespace-nowrap">ابعاد (متر)</TableHead>
+                        <TableHead className="whitespace-nowrap">وضعیت</TableHead>
+                        <TableHead className="whitespace-nowrap min-w-[150px]">آدرس</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {orders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="whitespace-nowrap text-sm">
+                            {new Date(order.created_at).toLocaleDateString('fa-IR')}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-sm">
+                            {getTypeLabel(order.sub_type)}
+                          </TableCell>
+                          <TableCell dir="ltr" className="whitespace-nowrap text-sm">
+                            {order.length} × {order.width} × {order.height}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <StatusBadge status={order.status} />
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate text-sm">
+                            {order.location_address || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </TabsContent>
 
           {/* Quick Actions Tab */}
-          <TabsContent value="actions" className="space-y-6">
+          <TabsContent value="actions" className="space-y-6 mt-4">
             {/* Support Ticket Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                ثبت تیکت پشتیبانی
+              <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                <span>ثبت تیکت پشتیبانی</span>
               </h3>
               <TicketForm userId={user.id} />
             </div>
@@ -193,9 +201,9 @@ export default function UserProfile() {
             {/* Contractor Registration Section */}
             {!isContractor && (
               <div className="space-y-4 pt-6 border-t">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Briefcase className="h-5 w-5 text-primary" />
-                  ثبت‌نام پیمانکاران
+                <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                  <span>ثبت‌نام پیمانکاران</span>
                 </h3>
                 <ContractorForm 
                   userId={user.id} 
@@ -205,13 +213,13 @@ export default function UserProfile() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
 
-      {/* Staff Request Dialog */}
-      <StaffRequestDialog
-        open={staffDialogOpen}
-        onOpenChange={setStaffDialogOpen}
-      />
+        {/* Staff Request Dialog */}
+        <StaffRequestDialog
+          open={staffDialogOpen}
+          onOpenChange={setStaffDialogOpen}
+        />
+      </div>
     </MainLayout>
   );
 }
