@@ -37,7 +37,7 @@ const Header = () => {
       <div className="container mx-auto px-4 sm:px-6">
         {/* Mobile & Tablet Layout - Two Rows */}
         <div className="md:hidden">
-          {/* First Row: Logo and Company Name */}
+          {/* First Row: Logo, Company Name, Contact, and Notification */}
           <div className="flex items-center justify-between py-3 border-b border-border/30">
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
               <img 
@@ -52,10 +52,54 @@ const Header = () => {
                 خدمات ساختمانی اهرم
               </h1>
             </div>
-            {user && <NotificationBell />}
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
+                  >
+                    <Phone className="h-4 w-4" />
+                    <span className="text-xs sm:text-sm">تماس</span>
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-sm border shadow-xl z-50 min-w-[200px]">
+                  <div className="p-2">
+                    <div className="text-xs text-muted-foreground mb-2 text-center">راه‌های تماس</div>
+                    <DropdownMenuItem asChild>
+                      <a 
+                        href="tel:90000319" 
+                        className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                      >
+                        <Phone className="h-4 w-4 text-primary" />
+                        <div className="text-right">
+                          <div className="font-medium">تلفن خدماتی اهرم</div>
+                          <div className="text-sm text-muted-foreground">90000319</div>
+                        </div>
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <a 
+                        href="tel:02538865040" 
+                        className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                      >
+                        <Building className="h-4 w-4 text-primary" />
+                        <div className="text-right">
+                          <div className="font-medium">دفتر</div>
+                          <div className="text-sm text-muted-foreground">02538865040</div>
+                        </div>
+                      </a>
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {user && <NotificationBell />}
+            </div>
           </div>
 
-          {/* Second Row: Auth Buttons and Contact */}
+          {/* Second Row: Auth Buttons */}
           <div className="flex items-center justify-center gap-2 py-2">
             {user ? (
               <>
@@ -97,67 +141,12 @@ const Header = () => {
                 </Button>
               </>
             )}
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
-                >
-                  <Phone className="h-4 w-4" />
-                  <span className="text-xs sm:text-sm">تماس</span>
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-sm border shadow-xl z-50 min-w-[200px]">
-                <div className="p-2">
-                  <div className="text-xs text-muted-foreground mb-2 text-center">راه‌های تماس</div>
-                  <DropdownMenuItem asChild>
-                    <a 
-                      href="tel:90000319" 
-                      className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
-                    >
-                      <Phone className="h-4 w-4 text-primary" />
-                      <div className="text-right">
-                        <div className="font-medium">تلفن خدماتی اهرم</div>
-                        <div className="text-sm text-muted-foreground">90000319</div>
-                      </div>
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a 
-                      href="tel:09125511494" 
-                      className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
-                    >
-                      <Smartphone className="h-4 w-4 text-primary" />
-                      <div className="text-right">
-                        <div className="font-medium">موبایل</div>
-                        <div className="text-sm text-muted-foreground">09125511494</div>
-                      </div>
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a 
-                      href="tel:02538865040" 
-                      className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
-                    >
-                      <Building className="h-4 w-4 text-primary" />
-                      <div className="text-right">
-                        <div className="font-medium">دفتر</div>
-                        <div className="text-sm text-muted-foreground">02538865040</div>
-                      </div>
-                    </a>
-                  </DropdownMenuItem>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 
         {/* Desktop Layout - Two Rows */}
         <div className="hidden md:block">
-          {/* First Row: Logo and Company Name */}
+          {/* First Row: Logo, Company Name, Contact, and Notification */}
           <div className="flex items-center justify-between py-4 border-b border-border/50">
             {/* Logo - Right side (RTL) */}
             <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
@@ -178,7 +167,7 @@ const Header = () => {
               </h1>
             </div>
             
-            {/* Primary Phone & Notification Bell - Left side (RTL) */}
+            {/* Primary Phone, Contact Dropdown & Notification Bell - Left side (RTL) */}
             <div className="flex items-center gap-4">
               <a 
                 href="tel:90000319" 
@@ -191,11 +180,52 @@ const Header = () => {
                   <div className="font-bold">90000319</div>
                 </div>
               </a>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium px-4 py-2 h-auto"
+                  >
+                    <Phone className="h-4 w-4" />
+                    <span>تماس با ما</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-sm border shadow-xl z-50 min-w-[200px]">
+                  <div className="p-2">
+                    <div className="text-xs text-muted-foreground mb-2 text-center">راه‌های تماس</div>
+                    <DropdownMenuItem asChild>
+                      <a 
+                        href="tel:90000319" 
+                        className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                      >
+                        <Phone className="h-4 w-4 text-primary" />
+                        <div className="text-right">
+                          <div className="font-medium">تلفن خدماتی اهرم</div>
+                          <div className="text-sm text-muted-foreground">90000319</div>
+                        </div>
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <a 
+                        href="tel:02538865040" 
+                        className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                      >
+                        <Building className="h-4 w-4 text-primary" />
+                        <div className="text-right">
+                          <div className="font-medium">دفتر</div>
+                          <div className="text-sm text-muted-foreground">02538865040</div>
+                        </div>
+                      </a>
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
               {user && <NotificationBell />}
             </div>
           </div>
 
-          {/* Second Row: Login/Register and Contact */}
+          {/* Second Row: Login/Register */}
           <div className="flex items-center justify-center gap-4 py-3">
             {user ? (
               <>
@@ -233,61 +263,6 @@ const Header = () => {
                 </Button>
               </>
             )}
-
-            {/* Contact Us Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium px-4 py-2 h-auto"
-                >
-                  <Phone className="h-4 w-4" />
-                  <span>تماس با ما</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-sm border shadow-xl z-50 min-w-[200px]">
-                <div className="p-2">
-                  <div className="text-xs text-muted-foreground mb-2 text-center">راه‌های تماس</div>
-                  <DropdownMenuItem asChild>
-                    <a 
-                      href="tel:90000319" 
-                      className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
-                    >
-                      <Phone className="h-4 w-4 text-primary" />
-                      <div className="text-right">
-                        <div className="font-medium">تلفن خدماتی اهرم</div>
-                        <div className="text-sm text-muted-foreground">90000319</div>
-                      </div>
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a 
-                      href="tel:09125511494" 
-                      className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
-                    >
-                      <Smartphone className="h-4 w-4 text-primary" />
-                      <div className="text-right">
-                        <div className="font-medium">موبایل</div>
-                        <div className="text-sm text-muted-foreground">09125511494</div>
-                      </div>
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a 
-                      href="tel:02538865040" 
-                      className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
-                    >
-                      <Building className="h-4 w-4 text-primary" />
-                      <div className="text-right">
-                        <div className="font-medium">دفتر</div>
-                        <div className="text-sm text-muted-foreground">02538865040</div>
-                      </div>
-                    </a>
-                  </DropdownMenuItem>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
       </div>
