@@ -146,40 +146,31 @@ const Header = () => {
 
         {/* Desktop Layout - Two Rows */}
         <div className="hidden md:block">
-          {/* First Row: Logo, Company Name, Contact, and Notification */}
-          <div className="flex items-center justify-between py-4 border-b border-border/50">
+          {/* First Row: Logo, Company Name, Contact - Symmetrical */}
+          <div className="grid grid-cols-3 items-center py-4 border-b border-border/50">
             {/* Logo - Right side (RTL) */}
-            <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
-              <img 
-                src={ahromLogo} 
-                alt="لوگوی اهرم" 
-                width="140"
-                height="80"
-                className="h-20 w-auto object-contain"
-                loading="eager"
-              />
+            <div className="flex justify-end">
+              <div className="cursor-pointer" onClick={() => navigate('/')}>
+                <img 
+                  src={ahromLogo} 
+                  alt="لوگوی اهرم" 
+                  width="140"
+                  height="80"
+                  className="h-20 w-auto object-contain"
+                  loading="eager"
+                />
+              </div>
             </div>
 
             {/* Company Name - Center */}
-            <div className="absolute left-1/2 transform -translate-x-1/2">
+            <div className="flex justify-center">
               <h1 className="text-2xl md:text-4xl font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 خدمات ساختمانی اهرم
               </h1>
             </div>
             
-            {/* Primary Phone, Contact Dropdown & Notification Bell - Left side (RTL) */}
-            <div className="flex items-center gap-4">
-              <a 
-                href="tel:90000319" 
-                className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all duration-300 group border border-primary/20 hover:border-primary/40"
-                title="تماس فوری"
-              >
-                <Phone className="h-4 w-4 group-hover:animate-pulse" />
-                <div className="text-right">
-                  <div className="text-xs text-muted-foreground">تلفن خدماتی اهرم</div>
-                  <div className="font-bold">90000319</div>
-                </div>
-              </a>
+            {/* Contact Dropdown & Notification - Left side (RTL) */}
+            <div className="flex items-center gap-4 justify-start">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
@@ -187,7 +178,7 @@ const Header = () => {
                     className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium px-4 py-2 h-auto"
                   >
                     <Phone className="h-4 w-4" />
-                    <span>تماس با ما</span>
+                    <span>تماس</span>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -225,8 +216,8 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Second Row: Login/Register */}
-          <div className="flex items-center justify-center gap-4 py-3">
+          {/* Second Row: Login/Register - Left aligned */}
+          <div className="flex items-center justify-start gap-4 py-3 pr-4">
             {user ? (
               <>
                 <Button
@@ -249,17 +240,17 @@ const Header = () => {
             ) : (
               <>
                 <Button
-                  variant="outline"
-                  onClick={() => navigate("/auth/login")}
-                  className="gap-2 font-medium"
-                >
-                  <span>ورود به حساب</span>
-                </Button>
-                <Button
                   onClick={() => navigate("/auth/register")}
                   className="gap-2 font-medium"
                 >
                   <span>ثبت‌نام</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/auth/login")}
+                  className="gap-2 font-medium"
+                >
+                  <span>ورود</span>
                 </Button>
               </>
             )}
