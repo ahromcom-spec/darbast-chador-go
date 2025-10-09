@@ -210,8 +210,6 @@ export default function Home() {
                     onClick={handleInstallApp} 
                     size="sm"
                     className="construction-gradient"
-                    disabled={!canInstall && !isIOS}
-                    title={!canInstall && !isIOS ? 'برای نصب، از منوی مرورگر گزینه Install/Add to Home Screen را انتخاب کنید' : ''}
                   >
                     <Download className="h-4 w-4 ml-1" />
                     نصب
