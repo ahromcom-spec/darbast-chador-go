@@ -125,23 +125,6 @@ export const WhitelistManagement = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('کاربر وارد نشده است');
 
-      // بررسی وجود قبلی شماره
-      const { data: existing } = await supabase
-        .from('staff_whitelist')
-        .select('id')
-        .eq('phone', phoneNumber)
-        .maybeSingle();
-
-      if (existing) {
-        toast({
-          title: 'خطا',
-          description: 'این شماره قبلاً در لیست ثبت شده است',
-          variant: 'destructive',
-        });
-        setProcessing(false);
-        return;
-      }
-
       const { error } = await supabase
         .from('staff_whitelist')
         .insert([{
@@ -151,14 +134,11 @@ export const WhitelistManagement = () => {
           created_by: user.id,
         }]);
 
-      if (error) {
-        console.error('Insert error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       toast({
         title: 'موفق',
-        description: `شماره ${phoneNumber} با موفقیت به لیست اضافه شد`,
+        description: 'شماره با موفقیت به لیست اضافه شد',
       });
 
       setShowAddDialog(false);

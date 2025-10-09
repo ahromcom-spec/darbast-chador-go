@@ -25,27 +25,17 @@ export const useStaffWhitelist = () => {
 
     try {
       // دریافت شماره تلفن کاربر از profiles
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('phone_number')
         .eq('user_id', user.id)
         .single();
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-        setIsWhitelisted(false);
-        setLoading(false);
-        return;
-      }
-
       if (!profile?.phone_number) {
-        console.log('No phone number found for user');
         setIsWhitelisted(false);
         setLoading(false);
         return;
       }
-
-      console.log('Checking whitelist for phone:', profile.phone_number);
 
       // بررسی وجود در whitelist
       const { data, error } = await supabase
@@ -56,13 +46,8 @@ export const useStaffWhitelist = () => {
         setIsWhitelisted(false);
       } else if (data && data.length > 0) {
         const result = data[0] as WhitelistCheck;
-        console.log('Whitelist result:', result);
         setIsWhitelisted(result.is_whitelisted);
         setAllowedRole(result.allowed_role);
-      } else {
-        console.log('Not whitelisted');
-        setIsWhitelisted(false);
-        setAllowedRole(null);
       }
     } catch (error) {
       console.error('Error in checkWhitelist:', error);

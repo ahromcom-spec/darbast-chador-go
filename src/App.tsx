@@ -10,50 +10,36 @@ import { AdminRoute } from "@/components/AdminRoute";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 import { PageLoadProgress } from "@/components/common/PageLoadProgress";
+import Header from "./components/Header";
+import Home from "./pages/Home";
 import { Loader2 } from "lucide-react";
 
-// فقط کامپوننت‌های ضروری به صورت eager load
-const Header = lazy(() => import("./components/Header"));
-const Home = lazy(() => import("./pages/Home"));
-
-// صفحات احراز هویت - اولویت بارگذاری
-const Login = lazy(() => import("./pages/auth/Login"));
-const Register = lazy(() => import("./pages/auth/Register"));
-
-// صفحات کاربر - بارگذاری تنبل
-const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
-const ProjectsDashboard = lazy(() => import("@/pages/user/ProjectsDashboard"));
-const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
-const ScaffoldingForm = lazy(() => import("./pages/scaffolding/ScaffoldingForm"));
-
-// صفحات تیکت - بارگذاری تنبل
-const TicketList = lazy(() => import("./pages/tickets/TicketList"));
-const NewTicket = lazy(() => import("./pages/tickets/NewTicket"));
-const TicketDetail = lazy(() => import("./pages/tickets/TicketDetail"));
-
-// صفحات پیمانکار - بارگذاری تنبل
-const ContractorRegister = lazy(() => import("./pages/contractor/ContractorRegister"));
-const ContractorDashboard = lazy(() => import("./pages/contractor/ContractorDashboard"));
-
-// صفحات ادمین - بارگذاری بسیار تنبل (فقط برای ادمین‌ها)
+// Lazy load all pages for better performance
 const AdminLayout = lazy(() => import("@/pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminOrders = lazy(() => import("@/pages/admin/AdminOrders"));
 const StaffRequests = lazy(() => import("@/pages/admin/StaffRequests").then(m => ({ default: m.StaffRequests })));
 const WhitelistManagement = lazy(() => import("@/pages/admin/WhitelistManagement").then(m => ({ default: m.WhitelistManagement })));
 const GeneralManagerDashboard = lazy(() => import("@/pages/admin/GeneralManagerDashboard").then(m => ({ default: m.GeneralManagerDashboard })));
-
-// صفحه 404
+const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
+const ProjectsDashboard = lazy(() => import("@/pages/user/ProjectsDashboard"));
+const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
+const Login = lazy(() => import("./pages/auth/Login"));
+const Register = lazy(() => import("./pages/auth/Register"));
+const ScaffoldingForm = lazy(() => import("./pages/scaffolding/ScaffoldingForm"));
+const TicketList = lazy(() => import("./pages/tickets/TicketList"));
+const NewTicket = lazy(() => import("./pages/tickets/NewTicket"));
+const TicketDetail = lazy(() => import("./pages/tickets/TicketDetail"));
+const ContractorRegister = lazy(() => import("./pages/contractor/ContractorRegister"));
+const ContractorDashboard = lazy(() => import("./pages/contractor/ContractorDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 10,
-      refetchOnWindowFocus: false, // کاهش درخواست‌های غیرضروری
-      retry: 1, // کاهش تلاش مجدد
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes
     },
   },
 });
