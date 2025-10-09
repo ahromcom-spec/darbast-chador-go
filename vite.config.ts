@@ -23,11 +23,37 @@ export default defineConfig(({ mode }) => ({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-select', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
-          'supabase': ['@supabase/supabase-js'],
-          'form': ['react-hook-form', 'zod'],
+        manualChunks: (id) => {
+          // Core vendors - بارگذاری اولیه
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-core';
+          }
+          if (id.includes('node_modules/react-router-dom')) {
+            return 'router';
+          }
+          
+          // UI Components - بارگذاری تنبل
+          if (id.includes('@radix-ui')) {
+            return 'ui-components';
+          }
+          if (id.includes('lucide-react')) {
+            return 'icons';
+          }
+          
+          // Backend - بارگذاری تنبل
+          if (id.includes('@supabase') || id.includes('@tanstack/react-query')) {
+            return 'backend';
+          }
+          
+          // Forms - بارگذاری تنبل
+          if (id.includes('react-hook-form') || id.includes('zod')) {
+            return 'forms';
+          }
+          
+          // Admin pages - جدا از بقیه
+          if (id.includes('src/pages/admin')) {
+            return 'admin-pages';
+          }
         },
       },
     },
@@ -40,7 +66,8 @@ export default defineConfig(({ mode }) => ({
         pure_funcs: ['console.log', 'console.info']
       }
     },
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 500,
+    target: 'esnext',
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],

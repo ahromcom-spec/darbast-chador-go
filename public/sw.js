@@ -1,5 +1,8 @@
-const CACHE_NAME = 'ahrom-v8';
-const urlsToCache = [
+const CACHE_NAME = 'ahrom-shell-v1';
+const RUNTIME_CACHE = 'ahrom-runtime-v1';
+
+// فقط App Shell اصلی کش می‌شود
+const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
@@ -7,22 +10,26 @@ const urlsToCache = [
   '/ahrom-logo-original.png'
 ];
 
-// Install event - cache essential files
+// Install - فقط Shell اصلی کش می‌شود
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
+      .then((cache) => {
+        console.log('[SW] Caching app shell');
+        return cache.addAll(APP_SHELL);
+      })
       .then(() => self.skipWaiting())
   );
 });
 
-// Activate event - clean up old caches
+// Activate - پاکسازی cache های قدیمی
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
+            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -31,36 +38,52 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch - استراتژی هوشمند: Shell از cache، بقیه از network
 self.addEventListener('fetch', (event) => {
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // فقط درخواست‌های همان origin
+  if (url.origin !== self.location.origin) {
     return;
   }
 
+  // برای Navigation requests (صفحات HTML)
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      caches.match(request)
+        .then((cached) => {
+          if (cached) {
+            return cached;
+          }
+          return fetch(request).then((response) => {
+            return caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, response.clone());
+              return response;
+            });
+          });
+        })
+        .catch(() => caches.match('/'))
+    );
+    return;
+  }
+
+  // برای Assets (JS, CSS, تصاویر) - Network First با Runtime Cache
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then((response) => {
-        // Clone the response before caching
-        const responseToCache = response.clone();
-        
-        // Only cache successful responses
-        if (response.status === 200) {
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
+        // کش فقط برای پاسخ‌های موفق
+        if (response && response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, responseClone);
           });
         }
-        
         return response;
       })
       .catch(() => {
-        // If network fails, try cache
-        return caches.match(event.request).then((cachedResponse) => {
-          return cachedResponse || new Response('Offline', {
-            status: 503,
-            statusText: 'Service Unavailable'
-          });
-        });
+        // اگر network در دسترس نیست، از cache استفاده کن
+        return caches.match(request);
       })
   );
 });
