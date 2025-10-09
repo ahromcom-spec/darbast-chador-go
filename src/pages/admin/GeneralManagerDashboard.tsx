@@ -114,20 +114,10 @@ export const GeneralManagerDashboard = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
-      {/* Header with Back Button */}
-      <div className="mb-6 flex items-center gap-3 sm:gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate('/')}
-          className="shrink-0"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold truncate">پنل کاربری</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground truncate">مدیریت اطلاعات و سفارشات خود</p>
-        </div>
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold">داشبورد مدیریت کل</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">مدیریت پرسنل و درخواست‌های سازمان</p>
       </div>
 
       {/* Profile Card */}
@@ -265,7 +255,7 @@ export const GeneralManagerDashboard = () => {
           <Button
             className="w-full justify-start gap-3 h-auto min-h-[3rem] py-3"
             variant="outline"
-            onClick={() => navigate('/admin/staff-requests')}
+            onClick={() => navigate('/general-manager/staff-requests')}
           >
             <ClipboardList className="h-5 w-5 shrink-0" />
             <div className="flex-1 text-right min-w-0">
@@ -282,7 +272,7 @@ export const GeneralManagerDashboard = () => {
           <Button
             className="w-full justify-start gap-3 h-auto min-h-[3rem] py-3"
             variant="outline"
-            onClick={() => navigate('/admin/whitelist')}
+            onClick={() => navigate('/general-manager/whitelist')}
           >
             <UserPlus className="h-5 w-5 shrink-0" />
             <div className="flex-1 text-right min-w-0">
