@@ -294,7 +294,7 @@ export const WhitelistManagement = () => {
 
             <div className="space-y-2">
               <Label htmlFor="role">نقش مجاز *</Label>
-              <Select value={allowedRole} onValueChange={setAllowedRole}>
+              <Select value={allowedRole || undefined} onValueChange={setAllowedRole}>
                 <SelectTrigger>
                   <SelectValue placeholder="انتخاب نقش" />
                 </SelectTrigger>
