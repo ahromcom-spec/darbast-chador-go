@@ -40,7 +40,9 @@ export default function Home() {
 
 
   const handleInstallApp = async () => {
-    if (canInstall) {
+    const hasDeferred = (window as any).__deferredPrompt;
+
+    if (canInstall || hasDeferred) {
       const { outcome } = await promptInstall();
       if (outcome === 'accepted') {
         toast({
