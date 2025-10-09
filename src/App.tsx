@@ -18,6 +18,8 @@ import { Loader2 } from "lucide-react";
 const AdminLayout = lazy(() => import("@/pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminOrders = lazy(() => import("@/pages/admin/AdminOrders"));
+const UsersList = lazy(() => import("@/pages/admin/UsersList"));
+const UserProfileView = lazy(() => import("@/pages/admin/UserProfileView"));
 const StaffRequests = lazy(() => import("@/pages/admin/StaffRequests").then(m => ({ default: m.StaffRequests })));
 const WhitelistManagement = lazy(() => import("@/pages/admin/WhitelistManagement").then(m => ({ default: m.WhitelistManagement })));
 const GeneralManagerDashboard = lazy(() => import("@/pages/admin/GeneralManagerDashboard").then(m => ({ default: m.GeneralManagerDashboard })));
@@ -104,6 +106,8 @@ const App = () => (
               }>
                 <Route index element={<AdminDashboard />} />
                 <Route path="orders" element={<AdminOrders />} />
+                <Route path="users" element={<UsersList />} />
+                <Route path="users/:userId" element={<UserProfileView />} />
                 <Route path="staff-requests" element={<StaffRequests />} />
                 <Route path="whitelist" element={<WhitelistManagement />} />
               </Route>

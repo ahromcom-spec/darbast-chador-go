@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator';
 const menuItems = [
   { title: 'داشبورد', url: '/admin', icon: LayoutDashboard },
   { title: 'سفارشات', url: '/admin/orders', icon: Package },
+  { title: 'مدیریت کاربران', url: '/admin/users', icon: Users },
   { title: 'درخواست‌های پرسنل', url: '/admin/staff-requests', icon: UserPlus },
   { title: 'مدیریت لیست مجاز', url: '/admin/whitelist', icon: Users },
 ];
