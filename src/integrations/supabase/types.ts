@@ -235,6 +235,59 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          created_at: string | null
+          customer_code: string
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_code: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_code?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      districts: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          province_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          province_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          province_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "districts_province_id_fkey"
+            columns: ["province_id"]
+            isOneToOne: false
+            referencedRelation: "provinces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           created_at: string
@@ -682,6 +735,127 @@ export type Database = {
           },
         ]
       }
+      projects_v3: {
+        Row: {
+          address: string
+          code: string
+          contractor_id: string | null
+          created_at: string | null
+          customer_id: string
+          detailed_address: string | null
+          district_id: string | null
+          id: string
+          notes: string | null
+          project_number: string
+          province_id: string
+          service_code: string
+          status: Database["public"]["Enums"]["project_status_v3"] | null
+          subcategory_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          address: string
+          code: string
+          contractor_id?: string | null
+          created_at?: string | null
+          customer_id: string
+          detailed_address?: string | null
+          district_id?: string | null
+          id?: string
+          notes?: string | null
+          project_number: string
+          province_id: string
+          service_code: string
+          status?: Database["public"]["Enums"]["project_status_v3"] | null
+          subcategory_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string
+          code?: string
+          contractor_id?: string | null
+          created_at?: string | null
+          customer_id?: string
+          detailed_address?: string | null
+          district_id?: string | null
+          id?: string
+          notes?: string | null
+          project_number?: string
+          province_id?: string
+          service_code?: string
+          status?: Database["public"]["Enums"]["project_status_v3"] | null
+          subcategory_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_v3_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_v3_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "public_contractors_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_v3_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_v3_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_v3_province_id_fkey"
+            columns: ["province_id"]
+            isOneToOne: false
+            referencedRelation: "provinces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_v3_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provinces: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       service_line_items: {
         Row: {
           created_at: string
@@ -921,6 +1095,30 @@ export type Database = {
         }
         Relationships: []
       }
+      service_types_v3: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           completion_date: string | null
@@ -1039,6 +1237,67 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_roles: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          province_id: string | null
+          role: Database["public"]["Enums"]["staff_role_type"]
+          service_type_id: string | null
+          subcategory_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          province_id?: string | null
+          role: Database["public"]["Enums"]["staff_role_type"]
+          service_type_id?: string | null
+          subcategory_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          province_id?: string | null
+          role?: Database["public"]["Enums"]["staff_role_type"]
+          service_type_id?: string | null
+          subcategory_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_roles_province_id_fkey"
+            columns: ["province_id"]
+            isOneToOne: false
+            referencedRelation: "provinces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_roles_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_roles_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_whitelist: {
         Row: {
           allowed_role: Database["public"]["Enums"]["app_role"]
@@ -1065,6 +1324,41 @@ export type Database = {
           phone?: string
         }
         Relationships: []
+      }
+      subcategories: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          service_type_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          service_type_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          service_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types_v3"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ticket_attachments: {
         Row: {
@@ -1300,6 +1594,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      generate_customer_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_project_code: {
+        Args: {
+          _customer_id: string
+          _province_id: string
+          _subcategory_id: string
+        }
+        Returns: string
+      }
       get_contractor_contact_info: {
         Args: { _contractor_id: string }
         Returns: {
@@ -1365,6 +1671,7 @@ export type Database = {
       payment_status: "UNBILLED" | "INVOICED" | "PARTIAL" | "SETTLED"
       payment_status_enum: "PENDING" | "PAID" | "FAILED" | "REFUNDED"
       project_status: "ACTIVE" | "ARCHIVED"
+      project_status_v3: "draft" | "pending_execution" | "active" | "completed"
       request_source: "PORTAL" | "AGENT" | "API"
       reservation_status: "RESERVED" | "PICKED" | "RETURNED"
       service_line_source: "BOM" | "ADHOC"
@@ -1377,6 +1684,15 @@ export type Database = {
         | "CLOSED"
         | "UNDER_REVIEW"
         | "CANCELLED"
+      staff_role_type:
+        | "manager"
+        | "supervisor"
+        | "operations_manager"
+        | "support"
+        | "accounting"
+        | "sales"
+        | "warehouse"
+        | "hr"
       task_status: "OPEN" | "IN_PROGRESS" | "DONE" | "BLOCKED"
       task_type:
         | "execution_schedule"
@@ -1538,6 +1854,7 @@ export const Constants = {
       payment_status: ["UNBILLED", "INVOICED", "PARTIAL", "SETTLED"],
       payment_status_enum: ["PENDING", "PAID", "FAILED", "REFUNDED"],
       project_status: ["ACTIVE", "ARCHIVED"],
+      project_status_v3: ["draft", "pending_execution", "active", "completed"],
       request_source: ["PORTAL", "AGENT", "API"],
       reservation_status: ["RESERVED", "PICKED", "RETURNED"],
       service_line_source: ["BOM", "ADHOC"],
@@ -1550,6 +1867,16 @@ export const Constants = {
         "CLOSED",
         "UNDER_REVIEW",
         "CANCELLED",
+      ],
+      staff_role_type: [
+        "manager",
+        "supervisor",
+        "operations_manager",
+        "support",
+        "accounting",
+        "sales",
+        "warehouse",
+        "hr",
       ],
       task_status: ["OPEN", "IN_PROGRESS", "DONE", "BLOCKED"],
       task_type: [
