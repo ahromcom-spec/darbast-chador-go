@@ -17,6 +17,7 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { EmptyState } from '@/components/common/EmptyState';
 import { TicketForm } from '@/components/profile/TicketForm';
 import { ContractorForm } from '@/components/profile/ContractorForm';
+import { NewContractorForm } from '@/components/profile/NewContractorForm';
 import { useContractorRole } from '@/hooks/useContractorRole';
 
 interface UserOrder {
@@ -201,11 +202,7 @@ export default function UserProfile() {
             {/* Contractor Registration Section */}
             {!isContractor && (
               <div className="space-y-4 pt-6 border-t">
-                <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                  <span>ثبت‌نام پیمانکاران</span>
-                </h3>
-                <ContractorForm 
+                <NewContractorForm 
                   userId={user.id} 
                   userEmail={user.email || ''} 
                 />

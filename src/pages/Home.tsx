@@ -16,13 +16,13 @@ export default function Home() {
   const [selectedService, setSelectedService] = useState<string>('');
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
-  const { goToScaffoldingForm, goToLogin, goToRegister, goToTickets, navigate } = useNavigation();
+  const { goToScaffoldingForm, goToLogin, goToRegister, goToTickets, navigate, navigateWithAuth } = useNavigation();
 
   // Auto-assign projects to contractors
   useAutoAssignProjects();
 
   const handleScaffoldingSelect = () => {
-    goToScaffoldingForm();
+    navigateWithAuth('/service/request');
   };
 
   const handleTarpaulinSelect = () => {
