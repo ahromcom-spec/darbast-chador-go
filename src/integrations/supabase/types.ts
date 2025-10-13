@@ -1614,6 +1614,19 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_public_contractors: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          company_name: string
+          created_at: string
+          description: string
+          experience_years: number
+          general_location: string
+          id: string
+          is_approved: boolean
+          services: Json
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

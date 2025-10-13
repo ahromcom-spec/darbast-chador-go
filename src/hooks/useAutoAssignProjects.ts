@@ -32,27 +32,41 @@ export const useAutoAssignProjects = () => {
 async function assignToMatchingContractors(serviceRequest: any) {
   try {
     // Find contractors that offer this service
+    // Only select contractor_id - no need to fetch full contractor data
     const { data: matchingServices, error: servicesError } = await supabase
       .from('contractor_services')
-      .select('contractor_id, contractors!inner(*)')
-      .eq('service_type', serviceRequest.service_type)
-      .eq('contractors.is_approved', true)
-      .eq('contractors.is_active', true);
+      .select('contractor_id')
+      .eq('service_type', serviceRequest.service_type);
 
     if (servicesError) {
       console.error('Error fetching matching contractors:', servicesError);
       return;
     }
 
+    // Filter for approved and active contractors
     if (!matchingServices || matchingServices.length === 0) {
       console.log('No matching contractors found for service:', serviceRequest.service_type);
       return;
     }
 
-    // Create assignment for each matching contractor
-    const assignments = matchingServices.map((service: any) => ({
+    // Verify contractors are approved and active
+    const contractorIds = matchingServices.map(s => s.contractor_id);
+    const { data: approvedContractors } = await supabase
+      .from('contractors')
+      .select('id')
+      .in('id', contractorIds)
+      .eq('is_approved', true)
+      .eq('is_active', true);
+
+    if (!approvedContractors || approvedContractors.length === 0) {
+      console.log('No approved contractors found for service:', serviceRequest.service_type);
+      return;
+    }
+
+    // Create assignment for each approved contractor
+    const assignments = approvedContractors.map((contractor) => ({
       service_request_id: serviceRequest.id,
-      contractor_id: service.contractor_id,
+      contractor_id: contractor.id,
       status: 'pending'
     }));
 
