@@ -178,13 +178,6 @@ export type Database = {
             referencedRelation: "contractors"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "contractor_services_contractor_id_fkey"
-            columns: ["contractor_id"]
-            isOneToOne: false
-            referencedRelation: "public_contractors_directory"
-            referencedColumns: ["id"]
-          },
         ]
       }
       contractors: {
@@ -586,13 +579,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "project_assignments_contractor_id_fkey"
-            columns: ["contractor_id"]
-            isOneToOne: false
-            referencedRelation: "public_contractors_directory"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "project_assignments_service_request_id_fkey"
             columns: ["service_request_id"]
             isOneToOne: false
@@ -793,13 +779,6 @@ export type Database = {
             columns: ["contractor_id"]
             isOneToOne: false
             referencedRelation: "contractors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projects_v3_contractor_id_fkey"
-            columns: ["contractor_id"]
-            isOneToOne: false
-            referencedRelation: "public_contractors_directory"
             referencedColumns: ["id"]
           },
           {
@@ -1168,13 +1147,6 @@ export type Database = {
             columns: ["contractor_id"]
             isOneToOne: false
             referencedRelation: "contractors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "services_contractor_id_fkey"
-            columns: ["contractor_id"]
-            isOneToOne: false
-            referencedRelation: "public_contractors_directory"
             referencedColumns: ["id"]
           },
           {
@@ -1547,19 +1519,7 @@ export type Database = {
       }
     }
     Views: {
-      public_contractors_directory: {
-        Row: {
-          company_name: string | null
-          created_at: string | null
-          description: string | null
-          experience_years: number | null
-          general_location: string | null
-          id: string | null
-          is_approved: boolean | null
-          services: Json | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       check_directory_rate_limit: {
