@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, UserPlus, Users } from 'lucide-react';
+import { LayoutDashboard, LogOut, UserPlus, Users, Building2 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -19,9 +19,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const menuItems = [
-  { title: 'داشبورد', url: '/general-manager', icon: LayoutDashboard },
-  { title: 'درخواست‌های پرسنل', url: '/general-manager/staff-requests', icon: UserPlus },
-  { title: 'مدیریت لیست مجاز', url: '/general-manager/whitelist', icon: Users },
+  { title: 'داشبورد', url: '/admin/general-manager', icon: LayoutDashboard },
+  { title: 'مدیریت پیمانکاران', url: '/admin/contractors', icon: Building2 },
+  { title: 'مدیریت پرسنل', url: '/admin/staff', icon: Users },
+  { title: 'درخواست‌های پرسنل', url: '/admin/staff-requests', icon: UserPlus },
+  { title: 'مدیریت لیست مجاز', url: '/admin/whitelist', icon: Users },
 ];
 
 export function GeneralManagerSidebar() {

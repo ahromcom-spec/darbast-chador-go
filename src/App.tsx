@@ -23,6 +23,8 @@ const UserProfileView = lazy(() => import("@/pages/admin/UserProfileView"));
 const StaffRequests = lazy(() => import("@/pages/admin/StaffRequests").then(m => ({ default: m.StaffRequests })));
 const WhitelistManagement = lazy(() => import("@/pages/admin/WhitelistManagement").then(m => ({ default: m.WhitelistManagement })));
 const GeneralManagerDashboard = lazy(() => import("@/pages/admin/GeneralManagerDashboard").then(m => ({ default: m.GeneralManagerDashboard })));
+const ContractorManagement = lazy(() => import("@/pages/admin/ContractorManagement"));
+const StaffManagement = lazy(() => import("@/pages/admin/StaffManagement"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectsDashboard = lazy(() => import("@/pages/user/ProjectsDashboard"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
@@ -114,15 +116,8 @@ const App = () => (
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="users" element={<UsersList />} />
                 <Route path="users/:userId" element={<UserProfileView />} />
-                <Route path="staff-requests" element={<StaffRequests />} />
-                <Route path="whitelist" element={<WhitelistManagement />} />
-              </Route>
-              <Route path="/general-manager" element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }>
-                <Route index element={<GeneralManagerDashboard />} />
+                <Route path="contractors" element={<ContractorManagement />} />
+                <Route path="staff" element={<StaffManagement />} />
                 <Route path="staff-requests" element={<StaffRequests />} />
                 <Route path="whitelist" element={<WhitelistManagement />} />
               </Route>
