@@ -1753,6 +1753,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_role_to_user: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       check_directory_rate_limit: {
         Args: { _user_id: string }
         Returns: boolean
@@ -1835,6 +1842,13 @@ export type Database = {
         }
         Returns: string
       }
+      remove_role_from_user: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       send_notification: {
         Args: {
           _body: string
@@ -1844,6 +1858,10 @@ export type Database = {
           _user_id: string
         }
         Returns: string
+      }
+      validate_phone_number: {
+        Args: { _phone: string }
+        Returns: boolean
       }
       verify_otp_code: {
         Args: { _code: string; _phone_number: string }
