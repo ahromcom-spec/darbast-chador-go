@@ -143,17 +143,9 @@ export default function ContractorRegister() {
 
       if (servicesError) throw servicesError;
 
-      // Add contractor role
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: user.id,
-          role: 'contractor'
-        });
-
-      if (roleError && !roleError.message.includes('duplicate')) {
-        console.error('Role assignment error:', roleError);
-      }
+      // Add contractor role using secure function (will fail if user is not admin)
+      // This registration creates a pending contractor that needs approval
+      // So we DON'T assign the role here - it will be assigned on approval
 
       toast({
         title: "✓ ثبت‌نام موفق",
@@ -255,6 +247,9 @@ export default function ContractorRegister() {
                     type="tel"
                     value={formData.phoneNumber}
                     onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    validatePhone
+                    placeholder="09XXXXXXXXX"
+                    maxLength={11}
                     required
                   />
                 </div>

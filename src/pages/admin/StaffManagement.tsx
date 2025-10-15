@@ -124,6 +124,8 @@ export default function StaffManagement() {
 
       if (insertError) throw insertError;
 
+      // TODO: اختصاص نقش مرتبط با پست سازمانی
+      // نیاز به mapping بین organizational_positions و app_role
       toast({
         title: 'موفق',
         description: 'پرسنل با موفقیت افزوده شد',
@@ -176,6 +178,7 @@ export default function StaffManagement() {
                 placeholder="09123456789"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
+                validatePhone
                 maxLength={11}
               />
             </div>

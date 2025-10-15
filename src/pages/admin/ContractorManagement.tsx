@@ -50,7 +50,8 @@ export default function ContractorManagement() {
             name
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (error) throw error;
       setContractors(data || []);
@@ -131,20 +132,25 @@ export default function ContractorManagement() {
 
       if (insertError) throw insertError;
 
-      // افزودن نقش contractor
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: 'contractor',
-        });
-
-      if (roleError && roleError.code !== '23505') throw roleError;
-
-      toast({
-        title: 'موفق',
-        description: 'پیمانکار با موفقیت افزوده شد',
+      // افزودن نقش contractor با استفاده از تابع امن
+      const { error: roleError } = await supabase.rpc('assign_role_to_user', {
+        _user_id: userId,
+        _role: 'contractor',
       });
+
+      if (roleError) {
+        console.error('Role assignment error:', roleError);
+        toast({
+          title: 'تذکر',
+          description: 'پیمانکار ثبت شد اما خطا در تخصیص نقش رخ داد',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'موفق',
+          description: 'پیمانکار با موفقیت افزوده شد و نقش اختصاص یافت',
+        });
+      }
 
       // ریست فرم
       setPhoneNumber('');
@@ -194,6 +200,7 @@ export default function ContractorManagement() {
                 placeholder="09123456789"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
+                validatePhone
                 maxLength={11}
               />
             </div>

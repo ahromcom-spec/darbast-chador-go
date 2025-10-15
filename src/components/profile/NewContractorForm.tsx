@@ -185,17 +185,8 @@ export function NewContractorForm({ userId, userEmail, onSuccess }: NewContracto
 
       if (servicesError) throw servicesError;
 
-      // ثبت نقش contractor
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert([{
-          user_id: userId,
-          role: "contractor"
-        }]);
-
-      if (roleError && roleError.code !== '23505') { // اگر نقش از قبل وجود داشت، مشکلی نیست
-        throw roleError;
-      }
+      // نقش contractor پس از تأیید توسط مدیر اختصاص داده می‌شود
+      // در اینجا فقط درخواست را ثبت می‌کنیم
 
       toast.success("درخواست شما با موفقیت ثبت شد", {
         description: "پس از تأیید مدیریت، می‌توانید پروژه‌ها را مشاهده کنید"
@@ -285,7 +276,9 @@ export function NewContractorForm({ userId, userEmail, onSuccess }: NewContracto
                   type="tel"
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  validatePhone
                   placeholder="09XXXXXXXXX"
+                  maxLength={11}
                   required
                 />
               </div>
