@@ -229,10 +229,7 @@ export default function OrderDetail() {
                 
                 {canEdit && (
                   <Button
-                    onClick={() => toast({
-                      title: "در دست توسعه",
-                      description: "امکان ویرایش به زودی اضافه خواهد شد"
-                    })}
+                    onClick={() => navigate(`/scaffolding/form?edit=${order.id}`)}
                   >
                     <Edit className="h-4 w-4 ml-2" />
                     ویرایش سفارش

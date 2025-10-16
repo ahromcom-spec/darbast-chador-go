@@ -510,7 +510,7 @@ export default function ComprehensiveScaffoldingForm() {
       });
 
       setTimeout(() => {
-        navigate('/projects');
+        navigate('/orders');
       }, 1500);
     } catch (error: any) {
       console.error('خطا:', error);

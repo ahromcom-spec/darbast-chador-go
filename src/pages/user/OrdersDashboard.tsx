@@ -213,14 +213,26 @@ export default function OrdersDashboard() {
                     )}
                   </div>
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/orders/${order.id}`)}
-                  >
-                    <Eye className="h-4 w-4 ml-2" />
-                    مشاهده جزئیات
-                  </Button>
+                  <div className="flex gap-2">
+                    {order.status === 'draft' && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => navigate(`/scaffolding/form?edit=${order.id}`)}
+                      >
+                        <Eye className="h-4 w-4 ml-2" />
+                        ویرایش
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/orders/${order.id}`)}
+                    >
+                      <Eye className="h-4 w-4 ml-2" />
+                      مشاهده جزئیات
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               

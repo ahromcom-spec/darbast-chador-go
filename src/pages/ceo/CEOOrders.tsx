@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { toastError } from '@/lib/errorHandler';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { AlertCircle, Check, X, Eye } from 'lucide-react';
+import { AlertCircle, Check, X, Eye, Edit2 } from 'lucide-react';
 import { z } from 'zod';
 
 // Define zod schema for order notes validation (security improvement)
@@ -57,6 +58,12 @@ export const CEOOrders = () => {
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    address: '',
+    detailed_address: '',
+    notes: ''
+  });
 
   useEffect(() => {
     fetchOrders();
@@ -141,6 +148,51 @@ export const CEOOrders = () => {
       setRejectionReason('');
     } catch (error: any) {
       toast(toastError(error, 'خطا در رد سفارش'));
+    }
+  };
+
+  const handleEditOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setEditForm({
+      address: order.address,
+      detailed_address: order.detailed_address || '',
+      notes: typeof order.notes === 'string' ? order.notes : JSON.stringify(order.notes, null, 2)
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      let parsedNotes = editForm.notes;
+      try {
+        parsedNotes = JSON.parse(editForm.notes);
+      } catch {
+        // If not valid JSON, keep as string
+      }
+
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          address: editForm.address,
+          detailed_address: editForm.detailed_address,
+          notes: parsedNotes
+        })
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'تغییرات ذخیره شد',
+        description: 'اطلاعات سفارش بروزرسانی شد.',
+      });
+
+      setEditDialogOpen(false);
+      setSelectedOrder(null);
+      fetchOrders();
+    } catch (error: any) {
+      toast(toastError(error, 'خطا در ذخیره تغییرات'));
     }
   };
 
@@ -241,7 +293,7 @@ export const CEOOrders = () => {
                     )}
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
@@ -252,6 +304,14 @@ export const CEOOrders = () => {
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       جزئیات
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleEditOrder(order)}
+                    >
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      ویرایش
                     </Button>
                     <Button
                       variant="default"
@@ -432,6 +492,74 @@ export const CEOOrders = () => {
           )}
           <DialogFooter>
             <Button onClick={() => setDetailsOpen(false)}>بستن</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ویرایش سفارش</DialogTitle>
+            <DialogDescription>
+              اطلاعات سفارش را ویرایش کنید و سپس تایید یا رد کنید
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-address">آدرس</Label>
+                <Textarea
+                  id="edit-address"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  rows={2}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-detailed">آدرس دقیق (اختیاری)</Label>
+                <Textarea
+                  id="edit-detailed"
+                  value={editForm.detailed_address}
+                  onChange={(e) => setEditForm({ ...editForm, detailed_address: e.target.value })}
+                  rows={2}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-notes">یادداشت‌ها (JSON یا متن)</Label>
+                <Textarea
+                  id="edit-notes"
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  rows={8}
+                  className="mt-1 font-mono text-xs"
+                  dir="ltr"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  می‌توانید JSON معتبر یا متن ساده وارد کنید
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditDialogOpen(false);
+                setSelectedOrder(null);
+              }}
+            >
+              انصراف
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              ذخیره تغییرات
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
