@@ -34,6 +34,8 @@ const CEOOrders = lazy(() => import("@/pages/ceo/CEOOrders").then(m => ({ defaul
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectsDashboard = lazy(() => import("@/pages/user/ProjectsDashboard"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
+const OrdersDashboard = lazy(() => import("@/pages/user/OrdersDashboard"));
+const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const ScaffoldingForm = lazy(() => import("./pages/scaffolding/ScaffoldingForm"));
@@ -103,6 +105,16 @@ const App = () => (
               <Route path="/projects/:id" element={
                 <ProtectedRoute>
                   <ProjectDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/orders" element={
+                <ProtectedRoute>
+                  <OrdersDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/orders/:id" element={
+                <ProtectedRoute>
+                  <OrderDetail />
                 </ProtectedRoute>
               } />
               <Route path="/tickets" element={<TicketList />} />
