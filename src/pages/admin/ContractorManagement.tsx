@@ -95,7 +95,7 @@ export default function ContractorManagement() {
         .from('contractor_profiles')
         .select('id')
         .eq('user_id', userId)
-        .eq('province', region.province)
+        .eq('province', region.province || '')
         .eq('service_category', category)
         .eq('activity_type', activity)
         .maybeSingle();
