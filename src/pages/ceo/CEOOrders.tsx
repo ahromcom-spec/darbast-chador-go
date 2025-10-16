@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   province_id: string;
+  district_id: string | null;
   subcategory_id: string;
   address: string;
   detailed_address: string | null;
@@ -62,12 +64,35 @@ export const CEOOrders = () => {
   const [editForm, setEditForm] = useState({
     address: '',
     detailed_address: '',
-    notes: ''
+    notes: '',
+    province_id: '',
+    district_id: '',
+    subcategory_id: ''
   });
+  
+  // برای لیست‌ها
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
 
   useEffect(() => {
     fetchOrders();
+    loadMetadata();
   }, []);
+
+  const loadMetadata = async () => {
+    try {
+      const [provincesRes, subcategoriesRes] = await Promise.all([
+        supabase.from('provinces').select('*').eq('is_active', true),
+        supabase.from('subcategories').select('*').eq('is_active', true)
+      ]);
+
+      if (provincesRes.data) setProvinces(provincesRes.data);
+      if (subcategoriesRes.data) setSubcategories(subcategoriesRes.data);
+    } catch (error: any) {
+      console.error('Error loading metadata:', error);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -151,13 +176,26 @@ export const CEOOrders = () => {
     }
   };
 
-  const handleEditOrder = (order: Order) => {
+  const handleEditOrder = async (order: Order) => {
     setSelectedOrder(order);
     setEditForm({
       address: order.address,
       detailed_address: order.detailed_address || '',
-      notes: typeof order.notes === 'string' ? order.notes : JSON.stringify(order.notes, null, 2)
+      notes: typeof order.notes === 'string' ? order.notes : JSON.stringify(order.notes, null, 2),
+      province_id: order.province_id,
+      district_id: order.district_id || '',
+      subcategory_id: order.subcategory_id
     });
+
+    // بارگذاری districts برای province انتخاب شده
+    if (order.province_id) {
+      const { data } = await supabase
+        .from('districts')
+        .select('*')
+        .eq('province_id', order.province_id);
+      if (data) setDistricts(data);
+    }
+
     setEditDialogOpen(true);
   };
 
@@ -177,7 +215,10 @@ export const CEOOrders = () => {
         .update({
           address: editForm.address,
           detailed_address: editForm.detailed_address,
-          notes: parsedNotes
+          notes: parsedNotes,
+          province_id: editForm.province_id,
+          district_id: editForm.district_id || null,
+          subcategory_id: editForm.subcategory_id
         })
         .eq('id', selectedOrder.id);
 
@@ -498,7 +539,7 @@ export const CEOOrders = () => {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>ویرایش سفارش</DialogTitle>
             <DialogDescription>
@@ -508,6 +549,73 @@ export const CEOOrders = () => {
           
           {selectedOrder && (
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-province">استان</Label>
+                  <Select
+                    value={editForm.province_id}
+                    onValueChange={async (value) => {
+                      setEditForm({ ...editForm, province_id: value, district_id: '' });
+                      const { data } = await supabase
+                        .from('districts')
+                        .select('*')
+                        .eq('province_id', value);
+                      if (data) setDistricts(data);
+                    }}
+                  >
+                    <SelectTrigger id="edit-province">
+                      <SelectValue placeholder="استان را انتخاب کنید" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {provinces.map((province) => (
+                        <SelectItem key={province.id} value={province.id}>
+                          {province.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-district">شهرستان (اختیاری)</Label>
+                  <Select
+                    value={editForm.district_id}
+                    onValueChange={(value) => setEditForm({ ...editForm, district_id: value })}
+                    disabled={!editForm.province_id}
+                  >
+                    <SelectTrigger id="edit-district">
+                      <SelectValue placeholder="شهرستان را انتخاب کنید" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {districts.map((district) => (
+                        <SelectItem key={district.id} value={district.id}>
+                          {district.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-subcategory">نوع خدمات</Label>
+                <Select
+                  value={editForm.subcategory_id}
+                  onValueChange={(value) => setEditForm({ ...editForm, subcategory_id: value })}
+                >
+                  <SelectTrigger id="edit-subcategory">
+                    <SelectValue placeholder="نوع خدمات را انتخاب کنید" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subcategories.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <Label htmlFor="edit-address">آدرس</Label>
                 <Textarea
