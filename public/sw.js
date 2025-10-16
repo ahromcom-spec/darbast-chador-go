@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ahrom-v9';
+const CACHE_NAME = 'ahrom-v10';
 const urlsToCache = [
   '/',
   '/index.html',
