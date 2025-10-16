@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,8 @@ import { sanitizeHtml, getSafeErrorMessage } from '@/lib/security';
 
 export default function ComprehensiveScaffoldingForm() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editOrderId = searchParams.get('edit');
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -81,10 +83,11 @@ export default function ComprehensiveScaffoldingForm() {
   const [qomCityId, setQomCityId] = useState<string>('');
   const [scaffoldingServiceId, setScaffoldingServiceId] = useState<string>('');
   const [withMaterialsSubcategoryId, setWithMaterialsSubcategoryId] = useState<string>('');
+  const [editingOrder, setEditingOrder] = useState<any>(null);
 
   useEffect(() => {
     loadInitialData();
-  }, [user]);
+  }, [user, editOrderId]);
 
   const loadInitialData = async () => {
     if (!user) {
@@ -94,6 +97,85 @@ export default function ComprehensiveScaffoldingForm() {
 
     try {
       setDataLoading(true);
+
+      // اگر در حالت ویرایش است، ابتدا سفارش را بارگذاری کن
+      if (editOrderId) {
+        const { data: order, error: orderError } = await supabase
+          .from('projects_v3')
+          .select('*')
+          .eq('id', editOrderId)
+          .single();
+
+        if (orderError) throw orderError;
+
+        // بررسی اینکه سفارش متعلق به کاربر است
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!customerData || order.customer_id !== customerData.id) {
+          toast({
+            title: 'خطا',
+            description: 'شما اجازه ویرایش این سفارش را ندارید',
+            variant: 'destructive',
+          });
+          navigate('/orders');
+          return;
+        }
+
+        if (order.status !== 'draft' && order.status !== 'pending') {
+          toast({
+            title: 'خطا',
+            description: 'فقط سفارشات پیش‌نویس یا در انتظار تایید قابل ویرایش هستند',
+            variant: 'destructive',
+          });
+          navigate('/orders');
+          return;
+        }
+
+        setEditingOrder(order);
+
+        // بارگذاری داده‌های سفارش
+        try {
+          const notes = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+          
+          setProjectAddress(order.address);
+          setActiveService(notes.service_type || 'facade');
+          
+          if (notes.dimensions && Array.isArray(notes.dimensions)) {
+            setDimensions(notes.dimensions.map((d: any, i: number) => ({
+              id: (i + 1).toString(),
+              length: d.length.toString(),
+              height: d.height.toString()
+            })));
+          }
+          
+          if (notes.conditions) {
+            setConditions(notes.conditions);
+          }
+
+          if (order.detailed_address) {
+            // سعی کن موقعیت را از detailed_address استخراج کنی
+            const match = order.detailed_address.match(/موقعیت: ([^,]+),([^ ]+)/);
+            if (match) {
+              const lat = parseFloat(match[1]);
+              const lng = parseFloat(match[2]);
+              const distanceMatch = order.detailed_address.match(/فاصله: ([^k]+)/);
+              const distance = distanceMatch ? parseFloat(distanceMatch[1]) : 0;
+              
+              setProjectLocation({
+                address: order.address,
+                coordinates: [lng, lat],
+                distance
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing order notes:', e);
+        }
+      }
 
       const { data: qom } = await supabase
         .from('provinces')
@@ -457,61 +539,86 @@ export default function ComprehensiveScaffoldingForm() {
       const totalArea = calculateTotalArea();
       const { total: estimatedPrice, pricePerMeter, breakdown } = calculatePrice();
 
-      const { data: projectCode, error: codeError } = await supabase
-        .rpc('generate_project_code', {
-          _customer_id: customer.id,
-          _province_id: qomProvinceId,
-          _subcategory_id: withMaterialsSubcategoryId
-        });
-
-      if (codeError) throw codeError;
-
-      const [projectNumber, serviceCode] = projectCode.split('/');
-
       const dimensionsData = dimensions.map(d => ({
         length: parseFloat(d.length),
         height: parseFloat(d.height),
         area: parseFloat(d.length) * parseFloat(d.height)
       }));
 
-      const { data: project, error: projectError } = await supabase
-        .from('projects_v3')
-        .insert({
-          customer_id: customer.id,
-          province_id: qomProvinceId,
-          district_id: qomCityId || null,
-          subcategory_id: withMaterialsSubcategoryId,
-          project_number: projectNumber,
-          service_code: serviceCode,
-          code: projectCode,
-          address: projectAddress,
-          detailed_address: projectLocation 
-            ? `موقعیت: ${projectLocation.coordinates[1]},${projectLocation.coordinates[0]} - فاصله: ${projectLocation.distance}km`
-            : null,
-          notes: JSON.stringify({
-            service_type: activeService,
-            dimensions: dimensionsData,
-            total_area: totalArea,
-            conditions: conditions,
-            estimated_price: estimatedPrice,
-            price_per_meter: pricePerMeter
-          }),
-          status: 'pending'
-        })
-        .select()
-        .single();
+      const orderData = {
+        address: projectAddress,
+        detailed_address: projectLocation 
+          ? `موقعیت: ${projectLocation.coordinates[1]},${projectLocation.coordinates[0]} - فاصله: ${projectLocation.distance}km`
+          : null,
+        notes: JSON.stringify({
+          service_type: activeService,
+          dimensions: dimensionsData,
+          total_area: totalArea,
+          conditions: conditions,
+          estimated_price: estimatedPrice,
+          price_per_meter: pricePerMeter
+        }),
+      };
 
-      if (projectError) throw projectError;
+      if (editingOrder) {
+        // حالت ویرایش
+        const { error: updateError } = await supabase
+          .from('projects_v3')
+          .update(orderData)
+          .eq('id', editingOrder.id);
 
-      toast({
-        title: '✅ سفارش با موفقیت ثبت شد',
-        description: `کد پروژه: ${projectCode}\nسفارش شما در انتظار تایید مدیر قرار گرفت.`,
-        duration: 5000,
-      });
+        if (updateError) throw updateError;
 
-      setTimeout(() => {
-        navigate('/orders');
-      }, 1500);
+        toast({
+          title: '✅ سفارش با موفقیت بروزرسانی شد',
+          description: `سفارش ${editingOrder.code} بروزرسانی شد.`,
+          duration: 5000,
+        });
+
+        setTimeout(() => {
+          navigate('/orders');
+        }, 1500);
+      } else {
+        // حالت ثبت جدید
+        const { data: projectCode, error: codeError } = await supabase
+          .rpc('generate_project_code', {
+            _customer_id: customer.id,
+            _province_id: qomProvinceId,
+            _subcategory_id: withMaterialsSubcategoryId
+          });
+
+        if (codeError) throw codeError;
+
+        const [projectNumber, serviceCode] = projectCode.split('/');
+
+        const { data: project, error: projectError } = await supabase
+          .from('projects_v3')
+          .insert({
+            customer_id: customer.id,
+            province_id: qomProvinceId,
+            district_id: qomCityId || null,
+            subcategory_id: withMaterialsSubcategoryId,
+            project_number: projectNumber,
+            service_code: serviceCode,
+            code: projectCode,
+            ...orderData,
+            status: 'pending'
+          })
+          .select()
+          .single();
+
+        if (projectError) throw projectError;
+
+        toast({
+          title: '✅ سفارش با موفقیت ثبت شد',
+          description: `کد پروژه: ${projectCode}\nسفارش شما در انتظار تایید مدیر قرار گرفت.`,
+          duration: 5000,
+        });
+
+        setTimeout(() => {
+          navigate('/orders');
+        }, 1500);
+      }
     } catch (error: any) {
       console.error('خطا:', error);
       const safeErrorMessage = getSafeErrorMessage(error);
@@ -539,6 +646,16 @@ export default function ComprehensiveScaffoldingForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* عنوان فرم */}
+      {editingOrder && (
+        <Alert className="bg-blue-500/10 border-blue-500/20">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-700">
+            در حال ویرایش سفارش: <strong>{editingOrder.code}</strong>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Service Type Tabs */}
       <Tabs value={activeService} onValueChange={(v) => setActiveService(v as any)} className="w-full">
         <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
@@ -1029,7 +1146,10 @@ export default function ComprehensiveScaffoldingForm() {
           disabled={loading}
           className="flex-1"
         >
-          {loading ? 'در حال ثبت...' : 'ثبت سفارش'}
+          {loading 
+            ? (editingOrder ? 'در حال بروزرسانی...' : 'در حال ثبت...') 
+            : (editingOrder ? 'بروزرسانی سفارش' : 'ثبت سفارش')
+          }
         </Button>
         <Button
           type="button"
