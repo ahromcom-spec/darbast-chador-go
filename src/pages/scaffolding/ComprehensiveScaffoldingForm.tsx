@@ -181,10 +181,11 @@ export default function ComprehensiveScaffoldingForm() {
     }, 0);
   };
 
-  const calculatePrice = (): { total: number; pricePerMeter: number | null } => {
+  const calculatePrice = (): { total: number; pricePerMeter: number | null; breakdown: string[] } => {
     const area = calculateTotalArea();
     let basePrice = 0;
     let pricePerMeter: number | null = null;
+    const breakdown: string[] = [];
 
     // Base pricing based on service type
     if (activeService === 'facade') {
@@ -225,9 +226,135 @@ export default function ComprehensiveScaffoldingForm() {
       }
     }
 
-    // TODO: Apply conditions multipliers (will add in next step)
+    breakdown.push(`قیمت پایه: ${basePrice.toLocaleString('fa-IR')} تومان`);
 
-    return { total: basePrice, pricePerMeter };
+    // شرایط فقط برای ماه اول اعمال می‌شود
+    if (conditions.currentMonth === 1) {
+      let monthMultiplier = 1;
+
+      // 1. فاصله از مرکز استان
+      if (conditions.distanceRange === '15-25') {
+        monthMultiplier *= 1.2;
+        breakdown.push('فاصله 15-25 کیلومتر: +20%');
+      } else if (conditions.distanceRange === '25-50') {
+        monthMultiplier *= 1.4;
+        breakdown.push('فاصله 25-50 کیلومتر: +40%');
+      } else if (conditions.distanceRange === '50-85') {
+        monthMultiplier *= 1.7;
+        breakdown.push('فاصله 50-85 کیلومتر: +70%');
+      }
+
+      // 2. ارتفاع پای کار (روی سکو/پشت‌بام)
+      if (!onGround && conditions.platformHeight !== null && conditions.scaffoldHeightFromPlatform !== null) {
+        const platformH = conditions.platformHeight;
+        const scaffoldH = conditions.scaffoldHeightFromPlatform;
+        
+        if (platformH <= 6) {
+          if (scaffoldH <= 6) {
+            // ارتفاع 9 متر حساب می‌شود (بدون افزایش خاص)
+            breakdown.push('ارتفاع پشت‌بام ≤6 و داربست ≤6: ارتفاع 9 متر');
+          } else if (scaffoldH <= 12) {
+            // ارتفاع کل از روی زمین
+            breakdown.push('ارتفاع پشت‌بام ≤6 و داربست 6-12: ارتفاع کل از زمین');
+          } else if (scaffoldH <= 24) {
+            monthMultiplier *= 1.2;
+            breakdown.push('ارتفاع پشت‌بام ≤6 و داربست 12-24: +20%');
+          } else if (scaffoldH <= 30) {
+            monthMultiplier *= 1.4;
+            breakdown.push('ارتفاع پشت‌بام ≤6 و داربست 24-30: +40%');
+          }
+        } else if (platformH <= 12) {
+          if (scaffoldH <= 12) {
+            // متراژ دو برابر
+            monthMultiplier *= 2;
+            breakdown.push('ارتفاع پشت‌بام 6-12 و داربست ≤12: متراژ ×2');
+          } else if (scaffoldH <= 24) {
+            // ارتفاع کل از زمین
+            breakdown.push('ارتفاع پشت‌بام 6-12 و داربست 12-24: ارتفاع کل');
+          }
+        } else if (platformH > 12 && scaffoldH > 12) {
+          monthMultiplier *= 2;
+          breakdown.push('ارتفاع پشت‌بام >12 و داربست >12: متراژ ×2 (نیاز به بالابر)');
+        }
+      }
+
+      // 3. فاصله وسیله نقلیه تا پای کار
+      if (!vehicleReachesSite && conditions.vehicleDistance !== null) {
+        const distance = conditions.vehicleDistance;
+        if (distance > 10 && distance <= 20) {
+          monthMultiplier *= 1.2;
+          breakdown.push('فاصله وسیله 10-20 متر: +20%');
+        } else if (distance > 20 && distance <= 40) {
+          monthMultiplier *= 1.4;
+          breakdown.push('فاصله وسیله 20-40 متر: +40%');
+        } else if (distance > 40 && distance <= 60) {
+          monthMultiplier *= 1.6;
+          breakdown.push('فاصله وسیله 40-60 متر: +60%');
+        } else if (distance > 60 && distance <= 100) {
+          monthMultiplier *= 1.8;
+          breakdown.push('فاصله وسیله 60-100 متر: +80%');
+        }
+      }
+
+      basePrice *= monthMultiplier;
+    }
+
+    // محاسبه قیمت چند ماهه
+    let totalPrice = basePrice;
+
+    if (conditions.totalMonths === 2) {
+      // ماه اول با شرایط + ماه دوم بدون شرایط با تخفیف
+      const month1 = basePrice;
+      
+      // قیمت پایه ماه دوم (بدون شرایط)
+      let month2Base = 0;
+      if (activeService === 'facade') {
+        if (area <= 50) month2Base = 3200000;
+        else if (area <= 100) month2Base = 4200000;
+        else month2Base = area * 45000;
+      } else if (activeService === 'formwork') {
+        if (area <= 100) month2Base = 3200000;
+        else if (area <= 200) month2Base = 4000000;
+        else month2Base = area * 20000;
+      } else if (activeService === 'ceiling-tiered') {
+        if (area <= 100) month2Base = 7500000;
+        else if (area <= 200) month2Base = 11000000;
+        else month2Base = area * 45000;
+      } else if (activeService === 'ceiling-slab') {
+        if (area <= 100) month2Base = 8000000;
+        else if (area <= 200) month2Base = 15000000;
+        else month2Base = area * 70000;
+      }
+
+      totalPrice = month1 + month2Base;
+      breakdown.push(`ماه دوم (بدون شرایط): ${month2Base.toLocaleString('fa-IR')} تومان`);
+    } else if (conditions.totalMonths >= 3) {
+      const month1 = basePrice;
+      
+      let monthBase = 0;
+      if (activeService === 'facade') {
+        if (area <= 50) monthBase = 3200000;
+        else if (area <= 100) monthBase = 4200000;
+        else monthBase = area * 45000;
+      } else if (activeService === 'formwork') {
+        if (area <= 100) monthBase = 3200000;
+        else if (area <= 200) monthBase = 4000000;
+        else monthBase = area * 20000;
+      } else if (activeService === 'ceiling-tiered') {
+        if (area <= 100) monthBase = 7500000;
+        else if (area <= 200) monthBase = 11000000;
+        else monthBase = area * 45000;
+      } else if (activeService === 'ceiling-slab') {
+        if (area <= 100) monthBase = 8000000;
+        else if (area <= 200) monthBase = 15000000;
+        else monthBase = area * 70000;
+      }
+
+      totalPrice = month1 + (monthBase * (conditions.totalMonths - 1));
+      breakdown.push(`ماه‌های ${conditions.totalMonths - 1} (بدون شرایط): ${(monthBase * (conditions.totalMonths - 1)).toLocaleString('fa-IR')} تومان`);
+    }
+
+    return { total: totalPrice, pricePerMeter, breakdown };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -279,7 +406,7 @@ export default function ComprehensiveScaffoldingForm() {
 
     try {
       const totalArea = calculateTotalArea();
-      const { total: estimatedPrice, pricePerMeter } = calculatePrice();
+      const { total: estimatedPrice, pricePerMeter, breakdown } = calculatePrice();
 
       const { data: projectCode, error: codeError } = await supabase
         .rpc('generate_project_code', {
@@ -357,7 +484,7 @@ export default function ComprehensiveScaffoldingForm() {
     );
   }
 
-  const { total: estimatedPrice, pricePerMeter } = calculatePrice();
+  const { total: estimatedPrice, pricePerMeter, breakdown } = calculatePrice();
   const totalArea = calculateTotalArea();
 
   return (
@@ -463,12 +590,216 @@ export default function ComprehensiveScaffoldingForm() {
                 </Alert>
               </div>
 
-              {/* Conditions - Will add in next step */}
-              <Card className="bg-secondary/20">
+              {/* شرایط خدمات در پروژه */}
+              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
                 <CardHeader>
                   <CardTitle className="text-lg">شرایط خدمات در پروژه</CardTitle>
-                  <CardDescription>این بخش در مرحله بعد تکمیل می‌شود</CardDescription>
+                  <CardDescription>این شرایط فقط برای ماه اول اعمال می‌شود</CardDescription>
                 </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* 1. تعداد ماه */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">۱. تعداد ماه داربست را انتخاب کنید</Label>
+                    <Select 
+                      value={conditions.totalMonths.toString()} 
+                      onValueChange={(v) => setConditions(prev => ({ 
+                        ...prev, 
+                        totalMonths: parseInt(v),
+                        currentMonth: Math.min(prev.currentMonth, parseInt(v))
+                      }))}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="1">یک ماه</SelectItem>
+                        <SelectItem value="2">دو ماه</SelectItem>
+                        <SelectItem value="3">سه ماه</SelectItem>
+                        <SelectItem value="4">چهار ماه</SelectItem>
+                        <SelectItem value="5">پنج ماه</SelectItem>
+                        <SelectItem value="6">شش ماه</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 2. ماه چندم */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">۲. ماه چندم است که داربست را می‌خواهید؟</Label>
+                    <RadioGroup 
+                      value={conditions.currentMonth.toString()}
+                      onValueChange={(v) => setConditions(prev => ({ ...prev, currentMonth: parseInt(v) }))}
+                      className="space-y-2"
+                    >
+                      {Array.from({ length: conditions.totalMonths }, (_, i) => i + 1).map(month => (
+                        <div key={month} className="flex items-center space-x-2 space-x-reverse">
+                          <RadioGroupItem value={month.toString()} id={`month-${month}`} />
+                          <Label htmlFor={`month-${month}`} className="font-normal cursor-pointer">
+                            ماه {month === 1 ? 'اول' : month === 2 ? 'دوم' : month === 3 ? 'سوم' : month === 4 ? 'چهارم' : month === 5 ? 'پنجم' : 'ششم'}
+                            {month > 1 && <span className="text-xs text-muted-foreground mr-2">(بدون شرایط افزایش قیمت)</span>}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+
+                  {/* 3. فاصله از مرکز استان */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">۳. فاصله آدرس پروژه تا مرکز استان</Label>
+                    <RadioGroup 
+                      value={conditions.distanceRange}
+                      onValueChange={(v: any) => setConditions(prev => ({ ...prev, distanceRange: v }))}
+                      className="space-y-2"
+                    >
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="0-15" id="dist-0-15" />
+                        <Label htmlFor="dist-0-15" className="font-normal cursor-pointer">
+                          تا ۱۵ کیلومتری (بدون افزایش قیمت)
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="15-25" id="dist-15-25" />
+                        <Label htmlFor="dist-15-25" className="font-normal cursor-pointer">
+                          ۱۵ تا ۲۵ کیلومتری (+۲۰٪)
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="25-50" id="dist-25-50" />
+                        <Label htmlFor="dist-25-50" className="font-normal cursor-pointer">
+                          ۲۵ تا ۵۰ کیلومتری (+۴۰٪)
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="50-85" id="dist-50-85" />
+                        <Label htmlFor="dist-50-85" className="font-normal cursor-pointer">
+                          ۵۰ تا ۸۵ کیلومتری (+۷۰٪)
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                    <Alert className="bg-yellow-500/10 border-yellow-500/20">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertDescription className="text-xs">
+                        بالای ۸۵ کیلومتر از مرکز استان کار پذیرفته نمی‌شود
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+
+                  {/* 4. ارتفاع پای کار */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">۴. ارتفاع پای کار داربست فلزی از روی زمین</Label>
+                    <RadioGroup 
+                      value={onGround ? 'ground' : 'platform'}
+                      onValueChange={(v) => setOnGround(v === 'ground')}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="ground" id="ground" />
+                        <Label htmlFor="ground" className="font-normal cursor-pointer">
+                          داربست روی زمین بسته می‌شود
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="platform" id="platform" />
+                        <Label htmlFor="platform" className="font-normal cursor-pointer">
+                          داربست روی سکو یا پشت‌بام بسته می‌شود
+                        </Label>
+                      </div>
+                    </RadioGroup>
+
+                    {!onGround && (
+                      <Card className="p-4 bg-background/50 space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="platformHeight">ارتفاع سکو/پشت‌بام از روی زمین (متر)</Label>
+                          <Input
+                            id="platformHeight"
+                            type="number"
+                            step="0.1"
+                            value={conditions.platformHeight || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              platformHeight: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 3"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="scaffoldHeight">ارتفاع داربست از روی پشت‌بام (متر)</Label>
+                          <Input
+                            id="scaffoldHeight"
+                            type="number"
+                            step="0.1"
+                            value={conditions.scaffoldHeightFromPlatform || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              scaffoldHeightFromPlatform: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 9"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            اگر پشت‌بام بالا و پایین دارد، ارتفاع میانگین را وارد کنید
+                          </p>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+
+                  {/* 5. فاصله وسیله نقلیه */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">۵. فاصله وسیله نقلیه تا پای کار</Label>
+                    <RadioGroup 
+                      value={vehicleReachesSite ? 'reaches' : 'distance'}
+                      onValueChange={(v) => setVehicleReachesSite(v === 'reaches')}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="reaches" id="reaches" />
+                        <Label htmlFor="reaches" className="font-normal cursor-pointer">
+                          وسیله نقلیه داربست تا پای کار می‌آید
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="distance" id="distance" />
+                        <Label htmlFor="distance" className="font-normal cursor-pointer">
+                          فاصله وسیله نقلیه تا پای کار را وارد کنید
+                        </Label>
+                      </div>
+                    </RadioGroup>
+
+                    {!vehicleReachesSite && (
+                      <Card className="p-4 bg-background/50">
+                        <div className="space-y-2">
+                          <Label htmlFor="vehicleDistance">فاصله به متر</Label>
+                          <Input
+                            id="vehicleDistance"
+                            type="number"
+                            step="1"
+                            value={conditions.vehicleDistance || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              vehicleDistance: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 25"
+                          />
+                          <div className="text-xs text-muted-foreground space-y-1 mt-2">
+                            <p>• تا ۱۰ متر: بدون افزایش</p>
+                            <p>• ۱۰-۲۰ متر: +۲۰٪</p>
+                            <p>• ۲۰-۴۰ متر: +۴۰٪</p>
+                            <p>• ۴۰-۶۰ متر: +۶۰٪</p>
+                            <p>• ۶۰-۱۰۰ متر: +۸۰٪</p>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+
+                  {conditions.currentMonth > 1 && (
+                    <Alert className="bg-blue-500/10 border-blue-500/20">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertDescription>
+                        شما ماه {conditions.currentMonth} را انتخاب کرده‌اید. شرایط افزایش قیمت فقط برای ماه اول اعمال می‌شود.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
               </Card>
             </CardContent>
           </Card>
@@ -514,20 +845,51 @@ export default function ComprehensiveScaffoldingForm() {
       </Tabs>
 
       {/* Price Display */}
-      <Card className="bg-primary/5 border-primary">
+      <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 shadow-lg">
         <CardContent className="p-6">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold">قیمت تخمینی:</span>
-              <span className="text-2xl font-bold text-primary">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center pb-4 border-b">
+              <span className="text-lg font-semibold">قیمت تخمینی کل:</span>
+              <span className="text-3xl font-bold text-primary">
                 {estimatedPrice.toLocaleString('fa-IR')} تومان
               </span>
             </div>
+            
             {pricePerMeter && totalArea > 100 && (
-              <div className="flex justify-between items-center text-sm text-muted-foreground">
-                <span>فی قیمت هر متر:</span>
-                <span>{pricePerMeter.toLocaleString('fa-IR')} تومان</span>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">فی قیمت هر متر مربع:</span>
+                <span className="font-semibold text-lg">{pricePerMeter.toLocaleString('fa-IR')} تومان</span>
               </div>
+            )}
+
+            {breakdown.length > 0 && (
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-between">
+                    <span className="text-sm">جزئیات محاسبه قیمت</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-2 pt-2">
+                  <div className="bg-background/50 rounded-lg p-4 space-y-2">
+                    {breakdown.map((item, index) => (
+                      <div key={index} className="text-sm text-muted-foreground flex items-start gap-2">
+                        <span className="text-primary">•</span>
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {conditions.totalMonths > 1 && (
+              <Alert className="bg-green-500/10 border-green-500/20">
+                <AlertCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-sm">
+                  قیمت برای {conditions.totalMonths} ماه محاسبه شده است
+                </AlertDescription>
+              </Alert>
             )}
           </div>
         </CardContent>
