@@ -33,11 +33,21 @@ interface UserOrder {
   location_distance: number | null;
 }
 
+interface ProjectOrder {
+  id: string;
+  created_at: string;
+  code: string;
+  status: string | null;
+  address: string | null;
+  estimated_price?: number | null;
+}
+
 export default function UserProfile() {
   usePageTitle('پروفایل کاربری');
   const { user } = useAuth();
   const { isContractor } = useContractorRole();
   const [orders, setOrders] = useState<UserOrder[]>([]);
+  const [projectOrders, setProjectOrders] = useState<ProjectOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState('');
   const [staffDialogOpen, setStaffDialogOpen] = useState(false);
@@ -66,25 +76,68 @@ export default function UserProfile() {
     }
   };
 
-  const fetchOrders = async () => {
-    if (!user) return;
+const fetchOrders = async () => {
+  if (!user) return;
 
-    try {
-      const { data, error } = await supabase
-        .from('service_requests')
-        .select('*')
-        .eq('user_id', user.id)
+  try {
+    // Legacy orders (if any)
+    const { data: legacyOrders, error: legacyError } = await supabase
+      .from('service_requests')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (legacyError) {
+      console.error('Error fetching legacy orders:', legacyError);
+    } else {
+      setOrders(legacyOrders || []);
+    }
+
+    // New projects-based orders (projects_v3)
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!customerError && customer) {
+      const { data: projects, error: projectsError } = await supabase
+        .from('projects_v3')
+        .select('id, created_at, code, status, address, notes')
+        .eq('customer_id', customer.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setOrders(data || []);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast.error('خطا در دریافت سفارشات');
-    } finally {
-      setLoading(false);
+      if (projectsError) {
+        console.error('Error fetching projects_v3:', projectsError);
+        setProjectOrders([]);
+      } else {
+        const normalized = (projects || []).map((p: any) => {
+          let estimated_price: number | null = null;
+          try {
+            const n = typeof p.notes === 'string' ? JSON.parse(p.notes) : p.notes;
+            estimated_price = n?.estimated_price ?? null;
+          } catch {}
+          return {
+            id: p.id,
+            created_at: p.created_at,
+            code: p.code,
+            status: p.status ?? null,
+            address: p.address ?? null,
+            estimated_price,
+          } as ProjectOrder;
+        });
+        setProjectOrders(normalized);
+      }
+    } else {
+      setProjectOrders([]);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    toast.error('خطا در دریافت سفارشات');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleProfileUpdate = (newName: string) => {
     setFullName(newName);
@@ -140,53 +193,102 @@ export default function UserProfile() {
             </div>
           </TabsContent>
 
-          {/* Orders Tab */}
-          <TabsContent value="orders" className="mt-4">
-            {orders.length === 0 ? (
-              <EmptyState
-                icon={Package}
-                title="سفارشی یافت نشد"
-                description="شما هنوز هیچ سفارشی ثبت نکرده‌اید"
-              />
-            ) : (
-              <div className="rounded-md border overflow-hidden">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="whitespace-nowrap">تاریخ ثبت</TableHead>
-                        <TableHead className="whitespace-nowrap">نوع خدمات</TableHead>
-                        <TableHead className="whitespace-nowrap">ابعاد (متر)</TableHead>
-                        <TableHead className="whitespace-nowrap">وضعیت</TableHead>
-                        <TableHead className="whitespace-nowrap min-w-[150px]">آدرس</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {orders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="whitespace-nowrap text-sm">
-                            {new Date(order.created_at).toLocaleDateString('fa-IR')}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-sm">
-                            {getTypeLabel(order.sub_type)}
-                          </TableCell>
-                          <TableCell dir="ltr" className="whitespace-nowrap text-sm">
-                            {order.length} × {order.width} × {order.height}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <StatusBadge status={order.status} />
-                          </TableCell>
-                          <TableCell className="max-w-[200px] truncate text-sm">
-                            {order.location_address || '-'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
-          </TabsContent>
+{/* Orders Tab */}
+<TabsContent value="orders" className="mt-4">
+  {orders.length === 0 && projectOrders.length === 0 ? (
+    <EmptyState
+      icon={Package}
+      title="سفارشی یافت نشد"
+      description="شما هنوز هیچ سفارشی ثبت نکرده‌اید"
+    />
+  ) : (
+    <div className="space-y-6">
+      {projectOrders.length > 0 && (
+        <div>
+          <h3 className="font-semibold mb-2">سفارشات ثبت شده</h3>
+          <div className="rounded-md border overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">تاریخ ثبت</TableHead>
+                    <TableHead className="whitespace-nowrap">کد پروژه</TableHead>
+                    <TableHead className="whitespace-nowrap">وضعیت</TableHead>
+                    <TableHead className="whitespace-nowrap min-w-[150px]">آدرس</TableHead>
+                    <TableHead className="whitespace-nowrap">قیمت تخمینی</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {projectOrders.map((po) => (
+                    <TableRow key={po.id}>
+                      <TableCell className="whitespace-nowrap text-sm">
+                        {new Date(po.created_at).toLocaleDateString('fa-IR')}
+                      </TableCell>
+                      <TableCell dir="ltr" className="whitespace-nowrap text-sm">
+                        {po.code}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <StatusBadge status={po.status || 'draft'} />
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm">
+                        {po.address || '-'}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">
+                        {po.estimated_price ? `${po.estimated_price.toLocaleString('fa-IR')} تومان` : '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {orders.length > 0 && (
+        <div>
+          <h3 className="font-semibold mb-2">درخواست‌های قدیمی</h3>
+          <div className="rounded-md border overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">تاریخ ثبت</TableHead>
+                    <TableHead className="whitespace-nowrap">نوع خدمات</TableHead>
+                    <TableHead className="whitespace-nowrap">ابعاد (متر)</TableHead>
+                    <TableHead className="whitespace-nowrap">وضعیت</TableHead>
+                    <TableHead className="whitespace-nowrap min-w-[150px]">آدرس</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="whitespace-nowrap text-sm">
+                        {new Date(order.created_at).toLocaleDateString('fa-IR')}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">
+                        {getTypeLabel(order.sub_type)}
+                      </TableCell>
+                      <TableCell dir="ltr" className="whitespace-nowrap text-sm">
+                        {order.length} × {order.width} × {order.height}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <StatusBadge status={order.status} />
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm">
+                        {order.location_address || '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )}
+</TabsContent>
 
           {/* Quick Actions Tab */}
           <TabsContent value="actions" className="space-y-6 mt-4">
