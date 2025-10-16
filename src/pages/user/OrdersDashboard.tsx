@@ -190,7 +190,7 @@ export default function OrdersDashboard() {
           title="هیچ سفارشی وجود ندارد"
           description="با ثبت اولین سفارش، می‌توانید وضعیت آن را در اینجا پیگیری کنید"
           actionLabel="ثبت سفارش جدید"
-          onAction={() => navigate("/scaffolding/comprehensive-form")}
+          onAction={() => navigate("/scaffolding/form")}
         />
       ) : (
         <div className="space-y-4">

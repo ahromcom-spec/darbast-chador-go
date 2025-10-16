@@ -146,17 +146,31 @@ export default function Home() {
                     <p className="text-xs sm:text-sm text-muted-foreground">
                       دریافت خدمات داربست فلزی با بالاترین کیفیت، تیم متخصص و قیمت مناسب
                     </p>
-                    <Button 
-                      onClick={handleScaffoldingSelect} 
-                      className="w-full h-auto p-3 sm:p-4 md:p-5 construction-gradient text-sm sm:text-base"
-                    >
-                      <div className="space-y-0.5 sm:space-y-1">
-                        <div className="font-semibold">ثبت درخواست داربست فلزی</div>
-                        <div className="text-xs sm:text-sm opacity-90">
-                          برای دریافت خدمات داربست ساختمانی کلیک کنید
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Button 
+                        onClick={() => navigateWithAuth('/scaffolding/form')} 
+                        className="w-full h-auto p-3 sm:p-4 md:p-5 construction-gradient text-sm sm:text-base"
+                      >
+                        <div className="space-y-0.5 sm:space-y-1">
+                          <div className="font-semibold">ثبت سفارش کامل</div>
+                          <div className="text-xs sm:text-sm opacity-90">
+                            قیمت‌گذاری دقیق با تمام مشخصات
+                          </div>
                         </div>
-                      </div>
-                    </Button>
+                      </Button>
+                      <Button 
+                        onClick={handleScaffoldingSelect} 
+                        variant="outline"
+                        className="w-full h-auto p-3 sm:p-4 md:p-5 border-2 text-sm sm:text-base"
+                      >
+                        <div className="space-y-0.5 sm:space-y-1">
+                          <div className="font-semibold">درخواست ساده</div>
+                          <div className="text-xs sm:text-sm opacity-90">
+                            پروژه اولیه بدون قیمت‌گذاری
+                          </div>
+                        </div>
+                      </Button>
+                    </div>
                   </section>
                 )}
 
