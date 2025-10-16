@@ -996,6 +996,8 @@ export type Database = {
       projects_v3: {
         Row: {
           address: string
+          approved_at: string | null
+          approved_by: string | null
           code: string
           contractor_id: string | null
           created_at: string | null
@@ -1006,6 +1008,7 @@ export type Database = {
           notes: string | null
           project_number: string
           province_id: string
+          rejection_reason: string | null
           service_code: string
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
@@ -1013,6 +1016,8 @@ export type Database = {
         }
         Insert: {
           address: string
+          approved_at?: string | null
+          approved_by?: string | null
           code: string
           contractor_id?: string | null
           created_at?: string | null
@@ -1023,6 +1028,7 @@ export type Database = {
           notes?: string | null
           project_number: string
           province_id: string
+          rejection_reason?: string | null
           service_code: string
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
@@ -1030,6 +1036,8 @@ export type Database = {
         }
         Update: {
           address?: string
+          approved_at?: string | null
+          approved_by?: string | null
           code?: string
           contractor_id?: string | null
           created_at?: string | null
@@ -1040,6 +1048,7 @@ export type Database = {
           notes?: string | null
           project_number?: string
           province_id?: string
+          rejection_reason?: string | null
           service_code?: string
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id?: string
@@ -2088,7 +2097,14 @@ export type Database = {
       payment_status: "UNBILLED" | "INVOICED" | "PARTIAL" | "SETTLED"
       payment_status_enum: "PENDING" | "PAID" | "FAILED" | "REFUNDED"
       project_status: "ACTIVE" | "ARCHIVED"
-      project_status_v3: "draft" | "pending_execution" | "active" | "completed"
+      project_status_v3:
+        | "draft"
+        | "pending_execution"
+        | "active"
+        | "completed"
+        | "pending"
+        | "approved"
+        | "rejected"
       request_source: "PORTAL" | "AGENT" | "API"
       reservation_status: "RESERVED" | "PICKED" | "RETURNED"
       service_line_source: "BOM" | "ADHOC"
@@ -2272,7 +2288,15 @@ export const Constants = {
       payment_status: ["UNBILLED", "INVOICED", "PARTIAL", "SETTLED"],
       payment_status_enum: ["PENDING", "PAID", "FAILED", "REFUNDED"],
       project_status: ["ACTIVE", "ARCHIVED"],
-      project_status_v3: ["draft", "pending_execution", "active", "completed"],
+      project_status_v3: [
+        "draft",
+        "pending_execution",
+        "active",
+        "completed",
+        "pending",
+        "approved",
+        "rejected",
+      ],
       request_source: ["PORTAL", "AGENT", "API"],
       reservation_status: ["RESERVED", "PICKED", "RETURNED"],
       service_line_source: ["BOM", "ADHOC"],
