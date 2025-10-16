@@ -37,6 +37,13 @@ serve(async (req) => {
     };
 
     const normalizedPhone = normalizeIranPhone(phone_number);
+    // Enforce strict 11-digit format: 09XXXXXXXXX
+    if (!/^09[0-9]{9}$/.test(normalizedPhone)) {
+      return new Response(
+        JSON.stringify({ error: 'شماره تلفن باید 11 رقم و با 09 شروع شود' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
     // Initialize Supabase client
@@ -107,9 +114,22 @@ serve(async (req) => {
     try {
       host = originHeader ? new URL(originHeader).host : host;
     } catch {}
-    const webOtpBinding = `@${host} #${code}`;
+    const hostIsValidFormat = /^[a-z0-9.-]+(:[0-9]{1,5})?$/i.test(host);
+    const baseHost = host.replace(/:.*$/, '');
+    const allowedExact = ['ahrom.org'];
+    const allowedSuffixes = ['.lovableproject.com', '.ahrom.org'];
+    const isLocalhost = /^localhost$/.test(baseHost) || /^127\.0\.0\.1$/.test(baseHost);
+    const isAllowed = hostIsValidFormat && (allowedExact.includes(baseHost) || allowedSuffixes.some(s => baseHost.endsWith(s)) || isLocalhost);
+    if (!isAllowed) {
+      return new Response(
+        JSON.stringify({ error: 'دامنه نامعتبر' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const safeHost = baseHost;
+    const webOtpBinding = `@${safeHost} #${code}`;
     // Simple format to avoid validation errors
-    const message = `کد تایید شما: ${code} برای ورود به اهرم\n\n@${host} #${code}\nلغو11`;
+    const message = `کد تایید شما: ${code} برای ورود به اهرم\n\n@${safeHost} #${code}\nلغو11`;
     const rawSender = Deno.env.get('PARSGREEN_SENDER') || '';
     const senderNumber = /^[0-9]+$/.test(rawSender) ? rawSender : '90000319';
     if (rawSender && !/^[0-9]+$/.test(rawSender)) {

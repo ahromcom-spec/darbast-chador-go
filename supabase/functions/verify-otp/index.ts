@@ -33,7 +33,13 @@ serve(async (req) => {
     };
 
     const normalizedPhone = normalizeIranPhone(phone_number);
-    
+    // Enforce strict 11-digit format: 09XXXXXXXXX
+    if (!/^09[0-9]{9}$/.test(normalizedPhone)) {
+      return new Response(
+        JSON.stringify({ error: 'شماره تلفن باید 11 رقم و با 09 شروع شود' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     // Convert to E.164 format for Supabase Auth (+98XXXXXXXXXX)
     const authPhone = normalizedPhone.startsWith('0') 
       ? '+98' + normalizedPhone.slice(1) 
