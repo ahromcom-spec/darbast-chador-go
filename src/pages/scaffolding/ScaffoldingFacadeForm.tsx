@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,96 @@ export default function ScaffoldingFacadeForm() {
     distance: number;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // بيانات النظام
+  const [customer, setCustomer] = useState<any>(null);
+  const [qomProvinceId, setQomProvinceId] = useState<string>('');
+  const [qomCityId, setQomCityId] = useState<string>('');
+  const [scaffoldingServiceId, setScaffoldingServiceId] = useState<string>('');
+  const [withMaterialsSubcategoryId, setWithMaterialsSubcategoryId] = useState<string>('');
+
+  useEffect(() => {
+    loadInitialData();
+  }, [user]);
+
+  const loadInitialData = async () => {
+    if (!user) {
+      navigate('/auth/login');
+      return;
+    }
+
+    try {
+      setDataLoading(true);
+
+      // تحميل استان قم
+      const { data: qom } = await supabase
+        .from('provinces')
+        .select('id')
+        .eq('code', '10')
+        .single();
+      
+      if (qom) setQomProvinceId(qom.id);
+
+      // تحميل شهر قم
+      const { data: qomCity } = await supabase
+        .from('districts')
+        .select('id')
+        .eq('name', 'شهر قم')
+        .maybeSingle();
+      
+      if (qomCity) setQomCityId(qomCity.id);
+
+      // تحميل نوع خدمة داربست فلزي
+      const { data: scaffolding } = await supabase
+        .from('service_types_v3')
+        .select('id')
+        .eq('code', '10')
+        .single();
+      
+      if (scaffolding) setScaffoldingServiceId(scaffolding.id);
+
+      // تحميل زيرشاخه "با مصالح"
+      if (scaffolding) {
+        const { data: withMaterials } = await supabase
+          .from('subcategories')
+          .select('id')
+          .eq('service_type_id', scaffolding.id)
+          .eq('code', '10')
+          .single();
+        
+        if (withMaterials) setWithMaterialsSubcategoryId(withMaterials.id);
+      }
+
+      // تحميل أو إنشاء سجل المشتري
+      let { data: customerData } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!customerData) {
+        const { data: newCustomer } = await supabase
+          .from('customers')
+          .insert({ user_id: user.id } as any)
+          .select()
+          .maybeSingle();
+        customerData = newCustomer;
+      }
+
+      setCustomer(customerData);
+    } catch (error: any) {
+      console.error('Error loading data:', error);
+      toast({
+        title: 'خطا در بارگذاری اطلاعات',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   const addDimension = () => {
     const newId = (dimensions.length + 1).toString();
@@ -128,39 +217,80 @@ export default function ScaffoldingFacadeForm() {
       return;
     }
 
+    if (!customer || !qomProvinceId || !withMaterialsSubcategoryId) {
+      toast({
+        title: 'خطا',
+        description: 'اطلاعات سیستم کامل نیست. لطفاً صفحه را رفرش کنید',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       const totalArea = calculateTotalArea();
       const estimatedPrice = calculatePrice(totalArea, durationMonths);
 
-      const { error } = await supabase.from('service_requests').insert({
-        user_id: user?.id,
-        service_type: 'scaffolding',
-        sub_type: 'facade_with_materials',
-        length: totalArea,
-        width: 0,
-        height: 0,
-        location_address: projectAddress,
-        location_coordinates: projectLocation 
-          ? `(${projectLocation.coordinates[1]},${projectLocation.coordinates[0]})`
-          : null,
-        location_distance: projectLocation?.distance || null,
-      });
+      // تولید کد پروژه
+      const { data: projectCode, error: codeError } = await supabase
+        .rpc('generate_project_code', {
+          _customer_id: customer.id,
+          _province_id: qomProvinceId,
+          _subcategory_id: withMaterialsSubcategoryId
+        });
 
-      if (error) throw error;
+      if (codeError) throw codeError;
+
+      const [projectNumber, serviceCode] = projectCode.split('/');
+
+      // حفظ بيانات الأبعاد كـ JSON
+      const dimensionsData = dimensions.map(d => ({
+        length: parseFloat(d.length),
+        height: parseFloat(d.height),
+        area: parseFloat(d.length) * parseFloat(d.height)
+      }));
+
+      // إنشاء المشروع
+      const { data: project, error: projectError } = await supabase
+        .from('projects_v3')
+        .insert({
+          customer_id: customer.id,
+          province_id: qomProvinceId,
+          district_id: qomCityId || null,
+          subcategory_id: withMaterialsSubcategoryId,
+          project_number: projectNumber,
+          service_code: serviceCode,
+          code: projectCode,
+          address: projectAddress,
+          detailed_address: projectLocation 
+            ? `موقعیت: ${projectLocation.coordinates[1]},${projectLocation.coordinates[0]} - فاصله: ${projectLocation.distance}km`
+            : null,
+          notes: JSON.stringify({
+            service_type: 'facade_with_materials',
+            dimensions: dimensionsData,
+            total_area: totalArea,
+            duration_months: durationMonths,
+            estimated_price: estimatedPrice
+          }),
+          status: 'draft'
+        })
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
 
       toast({
         title: 'درخواست ثبت شد',
-        description: `درخواست شما با موفقیت ثبت شد. قیمت تخمینی: ${estimatedPrice.toLocaleString('fa-IR')} تومان`,
+        description: `کد پروژه: ${projectCode} - قیمت تخمینی: ${estimatedPrice.toLocaleString('fa-IR')} تومان`,
       });
 
-      navigate('/');
-    } catch (error) {
+      navigate('/projects');
+    } catch (error: any) {
       console.error('Error submitting request:', error);
       toast({
         title: 'خطا در ثبت درخواست',
-        description: 'مشکلی در ثبت درخواست پیش آمد',
+        description: error.message || 'مشکلی در ثبت درخواست پیش آمد',
         variant: 'destructive',
       });
     } finally {
@@ -170,6 +300,17 @@ export default function ScaffoldingFacadeForm() {
 
   const totalArea = calculateTotalArea();
   const estimatedPrice = durationMonths ? calculatePrice(totalArea, durationMonths) : 0;
+
+  if (dataLoading) {
+    return (
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
+        <CardContent className="p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">در حال بارگذاری...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
