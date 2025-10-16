@@ -18,11 +18,7 @@ export default function StaffManagement() {
   const { positions, loading: positionsLoading } = useOrganizationalPositions();
 
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState<{
-    province?: string;
-    district?: string;
-    city?: string;
-  }>({});
+  const [selectedRegion, setSelectedRegion] = useState('');
   const [position, setPosition] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -62,7 +58,7 @@ export default function StaffManagement() {
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!phoneNumber.trim() || !selectedRegion.province || !position) {
+    if (!phoneNumber.trim() || !selectedRegion || !position) {
       toast({
         title: 'خطا',
         description: 'لطفاً تمام فیلدهای الزامی را پر کنید',
@@ -93,15 +89,12 @@ export default function StaffManagement() {
 
       const userId = profileData.user_id;
 
-      // بررسی تکراری نبودن (همان نقش + استان + شهرستان)
+      // بررسی تکراری نبودن
       const { data: duplicates } = await supabase
-        .from('staff_profiles')
+        .from('staff_verification_requests')
         .select('id')
-        .match({
-          user_id: userId,
-          province: selectedRegion.province || '',
-          staff_position: position
-        });
+        .eq('user_id', userId)
+        .eq('position_id', position);
 
       if (duplicates && duplicates.length > 0) {
         toast({
@@ -117,20 +110,19 @@ export default function StaffManagement() {
       // استفاده از operations_manager به عنوان نقش پیش‌فرض
       const defaultRole = 'operations_manager';
 
-      // ایجاد رکورد پرسنل
+      // ایجاد رکورد درخواست تأیید شده پرسنل
+      const currentUser = await supabase.auth.getUser();
       const { error: insertError } = await supabase
-        .from('staff_profiles')
+        .from('staff_verification_requests')
         .insert({
           user_id: userId,
-          requested_role: defaultRole,
-          province: selectedRegion.province,
-          staff_category: selectedRegion.district || '',
-          staff_subcategory: selectedRegion.city || '',
-          staff_position: position,
-          description: description || null,
+          phone_number: phoneNumber,
+          requested_role: defaultRole as any,
+          position_id: position,
+          region_id: selectedRegion,
           status: 'approved',
-          approved_by: (await supabase.auth.getUser()).data.user?.id,
-          approved_at: new Date().toISOString(),
+          verified_by: currentUser.data.user?.id,
+          verified_at: new Date().toISOString(),
         });
 
       if (insertError) throw insertError;
@@ -152,7 +144,7 @@ export default function StaffManagement() {
 
       // ریست فرم
       setPhoneNumber('');
-      setSelectedRegion({});
+      setSelectedRegion('');
       setPosition('');
       setDescription('');
       fetchStaff();

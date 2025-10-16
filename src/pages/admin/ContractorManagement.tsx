@@ -20,11 +20,7 @@ export default function ContractorManagement() {
   const { activityTypes, loading: activityTypesLoading } = useActivityTypes();
 
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState<{
-    province?: string;
-    district?: string;
-    city?: string;
-  }>({});
+  const [selectedRegion, setSelectedRegion] = useState('');
   const [category, setCategory] = useState('');
   const [activity, setActivity] = useState('');
   const [description, setDescription] = useState('');
@@ -66,7 +62,7 @@ export default function ContractorManagement() {
   const handleAddContractor = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!phoneNumber.trim() || !selectedRegion.province || !category || !activity) {
+    if (!phoneNumber.trim() || !selectedRegion || !category || !activity) {
       toast({
         title: 'خطا',
         description: 'لطفاً تمام فیلدهای الزامی را پر کنید',
@@ -96,18 +92,13 @@ export default function ContractorManagement() {
       }
 
       const userId = profileData.user_id;
-      const province = selectedRegion.province || '';
 
       // بررسی تکراری نبودن
       const { data: duplicates, error: duplicateError } = await supabase
         .from('contractor_profiles')
         .select('id')
-        .match({
-          user_id: userId,
-          province: province,
-          service_category: category,
-          activity_type: activity
-        });
+        .eq('user_id', userId)
+        .eq('service_category_id', category);
 
       if (!duplicateError && duplicates && duplicates.length > 0) {
         toast({
@@ -127,12 +118,9 @@ export default function ContractorManagement() {
           phone_verified: true,
           verified_by: (await supabase.auth.getUser()).data.user?.id,
           verified_at: new Date().toISOString(),
-          province: selectedRegion.province,
-          district: selectedRegion.district || '',
-          city: selectedRegion.city || '',
-          service_category: category,
-          activity_type: activity,
-          description: description || null,
+          region_id: selectedRegion,
+          service_category_id: category,
+          activity_type_id: activity,
           status: 'approved',
         });
 
@@ -155,7 +143,7 @@ export default function ContractorManagement() {
 
       // ریست فرم
       setPhoneNumber('');
-      setSelectedRegion({});
+      setSelectedRegion('');
       setCategory('');
       setActivity('');
       setDescription('');

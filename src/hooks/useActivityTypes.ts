@@ -18,7 +18,7 @@ export const useActivityTypes = () => {
   const fetchActivityTypes = async () => {
     try {
       const { data, error } = await supabase
-        .from('service_activity_types')
+        .from('activity_types')
         .select('*')
         .eq('is_active', true)
         .order('name');
