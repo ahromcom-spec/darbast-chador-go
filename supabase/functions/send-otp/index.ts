@@ -44,6 +44,11 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    // Mask phone number for logging (security best practice)
+    const maskedPhone = normalizedPhone.substring(0, 4) + 'XXX' + normalizedPhone.substring(9);
+    console.log('Processing OTP request for:', maskedPhone);
+    
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
     // Initialize Supabase client
@@ -147,8 +152,11 @@ serve(async (req) => {
         signature: apiKey
       });
 
-      console.log('Sending SMS to:', normalizedPhone);
-      console.log('SMS URL:', `${apiUrl}?${params.toString()}`);
+  console.log('Sending SMS to:', maskedPhone);
+  // Don't log the full URL with API key in production
+  if (Deno.env.get('ENVIRONMENT') !== 'production') {
+    console.log('SMS API endpoint:', apiUrl);
+  }
       
       const smsResponse = await fetch(`${apiUrl}?${params.toString()}`, {
         method: 'GET',
@@ -191,7 +199,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('OTP sent successfully to:', normalizedPhone);
+    console.log('OTP sent successfully to:', maskedPhone);
 
     return new Response(
       JSON.stringify({ 

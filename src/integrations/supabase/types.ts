@@ -2015,6 +2015,31 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_orders_with_customer_info: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          address: string
+          approved_at: string
+          approved_by: string
+          code: string
+          contractor_id: string
+          created_at: string
+          customer_id: string
+          customer_name: string
+          customer_phone: string
+          detailed_address: string
+          district_id: string
+          id: string
+          notes: string
+          project_number: string
+          province_id: string
+          rejection_reason: string
+          service_code: string
+          status: Database["public"]["Enums"]["project_status_v3"]
+          subcategory_id: string
+          updated_at: string
+        }[]
+      }
       get_public_contractors: {
         Args: Record<PropertyKey, never>
         Returns: {

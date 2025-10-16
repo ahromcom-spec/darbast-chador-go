@@ -16,17 +16,30 @@ export function sanitizePhoneNumber(phone: string): string {
   return phone.replace(/\D/g, '').slice(0, 11);
 }
 
-// WARNING: Client-side cache only for UI hints. Never use for security decisions.
-// All API calls are protected by server-side RLS policies.
-// Check if user has specific role with caching
+// ⚠️ CRITICAL: Client-side role cache is ONLY for UI hints (showing/hiding UI elements).
+// NEVER use this for security decisions or access control.
+// All security enforcement MUST happen server-side through RLS policies.
+// This cache exists solely to improve UX by avoiding redundant queries for UI state.
 const roleCache = new Map<string, { roles: Set<string>; timestamp: number }>();
-const CACHE_DURATION = 1 * 60 * 1000; // 1 minute (reduced from 5 for security)
+const CACHE_DURATION = 1 * 60 * 1000; // 1 minute
 
 type UserRole = 'admin' | 'general_manager' | 'operations_manager' | 'scaffold_supervisor' | 
   'scaffold_worker' | 'contractor' | 'user' | 'finance_manager' | 'sales_manager' | 
-  'support_manager' | 'security_manager' | 'warehouse_manager';
+  'support_manager' | 'security_manager' | 'warehouse_manager' | 'ceo';
 
-export async function hasRole(role: UserRole): Promise<boolean> {
+/**
+ * Check if user has a specific role - FOR UI HINTS ONLY!
+ * 
+ * ⚠️ WARNING: This function uses client-side caching and should ONLY be used
+ * to conditionally render UI elements (buttons, menu items, etc.).
+ * 
+ * DO NOT use this for access control or security decisions!
+ * All security must be enforced server-side through RLS policies.
+ * 
+ * @param role - The role to check for
+ * @returns Promise<boolean> - Whether the user has the role (cached result)
+ */
+export async function hasRoleUIHint(role: UserRole): Promise<boolean> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
@@ -54,6 +67,9 @@ export async function hasRole(role: UserRole): Promise<boolean> {
     return false;
   }
 }
+
+// Legacy alias for backward compatibility - will be removed in future versions
+export const hasRole = hasRoleUIHint;
 
 // Clear role cache (call after role changes)
 export function clearRoleCache(userId?: string) {
