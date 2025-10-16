@@ -261,7 +261,7 @@ export default function NewServiceRequestForm() {
           address: address,
           detailed_address: detailedAddress || null,
           notes: notes || null,
-          status: 'draft'
+          status: 'pending'
         })
         .select()
         .single();
