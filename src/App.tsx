@@ -30,6 +30,7 @@ const CEODashboard = lazy(() => import("@/pages/ceo/CEODashboard").then(m => ({ 
 const PhoneWhitelistManagement = lazy(() => import("@/pages/ceo/PhoneWhitelistManagement").then(m => ({ default: m.PhoneWhitelistManagement })));
 const ContractorVerifications = lazy(() => import("@/pages/ceo/ContractorVerifications").then(m => ({ default: m.ContractorVerifications })));
 const StaffVerifications = lazy(() => import("@/pages/ceo/StaffVerifications").then(m => ({ default: m.StaffVerifications })));
+const CEOOrders = lazy(() => import("@/pages/ceo/CEOOrders").then(m => ({ default: m.CEOOrders })));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectsDashboard = lazy(() => import("@/pages/user/ProjectsDashboard"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
@@ -133,6 +134,7 @@ const App = () => (
                 <Route path="whitelist" element={<PhoneWhitelistManagement />} />
                 <Route path="contractor-verifications" element={<ContractorVerifications />} />
                 <Route path="staff-verifications" element={<StaffVerifications />} />
+                <Route path="orders" element={<CEOOrders />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

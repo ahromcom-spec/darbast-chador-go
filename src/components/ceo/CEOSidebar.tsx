@@ -5,6 +5,7 @@ import {
   UserCheck,
   Users,
   ChevronRight,
+  ShoppingCart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -13,6 +14,11 @@ const menuItems = [
     title: 'داشبورد',
     icon: LayoutDashboard,
     href: '/ceo',
+  },
+  {
+    title: 'سفارشات',
+    icon: ShoppingCart,
+    href: '/ceo/orders',
   },
   {
     title: 'مدیریت دسترسی',

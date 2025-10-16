@@ -474,7 +474,7 @@ export default function ComprehensiveScaffoldingForm() {
             estimated_price: estimatedPrice,
             price_per_meter: pricePerMeter
           }),
-          status: 'draft'
+          status: 'pending'
         })
         .select()
         .single();
@@ -483,7 +483,7 @@ export default function ComprehensiveScaffoldingForm() {
 
       toast({
         title: '✅ سفارش با موفقیت ثبت شد',
-        description: `کد پروژه: ${projectCode}\nقیمت تخمینی: ${estimatedPrice.toLocaleString('fa-IR')} تومان`,
+        description: `کد پروژه: ${projectCode}\nسفارش شما در انتظار تایید مدیر قرار گرفت.`,
         duration: 5000,
       });
 
