@@ -31,6 +31,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import { toastError } from '@/lib/errorHandler';
 import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
@@ -171,11 +172,7 @@ export const StaffRequests = () => {
       fetchRequests();
     } catch (error: any) {
       console.error('Error processing request:', error);
-      toast({
-        title: 'خطا',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast(toastError(error, 'خطا در تصمیم‌گیری'));
     } finally {
       setProcessing(false);
     }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { handleError, toastError } from "@/lib/errorHandler";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -118,12 +119,9 @@ export default function OrdersDashboard() {
 
       setOrders(ordersData || []);
     } catch (error: any) {
-      setError(error.message || 'خطا در بارگذاری سفارشات');
-      toast({
-        title: "خطا در بارگذاری سفارشات",
-        description: error.message,
-        variant: "destructive"
-      });
+      const { message } = handleError(error, { context: 'Fetching orders' });
+      setError(message);
+      toast(toastError(error, 'خطا در بارگذاری سفارشات'));
     } finally {
       setLoading(false);
     }

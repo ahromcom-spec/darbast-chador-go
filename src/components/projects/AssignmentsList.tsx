@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+import { toastError } from '@/lib/errorHandler';
 import { Plus, Calendar, User, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
@@ -178,11 +179,7 @@ export const AssignmentsList = ({ projectId, canAssign }: AssignmentsListProps) 
       });
       fetchAssignments();
     } catch (error: any) {
-      toast({
-        title: 'خطا',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast(toastError(error, 'خطا در ثبت وظیفه'));
     }
   };
 
@@ -205,11 +202,7 @@ export const AssignmentsList = ({ projectId, canAssign }: AssignmentsListProps) 
 
       fetchAssignments();
     } catch (error: any) {
-      toast({
-        title: 'خطا',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast(toastError(error, 'خطا در به‌روزرسانی وضعیت'));
     }
   };
 

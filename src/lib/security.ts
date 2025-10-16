@@ -68,10 +68,14 @@ export async function hasRoleUIHint(role: UserRole): Promise<boolean> {
   }
 }
 
-// Legacy alias for backward compatibility - will be removed in future versions
-export const hasRole = hasRoleUIHint;
-
-// Clear role cache (call after role changes)
+/**
+ * Clear role cache (call after role changes)
+ * 
+ * IMPORTANT: Call this function after any role changes to ensure UI updates immediately.
+ * For real-time updates across sessions, consider using Supabase Realtime subscriptions.
+ * 
+ * @param userId - Optional user ID to clear specific user cache, or clear all if omitted
+ */
 export function clearRoleCache(userId?: string) {
   if (userId) {
     roleCache.delete(userId);
@@ -103,25 +107,65 @@ export function checkRateLimit(
   return true;
 }
 
-// Safe error messages (don't expose sensitive info)
+/**
+ * Get safe error messages that don't expose sensitive database information
+ * 
+ * SECURITY: Never expose raw database errors to users in production.
+ * Map known error codes to user-friendly Persian messages.
+ * 
+ * @param error - The error object to sanitize
+ * @returns User-safe error message in Persian
+ */
 export function getSafeErrorMessage(error: any): string {
   const knownErrors: Record<string, string> = {
+    // Database constraint violations
     '23505': 'این مورد قبلاً ثبت شده است',
     '23503': 'اطلاعات مورد نظر یافت نشد',
+    '23514': 'اطلاعات وارد شده نامعتبر است',
+    '23502': 'فیلد الزامی خالی است',
+    
+    // Permission errors
     '42501': 'دسترسی غیرمجاز',
+    '42P01': 'دسترسی غیرمجاز',
+    
+    // PostgREST errors
     'PGRST116': 'داده‌ای یافت نشد',
+    'PGRST204': 'دسترسی غیرمجاز',
+    'PGRST301': 'داده‌ای یافت نشد',
+    
+    // Auth errors
+    'invalid_credentials': 'اطلاعات ورود نادرست است',
+    'user_not_found': 'کاربر یافت نشد',
+    'email_exists': 'این ایمیل قبلاً ثبت شده است',
   };
 
-  const errorCode = error?.code || error?.error_code;
+  // Check for error code
+  const errorCode = error?.code || error?.error_code || error?.error;
   if (errorCode && knownErrors[errorCode]) {
     return knownErrors[errorCode];
   }
 
-  // Don't expose raw error messages to users
+  // Check for known error message patterns (without exposing full message)
+  const message = error?.message || '';
+  if (message.includes('duplicate key')) {
+    return 'این مورد قبلاً ثبت شده است';
+  }
+  if (message.includes('foreign key')) {
+    return 'اطلاعات مورد نظر یافت نشد';
+  }
+  if (message.includes('permission denied') || message.includes('insufficient_privilege')) {
+    return 'دسترسی غیرمجاز';
+  }
+  if (message.includes('not found')) {
+    return 'داده‌ای یافت نشد';
+  }
+
+  // Generic safe messages for production
   if (process.env.NODE_ENV === 'production') {
     return 'خطایی رخ داده است. لطفاً دوباره تلاش کنید';
   }
 
+  // In development, return sanitized message (no SQL/table names)
   return error?.message || 'خطای نامشخص';
 }
 

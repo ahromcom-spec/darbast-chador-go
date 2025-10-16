@@ -15,6 +15,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { toastError } from '@/lib/errorHandler';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { AlertCircle, Check, X, Eye } from 'lucide-react';
 import { z } from 'zod';
@@ -75,11 +76,7 @@ export const CEOOrders = () => {
       setOrders(data || []);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
-      toast({
-        title: 'خطا در بارگذاری سفارشات',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast(toastError(error, 'خطا در بارگذاری سفارشات'));
     } finally {
       setLoading(false);
     }
@@ -107,11 +104,7 @@ export const CEOOrders = () => {
       setSelectedOrder(null);
       setActionType(null);
     } catch (error: any) {
-      toast({
-        title: 'خطا در تایید سفارش',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast(toastError(error, 'خطا در تایید سفارش'));
     }
   };
 
@@ -147,11 +140,7 @@ export const CEOOrders = () => {
       setActionType(null);
       setRejectionReason('');
     } catch (error: any) {
-      toast({
-        title: 'خطا در رد سفارش',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast(toastError(error, 'خطا در رد سفارش'));
     }
   };
 

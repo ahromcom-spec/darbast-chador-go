@@ -37,6 +37,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { toastError } from '@/lib/errorHandler';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
@@ -148,11 +149,7 @@ export const WhitelistManagement = () => {
       fetchWhitelist();
     } catch (error: any) {
       console.error('Error adding to whitelist:', error);
-      toast({
-        title: 'خطا',
-        description: error.message || 'خطا در افزودن به لیست',
-        variant: 'destructive',
-      });
+      toast(toastError(error, 'خطا در افزودن به لیست'));
     } finally {
       setProcessing(false);
     }
@@ -177,11 +174,7 @@ export const WhitelistManagement = () => {
       fetchWhitelist();
     } catch (error: any) {
       console.error('Error deleting from whitelist:', error);
-      toast({
-        title: 'خطا',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast(toastError(error, 'خطا در حذف از لیست'));
     }
   };
 

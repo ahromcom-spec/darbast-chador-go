@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { toastError } from "@/lib/errorHandler";
 import {
   CheckCircle2,
   Clock,
@@ -130,11 +131,7 @@ export default function ContractorDashboard() {
 
       setAssignments(assignmentsWithProfiles as any);
     } catch (error: any) {
-      toast({
-        title: "خطا در بارگذاری اطلاعات",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast(toastError(error, 'خطا در بارگذاری اطلاعات'));
     } finally {
       setLoading(false);
     }
@@ -159,11 +156,7 @@ export default function ContractorDashboard() {
 
       fetchContractorData();
     } catch (error: any) {
-      toast({
-        title: "خطا",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast(toastError(error, 'خطا در پذیرش پروژه'));
     }
   };
 
@@ -186,11 +179,7 @@ export default function ContractorDashboard() {
 
       fetchContractorData();
     } catch (error: any) {
-      toast({
-        title: "خطا",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast(toastError(error, 'خطا در تکمیل پروژه'));
     }
   };
 

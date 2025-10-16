@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { toastError } from "@/lib/errorHandler";
 import {
   FolderOpen,
   MapPin,
@@ -71,11 +72,7 @@ export default function ProjectsBoard() {
 
       setProjects(transformedProjects || []);
     } catch (error: any) {
-      toast({
-        title: "خطا در بارگذاری پروژه‌ها",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast(toastError(error, 'خطا در بارگذاری پروژه‌ها'));
     } finally {
       setLoading(false);
     }
