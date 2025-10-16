@@ -330,7 +330,7 @@ export default function ScaffoldingFacadeForm() {
             duration_months: durationMonths,
             estimated_price: estimatedPrice
           }),
-          status: 'draft'
+          status: 'pending'
         })
         .select()
         .single();
@@ -342,7 +342,7 @@ export default function ScaffoldingFacadeForm() {
 
       toast({
         title: '✅ سفارش با موفقیت ثبت شد',
-        description: `کد پروژه: ${projectCode}\nقیمت تخمینی: ${estimatedPrice.toLocaleString('fa-IR')} تومان`,
+        description: `کد پروژه: ${projectCode}\nسفارش شما در انتظار تایید مدیرعامل است.`,
         duration: 5000,
       });
 
