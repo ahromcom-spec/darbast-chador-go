@@ -36,7 +36,7 @@ const ROLE_LABELS: Record<string, string> = {
   finance_manager: 'مدیر مالی',
   sales_manager: 'مدیر فروش',
   support_manager: 'مدیر پشتیبانی',
-  general_manager: 'مدیریت کل',
+  general_manager: 'مدیرعامل',
   warehouse_manager: 'مدیر انبار',
   security_manager: 'مدیر حراست',
 };

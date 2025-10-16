@@ -21,7 +21,8 @@ import {
   UserPlus,
   ClipboardList,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  Building2
 } from 'lucide-react';
 
 interface StaffStats {
@@ -116,8 +117,8 @@ export const GeneralManagerDashboard = () => {
     <div className="container mx-auto px-4 py-6 max-w-6xl">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold">داشبورد مدیریت کل</h1>
-        <p className="text-xs sm:text-sm text-muted-foreground">مدیریت پرسنل و درخواست‌های سازمان</p>
+        <h1 className="text-xl sm:text-2xl font-bold">داشبورد مدیرعامل</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">مدیریت پیمانکاران، پرسنل و درخواست‌های سازمان</p>
       </div>
 
       {/* Profile Card */}
@@ -134,7 +135,7 @@ export const GeneralManagerDashboard = () => {
               <CardDescription className="text-xs sm:text-sm">مشاهده و ویرایش اطلاعات شخصی</CardDescription>
             </div>
             <Badge variant="default" className="bg-purple-600 shrink-0">
-              مدیریت کل
+              مدیرعامل
             </Badge>
           </div>
         </CardHeader>
@@ -245,43 +246,97 @@ export const GeneralManagerDashboard = () => {
         </Card>
       </div>
 
-      {/* Management Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base sm:text-lg">مدیریت پرسنل</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">دسترسی سریع به امکانات مدیریتی</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Button
-            className="w-full justify-start gap-3 h-auto min-h-[3rem] py-3"
-            variant="outline"
-            onClick={() => navigate('/general-manager/staff-requests')}
-          >
-            <ClipboardList className="h-5 w-5 shrink-0" />
-            <div className="flex-1 text-right min-w-0">
-              <div className="font-semibold text-sm sm:text-base">بررسی درخواست‌های پرسنل</div>
-              <div className="text-xs text-muted-foreground">تأیید یا رد درخواست‌های نقش سازمانی</div>
-            </div>
-            {stats.pending > 0 && (
-              <Badge variant="destructive" className="ml-auto shrink-0">
-                {stats.pending}
-              </Badge>
-            )}
-          </Button>
+      {/* Management Actions - Separated into Contractors and Staff */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Contractors Management */}
+        <Card className="border-blue-200 dark:border-blue-800">
+          <CardHeader className="bg-blue-50 dark:bg-blue-950/30">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-blue-600" />
+              مدیریت پیمانکاران
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm">ثبت و مدیریت پیمانکاران سازمان</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-6">
+            <Button
+              className="w-full justify-start gap-3 h-auto min-h-[3rem] py-3"
+              variant="outline"
+              onClick={() => navigate('/admin/contractors')}
+            >
+              <Building2 className="h-5 w-5 shrink-0 text-blue-600" />
+              <div className="flex-1 text-right min-w-0">
+                <div className="font-semibold text-sm sm:text-base">مشاهده و افزودن پیمانکار</div>
+                <div className="text-xs text-muted-foreground">مدیریت کامل پیمانکاران</div>
+              </div>
+            </Button>
 
-          <Button
-            className="w-full justify-start gap-3 h-auto min-h-[3rem] py-3"
-            variant="outline"
-            onClick={() => navigate('/general-manager/whitelist')}
-          >
-            <UserPlus className="h-5 w-5 shrink-0" />
-            <div className="flex-1 text-right min-w-0">
-              <div className="font-semibold text-sm sm:text-base">مدیریت لیست مجاز</div>
-              <div className="text-xs text-muted-foreground">افزودن و حذف شماره‌های مجاز برای ثبت‌نام</div>
-            </div>
-          </Button>
-        </CardContent>
-      </Card>
+            <Button
+              className="w-full justify-start gap-3 h-auto min-h-[3rem] py-3"
+              variant="outline"
+              onClick={() => navigate('/admin/whitelist')}
+            >
+              <UserPlus className="h-5 w-5 shrink-0 text-blue-600" />
+              <div className="flex-1 text-right min-w-0">
+                <div className="font-semibold text-sm sm:text-base">لیست مجاز پیمانکاران</div>
+                <div className="text-xs text-muted-foreground">افزودن شماره‌های مجاز پیمانکار</div>
+              </div>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Staff Management */}
+        <Card className="border-green-200 dark:border-green-800">
+          <CardHeader className="bg-green-50 dark:bg-green-950/30">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+              <Users className="h-5 w-5 text-green-600" />
+              مدیریت پرسنل
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm">ثبت و مدیریت پرسنل داخلی</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-6">
+            <Button
+              className="w-full justify-start gap-3 h-auto min-h-[3rem] py-3"
+              variant="outline"
+              onClick={() => navigate('/admin/staff-requests')}
+            >
+              <ClipboardList className="h-5 w-5 shrink-0 text-green-600" />
+              <div className="flex-1 text-right min-w-0">
+                <div className="font-semibold text-sm sm:text-base">درخواست‌های پرسنل</div>
+                <div className="text-xs text-muted-foreground">تأیید یا رد درخواست‌های نقش</div>
+              </div>
+              {stats.pending > 0 && (
+                <Badge variant="destructive" className="ml-auto shrink-0">
+                  {stats.pending}
+                </Badge>
+              )}
+            </Button>
+
+            <Button
+              className="w-full justify-start gap-3 h-auto min-h-[3rem] py-3"
+              variant="outline"
+              onClick={() => navigate('/admin/staff')}
+            >
+              <Users className="h-5 w-5 shrink-0 text-green-600" />
+              <div className="flex-1 text-right min-w-0">
+                <div className="font-semibold text-sm sm:text-base">مشاهده و افزودن پرسنل</div>
+                <div className="text-xs text-muted-foreground">مدیریت کامل پرسنل</div>
+              </div>
+            </Button>
+
+            <Button
+              className="w-full justify-start gap-3 h-auto min-h-[3rem] py-3"
+              variant="outline"
+              onClick={() => navigate('/admin/whitelist')}
+            >
+              <UserPlus className="h-5 w-5 shrink-0 text-green-600" />
+              <div className="flex-1 text-right min-w-0">
+                <div className="font-semibold text-sm sm:text-base">لیست مجاز پرسنل</div>
+                <div className="text-xs text-muted-foreground">افزودن شماره‌های مجاز پرسنل</div>
+              </div>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

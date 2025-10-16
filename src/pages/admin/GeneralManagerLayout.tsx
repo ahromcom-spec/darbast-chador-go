@@ -10,7 +10,7 @@ export default function GeneralManagerLayout() {
         <div className="flex-1">
           <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4">
             <SidebarTrigger />
-            <h1 className="text-lg font-semibold">پنل مدیریت کل احرم</h1>
+            <h1 className="text-lg font-semibold">پنل مدیرعامل احرم</h1>
           </header>
           <main className="flex-1">
             <Outlet />

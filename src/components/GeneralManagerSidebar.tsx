@@ -70,7 +70,7 @@ export function GeneralManagerSidebar() {
       <SidebarContent>
         <div className="p-4">
           <h2 className={open ? 'text-lg font-bold' : 'text-xs text-center'}>
-            {open ? 'پنل مدیریت کل' : 'پنل'}
+            {open ? 'پنل مدیرعامل' : 'CEO'}
           </h2>
           {open && user?.email && (
             <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
