@@ -25,6 +25,11 @@ const WhitelistManagement = lazy(() => import("@/pages/admin/WhitelistManagement
 const GeneralManagerDashboard = lazy(() => import("@/pages/admin/GeneralManagerDashboard").then(m => ({ default: m.GeneralManagerDashboard })));
 const ContractorManagement = lazy(() => import("@/pages/admin/ContractorManagement"));
 const StaffManagement = lazy(() => import("@/pages/admin/StaffManagement"));
+const CEOLayout = lazy(() => import("@/pages/ceo/CEOLayout").then(m => ({ default: m.CEOLayout })));
+const CEODashboard = lazy(() => import("@/pages/ceo/CEODashboard").then(m => ({ default: m.CEODashboard })));
+const PhoneWhitelistManagement = lazy(() => import("@/pages/ceo/PhoneWhitelistManagement").then(m => ({ default: m.PhoneWhitelistManagement })));
+const ContractorVerifications = lazy(() => import("@/pages/ceo/ContractorVerifications").then(m => ({ default: m.ContractorVerifications })));
+const StaffVerifications = lazy(() => import("@/pages/ceo/StaffVerifications").then(m => ({ default: m.StaffVerifications })));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectsDashboard = lazy(() => import("@/pages/user/ProjectsDashboard"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
@@ -120,6 +125,12 @@ const App = () => (
                 <Route path="staff" element={<StaffManagement />} />
                 <Route path="staff-requests" element={<StaffRequests />} />
                 <Route path="whitelist" element={<WhitelistManagement />} />
+              </Route>
+              <Route path="/ceo" element={<CEOLayout />}>
+                <Route index element={<CEODashboard />} />
+                <Route path="whitelist" element={<PhoneWhitelistManagement />} />
+                <Route path="contractor-verifications" element={<ContractorVerifications />} />
+                <Route path="staff-verifications" element={<StaffVerifications />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
