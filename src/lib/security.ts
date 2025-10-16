@@ -16,9 +16,11 @@ export function sanitizePhoneNumber(phone: string): string {
   return phone.replace(/\D/g, '').slice(0, 11);
 }
 
+// WARNING: Client-side cache only for UI hints. Never use for security decisions.
+// All API calls are protected by server-side RLS policies.
 // Check if user has specific role with caching
 const roleCache = new Map<string, { roles: Set<string>; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 1 * 60 * 1000; // 1 minute (reduced from 5 for security)
 
 type UserRole = 'admin' | 'general_manager' | 'operations_manager' | 'scaffold_supervisor' | 
   'scaffold_worker' | 'contractor' | 'user' | 'finance_manager' | 'sales_manager' | 
