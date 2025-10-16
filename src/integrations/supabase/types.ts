@@ -271,6 +271,76 @@ export type Database = {
           },
         ]
       }
+      contractor_verification_requests: {
+        Row: {
+          activity_type_id: string | null
+          company_name: string
+          created_at: string | null
+          id: string
+          phone_number: string
+          region_id: string | null
+          rejection_reason: string | null
+          service_category_id: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          activity_type_id?: string | null
+          company_name: string
+          created_at?: string | null
+          id?: string
+          phone_number: string
+          region_id?: string | null
+          rejection_reason?: string | null
+          service_category_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          activity_type_id?: string | null
+          company_name?: string
+          created_at?: string | null
+          id?: string
+          phone_number?: string
+          region_id?: string | null
+          rejection_reason?: string | null
+          service_category_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_verification_requests_activity_type_id_fkey"
+            columns: ["activity_type_id"]
+            isOneToOne: false
+            referencedRelation: "activity_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_verification_requests_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_verification_requests_service_category_id_fkey"
+            columns: ["service_category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractors: {
         Row: {
           address: string | null
@@ -677,6 +747,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      phone_whitelist: {
+        Row: {
+          added_by: string | null
+          allowed_roles: string[]
+          created_at: string | null
+          id: string
+          notes: string | null
+          phone_number: string
+          updated_at: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          allowed_roles?: string[]
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          phone_number: string
+          updated_at?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          allowed_roles?: string[]
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          phone_number?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -1528,6 +1628,66 @@ export type Database = {
           },
         ]
       }
+      staff_verification_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          phone_number: string
+          position_id: string | null
+          region_id: string | null
+          rejection_reason: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          phone_number: string
+          position_id?: string | null
+          region_id?: string | null
+          rejection_reason?: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          phone_number?: string
+          position_id?: string | null
+          region_id?: string | null
+          rejection_reason?: string | null
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_verification_requests_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "organizational_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_verification_requests_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_whitelist: {
         Row: {
           allowed_role: Database["public"]["Enums"]["app_role"]
@@ -1794,6 +1954,13 @@ export type Database = {
       check_otp_rate_limit: {
         Args: { _phone_number: string }
         Returns: boolean
+      }
+      check_phone_whitelist: {
+        Args: { _phone: string }
+        Returns: {
+          allowed_roles: string[]
+          is_whitelisted: boolean
+        }[]
       }
       check_rate_limit: {
         Args: {
