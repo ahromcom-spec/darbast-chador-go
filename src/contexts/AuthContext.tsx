@@ -61,7 +61,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error };
       }
 
-      return { error: null, userExists: data?.user_exists };
+      // Always return success without exposing user existence (security fix)
+      return { error: null };
     } catch (error) {
       console.error('Error sending OTP:', error);
       return { error };
