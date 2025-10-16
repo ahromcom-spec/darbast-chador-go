@@ -132,19 +132,29 @@ export default function ScaffoldingFacadeForm() {
       }
 
       // تحميل أو إنشاء سجل المشتري
-      let { data: customerData } = await supabase
+      let { data: customerData, error: customerError } = await supabase
         .from('customers')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (!customerData) {
-        const { data: newCustomer } = await supabase
+        const { data: newCustomer, error: insertError } = await supabase
           .from('customers')
-          .insert({ user_id: user.id } as any)
+          .insert({ user_id: user.id, customer_code: '' })
           .select()
-          .maybeSingle();
+          .single();
+        
+        if (insertError) {
+          console.error('خطا در ایجاد مشتری:', insertError);
+          throw new Error('امکان ایجاد حساب مشتری وجود ندارد. لطفاً با پشتیبانی تماس بگیرید.');
+        }
+        
         customerData = newCustomer;
+      }
+
+      if (!customerData) {
+        throw new Error('برای شما حساب مشتری یافت نشد. لطفاً با پشتیبانی تماس بگیرید.');
       }
 
       setCustomer(customerData);
