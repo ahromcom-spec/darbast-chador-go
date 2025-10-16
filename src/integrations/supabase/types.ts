@@ -1009,6 +1009,7 @@ export type Database = {
       }
       regions: {
         Row: {
+          code: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -1017,6 +1018,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          code?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -1025,6 +1027,7 @@ export type Database = {
           type: string
         }
         Update: {
+          code?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
