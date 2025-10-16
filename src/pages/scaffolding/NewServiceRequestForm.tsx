@@ -146,9 +146,9 @@ export default function NewServiceRequestForm() {
       if (!customerData) {
         const { data: newCustomerData, error: insertError } = await supabase
           .from('customers')
-          .insert({ user_id: user.id } as any)
+          .insert([{ user_id: user.id }])
           .select()
-          .maybeSingle();
+          .single();
 
         if (insertError) throw insertError;
         customerData = newCustomerData;

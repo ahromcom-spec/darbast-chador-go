@@ -141,7 +141,7 @@ export default function ScaffoldingFacadeForm() {
       if (!customerData) {
         const { data: newCustomer, error: insertError } = await supabase
           .from('customers')
-          .insert({ user_id: user.id, customer_code: '' })
+          .insert([{ user_id: user.id }])
           .select()
           .single();
         
