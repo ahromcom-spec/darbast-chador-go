@@ -68,9 +68,9 @@ serve(async (req) => {
       });
 
     if (verifyError) {
-      console.error('OTP verification error:', verifyError);
+      console.error('OTP verification error');
       return new Response(
-        JSON.stringify({ error: 'خطا در تایید کد' }),
+        JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -149,7 +149,7 @@ serve(async (req) => {
             password: loginPassword,
           });
           if (retryError) {
-            console.error('Error signing in with email:', retryError);
+            console.error('Sign in error');
             return { session: null, error: retryError };
           }
           return { session: retryData.session, error: null };
@@ -169,9 +169,9 @@ serve(async (req) => {
       });
       const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
       if (emailErr) {
-        console.error('Error signing in (email fallback):', emailErr);
+        console.error('Authentication error');
         return new Response(
-          JSON.stringify({ error: 'خطا در ورود به سیستم' }),
+          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -181,7 +181,7 @@ serve(async (req) => {
       const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
       if (emailErr) {
         return new Response(
-          JSON.stringify({ error: 'خطا در ورود به سیستم' }),
+          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -199,9 +199,9 @@ serve(async (req) => {
       });
 
       if (error) {
-        console.error('Error creating user (email-based):', error);
+        console.error('User creation error');
         return new Response(
-          JSON.stringify({ error: 'خطا در ایجاد حساب کاربری' }),
+          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -209,9 +209,9 @@ serve(async (req) => {
       // Sign in the new user via email
       const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
       if (emailErr) {
-        console.error('Error signing in new user (email-based):', emailErr);
+        console.error('Authentication error');
         return new Response(
-          JSON.stringify({ error: 'خطا در ورود به سیستم' }),
+          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -231,9 +231,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in verify-otp function:', error);
+    console.error('Authentication system error');
     return new Response(
-      JSON.stringify({ error: 'خطای سرور' }),
+      JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -124,8 +124,40 @@ export default function StaffManagement() {
 
       if (insertError) throw insertError;
 
-      // TODO: اختصاص نقش مرتبط با پست سازمانی
-      // نیاز به mapping بین organizational_positions و app_role
+      // اختصاص نقش مرتبط با پست سازمانی
+      // دریافت نام پست سازمانی
+      const selectedPosition = positions.find(p => p.id === positionId);
+      
+      if (selectedPosition) {
+        // تبدیل نام پست سازمانی به app_role
+        type AppRole = 'operations_manager' | 'scaffold_supervisor' | 'warehouse_manager' | 'finance_manager';
+        let appRole: AppRole | null = null;
+        
+        // نگاشت پست‌های سازمانی به نقش‌های سیستمی
+        const positionName = selectedPosition.name.toLowerCase();
+        if (positionName.includes('مدیر عملیات')) {
+          appRole = 'operations_manager';
+        } else if (positionName.includes('سرپرست داربست')) {
+          appRole = 'scaffold_supervisor';
+        } else if (positionName.includes('مدیر انبار')) {
+          appRole = 'warehouse_manager';
+        } else if (positionName.includes('مدیر مالی')) {
+          appRole = 'finance_manager';
+        }
+        
+        // اختصاص نقش اگر نگاشت پیدا شد
+        if (appRole) {
+          const { error: roleError } = await supabase.rpc('assign_role_to_user', {
+            _user_id: userId,
+            _role: appRole,
+          });
+          
+          if (roleError) {
+            console.error('Error assigning role:', roleError);
+          }
+        }
+      }
+
       toast({
         title: 'موفق',
         description: 'پرسنل با موفقیت افزوده شد',

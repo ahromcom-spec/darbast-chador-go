@@ -96,7 +96,7 @@ serve(async (req) => {
     if (!apiKey) {
       console.error('PARSGREEN_API_KEY is not set');
       return new Response(
-        JSON.stringify({ error: 'خطا در تنظیمات سرویس پیامک' }),
+        JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -135,7 +135,8 @@ serve(async (req) => {
       });
 
       const responseText = await smsResponse.text();
-      console.log('Parsgreen Response:', responseText);
+      // Log only success/failure status, not full API response details
+      console.log('SMS send attempt completed with status:', smsResponse.ok ? 'success' : 'failed');
 
       // Parsgreen returns different formats:
       // Success: شناسه عددی (numeric ID)
@@ -155,17 +156,17 @@ serve(async (req) => {
       const hasValidFormat = parts.length === 3 && /^[0-9;]+$/.test(trimmedResponse);
       
       if (!smsResponse.ok || (isError && !hasValidFormat)) {
-        console.error('SMS send failed:', responseText);
+        console.error('SMS send failed');
         return new Response(
-          JSON.stringify({ error: 'خطا در ارسال پیامک - لطفا تنظیمات پنل را بررسی کنید' }),
+          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
     } catch (fetchError) {
-      console.error('Network error sending SMS:', fetchError);
+      console.error('Network error sending SMS');
       return new Response(
-        JSON.stringify({ error: 'خطا در اتصال به سرویس پیامک' }),
+        JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -182,9 +183,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in send-otp function:', error);
+    console.error('Authentication system error');
     return new Response(
-      JSON.stringify({ error: 'خطای سرور' }),
+      JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
