@@ -17,7 +17,11 @@ export default function ContractorManagement() {
   const { toast } = useToast();
 
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [region, setRegion] = useState<{ province?: string; district?: string; city?: string }>({});
+  const [selectedRegion, setSelectedRegion] = useState<{
+    province?: string;
+    district?: string;
+    city?: string;
+  }>({});
   const [category, setCategory] = useState('');
   const [activity, setActivity] = useState('');
   const [description, setDescription] = useState('');
@@ -59,7 +63,7 @@ export default function ContractorManagement() {
   const handleAddContractor = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!phoneNumber.trim() || !region.province || !category || !activity) {
+    if (!phoneNumber.trim() || !selectedRegion.province || !category || !activity) {
       toast({
         title: 'خطا',
         description: 'لطفاً تمام فیلدهای الزامی را پر کنید',
@@ -91,16 +95,15 @@ export default function ContractorManagement() {
       const userId = profileData.user_id;
 
       // بررسی تکراری نبودن (استان + صنف + فعالیت)
-      const { data: existingContractor } = await supabase
+      const { count } = await supabase
         .from('contractor_profiles')
-        .select('id')
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .eq('province', region.province || '')
+        .eq('province', selectedRegion.province || '')
         .eq('service_category', category)
-        .eq('activity_type', activity)
-        .maybeSingle();
+        .eq('activity_type', activity);
 
-      if (existingContractor) {
+      if (count && count > 0) {
         toast({
           title: 'خطا',
           description: 'این پیمانکار با همین صنف و نوع فعالیت در این محدوده قبلاً ثبت شده است',
@@ -118,9 +121,9 @@ export default function ContractorManagement() {
           phone_verified: true,
           verified_by: (await supabase.auth.getUser()).data.user?.id,
           verified_at: new Date().toISOString(),
-          province: region.province,
-          district: region.district || '',
-          city: region.city || '',
+          province: selectedRegion.province,
+          district: selectedRegion.district || '',
+          city: selectedRegion.city || '',
           service_category: category,
           activity_type: activity,
           description: description || null,
@@ -146,7 +149,7 @@ export default function ContractorManagement() {
 
       // ریست فرم
       setPhoneNumber('');
-      setRegion({});
+      setSelectedRegion({});
       setCategory('');
       setActivity('');
       setDescription('');
@@ -199,8 +202,8 @@ export default function ContractorManagement() {
             </div>
 
             <RegionSelector
-              value={region}
-              onChange={setRegion}
+              value={selectedRegion}
+              onChange={setSelectedRegion}
               required
             />
 
