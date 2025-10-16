@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ArrowRight, Plus, Trash2, AlertCircle } from 'lucide-react';
 import ProjectLocationMap from '@/components/ProjectLocationMap';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
 
 // Schema for dimension validation
 const dimensionSchema = z.object({
@@ -29,6 +30,12 @@ export default function ScaffoldingFacadeForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Use form persistence to save user's progress
+  const { formData, updateField, clearForm, isLoaded: formLoaded } = useFormPersistence('scaffolding-facade', {
+    projectAddress: '',
+    durationMonths: '',
+  });
   
   const [projectAddress, setProjectAddress] = useState('');
   const [dimensions, setDimensions] = useState<Dimension[]>([
@@ -54,6 +61,29 @@ export default function ScaffoldingFacadeForm() {
   useEffect(() => {
     loadInitialData();
   }, [user]);
+
+  // Load saved form data when available
+  useEffect(() => {
+    if (formLoaded && formData.projectAddress) {
+      setProjectAddress(formData.projectAddress);
+    }
+    if (formLoaded && formData.durationMonths) {
+      setDurationMonths(formData.durationMonths);
+    }
+  }, [formLoaded]);
+
+  // Save form data as user types
+  useEffect(() => {
+    if (formLoaded) {
+      updateField('projectAddress', projectAddress);
+    }
+  }, [projectAddress, formLoaded]);
+
+  useEffect(() => {
+    if (formLoaded) {
+      updateField('durationMonths', durationMonths);
+    }
+  }, [durationMonths, formLoaded]);
 
   const loadInitialData = async () => {
     if (!user) {
@@ -280,18 +310,40 @@ export default function ScaffoldingFacadeForm() {
 
       if (projectError) throw projectError;
 
+      // Clear the saved form data after successful submission
+      clearForm();
+
       toast({
-        title: 'درخواست ثبت شد',
-        description: `کد پروژه: ${projectCode} - قیمت تخمینی: ${estimatedPrice.toLocaleString('fa-IR')} تومان`,
+        title: '✅ سفارش با موفقیت ثبت شد',
+        description: `کد پروژه: ${projectCode}\nقیمت تخمینی: ${estimatedPrice.toLocaleString('fa-IR')} تومان`,
+        duration: 5000,
       });
 
-      navigate('/projects');
+      // Navigate after a short delay to let user see the success message
+      setTimeout(() => {
+        navigate('/projects');
+      }, 1500);
     } catch (error: any) {
-      console.error('Error submitting request:', error);
+      console.error('خطا در ثبت درخواست:', error);
+      
+      let errorMessage = 'مشکلی در ثبت درخواست پیش آمد. لطفاً دوباره تلاش کنید.';
+      
+      // Provide more specific error messages
+      if (error.message?.includes('generate_project_code')) {
+        errorMessage = 'خطا در تولید کد پروژه. لطفاً با پشتیبانی تماس بگیرید.';
+      } else if (error.message?.includes('projects_v3')) {
+        errorMessage = 'خطا در ذخیره پروژه. لطفاً اطلاعات را بررسی کرده و دوباره امتحان کنید.';
+      } else if (error.code === '23505') {
+        errorMessage = 'این پروژه قبلاً ثبت شده است.';
+      } else if (error.code === 'PGRST116') {
+        errorMessage = 'دسترسی به دیتابیس ممکن نیست. لطفاً ابتدا وارد حساب کاربری شوید.';
+      }
+      
       toast({
-        title: 'خطا در ثبت درخواست',
-        description: error.message || 'مشکلی در ثبت درخواست پیش آمد',
+        title: '❌ خطا در ثبت سفارش',
+        description: errorMessage,
         variant: 'destructive',
+        duration: 6000,
       });
     } finally {
       setLoading(false);
@@ -445,15 +497,26 @@ export default function ScaffoldingFacadeForm() {
               <div className="flex gap-4 pt-4">
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || dataLoading}
                   className="flex-1 construction-gradient"
                 >
-                  {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
+                  {loading ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      در حال ثبت سفارش...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight className="mr-2 h-4 w-4" />
+                      ثبت سفارش
+                    </>
+                  )}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => navigate('/')}
+                  disabled={loading}
                 >
                   انصراف
                 </Button>
