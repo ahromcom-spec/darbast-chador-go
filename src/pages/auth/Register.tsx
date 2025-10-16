@@ -110,7 +110,7 @@ export default function Register() {
 
     setLoading(true);
 
-    const { error, userExists } = await sendOTP(phoneNumber);
+    const { error } = await sendOTP(phoneNumber);
     
     setLoading(false);
 
@@ -120,17 +120,6 @@ export default function Register() {
         title: 'خطا',
         description: 'خطا در ارسال کد تایید. لطفا دوباره تلاش کنید.',
       });
-      return;
-    }
-
-    // اگر کاربر قبلاً ثبت‌نام کرده، نمایش پیام
-    if (userExists) {
-      setStep('already-registered');
-      toast({
-        title: 'کاربر موجود',
-        description: 'این شماره قبلاً ثبت‌نام کرده است. کد تایید برای ورود ارسال شد.',
-      });
-      setCountdown(90);
       return;
     }
 
@@ -182,6 +171,11 @@ export default function Register() {
 
     if (error) {
       const errorMessage = error.message || 'کد تایید نامعتبر است.';
+      // If backend says this number is already registered, switch to login flow
+      if (errorMessage.includes('قبلاً ثبت نام') || errorMessage.includes('قبلا ثبت نام')) {
+        setStep('already-registered');
+        return;
+      }
       toast({
         variant: 'destructive',
         title: 'خطا',

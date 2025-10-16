@@ -96,7 +96,7 @@ export default function Login() {
 
     setLoading(true);
 
-    const { error, userExists: exists } = await sendOTP(phoneNumber);
+    const { error } = await sendOTP(phoneNumber);
     
     setLoading(false);
 
@@ -109,14 +109,7 @@ export default function Login() {
       return;
     }
 
-    setUserExists(exists || false);
-
-    // اگر کاربر وجود ندارد، نمایش پیام عدم ثبت‌نام
-    if (!exists) {
-      setStep('not-registered');
-      return;
-    }
-
+    // Do not reveal user existence to prevent enumeration; always proceed to OTP entry
     toast({
       title: 'موفق',
       description: 'کد تایید به شماره شما ارسال شد.',
@@ -165,6 +158,11 @@ export default function Login() {
 
     if (error) {
       const errorMessage = error.message || 'کد تایید نامعتبر است.';
+      // If backend says number is not registered, guide user to registration step
+      if (errorMessage.includes('ثبت نشده')) {
+        setStep('not-registered');
+        return;
+      }
       toast({
         variant: 'destructive',
         title: 'خطا',
