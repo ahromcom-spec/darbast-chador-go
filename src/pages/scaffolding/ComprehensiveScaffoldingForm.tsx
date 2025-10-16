@@ -366,6 +366,15 @@ export default function ComprehensiveScaffoldingForm() {
       newErrors.projectAddress = 'آدرس پروژه الزامی است';
     }
 
+    // بررسی فاصله بیش از 85 کیلومتر
+    if (projectLocation && projectLocation.distance > 85) {
+      toast({
+        title: '⚠️ هشدار فاصله',
+        description: 'فاصله پروژه شما بیش از 85 کیلومتر است. سفارش شما ثبت می‌شود اما قیمت نهایی پس از بررسی کارشناسی اعلام خواهد شد.',
+        duration: 8000,
+      });
+    }
+
     dimensions.forEach((dim) => {
       const length = parseFloat(dim.length);
       const height = parseFloat(dim.height);
@@ -382,6 +391,24 @@ export default function ComprehensiveScaffoldingForm() {
         }
       }
     });
+
+    // اعتبارسنجی شرایط برای ماه اول
+    if (conditions.currentMonth === 1) {
+      if (!onGround) {
+        if (conditions.platformHeight === null || conditions.platformHeight <= 0) {
+          newErrors.platformHeight = 'لطفاً ارتفاع سکو/پشت‌بام را وارد کنید';
+        }
+        if (conditions.scaffoldHeightFromPlatform === null || conditions.scaffoldHeightFromPlatform <= 0) {
+          newErrors.scaffoldHeight = 'لطفاً ارتفاع داربست از روی پشت‌بام را وارد کنید';
+        }
+      }
+      
+      if (!vehicleReachesSite) {
+        if (conditions.vehicleDistance === null || conditions.vehicleDistance <= 0) {
+          newErrors.vehicleDistance = 'لطفاً فاصله وسیله نقلیه را وارد کنید';
+        }
+      }
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -708,7 +735,7 @@ export default function ComprehensiveScaffoldingForm() {
                     {!onGround && (
                       <Card className="p-4 bg-background/50 space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="platformHeight">ارتفاع سکو/پشت‌بام از روی زمین (متر)</Label>
+                          <Label htmlFor="platformHeight">ارتفاع سکو/پشت‌بام از روی زمین (متر) *</Label>
                           <Input
                             id="platformHeight"
                             type="number"
@@ -719,10 +746,14 @@ export default function ComprehensiveScaffoldingForm() {
                               platformHeight: parseFloat(e.target.value) || null 
                             }))}
                             placeholder="مثال: 3"
+                            className={errors.platformHeight ? 'border-destructive' : ''}
                           />
+                          {errors.platformHeight && (
+                            <p className="text-sm text-destructive">{errors.platformHeight}</p>
+                          )}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="scaffoldHeight">ارتفاع داربست از روی پشت‌بام (متر)</Label>
+                          <Label htmlFor="scaffoldHeight">ارتفاع داربست از روی پشت‌بام (متر) *</Label>
                           <Input
                             id="scaffoldHeight"
                             type="number"
@@ -733,7 +764,11 @@ export default function ComprehensiveScaffoldingForm() {
                               scaffoldHeightFromPlatform: parseFloat(e.target.value) || null 
                             }))}
                             placeholder="مثال: 9"
+                            className={errors.scaffoldHeight ? 'border-destructive' : ''}
                           />
+                          {errors.scaffoldHeight && (
+                            <p className="text-sm text-destructive">{errors.scaffoldHeight}</p>
+                          )}
                           <p className="text-xs text-muted-foreground">
                             اگر پشت‌بام بالا و پایین دارد، ارتفاع میانگین را وارد کنید
                           </p>
@@ -767,7 +802,7 @@ export default function ComprehensiveScaffoldingForm() {
                     {!vehicleReachesSite && (
                       <Card className="p-4 bg-background/50">
                         <div className="space-y-2">
-                          <Label htmlFor="vehicleDistance">فاصله به متر</Label>
+                          <Label htmlFor="vehicleDistance">فاصله به متر *</Label>
                           <Input
                             id="vehicleDistance"
                             type="number"
@@ -778,8 +813,13 @@ export default function ComprehensiveScaffoldingForm() {
                               vehicleDistance: parseFloat(e.target.value) || null 
                             }))}
                             placeholder="مثال: 25"
+                            className={errors.vehicleDistance ? 'border-destructive' : ''}
                           />
-                          <div className="text-xs text-muted-foreground space-y-1 mt-2">
+                          {errors.vehicleDistance && (
+                            <p className="text-sm text-destructive">{errors.vehicleDistance}</p>
+                          )}
+                          <div className="text-xs text-muted-foreground space-y-1 mt-2 bg-secondary/30 p-3 rounded">
+                            <p className="font-semibold mb-2">افزایش قیمت بر اساس فاصله:</p>
                             <p>• تا ۱۰ متر: بدون افزایش</p>
                             <p>• ۱۰-۲۰ متر: +۲۰٪</p>
                             <p>• ۲۰-۴۰ متر: +۴۰٪</p>
@@ -810,9 +850,16 @@ export default function ComprehensiveScaffoldingForm() {
           <Card>
             <CardHeader>
               <CardTitle>خدمات داربست کفراژ و حجمی</CardTitle>
+              <CardDescription>اطلاعات پروژه خود را وارد کنید</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">از همان فیلدهای بالا استفاده می‌شود. قیمت‌گذاری متفاوت است.</p>
+            <CardContent className="space-y-6">
+              {/* استفاده از همان فیلدهای بخش نماکاری */}
+              <p className="text-sm text-muted-foreground bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
+                💡 از همان فیلدهای بخش نماکاری استفاده می‌شود. تفاوت فقط در قیمت‌گذاری است:
+                <br />• تا 100 متر: 3,200,000 تومان
+                <br />• 100-200 متر: 4,000,000 تومان  
+                <br />• بالای 200 متر: 20,000 تومان به ازای هر متر مکعب
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -822,9 +869,15 @@ export default function ComprehensiveScaffoldingForm() {
           <Card>
             <CardHeader>
               <CardTitle>خدمات داربست زیربتن تیرچه</CardTitle>
+              <CardDescription>اطلاعات پروژه خود را وارد کنید</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">از همان فیلدهای بالا استفاده می‌شود. قیمت‌گذاری متفاوت است.</p>
+            <CardContent className="space-y-6">
+              <p className="text-sm text-muted-foreground bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
+                💡 از همان فیلدهای بخش نماکاری استفاده می‌شود. تفاوت فقط در قیمت‌گذاری است:
+                <br />• تا 100 متر: 7,500,000 تومان
+                <br />• 100-200 متر: 11,000,000 تومان
+                <br />• بالای 200 متر: 45,000 تومان به ازای هر متر مکعب
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -837,8 +890,13 @@ export default function ComprehensiveScaffoldingForm() {
                 روش محاسبه: تعداد پایه‌های داربست × مساحت مربع × ارتفاع
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">از همان فیلدهای بالا استفاده می‌شود. قیمت‌گذاری متفاوت است.</p>
+            <CardContent className="space-y-6">
+              <p className="text-sm text-muted-foreground bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
+                💡 از همان فیلدهای بخش نماکاری استفاده می‌شود. تفاوت فقط در قیمت‌گذاری است:
+                <br />• تا 100 متر: 8,000,000 تومان
+                <br />• 100-200 متر: 15,000,000 تومان
+                <br />• بالای 200 متر: 70,000 تومان به ازای هر متر مکعب
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -898,12 +956,46 @@ export default function ComprehensiveScaffoldingForm() {
       {/* Location Map */}
       <Card>
         <CardHeader>
-          <CardTitle>موقعیت پروژه روی نقشه</CardTitle>
+          <CardTitle>موقعیت پروژه روی نقشه (اختیاری)</CardTitle>
+          <CardDescription>
+            برای محاسبه دقیق فاصله از مرکز استان، موقعیت پروژه را روی نقشه مشخص کنید
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {projectLocation && projectLocation.distance > 85 && (
+            <Alert className="bg-red-500/10 border-red-500/30">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-700">
+                ⚠️ فاصله پروژه شما {projectLocation.distance.toFixed(1)} کیلومتر از مرکز استان است.
+                <br />
+                <strong>توجه:</strong> بالای 85 کیلومتر از مرکز استان کار پذیرفته نمی‌شود. 
+                قیمت نهایی پس از بررسی کارشناسی اعلام خواهد شد.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <ProjectLocationMap
-            onLocationSelect={(location) => setProjectLocation(location)}
+            onLocationSelect={(location) => {
+              setProjectLocation(location);
+              
+              // بروزرسانی خودکار distanceRange بر اساس فاصله واقعی
+              if (location.distance <= 15) {
+                setConditions(prev => ({ ...prev, distanceRange: '0-15' }));
+              } else if (location.distance <= 25) {
+                setConditions(prev => ({ ...prev, distanceRange: '15-25' }));
+              } else if (location.distance <= 50) {
+                setConditions(prev => ({ ...prev, distanceRange: '25-50' }));
+              } else if (location.distance <= 85) {
+                setConditions(prev => ({ ...prev, distanceRange: '50-85' }));
+              }
+            }}
           />
+          
+          {projectLocation && (
+            <div className="text-sm text-muted-foreground bg-secondary/30 p-3 rounded-lg">
+              📍 فاصله از مرکز استان: <strong>{projectLocation.distance.toFixed(1)} کیلومتر</strong>
+            </div>
+          )}
         </CardContent>
       </Card>
 
