@@ -15,9 +15,14 @@ import { Textarea } from '@/components/ui/textarea';
 
 export default function StaffManagement() {
   const { toast } = useToast();
+  const { positions, loading: positionsLoading } = useOrganizationalPositions();
 
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [region, setRegion] = useState<{ province?: string; district?: string; city?: string }>({});
+  const [selectedRegion, setSelectedRegion] = useState<{
+    province?: string;
+    district?: string;
+    city?: string;
+  }>({});
   const [position, setPosition] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,7 +62,7 @@ export default function StaffManagement() {
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!phoneNumber.trim() || !region.province || !position) {
+    if (!phoneNumber.trim() || !selectedRegion.province || !position) {
       toast({
         title: 'خطا',
         description: 'لطفاً تمام فیلدهای الزامی را پر کنید',
@@ -89,15 +94,16 @@ export default function StaffManagement() {
       const userId = profileData.user_id;
 
       // بررسی تکراری نبودن (همان نقش + استان + شهرستان)
-      const { data: existingStaff } = await supabase
+      const { data: duplicates } = await supabase
         .from('staff_profiles')
         .select('id')
-        .eq('user_id', userId)
-        .eq('province', region.province)
-        .eq('staff_position', position)
-        .maybeSingle();
+        .match({
+          user_id: userId,
+          province: selectedRegion.province || '',
+          staff_position: position
+        });
 
-      if (existingStaff) {
+      if (duplicates && duplicates.length > 0) {
         toast({
           title: 'خطا',
           description: 'این پرسنل با همین نقش و محدوده قبلاً ثبت شده است',
@@ -117,9 +123,9 @@ export default function StaffManagement() {
         .insert({
           user_id: userId,
           requested_role: defaultRole,
-          province: region.province,
-          staff_category: region.district || '',
-          staff_subcategory: region.city || '',
+          province: selectedRegion.province,
+          staff_category: selectedRegion.district || '',
+          staff_subcategory: selectedRegion.city || '',
           staff_position: position,
           description: description || null,
           status: 'approved',
@@ -146,7 +152,7 @@ export default function StaffManagement() {
 
       // ریست فرم
       setPhoneNumber('');
-      setRegion({});
+      setSelectedRegion({});
       setPosition('');
       setDescription('');
       fetchStaff();
@@ -198,8 +204,8 @@ export default function StaffManagement() {
             </div>
 
             <RegionSelector
-              value={region}
-              onChange={setRegion}
+              value={selectedRegion}
+              onChange={setSelectedRegion}
               required
             />
 

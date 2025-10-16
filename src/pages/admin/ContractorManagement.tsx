@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { RegionSelector } from '@/components/common/RegionSelector';
-import { serviceCategories, activityTypes } from '@/lib/staffContractorData';
+import { useServiceCategories } from '@/hooks/useServiceCategories';
+import { useActivityTypes } from '@/hooks/useActivityTypes';
 import { Building2, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,8 @@ import { Textarea } from '@/components/ui/textarea';
 
 export default function ContractorManagement() {
   const { toast } = useToast();
+  const { categories, loading: categoriesLoading } = useServiceCategories();
+  const { activityTypes, loading: activityTypesLoading } = useActivityTypes();
 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedRegion, setSelectedRegion] = useState<{
@@ -212,14 +215,14 @@ export default function ContractorManagement() {
 
             <div>
               <Label htmlFor="category">نوع صنف خدمات *</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={setCategory} disabled={categoriesLoading}>
                 <SelectTrigger>
-                  <SelectValue placeholder="صنف را انتخاب کنید..." />
+                  <SelectValue placeholder={categoriesLoading ? "در حال بارگذاری..." : "صنف را انتخاب کنید..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  {serviceCategories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -228,14 +231,14 @@ export default function ContractorManagement() {
 
             <div>
               <Label htmlFor="activity">نوع فعالیت خدمات *</Label>
-              <Select value={activity} onValueChange={setActivity}>
+              <Select value={activity} onValueChange={setActivity} disabled={activityTypesLoading}>
                 <SelectTrigger>
-                  <SelectValue placeholder="نوع فعالیت را انتخاب کنید..." />
+                  <SelectValue placeholder={activityTypesLoading ? "در حال بارگذاری..." : "نوع فعالیت را انتخاب کنید..."} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   {activityTypes.map((type) => (
-                    <SelectItem key={type} value={type} className="text-sm">
-                      {type}
+                    <SelectItem key={type.id} value={type.id} className="text-sm">
+                      {type.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

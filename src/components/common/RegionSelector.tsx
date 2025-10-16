@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { regionsData } from '@/lib/staffContractorData';
+import { useRegions } from '@/hooks/useRegions';
 
 interface RegionSelectorProps {
   value?: {
@@ -26,12 +26,12 @@ export const RegionSelector = ({
   disabled = false,
   required = false 
 }: RegionSelectorProps) => {
+  const { provinces, loading, getCitiesByProvince, getDistrictsByCity } = useRegions();
   const [selectedProvince, setSelectedProvince] = useState(value.province || '');
   const [selectedDistrict, setSelectedDistrict] = useState(value.district || '');
   const [selectedCity, setSelectedCity] = useState(value.city || '');
-
-  const currentProvince = regionsData.find(p => p.code === selectedProvince);
-  const currentDistrict = currentProvince?.districts.find(d => d.name === selectedDistrict);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [cities, setCities] = useState<any[]>([]);
 
   useEffect(() => {
     if (value.province !== selectedProvince || 
@@ -43,35 +43,64 @@ export const RegionSelector = ({
     }
   }, [value]);
 
-  const handleProvinceChange = (provinceCode: string) => {
-    setSelectedProvince(provinceCode);
+  useEffect(() => {
+    if (selectedProvince) {
+      loadDistricts(selectedProvince);
+    }
+  }, [selectedProvince]);
+
+  useEffect(() => {
+    if (selectedDistrict) {
+      loadCities(selectedDistrict);
+    }
+  }, [selectedDistrict]);
+
+  const loadDistricts = async (provinceId: string) => {
+    const districtList = await getDistrictsByCity(provinceId);
+    setDistricts(districtList);
+  };
+
+  const loadCities = async (districtId: string) => {
+    const cityList = await getCitiesByProvince(districtId);
+    setCities(cityList);
+  };
+
+  const handleProvinceChange = (provinceId: string) => {
+    setSelectedProvince(provinceId);
     setSelectedDistrict('');
     setSelectedCity('');
+    setDistricts([]);
+    setCities([]);
     onChange({ 
-      province: provinceCode, 
+      province: provinceId, 
       district: '', 
       city: '' 
     });
   };
 
-  const handleDistrictChange = (districtName: string) => {
-    setSelectedDistrict(districtName);
+  const handleDistrictChange = (districtId: string) => {
+    setSelectedDistrict(districtId);
     setSelectedCity('');
+    setCities([]);
     onChange({ 
       province: selectedProvince, 
-      district: districtName, 
+      district: districtId, 
       city: '' 
     });
   };
 
-  const handleCityChange = (cityName: string) => {
-    setSelectedCity(cityName);
+  const handleCityChange = (cityId: string) => {
+    setSelectedCity(cityId);
     onChange({ 
       province: selectedProvince, 
       district: selectedDistrict, 
-      city: cityName 
+      city: cityId 
     });
   };
+
+  if (loading) {
+    return <div className="text-sm text-muted-foreground">در حال بارگذاری...</div>;
+  }
 
   return (
     <div className="space-y-4">
@@ -89,8 +118,8 @@ export const RegionSelector = ({
             <SelectValue placeholder="استان را انتخاب کنید" />
           </SelectTrigger>
           <SelectContent>
-            {regionsData.map((province) => (
-              <SelectItem key={province.code} value={province.code}>
+            {provinces.map((province) => (
+              <SelectItem key={province.id} value={province.id}>
                 {province.name}
               </SelectItem>
             ))}
@@ -99,7 +128,7 @@ export const RegionSelector = ({
       </div>
 
       {/* District Selection */}
-      {selectedProvince && currentProvince && (
+      {selectedProvince && districts.length > 0 && (
         <div className="space-y-2">
           <Label htmlFor="district">
             شهرستان / منطقه {required && <span className="text-destructive">*</span>}
@@ -113,8 +142,8 @@ export const RegionSelector = ({
               <SelectValue placeholder="شهرستان را انتخاب کنید" />
             </SelectTrigger>
             <SelectContent>
-              {currentProvince.districts.map((district) => (
-                <SelectItem key={district.name} value={district.name}>
+              {districts.map((district) => (
+                <SelectItem key={district.id} value={district.id}>
                   {district.name}
                 </SelectItem>
               ))}
@@ -124,7 +153,7 @@ export const RegionSelector = ({
       )}
 
       {/* City Selection - Only show if district has multiple cities */}
-      {selectedDistrict && currentDistrict && currentDistrict.cities.length > 1 && (
+      {selectedDistrict && cities.length > 1 && (
         <div className="space-y-2">
           <Label htmlFor="city">
             شهر / منطقه {required && <span className="text-destructive">*</span>}
@@ -138,9 +167,9 @@ export const RegionSelector = ({
               <SelectValue placeholder="شهر را انتخاب کنید" />
             </SelectTrigger>
             <SelectContent>
-              {currentDistrict.cities.map((city) => (
-                <SelectItem key={city} value={city}>
-                  {city}
+              {cities.map((city) => (
+                <SelectItem key={city.id} value={city.id}>
+                  {city.name}
                 </SelectItem>
               ))}
             </SelectContent>
