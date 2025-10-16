@@ -14,11 +14,9 @@ import ProjectLocationMap from '@/components/ProjectLocationMap';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
 
-// Schema for dimension validation
-const dimensionSchema = z.object({
-  length: z.number().positive({ message: 'طول باید بیشتر از صفر باشد' }),
-  height: z.number().positive({ message: 'ارتفاع باید بیشتر از صفر باشد' }),
-});
+// Import comprehensive validation schemas
+import { orderDimensionSchema, orderFormSchema } from '@/lib/validations';
+import { sanitizeHtml } from '@/lib/security';
 
 interface Dimension {
   id: string;
@@ -211,16 +209,35 @@ export default function ScaffoldingFacadeForm() {
     
     const newErrors: { [key: string]: string } = {};
 
-    if (!projectAddress.trim()) {
-      newErrors.projectAddress = 'آدرس پروژه الزامی است';
+    // Comprehensive validation using zod schema
+    try {
+      const dimensionsData = dimensions.map(d => ({
+        length: parseFloat(d.length) || 0,
+        height: parseFloat(d.height) || 0,
+        area: (parseFloat(d.length) || 0) * (parseFloat(d.height) || 0)
+      }));
+
+      const formData = {
+        address: projectAddress,
+        dimensions: dimensionsData,
+      };
+
+      orderFormSchema.parse(formData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        error.errors.forEach(err => {
+          const path = err.path.join('.');
+          newErrors[path] = err.message;
+        });
+      }
     }
 
     if (!durationMonths) {
       newErrors.durationMonths = 'انتخاب مدت زمان الزامی است';
     }
 
-    // Validate all dimensions
-    dimensions.forEach((dim, index) => {
+    // Individual dimension validation for better error messages
+    dimensions.forEach((dim) => {
       const length = parseFloat(dim.length);
       const height = parseFloat(dim.height);
       
@@ -228,7 +245,7 @@ export default function ScaffoldingFacadeForm() {
         newErrors[`dimension${dim.id}`] = 'لطفاً طول و ارتفاع را وارد کنید';
       } else {
         try {
-          dimensionSchema.parse({ length, height });
+          orderDimensionSchema.parse({ length, height });
         } catch (error) {
           if (error instanceof z.ZodError) {
             newErrors[`dimension${dim.id}`] = error.errors[0].message;

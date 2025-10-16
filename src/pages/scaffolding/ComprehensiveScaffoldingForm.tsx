@@ -33,10 +33,9 @@ interface ServiceConditions {
   vehicleDistance: number | null;
 }
 
-const dimensionSchema = z.object({
-  length: z.number().positive({ message: 'طول باید بیشتر از صفر باشد' }),
-  height: z.number().positive({ message: 'ارتفاع باید بیشتر از صفر باشد' }),
-});
+// Import comprehensive validation schemas
+import { orderDimensionSchema, orderFormSchema } from '@/lib/validations';
+import { sanitizeHtml, getSafeErrorMessage } from '@/lib/security';
 
 export default function ComprehensiveScaffoldingForm() {
   const navigate = useNavigate();
@@ -362,6 +361,29 @@ export default function ComprehensiveScaffoldingForm() {
     
     const newErrors: { [key: string]: string } = {};
 
+    // Comprehensive validation using zod schema
+    try {
+      const dimensionsData = dimensions.map(d => ({
+        length: parseFloat(d.length) || 0,
+        height: parseFloat(d.height) || 0,
+        area: (parseFloat(d.length) || 0) * (parseFloat(d.height) || 0)
+      }));
+
+      const formData = {
+        address: projectAddress,
+        dimensions: dimensionsData,
+      };
+
+      orderFormSchema.parse(formData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        error.errors.forEach(err => {
+          const path = err.path.join('.');
+          newErrors[path] = err.message;
+        });
+      }
+    }
+
     if (!projectAddress.trim()) {
       newErrors.projectAddress = 'آدرس پروژه الزامی است';
     }
@@ -383,7 +405,7 @@ export default function ComprehensiveScaffoldingForm() {
         newErrors[`dimension${dim.id}`] = 'لطفاً طول و ارتفاع را وارد کنید';
       } else {
         try {
-          dimensionSchema.parse({ length, height });
+          orderDimensionSchema.parse({ length, height });
         } catch (error) {
           if (error instanceof z.ZodError) {
             newErrors[`dimension${dim.id}`] = error.errors[0].message;
@@ -492,9 +514,10 @@ export default function ComprehensiveScaffoldingForm() {
       }, 1500);
     } catch (error: any) {
       console.error('خطا:', error);
+      const safeErrorMessage = getSafeErrorMessage(error);
       toast({
         title: '❌ خطا در ثبت سفارش',
-        description: error.message || 'مشکلی پیش آمد',
+        description: safeErrorMessage,
         variant: 'destructive',
       });
     } finally {

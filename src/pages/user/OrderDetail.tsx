@@ -175,7 +175,8 @@ export default function OrderDetail() {
     }
   };
 
-  const canEdit = order?.status === 'draft' || order?.status === 'pending';
+  // Security: Only draft orders are editable, pending orders are locked
+  const canEdit = order?.status === 'draft';
 
   if (loading) {
     return (
@@ -363,7 +364,7 @@ export default function OrderDetail() {
                     </p>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300">
                       سفارش شما در حال بررسی است و به زودی نتیجه به شما اطلاع داده خواهد شد.
-                      {canEdit && ' در این مدت می‌توانید سفارش را ویرایش کنید.'}
+                      پس از ثبت سفارش، امکان ویرایش وجود ندارد.
                     </p>
                   </div>
                 </div>

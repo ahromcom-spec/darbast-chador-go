@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { sanitizeHtml } from './security';
 
 // Phone validation schemas
 export const phoneSchema = z.object({
@@ -30,6 +31,37 @@ export const profileSchema = z.object({
     .optional()
 });
 
+// Comprehensive order/project validation schema
+export const orderDimensionSchema = z.object({
+  length: z.number()
+    .positive({ message: 'طول باید بیشتر از صفر باشد' })
+    .max(1000, { message: 'طول نباید بیش از 1000 متر باشد' }),
+  height: z.number()
+    .positive({ message: 'ارتفاع باید بیشتر از صفر باشد' })
+    .max(500, { message: 'ارتفاع نباید بیش از 500 متر باشد' }),
+  area: z.number().positive().optional()
+});
+
+export const orderFormSchema = z.object({
+  address: z.string()
+    .trim()
+    .min(10, { message: 'آدرس باید حداقل 10 کاراکتر باشد' })
+    .max(500, { message: 'آدرس نباید بیش از 500 کاراکتر باشد' })
+    .transform(sanitizeHtml),
+  detailed_address: z.string()
+    .trim()
+    .max(500, { message: 'آدرس تکمیلی نباید بیش از 500 کاراکتر باشد' })
+    .transform(sanitizeHtml)
+    .optional(),
+  dimensions: z.array(orderDimensionSchema)
+    .min(1, { message: 'حداقل یک ابعاد باید وارد شود' })
+    .max(50, { message: 'حداکثر 50 ابعاد مجاز است' }),
+  notes: z.string()
+    .max(2000, { message: 'یادداشت‌ها نباید بیش از 2000 کاراکتر باشد' })
+    .transform(sanitizeHtml)
+    .optional()
+});
+
 // Service request validation
 export const serviceRequestSchema = z.object({
   service_type: z.enum(['scaffolding', 'tarpaulin'], {
@@ -49,6 +81,7 @@ export const serviceRequestSchema = z.object({
     .trim()
     .min(10, { message: 'آدرس باید حداقل 10 کاراکتر باشد' })
     .max(500, { message: 'آدرس نباید بیش از 500 کاراکتر باشد' })
+    .transform(sanitizeHtml)
     .optional()
 });
 
@@ -57,11 +90,13 @@ export const contractorSchema = z.object({
   company_name: z.string()
     .trim()
     .min(3, { message: 'نام شرکت باید حداقل 3 کاراکتر باشد' })
-    .max(200, { message: 'نام شرکت نباید بیش از 200 کاراکتر باشد' }),
+    .max(200, { message: 'نام شرکت نباید بیش از 200 کاراکتر باشد' })
+    .transform(sanitizeHtml),
   contact_person: z.string()
     .trim()
     .min(3, { message: 'نام شخص تماس باید حداقل 3 کاراکتر باشد' })
-    .max(100, { message: 'نام شخص تماس نباید بیش از 100 کاراکتر باشد' }),
+    .max(100, { message: 'نام شخص تماس نباید بیش از 100 کاراکتر باشد' })
+    .transform(sanitizeHtml),
   phone_number: z.string()
     .trim()
     .length(11, { message: 'شماره موبایل باید 11 رقم باشد' })
@@ -74,10 +109,12 @@ export const contractorSchema = z.object({
     .trim()
     .min(10, { message: 'آدرس باید حداقل 10 کاراکتر باشد' })
     .max(500, { message: 'آدرس نباید بیش از 500 کاراکتر باشد' })
+    .transform(sanitizeHtml)
     .optional(),
   description: z.string()
     .trim()
     .max(1000, { message: 'توضیحات نباید بیش از 1000 کاراکتر باشد' })
+    .transform(sanitizeHtml)
     .optional(),
   experience_years: z.number()
     .int({ message: 'سابقه کار باید عدد صحیح باشد' })
@@ -91,11 +128,13 @@ export const ticketSchema = z.object({
   subject: z.string()
     .trim()
     .min(5, { message: 'موضوع باید حداقل 5 کاراکتر باشد' })
-    .max(200, { message: 'موضوع نباید بیش از 200 کاراکتر باشد' }),
+    .max(200, { message: 'موضوع نباید بیش از 200 کاراکتر باشد' })
+    .transform(sanitizeHtml),
   message: z.string()
     .trim()
     .min(10, { message: 'پیام باید حداقل 10 کاراکتر باشد' })
-    .max(2000, { message: 'پیام نباید بیش از 2000 کاراکتر باشد' }),
+    .max(2000, { message: 'پیام نباید بیش از 2000 کاراکتر باشد' })
+    .transform(sanitizeHtml),
   department: z.enum(['general', 'technical', 'financial', 'support'], {
     errorMap: () => ({ message: 'دپارتمان نامعتبر است' })
   })
@@ -106,10 +145,12 @@ export const assignmentSchema = z.object({
   title: z.string()
     .trim()
     .min(5, { message: 'عنوان باید حداقل 5 کاراکتر باشد' })
-    .max(200, { message: 'عنوان نباید بیش از 200 کاراکتر باشد' }),
+    .max(200, { message: 'عنوان نباید بیش از 200 کاراکتر باشد' })
+    .transform(sanitizeHtml),
   description: z.string()
     .trim()
     .max(1000, { message: 'توضیحات نباید بیش از 1000 کاراکتر باشد' })
+    .transform(sanitizeHtml)
     .optional(),
   assignee_user_id: z.string().uuid({ message: 'شناسه کاربر نامعتبر است' }),
   project_id: z.string().uuid({ message: 'شناسه پروژه نامعتبر است' }),
