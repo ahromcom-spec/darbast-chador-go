@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { RegionSelector } from '@/components/common/RegionSelector';
-import { staffPositions } from '@/lib/staffContractorData';
+import { useOrganizationalPositions } from '@/hooks/useOrganizationalPositions';
 import { UserPlus, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -211,14 +211,14 @@ export default function StaffManagement() {
 
             <div>
               <Label htmlFor="position">نوع سمت *</Label>
-              <Select value={position} onValueChange={setPosition}>
+              <Select value={position} onValueChange={setPosition} disabled={positionsLoading}>
                 <SelectTrigger>
-                  <SelectValue placeholder="سمت را انتخاب کنید..." />
+                  <SelectValue placeholder={positionsLoading ? "در حال بارگذاری..." : "سمت را انتخاب کنید..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  {staffPositions.map((pos) => (
-                    <SelectItem key={pos} value={pos}>
-                      {pos}
+                  {positions.map((pos) => (
+                    <SelectItem key={pos.id} value={pos.id}>
+                      {pos.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
