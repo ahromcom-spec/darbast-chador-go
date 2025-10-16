@@ -93,17 +93,20 @@ export default function ContractorManagement() {
       }
 
       const userId = profileData.user_id;
+      const province = selectedRegion.province || '';
 
-      // بررسی تکراری نبودن (استان + صنف + فعالیت)
-      const { count } = await supabase
+      // بررسی تکراری نبودن
+      const { data: duplicates, error: duplicateError } = await supabase
         .from('contractor_profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('province', selectedRegion.province || '')
-        .eq('service_category', category)
-        .eq('activity_type', activity);
+        .select('id')
+        .match({
+          user_id: userId,
+          province: province,
+          service_category: category,
+          activity_type: activity
+        });
 
-      if (count && count > 0) {
+      if (!duplicateError && duplicates && duplicates.length > 0) {
         toast({
           title: 'خطا',
           description: 'این پیمانکار با همین صنف و نوع فعالیت در این محدوده قبلاً ثبت شده است',
