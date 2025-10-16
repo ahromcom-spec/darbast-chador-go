@@ -56,15 +56,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check if user exists
-    const { data: existingUser } = await supabase.auth.admin.listUsers();
-    const authPhone = normalizedPhone.startsWith('0') 
-      ? '+98' + normalizedPhone.slice(1) 
-      : '+98' + normalizedPhone;
-    const userWithPhone = existingUser.users.find(u => u.phone === authPhone);
-    const userWithEmail = existingUser.users.find(u => u.email === derivedEmail);
-    const userExists = userWithPhone || userWithEmail;
-
     // Check rate limit
     const { data: rateLimitOk, error: rateLimitError } = await supabase
       .rpc('check_otp_rate_limit', { _phone_number: normalizedPhone });
@@ -121,11 +112,25 @@ serve(async (req) => {
     } catch {}
     const hostIsValidFormat = /^[a-z0-9.-]+(:[0-9]{1,5})?$/i.test(host);
     const baseHost = host.replace(/:.*$/, '');
-    const allowedExact = ['ahrom.org'];
-    const allowedSuffixes = ['.lovableproject.com', '.ahrom.org'];
-    const isLocalhost = /^localhost$/.test(baseHost) || /^127\.0\.0\.1$/.test(baseHost);
-    const isAllowed = hostIsValidFormat && (allowedExact.includes(baseHost) || allowedSuffixes.some(s => baseHost.endsWith(s)) || isLocalhost);
+    
+    // Environment-based host validation
+    const isDevelopment = Deno.env.get('ENVIRONMENT') !== 'production';
+    const allowedProductionHosts = ['ahrom.org'];
+    const allowedProductionSuffixes = ['.ahrom.org'];
+    
+    // Only allow localhost/127.0.0.1 in development
+    const isLocalhost = isDevelopment && (/^localhost$/.test(baseHost) || /^127\.0\.0\.1$/.test(baseHost));
+    
+    // Production: strict whitelist only
+    // Development: allow localhost + lovableproject.com for testing
+    const isProductionAllowed = allowedProductionHosts.includes(baseHost) || 
+                                allowedProductionSuffixes.some(s => baseHost.endsWith(s));
+    const isDevelopmentAllowed = isDevelopment && (baseHost.endsWith('.lovableproject.com'));
+    
+    const isAllowed = hostIsValidFormat && (isProductionAllowed || isLocalhost || isDevelopmentAllowed);
+    
     if (!isAllowed) {
+      console.warn('Invalid host attempt:', baseHost);
       return new Response(
         JSON.stringify({ error: 'دامنه نامعتبر' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -201,11 +206,11 @@ serve(async (req) => {
 
     console.log('OTP sent successfully to:', maskedPhone);
 
+    // Always return same response regardless of user existence to prevent enumeration
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'کد تایید با موفقیت ارسال شد',
-        user_exists: userExists
+        message: 'کد تایید با موفقیت ارسال شد'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
