@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ahrom-v8';
+const CACHE_NAME = 'ahrom-v9';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -14,6 +14,13 @@ self.addEventListener('install', (event) => {
       .then((cache) => cache.addAll(urlsToCache))
       .then(() => self.skipWaiting())
   );
+});
+
+// Allow page to tell SW to take control immediately
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Activate event - clean up old caches
