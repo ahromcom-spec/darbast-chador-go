@@ -6,19 +6,20 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { RegionSelector } from '@/components/ceo/RegionSelector';
-import { useOrganizationalPositions } from '@/hooks/useOrganizationalPositions';
+import { RegionSelector } from '@/components/common/RegionSelector';
+import { staffPositions } from '@/lib/staffContractorData';
 import { UserPlus, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function StaffManagement() {
   const { toast } = useToast();
-  const { positions, loading: positionsLoading } = useOrganizationalPositions();
 
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [regionId, setRegionId] = useState('');
-  const [positionId, setPositionId] = useState('');
+  const [region, setRegion] = useState<{ province?: string; district?: string; city?: string }>({});
+  const [position, setPosition] = useState('');
+  const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [staff, setStaff] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,20 +31,15 @@ export default function StaffManagement() {
   const fetchStaff = async () => {
     try {
       const { data, error } = await supabase
-        .from('internal_staff_profiles')
+        .from('staff_profiles')
         .select(`
           *,
           profiles:user_id (
             full_name,
             phone_number
-          ),
-          regions:region_id (
-            name
-          ),
-          organizational_positions:position_id (
-            name
           )
         `)
+        .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -61,10 +57,10 @@ export default function StaffManagement() {
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!phoneNumber.trim() || !regionId || !positionId) {
+    if (!phoneNumber.trim() || !region.province || !position) {
       toast({
         title: 'خطا',
-        description: 'لطفاً تمام فیلدها را پر کنید',
+        description: 'لطفاً تمام فیلدهای الزامی را پر کنید',
         variant: 'destructive',
       });
       return;
@@ -78,7 +74,7 @@ export default function StaffManagement() {
         .from('profiles')
         .select('user_id')
         .eq('phone_number', phoneNumber)
-        .single();
+        .maybeSingle();
 
       if (profileError || !profileData) {
         toast({
@@ -92,70 +88,55 @@ export default function StaffManagement() {
 
       const userId = profileData.user_id;
 
-      // بررسی وجود پروفایل پرسنل
+      // بررسی تکراری نبودن (همان نقش + استان + شهرستان)
       const { data: existingStaff } = await supabase
-        .from('internal_staff_profiles')
+        .from('staff_profiles')
         .select('id')
         .eq('user_id', userId)
+        .eq('province', region.province)
+        .eq('staff_position', position)
         .maybeSingle();
 
       if (existingStaff) {
         toast({
           title: 'خطا',
-          description: 'این کاربر قبلاً به عنوان پرسنل ثبت شده است',
+          description: 'این پرسنل با همین نقش و محدوده قبلاً ثبت شده است',
           variant: 'destructive',
         });
         setLoading(false);
         return;
       }
 
-      // ایجاد پروفایل پرسنل
+      // نقش برای staff_profiles باید از app_role باشد
+      // استفاده از operations_manager به عنوان نقش پیش‌فرض
+      const defaultRole = 'operations_manager';
+
+      // ایجاد رکورد پرسنل
       const { error: insertError } = await supabase
-        .from('internal_staff_profiles')
+        .from('staff_profiles')
         .insert({
           user_id: userId,
-          phone_verified: true,
-          verified_by: (await supabase.auth.getUser()).data.user?.id,
-          verified_at: new Date().toISOString(),
-          region_id: regionId,
-          position_id: positionId,
+          requested_role: defaultRole,
+          province: region.province,
+          staff_category: region.district || '',
+          staff_subcategory: region.city || '',
+          staff_position: position,
+          description: description || null,
           status: 'approved',
+          approved_by: (await supabase.auth.getUser()).data.user?.id,
+          approved_at: new Date().toISOString(),
         });
 
       if (insertError) throw insertError;
 
-      // اختصاص نقش مرتبط با پست سازمانی
-      // دریافت نام پست سازمانی
-      const selectedPosition = positions.find(p => p.id === positionId);
-      
-      if (selectedPosition) {
-        // تبدیل نام پست سازمانی به app_role
-        type AppRole = 'operations_manager' | 'scaffold_supervisor' | 'warehouse_manager' | 'finance_manager';
-        let appRole: AppRole | null = null;
-        
-        // نگاشت پست‌های سازمانی به نقش‌های سیستمی
-        const positionName = selectedPosition.name.toLowerCase();
-        if (positionName.includes('مدیر عملیات')) {
-          appRole = 'operations_manager';
-        } else if (positionName.includes('سرپرست داربست')) {
-          appRole = 'scaffold_supervisor';
-        } else if (positionName.includes('مدیر انبار')) {
-          appRole = 'warehouse_manager';
-        } else if (positionName.includes('مدیر مالی')) {
-          appRole = 'finance_manager';
-        }
-        
-        // اختصاص نقش اگر نگاشت پیدا شد
-        if (appRole) {
-          const { error: roleError } = await supabase.rpc('assign_role_to_user', {
-            _user_id: userId,
-            _role: appRole,
-          });
-          
-          if (roleError) {
-            console.error('Error assigning role:', roleError);
-          }
-        }
+      // اختصاص نقش سیستمی
+      const { error: roleError } = await supabase.rpc('assign_role_to_user', {
+        _user_id: userId,
+        _role: defaultRole,
+      });
+
+      if (roleError) {
+        console.error('Error assigning role:', roleError);
       }
 
       toast({
@@ -165,8 +146,9 @@ export default function StaffManagement() {
 
       // ریست فرم
       setPhoneNumber('');
-      setRegionId('');
-      setPositionId('');
+      setRegion({});
+      setPosition('');
+      setDescription('');
       fetchStaff();
     } catch (error) {
       console.error('Error adding staff:', error);
@@ -197,7 +179,7 @@ export default function StaffManagement() {
             افزودن پرسنل جدید
           </CardTitle>
           <CardDescription>
-            تأیید شماره تلفن و تعیین پست سازمانی
+            تأیید شماره تلفن و تعیین محدوده و سمت پرسنل
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -210,35 +192,42 @@ export default function StaffManagement() {
                 placeholder="09123456789"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                validatePhone
                 maxLength={11}
+                className="direction-ltr text-right"
               />
             </div>
 
             <RegionSelector
-              value={regionId}
-              onChange={setRegionId}
-              error={!regionId ? 'محدوده را انتخاب کنید' : ''}
+              value={region}
+              onChange={setRegion}
+              required
             />
 
             <div>
-              <Label htmlFor="position">پست سازمانی *</Label>
-              <Select value={positionId} onValueChange={setPositionId}>
+              <Label htmlFor="position">نوع سمت *</Label>
+              <Select value={position} onValueChange={setPosition}>
                 <SelectTrigger>
-                  <SelectValue placeholder="پست سازمانی را انتخاب کنید..." />
+                  <SelectValue placeholder="سمت را انتخاب کنید..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {positionsLoading ? (
-                    <SelectItem value="loading" disabled>در حال بارگذاری...</SelectItem>
-                  ) : (
-                    positions.map((position) => (
-                      <SelectItem key={position.id} value={position.id}>
-                        {position.name}
-                      </SelectItem>
-                    ))
-                  )}
+                  {staffPositions.map((pos) => (
+                    <SelectItem key={pos} value={pos}>
+                      {pos}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="description">توضیحات (اختیاری)</Label>
+              <Textarea
+                id="description"
+                placeholder="توضیحات تکمیلی..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+              />
             </div>
 
             <Button type="submit" disabled={loading} className="w-full">
@@ -261,40 +250,46 @@ export default function StaffManagement() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right">نام</TableHead>
-                <TableHead className="text-right">شماره تلفن</TableHead>
-                <TableHead className="text-right">محدوده</TableHead>
-                <TableHead className="text-right">پست سازمانی</TableHead>
-                <TableHead className="text-right">وضعیت</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredStaff.length === 0 ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    پرسنلی یافت نشد
-                  </TableCell>
+                  <TableHead className="text-right">نام</TableHead>
+                  <TableHead className="text-right">شماره تلفن</TableHead>
+                  <TableHead className="text-right">محدوده</TableHead>
+                  <TableHead className="text-right">سمت</TableHead>
+                  <TableHead className="text-right">وضعیت</TableHead>
                 </TableRow>
-              ) : (
-                filteredStaff.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell>{member.profiles?.full_name || '-'}</TableCell>
-                    <TableCell>{member.profiles?.phone_number || '-'}</TableCell>
-                    <TableCell>{member.regions?.name || '-'}</TableCell>
-                    <TableCell>{member.organizational_positions?.name || '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant={member.status === 'approved' ? 'default' : 'secondary'}>
-                        {member.status === 'approved' ? 'تأیید شده' : 'در انتظار'}
-                      </Badge>
+              </TableHeader>
+              <TableBody>
+                {filteredStaff.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      پرسنلی یافت نشد
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filteredStaff.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell>{member.profiles?.full_name || '-'}</TableCell>
+                      <TableCell className="direction-ltr text-right">
+                        {member.profiles?.phone_number || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {member.province && `${member.province}${member.staff_category ? ' - ' + member.staff_category : ''}`}
+                      </TableCell>
+                      <TableCell>{member.staff_position || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="default">
+                          تأیید شده
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

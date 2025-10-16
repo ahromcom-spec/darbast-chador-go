@@ -6,22 +6,21 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { RegionSelector } from '@/components/ceo/RegionSelector';
-import { useServiceCategories } from '@/hooks/useServiceCategories';
-import { useActivityTypes } from '@/hooks/useActivityTypes';
-import { UserPlus, Search } from 'lucide-react';
+import { RegionSelector } from '@/components/common/RegionSelector';
+import { serviceCategories, activityTypes } from '@/lib/staffContractorData';
+import { Building2, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function ContractorManagement() {
   const { toast } = useToast();
-  const { categories, loading: categoriesLoading } = useServiceCategories();
-  const { activityTypes, loading: activityTypesLoading } = useActivityTypes();
 
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [regionId, setRegionId] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [activityTypeId, setActivityTypeId] = useState('');
+  const [region, setRegion] = useState<{ province?: string; district?: string; city?: string }>({});
+  const [category, setCategory] = useState('');
+  const [activity, setActivity] = useState('');
+  const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [contractors, setContractors] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,17 +38,9 @@ export default function ContractorManagement() {
           profiles:user_id (
             full_name,
             phone_number
-          ),
-          regions:region_id (
-            name
-          ),
-          service_categories:service_category_id (
-            name
-          ),
-          service_activity_types:activity_type_id (
-            name
           )
         `)
+        .eq('status', 'approved')
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -68,10 +59,10 @@ export default function ContractorManagement() {
   const handleAddContractor = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!phoneNumber.trim() || !regionId || !categoryId || !activityTypeId) {
+    if (!phoneNumber.trim() || !region.province || !category || !activity) {
       toast({
         title: 'خطا',
-        description: 'لطفاً تمام فیلدها را پر کنید',
+        description: 'لطفاً تمام فیلدهای الزامی را پر کنید',
         variant: 'destructive',
       });
       return;
@@ -85,7 +76,7 @@ export default function ContractorManagement() {
         .from('profiles')
         .select('user_id')
         .eq('phone_number', phoneNumber)
-        .single();
+        .maybeSingle();
 
       if (profileError || !profileData) {
         toast({
@@ -99,17 +90,20 @@ export default function ContractorManagement() {
 
       const userId = profileData.user_id;
 
-      // بررسی وجود پروفایل پیمانکار
+      // بررسی تکراری نبودن (استان + صنف + فعالیت)
       const { data: existingContractor } = await supabase
         .from('contractor_profiles')
         .select('id')
         .eq('user_id', userId)
+        .eq('province', region.province)
+        .eq('service_category', category)
+        .eq('activity_type', activity)
         .maybeSingle();
 
       if (existingContractor) {
         toast({
           title: 'خطا',
-          description: 'این کاربر قبلاً به عنوان پیمانکار ثبت شده است',
+          description: 'این پیمانکار با همین صنف و نوع فعالیت در این محدوده قبلاً ثبت شده است',
           variant: 'destructive',
         });
         setLoading(false);
@@ -124,15 +118,18 @@ export default function ContractorManagement() {
           phone_verified: true,
           verified_by: (await supabase.auth.getUser()).data.user?.id,
           verified_at: new Date().toISOString(),
-          region_id: regionId,
-          service_category_id: categoryId,
-          activity_type_id: activityTypeId,
+          province: region.province,
+          district: region.district || '',
+          city: region.city || '',
+          service_category: category,
+          activity_type: activity,
+          description: description || null,
           status: 'approved',
         });
 
       if (insertError) throw insertError;
 
-      // افزودن نقش contractor با استفاده از تابع امن
+      // افزودن نقش contractor
       const { error: roleError } = await supabase.rpc('assign_role_to_user', {
         _user_id: userId,
         _role: 'contractor',
@@ -140,23 +137,19 @@ export default function ContractorManagement() {
 
       if (roleError) {
         console.error('Role assignment error:', roleError);
-        toast({
-          title: 'تذکر',
-          description: 'پیمانکار ثبت شد اما خطا در تخصیص نقش رخ داد',
-          variant: 'default',
-        });
-      } else {
-        toast({
-          title: 'موفق',
-          description: 'پیمانکار با موفقیت افزوده شد و نقش اختصاص یافت',
-        });
       }
+
+      toast({
+        title: 'موفق',
+        description: 'پیمانکار با موفقیت افزوده شد',
+      });
 
       // ریست فرم
       setPhoneNumber('');
-      setRegionId('');
-      setCategoryId('');
-      setActivityTypeId('');
+      setRegion({});
+      setCategory('');
+      setActivity('');
+      setDescription('');
       fetchContractors();
     } catch (error) {
       console.error('Error adding contractor:', error);
@@ -183,11 +176,11 @@ export default function ContractorManagement() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
+            <Building2 className="h-5 w-5" />
             افزودن پیمانکار جدید
           </CardTitle>
           <CardDescription>
-            تأیید شماره تلفن و تعیین اطلاعات پیمانکار
+            تأیید شماره تلفن و تعیین محدوده، صنف و نوع فعالیت
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -200,55 +193,58 @@ export default function ContractorManagement() {
                 placeholder="09123456789"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                validatePhone
                 maxLength={11}
+                className="direction-ltr text-right"
               />
             </div>
 
             <RegionSelector
-              value={regionId}
-              onChange={setRegionId}
-              error={!regionId ? 'محدوده را انتخاب کنید' : ''}
+              value={region}
+              onChange={setRegion}
+              required
             />
 
             <div>
               <Label htmlFor="category">نوع صنف خدمات *</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
+              <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger>
                   <SelectValue placeholder="صنف را انتخاب کنید..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {categoriesLoading ? (
-                    <SelectItem value="loading" disabled>در حال بارگذاری...</SelectItem>
-                  ) : (
-                    categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))
-                  )}
+                  {serviceCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div>
               <Label htmlFor="activity">نوع فعالیت خدمات *</Label>
-              <Select value={activityTypeId} onValueChange={setActivityTypeId}>
+              <Select value={activity} onValueChange={setActivity}>
                 <SelectTrigger>
                   <SelectValue placeholder="نوع فعالیت را انتخاب کنید..." />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  {activityTypesLoading ? (
-                    <SelectItem value="loading" disabled>در حال بارگذاری...</SelectItem>
-                  ) : (
-                    activityTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))
-                  )}
+                  {activityTypes.map((type) => (
+                    <SelectItem key={type} value={type} className="text-sm">
+                      {type}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="description">توضیحات (اختیاری)</Label>
+              <Textarea
+                id="description"
+                placeholder="توضیحات تکمیلی..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+              />
             </div>
 
             <Button type="submit" disabled={loading} className="w-full">
@@ -271,40 +267,50 @@ export default function ContractorManagement() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right">نام</TableHead>
-                <TableHead className="text-right">شماره تلفن</TableHead>
-                <TableHead className="text-right">محدوده</TableHead>
-                <TableHead className="text-right">صنف</TableHead>
-                <TableHead className="text-right">وضعیت</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredContractors.length === 0 ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    پیمانکاری یافت نشد
-                  </TableCell>
+                  <TableHead className="text-right">نام</TableHead>
+                  <TableHead className="text-right">شماره تلفن</TableHead>
+                  <TableHead className="text-right">محدوده</TableHead>
+                  <TableHead className="text-right">صنف</TableHead>
+                  <TableHead className="text-right">نوع فعالیت</TableHead>
+                  <TableHead className="text-right">وضعیت</TableHead>
                 </TableRow>
-              ) : (
-                filteredContractors.map((contractor) => (
-                  <TableRow key={contractor.id}>
-                    <TableCell>{contractor.profiles?.full_name || '-'}</TableCell>
-                    <TableCell>{contractor.profiles?.phone_number || '-'}</TableCell>
-                    <TableCell>{contractor.regions?.name || '-'}</TableCell>
-                    <TableCell>{contractor.service_categories?.name || '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant={contractor.status === 'approved' ? 'default' : 'secondary'}>
-                        {contractor.status === 'approved' ? 'تأیید شده' : 'در انتظار'}
-                      </Badge>
+              </TableHeader>
+              <TableBody>
+                {filteredContractors.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      پیمانکاری یافت نشد
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filteredContractors.map((contractor) => (
+                    <TableRow key={contractor.id}>
+                      <TableCell>{contractor.profiles?.full_name || '-'}</TableCell>
+                      <TableCell className="direction-ltr text-right">
+                        {contractor.profiles?.phone_number || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {contractor.province && `${contractor.province}${contractor.district ? ' - ' + contractor.district : ''}`}
+                      </TableCell>
+                      <TableCell className="text-sm">{contractor.service_category || '-'}</TableCell>
+                      <TableCell className="text-xs max-w-[200px] truncate" title={contractor.activity_type}>
+                        {contractor.activity_type || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="default">
+                          تأیید شده
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
