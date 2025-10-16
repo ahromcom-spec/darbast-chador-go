@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,12 +18,10 @@ export default function ScaffoldingForm() {
         backgroundAttachment: 'fixed'
       }}
     >
-      {/* Overlay for better readability */}
       <div className="absolute inset-0 bg-black/50 z-0" />
       
       <div className="container mx-auto px-4 max-w-7xl relative z-10">
         <div className="space-y-6">
-          {/* Back Button */}
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
@@ -34,7 +31,6 @@ export default function ScaffoldingForm() {
             بازگشت
           </Button>
 
-          {/* Main Card */}
           <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
             <CardHeader className="text-center border-b">
               <CardTitle className="text-2xl flex items-center justify-center gap-2">
