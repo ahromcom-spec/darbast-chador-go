@@ -60,7 +60,7 @@ serve(async (req) => {
         .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
         .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)))
         .replace(/[^0-9]/g, '')
-        .slice(0, 6);
+        .slice(0, 5); // Changed from 6 to 5 to match send-otp
     };
     const normalizedCode = normalizeOtpCode(code);
     // Build a strong per-login password from OTP to satisfy password policy
