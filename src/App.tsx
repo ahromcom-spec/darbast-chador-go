@@ -42,6 +42,7 @@ const NewTicket = lazy(() => import("./pages/tickets/NewTicket"));
 const TicketDetail = lazy(() => import("./pages/tickets/TicketDetail"));
 const ContractorRegister = lazy(() => import("./pages/contractor/ContractorRegister"));
 const ContractorDashboard = lazy(() => import("./pages/contractor/ContractorDashboard"));
+const StaffRoleRequest = lazy(() => import("./pages/staff/StaffRoleRequest"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 
@@ -106,7 +107,8 @@ const App = () => (
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<NewTicket />} />
               <Route path="/tickets/:id" element={<TicketDetail />} />
-              <Route path="/contractor/register" element={<ContractorRegister />} />
+          <Route path="/contractor/register" element={<ContractorRegister />} />
+          <Route path="/staff/request-role" element={<StaffRoleRequest />} />
               <Route path="/contractor/dashboard" element={
                 <ProtectedRoute>
                   <ContractorDashboard />

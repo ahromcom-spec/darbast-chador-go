@@ -8,21 +8,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, Building2 } from "lucide-react";
+import { ArrowRight, UserCog } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle } from "lucide-react";
-import { useServiceCategories } from "@/hooks/useServiceCategories";
-import { useActivityTypes } from "@/hooks/useActivityTypes";
+import { CheckCircle } from "lucide-react";
+import { useOrganizationalPositions } from "@/hooks/useOrganizationalPositions";
 import { useRegions } from "@/hooks/useRegions";
 
+const staffRoles = [
+  { value: 'admin', label: 'مدیر سیستم' },
+  { value: 'general_manager', label: 'مدیرکل' },
+  { value: 'operations_manager', label: 'مدیر عملیات' },
+  { value: 'scaffold_supervisor', label: 'سرپرست داربست' },
+  { value: 'warehouse_manager', label: 'مدیر انبار' },
+  { value: 'finance_manager', label: 'مدیر مالی' },
+];
 
-export default function ContractorRegister() {
+export default function StaffRoleRequest() {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
-    companyName: "",
     phoneNumber: "",
-    serviceCategoryId: "",
-    activityTypeId: "",
+    requestedRole: "",
+    positionId: "",
     regionId: "",
   });
   const [loading, setLoading] = useState(false);
@@ -30,17 +36,15 @@ export default function ContractorRegister() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const { categories, loading: categoriesLoading } = useServiceCategories();
-  const { activityTypes, loading: activityTypesLoading } = useActivityTypes();
+  const { positions, loading: positionsLoading } = useOrganizationalPositions();
   const { provinces, loading: regionsLoading } = useRegions();
 
-  // بررسی لاگین و بارگذاری اطلاعات کاربر
   useEffect(() => {
     const checkAuthAndLoadProfile = async () => {
       if (!user) {
         toast({
           title: "نیاز به ورود",
-          description: "برای ثبت‌نام پیمانکار، لطفاً ابتدا وارد حساب کاربری خود شوید",
+          description: "برای درخواست نقش پرسنلی، لطفاً ابتدا وارد حساب کاربری خود شوید",
           variant: "destructive"
         });
         navigate("/auth/login");
@@ -70,11 +74,10 @@ export default function ContractorRegister() {
     checkAuthAndLoadProfile();
   }, [user, navigate, toast]);
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.phoneNumber || !formData.companyName) {
+    if (!formData.phoneNumber || !formData.requestedRole) {
       toast({
         title: "خطا",
         description: "لطفاً تمام فیلدهای الزامی را پر کنید",
@@ -96,24 +99,22 @@ export default function ContractorRegister() {
         return;
       }
 
-      // ثبت درخواست تأیید پیمانکار
+      // ثبت درخواست تأیید نقش پرسنلی
       const { error } = await supabase
-        .from("contractor_verification_requests")
-        .insert({
+        .from("staff_verification_requests")
+        .insert([{
           user_id: user.id,
           phone_number: formData.phoneNumber,
-          company_name: formData.companyName,
-          service_category_id: formData.serviceCategoryId || null,
-          activity_type_id: formData.activityTypeId || null,
+          requested_role: formData.requestedRole as any,
+          position_id: formData.positionId || null,
           region_id: formData.regionId || null,
-          status: 'pending'
-        });
+        }]);
 
       if (error) throw error;
 
       toast({
         title: "✓ درخواست ثبت شد",
-        description: "درخواست پیمانکاری شما با موفقیت ثبت شد. پس از بررسی و تأیید CEO، اطلاع‌رسانی خواهید شد."
+        description: "درخواست نقش پرسنلی شما با موفقیت ثبت شد. پس از بررسی و تأیید CEO، اطلاع‌رسانی خواهید شد."
       });
 
       navigate("/");
@@ -128,7 +129,7 @@ export default function ContractorRegister() {
     }
   };
 
-  if (initialLoading || categoriesLoading || activityTypesLoading || regionsLoading) {
+  if (initialLoading || positionsLoading || regionsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -137,7 +138,7 @@ export default function ContractorRegister() {
   }
 
   if (!user) {
-    return null; // کاربر در useEffect هدایت می‌شود
+    return null;
   }
 
   return (
@@ -155,12 +156,12 @@ export default function ContractorRegister() {
         <CardHeader className="space-y-3 border-b">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Building2 className="h-6 w-6 text-primary" />
+              <UserCog className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-2xl">درخواست پیمانکاری</CardTitle>
+              <CardTitle className="text-2xl">درخواست نقش پرسنلی</CardTitle>
               <CardDescription>
-                برای همکاری به عنوان پیمانکار، درخواست خود را ثبت کنید
+                برای دریافت نقش پرسنلی در سیستم، درخواست خود را ثبت کنید
               </CardDescription>
             </div>
           </div>
@@ -177,22 +178,11 @@ export default function ContractorRegister() {
 
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                اطلاعات پایه
+                <UserCog className="h-5 w-5 text-primary" />
+                اطلاعات درخواست
               </h3>
               
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">نام شرکت *</Label>
-                  <Input
-                    id="companyName"
-                    value={formData.companyName}
-                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                    placeholder="نام شرکت پیمانکاری"
-                    required
-                  />
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber">شماره تماس *</Label>
                   <Input
@@ -207,18 +197,19 @@ export default function ContractorRegister() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="serviceCategory">دسته خدمات</Label>
+                  <Label htmlFor="requestedRole">نقش درخواستی *</Label>
                   <Select
-                    value={formData.serviceCategoryId}
-                    onValueChange={(value) => setFormData({ ...formData, serviceCategoryId: value })}
+                    value={formData.requestedRole}
+                    onValueChange={(value) => setFormData({ ...formData, requestedRole: value })}
+                    required
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="انتخاب دسته خدمات" />
+                      <SelectValue placeholder="انتخاب نقش" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
+                      {staffRoles.map((role) => (
+                        <SelectItem key={role.value} value={role.value}>
+                          {role.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -226,18 +217,18 @@ export default function ContractorRegister() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="activityType">نوع فعالیت</Label>
+                  <Label htmlFor="position">سمت سازمانی</Label>
                   <Select
-                    value={formData.activityTypeId}
-                    onValueChange={(value) => setFormData({ ...formData, activityTypeId: value })}
+                    value={formData.positionId}
+                    onValueChange={(value) => setFormData({ ...formData, positionId: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="انتخاب نوع فعالیت" />
+                      <SelectValue placeholder="انتخاب سمت" />
                     </SelectTrigger>
                     <SelectContent>
-                      {activityTypes.map((type) => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.name}
+                      {positions.map((position) => (
+                        <SelectItem key={position.id} value={position.id}>
+                          {position.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -245,7 +236,7 @@ export default function ContractorRegister() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="region">استان فعالیت</Label>
+                  <Label htmlFor="region">استان محل خدمت</Label>
                   <Select
                     value={formData.regionId}
                     onValueChange={(value) => setFormData({ ...formData, regionId: value })}
