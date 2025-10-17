@@ -89,7 +89,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
     isActive
       ? 'bg-primary text-primary-foreground font-medium shadow-sm'
-      : 'hover:bg-accent/10 text-muted-foreground hover:text-foreground transition-all duration-200';
+      : 'hover:bg-accent/10 text-foreground hover:text-primary transition-all duration-200';
 
   const handleClick = () => {
     if (onNavigate) {
