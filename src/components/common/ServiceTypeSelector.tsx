@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ChevronDown, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -32,16 +32,6 @@ export function ServiceTypeSelector({
 }: ServiceTypeSelectorProps) {
   const [open, setOpen] = useState(false);
   const [expandedServiceType, setExpandedServiceType] = useState<string | null>(null);
-
-  // Detect if device supports hover to enable hover-based expansion on desktop only
-  const [supportsHover, setSupportsHover] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia?.('(hover: hover) and (pointer: fine)');
-    setSupportsHover(!!mq?.matches);
-    const handler = (e: MediaQueryListEvent) => setSupportsHover(e.matches);
-    mq?.addEventListener?.('change', handler);
-    return () => mq?.removeEventListener?.('change', handler);
-  }, []);
 
   // Parse current value
   const [selectedServiceTypeId, selectedSubcategoryCode] = value ? value.split(':') : ['', ''];
@@ -99,11 +89,7 @@ export function ServiceTypeSelector({
             <CommandEmpty>خدمتی یافت نشد.</CommandEmpty>
             {serviceTypes.map((serviceType) => (
               <CommandGroup key={serviceType.id}>
-                <div
-                  className="relative"
-                  onMouseEnter={supportsHover ? () => setExpandedServiceType(serviceType.id) : undefined}
-                  onMouseLeave={supportsHover ? () => setExpandedServiceType(null) : undefined}
-                >
+                <div className="relative">
                   <button type="button"
                     onClick={() => handleServiceTypeClick(serviceType.id)}
                     className={cn(
