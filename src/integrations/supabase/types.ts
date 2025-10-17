@@ -1152,6 +1152,193 @@ export type Database = {
         }
         Relationships: []
       }
+      rating_criteria: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          rating_type: Database["public"]["Enums"]["rating_type"]
+          title: string
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          rating_type: Database["public"]["Enums"]["rating_type"]
+          title: string
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          rating_type?: Database["public"]["Enums"]["rating_type"]
+          title?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
+      rating_helpful_votes: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_helpful: boolean
+          rating_id: string | null
+          voter_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_helpful: boolean
+          rating_id?: string | null
+          voter_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_helpful?: boolean
+          rating_id?: string | null
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rating_helpful_votes_rating_id_fkey"
+            columns: ["rating_id"]
+            isOneToOne: false
+            referencedRelation: "ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rating_helpful_votes_voter_id_fkey"
+            columns: ["voter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      rating_responses: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_official: boolean | null
+          rating_id: string | null
+          responder_id: string
+          response: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_official?: boolean | null
+          rating_id?: string | null
+          responder_id: string
+          response: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_official?: boolean | null
+          rating_id?: string | null
+          responder_id?: string
+          response?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rating_responses_rating_id_fkey"
+            columns: ["rating_id"]
+            isOneToOne: false
+            referencedRelation: "ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rating_responses_responder_id_fkey"
+            columns: ["responder_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      ratings: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          criteria_scores: Json | null
+          helpful_count: number | null
+          id: string
+          is_anonymous: boolean | null
+          is_verified: boolean | null
+          overall_score: number | null
+          project_id: string | null
+          rated_id: string
+          rater_id: string
+          rating_type: Database["public"]["Enums"]["rating_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          criteria_scores?: Json | null
+          helpful_count?: number | null
+          id?: string
+          is_anonymous?: boolean | null
+          is_verified?: boolean | null
+          overall_score?: number | null
+          project_id?: string | null
+          rated_id: string
+          rater_id: string
+          rating_type: Database["public"]["Enums"]["rating_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          criteria_scores?: Json | null
+          helpful_count?: number | null
+          id?: string
+          is_anonymous?: boolean | null
+          is_verified?: boolean | null
+          overall_score?: number | null
+          project_id?: string | null
+          rated_id?: string
+          rater_id?: string
+          rating_type?: Database["public"]["Enums"]["rating_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_rated_id_fkey"
+            columns: ["rated_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ratings_rater_id_fkey"
+            columns: ["rater_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       regions: {
         Row: {
           code: string | null
@@ -1187,6 +1374,59 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "regions"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      reputation_scores: {
+        Row: {
+          contractor_score: number | null
+          created_at: string | null
+          customer_score: number | null
+          id: string
+          last_calculated_at: string | null
+          overall_score: number | null
+          staff_score: number | null
+          total_ratings: number | null
+          trust_level: string | null
+          updated_at: string | null
+          user_id: string
+          verified_projects: number | null
+        }
+        Insert: {
+          contractor_score?: number | null
+          created_at?: string | null
+          customer_score?: number | null
+          id?: string
+          last_calculated_at?: string | null
+          overall_score?: number | null
+          staff_score?: number | null
+          total_ratings?: number | null
+          trust_level?: string | null
+          updated_at?: string | null
+          user_id: string
+          verified_projects?: number | null
+        }
+        Update: {
+          contractor_score?: number | null
+          created_at?: string | null
+          customer_score?: number | null
+          id?: string
+          last_calculated_at?: string | null
+          overall_score?: number | null
+          staff_score?: number | null
+          total_ratings?: number | null
+          trust_level?: string | null
+          updated_at?: string | null
+          user_id?: string
+          verified_projects?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reputation_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1992,6 +2232,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      calculate_reputation_score: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       check_directory_rate_limit: {
         Args: { _user_id: string }
         Returns: boolean
@@ -2180,6 +2424,19 @@ export type Database = {
         | "in_progress"
         | "paid"
         | "closed"
+      rating_context:
+        | "project_completion"
+        | "service_quality"
+        | "communication"
+        | "professionalism"
+        | "punctuality"
+      rating_type:
+        | "customer_to_contractor"
+        | "contractor_to_customer"
+        | "staff_to_contractor"
+        | "contractor_to_staff"
+        | "customer_to_staff"
+        | "staff_to_customer"
       request_source: "PORTAL" | "AGENT" | "API"
       reservation_status: "RESERVED" | "PICKED" | "RETURNED"
       service_line_source: "BOM" | "ADHOC"
@@ -2375,6 +2632,21 @@ export const Constants = {
         "in_progress",
         "paid",
         "closed",
+      ],
+      rating_context: [
+        "project_completion",
+        "service_quality",
+        "communication",
+        "professionalism",
+        "punctuality",
+      ],
+      rating_type: [
+        "customer_to_contractor",
+        "contractor_to_customer",
+        "staff_to_contractor",
+        "contractor_to_staff",
+        "customer_to_staff",
+        "staff_to_customer",
       ],
       request_source: ["PORTAL", "AGENT", "API"],
       reservation_status: ["RESERVED", "PICKED", "RETURNED"],
