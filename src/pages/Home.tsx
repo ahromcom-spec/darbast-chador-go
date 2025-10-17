@@ -63,8 +63,8 @@ export default function Home() {
     const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
     const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
     
-    // اگر زیرمجموعه داربست با اجناس (کد 01) انتخاب شده، مستقیماً به فرم برو
-    if (selectedSubcategory === '01') {
+    // اگر زیرمجموعه داربست با اجناس (کد 10) انتخاب شده، مستقیماً به فرم برو
+    if (selectedSubcategory === '10') {
       navigate('/scaffolding/form', {
         state: {
           serviceTypeId: selectedServiceType,
