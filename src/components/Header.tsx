@@ -121,15 +121,6 @@ const Header = () => {
                   <User className="h-4 w-4" />
                   <span className="text-xs sm:text-sm">پروفایل</span>
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span className="text-xs sm:text-sm">خروج</span>
-                </Button>
               </>
             ) : (
               <>
@@ -244,14 +235,6 @@ const Header = () => {
                 >
                   <User className="h-4 w-4" />
                   <span>پروفایل کاربری</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleSignOut}
-                  className="gap-2 font-medium"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>خروج از حساب</span>
                 </Button>
               </>
             ) : (
