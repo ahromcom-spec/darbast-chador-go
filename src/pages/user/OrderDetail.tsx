@@ -25,7 +25,7 @@ import { z } from "zod";
 interface Order {
   id: string;
   code: string;
-  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'active' | 'pending_execution' | 'completed';
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'active' | 'pending_execution' | 'completed' | 'in_progress' | 'paid' | 'closed';
   created_at: string;
   updated_at: string;
   address: string;
