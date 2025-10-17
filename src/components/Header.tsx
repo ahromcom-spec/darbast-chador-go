@@ -95,7 +95,6 @@ const Header = () => {
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {user && <NotificationBell />}
             </div>
           </div>
 
@@ -103,6 +102,7 @@ const Header = () => {
           <div className="flex items-center justify-end gap-2 py-2 pr-2">
             {user ? (
               <>
+                <NotificationBell />
                 <Button
                   variant="outline"
                   size="sm"
@@ -212,7 +212,6 @@ const Header = () => {
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {user && <NotificationBell />}
             </div>
           </div>
 
@@ -220,6 +219,7 @@ const Header = () => {
           <div className="flex items-center justify-end gap-4 py-3 pr-4">
             {user ? (
               <>
+                <NotificationBell />
                 <Button
                   variant="outline"
                   onClick={() => navigate("/ratings/test")}
