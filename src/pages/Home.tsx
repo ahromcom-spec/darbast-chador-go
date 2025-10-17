@@ -1,42 +1,74 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase } from 'lucide-react';
+import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useNavigation } from '@/hooks/useNavigation';
-//
 import usePWAInstall from '@/hooks/usePWAInstall';
+import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
+import { useUserProjects } from '@/hooks/useUserProjects';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 export default function Home() {
   usePageTitle('صفحه اصلی');
-  const [selectedService, setSelectedService] = useState<string>('');
+  const [selectedServiceType, setSelectedServiceType] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
-  const { goToScaffoldingForm, goToLogin, goToRegister, goToTickets, navigate, navigateWithAuth } = useNavigation();
+  const { navigate, navigateWithAuth } = useNavigation();
+  const { serviceTypes, loading: servicesLoading } = useServiceTypesWithSubcategories();
+  const { projects, loading: projectsLoading } = useUserProjects(
+    selectedServiceType || undefined,
+    selectedSubcategory || undefined
+  );
 
   // Auto-assign projects to contractors
   useAutoAssignProjects();
 
-  const handleScaffoldingSelect = () => {
-    navigateWithAuth('/service/request');
+  // Reset selections when component mounts
+  useEffect(() => {
+    setSelectedServiceType('');
+    setSelectedSubcategory('');
+    setSelectedProject('');
+  }, []);
+
+  const handleServiceTypeChange = (value: string) => {
+    // Value format: "serviceTypeId:subcategoryCode"
+    const [serviceTypeId, subcategoryCode] = value.split(':');
+    setSelectedServiceType(serviceTypeId);
+    setSelectedSubcategory(subcategoryCode);
+    setSelectedProject('');
   };
 
-  const handleTarpaulinSelect = () => {
-    toast({
-      title: 'به زودی',
-      description: 'خدمات چادر برزنتی به زودی اضافه خواهد شد'
+  const handleProjectSelect = (projectId: string) => {
+    setSelectedProject(projectId);
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      navigate(`/user/projects`);
+    }
+  };
+
+  const handleCreateNewProject = () => {
+    const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
+    const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
+    
+    navigate('/user/create-project', {
+      state: {
+        preSelectedServiceType: selectedServiceType,
+        preSelectedServiceCode: selectedSubcategory,
+        serviceTypeName: serviceType?.name,
+        subcategoryName: subcategory?.name
+      }
     });
   };
 
-  // Reset selected service when component mounts
-  useEffect(() => {
-    setSelectedService('');
-    sessionStorage.removeItem('selected-service');
-  }, []);
+  const selectedServiceTypeObj = serviceTypes.find(st => st.id === selectedServiceType);
 
 
   const handleInstallApp = async () => {
@@ -115,91 +147,106 @@ export default function Home() {
               </CardHeader>
               
               <CardContent className="space-y-4 sm:space-y-5 md:space-y-6 px-4 sm:px-6 pb-6 sm:pb-8">
-                <div className="space-y-2.5 sm:space-y-3 slide-up">
-                  <label htmlFor="service-select" className="text-xs sm:text-sm font-medium text-foreground block">
-                    انتخاب نوع خدمات:
-                  </label>
-                  <Select value={selectedService} onValueChange={setSelectedService}>
-                    <SelectTrigger id="service-select" className="w-full text-right h-11 sm:h-12 text-sm sm:text-base smooth-hover">
-                      <SelectValue placeholder="لطفاً نوع خدمات مورد نظر خود را انتخاب کنید..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-2 z-[100]">
-                      <SelectItem value="scaffolding" className="text-sm sm:text-base">
-                        خدمات داربست فلزی
-                      </SelectItem>
-                      <SelectItem value="tarpaulin" className="text-sm sm:text-base">
-                        خدمات چادر برزنتی
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Scaffolding Options */}
-                {selectedService === 'scaffolding' && (
-                  <section className="space-y-3 sm:space-y-4 p-4 sm:p-5 md:p-6 bg-secondary/50 rounded-lg border-2 border-construction/20 scale-in">
-                    <div className="flex items-center gap-2 sm:gap-2.5">
-                      <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                      <h3 className="font-semibold text-primary text-sm sm:text-base">
-                        خدمات داربست فلزی حرفه‌ای - نصب و اجرا در قم و سراسر ایران
-                      </h3>
+                {servicesLoading ? (
+                  <div className="flex justify-center py-8">
+                    <LoadingSpinner size="lg" />
+                  </div>
+                ) : (
+                  <>
+                    {/* Service Type Selection */}
+                    <div className="space-y-2.5 sm:space-y-3 slide-up">
+                      <label htmlFor="service-type-select" className="text-xs sm:text-sm font-medium text-foreground block">
+                        انتخاب نوع خدمات:
+                      </label>
+                      <Select value={selectedServiceType} onValueChange={handleServiceTypeChange}>
+                        <SelectTrigger id="service-type-select" className="w-full text-right h-11 sm:h-12 text-sm sm:text-base smooth-hover">
+                          <SelectValue placeholder="لطفاً نوع خدمات مورد نظر خود را انتخاب کنید..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-2 z-[100]">
+                          {serviceTypes.map((serviceType) => (
+                            <SelectGroup key={serviceType.id}>
+                              <SelectLabel className="text-sm font-semibold text-primary">
+                                {serviceType.name}
+                              </SelectLabel>
+                              {serviceType.subcategories.map((sub) => (
+                                <SelectItem 
+                                  key={sub.id} 
+                                  value={`${serviceType.id}:${sub.code}`}
+                                  className="text-sm sm:text-base pr-6"
+                                >
+                                  {sub.name}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      دریافت خدمات داربست فلزی با بالاترین کیفیت، تیم متخصص و قیمت مناسب
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Button 
-                        onClick={() => navigateWithAuth('/scaffolding/form')} 
-                        className="w-full h-auto p-3 sm:p-4 md:p-5 construction-gradient text-sm sm:text-base"
-                      >
-                        <div className="space-y-0.5 sm:space-y-1">
-                          <div className="font-semibold">ثبت سفارش کامل</div>
-                          <div className="text-xs sm:text-sm opacity-90">
-                            قیمت‌گذاری دقیق با تمام مشخصات
-                          </div>
+
+                    {/* Show Projects and Actions when service is selected */}
+                    {selectedServiceType && selectedSubcategory && (
+                      <section className="space-y-3 sm:space-y-4 p-4 sm:p-5 md:p-6 bg-secondary/50 rounded-lg border-2 border-construction/20 scale-in">
+                        <div className="flex items-center gap-2 sm:gap-2.5">
+                          <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                          <h3 className="font-semibold text-primary text-sm sm:text-base">
+                            {selectedServiceTypeObj?.name} - {selectedServiceTypeObj?.subcategories.find(s => s.code === selectedSubcategory)?.name}
+                          </h3>
                         </div>
-                      </Button>
-                      <Button 
-                        onClick={handleScaffoldingSelect} 
-                        variant="outline"
-                        className="w-full h-auto p-3 sm:p-4 md:p-5 border-2 text-sm sm:text-base"
-                      >
-                        <div className="space-y-0.5 sm:space-y-1">
-                          <div className="font-semibold">درخواست ساده</div>
-                          <div className="text-xs sm:text-sm opacity-90">
-                            پروژه اولیه بدون قیمت‌گذاری
+
+                        {/* Existing Projects */}
+                        {projectsLoading ? (
+                          <div className="flex justify-center py-4">
+                            <LoadingSpinner />
                           </div>
+                        ) : projects.length > 0 ? (
+                          <div className="space-y-2">
+                            <label className="text-xs sm:text-sm font-medium text-foreground block">
+                              پروژه‌های قبلی شما:
+                            </label>
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                              {projects.map((project) => (
+                                <button
+                                  key={project.id}
+                                  onClick={() => handleProjectSelect(project.id)}
+                                  className="w-full text-right p-3 rounded-lg border-2 hover:border-primary hover:bg-primary/5 transition-all smooth-hover"
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-semibold text-sm">{project.title}</div>
+                                      <div className="text-xs text-muted-foreground truncate">
+                                        {project.addresses?.line1}, {project.addresses?.city}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs sm:text-sm text-muted-foreground text-center py-2">
+                            هنوز پروژه‌ای برای این نوع خدمات ثبت نکرده‌اید
+                          </p>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="grid grid-cols-1 gap-3 pt-2">
+                          <Button 
+                            onClick={handleCreateNewProject}
+                            className="w-full h-auto p-3 sm:p-4 construction-gradient text-sm sm:text-base"
+                          >
+                            <div className="space-y-0.5 sm:space-y-1">
+                              <div className="font-semibold">ایجاد پروژه جدید</div>
+                              <div className="text-xs sm:text-sm opacity-90">
+                                تعریف پروژه جدید با آدرس و مشخصات کامل
+                              </div>
+                            </div>
+                          </Button>
                         </div>
-                      </Button>
-                    </div>
-                  </section>
+                      </section>
+                    )}
+                  </>
                 )}
-
-                {/* Tarpaulin Options */}
-                {selectedService === 'tarpaulin' && (
-                  <section className="space-y-3 sm:space-y-4 p-4 sm:p-5 md:p-6 bg-secondary/50 rounded-lg border-2 border-construction/20 scale-in">
-                    <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-                      <Badge variant="secondary" className="bg-gold/20 text-gold-light border-gold/30 text-xs">
-                        به زودی
-                      </Badge>
-                      <h3 className="font-semibold text-muted-foreground text-sm sm:text-base">
-                        خدمات چادر برزنتی ساختمانی
-                      </h3>
-                    </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      خدمات چادر برزنتی برای محافظت از ساختمان شما به زودی در دسترس خواهد بود
-                    </p>
-                    <Button 
-                      onClick={handleTarpaulinSelect} 
-                      disabled 
-                      variant="outline" 
-                      className="w-full opacity-60 h-11 sm:h-12 text-sm sm:text-base"
-                    >
-                      این خدمات به زودی اضافه خواهد شد
-                    </Button>
-                  </section>
-                )}
-
-                {/* No Quick Access Buttons - moved to user profile */}
               </CardContent>
             </Card>
           </article>
