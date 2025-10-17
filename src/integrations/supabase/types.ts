@@ -998,60 +998,96 @@ export type Database = {
           address: string
           approved_at: string | null
           approved_by: string | null
+          closed_at: string | null
           code: string
           contractor_id: string | null
           created_at: string | null
           customer_id: string
           detailed_address: string | null
           district_id: string | null
+          executed_by: string | null
+          execution_confirmed_at: string | null
+          execution_end_date: string | null
+          execution_start_date: string | null
+          financial_confirmed_at: string | null
+          financial_confirmed_by: string | null
           id: string
           notes: string | null
+          payment_amount: number | null
+          payment_confirmed_at: string | null
+          payment_confirmed_by: string | null
+          payment_method: string | null
           project_number: string
           province_id: string
           rejection_reason: string | null
           service_code: string
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
+          transaction_reference: string | null
           updated_at: string | null
         }
         Insert: {
           address: string
           approved_at?: string | null
           approved_by?: string | null
+          closed_at?: string | null
           code: string
           contractor_id?: string | null
           created_at?: string | null
           customer_id: string
           detailed_address?: string | null
           district_id?: string | null
+          executed_by?: string | null
+          execution_confirmed_at?: string | null
+          execution_end_date?: string | null
+          execution_start_date?: string | null
+          financial_confirmed_at?: string | null
+          financial_confirmed_by?: string | null
           id?: string
           notes?: string | null
+          payment_amount?: number | null
+          payment_confirmed_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_method?: string | null
           project_number: string
           province_id: string
           rejection_reason?: string | null
           service_code: string
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
+          transaction_reference?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string
           approved_at?: string | null
           approved_by?: string | null
+          closed_at?: string | null
           code?: string
           contractor_id?: string | null
           created_at?: string | null
           customer_id?: string
           detailed_address?: string | null
           district_id?: string | null
+          executed_by?: string | null
+          execution_confirmed_at?: string | null
+          execution_end_date?: string | null
+          execution_start_date?: string | null
+          financial_confirmed_at?: string | null
+          financial_confirmed_by?: string | null
           id?: string
           notes?: string | null
+          payment_amount?: number | null
+          payment_confirmed_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_method?: string | null
           project_number?: string
           province_id?: string
           rejection_reason?: string | null
           service_code?: string
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id?: string
+          transaction_reference?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2069,6 +2105,16 @@ export type Database = {
           _meta?: Json
         }
         Returns: string
+      }
+      notify_role: {
+        Args: {
+          _body: string
+          _link: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _title: string
+          _type?: string
+        }
+        Returns: undefined
       }
       remove_role_from_user: {
         Args: {
