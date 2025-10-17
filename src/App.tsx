@@ -46,7 +46,10 @@ const TicketDetail = lazy(() => import("./pages/tickets/TicketDetail"));
 const ContractorRegister = lazy(() => import("./pages/contractor/ContractorRegister"));
 const ContractorDashboard = lazy(() => import("./pages/contractor/ContractorDashboard"));
 const StaffRoleRequest = lazy(() => import("./pages/staff/StaffRoleRequest"));
+const ExecutiveLayout = lazy(() => import("./pages/executive/ExecutiveLayout").then(m => ({ default: m.ExecutiveLayout })));
+const ExecutiveDashboard = lazy(() => import("./pages/executive/ExecutiveDashboard"));
 const ExecutiveOrders = lazy(() => import("./pages/executive/ExecutiveOrders"));
+const ExecutiveCustomers = lazy(() => import("./pages/executive/ExecutiveCustomers"));
 const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
 const FinanceOrders = lazy(() => import("./pages/finance/FinanceOrders"));
 const ReputationDashboard = lazy(() => import("./pages/ratings/ReputationDashboard"));
@@ -153,11 +156,15 @@ const App = () => (
                 <Route path="staff-verifications" element={<StaffVerifications />} />
                 <Route path="orders" element={<CEOOrders />} />
               </Route>
-              <Route path="/executive/orders" element={
+              <Route path="/executive" element={
                 <ProtectedRoute>
-                  <ExecutiveOrders />
+                  <ExecutiveLayout />
                 </ProtectedRoute>
-              } />
+              }>
+                <Route index element={<ExecutiveDashboard />} />
+                <Route path="orders" element={<ExecutiveOrders />} />
+                <Route path="customers" element={<ExecutiveCustomers />} />
+              </Route>
               <Route path="/sales/orders" element={
                 <ProtectedRoute>
                   <SalesOrders />
