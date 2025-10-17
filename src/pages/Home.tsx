@@ -49,8 +49,8 @@ export default function Home() {
   const handleProjectSelect = (projectId: string) => {
     setSelectedProject(projectId);
     
-    // بررسی اینکه آیا زیرمجموعه انتخاب شده داربست با اجناس (کد 01) است
-    if (selectedSubcategory === '01') {
+    // بررسی اینکه آیا زیرمجموعه انتخاب شده داربست با اجناس (کد 10) است
+    if (selectedSubcategory === '10') {
       // هدایت به فرم جامع داربست با اطلاعات پروژه
       navigate(`/scaffolding/form/${projectId}`);
     } else {
