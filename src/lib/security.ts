@@ -28,18 +28,27 @@ type UserRole = 'admin' | 'general_manager' | 'operations_manager' | 'scaffold_s
   'support_manager' | 'security_manager' | 'warehouse_manager' | 'ceo';
 
 /**
- * Check if user has a specific role - FOR UI HINTS ONLY!
+ * Check if user has a specific role - FOR UI DISPLAY ONLY!
  * 
- * ⚠️ WARNING: This function uses client-side caching and should ONLY be used
- * to conditionally render UI elements (buttons, menu items, etc.).
+ * ⚠️ CRITICAL WARNING: This function is ONLY for UI display purposes.
+ * DO NOT USE for access control or security decisions!
  * 
- * DO NOT use this for access control or security decisions!
- * All security must be enforced server-side through RLS policies.
+ * This function uses client-side caching and should ONLY be used to:
+ * - Conditionally render UI elements (buttons, menu items, etc.)
+ * - Show/hide visual components based on user role
  * 
- * @param role - The role to check for
- * @returns Promise<boolean> - Whether the user has the role (cached result)
+ * All security MUST be enforced server-side through RLS policies.
+ * The server will always validate permissions regardless of what this returns.
+ * 
+ * @param role - The role to check for UI display purposes
+ * @returns Promise<boolean> - Whether to show UI for this role (cached result)
  */
-export async function hasRoleUIHint(role: UserRole): Promise<boolean> {
+export async function hasRoleForUIDisplayOnly(role: UserRole): Promise<boolean> {
+  // Development warning to remind developers this is UI-only
+  if (import.meta.env.DEV) {
+    console.warn('⚠️ hasRoleForUIDisplayOnly: This function is ONLY for UI display, not access control');
+  }
+
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
@@ -63,10 +72,16 @@ export async function hasRoleUIHint(role: UserRole): Promise<boolean> {
 
     return roles.has(role);
   } catch (error) {
-    console.error('Error checking role:', error);
+    console.error('Error checking role for UI:', error);
     return false;
   }
 }
+
+/**
+ * @deprecated Use hasRoleForUIDisplayOnly instead for clarity
+ * This alias is kept for backward compatibility
+ */
+export const hasRoleUIHint = hasRoleForUIDisplayOnly;
 
 /**
  * Clear role cache (call after role changes)
