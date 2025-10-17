@@ -545,26 +545,42 @@ export default function ComprehensiveScaffoldingForm() {
         area: parseFloat(d.length) * parseFloat(d.height)
       }));
 
+      const notesData = JSON.stringify({
+        service_type: activeService,
+        dimensions: dimensionsData,
+        total_area: totalArea,
+        conditions: conditions,
+        estimated_price: estimatedPrice,
+        price_per_meter: pricePerMeter
+      });
+
       const orderData = {
         address: projectAddress,
         detailed_address: projectLocation 
           ? `موقعیت: ${projectLocation.coordinates[1]},${projectLocation.coordinates[0]} - فاصله: ${projectLocation.distance}km`
           : null,
-        notes: JSON.stringify({
-          service_type: activeService,
-          dimensions: dimensionsData,
-          total_area: totalArea,
-          conditions: conditions,
-          estimated_price: estimatedPrice,
-          price_per_meter: pricePerMeter
-        }),
+        notes: notesData,
       };
 
       if (editingOrder) {
-        // حالت ویرایش
+        // حالت ویرایش - اعتبارسنجی با Zod
+        const { orderEditSchema } = await import('@/lib/validations');
+        const validatedData = orderEditSchema.parse({
+          address: orderData.address,
+          detailed_address: orderData.detailed_address || '',
+          notes: orderData.notes,
+          province_id: editingOrder.province_id,
+          district_id: editingOrder.district_id,
+          subcategory_id: editingOrder.subcategory_id
+        });
+
         const { error: updateError } = await supabase
           .from('projects_v3')
-          .update(orderData)
+          .update({
+            address: validatedData.address,
+            detailed_address: validatedData.detailed_address,
+            notes: validatedData.notes
+          })
           .eq('id', editingOrder.id);
 
         if (updateError) throw updateError;

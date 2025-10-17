@@ -159,3 +159,28 @@ export const assignmentSchema = z.object({
     errorMap: () => ({ message: 'اولویت نامعتبر است' })
   }).optional()
 });
+
+// Order edit validation (for projects_v3 table)
+export const orderEditSchema = z.object({
+  address: z.string()
+    .trim()
+    .min(10, { message: 'آدرس باید حداقل 10 کاراکتر باشد' })
+    .max(500, { message: 'آدرس نباید بیش از 500 کاراکتر باشد' })
+    .transform(sanitizeHtml),
+  detailed_address: z.string()
+    .trim()
+    .max(500, { message: 'آدرس تکمیلی نباید بیش از 500 کاراکتر باشد' })
+    .transform(sanitizeHtml)
+    .optional(),
+  notes: z.string()
+    .max(5000, { message: 'یادداشت‌ها نباید بیش از 5000 کاراکتر باشد' })
+    .optional(),
+  province_id: z.string()
+    .uuid({ message: 'شناسه استان نامعتبر است' }),
+  district_id: z.string()
+    .uuid({ message: 'شناسه شهرستان نامعتبر است' })
+    .optional()
+    .nullable(),
+  subcategory_id: z.string()
+    .uuid({ message: 'شناسه زیرمجموعه نامعتبر است' })
+});

@@ -205,9 +205,22 @@ export const CEOOrders = () => {
     if (!selectedOrder) return;
 
     try {
-      let parsedNotes = editForm.notes;
+      // Validate with Zod
+      const { orderEditSchema } = await import('@/lib/validations');
+      const validatedData = orderEditSchema.parse({
+        address: editForm.address,
+        detailed_address: editForm.detailed_address,
+        notes: editForm.notes,
+        province_id: editForm.province_id,
+        district_id: editForm.district_id || null,
+        subcategory_id: editForm.subcategory_id
+      });
+
+      let parsedNotes = validatedData.notes;
       try {
-        parsedNotes = JSON.parse(editForm.notes);
+        if (parsedNotes) {
+          parsedNotes = JSON.parse(parsedNotes);
+        }
       } catch {
         // If not valid JSON, keep as string
       }
@@ -215,12 +228,12 @@ export const CEOOrders = () => {
       const { error } = await supabase
         .from('projects_v3')
         .update({
-          address: editForm.address,
-          detailed_address: editForm.detailed_address,
+          address: validatedData.address,
+          detailed_address: validatedData.detailed_address,
           notes: parsedNotes,
-          province_id: editForm.province_id,
-          district_id: editForm.district_id || null,
-          subcategory_id: editForm.subcategory_id
+          province_id: validatedData.province_id,
+          district_id: validatedData.district_id,
+          subcategory_id: validatedData.subcategory_id
         })
         .eq('id', selectedOrder.id);
 
@@ -235,7 +248,15 @@ export const CEOOrders = () => {
       setSelectedOrder(null);
       fetchOrders();
     } catch (error: any) {
-      toast(toastError(error, 'خطا در ذخیره تغییرات'));
+      if (error.name === 'ZodError') {
+        toast({
+          title: 'خطای اعتبارسنجی',
+          description: error.errors[0]?.message || 'داده‌های ورودی نامعتبر است',
+          variant: 'destructive'
+        });
+      } else {
+        toast(toastError(error, 'خطا در ذخیره تغییرات'));
+      }
     }
   };
 
