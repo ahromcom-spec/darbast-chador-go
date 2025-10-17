@@ -48,15 +48,14 @@ export default function Home() {
 
   const handleProjectSelect = (projectId: string) => {
     setSelectedProject(projectId);
-    const project = projects.find(p => p.id === projectId);
-    if (project) {
-      // بررسی اینکه آیا پروژه از نوع داربست با اجناس و حمل است
-      if (project.service_code === 'scaffolding_with_materials_and_transport') {
-        // هدایت به فرم جامع داربست با اطلاعات پروژه
-        navigate(`/service/scaffolding-order/${projectId}`);
-      } else {
-        navigate(`/user/projects`);
-      }
+    
+    // بررسی اینکه آیا زیرمجموعه انتخاب شده داربست با اجناس (کد 01) است
+    if (selectedSubcategory === '01') {
+      // هدایت به فرم جامع داربست با اطلاعات پروژه
+      navigate(`/scaffolding/form/${projectId}`);
+    } else {
+      // برای سایر خدمات به صفحه پروژه‌ها
+      navigate(`/user/projects`);
     }
   };
 
@@ -64,14 +63,27 @@ export default function Home() {
     const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
     const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
     
-    navigate('/user/create-project', {
-      state: {
-        preSelectedServiceType: selectedServiceType,
-        preSelectedServiceCode: selectedSubcategory,
-        serviceTypeName: serviceType?.name,
-        subcategoryName: subcategory?.name
-      }
-    });
+    // اگر زیرمجموعه داربست با اجناس (کد 01) انتخاب شده، مستقیماً به فرم برو
+    if (selectedSubcategory === '01') {
+      navigate('/scaffolding/form', {
+        state: {
+          serviceTypeId: selectedServiceType,
+          subcategoryCode: selectedSubcategory,
+          serviceTypeName: serviceType?.name,
+          subcategoryName: subcategory?.name
+        }
+      });
+    } else {
+      // برای سایر خدمات به صفحه ایجاد پروژه
+      navigate('/user/create-project', {
+        state: {
+          preSelectedServiceType: selectedServiceType,
+          preSelectedServiceCode: selectedSubcategory,
+          serviceTypeName: serviceType?.name,
+          subcategoryName: subcategory?.name
+        }
+      });
+    }
   };
 
   const selectedServiceTypeObj = serviceTypes.find(st => st.id === selectedServiceType);

@@ -98,6 +98,11 @@ const App = () => (
                   <ScaffoldingForm />
                 </ProtectedRoute>
               } />
+              <Route path="/scaffolding/form/:projectId" element={
+                <ProtectedRoute>
+                  <ScaffoldingForm />
+                </ProtectedRoute>
+              } />
               <Route path="/service/request" element={
                 <ProtectedRoute>
                   <NewServiceRequestForm />
