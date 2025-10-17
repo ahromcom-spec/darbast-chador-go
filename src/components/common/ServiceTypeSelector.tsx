@@ -39,8 +39,8 @@ export function ServiceTypeSelector({
   const selectedServiceType = serviceTypes.find(st => st.id === selectedServiceTypeId);
   const selectedSubcategory = selectedServiceType?.subcategories.find(sc => sc.code === selectedSubcategoryCode);
 
-  const displayValue = selectedServiceType && selectedSubcategory
-    ? `${selectedServiceType.name} - ${selectedSubcategory.name}`
+  const displayValue = selectedSubcategory
+    ? selectedSubcategory.name
     : '';
 
   const handleSelect = (serviceTypeId: string, subcategoryCode: string) => {
