@@ -2111,6 +2111,7 @@ export type Database = {
         | "warehouse_manager"
         | "security_manager"
         | "ceo"
+        | "scaffold_executive_manager"
       inventory_tracking: "NONE" | "SN" | "SN_LOT"
       invoice_status: "DRAFT" | "SENT" | "PAID" | "VOID"
       media_type:
@@ -2130,6 +2131,9 @@ export type Database = {
         | "pending"
         | "approved"
         | "rejected"
+        | "in_progress"
+        | "paid"
+        | "closed"
       request_source: "PORTAL" | "AGENT" | "API"
       reservation_status: "RESERVED" | "PICKED" | "RETURNED"
       service_line_source: "BOM" | "ADHOC"
@@ -2300,6 +2304,7 @@ export const Constants = {
         "warehouse_manager",
         "security_manager",
         "ceo",
+        "scaffold_executive_manager",
       ],
       inventory_tracking: ["NONE", "SN", "SN_LOT"],
       invoice_status: ["DRAFT", "SENT", "PAID", "VOID"],
@@ -2321,6 +2326,9 @@ export const Constants = {
         "pending",
         "approved",
         "rejected",
+        "in_progress",
+        "paid",
+        "closed",
       ],
       request_source: ["PORTAL", "AGENT", "API"],
       reservation_status: ["RESERVED", "PICKED", "RETURNED"],
