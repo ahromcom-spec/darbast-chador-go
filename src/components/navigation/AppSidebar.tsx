@@ -69,7 +69,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   ] : [];
 
   const executiveItems = isExecutiveManager ? [
-    { title: 'مدیریت اجرا', url: '/executive/orders', icon: Hammer },
+    { title: 'داشبورد اجرا', url: '/executive', icon: Hammer },
+    { title: 'سفارشات', url: '/executive/orders', icon: ClipboardList },
+    { title: 'مشتریان', url: '/executive/customers', icon: Users },
   ] : [];
 
   const salesItems = isSalesManager ? [
@@ -86,8 +88,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
     isActive
-      ? 'bg-primary/10 text-primary font-medium border-r-2 border-primary'
-      : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground';
+      ? 'bg-primary text-primary-foreground font-medium shadow-sm'
+      : 'hover:bg-accent/10 text-muted-foreground hover:text-foreground transition-all duration-200';
 
   const handleClick = () => {
     if (onNavigate) {

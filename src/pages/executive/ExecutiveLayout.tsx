@@ -33,11 +33,11 @@ export function ExecutiveLayout() {
                 end={item.href === '/executive'}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-md transition-colors whitespace-nowrap',
-                    'hover:bg-accent hover:text-accent-foreground',
+                    'flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap',
+                    'hover:bg-accent/10',
                     isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   )
                 }
               >

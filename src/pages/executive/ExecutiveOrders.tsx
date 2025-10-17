@@ -104,8 +104,8 @@ export default function ExecutiveOrders() {
       if (error) throw error;
 
       toast({
-        title: 'موفق',
-        description: 'زمان اجرا ثبت شد'
+        title: '✓ موفق',
+        description: 'زمان اجرا با موفقیت ثبت شد'
       });
 
       setSelectedOrder(null);
@@ -134,8 +134,8 @@ export default function ExecutiveOrders() {
       if (error) throw error;
 
       toast({
-        title: 'موفق',
-        description: 'اجرای سفارش تایید شد'
+        title: '✓ موفق',
+        description: 'اجرای سفارش با موفقیت تایید شد'
       });
 
       fetchOrders();
@@ -150,13 +150,13 @@ export default function ExecutiveOrders() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' }> = {
-      approved: { label: 'تایید شده', variant: 'default' },
-      in_progress: { label: 'در حال اجرا', variant: 'secondary' }
+    const statusMap: Record<string, { label: string; className: string }> = {
+      approved: { label: 'تایید شده', className: 'bg-yellow-500/10 text-yellow-600' },
+      in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' }
     };
 
-    const { label, variant } = statusMap[status] || { label: status, variant: 'default' };
-    return <Badge variant={variant}>{label}</Badge>;
+    const { label, className } = statusMap[status] || { label: status, className: '' };
+    return <Badge className={className}>{label}</Badge>;
   };
 
   if (loading) return <LoadingSpinner />;
@@ -164,25 +164,28 @@ export default function ExecutiveOrders() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
-        title="مدیریت اجرای سفارشات"
-        description="ثبت زمان اجرا و تایید اجرای سفارشات داربست"
+        title="مدیریت سفارشات اجرا"
+        description="ثبت زمان شروع و تکمیل سفارشات"
+        showBackButton={true}
+        backTo="/executive"
       />
 
       <div className="grid gap-4">
         {orders.length === 0 ? (
           <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">
-              سفارشی برای اجرا وجود ندارد
+            <CardContent className="p-12 text-center text-muted-foreground">
+              <Clock className="h-12 w-12 mx-auto mb-4 opacity-40" />
+              <p>سفارشی برای اجرا وجود ندارد</p>
             </CardContent>
           </Card>
         ) : (
           orders.map((order) => (
-            <Card key={order.id}>
+            <Card key={order.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
                     <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
-                    <CardDescription>
+                    <CardDescription className="mt-1">
                       مشتری: {order.customer_name} • {order.customer_phone}
                     </CardDescription>
                   </div>
@@ -192,22 +195,23 @@ export default function ExecutiveOrders() {
               <CardContent className="space-y-4">
                 <div>
                   <Label className="text-sm text-muted-foreground">آدرس</Label>
-                  <p className="text-sm">{order.address}</p>
+                  <p className="text-sm mt-1">{order.address}</p>
                   {order.detailed_address && (
-                    <p className="text-sm text-muted-foreground">{order.detailed_address}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{order.detailed_address}</p>
                   )}
                 </div>
 
                 {order.execution_start_date && (
                   <div>
                     <Label className="text-sm text-muted-foreground">زمان اجرا</Label>
-                    <p className="text-sm">
+                    <p className="text-sm mt-1 flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
                       {new Date(order.execution_start_date).toLocaleDateString('fa-IR')}
                     </p>
                   </div>
                 )}
 
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap pt-2">
                   {order.status === 'approved' && (
                     <Button
                       onClick={() => setSelectedOrder(order)}
@@ -223,8 +227,7 @@ export default function ExecutiveOrders() {
                     <Button
                       onClick={() => handleConfirmExecution(order.id)}
                       size="sm"
-                      variant="default"
-                      className="gap-2"
+                      className="gap-2 bg-green-600 hover:bg-green-700"
                     >
                       <CheckCircle className="h-4 w-4" />
                       تایید اجرا
@@ -238,9 +241,10 @@ export default function ExecutiveOrders() {
       </div>
 
       {selectedOrder && (
-        <Card className="border-primary">
+        <Card className="border-2 border-primary shadow-lg">
           <CardHeader>
             <CardTitle>ثبت زمان اجرا برای سفارش {selectedOrder.code}</CardTitle>
+            <CardDescription>مشتری: {selectedOrder.customer_name}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -250,15 +254,22 @@ export default function ExecutiveOrders() {
                 type="date"
                 value={executionDate}
                 onChange={(e) => setExecutionDate(e.target.value)}
+                className="mt-2"
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-2">
               <Button onClick={handleSetExecutionDate} className="gap-2">
                 <Clock className="h-4 w-4" />
                 ثبت زمان اجرا
               </Button>
-              <Button variant="outline" onClick={() => setSelectedOrder(null)}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSelectedOrder(null);
+                  setExecutionDate('');
+                }}
+              >
                 انصراف
               </Button>
             </div>

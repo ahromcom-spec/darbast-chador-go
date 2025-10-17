@@ -41,30 +41,57 @@ export default function ExecutiveDashboard() {
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="مشتریان فعال"
-          value={stats?.totalCustomers || 0}
-          icon={Users}
-          description="کل مشتریان با سفارش"
-        />
-        <StatCard
-          title="در انتظار اجرا"
-          value={stats?.pendingExecution || 0}
-          icon={Clock}
-          description="سفارشات آماده اجرا"
-        />
-        <StatCard
-          title="در حال اجرا"
-          value={stats?.inProgress || 0}
-          icon={ShoppingCart}
-          description="سفارشات در دست اجرا"
-        />
-        <StatCard
-          title="تکمیل شده"
-          value={stats?.completed || 0}
-          icon={CheckCircle}
-          description="سفارشات اجرا شده"
-        />
+        <Card className="hover:shadow-md hover:-translate-y-1 transition-all duration-300 border-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">مشتریان فعال</CardTitle>
+            <div className="p-2 rounded-lg bg-purple-500/10">
+              <Users className="h-5 w-5 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.totalCustomers || 0}</div>
+            <p className="text-xs text-muted-foreground mt-2">کل مشتریان با سفارش</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md hover:-translate-y-1 transition-all duration-300 border-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">در انتظار اجرا</CardTitle>
+            <div className="p-2 rounded-lg bg-yellow-500/10">
+              <Clock className="h-5 w-5 text-yellow-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.pendingExecution || 0}</div>
+            <p className="text-xs text-muted-foreground mt-2">سفارشات آماده اجرا</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md hover:-translate-y-1 transition-all duration-300 border-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">در حال اجرا</CardTitle>
+            <div className="p-2 rounded-lg bg-blue-500/10">
+              <ShoppingCart className="h-5 w-5 text-blue-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.inProgress || 0}</div>
+            <p className="text-xs text-muted-foreground mt-2">سفارشات در دست اجرا</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md hover:-translate-y-1 transition-all duration-300 border-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">تکمیل شده</CardTitle>
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.completed || 0}</div>
+            <p className="text-xs text-muted-foreground mt-2">سفارشات اجرا شده</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>

@@ -4,10 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Search, Eye, Phone, Calendar } from 'lucide-react';
+import { Search, Phone, Calendar } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -86,7 +85,9 @@ export default function ExecutiveCustomers() {
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
         title="مدیریت مشتریان"
-        description="مشاهده و مدیریت مشتریان ثبت‌نام شده"
+        description="مشاهده و مدیریت اطلاعات مشتریان"
+        showBackButton={true}
+        backTo="/executive"
       />
 
       <Card>
@@ -157,14 +158,14 @@ export default function ExecutiveCustomers() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {customer.pending_orders > 0 && (
                             <Badge variant="secondary">
                               {customer.pending_orders} منتظر
                             </Badge>
                           )}
                           {customer.in_progress_orders > 0 && (
-                            <Badge variant="default">
+                            <Badge className="bg-primary">
                               {customer.in_progress_orders} در حال اجرا
                             </Badge>
                           )}

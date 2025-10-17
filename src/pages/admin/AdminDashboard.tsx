@@ -94,20 +94,22 @@ export default function AdminDashboard() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">داشبورد مدیریت</h1>
-        <p className="text-muted-foreground mt-2">خلاصه وضعیت سیستم</p>
+        <h1 className="text-3xl font-bold text-foreground">داشبورد مدیریت</h1>
+        <p className="text-muted-foreground mt-2">خلاصه وضعیت سیستم و آمار کلی</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Card key={stat.title} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
+          <Card key={stat.title} className="hover:shadow-md hover:-translate-y-1 transition-all duration-300 border-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+              <div className="p-2 rounded-lg bg-primary/10">
+                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+              <div className="text-3xl font-bold">{stat.value}</div>
+              <p className="text-xs text-muted-foreground mt-2">{stat.description}</p>
             </CardContent>
           </Card>
         ))}

@@ -160,21 +160,34 @@ const fetchOrders = async () => {
   return (
     <MainLayout>
       <div className="container max-w-6xl mx-auto px-4 py-6 space-y-6">
-        <PageHeader title="پروفایل کاربری" />
+        <PageHeader 
+          title="پروفایل کاربری" 
+          description="مدیریت اطلاعات شخصی و سفارشات"
+          showBackButton={true}
+        />
 
         {/* Profile Header */}
         <ProfileHeader user={user} fullName={fullName} />
 
         {/* Tabs */}
         <Tabs defaultValue="info" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
-            <TabsTrigger value="info" className="text-sm sm:text-base py-2">
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto gap-2 bg-muted/50 p-1">
+            <TabsTrigger 
+              value="info" 
+              className="text-sm sm:text-base py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
               اطلاعات کاربری
             </TabsTrigger>
-            <TabsTrigger value="orders" className="text-sm sm:text-base py-2">
+            <TabsTrigger 
+              value="orders" 
+              className="text-sm sm:text-base py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
               سفارشات من
             </TabsTrigger>
-            <TabsTrigger value="actions" className="text-sm sm:text-base py-2">
+            <TabsTrigger 
+              value="actions" 
+              className="text-sm sm:text-base py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
               دسترسی سریع
             </TabsTrigger>
           </TabsList>

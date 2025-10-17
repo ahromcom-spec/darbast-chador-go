@@ -207,7 +207,7 @@ export default function ContractorDashboard() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold text-foreground">کارتابل پیمانکار</h1>
             <p className="text-muted-foreground mt-1">{contractor.company_name}</p>
@@ -267,14 +267,23 @@ export default function ContractorDashboard() {
         </Card>
       ) : (
         <Tabs defaultValue="pending" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="pending">
+          <TabsList className="grid w-full grid-cols-3 gap-2 bg-muted/50 p-1 h-auto">
+            <TabsTrigger 
+              value="pending"
+              className="py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
               جدید ({pendingAssignments.length})
             </TabsTrigger>
-            <TabsTrigger value="active">
+            <TabsTrigger 
+              value="active"
+              className="py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
               فعال ({activeAssignments.length})
             </TabsTrigger>
-            <TabsTrigger value="completed">
+            <TabsTrigger 
+              value="completed"
+              className="py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
               تکمیل شده ({completedAssignments.length})
             </TabsTrigger>
           </TabsList>
