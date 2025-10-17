@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ import { sanitizeHtml, getSafeErrorMessage } from '@/lib/security';
 export default function ComprehensiveScaffoldingForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { projectId } = useParams<{ projectId: string }>();
   const editOrderId = searchParams.get('edit');
   const { toast } = useToast();
   const { user } = useAuth();
@@ -47,8 +48,10 @@ export default function ComprehensiveScaffoldingForm() {
   // Active service type
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab'>('facade');
 
-  // Common fields
+  // Common fields - locked from project when projectId is provided
   const [projectAddress, setProjectAddress] = useState('');
+  const [isFieldsLocked, setIsFieldsLocked] = useState(false);
+  const [lockedProjectData, setLockedProjectData] = useState<any>(null);
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', height: '' }]);
   const [projectLocation, setProjectLocation] = useState<{
     address: string;
@@ -87,7 +90,7 @@ export default function ComprehensiveScaffoldingForm() {
 
   useEffect(() => {
     loadInitialData();
-  }, [user, editOrderId]);
+  }, [user, editOrderId, projectId]);
 
   const loadInitialData = async () => {
     if (!user) {
@@ -97,6 +100,67 @@ export default function ComprehensiveScaffoldingForm() {
 
     try {
       setDataLoading(true);
+
+      // اگر projectId وجود دارد، اطلاعات پروژه را بارگذاری کن و فیلدها را قفل کن
+      if (projectId) {
+        const { data: project, error: projectError } = await supabase
+          .from('projects_v3')
+          .select(`
+            *,
+            province:provinces(name),
+            district:districts(name),
+            subcategory:subcategories(
+              id,
+              name,
+              code,
+              service_type_id,
+              service_type:service_types_v3(id, name)
+            )
+          `)
+          .eq('id', projectId)
+          .single();
+
+        if (projectError) throw projectError;
+
+        // بررسی اینکه پروژه متعلق به کاربر است
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!customerData || project.customer_id !== customerData.id) {
+          toast({
+            title: 'خطا',
+            description: 'شما اجازه دسترسی به این پروژه را ندارید',
+            variant: 'destructive',
+          });
+          navigate('/user/projects');
+          return;
+        }
+
+        // تنظیم داده‌های قفل شده
+        setLockedProjectData(project);
+        setProjectAddress(project.address);
+        setIsFieldsLocked(true);
+
+        // تنظیم موقعیت اگر موجود است
+        if (project.detailed_address) {
+          const match = project.detailed_address.match(/موقعیت: ([^,]+),([^ ]+)/);
+          if (match) {
+            const lat = parseFloat(match[1]);
+            const lng = parseFloat(match[2]);
+            const distanceMatch = project.detailed_address.match(/فاصله: ([^k]+)/);
+            const distance = distanceMatch ? parseFloat(distanceMatch[1]) : 0;
+            
+            setProjectLocation({
+              address: project.address,
+              coordinates: [lng, lat],
+              distance
+            });
+          }
+        }
+      }
 
       // اگر در حالت ویرایش است، ابتدا سفارش را بارگذاری کن
       if (editOrderId) {
@@ -594,6 +658,27 @@ export default function ComprehensiveScaffoldingForm() {
         setTimeout(() => {
           navigate('/orders');
         }, 1500);
+        } else if (projectId && lockedProjectData) {
+        // حالت سفارش برای پروژه موجود - استفاده از اطلاعات قفل شده
+        const { error: projectError } = await supabase
+          .from('projects_v3')
+          .update({
+            ...orderData,
+            status: 'pending'
+          })
+          .eq('id', projectId);
+
+        if (projectError) throw projectError;
+
+        toast({
+          title: '✅ سفارش با موفقیت ثبت شد',
+          description: `کد پروژه: ${lockedProjectData.code}\nسفارش شما در انتظار تایید مدیر قرار گرفت.`,
+          duration: 5000,
+        });
+
+        setTimeout(() => {
+          navigate('/orders');
+        }, 1500);
       } else {
         // حالت ثبت جدید
         const { data: projectCode, error: codeError } = await supabase
@@ -672,9 +757,45 @@ export default function ComprehensiveScaffoldingForm() {
         </Alert>
       )}
 
+      {/* نمایش اطلاعات قفل شده پروژه */}
+      {isFieldsLocked && lockedProjectData && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-primary" />
+              اطلاعات پروژه (غیرقابل تغییر)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">نوع خدمات</p>
+                <p className="font-semibold">{lockedProjectData.subcategory?.service_type?.name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">زیرشاخه خدمات</p>
+                <p className="font-semibold">{lockedProjectData.subcategory?.name}</p>
+              </div>
+              <div className="md:col-span-2">
+                <p className="text-sm text-muted-foreground">آدرس پروژه</p>
+                <p className="font-semibold">{projectAddress}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">استان</p>
+                <p className="font-semibold">{lockedProjectData.province?.name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">شهرستان / بخش</p>
+                <p className="font-semibold">{lockedProjectData.district?.name}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Service Type Tabs */}
-      <Tabs value={activeService} onValueChange={(v) => setActiveService(v as any)} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+      <Tabs value={activeService} onValueChange={isFieldsLocked ? undefined : (v) => setActiveService(v as any)} className="w-full">
+        <TabsList className={`grid w-full grid-cols-2 lg:grid-cols-4 ${isFieldsLocked ? 'pointer-events-none opacity-60' : ''}`}>
           <TabsTrigger value="facade">نماکاری و سطحی</TabsTrigger>
           <TabsTrigger value="formwork">کفراژ و حجمی</TabsTrigger>
           <TabsTrigger value="ceiling-tiered">زیربتن تیرچه</TabsTrigger>
@@ -689,20 +810,22 @@ export default function ComprehensiveScaffoldingForm() {
               <CardDescription>اطلاعات پروژه خود را وارد کنید</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Project Address */}
-              <div className="space-y-2">
-                <Label htmlFor="projectAddress">آدرس محل پروژه *</Label>
-                <Input
-                  id="projectAddress"
-                  value={projectAddress}
-                  onChange={(e) => setProjectAddress(e.target.value)}
-                  placeholder="آدرس کامل پروژه"
-                  className={errors.projectAddress ? 'border-destructive' : ''}
-                />
-                {errors.projectAddress && (
-                  <p className="text-sm text-destructive">{errors.projectAddress}</p>
-                )}
-              </div>
+              {/* Project Address - قفل شده در حالت پروژه موجود */}
+              {!isFieldsLocked && (
+                <div className="space-y-2">
+                  <Label htmlFor="projectAddress">آدرس محل پروژه *</Label>
+                  <Input
+                    id="projectAddress"
+                    value={projectAddress}
+                    onChange={(e) => setProjectAddress(e.target.value)}
+                    placeholder="آدرس کامل پروژه"
+                    className={errors.projectAddress ? 'border-destructive' : ''}
+                  />
+                  {errors.projectAddress && (
+                    <p className="text-sm text-destructive">{errors.projectAddress}</p>
+                  )}
+                </div>
+              )}
 
               {/* Dimensions */}
               <div className="space-y-4">
@@ -1130,22 +1253,36 @@ export default function ComprehensiveScaffoldingForm() {
             </Alert>
           )}
           
-          <ProjectLocationMap
-            onLocationSelect={(location) => {
-              setProjectLocation(location);
-              
-              // بروزرسانی خودکار distanceRange بر اساس فاصله واقعی
-              if (location.distance <= 15) {
-                setConditions(prev => ({ ...prev, distanceRange: '0-15' }));
-              } else if (location.distance <= 25) {
-                setConditions(prev => ({ ...prev, distanceRange: '15-25' }));
-              } else if (location.distance <= 50) {
-                setConditions(prev => ({ ...prev, distanceRange: '25-50' }));
-              } else if (location.distance <= 85) {
-                setConditions(prev => ({ ...prev, distanceRange: '50-85' }));
-              }
-            }}
-          />
+          {!isFieldsLocked && (
+            <ProjectLocationMap
+              onLocationSelect={(location) => {
+                setProjectLocation(location);
+                
+                // بروزرسانی خودکار distanceRange بر اساس فاصله واقعی
+                if (location.distance <= 15) {
+                  setConditions(prev => ({ ...prev, distanceRange: '0-15' }));
+                } else if (location.distance <= 25) {
+                  setConditions(prev => ({ ...prev, distanceRange: '15-25' }));
+                } else if (location.distance <= 50) {
+                  setConditions(prev => ({ ...prev, distanceRange: '25-50' }));
+                } else if (location.distance <= 85) {
+                  setConditions(prev => ({ ...prev, distanceRange: '50-85' }));
+                }
+              }}
+            />
+          )}
+          
+          {isFieldsLocked && projectLocation && (
+            <div className="h-[400px] rounded-lg overflow-hidden border bg-muted/20 flex items-center justify-center">
+              <div className="text-center p-6">
+                <AlertCircle className="h-12 w-12 text-primary mx-auto mb-4" />
+                <p className="text-lg font-semibold mb-2">موقعیت پروژه ثبت شده</p>
+                <p className="text-sm text-muted-foreground">
+                  فاصله از مرکز: <strong>{projectLocation.distance.toFixed(1)} کیلومتر</strong>
+                </p>
+              </div>
+            </div>
+          )}
           
           {projectLocation && (
             <div className="text-sm text-muted-foreground bg-secondary/30 p-3 rounded-lg">

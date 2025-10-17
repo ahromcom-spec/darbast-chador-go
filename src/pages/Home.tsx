@@ -50,7 +50,13 @@ export default function Home() {
     setSelectedProject(projectId);
     const project = projects.find(p => p.id === projectId);
     if (project) {
-      navigate(`/user/projects`);
+      // بررسی اینکه آیا پروژه از نوع داربست با اجناس و حمل است
+      if (project.service_code === 'scaffolding_with_materials_and_transport') {
+        // هدایت به فرم جامع داربست با اطلاعات پروژه
+        navigate(`/service/scaffolding-order/${projectId}`);
+      } else {
+        navigate(`/user/projects`);
+      }
     }
   };
 
