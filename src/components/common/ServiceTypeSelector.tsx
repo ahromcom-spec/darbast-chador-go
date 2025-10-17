@@ -87,26 +87,46 @@ export function ServiceTypeSelector({
           <CommandInput placeholder="جستجوی خدمات..." className="h-9" />
           <CommandList>
             <CommandEmpty>خدمتی یافت نشد.</CommandEmpty>
-            {serviceTypes.map((serviceType) => (
-              <CommandGroup key={serviceType.id} heading={serviceType.name}>
-                {serviceType.subcategories.length > 0 ? (
-                  serviceType.subcategories.map((subcategory) => (
-                    <CommandItem
-                      key={subcategory.id}
-                      value={`${serviceType.name} ${subcategory.name}`}
-                      onSelect={() => handleSelect(serviceType.id, subcategory.code)}
-                      className="text-sm sm:text-base cursor-pointer"
-                    >
-                      <span>{subcategory.name}</span>
-                    </CommandItem>
-                  ))
-                ) : (
-                  <div className="px-4 py-2 text-xs text-muted-foreground">
-                    زیرشاخه‌ای موجود نیست
-                  </div>
-                )}
-              </CommandGroup>
-            ))}
+            <CommandGroup>
+              {serviceTypes.map((serviceType) => (
+                <div key={serviceType.id}>
+                  <CommandItem
+                    value={serviceType.name}
+                    onSelect={() => handleServiceTypeClick(serviceType.id)}
+                    className="font-semibold text-primary cursor-pointer"
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span>{serviceType.name}</span>
+                      <ChevronLeft className={cn(
+                        "h-4 w-4 transition-transform",
+                        expandedServiceType === serviceType.id && "rotate-180"
+                      )} />
+                    </div>
+                  </CommandItem>
+
+                  {expandedServiceType === serviceType.id && (
+                    <div className="pr-4 pb-1 animate-in fade-in-0 slide-in-from-top-1">
+                      {serviceType.subcategories.length > 0 ? (
+                        serviceType.subcategories.map((subcategory) => (
+                          <CommandItem
+                            key={subcategory.id}
+                            value={`${serviceType.name} ${subcategory.name}`}
+                            onSelect={() => handleSelect(serviceType.id, subcategory.code)}
+                            className="text-sm sm:text-base cursor-pointer"
+                          >
+                            <span>{subcategory.name}</span>
+                          </CommandItem>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-xs text-muted-foreground">
+                          زیرشاخه‌ای موجود نیست
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </CommandGroup>
           </CommandList>
         </Command>
       </PopoverContent>
