@@ -36,7 +36,48 @@ serve(async (req) => {
       return raw;
     };
 
-    const normalizedPhone = normalizeIranPhone(phone_number);
+    // Check if this is a test phone number (starts with aaa or bbb)
+    const isTestPhone = phone_number.startsWith('aaa') || phone_number.startsWith('bbb');
+    
+    let normalizedPhone: string;
+    let maskedPhone: string;
+    
+    if (isTestPhone) {
+      // For test phones, use as-is without validation
+      normalizedPhone = phone_number;
+      maskedPhone = phone_number;
+      console.log('Processing TEST OTP request for:', maskedPhone);
+      
+      // For test phones, skip SMS sending - just return success
+      // Initialize Supabase client
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      
+      // Generate dummy OTP (not used but required for database)
+      const code = '11111';
+      const expiresAt = new Date(Date.now() + 90 * 1000);
+      
+      await supabase
+        .from('otp_codes')
+        .insert({
+          phone_number: normalizedPhone,
+          code,
+          expires_at: expiresAt.toISOString(),
+          verified: false,
+        });
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'کد تایید برای شماره تستی آماده است'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Regular phone validation for real phones
+    normalizedPhone = normalizeIranPhone(phone_number);
     // Enforce strict 11-digit format: 09XXXXXXXXX
     if (!/^09[0-9]{9}$/.test(normalizedPhone)) {
       return new Response(
@@ -46,7 +87,7 @@ serve(async (req) => {
     }
     
     // Mask phone number for logging (security best practice)
-    const maskedPhone = normalizedPhone.substring(0, 4) + 'XXX' + normalizedPhone.substring(9);
+    maskedPhone = normalizedPhone.substring(0, 4) + 'XXX' + normalizedPhone.substring(9);
     console.log('Processing OTP request for:', maskedPhone);
     
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;

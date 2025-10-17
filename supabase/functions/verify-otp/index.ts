@@ -32,25 +32,38 @@ serve(async (req) => {
       return raw;
     };
 
-    const normalizedPhone = normalizeIranPhone(phone_number);
-    // Enforce strict 11-digit format: 09XXXXXXXXX
-    if (!/^09[0-9]{9}$/.test(normalizedPhone)) {
-      return new Response(
-        JSON.stringify({ error: 'شماره تلفن باید 11 رقم و با 09 شروع شود' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    // Convert to E.164 format for Supabase Auth (+98XXXXXXXXXX)
-    const authPhone = normalizedPhone.startsWith('0') 
-      ? '+98' + normalizedPhone.slice(1) 
-      : '+98' + normalizedPhone;
-
-    const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
-
-    // Initialize Supabase client
+    // Initialize Supabase client first (needed for whitelist check)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Check if this is a test phone number (starts with aaa or bbb)
+    const isTestPhone = phone_number.startsWith('aaa') || phone_number.startsWith('bbb');
+    
+    let normalizedPhone: string;
+    let authPhone: string;
+    
+    if (isTestPhone) {
+      // For test phones, use as-is without validation
+      normalizedPhone = phone_number;
+      authPhone = phone_number; // No E.164 conversion for test phones
+    } else {
+      // Regular phone validation for real phones
+      normalizedPhone = normalizeIranPhone(phone_number);
+      // Enforce strict 11-digit format: 09XXXXXXXXX
+      if (!/^09[0-9]{9}$/.test(normalizedPhone)) {
+        return new Response(
+          JSON.stringify({ error: 'شماره تلفن باید 11 رقم و با 09 شروع شود' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      // Convert to E.164 format for Supabase Auth (+98XXXXXXXXXX)
+      authPhone = normalizedPhone.startsWith('0') 
+        ? '+98' + normalizedPhone.slice(1) 
+        : '+98' + normalizedPhone;
+    }
+
+    const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
     // Normalize OTP code to ASCII digits (handles Persian/Arabic numerals)
     const normalizeOtpCode = (input: string) => {
@@ -66,34 +79,53 @@ serve(async (req) => {
     // Build a strong per-login password from OTP to satisfy password policy
     const loginPassword = `otp-${normalizedCode}-x`;
 
-    // Verify OTP using secure function
-    const { data: isValid, error: verifyError } = await supabase
-      .rpc('verify_otp_code', { 
-        _phone_number: normalizedPhone, 
-        _code: normalizedCode 
-      });
+    // For test phones in whitelist, bypass OTP verification
+    if (isTestPhone) {
+      // Check if phone is in whitelist
+      const { data: whitelistData } = await supabase
+        .from('phone_whitelist')
+        .select('phone_number, allowed_roles')
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle();
+      
+      if (!whitelistData) {
+        return new Response(
+          JSON.stringify({ error: 'شماره تستی در لیست مجاز نیست' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log('Test phone detected - bypassing OTP verification:', normalizedPhone);
+    } else {
+      // Regular OTP verification for real phones
+      const { data: isValid, error: verifyError } = await supabase
+        .rpc('verify_otp_code', { 
+          _phone_number: normalizedPhone, 
+          _code: normalizedCode 
+        });
 
-    if (verifyError) {
-      console.error('OTP verification error');
-      return new Response(
-        JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (verifyError) {
+        console.error('OTP verification error');
+        return new Response(
+          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!isValid) {
+        return new Response(
+          JSON.stringify({ error: 'کد تایید نامعتبر یا منقضی شده است' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Mark OTP as verified for real phones
+      await supabase
+        .from('otp_codes')
+        .update({ verified: true })
+        .eq('phone_number', normalizedPhone)
+        .eq('code', normalizedCode);
     }
-
-    if (!isValid) {
-      return new Response(
-        JSON.stringify({ error: 'کد تایید نامعتبر یا منقضی شده است' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Mark OTP as verified
-    await supabase
-      .from('otp_codes')
-      .update({ verified: true })
-      .eq('phone_number', normalizedPhone)
-      .eq('code', normalizedCode);
 
     // Check if user exists with this phone number or derived email
     const { data: existingUser } = await supabase.auth.admin.listUsers();
@@ -222,6 +254,29 @@ serve(async (req) => {
         );
       }
       session = sess;
+      
+      // If this is a test phone, automatically assign roles from whitelist
+      if (isTestPhone) {
+        const { data: whitelistData } = await supabase
+          .from('phone_whitelist')
+          .select('allowed_roles')
+          .eq('phone_number', normalizedPhone)
+          .maybeSingle();
+        
+        if (whitelistData?.allowed_roles && data.user) {
+          // Insert roles for the new user
+          const roleInserts = whitelistData.allowed_roles.map((role: string) => ({
+            user_id: data.user.id,
+            role: role
+          }));
+          
+          await supabase
+            .from('user_roles')
+            .insert(roleInserts);
+          
+          console.log('Auto-assigned roles for test phone:', normalizedPhone, whitelistData.allowed_roles);
+        }
+      }
     }
 
     // Clean up old OTP codes
