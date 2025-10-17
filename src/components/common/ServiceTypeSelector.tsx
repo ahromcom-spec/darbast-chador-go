@@ -88,44 +88,23 @@ export function ServiceTypeSelector({
           <CommandList>
             <CommandEmpty>خدمتی یافت نشد.</CommandEmpty>
             {serviceTypes.map((serviceType) => (
-              <CommandGroup key={serviceType.id}>
-                <div className="relative">
-                  <button type="button"
-                    onClick={() => handleServiceTypeClick(serviceType.id)}
-                    className={cn(
-                      "flex w-full items-center justify-between px-2 py-2 text-sm font-semibold text-primary hover:bg-accent rounded-sm cursor-pointer",
-                      expandedServiceType === serviceType.id && "bg-accent"
-                    )}
-                  >
-                    <span>{serviceType.name}</span>
-                    <ChevronLeft className={cn(
-                      "h-4 w-4 transition-transform",
-                      expandedServiceType === serviceType.id && "rotate-180"
-                    )} />
-                  </button>
-
-                  {/* Subcategories - shown on hover (desktop) or click (mobile) */}
-                  {expandedServiceType === serviceType.id && (
-                    <div className="pr-4 pb-1 animate-in fade-in-0 slide-in-from-top-1">
-                      {serviceType.subcategories.length > 0 ? (
-                        serviceType.subcategories.map((subcategory) => (
-                          <CommandItem
-                            key={subcategory.id}
-                            value={`${serviceType.name} ${subcategory.name}`}
-                            onSelect={() => handleSelect(serviceType.id, subcategory.code)}
-                            className="text-sm sm:text-base pr-4 cursor-pointer"
-                          >
-                            <span>{subcategory.name}</span>
-                          </CommandItem>
-                        ))
-                      ) : (
-                        <div className="px-4 py-2 text-xs text-muted-foreground">
-                          زیرشاخه‌ای موجود نیست
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+              <CommandGroup key={serviceType.id} heading={serviceType.name}>
+                {serviceType.subcategories.length > 0 ? (
+                  serviceType.subcategories.map((subcategory) => (
+                    <CommandItem
+                      key={subcategory.id}
+                      value={`${serviceType.name} ${subcategory.name}`}
+                      onSelect={() => handleSelect(serviceType.id, subcategory.code)}
+                      className="text-sm sm:text-base cursor-pointer"
+                    >
+                      <span>{subcategory.name}</span>
+                    </CommandItem>
+                  ))
+                ) : (
+                  <div className="px-4 py-2 text-xs text-muted-foreground">
+                    زیرشاخه‌ای موجود نیست
+                  </div>
+                )}
               </CommandGroup>
             ))}
           </CommandList>
