@@ -46,6 +46,9 @@ const TicketDetail = lazy(() => import("./pages/tickets/TicketDetail"));
 const ContractorRegister = lazy(() => import("./pages/contractor/ContractorRegister"));
 const ContractorDashboard = lazy(() => import("./pages/contractor/ContractorDashboard"));
 const StaffRoleRequest = lazy(() => import("./pages/staff/StaffRoleRequest"));
+const ExecutiveOrders = lazy(() => import("./pages/executive/ExecutiveOrders"));
+const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
+const FinanceOrders = lazy(() => import("./pages/finance/FinanceOrders"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 
@@ -148,6 +151,21 @@ const App = () => (
                 <Route path="staff-verifications" element={<StaffVerifications />} />
                 <Route path="orders" element={<CEOOrders />} />
               </Route>
+              <Route path="/executive/orders" element={
+                <ProtectedRoute>
+                  <ExecutiveOrders />
+                </ProtectedRoute>
+              } />
+              <Route path="/sales/orders" element={
+                <ProtectedRoute>
+                  <SalesOrders />
+                </ProtectedRoute>
+              } />
+              <Route path="/finance/orders" element={
+                <ProtectedRoute>
+                  <FinanceOrders />
+                </ProtectedRoute>
+              } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
               </Routes>

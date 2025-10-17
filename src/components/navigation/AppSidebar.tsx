@@ -25,6 +25,9 @@ import {
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
 import { useContractorRole } from '@/hooks/useContractorRole';
+import { useExecutiveManagerRole } from '@/hooks/useExecutiveManagerRole';
+import { useSalesManagerRole } from '@/hooks/useSalesManagerRole';
+import { useFinanceManagerRole } from '@/hooks/useFinanceManagerRole';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AppSidebarProps {
@@ -36,6 +39,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { isAdmin } = useAdminRole();
   const { isGeneralManager } = useGeneralManagerRole();
   const { isContractor } = useContractorRole();
+  const { isExecutiveManager } = useExecutiveManagerRole();
+  const { isSalesManager } = useSalesManagerRole();
+  const { isFinanceManager } = useFinanceManagerRole();
 
   const publicItems = [
     { title: 'صفحه اصلی', url: '/', icon: Home },
@@ -60,6 +66,18 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   const gmItems = isGeneralManager ? [
     { title: 'داشبورد مدیرکل', url: '/admin/general-manager', icon: Settings },
+  ] : [];
+
+  const executiveItems = isExecutiveManager ? [
+    { title: 'مدیریت اجرا', url: '/executive/orders', icon: Hammer },
+  ] : [];
+
+  const salesItems = isSalesManager ? [
+    { title: 'مدیریت فروش', url: '/sales/orders', icon: ClipboardList },
+  ] : [];
+
+  const financeItems = isFinanceManager ? [
+    { title: 'مدیریت مالی', url: '/finance/orders', icon: FileText },
   ] : [];
 
   const serviceItems = user ? [
@@ -190,6 +208,69 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {gmItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* مدیر اجرایی */}
+        {executiveItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>اجرا</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {executiveItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* مدیر فروش */}
+        {salesItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>فروش</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {salesItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* مدیر مالی */}
+        {financeItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>مالی</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {financeItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
