@@ -129,8 +129,8 @@ export default function Home() {
           className="fixed inset-0 z-0" 
           style={{
             backgroundImage: 'url(/background-city.png)',
-            backgroundSize: 'cover',
-            backgroundPosition: window.innerWidth < 768 ? '60% center' : 'center center',
+            backgroundSize: window.innerWidth < 768 ? 'auto 120%' : 'cover',
+            backgroundPosition: window.innerWidth < 768 ? '65% center' : 'center center',
             backgroundRepeat: 'no-repeat',
             backgroundAttachment: 'fixed'
           }} 
