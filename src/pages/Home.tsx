@@ -144,8 +144,8 @@ export default function Home() {
             {/* Service Selection Card */}
             <Card className="shadow-xl md:shadow-2xl persian-slide bg-card/95 backdrop-blur-md border-2 smooth-hover">
               <CardHeader className="text-center pb-3 sm:pb-4 md:pb-6 px-4 sm:px-6">
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight tracking-tight primary-gradient bg-clip-text text-transparent mb-2">
-                  خدمات ساختمانی خود را انتخاب کنید
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight tracking-tight primary-gradient bg-clip-text text-transparent mb-2 whitespace-nowrap">
+                  خدمات ساختمانی و منزل خود را انتخاب کنید
                 </h2>
                 <CardDescription className="text-sm sm:text-base md:text-lg">
                   خدمات ساختمانی و داربست در قم و سراسر ایران
