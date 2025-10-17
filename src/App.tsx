@@ -49,6 +49,8 @@ const StaffRoleRequest = lazy(() => import("./pages/staff/StaffRoleRequest"));
 const ExecutiveOrders = lazy(() => import("./pages/executive/ExecutiveOrders"));
 const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
 const FinanceOrders = lazy(() => import("./pages/finance/FinanceOrders"));
+const ReputationDashboard = lazy(() => import("./pages/ratings/ReputationDashboard"));
+const RatingTestPage = lazy(() => import("./pages/ratings/RatingTestPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 
@@ -164,6 +166,21 @@ const App = () => (
               <Route path="/finance/orders" element={
                 <ProtectedRoute>
                   <FinanceOrders />
+                </ProtectedRoute>
+              } />
+              <Route path="/reputation" element={
+                <ProtectedRoute>
+                  <ReputationDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/reputation/:userId" element={
+                <ProtectedRoute>
+                  <ReputationDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/ratings/test" element={
+                <ProtectedRoute>
+                  <RatingTestPage />
                 </ProtectedRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

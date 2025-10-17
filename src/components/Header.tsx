@@ -1,4 +1,4 @@
-import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut } from "lucide-react";
+import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
@@ -115,6 +115,15 @@ const Header = () => {
           <div className="flex items-center justify-center gap-2 py-2">
             {user ? (
               <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/ratings/test")}
+                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
+                >
+                  <Award className="h-3 w-3" />
+                  <span className="text-xs sm:text-sm">امتیازات</span>
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -244,6 +253,14 @@ const Header = () => {
           <div className="flex items-center justify-start gap-4 py-3 pr-4">
             {user ? (
               <>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/ratings/test")}
+                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
+                >
+                  <Award className="h-4 w-4" />
+                  <span>سیستم امتیازدهی</span>
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => navigate("/profile")}
