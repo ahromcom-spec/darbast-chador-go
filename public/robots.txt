@@ -1,5 +1,5 @@
-# robots.txt for خدمات داربست فلزی اهرم
-# https://darbast-chador-go.lovable.app
+# robots.txt for خدمات ساختمانی اهرم
+# https://ahrom.org
 
 User-agent: *
 Allow: /
@@ -41,7 +41,7 @@ User-agent: ia_archiver
 Allow: /
 
 # Sitemap location
-Sitemap: https://darbast-chador-go.lovable.app/sitemap.xml
+Sitemap: https://ahrom.org/sitemap.xml
 
 # Host
-Host: https://darbast-chador-go.lovable.app
+Host: https://ahrom.org
