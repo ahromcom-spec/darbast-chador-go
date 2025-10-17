@@ -38,21 +38,21 @@ const Header = () => {
         {/* Mobile & Tablet Layout - Two Rows */}
         <div className="md:hidden">
           {/* First Row: Logo, Company Name, Contact, and Notification */}
-          <div className="flex items-center justify-between py-3 border-b border-border/30">
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="flex items-center justify-between py-3 border-b border-border/30 px-1">
+            <div className="flex items-center gap-1 cursor-pointer" onClick={() => navigate('/')}>
               <img 
                 src={ahromLogo} 
                 alt="لوگوی اهرم" 
                 width="140"
                 height="80"
-                className="h-12 sm:h-14 w-auto object-contain"
+                className="h-11 sm:h-12 w-auto object-contain"
                 loading="eager"
               />
-              <h1 className="text-xs sm:text-sm font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent whitespace-nowrap">
+              <h1 className="text-[10px] sm:text-xs font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent whitespace-nowrap">
                 خدمات ساختمان و منزل اهرم
               </h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
