@@ -42,6 +42,7 @@ serve(async (req) => {
     
     let normalizedPhone: string;
     let authPhone: string;
+    let isWhitelistedPhone = false;
     
     if (isTestPhone) {
       // For test phones, use as-is without validation
@@ -61,6 +62,15 @@ serve(async (req) => {
       authPhone = normalizedPhone.startsWith('0') 
         ? '+98' + normalizedPhone.slice(1) 
         : '+98' + normalizedPhone;
+      
+      // Check if this phone number is in the whitelist (management numbers)
+      const { data: whitelistData } = await supabase
+        .from('phone_whitelist')
+        .select('phone_number')
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle();
+      
+      isWhitelistedPhone = !!whitelistData;
     }
 
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
@@ -79,7 +89,7 @@ serve(async (req) => {
     // Build a strong per-login password from OTP to satisfy password policy
     const loginPassword = `otp-${normalizedCode}-x`;
 
-    // For test phones in whitelist, bypass OTP verification
+    // For whitelisted phones or test phones, bypass OTP verification or use fixed code
     if (isTestPhone) {
       // Check if phone is in whitelist
       const { data: whitelistData } = await supabase
@@ -96,6 +106,23 @@ serve(async (req) => {
       }
       
       console.log('Test phone detected - bypassing OTP verification:', normalizedPhone);
+    } else if (isWhitelistedPhone) {
+      // For whitelisted management phones, verify against fixed code "12345"
+      if (normalizedCode !== '12345') {
+        return new Response(
+          JSON.stringify({ error: 'کد تایید نامعتبر است' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log('Whitelisted management phone - using fixed OTP:', normalizedPhone);
+      
+      // Mark OTP as verified
+      await supabase
+        .from('otp_codes')
+        .update({ verified: true })
+        .eq('phone_number', normalizedPhone)
+        .eq('code', '12345');
     } else {
       // Regular OTP verification for real phones
       const { data: isValid, error: verifyError } = await supabase
@@ -255,8 +282,8 @@ serve(async (req) => {
       }
       session = sess;
       
-      // If this is a test phone, automatically assign roles from whitelist
-      if (isTestPhone) {
+      // If this is a test phone or whitelisted phone, automatically assign roles from whitelist
+      if (isTestPhone || isWhitelistedPhone) {
         const { data: whitelistData } = await supabase
           .from('phone_whitelist')
           .select('allowed_roles')
@@ -274,7 +301,7 @@ serve(async (req) => {
             .from('user_roles')
             .insert(roleInserts);
           
-          console.log('Auto-assigned roles for test phone:', normalizedPhone, whitelistData.allowed_roles);
+          console.log('Auto-assigned roles for special phone:', normalizedPhone, whitelistData.allowed_roles);
         }
       }
     }

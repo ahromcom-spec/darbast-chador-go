@@ -36,26 +36,36 @@ serve(async (req) => {
       return raw;
     };
 
+    // Normalize to Iranian mobile format first (for whitelist check)
+    let normalizedPhone = normalizeIranPhone(phone_number);
+    
+    // Initialize Supabase client early for whitelist check
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Check if this phone number is in the whitelist (management numbers)
+    const { data: whitelistData } = await supabase
+      .from('phone_whitelist')
+      .select('phone_number')
+      .eq('phone_number', normalizedPhone)
+      .maybeSingle();
+    
+    const isWhitelistedPhone = !!whitelistData;
+    
     // Check if this is a test phone number (starts with aaa or bbb)
     const isTestPhone = phone_number.startsWith('aaa') || phone_number.startsWith('bbb');
     
-    let normalizedPhone: string;
     let maskedPhone: string;
     
-    if (isTestPhone) {
-      // For test phones, use as-is without validation
-      normalizedPhone = phone_number;
-      maskedPhone = phone_number;
-      console.log('Processing TEST OTP request for:', maskedPhone);
+    if (isWhitelistedPhone || isTestPhone) {
+      // For whitelisted/test phones, use as-is
+      maskedPhone = normalizedPhone;
+      console.log('Processing SPECIAL OTP request for:', maskedPhone);
       
-      // For test phones, skip SMS sending - just return success
-      // Initialize Supabase client
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      // Generate dummy OTP (not used but required for database)
-      const code = '11111';
+      // For whitelisted/test phones, skip SMS sending - just store OTP in database
+      // Use fixed code "12345" for whitelisted phones, "11111" for test phones
+      const code = isWhitelistedPhone ? '12345' : '11111';
       const expiresAt = new Date(Date.now() + 90 * 1000);
       
       await supabase
@@ -70,14 +80,13 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'کد تایید برای شماره تستی آماده است'
+          message: 'کد تایید برای شماره مدیریتی آماده است'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
     // Regular phone validation for real phones
-    normalizedPhone = normalizeIranPhone(phone_number);
     // Enforce strict 11-digit format: 09XXXXXXXXX
     if (!/^09[0-9]{9}$/.test(normalizedPhone)) {
       return new Response(
@@ -91,11 +100,6 @@ serve(async (req) => {
     console.log('Processing OTP request for:', maskedPhone);
     
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Check rate limit
     const { data: rateLimitOk, error: rateLimitError } = await supabase
