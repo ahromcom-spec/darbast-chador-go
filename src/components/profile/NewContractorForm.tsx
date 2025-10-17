@@ -149,6 +149,20 @@ export function NewContractorForm({ userId, userEmail, onSuccess }: NewContracto
 
     setLoading(true);
     try {
+      // بررسی تکراری بودن ایمیل یا شماره تلفن
+      const { data: existing, error: checkError } = await supabase
+        .from('contractors')
+        .select('id')
+        .or(`email.eq.${formData.email},phone_number.eq.${formData.phoneNumber}`);
+
+      if (checkError) throw checkError;
+
+      if (existing && existing.length > 0) {
+        toast.error('شماره تلفن یا ایمیل قبلاً ثبت شده است');
+        setLoading(false);
+        return;
+      }
+
       // ثبت اطلاعات پیمانکار
       const { data: contractor, error: contractorError } = await supabase
         .from("contractors")
@@ -167,7 +181,15 @@ export function NewContractorForm({ userId, userEmail, onSuccess }: NewContracto
         .select()
         .single();
 
-      if (contractorError) throw contractorError;
+      if (contractorError) {
+        // مدیریت خطای constraint violation
+        if (contractorError.code === '23505') {
+          toast.error('این ایمیل یا شماره تلفن قبلاً ثبت شده است');
+        } else {
+          throw contractorError;
+        }
+        return;
+      }
 
       // ثبت خدمات پیمانکار
       const serviceInserts = selectedSubcategories.map(subcategoryId => {
