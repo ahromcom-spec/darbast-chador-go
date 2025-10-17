@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -66,6 +66,7 @@ interface Subcategory {
 
 export default function CreateProject() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -78,12 +79,16 @@ export default function CreateProject() {
     address: string;
   } | null>(null);
 
+  // دریافت اطلاعات از state
+  const preselectedServiceTypeId = location.state?.serviceTypeId;
+  const preselectedSubcategoryCode = location.state?.subcategoryCode;
+
   const form = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
       province_id: "",
       district_id: "",
-      service_type_id: "",
+      service_type_id: preselectedServiceTypeId || "",
       subcategory_id: "",
       address: "",
       detailed_address: "",
@@ -96,6 +101,31 @@ export default function CreateProject() {
     fetchProvinces();
     fetchServiceTypes();
   }, []);
+
+  // بارگذاری زیرمجموعه‌ها و انتخاب خودکار subcategory در صورت وجود
+  useEffect(() => {
+    const loadPreselectedSubcategory = async () => {
+      if (preselectedServiceTypeId && preselectedSubcategoryCode) {
+        // ابتدا زیرمجموعه‌ها را بارگذاری می‌کنیم
+        await fetchSubcategories(preselectedServiceTypeId);
+        
+        // سپس subcategory مناسب را پیدا و انتخاب می‌کنیم
+        const { data, error } = await supabase
+          .from("subcategories")
+          .select("id")
+          .eq("service_type_id", preselectedServiceTypeId)
+          .eq("code", preselectedSubcategoryCode)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (data && !error) {
+          form.setValue("subcategory_id", data.id);
+        }
+      }
+    };
+
+    loadPreselectedSubcategory();
+  }, [preselectedServiceTypeId, preselectedSubcategoryCode]);
 
   useEffect(() => {
     const provinceId = form.watch("province_id");
@@ -369,7 +399,8 @@ export default function CreateProject() {
                       <FormLabel>نوع خدمات *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
+                        disabled={!!preselectedServiceTypeId}
                       >
                         <FormControl>
                           <SelectTrigger className="bg-background">
@@ -398,8 +429,8 @@ export default function CreateProject() {
                       <FormLabel>زیرشاخه خدمات *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        disabled={!form.watch("service_type_id")}
+                        value={field.value}
+                        disabled={!form.watch("service_type_id") || !!preselectedSubcategoryCode}
                       >
                         <FormControl>
                           <SelectTrigger className="bg-background">
