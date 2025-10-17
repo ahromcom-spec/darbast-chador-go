@@ -208,143 +208,146 @@ const fetchOrders = async () => {
 
 {/* Orders Tab */}
 <TabsContent value="orders" className="mt-4">
-  {orders.length === 0 && projectOrders.length === 0 ? (
-    <EmptyState
-      icon={Package}
-      title="سفارشی یافت نشد"
-      description="شما هنوز هیچ سفارشی ثبت نکرده‌اید"
-    />
-  ) : (
-    <div className="space-y-6">
-      {projectOrders.length > 0 && (
-        <div>
-          <h3 className="font-semibold mb-2">سفارشات ثبت شده</h3>
-          <div className="rounded-md border overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">تاریخ ثبت</TableHead>
-                    <TableHead className="whitespace-nowrap">کد پروژه</TableHead>
-                    <TableHead className="whitespace-nowrap">وضعیت</TableHead>
-                    <TableHead className="whitespace-nowrap min-w-[150px]">آدرس</TableHead>
-                    <TableHead className="whitespace-nowrap">قیمت تخمینی</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {projectOrders.map((po) => (
-                    <TableRow key={po.id}>
-                      <TableCell className="whitespace-nowrap text-sm">
-                        {new Date(po.created_at).toLocaleDateString('fa-IR')}
-                      </TableCell>
-                      <TableCell dir="ltr" className="whitespace-nowrap text-sm">
-                        {po.code}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <StatusBadge status={po.status || 'draft'} />
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm">
-                        {po.address || '-'}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-sm">
-                        {po.estimated_price ? `${po.estimated_price.toLocaleString('fa-IR')} تومان` : '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+  <div className="space-y-6">
+    {/* Project Management Section - در سفارشات */}
+    <div className="space-y-4 p-4 rounded-lg border-2 border-primary/20 bg-card">
+      <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+        <FolderKanban className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+        <span>مدیریت پروژه‌ها</span>
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button
+          onClick={() => window.location.href = '/user/projects'}
+          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <FolderKanban className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <div className="font-semibold text-sm">پروژه‌های من</div>
+              <div className="text-xs text-muted-foreground">مشاهده و مدیریت پروژه‌ها</div>
             </div>
           </div>
-        </div>
-      )}
-
-      {orders.length > 0 && (
-        <div>
-          <h3 className="font-semibold mb-2">درخواست‌های قدیمی</h3>
-          <div className="rounded-md border overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">تاریخ ثبت</TableHead>
-                    <TableHead className="whitespace-nowrap">نوع خدمات</TableHead>
-                    <TableHead className="whitespace-nowrap">ابعاد (متر)</TableHead>
-                    <TableHead className="whitespace-nowrap">وضعیت</TableHead>
-                    <TableHead className="whitespace-nowrap min-w-[150px]">آدرس</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="whitespace-nowrap text-sm">
-                        {new Date(order.created_at).toLocaleDateString('fa-IR')}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-sm">
-                        {getTypeLabel(order.sub_type)}
-                      </TableCell>
-                      <TableCell dir="ltr" className="whitespace-nowrap text-sm">
-                        {order.length} × {order.width} × {order.height}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <StatusBadge status={order.status} />
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm">
-                        {order.location_address || '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+        </button>
+        <button
+          onClick={() => window.location.href = '/user/create-project'}
+          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <div className="font-semibold text-sm">پروژه جدید</div>
+              <div className="text-xs text-muted-foreground">ایجاد پروژه با آدرس و خدمات</div>
             </div>
           </div>
-        </div>
-      )}
+        </button>
+      </div>
     </div>
-  )}
+
+    {/* Orders Table */}
+    {orders.length === 0 && projectOrders.length === 0 ? (
+      <EmptyState
+        icon={Package}
+        title="سفارشی یافت نشد"
+        description="شما هنوز هیچ سفارشی ثبت نکرده‌اید"
+      />
+    ) : (
+      <div className="space-y-6">
+        {projectOrders.length > 0 && (
+          <div>
+            <h3 className="font-semibold mb-2">سفارشات ثبت شده</h3>
+            <div className="rounded-md border overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">تاریخ ثبت</TableHead>
+                      <TableHead className="whitespace-nowrap">کد پروژه</TableHead>
+                      <TableHead className="whitespace-nowrap">وضعیت</TableHead>
+                      <TableHead className="whitespace-nowrap min-w-[150px]">آدرس</TableHead>
+                      <TableHead className="whitespace-nowrap">قیمت تخمینی</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projectOrders.map((po) => (
+                      <TableRow key={po.id}>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {new Date(po.created_at).toLocaleDateString('fa-IR')}
+                        </TableCell>
+                        <TableCell dir="ltr" className="whitespace-nowrap text-sm">
+                          {po.code}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <StatusBadge status={po.status || 'draft'} />
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-sm">
+                          {po.address || '-'}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {po.estimated_price ? `${po.estimated_price.toLocaleString('fa-IR')} تومان` : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {orders.length > 0 && (
+          <div>
+            <h3 className="font-semibold mb-2">درخواست‌های قدیمی</h3>
+            <div className="rounded-md border overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">تاریخ ثبت</TableHead>
+                      <TableHead className="whitespace-nowrap">نوع خدمات</TableHead>
+                      <TableHead className="whitespace-nowrap">ابعاد (متر)</TableHead>
+                      <TableHead className="whitespace-nowrap">وضعیت</TableHead>
+                      <TableHead className="whitespace-nowrap min-w-[150px]">آدرس</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {new Date(order.created_at).toLocaleDateString('fa-IR')}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {getTypeLabel(order.sub_type)}
+                        </TableCell>
+                        <TableCell dir="ltr" className="whitespace-nowrap text-sm">
+                          {order.length} × {order.width} × {order.height}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <StatusBadge status={order.status} />
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-sm">
+                          {order.location_address || '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
 </TabsContent>
 
           {/* Quick Actions Tab */}
           <TabsContent value="actions" className="space-y-6 mt-4">
-            {/* Project Management Section */}
-            <div className="space-y-4">
-              <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
-                <FolderKanban className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                <span>مدیریت پروژه‌ها</span>
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button
-                  onClick={() => window.location.href = '/user/projects'}
-                  className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-card hover:bg-accent/5 transition-all text-right group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                      <FolderKanban className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm">پروژه‌های من</div>
-                      <div className="text-xs text-muted-foreground">مشاهده و مدیریت پروژه‌ها</div>
-                    </div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => window.location.href = '/user/create-project'}
-                  className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-card hover:bg-accent/5 transition-all text-right group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                      <Package className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm">پروژه جدید</div>
-                      <div className="text-xs text-muted-foreground">ایجاد پروژه با آدرس و خدمات</div>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
             {/* Support Ticket Section */}
-            <div className="space-y-4 pt-6 border-t">
+            <div className="space-y-4">
               <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
                 <span>ثبت تیکت پشتیبانی</span>
