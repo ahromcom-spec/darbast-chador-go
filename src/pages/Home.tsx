@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin } from 'lucide-react';
+import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -158,44 +158,12 @@ export default function Home() {
                       <label htmlFor="service-type-select" className="text-xs sm:text-sm font-medium text-foreground block">
                         انتخاب نوع خدمات:
                       </label>
-                      <Select 
-                        value={selectedServiceType ? `${selectedServiceType}:${selectedSubcategory}` : ''} 
-                        onValueChange={handleServiceTypeChange}
-                      >
-                        <SelectTrigger id="service-type-select" className="w-full text-right h-11 sm:h-12 text-sm sm:text-base smooth-hover">
-                          <SelectValue placeholder="لطفاً نوع خدمات مورد نظر خود را انتخاب کنید..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-2 z-[100]">
-                          {serviceTypes.length === 0 ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">
-                              در حال بارگذاری خدمات...
-                            </div>
-                          ) : (
-                            serviceTypes.map((serviceType) => (
-                              <SelectGroup key={serviceType.id}>
-                                <SelectLabel className="text-sm font-semibold text-primary">
-                                  {serviceType.name}
-                                </SelectLabel>
-                                {serviceType.subcategories.length > 0 ? (
-                                  serviceType.subcategories.map((sub) => (
-                                    <SelectItem 
-                                      key={sub.id} 
-                                      value={`${serviceType.id}:${sub.code}`}
-                                      className="text-sm sm:text-base pr-6"
-                                    >
-                                      {sub.name}
-                                    </SelectItem>
-                                  ))
-                                ) : (
-                                  <div className="px-8 py-2 text-xs text-muted-foreground">
-                                    زیرشاخه‌ای موجود نیست
-                                  </div>
-                                )}
-                              </SelectGroup>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <ServiceTypeSelector
+                        serviceTypes={serviceTypes}
+                        value={selectedServiceType ? `${selectedServiceType}:${selectedSubcategory}` : ''}
+                        onChange={handleServiceTypeChange}
+                        loading={servicesLoading}
+                      />
                     </div>
 
                     {/* Show Projects and Actions when service is selected */}
