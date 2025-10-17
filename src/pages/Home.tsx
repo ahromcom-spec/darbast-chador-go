@@ -130,7 +130,7 @@ export default function Home() {
           style={{
             backgroundImage: 'url(/background-city.png)',
             backgroundSize: 'cover',
-            backgroundPosition: 'center center',
+            backgroundPosition: 'left center',
             backgroundRepeat: 'no-repeat',
             backgroundAttachment: 'fixed'
           }} 
