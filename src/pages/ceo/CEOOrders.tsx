@@ -90,7 +90,9 @@ export const CEOOrders = () => {
       if (provincesRes.data) setProvinces(provincesRes.data);
       if (subcategoriesRes.data) setSubcategories(subcategoriesRes.data);
     } catch (error: any) {
-      console.error('Error loading metadata:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error loading metadata:', error);
+      }
     }
   };
 

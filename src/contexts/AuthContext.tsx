@@ -57,21 +57,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) {
-        console.error('Error sending OTP:', error);
+        if (import.meta.env.DEV) {
+          console.error('Error sending OTP:', error);
+        }
         return { error };
       }
 
       // Always return success without exposing user existence (security fix)
       return { error: null };
     } catch (error) {
-      console.error('Error sending OTP:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error sending OTP:', error);
+      }
       return { error };
     }
   };
 
   const verifyOTP = async (phoneNumber: string, code: string, fullName?: string, isRegistration: boolean = false) => {
     try {
-      console.log('Calling verify-otp with:', { phoneNumber, code, fullName, isRegistration });
+      // ⚠️ Removed sensitive logging (phone, OTP) - security improvement
       
       const { data, error } = await supabase.functions.invoke('verify-otp', {
         body: { 
@@ -82,8 +86,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       });
 
-      console.log('verify-otp response:', { data, error });
-
       // Check if response contains an error message (even with HTTP error)
       if (data?.error) {
         return { error: { message: data.error }, session: null };
@@ -91,7 +93,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Check for network/HTTP errors
       if (error) {
-        console.error('Error verifying OTP:', error);
+        if (import.meta.env.DEV) {
+          console.error('Error verifying OTP:', error);
+        }
         // Try to extract error message from response
         const errorMessage = error.message || 'کد تایید نامعتبر است.';
         return { error: { message: errorMessage }, session: null };
@@ -110,14 +114,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setSession(setData.session);
             setUser(setData.session?.user ?? null);
           } else {
-            console.error('Error setting session:', setErr);
+            if (import.meta.env.DEV) {
+              console.error('Error setting session:', setErr);
+            }
           }
         }
       }
 
       return { error: null, session: data?.session };
     } catch (error) {
-      console.error('Error verifying OTP:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error verifying OTP:', error);
+      }
       return { error, session: null };
     }
   };
@@ -125,15 +133,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) {
+      if (error && import.meta.env.DEV) {
         console.error('Logout error:', error);
-        // Even if there's an error, clear the local state
       }
       // Clear local state regardless of server response
       setSession(null);
       setUser(null);
     } catch (error) {
-      console.error('Logout error:', error);
+      if (import.meta.env.DEV) {
+        console.error('Logout error:', error);
+      }
       // Clear local state even if there's an error
       setSession(null);
       setUser(null);

@@ -17,7 +17,9 @@ export const useAutoAssignProjects = () => {
           table: 'service_requests'
         },
         async (payload) => {
-          console.log('New service request detected:', payload.new);
+          if (import.meta.env.DEV) {
+            console.log('New service request detected:', payload.new);
+          }
           await assignToMatchingContractors(payload.new as any);
         }
       )
@@ -39,13 +41,17 @@ async function assignToMatchingContractors(serviceRequest: any) {
       .eq('service_type', serviceRequest.service_type);
 
     if (servicesError) {
-      console.error('Error fetching matching contractors:', servicesError);
+      if (import.meta.env.DEV) {
+        console.error('Error fetching matching contractors:', servicesError);
+      }
       return;
     }
 
     // Filter for approved and active contractors
     if (!matchingServices || matchingServices.length === 0) {
-      console.log('No matching contractors found for service:', serviceRequest.service_type);
+      if (import.meta.env.DEV) {
+        console.log('No matching contractors found for service:', serviceRequest.service_type);
+      }
       return;
     }
 
@@ -59,7 +65,9 @@ async function assignToMatchingContractors(serviceRequest: any) {
       .eq('is_active', true);
 
     if (!approvedContractors || approvedContractors.length === 0) {
-      console.log('No approved contractors found for service:', serviceRequest.service_type);
+      if (import.meta.env.DEV) {
+        console.log('No approved contractors found for service:', serviceRequest.service_type);
+      }
       return;
     }
 
@@ -75,11 +83,15 @@ async function assignToMatchingContractors(serviceRequest: any) {
       .insert(assignments);
 
     if (assignmentError) {
-      console.error('Error creating assignments:', assignmentError);
-    } else {
+      if (import.meta.env.DEV) {
+        console.error('Error creating assignments:', assignmentError);
+      }
+    } else if (import.meta.env.DEV) {
       console.log(`Assigned project to ${assignments.length} contractors`);
     }
   } catch (error) {
-    console.error('Error in assignToMatchingContractors:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error in assignToMatchingContractors:', error);
+    }
   }
 }
