@@ -117,12 +117,33 @@ serve(async (req) => {
       
       console.log('Whitelisted management phone - using fixed OTP:', normalizedPhone);
       
-      // Mark OTP as verified
-      await supabase
+      // Check if OTP record exists, if not create it
+      const { data: existingOtp } = await supabase
         .from('otp_codes')
-        .update({ verified: true })
+        .select('id')
         .eq('phone_number', normalizedPhone)
-        .eq('code', '12345');
+        .eq('code', '12345')
+        .maybeSingle();
+      
+      if (existingOtp) {
+        // Mark existing OTP as verified
+        await supabase
+          .from('otp_codes')
+          .update({ verified: true })
+          .eq('phone_number', normalizedPhone)
+          .eq('code', '12345');
+      } else {
+        // Create new OTP record as verified for whitelisted phones
+        const expiresAt = new Date(Date.now() + 90 * 1000);
+        await supabase
+          .from('otp_codes')
+          .insert({
+            phone_number: normalizedPhone,
+            code: '12345',
+            expires_at: expiresAt.toISOString(),
+            verified: true,
+          });
+      }
     } else {
       // Regular OTP verification for real phones
       const { data: isValid, error: verifyError } = await supabase
