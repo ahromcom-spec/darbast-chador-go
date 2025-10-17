@@ -182,15 +182,19 @@ serve(async (req) => {
     
     const userExists = userWithPhone || userWithEmail;
 
-    // If this is a login attempt and user doesn't exist, return error
+    // If this is a login attempt and user doesn't exist:
+    // - For whitelisted/test phones, allow auto-provisioning (skip error)
+    // - For regular phones, require registration
     if (!is_registration && !userExists) {
-      return new Response(
-        JSON.stringify({ error: 'شماره موبایل ثبت نشده است. لطفا ابتدا ثبت نام کنید.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (!(isWhitelistedPhone || isTestPhone)) {
+        return new Response(
+          JSON.stringify({ error: 'شماره موبایل ثبت نشده است. لطفا ابتدا ثبت نام کنید.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    // If this is a registration attempt and user already exists, return error
+    // For registration attempts, prevent duplicate signups
     if (is_registration && userExists) {
       return new Response(
         JSON.stringify({ error: 'این شماره قبلاً ثبت نام کرده است. لطفا وارد شوید.' }),
@@ -198,21 +202,6 @@ serve(async (req) => {
       );
     }
 
-    // If this is a login attempt and user doesn't exist, return error
-    if (!is_registration && !userExists) {
-      return new Response(
-        JSON.stringify({ error: 'شماره موبایل ثبت نشده است. لطفا ابتدا ثبت نام کنید.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // If this is a registration attempt and user already exists, return error
-    if (is_registration && userExists) {
-      return new Response(
-        JSON.stringify({ error: 'این شماره قبلاً ثبت نام کرده است. لطفا وارد شوید.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     let session;
 
