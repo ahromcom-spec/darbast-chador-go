@@ -13,12 +13,23 @@ interface ProjectLocationMapProps {
     coordinates: [number, number];
     distance: number;
   }) => void;
+  existingProjects?: Array<{
+    id: string;
+    code: string;
+    address: string;
+    serviceName: string;
+  }>;
+  onProjectSelect?: (projectId: string) => void;
 }
 
 // مختصات مرکز شهر قم
 const QOM_CENTER: [number, number] = [50.8764, 34.6400];
 
-const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelect }) => {
+const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ 
+  onLocationSelect,
+  existingProjects = [],
+  onProjectSelect
+}) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
@@ -134,6 +145,27 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({ onLocationSelec
         .setLngLat(QOM_CENTER)
         .setPopup(new mapboxgl.Popup().setHTML('<strong>کارگاه</strong><br>قم'))
         .addTo(map.current);
+
+      // اضافه کردن مارکرهای پروژه‌های موجود
+      existingProjects.forEach((project) => {
+        // برای نمایش پروژه‌ها، از آدرس استفاده می‌کنیم که باید geocode شود
+        // اینجا فرض می‌کنیم پروژه‌ها مختصات ندارند و فقط یک نشانگر نمایشی می‌گذاریم
+        // در عمل باید مختصات در دیتابیس ذخیره شود
+        const marker = new mapboxgl.Marker({ color: '#3b82f6' })
+          .setLngLat(QOM_CENTER) // موقتاً در قم
+          .setPopup(new mapboxgl.Popup().setHTML(
+            `<strong>${project.code}</strong><br>${project.serviceName}<br><small>${project.address}</small>`
+          ))
+          .addTo(map.current!);
+
+        // اضافه کردن event listener برای کلیک روی مارکر
+        marker.getElement().addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (onProjectSelect) {
+            onProjectSelect(project.id);
+          }
+        });
+      });
 
       // رویداد کلیک روی نقشه
       map.current.on('click', async (e) => {

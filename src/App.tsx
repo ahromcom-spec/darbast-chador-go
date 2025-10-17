@@ -36,6 +36,8 @@ const ProjectsDashboard = lazy(() => import("@/pages/user/ProjectsDashboard"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrdersDashboard = lazy(() => import("@/pages/user/OrdersDashboard"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
+const ProjectManagement = lazy(() => import("@/pages/user/ProjectManagement"));
+const CreateProject = lazy(() => import("@/pages/user/CreateProject"));
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const ScaffoldingForm = lazy(() => import("./pages/scaffolding/ScaffoldingForm"));
@@ -103,6 +105,16 @@ const App = () => (
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <UserProfile />
+                </ProtectedRoute>
+              } />
+              <Route path="/user/projects" element={
+                <ProtectedRoute>
+                  <ProjectManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="/user/create-project" element={
+                <ProtectedRoute>
+                  <CreateProject />
                 </ProtectedRoute>
               } />
               <Route path="/projects" element={

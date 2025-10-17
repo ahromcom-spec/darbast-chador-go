@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, MessageSquare, Briefcase } from 'lucide-react';
+import { Package, MessageSquare, Briefcase, FolderKanban } from 'lucide-react';
 import { toast } from 'sonner';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -305,8 +305,46 @@ const fetchOrders = async () => {
 
           {/* Quick Actions Tab */}
           <TabsContent value="actions" className="space-y-6 mt-4">
-            {/* Support Ticket Section */}
+            {/* Project Management Section */}
             <div className="space-y-4">
+              <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                <FolderKanban className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                <span>مدیریت پروژه‌ها</span>
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                  onClick={() => window.location.href = '/user/projects'}
+                  className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-card hover:bg-accent/5 transition-all text-right group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                      <FolderKanban className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-sm">پروژه‌های من</div>
+                      <div className="text-xs text-muted-foreground">مشاهده و مدیریت پروژه‌ها</div>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => window.location.href = '/user/create-project'}
+                  className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-card hover:bg-accent/5 transition-all text-right group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                      <Package className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-sm">پروژه جدید</div>
+                      <div className="text-xs text-muted-foreground">ایجاد پروژه با آدرس و خدمات</div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Support Ticket Section */}
+            <div className="space-y-4 pt-6 border-t">
               <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
                 <span>ثبت تیکت پشتیبانی</span>
