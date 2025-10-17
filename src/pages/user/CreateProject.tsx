@@ -179,13 +179,28 @@ export default function CreateProject() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("کاربر احراز هویت نشده");
 
-      const { data: customerData } = await supabase
+      // Get or create customer record
+      let { data: customerData, error: customerFetchError } = await supabase
         .from("customers")
         .select("id")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (!customerData) throw new Error("اطلاعات مشتری یافت نشد");
+      if (customerFetchError) throw customerFetchError;
+      
+      // If customer doesn't exist, create one
+      if (!customerData) {
+        const { data: newCustomer, error: createError } = await supabase
+          .from("customers")
+          .insert({ user_id: user.id })
+          .select("id")
+          .single();
+        
+        if (createError) throw createError;
+        customerData = newCustomer;
+      }
+
+      if (!customerData) throw new Error("خطا در ایجاد اطلاعات مشتری");
 
       // تولید کد پروژه
       const { data: projectCode, error: codeError } = await supabase.rpc(

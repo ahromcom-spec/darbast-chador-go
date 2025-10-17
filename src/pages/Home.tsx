@@ -41,8 +41,8 @@ export default function Home() {
   const handleServiceTypeChange = (value: string) => {
     // Value format: "serviceTypeId:subcategoryCode"
     const [serviceTypeId, subcategoryCode] = value.split(':');
-    setSelectedServiceType(serviceTypeId);
-    setSelectedSubcategory(subcategoryCode);
+    setSelectedServiceType(serviceTypeId || '');
+    setSelectedSubcategory(subcategoryCode || '');
     setSelectedProject('');
   };
 
@@ -158,27 +158,42 @@ export default function Home() {
                       <label htmlFor="service-type-select" className="text-xs sm:text-sm font-medium text-foreground block">
                         انتخاب نوع خدمات:
                       </label>
-                      <Select value={selectedServiceType} onValueChange={handleServiceTypeChange}>
+                      <Select 
+                        value={selectedServiceType ? `${selectedServiceType}:${selectedSubcategory}` : ''} 
+                        onValueChange={handleServiceTypeChange}
+                      >
                         <SelectTrigger id="service-type-select" className="w-full text-right h-11 sm:h-12 text-sm sm:text-base smooth-hover">
                           <SelectValue placeholder="لطفاً نوع خدمات مورد نظر خود را انتخاب کنید..." />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border-2 z-[100]">
-                          {serviceTypes.map((serviceType) => (
-                            <SelectGroup key={serviceType.id}>
-                              <SelectLabel className="text-sm font-semibold text-primary">
-                                {serviceType.name}
-                              </SelectLabel>
-                              {serviceType.subcategories.map((sub) => (
-                                <SelectItem 
-                                  key={sub.id} 
-                                  value={`${serviceType.id}:${sub.code}`}
-                                  className="text-sm sm:text-base pr-6"
-                                >
-                                  {sub.name}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          ))}
+                          {serviceTypes.length === 0 ? (
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              در حال بارگذاری خدمات...
+                            </div>
+                          ) : (
+                            serviceTypes.map((serviceType) => (
+                              <SelectGroup key={serviceType.id}>
+                                <SelectLabel className="text-sm font-semibold text-primary">
+                                  {serviceType.name}
+                                </SelectLabel>
+                                {serviceType.subcategories.length > 0 ? (
+                                  serviceType.subcategories.map((sub) => (
+                                    <SelectItem 
+                                      key={sub.id} 
+                                      value={`${serviceType.id}:${sub.code}`}
+                                      className="text-sm sm:text-base pr-6"
+                                    >
+                                      {sub.name}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <div className="px-8 py-2 text-xs text-muted-foreground">
+                                    زیرشاخه‌ای موجود نیست
+                                  </div>
+                                )}
+                              </SelectGroup>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
