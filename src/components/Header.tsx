@@ -100,7 +100,7 @@ const Header = () => {
           </div>
 
           {/* Second Row: Auth Buttons */}
-          <div className="flex items-center justify-center gap-2 py-2">
+          <div className="flex items-center justify-end gap-2 py-2 pr-2">
             {user ? (
               <>
                 <Button
@@ -225,8 +225,8 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Second Row: Login/Register - Left aligned */}
-          <div className="flex items-center justify-start gap-4 py-3 pr-4">
+          {/* Second Row: Login/Register - Right aligned */}
+          <div className="flex items-center justify-end gap-4 py-3 pr-4">
             {user ? (
               <>
                 <Button

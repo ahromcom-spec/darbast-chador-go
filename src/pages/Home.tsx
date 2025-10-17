@@ -126,12 +126,13 @@ export default function Home() {
       <div className="min-h-screen flex flex-col relative bg-background">
         {/* Background Image */}
         <div 
-          className="fixed inset-0 z-0 md:block" 
+          className="fixed inset-0 z-0" 
           style={{
             backgroundImage: 'url(/background-city.png)',
             backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
+            backgroundPosition: 'center center',
+            backgroundRepeat: 'no-repeat',
+            backgroundAttachment: 'fixed'
           }} 
           role="presentation" 
           aria-hidden="true" 
