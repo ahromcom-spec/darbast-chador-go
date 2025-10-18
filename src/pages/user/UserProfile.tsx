@@ -161,7 +161,7 @@ const fetchOrders = async () => {
     <MainLayout>
       <div className="container max-w-6xl mx-auto px-4 py-6 space-y-6">
         <PageHeader 
-          title="پروفایل کاربری" 
+          title={fullName || "پروفایل کاربری"} 
           description="مدیریت اطلاعات شخصی و سفارشات"
           showBackButton={true}
         />
