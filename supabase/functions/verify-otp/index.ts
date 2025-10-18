@@ -101,8 +101,16 @@ serve(async (req) => {
     // Build a strong per-login password from OTP to satisfy password policy
     const loginPassword = `otp-${normalizedCode}-x`;
 
-    // For test phones only, bypass OTP verification
+    // For test phones only, bypass OTP verification if code is 12345
     if (isTestPhone) {
+      // Check if code is the test code (12345)
+      if (normalizedCode !== '12345') {
+        return new Response(
+          JSON.stringify({ error: 'کد تایید نامعتبر است. برای شماره‌های تست از کد 12345 استفاده کنید.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       // Check if phone is in whitelist
       const { data: whitelistData } = await supabase
         .from('phone_whitelist')
