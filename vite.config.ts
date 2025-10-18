@@ -16,8 +16,9 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['ahrom-app-icon.png', 'ahrom-logo.png'],
+      includeAssets: ['ahrom-pwa-icon.png', 'ahrom-app-icon.png', 'ahrom-logo.png'],
       manifest: {
+        id: '/',
         name: 'خدمات ساختمانی و منزل اهرم',
         short_name: 'اهرم',
         description: 'سامانه مدیریت خدمات ساختمانی و منزل اهرم',
@@ -28,19 +29,33 @@ export default defineConfig(({ mode }) => ({
         dir: 'rtl',
         lang: 'fa',
         start_url: '/',
+        scope: '/',
         icons: [
+          {
+            src: '/ahrom-pwa-icon.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
           {
             src: '/ahrom-pwa-icon.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
           },
           {
-            src: '/ahrom-app-icon.png',
-            sizes: '192x192',
-            type: 'image/png'
+            src: '/ahrom-pwa-icon.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
-        ]
+        ],
+        categories: ['business', 'productivity'],
+        display_override: ['standalone', 'minimal-ui'],
+        prefer_related_applications: false,
+        launch_handler: {
+          client_mode: 'navigate-existing'
+        }
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],

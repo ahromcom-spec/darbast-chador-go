@@ -1,15 +1,23 @@
 {
+  "id": "/",
   "name": "خدمات ساختمانی و منزل اهرم",
   "short_name": "اهرم",
   "description": "سامانه مدیریت خدمات ساختمانی و منزل اهرم",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "theme_color": "#1a1a1a",
   "orientation": "portrait-primary",
   "dir": "rtl",
   "lang": "fa",
   "icons": [
+    {
+      "src": "/ahrom-pwa-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/ahrom-pwa-icon.png",
       "sizes": "512x512",
@@ -24,5 +32,9 @@
     }
   ],
   "prefer_related_applications": false,
-  "display_override": ["standalone", "fullscreen"]
+  "display_override": ["standalone", "minimal-ui"],
+  "categories": ["business", "productivity"],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }
