@@ -2,7 +2,7 @@ import { ReactNode, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/navigation/AppSidebar';
 import { LogOut, Menu } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -61,7 +61,7 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full bg-background">
         {/* Desktop Sidebar */}
         <div className="hidden md:block">
@@ -74,6 +74,9 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
           <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-14 items-center justify-between px-4">
               <div className="flex items-center gap-3">
+                {/* Desktop Sidebar Toggle */}
+                <SidebarTrigger className="hidden md:flex" />
+                
                 {/* Mobile Menu */}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild className="md:hidden">
