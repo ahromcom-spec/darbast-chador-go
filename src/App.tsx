@@ -87,10 +87,10 @@ const App = () => (
           <AuthProvider>
             <PageLoadProgress />
             <OfflineIndicator />
-            <div className="min-h-screen bg-background">
-              <Header />
-              <Suspense fallback={<PageLoader />}>
-              <Routes>
+            <Suspense fallback={<PageLoader />}>
+              <div className="min-h-screen bg-background">
+                <Header />
+                <Routes>
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
               <Route path="/" element={<Home />} />
@@ -221,11 +221,11 @@ const App = () => (
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
-              </Routes>
+                </Routes>
+              </div>
             </Suspense>
-          </div>
-        </AuthProvider>
-      </BrowserRouter>
+          </AuthProvider>
+        </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
   </ErrorBoundary>
