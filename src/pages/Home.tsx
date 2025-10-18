@@ -79,78 +79,42 @@ export default function Home() {
       
       if (projects.length === 0) {
         // هیچ پروژه‌ای وجود ندارد - مستقیماً به صفحه ایجاد پروژه برو
-        if (selectedSubcategory === '10') {
-          navigate('/scaffolding/form', {
-            state: {
-              serviceTypeId: selectedServiceType,
-              subcategoryCode: selectedSubcategory,
-              serviceTypeName: serviceType?.name,
-              subcategoryName: subcategory?.name
-            }
-          });
-        } else {
-          navigate('/user/create-project', {
-            state: {
-              serviceTypeId: selectedServiceType,
-              subcategoryCode: selectedSubcategory,
-              serviceTypeName: serviceType?.name,
-              subcategoryName: subcategory?.name
-            }
-          });
-        }
+        navigate('/user/create-project', {
+          state: {
+            serviceTypeId: selectedServiceType,
+            subcategoryCode: selectedSubcategory,
+            serviceTypeName: serviceType?.name,
+            subcategoryName: subcategory?.name
+          }
+        });
       } else if (projects.length === 1) {
         // فقط یک پروژه فعال وجود دارد - مستقیماً به صفحه افزودن خدمات برو
         const project = projects[0];
-        
-        if (selectedSubcategory === '10') {
-          // برای داربست با اجناس به فرم جامع
-          navigate(`/scaffolding/form/${project.id}`);
-        } else {
-          // برای سایر خدمات به صفحه افزودن خدمات
-          navigate(`/user/add-service/${project.id}`);
-        }
+        navigate(`/user/add-service/${project.id}`);
       }
+      // اگر بیش از یک پروژه باشد، لیست پروژه‌ها نمایش داده می‌شود
     }
   }, [projects, projectsLoading, selectedServiceType, selectedSubcategory, navigate, serviceTypes, user]);
 
   const handleProjectSelect = (projectId: string) => {
     setSelectedProject(projectId);
-    
-    // بررسی اینکه آیا زیرمجموعه انتخاب شده داربست با اجناس (کد 10) است
-    if (selectedSubcategory === '10') {
-      // هدایت به فرم جامع داربست با اطلاعات پروژه
-      navigate(`/scaffolding/form/${projectId}`);
-    } else {
-      // برای سایر خدمات به صفحه افزودن خدمات
-      navigate(`/user/add-service/${projectId}`);
-    }
+    // همه خدمات به صفحه افزودن خدمات می‌روند
+    navigate(`/user/add-service/${projectId}`);
   };
 
   const handleCreateNewProject = () => {
     const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
     const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
     
-    // اگر زیرمجموعه داربست با اجناس (کد 10) انتخاب شده، مستقیماً به فرم برو
-    if (selectedSubcategory === '10') {
-      navigate('/scaffolding/form', {
-        state: {
-          serviceTypeId: selectedServiceType,
-          subcategoryCode: selectedSubcategory,
-          serviceTypeName: serviceType?.name,
-          subcategoryName: subcategory?.name
-        }
-      });
-    } else {
-      // برای سایر خدمات به صفحه ایجاد پروژه
-      navigate('/user/create-project', {
-        state: {
-          preSelectedServiceType: selectedServiceType,
-          preSelectedServiceCode: selectedSubcategory,
-          serviceTypeName: serviceType?.name,
-          subcategoryName: subcategory?.name
-        }
-      });
-    }
+    // همه خدمات به صفحه ایجاد پروژه می‌روند
+    navigate('/user/create-project', {
+      state: {
+        preSelectedServiceType: selectedServiceType,
+        preSelectedServiceCode: selectedSubcategory,
+        serviceTypeName: serviceType?.name,
+        subcategoryName: subcategory?.name
+      }
+    });
   };
 
   const selectedServiceTypeObj = serviceTypes.find(st => st.id === selectedServiceType);
