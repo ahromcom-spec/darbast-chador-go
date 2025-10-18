@@ -907,7 +907,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-sm text-muted-foreground">متراژ</span>
                         <span className="font-bold text-primary">
-                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م³
+                          {parseFloat(((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2))} م³
                         </span>
                         {dimensions.length > 1 && (
                           <Button
@@ -961,7 +961,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    جمع متراژ: <strong>{totalArea.toFixed(2)} متر مکعب</strong>
+                    جمع متراژ: <strong>{parseFloat(totalArea.toFixed(2))} متر مکعب</strong>
                   </AlertDescription>
                 </Alert>
               </div>
@@ -1237,7 +1237,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-sm text-muted-foreground">متراژ</span>
                         <span className="font-bold text-primary">
-                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م³
+                          {parseFloat(((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2))} م³
                         </span>
                         {dimensions.length > 1 && (
                           <Button
@@ -1267,7 +1267,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 </Button>
 
                 <div className="p-4 bg-primary/5 rounded-lg">
-                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مکعب</p>
+                  <p className="text-sm font-medium">مجموع متراژ کل: {parseFloat(totalArea.toFixed(2))} متر مکعب</p>
                 </div>
               </div>
             </CardContent>
@@ -1341,7 +1341,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-sm text-muted-foreground">متراژ</span>
                         <span className="font-bold text-primary">
-                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م³
+                          {parseFloat(((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2))} م³
                         </span>
                         {dimensions.length > 1 && (
                           <Button
@@ -1371,7 +1371,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 </Button>
 
                 <div className="p-4 bg-primary/5 rounded-lg">
-                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مکعب</p>
+                  <p className="text-sm font-medium">مجموع متراژ کل: {parseFloat(totalArea.toFixed(2))} متر مکعب</p>
                 </div>
               </div>
             </CardContent>
@@ -1444,7 +1444,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-sm text-muted-foreground">متراژ</span>
                         <span className="font-bold text-primary">
-                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م³
+                          {parseFloat(((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2))} م³
                         </span>
                         {dimensions.length > 1 && (
                           <Button
@@ -1474,7 +1474,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 </Button>
 
                 <div className="p-4 bg-primary/5 rounded-lg">
-                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مکعب</p>
+                  <p className="text-sm font-medium">مجموع متراژ کل: {parseFloat(totalArea.toFixed(2))} متر مکعب</p>
                 </div>
               </div>
             </CardContent>
