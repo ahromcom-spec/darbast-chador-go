@@ -46,6 +46,22 @@ export default function Home() {
     setSelectedProject('');
   };
 
+  // هنگامی که پروژه‌ها لود شدند، اگر فقط یک پروژه فعال وجود داشت، مستقیماً به صفحه افزودن خدمات برو
+  useEffect(() => {
+    if (!projectsLoading && selectedServiceType && selectedSubcategory && projects.length === 1) {
+      // فقط یک پروژه فعال وجود دارد - مستقیماً به صفحه افزودن خدمات برو
+      const project = projects[0];
+      
+      if (selectedSubcategory === '10') {
+        // برای داربست با اجناس به فرم جامع
+        navigate(`/scaffolding/form/${project.id}`);
+      } else {
+        // برای سایر خدمات به صفحه افزودن خدمات
+        navigate(`/user/add-service/${project.id}`);
+      }
+    }
+  }, [projects, projectsLoading, selectedServiceType, selectedSubcategory, navigate]);
+
   const handleProjectSelect = (projectId: string) => {
     setSelectedProject(projectId);
     
@@ -54,8 +70,8 @@ export default function Home() {
       // هدایت به فرم جامع داربست با اطلاعات پروژه
       navigate(`/scaffolding/form/${projectId}`);
     } else {
-      // برای سایر خدمات به صفحه پروژه‌ها
-      navigate(`/user/projects`);
+      // برای سایر خدمات به صفحه افزودن خدمات
+      navigate(`/user/add-service/${projectId}`);
     }
   };
 
@@ -200,10 +216,10 @@ export default function Home() {
                           <div className="flex justify-center py-4">
                             <LoadingSpinner />
                           </div>
-                        ) : projects.length > 0 ? (
+                        ) : projects.length > 1 ? (
                           <div className="space-y-2">
                             <label className="text-xs sm:text-sm font-medium text-foreground block">
-                              پروژه‌های قبلی شما:
+                              پروژه‌های فعال شما - یکی را انتخاب کنید:
                             </label>
                             <div className="space-y-2 max-h-48 overflow-y-auto">
                               {projects.map((project) => (
@@ -219,32 +235,37 @@ export default function Home() {
                                       <div className="text-xs text-muted-foreground truncate">
                                         {project.addresses?.line1}, {project.addresses?.city}
                                       </div>
+                                      <div className="text-xs text-primary mt-1">
+                                        کلیک کنید تا خدمات جدید اضافه کنید
+                                      </div>
                                     </div>
                                   </div>
                                 </button>
                               ))}
                             </div>
                           </div>
-                        ) : (
+                        ) : projects.length === 0 ? (
                           <p className="text-xs sm:text-sm text-muted-foreground text-center py-2">
                             هنوز پروژه‌ای برای این نوع خدمات ثبت نکرده‌اید
                           </p>
-                        )}
+                        ) : null}
 
-                        {/* Action Buttons */}
-                        <div className="grid grid-cols-1 gap-3 pt-2">
-                          <Button 
-                            onClick={handleCreateNewProject}
-                            className="w-full h-auto p-3 sm:p-4 construction-gradient text-sm sm:text-base"
-                          >
-                            <div className="space-y-0.5 sm:space-y-1">
-                              <div className="font-semibold">ایجاد پروژه جدید</div>
-                              <div className="text-xs sm:text-sm opacity-90">
-                                تعریف پروژه جدید با آدرس و مشخصات کامل
+                        {/* Action Buttons - فقط زمانی نمایش داده می‌شود که بیش از یک پروژه داریم یا هیچ پروژه‌ای نداریم */}
+                        {(projects.length === 0 || projects.length > 1) && (
+                          <div className="grid grid-cols-1 gap-3 pt-2">
+                            <Button 
+                              onClick={handleCreateNewProject}
+                              className="w-full h-auto p-3 sm:p-4 construction-gradient text-sm sm:text-base"
+                            >
+                              <div className="space-y-0.5 sm:space-y-1">
+                                <div className="font-semibold">ایجاد پروژه جدید</div>
+                                <div className="text-xs sm:text-sm opacity-90">
+                                  تعریف پروژه جدید با آدرس و مشخصات کامل
+                                </div>
                               </div>
-                            </div>
-                          </Button>
-                        </div>
+                            </Button>
+                          </div>
+                        )}
                       </section>
                     )}
                   </>
