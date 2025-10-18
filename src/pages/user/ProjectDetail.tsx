@@ -1,295 +1,185 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
-import { ProjectProgressBar } from "@/components/projects/ProjectProgressBar";
-import { AssignmentsList } from "@/components/projects/AssignmentsList";
-import {
-  ArrowRight,
-  MapPin,
-  Calendar,
-  Ruler,
-  Package
-} from "lucide-react";
+import { useProjectServices } from "@/hooks/useProjectServices";
+import { PageHeader } from "@/components/common/PageHeader";
+import { ArrowRight, MapPin, Calendar, Package, Plus, CheckCircle2 } from "lucide-react";
 
-interface Project {
+interface ProjectV3 {
   id: string;
-  project_name: string;
-  service_type: string;
-  location_address: string;
+  code: string;
+  address: string;
+  detailed_address: string | null;
   status: string;
   created_at: string;
-}
-
-interface ServiceRequest {
-  id: string;
-  service_type: string;
-  sub_type: string | null;
-  length: number;
-  width: number;
-  height: number;
-  created_at: string;
-  status: string;
+  province?: { name: string } | null;
+  district?: { name: string } | null;
+  subcategory?: { name: string; service_type?: { name: string } | null } | null;
 }
 
 export default function ProjectDetail() {
-  const { id } = useParams<{ id: string }>();
-  const [project, setProject] = useState<Project | null>(null);
-  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
-  const [stages, setStages] = useState<any[]>([]);
-  const [canManageProject, setCanManageProject] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (id) {
-      fetchProjectDetails();
-    }
-  }, [id]);
+  const [project, setProject] = useState<ProjectV3 | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const fetchProjectDetails = async () => {
+  const { services, loading: servicesLoading, refetch } = useProjectServices(projectId);
+
+  useEffect(() => {
+    if (projectId) fetchProject();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  const fetchProject = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth/login");
-        return;
-      }
+      if (!user) throw new Error("کاربر احراز هویت نشده");
 
-      // Fetch project
-      const { data: projectData, error: projectError } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", id)
+      const { data: customerData, error: customerErr } = await supabase
+        .from("customers")
+        .select("id")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
+      if (customerErr) throw customerErr;
+      if (!customerData) throw new Error("اطلاعات مشتری یافت نشد");
 
-      if (projectError) throw projectError;
-      setProject(projectData);
+      const { data, error } = await supabase
+        .from("projects_v3")
+        .select(`*,
+          province:provinces(name),
+          district:districts(name),
+          subcategory:subcategories(
+            name,
+            service_type:service_types_v3(name)
+          )
+        `)
+        .eq("id", projectId)
+        .eq("customer_id", customerData.id)
+        .maybeSingle();
 
-      // Fetch service requests
-      const { data: requestsData, error: requestsError } = await supabase
-        .from("service_requests")
-        .select("*")
-        .eq("project_id", id)
-        .order("created_at", { ascending: false });
-
-      if (requestsError) throw requestsError;
-      setServiceRequests(requestsData || []);
-
-      // Fetch project stages
-      const { data: stagesData, error: stagesError } = await supabase
-        .from("project_progress_stages")
-        .select("*")
-        .eq("project_id", id)
-        .order("order_index", { ascending: true });
-
-      if (stagesError) throw stagesError;
-      setStages(stagesData || []);
-
-      // Check if user can manage project (operations_manager or scaffold_supervisor)
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .in("role", ["operations_manager", "scaffold_supervisor", "admin", "general_manager"]);
-
-      setCanManageProject(!!rolesData && rolesData.length > 0);
-
-    } catch (error: any) {
-      toast({
-        title: "خطا در بارگذاری پروژه",
-        description: error.message,
-        variant: "destructive"
-      });
+      if (error) throw error;
+      if (!data) throw new Error("پروژه یافت نشد");
+      setProject(data as ProjectV3);
+      await refetch();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "خطا", description: err.message });
       navigate("/user/projects");
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
+  const handleAddService = () => {
+    if (!projectId || !project) return;
+    const isScaffoldingWithMaterials =
+      project.subcategory?.service_type?.name === "داربست" &&
+      project.subcategory?.name === "اجرای داربست به همراه اجناس";
+
+    if (isScaffoldingWithMaterials) {
+      navigate(`/service/scaffolding-order/${projectId}`);
+    } else {
+      navigate(`/user/add-service/${projectId}`);
+    }
+  };
+
+  if (loading || servicesLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-3">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="text-muted-foreground">در حال بارگذاری...</p>
-          </div>
+          <LoadingSpinner size="lg" text="در حال بارگذاری پروژه..." />
         </div>
       </div>
     );
   }
 
-  if (!project) {
-    return null;
-  }
+  if (!project) return null;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <Button
-        variant="ghost"
-        onClick={() => navigate("/user/projects")}
-        className="mb-6 gap-2"
-      >
+      <Button variant="ghost" onClick={() => navigate("/user/projects")} className="mb-6 gap-2">
         <ArrowRight className="h-4 w-4" />
-        بازگشت به لیست پروژه‌ها
+        بازگشت به پروژه‌ها
       </Button>
 
-      <div className="space-y-6">
-        {/* Project Header */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
+      <PageHeader
+        title={`پروژه ${project.code}`}
+        description={`${project.subcategory?.service_type?.name || ""} - ${project.subcategory?.name || ""}`}
+        showBackButton={false}
+      />
+
+      <Card className="p-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="font-medium text-muted-foreground">استان:</span>{" "}
+            <span className="font-semibold">{project.province?.name}</span>
+          </div>
+          <div>
+            <span className="font-medium text-muted-foreground">بخش:</span>{" "}
+            <span className="font-semibold">{project.district?.name}</span>
+          </div>
+          <div className="md:col-span-2">
+            <span className="font-medium text-muted-foreground">آدرس:</span>{" "}
+            <span className="font-semibold">{project.address}</span>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4 inline mr-1 align-[-2px]" />
+            ایجاد شده در {new Date(project.created_at).toLocaleDateString("fa-IR", { year: "numeric", month: "long", day: "numeric" })}
+          </div>
+        </div>
+      </Card>
+
+      <Separator className="my-6" />
+
+      {/* خدمات پروژه */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <Package className="w-5 h-5 text-primary" />
+          خدمات پروژه ({services.length})
+        </h2>
+        <Button onClick={handleAddService} className="gap-2">
+          <Plus className="w-4 h-4" />
+          افزودن خدمات جدید
+        </Button>
+      </div>
+
+      {services.length === 0 ? (
+        <Card className="p-8 text-center">
+          <Package className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+          <p className="text-muted-foreground mb-4">هنوز خدمتی برای این پروژه ثبت نشده است</p>
+          <Button onClick={handleAddService} variant="outline" className="gap-2">
+            <Plus className="w-4 h-4" /> افزودن اولین خدمات
+          </Button>
+        </Card>
+      ) : (
+        <Card className="p-6 space-y-3">
+          {services.map((service) => (
+            <div key={service.id} className="p-3 bg-muted/50 rounded-lg flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <Badge variant="outline">
-                    {project.service_type === 'scaffolding' ? 'داربست فلزی' : 'چادر برزنتی'}
-                  </Badge>
-                  <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                    {project.status === 'active' ? 'فعال' : 'تکمیل شده'}
-                  </Badge>
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <span className="font-semibold text-sm">{service.service_code}</span>
+                  <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded">
+                    {service.status === 'pending' && 'در انتظار'}
+                    {service.status === 'in_progress' && 'در حال اجرا'}
+                    {service.status === 'completed' && 'تکمیل شده'}
+                    {service.status === 'cancelled' && 'لغو شده'}
+                  </span>
                 </div>
-                <CardTitle className="text-2xl">{project.project_name}</CardTitle>
+                {service.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
+                )}
               </div>
             </div>
-          </CardHeader>
-          
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <span>{project.location_address || 'بدون آدرس'}</span>
-            </div>
-            
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>
-                ایجاد شده در {new Date(project.created_at).toLocaleDateString("fa-IR", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric"
-                })}
-              </span>
-            </div>
-          </CardContent>
+          ))}
         </Card>
-
-        <Separator />
-
-        {/* Service Requests List */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Package className="h-6 w-6 text-primary" />
-              درخواست‌های خدمات ({serviceRequests.length})
-            </h2>
-            <Button onClick={() => navigate(`/service/scaffolding-order/${id}`)}>
-              {project.service_type === 'scaffolding' 
-                ? 'ثبت سفارش اجرای داربست به همراه اجناس' 
-                : 'افزودن درخواست جدید'}
-            </Button>
-          </div>
-
-          {serviceRequests.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Package className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-                <p className="text-muted-foreground">هیچ درخواستی در این پروژه وجود ندارد</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {serviceRequests.map((request) => (
-                <Card key={request.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">
-                          درخواست #{request.id.slice(0, 8)}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {new Date(request.created_at).toLocaleDateString("fa-IR", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })}
-                        </p>
-                      </div>
-                      <Badge variant={request.status === 'pending' ? 'default' : 'secondary'}>
-                        {request.status === 'pending' ? 'در انتظار' : request.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Ruler className="h-4 w-4 text-muted-foreground" />
-                      <span>
-                        طول: {request.length}m × 
-                        عرض: {request.width}m × 
-                        ارتفاع: {request.height}m
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Project Progress */}
-        {stages.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>پیشرفت پروژه</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProjectProgressBar
-                stages={stages}
-                canEdit={canManageProject}
-                onStageClick={async (stage) => {
-                  if (!canManageProject) return;
-                  
-                  try {
-                    const { error } = await supabase
-                      .from("project_progress_stages")
-                      .update({
-                        is_completed: !stage.is_completed,
-                        completed_at: !stage.is_completed ? new Date().toISOString() : null,
-                      })
-                      .eq("id", stage.id);
-
-                    if (error) throw error;
-
-                    toast({
-                      title: "موفق",
-                      description: `مرحله "${stage.stage_title}" بروزرسانی شد`,
-                    });
-
-                    // Refresh stages
-                    fetchProjectDetails();
-                  } catch (error: any) {
-                    toast({
-                      title: "خطا",
-                      description: error.message,
-                      variant: "destructive",
-                    });
-                  }
-                }}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Assignments */}
-        <AssignmentsList projectId={project.id} canAssign={canManageProject} />
-      </div>
+      )}
     </div>
   );
 }
