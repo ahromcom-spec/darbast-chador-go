@@ -52,7 +52,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
 
   const userItems = user ? [
     { title: 'پروفایل کاربری', url: '/profile', icon: User },
-    { title: 'پروژه‌های من', url: '/projects', icon: Building2 },
+    { title: 'پروژه‌های من', url: '/user/projects', icon: Building2 },
     { title: 'تیکت‌های پشتیبانی', url: '/tickets', icon: MessageSquare },
   ] : [];
 

@@ -60,7 +60,7 @@ export default function Home() {
         });
         navigate('/auth/login', {
           state: {
-            from: '/projects',
+            from: '/user/projects',
             serviceTypeId: selectedServiceType,
             subcategoryCode: selectedSubcategory
           }
@@ -69,7 +69,7 @@ export default function Home() {
       }
       
       // اگر کاربر لاگین است، به صفحه پروژه‌ها هدایت شود
-      navigate('/projects', {
+      navigate('/user/projects', {
         state: {
           serviceTypeId: selectedServiceType,
           subcategoryCode: selectedSubcategory

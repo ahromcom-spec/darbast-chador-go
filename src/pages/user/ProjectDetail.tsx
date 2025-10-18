@@ -106,7 +106,7 @@ export default function ProjectDetail() {
         description: error.message,
         variant: "destructive"
       });
-      navigate("/projects");
+      navigate("/user/projects");
     } finally {
       setLoading(false);
     }
@@ -133,7 +133,7 @@ export default function ProjectDetail() {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <Button
         variant="ghost"
-        onClick={() => navigate("/projects")}
+        onClick={() => navigate("/user/projects")}
         className="mb-6 gap-2"
       >
         <ArrowRight className="h-4 w-4" />

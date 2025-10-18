@@ -273,7 +273,7 @@ export default function NewServiceRequestForm() {
       });
 
       // انتقال به داشبورد پروژه‌ها
-      navigate('/projects');
+      navigate('/user/projects');
     } catch (error: any) {
       console.error('Error creating project:', error);
       toast.error('خطا در ثبت درخواست: ' + error.message);

@@ -348,7 +348,7 @@ export default function ScaffoldingFacadeForm() {
 
       // Navigate after a short delay to let user see the success message
       setTimeout(() => {
-        navigate('/projects');
+        navigate('/user/projects');
       }, 1500);
     } catch (error: any) {
       console.error('خطا در ثبت درخواست:', error);

@@ -24,7 +24,7 @@ export function useNavigation() {
 
   const goToHome = () => navigate('/');
   const goToProfile = () => navigateWithAuth('/profile');
-  const goToProjects = () => navigateWithAuth('/projects');
+  const goToProjects = () => navigateWithAuth('/user/projects');
   const goToTickets = () => navigate('/tickets');
   const goToScaffoldingForm = () => navigateWithAuth('/scaffolding/form');
   const goToContractorDashboard = () => navigateWithAuth('/contractor/dashboard');
