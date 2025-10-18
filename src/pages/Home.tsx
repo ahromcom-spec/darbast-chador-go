@@ -48,7 +48,7 @@ export default function Home() {
     setSelectedProject('');
   };
 
-  // هنگامی که نوع خدمات انتخاب شد، اول چک کنیم کاربر لاگین است
+  // هنگامی که نوع خدمات انتخاب شد، کاربر را به صفحه پروژه‌ها هدایت کنیم
   useEffect(() => {
     if (selectedServiceType && selectedSubcategory) {
       // اول چک می‌کنیم که کاربر لاگین کرده است
@@ -60,13 +60,21 @@ export default function Home() {
         });
         navigate('/auth/login', {
           state: {
-            from: '/user/create-project',
+            from: '/projects',
             serviceTypeId: selectedServiceType,
             subcategoryCode: selectedSubcategory
           }
         });
         return;
       }
+      
+      // اگر کاربر لاگین است، به صفحه پروژه‌ها هدایت شود
+      navigate('/projects', {
+        state: {
+          serviceTypeId: selectedServiceType,
+          subcategoryCode: selectedSubcategory
+        }
+      });
     }
   }, [selectedServiceType, selectedSubcategory, user, navigate, toast]);
 

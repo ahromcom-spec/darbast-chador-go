@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layouts/MainLayout";
@@ -10,7 +10,8 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { StatCard } from "@/components/common/StatCard";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ErrorMessage } from "@/components/common/ErrorMessage";
-import { FolderOpen, Building2, CheckCircle } from "lucide-react";
+import { FolderOpen, Building2, CheckCircle, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Project {
   id: string;
@@ -28,11 +29,30 @@ export default function ProjectsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  
+  // دریافت اطلاعات نوع خدمات انتخاب شده از state
+  const serviceTypeId = location.state?.serviceTypeId;
+  const subcategoryCode = location.state?.subcategoryCode;
 
   useEffect(() => {
     fetchProjects();
   }, []);
+  
+  // اگر نوع خدمات انتخاب شده است، دکمه ایجاد پروژه جدید را نمایش بده
+  const handleCreateProject = () => {
+    if (serviceTypeId && subcategoryCode) {
+      navigate('/user/create-project', {
+        state: {
+          preSelectedServiceType: serviceTypeId,
+          preSelectedServiceCode: subcategoryCode
+        }
+      });
+    } else {
+      navigate('/user/create-project');
+    }
+  };
 
   const fetchProjects = async () => {
     try {
@@ -88,10 +108,19 @@ export default function ProjectsDashboard() {
 
   return (
     <MainLayout>
-      <PageHeader
-        title="کارتابل پروژه‌های من"
-        description="مدیریت پروژه‌ها بر اساس آدرس و نوع خدمات"
-      />
+      <div className="flex justify-between items-center mb-6">
+        <PageHeader
+          title="کارتابل پروژه‌های من"
+          description="مدیریت پروژه‌ها بر اساس آدرس و نوع خدمات"
+        />
+        <Button 
+          onClick={handleCreateProject}
+          className="construction-gradient"
+        >
+          <Plus className="h-4 w-4 ml-2" />
+          پروژه جدید
+        </Button>
+      </div>
 
       {error && (
         <ErrorMessage 
