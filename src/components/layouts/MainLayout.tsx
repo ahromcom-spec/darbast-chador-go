@@ -67,11 +67,6 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
         <div className="hidden md:block">
           <AppSidebar />
         </div>
-        
-        {/* Sidebar Toggle Button - همیشه نمایان */}
-        <div className="hidden md:block fixed right-0 top-20 z-50">
-          <SidebarTrigger className="rounded-l-md rounded-r-none border-l-0" />
-        </div>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col w-full">
@@ -97,10 +92,17 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
                 </Link>
               </div>
 
-              <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">خروج</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* Desktop Sidebar Toggle */}
+                <div className="hidden md:block">
+                  <SidebarTrigger className="rounded-md" />
+                </div>
+                
+                <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">خروج</span>
+                </Button>
+              </div>
             </div>
           </header>
 
