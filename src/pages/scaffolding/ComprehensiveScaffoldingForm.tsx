@@ -901,7 +901,9 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 </Alert>
               </div>
 
-              {/* شرایط خدمات در پروژه */}
+
+              {/* شرایط خدمات در پروژه - فقط اگر حداقل یک ابعاد وارد شده باشد */}
+              {totalArea > 0 && (
               <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
                 <CardHeader>
                   <CardTitle className="text-lg">شرایط خدمات در پروژه</CardTitle>
@@ -1098,6 +1100,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                   )}
                 </CardContent>
               </Card>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1159,7 +1162,8 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
         </TabsContent>
       </Tabs>
 
-      {/* Price Display */}
+      {/* Price Display - فقط اگر ابعاد وارد شده باشد */}
+      {totalArea > 0 && (
       <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 shadow-lg">
         <CardContent className="p-6">
           <div className="space-y-4">
@@ -1209,6 +1213,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Location Map */}
       <Card>
