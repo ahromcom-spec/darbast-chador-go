@@ -168,7 +168,7 @@ export default function ProjectManagement() {
                       }}
                       className="w-full gap-2"
                     >
-                      ثبت سفارش {project.subcategory?.name}
+                      افزودن خدمات جدید
                       <ArrowRight className="w-4 h-4" />
                     </Button>
                   </div>
@@ -205,7 +205,7 @@ export default function ProjectManagement() {
                   onClick={() => handleAddServiceToProject(selectedProject.id)}
                   className="w-full gap-2"
                 >
-                  ثبت سفارش {selectedProject.subcategory?.name}
+                  افزودن خدمات جدید
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Card>
