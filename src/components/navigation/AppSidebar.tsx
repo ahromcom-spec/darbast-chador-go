@@ -32,9 +32,10 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface AppSidebarProps {
   onNavigate?: () => void;
+  staticMode?: boolean;
 }
 
-export function AppSidebar({ onNavigate }: AppSidebarProps) {
+export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
   const { user } = useAuth();
   const { isAdmin } = useAdminRole();
   const { isGeneralManager } = useGeneralManagerRole();
@@ -98,7 +99,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar className="border-l">
+    <Sidebar className="border-l" collapsible={staticMode ? 'none' : 'offcanvas'}>
       <SidebarContent>
         {/* عمومی */}
         <SidebarGroup>

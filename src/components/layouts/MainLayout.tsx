@@ -81,8 +81,8 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
                       <Menu className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-64 p-0">
-                    <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
+                  <SheetContent side="right" className="w-64 p-0 bg-sidebar text-sidebar-foreground">
+                    <AppSidebar onNavigate={() => setMobileMenuOpen(false)} staticMode />
                   </SheetContent>
                 </Sheet>
 
