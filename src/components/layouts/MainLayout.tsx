@@ -62,10 +62,15 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
 
   return (
     <SidebarProvider defaultOpen={false}>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-background relative">
         {/* Desktop Sidebar */}
         <div className="hidden md:block">
           <AppSidebar />
+        </div>
+        
+        {/* Sidebar Toggle Button - همیشه نمایان */}
+        <div className="hidden md:block fixed right-0 top-20 z-50">
+          <SidebarTrigger className="rounded-l-md rounded-r-none border-l-0" />
         </div>
 
         {/* Main Content */}
@@ -74,9 +79,6 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
           <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-14 items-center justify-between px-4">
               <div className="flex items-center gap-3">
-                {/* Desktop Sidebar Toggle */}
-                <SidebarTrigger className="hidden md:flex" />
-                
                 {/* Mobile Menu */}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild className="md:hidden">

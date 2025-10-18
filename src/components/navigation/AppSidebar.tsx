@@ -21,6 +21,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
@@ -37,6 +38,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
   const { user } = useAuth();
+  const { open } = useSidebar();
   const { isAdmin } = useAdminRole();
   const { isGeneralManager } = useGeneralManagerRole();
   const { isContractor } = useContractorRole();
@@ -99,19 +101,22 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar className="border-l" collapsible={staticMode ? 'none' : 'offcanvas'}>
+    <Sidebar 
+      className="border-l" 
+      collapsible={staticMode ? 'none' : 'icon'}
+    >
       <SidebarContent>
         {/* عمومی */}
         <SidebarGroup>
-          <SidebarGroupLabel>عمومی</SidebarGroupLabel>
+          {open && <SidebarGroupLabel>عمومی</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {publicItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                     <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                      <item.icon className="ml-2 h-4 w-4" />
-                      <span>{item.title}</span>
+                      <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
+                      {open && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -123,15 +128,15 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* کاربری */}
         {userItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>کاربری</SidebarGroupLabel>
+            {open && <SidebarGroupLabel>کاربری</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {userItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className="ml-2 h-4 w-4" />
-                        <span>{item.title}</span>
+                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
+                        {open && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -144,15 +149,15 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* خدمات */}
         {serviceItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>خدمات</SidebarGroupLabel>
+            {open && <SidebarGroupLabel>خدمات</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {serviceItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className="ml-2 h-4 w-4" />
-                        <span>{item.title}</span>
+                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
+                        {open && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -165,15 +170,15 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* پیمانکار */}
         {contractorItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>پیمانکار</SidebarGroupLabel>
+            {open && <SidebarGroupLabel>پیمانکار</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {contractorItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className="ml-2 h-4 w-4" />
-                        <span>{item.title}</span>
+                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
+                        {open && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -186,15 +191,15 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* مدیریت */}
         {adminItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>مدیریت</SidebarGroupLabel>
+            {open && <SidebarGroupLabel>مدیریت</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {adminItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className="ml-2 h-4 w-4" />
-                        <span>{item.title}</span>
+                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
+                        {open && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -207,15 +212,15 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* مدیرکل */}
         {gmItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>مدیرکل</SidebarGroupLabel>
+            {open && <SidebarGroupLabel>مدیرکل</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {gmItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className="ml-2 h-4 w-4" />
-                        <span>{item.title}</span>
+                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
+                        {open && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -228,15 +233,15 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* مدیر اجرایی */}
         {executiveItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>اجرا</SidebarGroupLabel>
+            {open && <SidebarGroupLabel>اجرا</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {executiveItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className="ml-2 h-4 w-4" />
-                        <span>{item.title}</span>
+                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
+                        {open && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -249,15 +254,15 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* مدیر فروش */}
         {salesItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>فروش</SidebarGroupLabel>
+            {open && <SidebarGroupLabel>فروش</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {salesItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className="ml-2 h-4 w-4" />
-                        <span>{item.title}</span>
+                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
+                        {open && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -270,15 +275,15 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* مدیر مالی */}
         {financeItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>مالی</SidebarGroupLabel>
+            {open && <SidebarGroupLabel>مالی</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {financeItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className="ml-2 h-4 w-4" />
-                        <span>{item.title}</span>
+                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
+                        {open && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
