@@ -131,10 +131,10 @@ export default function AddServiceToProject() {
   if (loading || servicesLoading) return <LoadingSpinner />;
   if (!project) return null;
 
-  // بررسی اینکه آیا زیرشاخه "خدمات اجرای داربست به همراه اجناس" است
+  // بررسی اینکه آیا زیرشاخه "اجرای داربست به همراه اجناس" است
   const isScaffoldingWithMaterials = 
     project.subcategory?.service_type?.name === 'داربست' && 
-    project.subcategory?.name === 'خدمات اجرای داربست به همراه اجناس';
+    project.subcategory?.name === 'اجرای داربست به همراه اجناس';
 
   // اگر زیرشاخه "خدمات اجرای داربست به همراه اجناس" است، فرم تخصصی را نشان بده
   if (isScaffoldingWithMaterials) {
