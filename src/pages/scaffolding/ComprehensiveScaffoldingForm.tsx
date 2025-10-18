@@ -57,7 +57,8 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
   const [projectAddress, setProjectAddress] = useState('');
   const [isFieldsLocked, setIsFieldsLocked] = useState(false);
   const [lockedProjectData, setLockedProjectData] = useState<any>(null);
-  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '', height: '' }]);
+  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '' }]);
+  const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
   const [projectLocation, setProjectLocation] = useState<{
     address: string;
     coordinates: [number, number];
@@ -217,9 +218,13 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
             setDimensions(notes.dimensions.map((d: any, i: number) => ({
               id: (i + 1).toString(),
               length: d.length.toString(),
-              width: d.width?.toString() || '',
+              width: d.width?.toString() || '1',
               height: d.height.toString()
             })));
+          }
+          
+          if (notes.isFacadeWidth2m !== undefined) {
+            setIsFacadeWidth2m(notes.isFacadeWidth2m);
           }
           
           if (notes.conditions) {
@@ -309,7 +314,8 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
   // Dimension management
   const addDimension = () => {
     const newId = (dimensions.length + 1).toString();
-    setDimensions([...dimensions, { id: newId, length: '', width: '', height: '' }]);
+    const defaultWidth = activeService === 'facade' ? (isFacadeWidth2m ? '1.5' : '1') : '';
+    setDimensions([...dimensions, { id: newId, length: '', width: defaultWidth, height: '' }]);
   };
 
   const removeDimension = (id: string) => {
@@ -625,7 +631,8 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
         total_area: totalArea,
         conditions: conditions,
         estimated_price: estimatedPrice,
-        price_per_meter: pricePerMeter
+        price_per_meter: pricePerMeter,
+        isFacadeWidth2m: activeService === 'facade' ? isFacadeWidth2m : undefined
       });
 
       const orderData = {
@@ -882,7 +889,8 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.width}
                             onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
-                            placeholder="3"
+                            placeholder="1"
+                            disabled={isFacadeWidth2m}
                           />
                         </div>
                         <div className="space-y-2">
@@ -916,6 +924,28 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                     </div>
                   </Card>
                 ))}
+
+                <div className="flex items-center space-x-2 space-x-reverse mb-4">
+                  <Checkbox 
+                    id="facadeWidth2m" 
+                    checked={isFacadeWidth2m}
+                    onCheckedChange={(checked) => {
+                      setIsFacadeWidth2m(checked === true);
+                      // تغییر عرض همه ابعاد موجود
+                      if (checked === true) {
+                        setDimensions(dimensions.map(d => ({ ...d, width: '1.5' })));
+                      } else {
+                        setDimensions(dimensions.map(d => ({ ...d, width: '1' })));
+                      }
+                    }}
+                  />
+                  <Label 
+                    htmlFor="facadeWidth2m" 
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    عرض داربست نماکاری و سطحی 2 متری است
+                  </Label>
+                </div>
 
                 <Button
                   type="button"
