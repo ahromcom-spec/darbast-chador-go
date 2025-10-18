@@ -1270,6 +1270,202 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                   <p className="text-sm font-medium">مجموع متراژ کل: {parseFloat(totalArea.toFixed(2))} متر مکعب</p>
                 </div>
               </div>
+
+              {/* شرایط خدمات در پروژه - فقط اگر حداقل یک ابعاد وارد شده باشد */}
+              {totalArea > 0 && (
+              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-lg">شرایط خدمات در پروژه</CardTitle>
+                  <CardDescription>این شرایط فقط برای ماه اول اعمال می‌شود</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* 1. تعداد ماه */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">۱. تعداد ماه داربست را انتخاب کنید</Label>
+                    <Select 
+                      value={conditions.totalMonths.toString()} 
+                      onValueChange={(v) => setConditions(prev => ({ 
+                        ...prev, 
+                        totalMonths: parseInt(v),
+                        currentMonth: 1
+                      }))}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="1">یک ماه</SelectItem>
+                        <SelectItem value="2">دو ماه</SelectItem>
+                        <SelectItem value="3">سه ماه</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* ۲. محاسبه ماه فعلی */}
+                  {conditions.totalMonths > 1 && (
+                    <div className="space-y-3">
+                      <Label className="text-base font-semibold">۲. این سفارش برای کدام ماه است؟</Label>
+                      <RadioGroup 
+                        value={conditions.currentMonth.toString()} 
+                        onValueChange={(v) => setConditions(prev => ({ ...prev, currentMonth: parseInt(v) }))}
+                      >
+                        {Array.from({ length: conditions.totalMonths }, (_, i) => i + 1).map(month => (
+                          <div key={month} className="flex items-center space-x-2 space-x-reverse">
+                            <RadioGroupItem value={month.toString()} id={`formwork-month-${month}`} />
+                            <Label htmlFor={`formwork-month-${month}`} className="cursor-pointer">
+                              ماه {month}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                  )}
+
+                  {/* 3. فاصله از مرکز استان */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">
+                      {conditions.totalMonths > 1 ? '۳.' : '۲.'} فاصله محل پروژه از مرکز استان قم
+                    </Label>
+                    <Select 
+                      value={conditions.distanceRange}
+                      onValueChange={(v: any) => setConditions(prev => ({ ...prev, distanceRange: v }))}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="0-15">تا ۱۵ کیلومتر (بدون افزایش)</SelectItem>
+                        <SelectItem value="15-25">۱۵-۲۵ کیلومتر (+۲۰٪)</SelectItem>
+                        <SelectItem value="25-50">۲۵-۵۰ کیلومتر (+۴۰٪)</SelectItem>
+                        <SelectItem value="50-85">۵۰-۸۵ کیلومتر (+۷۰٪)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 4. ارتفاع پای کار */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">
+                      {conditions.totalMonths > 1 ? '۴.' : '۳.'} ارتفاع پای کار
+                    </Label>
+                    <Select 
+                      value={onGround ? 'ground' : 'platform'}
+                      onValueChange={(v) => setOnGround(v === 'ground')}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="ground">داربست روی زمین بسته می‌شود</SelectItem>
+                        <SelectItem value="platform">داربست روی سکو یا پشت‌بام بسته می‌شود</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {!onGround && (
+                      <Card className="p-4 bg-background/50 space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="formwork-platformHeight">ارتفاع سکو/پشت‌بام از روی زمین (متر) *</Label>
+                          <Input
+                            id="formwork-platformHeight"
+                            type="number"
+                            step="0.1"
+                            value={conditions.platformHeight || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              platformHeight: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 3"
+                            className={errors.platformHeight ? 'border-destructive' : ''}
+                          />
+                          {errors.platformHeight && (
+                            <p className="text-sm text-destructive">{errors.platformHeight}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="formwork-scaffoldHeight">ارتفاع داربست از روی پشت‌بام (متر) *</Label>
+                          <Input
+                            id="formwork-scaffoldHeight"
+                            type="number"
+                            step="0.1"
+                            value={conditions.scaffoldHeightFromPlatform || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              scaffoldHeightFromPlatform: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 9"
+                            className={errors.scaffoldHeight ? 'border-destructive' : ''}
+                          />
+                          {errors.scaffoldHeight && (
+                            <p className="text-sm text-destructive">{errors.scaffoldHeight}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            اگر پشت‌بام بالا و پایین دارد، ارتفاع میانگین را وارد کنید
+                          </p>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+
+                  {/* 5. فاصله وسیله نقلیه */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">
+                      {conditions.totalMonths > 1 ? '۵.' : '۴.'} فاصله وسیله نقلیه تا پای کار
+                    </Label>
+                    <Select 
+                      value={vehicleReachesSite ? 'reaches' : 'distance'}
+                      onValueChange={(v) => setVehicleReachesSite(v === 'reaches')}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="reaches">وسیله نقلیه داربست تا پای کار می‌آید</SelectItem>
+                        <SelectItem value="distance">فاصله وسیله نقلیه تا پای کار را وارد کنید</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {!vehicleReachesSite && (
+                      <Card className="p-4 bg-background/50">
+                        <div className="space-y-2">
+                          <Label htmlFor="formwork-vehicleDistance">فاصله به متر *</Label>
+                          <Input
+                            id="formwork-vehicleDistance"
+                            type="number"
+                            step="1"
+                            value={conditions.vehicleDistance || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              vehicleDistance: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 25"
+                            className={errors.vehicleDistance ? 'border-destructive' : ''}
+                          />
+                          {errors.vehicleDistance && (
+                            <p className="text-sm text-destructive">{errors.vehicleDistance}</p>
+                          )}
+                          <div className="text-xs text-muted-foreground space-y-1 mt-2 bg-secondary/30 p-3 rounded">
+                            <p className="font-semibold mb-2">افزایش قیمت بر اساس فاصله:</p>
+                            <p>• تا ۱۰ متر: بدون افزایش</p>
+                            <p>• ۱۰-۲۰ متر: +۲۰٪</p>
+                            <p>• ۲۰-۴۰ متر: +۴۰٪</p>
+                            <p>• ۴۰-۶۰ متر: +۶۰٪</p>
+                            <p>• ۶۰-۱۰۰ متر: +۸۰٪</p>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+
+                  {conditions.currentMonth > 1 && (
+                    <Alert className="bg-blue-500/10 border-blue-500/20">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertDescription>
+                        شما ماه {conditions.currentMonth} را انتخاب کرده‌اید. شرایط افزایش قیمت فقط برای ماه اول اعمال می‌شود.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+              )}
             </CardContent>
           </Card>
         )}
@@ -1374,6 +1570,202 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                   <p className="text-sm font-medium">مجموع متراژ کل: {parseFloat(totalArea.toFixed(2))} متر مکعب</p>
                 </div>
               </div>
+
+              {/* شرایط خدمات در پروژه - فقط اگر حداقل یک ابعاد وارد شده باشد */}
+              {totalArea > 0 && (
+              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-lg">شرایط خدمات در پروژه</CardTitle>
+                  <CardDescription>این شرایط فقط برای ماه اول اعمال می‌شود</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* 1. تعداد ماه */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">۱. تعداد ماه داربست را انتخاب کنید</Label>
+                    <Select 
+                      value={conditions.totalMonths.toString()} 
+                      onValueChange={(v) => setConditions(prev => ({ 
+                        ...prev, 
+                        totalMonths: parseInt(v),
+                        currentMonth: 1
+                      }))}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="1">یک ماه</SelectItem>
+                        <SelectItem value="2">دو ماه</SelectItem>
+                        <SelectItem value="3">سه ماه</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* ۲. محاسبه ماه فعلی */}
+                  {conditions.totalMonths > 1 && (
+                    <div className="space-y-3">
+                      <Label className="text-base font-semibold">۲. این سفارش برای کدام ماه است؟</Label>
+                      <RadioGroup 
+                        value={conditions.currentMonth.toString()} 
+                        onValueChange={(v) => setConditions(prev => ({ ...prev, currentMonth: parseInt(v) }))}
+                      >
+                        {Array.from({ length: conditions.totalMonths }, (_, i) => i + 1).map(month => (
+                          <div key={month} className="flex items-center space-x-2 space-x-reverse">
+                            <RadioGroupItem value={month.toString()} id={`tiered-month-${month}`} />
+                            <Label htmlFor={`tiered-month-${month}`} className="cursor-pointer">
+                              ماه {month}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                  )}
+
+                  {/* 3. فاصله از مرکز استان */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">
+                      {conditions.totalMonths > 1 ? '۳.' : '۲.'} فاصله محل پروژه از مرکز استان قم
+                    </Label>
+                    <Select 
+                      value={conditions.distanceRange}
+                      onValueChange={(v: any) => setConditions(prev => ({ ...prev, distanceRange: v }))}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="0-15">تا ۱۵ کیلومتر (بدون افزایش)</SelectItem>
+                        <SelectItem value="15-25">۱۵-۲۵ کیلومتر (+۲۰٪)</SelectItem>
+                        <SelectItem value="25-50">۲۵-۵۰ کیلومتر (+۴۰٪)</SelectItem>
+                        <SelectItem value="50-85">۵۰-۸۵ کیلومتر (+۷۰٪)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 4. ارتفاع پای کار */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">
+                      {conditions.totalMonths > 1 ? '۴.' : '۳.'} ارتفاع پای کار
+                    </Label>
+                    <Select 
+                      value={onGround ? 'ground' : 'platform'}
+                      onValueChange={(v) => setOnGround(v === 'ground')}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="ground">داربست روی زمین بسته می‌شود</SelectItem>
+                        <SelectItem value="platform">داربست روی سکو یا پشت‌بام بسته می‌شود</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {!onGround && (
+                      <Card className="p-4 bg-background/50 space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="tiered-platformHeight">ارتفاع سکو/پشت‌بام از روی زمین (متر) *</Label>
+                          <Input
+                            id="tiered-platformHeight"
+                            type="number"
+                            step="0.1"
+                            value={conditions.platformHeight || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              platformHeight: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 3"
+                            className={errors.platformHeight ? 'border-destructive' : ''}
+                          />
+                          {errors.platformHeight && (
+                            <p className="text-sm text-destructive">{errors.platformHeight}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tiered-scaffoldHeight">ارتفاع داربست از روی پشت‌بام (متر) *</Label>
+                          <Input
+                            id="tiered-scaffoldHeight"
+                            type="number"
+                            step="0.1"
+                            value={conditions.scaffoldHeightFromPlatform || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              scaffoldHeightFromPlatform: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 9"
+                            className={errors.scaffoldHeight ? 'border-destructive' : ''}
+                          />
+                          {errors.scaffoldHeight && (
+                            <p className="text-sm text-destructive">{errors.scaffoldHeight}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            اگر پشت‌بام بالا و پایین دارد، ارتفاع میانگین را وارد کنید
+                          </p>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+
+                  {/* 5. فاصله وسیله نقلیه */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">
+                      {conditions.totalMonths > 1 ? '۵.' : '۴.'} فاصله وسیله نقلیه تا پای کار
+                    </Label>
+                    <Select 
+                      value={vehicleReachesSite ? 'reaches' : 'distance'}
+                      onValueChange={(v) => setVehicleReachesSite(v === 'reaches')}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="reaches">وسیله نقلیه داربست تا پای کار می‌آید</SelectItem>
+                        <SelectItem value="distance">فاصله وسیله نقلیه تا پای کار را وارد کنید</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {!vehicleReachesSite && (
+                      <Card className="p-4 bg-background/50">
+                        <div className="space-y-2">
+                          <Label htmlFor="tiered-vehicleDistance">فاصله به متر *</Label>
+                          <Input
+                            id="tiered-vehicleDistance"
+                            type="number"
+                            step="1"
+                            value={conditions.vehicleDistance || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              vehicleDistance: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 25"
+                            className={errors.vehicleDistance ? 'border-destructive' : ''}
+                          />
+                          {errors.vehicleDistance && (
+                            <p className="text-sm text-destructive">{errors.vehicleDistance}</p>
+                          )}
+                          <div className="text-xs text-muted-foreground space-y-1 mt-2 bg-secondary/30 p-3 rounded">
+                            <p className="font-semibold mb-2">افزایش قیمت بر اساس فاصله:</p>
+                            <p>• تا ۱۰ متر: بدون افزایش</p>
+                            <p>• ۱۰-۲۰ متر: +۲۰٪</p>
+                            <p>• ۲۰-۴۰ متر: +۴۰٪</p>
+                            <p>• ۴۰-۶۰ متر: +۶۰٪</p>
+                            <p>• ۶۰-۱۰۰ متر: +۸۰٪</p>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+
+                  {conditions.currentMonth > 1 && (
+                    <Alert className="bg-blue-500/10 border-blue-500/20">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertDescription>
+                        شما ماه {conditions.currentMonth} را انتخاب کرده‌اید. شرایط افزایش قیمت فقط برای ماه اول اعمال می‌شود.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+              )}
             </CardContent>
           </Card>
         )}
@@ -1477,6 +1869,202 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                   <p className="text-sm font-medium">مجموع متراژ کل: {parseFloat(totalArea.toFixed(2))} متر مکعب</p>
                 </div>
               </div>
+
+              {/* شرایط خدمات در پروژه - فقط اگر حداقل یک ابعاد وارد شده باشد */}
+              {totalArea > 0 && (
+              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-lg">شرایط خدمات در پروژه</CardTitle>
+                  <CardDescription>این شرایط فقط برای ماه اول اعمال می‌شود</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* 1. تعداد ماه */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">۱. تعداد ماه داربست را انتخاب کنید</Label>
+                    <Select 
+                      value={conditions.totalMonths.toString()} 
+                      onValueChange={(v) => setConditions(prev => ({ 
+                        ...prev, 
+                        totalMonths: parseInt(v),
+                        currentMonth: 1
+                      }))}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="1">یک ماه</SelectItem>
+                        <SelectItem value="2">دو ماه</SelectItem>
+                        <SelectItem value="3">سه ماه</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* ۲. محاسبه ماه فعلی */}
+                  {conditions.totalMonths > 1 && (
+                    <div className="space-y-3">
+                      <Label className="text-base font-semibold">۲. این سفارش برای کدام ماه است؟</Label>
+                      <RadioGroup 
+                        value={conditions.currentMonth.toString()} 
+                        onValueChange={(v) => setConditions(prev => ({ ...prev, currentMonth: parseInt(v) }))}
+                      >
+                        {Array.from({ length: conditions.totalMonths }, (_, i) => i + 1).map(month => (
+                          <div key={month} className="flex items-center space-x-2 space-x-reverse">
+                            <RadioGroupItem value={month.toString()} id={`slab-month-${month}`} />
+                            <Label htmlFor={`slab-month-${month}`} className="cursor-pointer">
+                              ماه {month}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                  )}
+
+                  {/* 3. فاصله از مرکز استان */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">
+                      {conditions.totalMonths > 1 ? '۳.' : '۲.'} فاصله محل پروژه از مرکز استان قم
+                    </Label>
+                    <Select 
+                      value={conditions.distanceRange}
+                      onValueChange={(v: any) => setConditions(prev => ({ ...prev, distanceRange: v }))}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="0-15">تا ۱۵ کیلومتر (بدون افزایش)</SelectItem>
+                        <SelectItem value="15-25">۱۵-۲۵ کیلومتر (+۲۰٪)</SelectItem>
+                        <SelectItem value="25-50">۲۵-۵۰ کیلومتر (+۴۰٪)</SelectItem>
+                        <SelectItem value="50-85">۵۰-۸۵ کیلومتر (+۷۰٪)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 4. ارتفاع پای کار */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">
+                      {conditions.totalMonths > 1 ? '۴.' : '۳.'} ارتفاع پای کار
+                    </Label>
+                    <Select 
+                      value={onGround ? 'ground' : 'platform'}
+                      onValueChange={(v) => setOnGround(v === 'ground')}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="ground">داربست روی زمین بسته می‌شود</SelectItem>
+                        <SelectItem value="platform">داربست روی سکو یا پشت‌بام بسته می‌شود</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {!onGround && (
+                      <Card className="p-4 bg-background/50 space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="slab-platformHeight">ارتفاع سکو/پشت‌بام از روی زمین (متر) *</Label>
+                          <Input
+                            id="slab-platformHeight"
+                            type="number"
+                            step="0.1"
+                            value={conditions.platformHeight || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              platformHeight: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 3"
+                            className={errors.platformHeight ? 'border-destructive' : ''}
+                          />
+                          {errors.platformHeight && (
+                            <p className="text-sm text-destructive">{errors.platformHeight}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="slab-scaffoldHeight">ارتفاع داربست از روی پشت‌بام (متر) *</Label>
+                          <Input
+                            id="slab-scaffoldHeight"
+                            type="number"
+                            step="0.1"
+                            value={conditions.scaffoldHeightFromPlatform || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              scaffoldHeightFromPlatform: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 9"
+                            className={errors.scaffoldHeight ? 'border-destructive' : ''}
+                          />
+                          {errors.scaffoldHeight && (
+                            <p className="text-sm text-destructive">{errors.scaffoldHeight}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            اگر پشت‌بام بالا و پایین دارد، ارتفاع میانگین را وارد کنید
+                          </p>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+
+                  {/* 5. فاصله وسیله نقلیه */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">
+                      {conditions.totalMonths > 1 ? '۵.' : '۴.'} فاصله وسیله نقلیه تا پای کار
+                    </Label>
+                    <Select 
+                      value={vehicleReachesSite ? 'reaches' : 'distance'}
+                      onValueChange={(v) => setVehicleReachesSite(v === 'reaches')}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="reaches">وسیله نقلیه داربست تا پای کار می‌آید</SelectItem>
+                        <SelectItem value="distance">فاصله وسیله نقلیه تا پای کار را وارد کنید</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {!vehicleReachesSite && (
+                      <Card className="p-4 bg-background/50">
+                        <div className="space-y-2">
+                          <Label htmlFor="slab-vehicleDistance">فاصله به متر *</Label>
+                          <Input
+                            id="slab-vehicleDistance"
+                            type="number"
+                            step="1"
+                            value={conditions.vehicleDistance || ''}
+                            onChange={(e) => setConditions(prev => ({ 
+                              ...prev, 
+                              vehicleDistance: parseFloat(e.target.value) || null 
+                            }))}
+                            placeholder="مثال: 25"
+                            className={errors.vehicleDistance ? 'border-destructive' : ''}
+                          />
+                          {errors.vehicleDistance && (
+                            <p className="text-sm text-destructive">{errors.vehicleDistance}</p>
+                          )}
+                          <div className="text-xs text-muted-foreground space-y-1 mt-2 bg-secondary/30 p-3 rounded">
+                            <p className="font-semibold mb-2">افزایش قیمت بر اساس فاصله:</p>
+                            <p>• تا ۱۰ متر: بدون افزایش</p>
+                            <p>• ۱۰-۲۰ متر: +۲۰٪</p>
+                            <p>• ۲۰-۴۰ متر: +۴۰٪</p>
+                            <p>• ۴۰-۶۰ متر: +۶۰٪</p>
+                            <p>• ۶۰-۱۰۰ متر: +۸۰٪</p>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+
+                  {conditions.currentMonth > 1 && (
+                    <Alert className="bg-blue-500/10 border-blue-500/20">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertDescription>
+                        شما ماه {conditions.currentMonth} را انتخاب کرده‌اید. شرایط افزایش قیمت فقط برای ماه اول اعمال می‌شود.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+              )}
             </CardContent>
           </Card>
         )}
