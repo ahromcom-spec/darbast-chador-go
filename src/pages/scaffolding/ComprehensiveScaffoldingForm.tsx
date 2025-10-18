@@ -1459,46 +1459,6 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
       </Card>
       )}
 
-      {/* Location Map */}
-      <Card>
-        <CardHeader>
-          <CardTitle>موقعیت پروژه روی نقشه (اختیاری)</CardTitle>
-          <CardDescription>
-            برای محاسبه دقیق فاصله از مرکز استان، موقعیت پروژه را روی نقشه مشخص کنید
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {projectLocation && projectLocation.distance > 85 && (
-            <Alert className="bg-red-500/10 border-red-500/30">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-700">
-                ⚠️ فاصله پروژه شما {projectLocation.distance.toFixed(1)} کیلومتر از مرکز استان است.
-                <br />
-                <strong>توجه:</strong> بالای 85 کیلومتر از مرکز استان کار پذیرفته نمی‌شود. 
-                قیمت نهایی پس از بررسی کارشناسی اعلام خواهد شد.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {isFieldsLocked && projectLocation && (
-            <div className="h-[400px] rounded-lg overflow-hidden border bg-muted/20 flex items-center justify-center">
-              <div className="text-center p-6">
-                <AlertCircle className="h-12 w-12 text-primary mx-auto mb-4" />
-                <p className="text-lg font-semibold mb-2">موقعیت پروژه ثبت شده</p>
-                <p className="text-sm text-muted-foreground">
-                  فاصله از مرکز: <strong>{projectLocation.distance.toFixed(1)} کیلومتر</strong>
-                </p>
-              </div>
-            </div>
-          )}
-          
-          {projectLocation && (
-            <div className="text-sm text-muted-foreground bg-secondary/30 p-3 rounded-lg">
-              📍 فاصله از مرکز استان: <strong>{projectLocation.distance.toFixed(1)} کیلومتر</strong>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Submit Buttons */}
       <div className="flex gap-4">
