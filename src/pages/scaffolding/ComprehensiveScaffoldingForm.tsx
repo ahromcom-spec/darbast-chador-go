@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -798,17 +797,34 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
         </Card>
       )}
 
-      {/* Service Type Tabs */}
-      <Tabs value={activeService} onValueChange={isFieldsLocked ? undefined : (v) => setActiveService(v as any)} className="w-full">
-        <TabsList className={`grid w-full grid-cols-2 lg:grid-cols-4 ${isFieldsLocked ? 'pointer-events-none opacity-60' : ''}`}>
-          <TabsTrigger value="facade">نماکاری و سطحی</TabsTrigger>
-          <TabsTrigger value="formwork">کفراژ و حجمی</TabsTrigger>
-          <TabsTrigger value="ceiling-tiered">زیربتن تیرچه</TabsTrigger>
-          <TabsTrigger value="ceiling-slab">زیربتن دال</TabsTrigger>
-        </TabsList>
+      
+      {/* Service Type Selection - لیست کشویی */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">نوع خدمات داربست</Label>
+            <Select 
+              value={activeService} 
+              onValueChange={(v) => !isFieldsLocked && setActiveService(v as any)}
+              disabled={isFieldsLocked}
+            >
+              <SelectTrigger className="bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                <SelectItem value="facade">نماکاری و سطحی</SelectItem>
+                <SelectItem value="formwork">کفراژ و حجمی</SelectItem>
+                <SelectItem value="ceiling-tiered">زیربتن تیرچه</SelectItem>
+                <SelectItem value="ceiling-slab">زیربتن دال</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
+      <div className="space-y-6">
         {/* Facade Service */}
-        <TabsContent value="facade" className="space-y-6 mt-6">
+        {activeService === 'facade' && (
           <Card>
             <CardHeader>
               <CardTitle>خدمات داربست نماکاری و سطحی</CardTitle>
@@ -1103,10 +1119,10 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
 
         {/* Formwork Service */}
-        <TabsContent value="formwork" className="space-y-6 mt-6">
+        {activeService === 'formwork' && (
           <Card>
             <CardHeader>
               <CardTitle>خدمات داربست کفراژ و حجمی</CardTitle>
@@ -1122,10 +1138,10 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
               </p>
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
 
         {/* Ceiling Services */}
-        <TabsContent value="ceiling-tiered" className="space-y-6 mt-6">
+        {activeService === 'ceiling-tiered' && (
           <Card>
             <CardHeader>
               <CardTitle>خدمات داربست زیربتن تیرچه</CardTitle>
@@ -1140,9 +1156,9 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
               </p>
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
 
-        <TabsContent value="ceiling-slab" className="space-y-6 mt-6">
+        {activeService === 'ceiling-slab' && (
           <Card>
             <CardHeader>
               <CardTitle>خدمات داربست زیربتن دال</CardTitle>
@@ -1159,8 +1175,8 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
               </p>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
 
       {/* Price Display - فقط اگر ابعاد وارد شده باشد */}
       {totalArea > 0 && (
