@@ -400,7 +400,6 @@ export default function CreateProject() {
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={!!preselectedServiceTypeId}
                       >
                         <FormControl>
                           <SelectTrigger className="bg-background">
@@ -430,7 +429,7 @@ export default function CreateProject() {
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={!form.watch("service_type_id") || !!preselectedSubcategoryCode}
+                        disabled={!form.watch("service_type_id")}
                       >
                         <FormControl>
                           <SelectTrigger className="bg-background">

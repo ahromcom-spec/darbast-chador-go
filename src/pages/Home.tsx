@@ -46,21 +46,47 @@ export default function Home() {
     setSelectedProject('');
   };
 
-  // هنگامی که پروژه‌ها لود شدند، اگر فقط یک پروژه فعال وجود داشت، مستقیماً به صفحه افزودن خدمات برو
+  // هنگامی که پروژه‌ها لود شدند، هدایت خودکار بر اساس تعداد پروژه‌ها
   useEffect(() => {
-    if (!projectsLoading && selectedServiceType && selectedSubcategory && projects.length === 1) {
-      // فقط یک پروژه فعال وجود دارد - مستقیماً به صفحه افزودن خدمات برو
-      const project = projects[0];
+    if (!projectsLoading && selectedServiceType && selectedSubcategory) {
+      const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
+      const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
       
-      if (selectedSubcategory === '10') {
-        // برای داربست با اجناس به فرم جامع
-        navigate(`/scaffolding/form/${project.id}`);
-      } else {
-        // برای سایر خدمات به صفحه افزودن خدمات
-        navigate(`/user/add-service/${project.id}`);
+      if (projects.length === 0) {
+        // هیچ پروژه‌ای وجود ندارد - مستقیماً به صفحه ایجاد پروژه برو
+        if (selectedSubcategory === '10') {
+          navigate('/scaffolding/form', {
+            state: {
+              serviceTypeId: selectedServiceType,
+              subcategoryCode: selectedSubcategory,
+              serviceTypeName: serviceType?.name,
+              subcategoryName: subcategory?.name
+            }
+          });
+        } else {
+          navigate('/user/create-project', {
+            state: {
+              serviceTypeId: selectedServiceType,
+              subcategoryCode: selectedSubcategory,
+              serviceTypeName: serviceType?.name,
+              subcategoryName: subcategory?.name
+            }
+          });
+        }
+      } else if (projects.length === 1) {
+        // فقط یک پروژه فعال وجود دارد - مستقیماً به صفحه افزودن خدمات برو
+        const project = projects[0];
+        
+        if (selectedSubcategory === '10') {
+          // برای داربست با اجناس به فرم جامع
+          navigate(`/scaffolding/form/${project.id}`);
+        } else {
+          // برای سایر خدمات به صفحه افزودن خدمات
+          navigate(`/user/add-service/${project.id}`);
+        }
       }
     }
-  }, [projects, projectsLoading, selectedServiceType, selectedSubcategory, navigate]);
+  }, [projects, projectsLoading, selectedServiceType, selectedSubcategory, navigate, serviceTypes]);
 
   const handleProjectSelect = (projectId: string) => {
     setSelectedProject(projectId);
