@@ -815,10 +815,10 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 position="popper"
                 sideOffset={5}
               >
-                <SelectItem value="facade">نماکاری و سطحی</SelectItem>
-                <SelectItem value="formwork">کفراژ و حجمی</SelectItem>
-                <SelectItem value="ceiling-tiered">زیربتن تیرچه</SelectItem>
-                <SelectItem value="ceiling-slab">زیربتن دال</SelectItem>
+                <SelectItem value="facade">داربست نماکاری و سطحی</SelectItem>
+                <SelectItem value="formwork">داربست کفراژ و حجمی</SelectItem>
+                <SelectItem value="ceiling-tiered">داربست زیربتن تیرچه</SelectItem>
+                <SelectItem value="ceiling-slab">داربست زیربتن دال</SelectItem>
               </SelectContent>
             </Select>
           </div>
