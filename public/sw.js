@@ -1,13 +1,16 @@
-const CACHE_VERSION = 'ahrom-v12';
+const CACHE_VERSION = 'ahrom-v13-pwa-fix';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
-// فقط فایل‌های ضروری برای نصب اولیه (App Shell)
+// فایل‌های ضروری برای نصب اولیه (App Shell) - با آیکون‌های PWA جدید
 const SHELL_FILES = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
+  '/manifest.json',
+  '/ahrom-pwa-icon.png',
   '/ahrom-app-icon.png',
+  '/ahrom-logo.png',
   '/ahrom-logo-original.png'
 ];
 
@@ -37,12 +40,29 @@ self.addEventListener('message', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const cacheNames = await caches.keys();
+    
+    // حذف تمام کش‌های قدیمی
     await Promise.all(
       cacheNames.map((cacheName) => {
-        // حذف تمام کش‌های قدیمی که مربوط به نسخه فعلی نیستند
         if (!cacheName.startsWith(CACHE_VERSION)) {
           console.log('[SW] Removing old cache:', cacheName);
           return caches.delete(cacheName);
+        }
+      })
+    );
+
+    // حذف کش آیکون‌های قدیمی به صورت دستی
+    const cache = await caches.open(CACHE_NAME);
+    const keys = await cache.keys();
+    await Promise.all(
+      keys.map((request) => {
+        const url = new URL(request.url);
+        // حذف آیکون‌های قدیمی که ممکن است با نام دیگر کش شده باشند
+        if (url.pathname.includes('icon-') || 
+            url.pathname.includes('apple-touch') ||
+            (url.pathname.includes('ahrom') && !url.pathname.includes('pwa-icon'))) {
+          console.log('[SW] Removing old icon cache:', url.pathname);
+          return cache.delete(request);
         }
       })
     );
@@ -52,7 +72,7 @@ self.addEventListener('activate', (event) => {
       try { await self.registration.navigationPreload.enable(); } catch (e) {}
     }
 
-    console.log('[SW] Service Worker activated');
+    console.log('[SW] Service Worker activated with new PWA icons');
     await self.clients.claim();
   })());
 });
