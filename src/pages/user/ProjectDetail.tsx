@@ -187,7 +187,7 @@ export default function ProjectDetail() {
               <Package className="h-6 w-6 text-primary" />
               درخواست‌های خدمات ({serviceRequests.length})
             </h2>
-            <Button onClick={() => navigate(`/user/projects/${id}/add-service`)}>
+            <Button onClick={() => navigate(`/user/add-service/${id}`)}>
               {project.service_type === 'scaffolding' 
                 ? 'ثبت سفارش اجرای داربست به همراه اجناس' 
                 : 'افزودن درخواست جدید'}
