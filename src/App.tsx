@@ -72,7 +72,7 @@ const queryClient = new QueryClient({
 
 // Loading component
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
     <LoadingSpinner size="lg" text="در حال بارگذاری..." />
   </div>
 );
