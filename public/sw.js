@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ahrom-v11';
+const CACHE_VERSION = 'ahrom-v12';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -35,22 +35,26 @@ self.addEventListener('message', (event) => {
 
 // فعال‌سازی - پاک‌سازی کش‌های قدیمی
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          // حذف تمام کش‌های قدیمی که مربوط به نسخه فعلی نیستند
-          if (!cacheName.startsWith(CACHE_VERSION)) {
-            console.log('[SW] Removing old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      console.log('[SW] Service Worker activated');
-      return self.clients.claim();
-    })
-  );
+  event.waitUntil((async () => {
+    const cacheNames = await caches.keys();
+    await Promise.all(
+      cacheNames.map((cacheName) => {
+        // حذف تمام کش‌های قدیمی که مربوط به نسخه فعلی نیستند
+        if (!cacheName.startsWith(CACHE_VERSION)) {
+          console.log('[SW] Removing old cache:', cacheName);
+          return caches.delete(cacheName);
+        }
+      })
+    );
+
+    // فعال‌سازی Navigation Preload برای بهبود سرعت
+    if (self.registration.navigationPreload) {
+      try { await self.registration.navigationPreload.enable(); } catch (e) {}
+    }
+
+    console.log('[SW] Service Worker activated');
+    await self.clients.claim();
+  })());
 });
 
 // محدود کردن سایز کش Runtime
@@ -75,23 +79,31 @@ self.addEventListener('fetch', (event) => {
 
   // صفحات HTML: Network First با Runtime Cache
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(request)
-        .then(async (response) => {
-          if (response.status === 200) {
-            const cache = await caches.open(RUNTIME_CACHE);
-            cache.put(request, response.clone());
-            // محدود کردن سایز کش
-            trimCache(RUNTIME_CACHE, MAX_RUNTIME_CACHE_SIZE);
-          }
-          return response;
-        })
-        .catch(async () => {
-          // اگر آنلاین نیست، از کش استفاده کن
-          const cached = await caches.match(request);
-          return cached || caches.match('/');
-        })
-    );
+    event.respondWith((async () => {
+      try {
+        // تلاش برای استفاده از پاسخ پیش‌لود شده توسط مرورگر
+        const preloaded = await event.preloadResponse;
+        if (preloaded) {
+          const cache = await caches.open(RUNTIME_CACHE);
+          cache.put(request, preloaded.clone());
+          trimCache(RUNTIME_CACHE, MAX_RUNTIME_CACHE_SIZE);
+          return preloaded;
+        }
+
+        const response = await fetch(request);
+        if (response.status === 200) {
+          const cache = await caches.open(RUNTIME_CACHE);
+          cache.put(request, response.clone());
+          // محدود کردن سایز کش
+          trimCache(RUNTIME_CACHE, MAX_RUNTIME_CACHE_SIZE);
+        }
+        return response;
+      } catch (err) {
+        // اگر آنلاین نیست، از کش استفاده کن
+        const cached = await caches.match(request);
+        return cached || caches.match('/');
+      }
+    })());
     return;
   }
 
