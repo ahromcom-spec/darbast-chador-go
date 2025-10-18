@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/navigation/AppSidebar';
-import { LogOut, Menu } from 'lucide-react';
+import { LogOut, Menu, PanelLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useMediaQuery } from '@/hooks/useResponsive';
@@ -93,11 +93,6 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Desktop Sidebar Toggle */}
-                <div className="hidden md:block">
-                  <SidebarTrigger className="rounded-md" />
-                </div>
-                
                 <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
                   <LogOut className="h-4 w-4" />
                   <span className="hidden sm:inline">خروج</span>
@@ -112,6 +107,13 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
               {children}
             </div>
           </main>
+
+          {/* Floating Sidebar Toggle - Bottom Left */}
+          <div className="hidden md:block fixed bottom-6 left-6 z-50">
+            <SidebarTrigger className="rounded-full h-12 w-12 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all">
+              <PanelLeft className="h-5 w-5" />
+            </SidebarTrigger>
+          </div>
         </div>
       </div>
     </SidebarProvider>
