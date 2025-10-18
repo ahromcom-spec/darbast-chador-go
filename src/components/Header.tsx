@@ -1,6 +1,7 @@
-import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award } from "lucide-react";
+import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award, Bell, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ahromLogo from "@/assets/ahrom-logo.png";
@@ -8,6 +9,8 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useGeneralManagerRole } from "@/hooks/useGeneralManagerRole";
 import { useToast } from "@/hooks/use-toast";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -17,6 +20,11 @@ const Header = () => {
   const { toast } = useToast();
   const { profile } = useUserProfile();
   const displayName = profile?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
+  const { canInstall, isStandalone, promptInstall } = usePWAInstall();
+  const { permission, requestPermission } = usePushNotifications();
+  
+  const showNotificationPrompt = permission === 'default' || permission === 'denied';
+  const showInstallPrompt = canInstall && !isStandalone;
 
   const handleSignOut = async () => {
     try {
@@ -100,6 +108,39 @@ const Header = () => {
               </DropdownMenu>
             </div>
           </div>
+
+          {/* Notification & Install Prompts - Below Contact Dropdown */}
+          {(showNotificationPrompt || showInstallPrompt) && (
+            <div className="px-2 pb-2 border-b border-border/30">
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {showNotificationPrompt && (
+                      <Button
+                        onClick={() => navigate('/settings/notifications')}
+                        size="sm"
+                        className="flex-1 min-w-[140px] gap-2"
+                      >
+                        <Bell className="h-3 w-3" />
+                        <span className="text-xs">فعال‌سازی اعلان‌ها</span>
+                      </Button>
+                    )}
+                    {showInstallPrompt && (
+                      <Button
+                        onClick={() => navigate('/settings/install')}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 min-w-[140px] gap-2"
+                      >
+                        <Download className="h-3 w-3" />
+                        <span className="text-xs">نصب برنامه</span>
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Second Row: Auth Buttons, Notifications - Horizontal Layout */}
           <div className="flex items-center justify-end gap-2 py-2 pr-2">
@@ -217,6 +258,39 @@ const Header = () => {
               </DropdownMenu>
             </div>
           </div>
+
+          {/* Notification & Install Prompts - Below Contact Dropdown */}
+          {(showNotificationPrompt || showInstallPrompt) && (
+            <div className="px-4 pb-3 border-b border-border/50">
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {showNotificationPrompt && (
+                      <Button
+                        onClick={() => navigate('/settings/notifications')}
+                        size="default"
+                        className="flex-1 min-w-[180px] gap-2"
+                      >
+                        <Bell className="h-4 w-4" />
+                        <span>فعال‌سازی اعلان‌ها</span>
+                      </Button>
+                    )}
+                    {showInstallPrompt && (
+                      <Button
+                        onClick={() => navigate('/settings/install')}
+                        variant="outline"
+                        size="default"
+                        className="flex-1 min-w-[180px] gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span>نصب برنامه</span>
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Second Row: Login/Register - Right aligned */}
           <div className="flex items-center justify-end gap-4 py-3 pr-4">
