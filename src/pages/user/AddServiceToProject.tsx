@@ -136,11 +136,6 @@ export default function AddServiceToProject() {
     project.subcategory?.service_type?.name === 'داربست' && 
     project.subcategory?.name === 'اجرای داربست به همراه اجناس';
 
-  // اگر زیرشاخه "خدمات اجرای داربست به همراه اجناس" است، فرم تخصصی را نشان بده
-  if (isScaffoldingWithMaterials) {
-    return <ComprehensiveScaffoldingForm projectId={projectId!} />;
-  }
-
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -214,53 +209,57 @@ export default function AddServiceToProject() {
           </Card>
         )}
 
-        {/* فرم افزودن خدمات جدید */}
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Plus className="w-5 h-5 text-primary" />
-            <h3 className="font-bold text-lg">افزودن خدمات جدید</h3>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="description">
-                توضیحات خدمات <span className="text-destructive">*</span>
-              </Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="توضیحات کامل خدمات مورد نیاز را وارد کنید..."
-                className="min-h-[120px]"
-                required
-              />
+        {/* فرم افزودن خدمات - فرم جامع برای داربست، فرم ساده برای سایر خدمات */}
+        {isScaffoldingWithMaterials ? (
+          <ComprehensiveScaffoldingForm projectId={projectId!} />
+        ) : (
+          <Card className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Plus className="w-5 h-5 text-primary" />
+              <h3 className="font-bold text-lg">افزودن خدمات جدید</h3>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">یادداشت‌های اضافی (اختیاری)</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="هر گونه توضیحات تکمیلی..."
-                className="min-h-[80px]"
-              />
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="description">
+                  توضیحات خدمات <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="توضیحات کامل خدمات مورد نیاز را وارد کنید..."
+                  className="min-h-[120px]"
+                  required
+                />
+              </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={submitting} className="flex-1">
-                {submitting ? "در حال ثبت..." : "افزودن خدمات"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/user/projects")}
-              >
-                بازگشت
-              </Button>
-            </div>
-          </form>
-        </Card>
+              <div className="space-y-2">
+                <Label htmlFor="notes">یادداشت‌های اضافی (اختیاری)</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="هر گونه توضیحات تکمیلی..."
+                  className="min-h-[80px]"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button type="submit" disabled={submitting} className="flex-1">
+                  {submitting ? "در حال ثبت..." : "افزودن خدمات"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate("/user/projects")}
+                >
+                  بازگشت
+                </Button>
+              </div>
+            </form>
+          </Card>
+        )}
       </div>
     </div>
   );
