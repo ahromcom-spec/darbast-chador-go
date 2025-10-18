@@ -81,13 +81,13 @@
 
     --radius: 0.75rem;
 
-    --sidebar-background: 45 25% 98%;
+    --sidebar-background: 220 13% 91%;
     --sidebar-foreground: 220 20% 15%;
     --sidebar-primary: 215 85% 25%;
     --sidebar-primary-foreground: 45 25% 98%;
-    --sidebar-accent: 215 15% 92%;
+    --sidebar-accent: 220 10% 85%;
     --sidebar-accent-foreground: 215 90% 20%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 220 13% 80%;
     --sidebar-ring: 215 85% 25%;
   }
 
