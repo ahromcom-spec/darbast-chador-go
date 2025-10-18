@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 export function usePageTitle(title: string) {
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = title ? `${title} | اهرم` : 'اهرم - خدمات ساختمانی';
+    document.title = title ? `${title} | اهرم` : 'خدمات ساختمانی و منزل اهرم';
     
     return () => {
       document.title = previousTitle;
