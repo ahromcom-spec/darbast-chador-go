@@ -1132,13 +1132,88 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
               <CardDescription>اطلاعات پروژه خود را وارد کنید</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* استفاده از همان فیلدهای بخش نماکاری */}
-              <p className="text-sm text-muted-foreground bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
-                💡 از همان فیلدهای بخش نماکاری استفاده می‌شود. تفاوت فقط در قیمت‌گذاری است:
-                <br />• تا 100 متر: 3,200,000 تومان
-                <br />• 100-200 متر: 4,000,000 تومان  
-                <br />• بالای 200 متر: 20,000 تومان به ازای هر متر مکعب
-              </p>
+              {/* Project Address - قفل شده در حالت پروژه موجود */}
+              {!isFieldsLocked && (
+                <div className="space-y-2">
+                  <Label htmlFor="projectAddress">آدرس محل پروژه *</Label>
+                  <Input
+                    id="projectAddress"
+                    value={projectAddress}
+                    onChange={(e) => setProjectAddress(e.target.value)}
+                    placeholder="آدرس کامل پروژه"
+                    className={errors.projectAddress ? 'border-destructive' : ''}
+                  />
+                  {errors.projectAddress && (
+                    <p className="text-sm text-destructive">{errors.projectAddress}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Dimensions */}
+              <div className="space-y-4">
+                <Label>ابعاد داربست (برای محاسبه متراژ)</Label>
+                
+                {dimensions.map((dim) => (
+                  <Card key={dim.id} className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>طول (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.length}
+                            onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
+                            placeholder="6"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>ارتفاع (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.height}
+                            onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
+                            placeholder="9"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-sm text-muted-foreground">متراژ</span>
+                        <span className="font-bold text-primary">
+                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م²
+                        </span>
+                        {dimensions.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeDimension(dim.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDimension}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  افزودن نما جدید
+                </Button>
+
+                <div className="p-4 bg-primary/5 rounded-lg">
+                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مربع</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -1151,12 +1226,88 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
               <CardDescription>اطلاعات پروژه خود را وارد کنید</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-sm text-muted-foreground bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
-                💡 از همان فیلدهای بخش نماکاری استفاده می‌شود. تفاوت فقط در قیمت‌گذاری است:
-                <br />• تا 100 متر: 7,500,000 تومان
-                <br />• 100-200 متر: 11,000,000 تومان
-                <br />• بالای 200 متر: 45,000 تومان به ازای هر متر مکعب
-              </p>
+              {/* Project Address - قفل شده در حالت پروژه موجود */}
+              {!isFieldsLocked && (
+                <div className="space-y-2">
+                  <Label htmlFor="projectAddress">آدرس محل پروژه *</Label>
+                  <Input
+                    id="projectAddress"
+                    value={projectAddress}
+                    onChange={(e) => setProjectAddress(e.target.value)}
+                    placeholder="آدرس کامل پروژه"
+                    className={errors.projectAddress ? 'border-destructive' : ''}
+                  />
+                  {errors.projectAddress && (
+                    <p className="text-sm text-destructive">{errors.projectAddress}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Dimensions */}
+              <div className="space-y-4">
+                <Label>ابعاد داربست (برای محاسبه متراژ)</Label>
+                
+                {dimensions.map((dim) => (
+                  <Card key={dim.id} className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>طول (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.length}
+                            onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
+                            placeholder="6"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>ارتفاع (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.height}
+                            onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
+                            placeholder="9"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-sm text-muted-foreground">متراژ</span>
+                        <span className="font-bold text-primary">
+                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م²
+                        </span>
+                        {dimensions.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeDimension(dim.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDimension}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  افزودن نما جدید
+                </Button>
+
+                <div className="p-4 bg-primary/5 rounded-lg">
+                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مربع</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -1165,17 +1316,91 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
           <Card>
             <CardHeader>
               <CardTitle>خدمات داربست زیربتن دال</CardTitle>
-              <CardDescription>
-                روش محاسبه: تعداد پایه‌های داربست × مساحت مربع × ارتفاع
-              </CardDescription>
+              <CardDescription>اطلاعات پروژه خود را وارد کنید</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-sm text-muted-foreground bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
-                💡 از همان فیلدهای بخش نماکاری استفاده می‌شود. تفاوت فقط در قیمت‌گذاری است:
-                <br />• تا 100 متر: 8,000,000 تومان
-                <br />• 100-200 متر: 15,000,000 تومان
-                <br />• بالای 200 متر: 70,000 تومان به ازای هر متر مکعب
-              </p>
+              {/* Project Address - قفل شده در حالت پروژه موجود */}
+              {!isFieldsLocked && (
+                <div className="space-y-2">
+                  <Label htmlFor="projectAddress">آدرس محل پروژه *</Label>
+                  <Input
+                    id="projectAddress"
+                    value={projectAddress}
+                    onChange={(e) => setProjectAddress(e.target.value)}
+                    placeholder="آدرس کامل پروژه"
+                    className={errors.projectAddress ? 'border-destructive' : ''}
+                  />
+                  {errors.projectAddress && (
+                    <p className="text-sm text-destructive">{errors.projectAddress}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Dimensions */}
+              <div className="space-y-4">
+                <Label>ابعاد داربست (برای محاسبه متراژ)</Label>
+                
+                {dimensions.map((dim) => (
+                  <Card key={dim.id} className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>طول (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.length}
+                            onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
+                            placeholder="6"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>ارتفاع (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.height}
+                            onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
+                            placeholder="9"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-sm text-muted-foreground">متراژ</span>
+                        <span className="font-bold text-primary">
+                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م²
+                        </span>
+                        {dimensions.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeDimension(dim.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDimension}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  افزودن نما جدید
+                </Button>
+
+                <div className="p-4 bg-primary/5 rounded-lg">
+                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مربع</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
