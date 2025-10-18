@@ -10,9 +10,9 @@ import { AdminRoute } from "@/components/AdminRoute";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 import { PageLoadProgress } from "@/components/common/PageLoadProgress";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import Header from "./components/Header";
 import Home from "./pages/Home";
-import { Loader2 } from "lucide-react";
 
 // Lazy load all pages for better performance
 const AdminLayout = lazy(() => import("@/pages/admin/AdminLayout"));
@@ -73,7 +73,7 @@ const queryClient = new QueryClient({
 // Loading component
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <LoadingSpinner size="lg" text="در حال بارگذاری..." />
   </div>
 );
 
