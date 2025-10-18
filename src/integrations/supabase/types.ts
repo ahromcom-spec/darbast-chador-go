@@ -1801,6 +1801,56 @@ export type Database = {
           },
         ]
       }
+      services_v3: {
+        Row: {
+          created_at: string
+          description: string | null
+          execution_end_date: string | null
+          execution_start_date: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          service_code: string
+          service_number: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          execution_end_date?: string | null
+          execution_start_date?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          service_code: string
+          service_number: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          execution_end_date?: string | null
+          execution_start_date?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          service_code?: string
+          service_number?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_v3_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_profiles: {
         Row: {
           approved_at: string | null
@@ -2285,6 +2335,10 @@ export type Database = {
           _province_id: string
           _subcategory_id: string
         }
+        Returns: string
+      }
+      generate_service_code: {
+        Args: { _project_id: string }
         Returns: string
       }
       get_contractor_contact_info: {
