@@ -48,6 +48,17 @@ interface Order {
   };
 }
 
+// تابع استخراج قیمت از notes
+const extractPriceFromNotes = (notes?: string): number | null => {
+  if (!notes) return null;
+  try {
+    const parsedNotes = typeof notes === 'string' ? JSON.parse(notes) : notes;
+    return parsedNotes?.estimatedPrice || null;
+  } catch {
+    return null;
+  }
+};
+
 const getStatusBadge = (status: string) => {
   const variants: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
     draft: { label: 'پیش‌نویس', variant: 'outline' },
@@ -246,6 +257,22 @@ export default function OrdersDashboard() {
                     )}
                   </div>
                 </div>
+
+                {/* نمایش قیمت سفارش */}
+                {(() => {
+                  const price = extractPriceFromNotes(order.notes);
+                  if (price) {
+                    return (
+                      <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                        <span className="text-sm font-medium">قیمت تخمینی:</span>
+                        <span className="text-lg font-bold text-primary">
+                          {price.toLocaleString('fa-IR')} تومان
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4" />
