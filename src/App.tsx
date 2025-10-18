@@ -38,6 +38,7 @@ const OrdersDashboard = lazy(() => import("@/pages/user/OrdersDashboard"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
 const ProjectManagement = lazy(() => import("@/pages/user/ProjectManagement"));
 const CreateProject = lazy(() => import("@/pages/user/CreateProject"));
+const AddServiceToProject = lazy(() => import("@/pages/user/AddServiceToProject"));
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const ScaffoldingForm = lazy(() => import("./pages/scaffolding/ScaffoldingForm"));
@@ -126,6 +127,11 @@ const App = () => (
               <Route path="/user/create-project" element={
                 <ProtectedRoute>
                   <CreateProject />
+                </ProtectedRoute>
+              } />
+              <Route path="/user/add-service/:projectId" element={
+                <ProtectedRoute>
+                  <AddServiceToProject />
                 </ProtectedRoute>
               } />
               <Route path="/projects" element={
