@@ -87,7 +87,7 @@ export default function ProjectManagement() {
   };
 
   const handleAddServiceToProject = (projectId: string) => {
-    navigate(`/user/add-service/${projectId}`);
+    navigate(`/service/scaffolding-order/${projectId}`);
   };
 
   if (loading) return <LoadingSpinner />;
