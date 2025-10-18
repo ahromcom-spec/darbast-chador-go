@@ -20,7 +20,14 @@ import { ContractorForm } from '@/components/profile/ContractorForm';
 import { NewContractorForm } from '@/components/profile/NewContractorForm';
 import { useContractorRole } from '@/hooks/useContractorRole';
 import { useCEORole } from '@/hooks/useCEORole';
+import { useAdminRole } from '@/hooks/useAdminRole';
+import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
+import { useSalesManagerRole } from '@/hooks/useSalesManagerRole';
+import { useFinanceManagerRole } from '@/hooks/useFinanceManagerRole';
+import { useExecutiveManagerRole } from '@/hooks/useExecutiveManagerRole';
 import { CEOManagementSection } from '@/components/profile/CEOManagementSection';
+import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
+import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 
 interface UserOrder {
   id: string;
@@ -49,12 +56,19 @@ export default function UserProfile() {
   const { user } = useAuth();
   const { isContractor } = useContractorRole();
   const { isCEO } = useCEORole();
+  const { isAdmin } = useAdminRole();
+  const { isGeneralManager } = useGeneralManagerRole();
+  const { isSalesManager } = useSalesManagerRole();
+  const { isFinanceManager } = useFinanceManagerRole();
+  const { isExecutiveManager } = useExecutiveManagerRole();
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [projectOrders, setProjectOrders] = useState<ProjectOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [staffDialogOpen, setStaffDialogOpen] = useState(false);
+
+  const isManager = isCEO || isAdmin || isGeneralManager || isSalesManager || isFinanceManager || isExecutiveManager;
 
   useEffect(() => {
     if (user) {
@@ -204,12 +218,22 @@ const fetchOrders = async () => {
               <CEOManagementSection userId={user.id} userEmail={user.email || ''} />
             )}
 
+            {/* Manager Activity Summary */}
+            {isManager && (
+              <ManagerActivitySummary userId={user.id} />
+            )}
+
             <ProfileForm
               userId={user.id}
               initialFullName={fullName}
               phoneNumber={phoneNumber}
               onUpdate={handleProfileUpdate}
             />
+
+            {/* Manager Approval History */}
+            {isManager && (
+              <ApprovalHistory userId={user.id} />
+            )}
 
             {/* Staff Registration */}
             <div className="flex justify-center pt-4">

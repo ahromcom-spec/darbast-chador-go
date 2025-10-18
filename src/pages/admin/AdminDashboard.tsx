@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Users, Clock, CheckCircle } from 'lucide-react';
+import { Package, Users, Clock, CheckCircle, FileText, Settings } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
+import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
+import { Button } from '@/components/ui/button';
 
 interface DashboardStats {
   totalOrders: number;
@@ -11,6 +15,7 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalOrders: 0,
     pendingOrders: 0,
@@ -114,6 +119,53 @@ export default function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Manager Activity Summary */}
+      {user && <ManagerActivitySummary userId={user.id} />}
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>دسترسی سریع</CardTitle>
+          <CardDescription>مدیریت و نظارت بر سیستم</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button 
+              variant="outline" 
+              className="h-auto flex-col items-start p-4"
+              onClick={() => window.location.href = '/admin/orders'}
+            >
+              <FileText className="h-5 w-5 mb-2 text-primary" />
+              <span className="font-semibold">مدیریت سفارشات</span>
+              <span className="text-xs text-muted-foreground mt-1">بررسی و پردازش سفارشات</span>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="h-auto flex-col items-start p-4"
+              onClick={() => window.location.href = '/admin/users'}
+            >
+              <Users className="h-5 w-5 mb-2 text-primary" />
+              <span className="font-semibold">مدیریت کاربران</span>
+              <span className="text-xs text-muted-foreground mt-1">مشاهده و ویرایش کاربران</span>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="h-auto flex-col items-start p-4"
+              onClick={() => window.location.href = '/admin/staff-requests'}
+            >
+              <CheckCircle className="h-5 w-5 mb-2 text-primary" />
+              <span className="font-semibold">درخواست‌های پرسنل</span>
+              <span className="text-xs text-muted-foreground mt-1">بررسی و تایید</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Approval History */}
+      {user && <ApprovalHistory userId={user.id} />}
     </div>
   );
 }

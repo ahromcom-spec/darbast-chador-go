@@ -1,13 +1,18 @@
 import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, UserCheck, Users, Clock } from 'lucide-react';
+import { Shield, UserCheck, Users, Clock, FileText, TrendingUp } from 'lucide-react';
 import { usePhoneWhitelist } from '@/hooks/usePhoneWhitelist';
 import { useContractorVerificationRequests } from '@/hooks/useContractorVerificationRequests';
 import { useStaffVerificationRequests } from '@/hooks/useStaffVerificationRequests';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useAuth } from '@/contexts/AuthContext';
+import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
+import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
+import { Button } from '@/components/ui/button';
 
 export const CEODashboard = () => {
   usePageTitle('داشبورد CEO');
+  const { user } = useAuth();
 
   const { whitelist, loading: whitelistLoading } = usePhoneWhitelist();
   const {
@@ -82,6 +87,9 @@ export const CEODashboard = () => {
         ))}
       </div>
 
+      {/* Manager Activity Summary */}
+      {user && <ManagerActivitySummary userId={user.id} />}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -151,6 +159,59 @@ export const CEODashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Approval History */}
+      {user && <ApprovalHistory userId={user.id} />}
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>دسترسی سریع</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button 
+              variant="outline" 
+              className="h-auto flex-col items-start p-4"
+              onClick={() => window.location.href = '/ceo/orders'}
+            >
+              <FileText className="h-5 w-5 mb-2 text-primary" />
+              <span className="font-semibold">مدیریت سفارشات</span>
+              <span className="text-xs text-muted-foreground mt-1">بررسی و تایید سفارشات</span>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="h-auto flex-col items-start p-4"
+              onClick={() => window.location.href = '/ceo/staff-verifications'}
+            >
+              <Users className="h-5 w-5 mb-2 text-primary" />
+              <span className="font-semibold">تایید پرسنل</span>
+              <span className="text-xs text-muted-foreground mt-1">بررسی درخواست‌های پرسنل</span>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="h-auto flex-col items-start p-4"
+              onClick={() => window.location.href = '/ceo/contractor-verifications'}
+            >
+              <UserCheck className="h-5 w-5 mb-2 text-primary" />
+              <span className="font-semibold">تایید پیمانکاران</span>
+              <span className="text-xs text-muted-foreground mt-1">بررسی درخواست‌های پیمانکاری</span>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="h-auto flex-col items-start p-4"
+              onClick={() => window.location.href = '/ceo/phone-whitelist'}
+            >
+              <Shield className="h-5 w-5 mb-2 text-primary" />
+              <span className="font-semibold">مدیریت دسترسی</span>
+              <span className="text-xs text-muted-foreground mt-1">لیست شماره‌های مجاز</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCEORole } from '@/hooks/useCEORole';
 import { CEOManagementSection } from '@/components/profile/CEOManagementSection';
+import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
+import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 
 export default function UserProfileView() {
   const { userId } = useParams<{ userId: string }>();
@@ -134,6 +136,16 @@ export default function UserProfileView() {
       {/* CEO Management Section */}
       {isCEO && userId && (
         <CEOManagementSection userId={userId} />
+      )}
+
+      {/* Manager Activity Summary - only show if viewing a manager */}
+      {userId && userRoles && userRoles.some(r => 
+        ['ceo', 'admin', 'general_manager', 'sales_manager', 'finance_manager', 'scaffold_executive_manager'].includes(r.role)
+      ) && (
+        <>
+          <ManagerActivitySummary userId={userId} />
+          <ApprovalHistory userId={userId} />
+        </>
       )}
 
       <Tabs defaultValue="projects" className="w-full">

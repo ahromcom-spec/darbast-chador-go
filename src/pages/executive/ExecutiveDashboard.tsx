@@ -5,8 +5,12 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Users, ShoppingCart, Clock, CheckCircle } from 'lucide-react';
 import { StatCard } from '@/components/common/StatCard';
+import { useAuth } from '@/contexts/AuthContext';
+import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
+import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 
 export default function ExecutiveDashboard() {
+  const { user } = useAuth();
   const { data: stats, isLoading } = useQuery({
     queryKey: ['executive-stats'],
     queryFn: async () => {
@@ -94,6 +98,9 @@ export default function ExecutiveDashboard() {
         </Card>
       </div>
 
+      {/* Manager Activity Summary */}
+      {user && <ManagerActivitySummary userId={user.id} />}
+
       <Card>
         <CardHeader>
           <CardTitle>راهنمای استفاده</CardTitle>
@@ -137,6 +144,9 @@ export default function ExecutiveDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Approval History */}
+      {user && <ApprovalHistory userId={user.id} />}
     </div>
   );
 }
