@@ -48,10 +48,10 @@ export default function Home() {
     setSelectedProject('');
   };
 
-  // هنگامی که پروژه‌ها لود شدند، هدایت خودکار بر اساس تعداد پروژه‌ها
+  // هنگامی که نوع خدمات انتخاب شد، اول چک کنیم کاربر لاگین است
   useEffect(() => {
-    if (!projectsLoading && selectedServiceType && selectedSubcategory) {
-      // اول چک کنیم که کاربر لاگین کرده است
+    if (selectedServiceType && selectedSubcategory) {
+      // اول چک می‌کنیم که کاربر لاگین کرده است
       if (!user) {
         toast({
           title: 'نیاز به ورود',
@@ -67,6 +67,12 @@ export default function Home() {
         });
         return;
       }
+    }
+  }, [selectedServiceType, selectedSubcategory, user, navigate, toast]);
+
+  // بعد از احراز هویت، هدایت خودکار بر اساس تعداد پروژه‌ها
+  useEffect(() => {
+    if (!projectsLoading && selectedServiceType && selectedSubcategory && user) {
 
       const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
       const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
@@ -105,7 +111,7 @@ export default function Home() {
         }
       }
     }
-  }, [projects, projectsLoading, selectedServiceType, selectedSubcategory, navigate, serviceTypes, user, toast]);
+  }, [projects, projectsLoading, selectedServiceType, selectedSubcategory, navigate, serviceTypes, user]);
 
   const handleProjectSelect = (projectId: string) => {
     setSelectedProject(projectId);
