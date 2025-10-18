@@ -10,10 +10,11 @@ import { toast } from 'sonner';
 interface ProfileFormProps {
   userId: string;
   initialFullName: string;
+  phoneNumber?: string;
   onUpdate: (fullName: string) => void;
 }
 
-export function ProfileForm({ userId, initialFullName, onUpdate }: ProfileFormProps) {
+export function ProfileForm({ userId, initialFullName, phoneNumber, onUpdate }: ProfileFormProps) {
   const [editMode, setEditMode] = useState(false);
   const [fullName, setFullName] = useState(initialFullName);
   const [saving, setSaving] = useState(false);
@@ -71,6 +72,19 @@ export function ProfileForm({ userId, initialFullName, onUpdate }: ProfileFormPr
             placeholder="نام و نام خانوادگی خود را وارد کنید"
           />
         </div>
+
+        {phoneNumber && (
+          <div className="space-y-2">
+            <Label htmlFor="phoneNumber">شماره تماس</Label>
+            <Input
+              id="phoneNumber"
+              value={phoneNumber}
+              disabled
+              className="bg-muted cursor-not-allowed"
+              placeholder="شماره تماس"
+            />
+          </div>
+        )}
 
         {editMode && (
           <div className="flex gap-2">

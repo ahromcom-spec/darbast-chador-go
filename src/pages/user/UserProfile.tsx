@@ -50,6 +50,7 @@ export default function UserProfile() {
   const [projectOrders, setProjectOrders] = useState<ProjectOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [staffDialogOpen, setStaffDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -65,12 +66,13 @@ export default function UserProfile() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('full_name, phone_number')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (error) throw error;
       setFullName(data?.full_name || '');
+      setPhoneNumber(data?.phone_number || '');
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -197,6 +199,7 @@ const fetchOrders = async () => {
             <ProfileForm
               userId={user.id}
               initialFullName={fullName}
+              phoneNumber={phoneNumber}
               onUpdate={handleProfileUpdate}
             />
 
