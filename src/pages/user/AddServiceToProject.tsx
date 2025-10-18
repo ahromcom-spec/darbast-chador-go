@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useProjectServices } from "@/hooks/useProjectServices";
 import { Package, Plus, CheckCircle2 } from "lucide-react";
+import ComprehensiveScaffoldingForm from "@/pages/scaffolding/ComprehensiveScaffoldingForm";
 
 interface Project {
   id: string;
@@ -129,6 +130,16 @@ export default function AddServiceToProject() {
 
   if (loading || servicesLoading) return <LoadingSpinner />;
   if (!project) return null;
+
+  // بررسی اینکه آیا زیرشاخه "خدمات اجرای داربست به همراه اجناس" است
+  const isScaffoldingWithMaterials = 
+    project.subcategory?.service_type?.name === 'داربست' && 
+    project.subcategory?.name === 'خدمات اجرای داربست به همراه اجناس';
+
+  // اگر زیرشاخه "خدمات اجرای داربست به همراه اجناس" است، فرم تخصصی را نشان بده
+  if (isScaffoldingWithMaterials) {
+    return <ComprehensiveScaffoldingForm />;
+  }
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
