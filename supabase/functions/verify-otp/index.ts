@@ -23,7 +23,10 @@ serve(async (req) => {
 
     // Normalize to Iranian mobile format: 09XXXXXXXXX (same as send-otp)
     const normalizeIranPhone = (input: string) => {
-      let raw = input.replace(/[^0-9]/g, '');
+      // Security: Limit input length to prevent memory exhaustion
+      if (input.length > 20) return '';
+      
+      let raw = input.slice(0, 20).replace(/[^0-9]/g, '');
       if (raw.startsWith('0098')) raw = '0' + raw.slice(4);
       else if (raw.startsWith('098')) raw = '0' + raw.slice(3);
       else if (raw.startsWith('98')) raw = '0' + raw.slice(2);
@@ -37,8 +40,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check if this is a test phone number (starts with aaa or bbb)
-    const isTestPhone = phone_number.startsWith('aaa') || phone_number.startsWith('bbb');
+    // Security: Only allow test phones in development environment
+    const isDevelopment = Deno.env.get('ENVIRONMENT') !== 'production';
+    const isTestPhone = isDevelopment && (phone_number.startsWith('aaa') || phone_number.startsWith('bbb'));
     
     let normalizedPhone: string;
     let authPhone: string;
@@ -182,13 +186,17 @@ serve(async (req) => {
     
     const userExists = userWithPhone || userWithEmail;
 
+    // Security: Add random delay to prevent timing attacks (50-150ms)
+    const randomDelay = Math.floor(Math.random() * 100) + 50;
+    await new Promise(resolve => setTimeout(resolve, randomDelay));
+
     // If this is a login attempt and user doesn't exist:
     // - For whitelisted/test phones, allow auto-provisioning (skip error)
-    // - For regular phones, require registration
+    // - For regular phones, return generic error to prevent enumeration
     if (!is_registration && !userExists) {
       if (!(isWhitelistedPhone || isTestPhone)) {
         return new Response(
-          JSON.stringify({ error: 'شماره موبایل ثبت نشده است. لطفا ابتدا ثبت نام کنید.' }),
+          JSON.stringify({ error: 'اطلاعات ورود نامعتبر است' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

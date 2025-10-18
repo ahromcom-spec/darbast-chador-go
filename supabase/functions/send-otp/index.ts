@@ -23,8 +23,11 @@ serve(async (req) => {
 
     // Normalize to Iranian mobile format: 09XXXXXXXXX (for Parsgreen)
     const normalizeIranPhone = (input: string) => {
+      // Security: Limit input length to prevent memory exhaustion
+      if (input.length > 20) return '';
+      
       // Keep only digits
-      let raw = input.replace(/[^0-9]/g, '');
+      let raw = input.slice(0, 20).replace(/[^0-9]/g, '');
       // Remove common country prefixes
       if (raw.startsWith('0098')) raw = '0' + raw.slice(4);
       else if (raw.startsWith('098')) raw = '0' + raw.slice(3);
@@ -53,8 +56,9 @@ serve(async (req) => {
     
     const isWhitelistedPhone = !!whitelistData;
     
-    // Check if this is a test phone number (starts with aaa or bbb)
-    const isTestPhone = phone_number.startsWith('aaa') || phone_number.startsWith('bbb');
+    // Security: Only allow test phones in development environment
+    const isDevelopment = Deno.env.get('ENVIRONMENT') !== 'production';
+    const isTestPhone = isDevelopment && (phone_number.startsWith('aaa') || phone_number.startsWith('bbb'));
     
     let maskedPhone: string;
     
@@ -159,7 +163,6 @@ serve(async (req) => {
     const baseHost = host.replace(/:.*$/, '');
     
     // Environment-based host validation
-    const isDevelopment = Deno.env.get('ENVIRONMENT') !== 'production';
     const allowedProductionHosts = ['ahrom.org'];
     const allowedProductionSuffixes = ['.ahrom.org'];
     
