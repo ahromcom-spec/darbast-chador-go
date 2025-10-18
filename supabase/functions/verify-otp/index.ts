@@ -93,7 +93,7 @@ serve(async (req) => {
     // Build a strong per-login password from OTP to satisfy password policy
     const loginPassword = `otp-${normalizedCode}-x`;
 
-    // For whitelisted phones or test phones, bypass OTP verification or use fixed code
+    // For test phones only, bypass OTP verification
     if (isTestPhone) {
       // Check if phone is in whitelist
       const { data: whitelistData } = await supabase
@@ -110,45 +110,8 @@ serve(async (req) => {
       }
       
       console.log('Test phone detected - bypassing OTP verification:', normalizedPhone);
-    } else if (isWhitelistedPhone) {
-      // For whitelisted management phones, verify against fixed code "12345"
-      if (normalizedCode !== '12345') {
-        return new Response(
-          JSON.stringify({ error: 'کد تایید نامعتبر است' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      console.log('Whitelisted management phone - using fixed OTP:', normalizedPhone);
-      
-      // Check if OTP record exists, if not create it
-      const { data: existingOtp } = await supabase
-        .from('otp_codes')
-        .select('id')
-        .eq('phone_number', normalizedPhone)
-        .eq('code', '12345')
-        .maybeSingle();
-      
-      if (existingOtp) {
-        // Mark existing OTP as verified
-        await supabase
-          .from('otp_codes')
-          .update({ verified: true })
-          .eq('phone_number', normalizedPhone)
-          .eq('code', '12345');
-      } else {
-        // Create new OTP record as verified for whitelisted phones
-        const expiresAt = new Date(Date.now() + 90 * 1000);
-        await supabase
-          .from('otp_codes')
-          .insert({
-            phone_number: normalizedPhone,
-            code: '12345',
-            expires_at: expiresAt.toISOString(),
-            verified: true,
-          });
-      }
     } else {
+      // Security: All real phones (including whitelisted) now use proper OTP verification
       // Regular OTP verification for real phones
       const { data: isValid, error: verifyError } = await supabase
         .rpc('verify_otp_code', { 

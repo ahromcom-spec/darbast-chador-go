@@ -62,14 +62,13 @@ serve(async (req) => {
     
     let maskedPhone: string;
     
-    if (isWhitelistedPhone || isTestPhone) {
-      // For whitelisted/test phones, use as-is
+    if (isTestPhone) {
+      // For test phones only (development), use as-is
       maskedPhone = normalizedPhone;
-      console.log('Processing SPECIAL OTP request for:', maskedPhone);
+      console.log('Processing TEST OTP request for:', maskedPhone);
       
-      // For whitelisted/test phones, skip SMS sending - just store OTP in database
-      // Use fixed code "12345" for whitelisted phones, "11111" for test phones
-      const code = isWhitelistedPhone ? '12345' : '11111';
+      // For test phones, skip SMS sending - just store OTP in database with fixed code
+      const code = '11111';
       const expiresAt = new Date(Date.now() + 90 * 1000);
       
       await supabase
@@ -84,11 +83,14 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'کد تایید برای شماره مدیریتی آماده است'
+          message: 'کد تایید برای شماره تستی آماده است'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    // Security: Whitelisted phones now receive real SMS like everyone else
+    // This prevents the security risk of hardcoded OTP codes
     
     // Regular phone validation for real phones
     // Enforce strict 11-digit format: 09XXXXXXXXX
