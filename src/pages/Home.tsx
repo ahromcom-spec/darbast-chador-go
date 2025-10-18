@@ -70,31 +70,8 @@ export default function Home() {
     }
   }, [selectedServiceType, selectedSubcategory, user, navigate, toast]);
 
-  // بعد از احراز هویت، هدایت خودکار بر اساس تعداد پروژه‌ها
-  useEffect(() => {
-    if (!projectsLoading && selectedServiceType && selectedSubcategory && user) {
-
-      const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
-      const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
-      
-      if (projects.length === 0) {
-        // هیچ پروژه‌ای وجود ندارد - مستقیماً به صفحه ایجاد پروژه برو
-        navigate('/user/create-project', {
-          state: {
-            serviceTypeId: selectedServiceType,
-            subcategoryCode: selectedSubcategory,
-            serviceTypeName: serviceType?.name,
-            subcategoryName: subcategory?.name
-          }
-        });
-      } else if (projects.length === 1) {
-        // فقط یک پروژه فعال وجود دارد - مستقیماً به صفحه افزودن خدمات برو
-        const project = projects[0];
-        navigate(`/user/add-service/${project.id}`);
-      }
-      // اگر بیش از یک پروژه باشد، لیست پروژه‌ها نمایش داده می‌شود
-    }
-  }, [projects, projectsLoading, selectedServiceType, selectedSubcategory, navigate, serviceTypes, user]);
+  // پروژه‌های کاربر را نمایش می‌دهیم و اجازه می‌دهیم انتخاب کند
+  // دیگر redirect خودکار نداریم تا کاربر بتواند پروژه‌هایش را ببیند
 
   const handleProjectSelect = (projectId: string) => {
     setSelectedProject(projectId);
@@ -231,7 +208,7 @@ export default function Home() {
                           <div className="flex justify-center py-4">
                             <LoadingSpinner />
                           </div>
-                        ) : projects.length > 1 ? (
+                        ) : projects.length > 0 ? (
                           <div className="space-y-3">
                             {(() => {
                               // فقط پروژه‌های مرتبط با نوع خدمات انتخاب شده
@@ -268,6 +245,12 @@ export default function Home() {
                                       </div>
                                     </div>
                                   )}
+                                  
+                                  {matchingProjects.length === 0 && (
+                                    <p className="text-xs sm:text-sm text-muted-foreground text-center py-2">
+                                      هنوز پروژه‌ای برای این نوع خدمات ثبت نکرده‌اید
+                                    </p>
+                                  )}
                                 </>
                               );
                             })()}
@@ -287,27 +270,26 @@ export default function Home() {
                               </Button>
                             </div>
                           </div>
-                        ) : projects.length === 0 ? (
-                          <p className="text-xs sm:text-sm text-muted-foreground text-center py-2">
-                            هنوز پروژه‌ای برای این نوع خدمات ثبت نکرده‌اید
-                          </p>
-                        ) : null}
-
-                        {/* دکمه ایجاد پروژه جدید فقط برای حالت صفر پروژه */}
-                        {projects.length === 0 && (
-                          <div className="grid grid-cols-1 gap-3 pt-2">
-                            <Button 
-                              onClick={handleCreateNewProject}
-                              className="w-full h-auto p-3 sm:p-4 construction-gradient text-sm sm:text-base"
-                            >
-                              <div className="space-y-0.5 sm:space-y-1">
-                                <div className="font-semibold">ایجاد پروژه جدید</div>
-                                <div className="text-xs sm:text-sm opacity-90">
-                                  تعریف پروژه جدید با آدرس و مشخصات کامل
+                        ) : (
+                          <>
+                            <p className="text-xs sm:text-sm text-muted-foreground text-center py-2">
+                              هنوز پروژه‌ای برای این نوع خدمات ثبت نکرده‌اید
+                            </p>
+                            {/* دکمه ایجاد پروژه جدید فقط برای حالت صفر پروژه */}
+                            <div className="grid grid-cols-1 gap-3 pt-2">
+                              <Button 
+                                onClick={handleCreateNewProject}
+                                className="w-full h-auto p-3 sm:p-4 construction-gradient text-sm sm:text-base"
+                              >
+                                <div className="space-y-0.5 sm:space-y-1">
+                                  <div className="font-semibold">ایجاد پروژه جدید</div>
+                                  <div className="text-xs sm:text-sm opacity-90">
+                                    تعریف پروژه جدید با آدرس و مشخصات کامل
+                                  </div>
                                 </div>
-                              </div>
-                            </Button>
-                          </div>
+                              </Button>
+                            </div>
+                          </>
                         )}
                       </section>
                     )}
