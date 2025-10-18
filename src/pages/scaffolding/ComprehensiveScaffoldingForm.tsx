@@ -37,10 +37,15 @@ interface ServiceConditions {
 import { orderDimensionSchema, orderFormSchema } from '@/lib/validations';
 import { sanitizeHtml, getSafeErrorMessage } from '@/lib/security';
 
-export default function ComprehensiveScaffoldingForm() {
+interface ComprehensiveScaffoldingFormProps {
+  projectId?: string;
+}
+
+export default function ComprehensiveScaffoldingForm({ projectId: propProjectId }: ComprehensiveScaffoldingFormProps = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { projectId } = useParams<{ projectId: string }>();
+  const { projectId: paramProjectId } = useParams<{ projectId: string }>();
+  const projectId = propProjectId || paramProjectId;
   const editOrderId = searchParams.get('edit');
   const { toast } = useToast();
   const { user } = useAuth();

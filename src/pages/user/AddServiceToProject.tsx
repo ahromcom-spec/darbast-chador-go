@@ -138,7 +138,7 @@ export default function AddServiceToProject() {
 
   // اگر زیرشاخه "خدمات اجرای داربست به همراه اجناس" است، فرم تخصصی را نشان بده
   if (isScaffoldingWithMaterials) {
-    return <ComprehensiveScaffoldingForm />;
+    return <ComprehensiveScaffoldingForm projectId={projectId!} />;
   }
 
   return (
