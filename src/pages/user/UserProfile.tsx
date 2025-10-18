@@ -19,6 +19,8 @@ import { TicketForm } from '@/components/profile/TicketForm';
 import { ContractorForm } from '@/components/profile/ContractorForm';
 import { NewContractorForm } from '@/components/profile/NewContractorForm';
 import { useContractorRole } from '@/hooks/useContractorRole';
+import { useCEORole } from '@/hooks/useCEORole';
+import { CEOManagementSection } from '@/components/profile/CEOManagementSection';
 
 interface UserOrder {
   id: string;
@@ -46,6 +48,7 @@ export default function UserProfile() {
   usePageTitle('پروفایل کاربری');
   const { user } = useAuth();
   const { isContractor } = useContractorRole();
+  const { isCEO } = useCEORole();
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [projectOrders, setProjectOrders] = useState<ProjectOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,6 +199,11 @@ const fetchOrders = async () => {
 
           {/* Profile Info Tab */}
           <TabsContent value="info" className="space-y-4">
+            {/* CEO Management Section */}
+            {isCEO && (
+              <CEOManagementSection userId={user.id} userEmail={user.email || ''} />
+            )}
+
             <ProfileForm
               userId={user.id}
               initialFullName={fullName}

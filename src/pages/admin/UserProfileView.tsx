@@ -9,10 +9,13 @@ import { ArrowRight, User, Phone, Calendar, Shield } from 'lucide-react';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useCEORole } from '@/hooks/useCEORole';
+import { CEOManagementSection } from '@/components/profile/CEOManagementSection';
 
 export default function UserProfileView() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { isCEO } = useCEORole();
 
   const { data: userProfile, isLoading: profileLoading } = useQuery({
     queryKey: ['admin-user-profile', userId],
@@ -127,6 +130,11 @@ export default function UserProfileView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* CEO Management Section */}
+      {isCEO && userId && (
+        <CEOManagementSection userId={userId} />
+      )}
 
       <Tabs defaultValue="projects" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
