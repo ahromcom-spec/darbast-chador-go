@@ -58,6 +58,8 @@ const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
 const FinanceOrders = lazy(() => import("./pages/finance/FinanceOrders"));
 const ReputationDashboard = lazy(() => import("./pages/ratings/ReputationDashboard"));
 const RatingTestPage = lazy(() => import("./pages/ratings/RatingTestPage"));
+const NotificationSettings = lazy(() => import("./pages/settings/NotificationSettings"));
+const InstallApp = lazy(() => import("./pages/settings/InstallApp"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 
@@ -204,6 +206,16 @@ const App = () => (
                   <FinanceOrders />
                 </ProtectedRoute>
               } />
+              
+              {/* Settings Routes */}
+              <Route path="/settings/notifications" element={
+                <ProtectedRoute>
+                  <NotificationSettings />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/install" element={<InstallApp />} />
+              
+              {/* Reputation & Ratings */}
               <Route path="/reputation" element={
                 <ProtectedRoute>
                   <ReputationDashboard />

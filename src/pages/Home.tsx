@@ -13,6 +13,7 @@ import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSub
 import { useUserProjects } from '@/hooks/useUserProjects';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import { NotificationPrompt } from '@/components/common/NotificationPrompt';
 
 export default function Home() {
   usePageTitle('صفحه اصلی');
@@ -306,6 +307,13 @@ export default function Home() {
               </CardContent>
             </Card>
           </article>
+
+          {/* Notification Prompt - only for logged-in users */}
+          {user && (
+            <div className="w-full max-w-2xl mt-6">
+              <NotificationPrompt />
+            </div>
+          )}
         </main>
         
         {/* PWA Install Card */}
