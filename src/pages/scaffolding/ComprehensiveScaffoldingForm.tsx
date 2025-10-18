@@ -890,7 +890,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             value={dim.width}
                             onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
                             placeholder="1"
-                            disabled={isFacadeWidth2m}
+                            disabled={true}
                           />
                         </div>
                         <div className="space-y-2">
