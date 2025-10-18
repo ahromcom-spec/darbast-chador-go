@@ -37,7 +37,13 @@ const projectSchema = z.object({
   detailed_address: z.string().optional(),
   postal_code: z.string().optional(),
   plaque: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    // بررسی می‌کنیم که استان انتخاب شده قم باشد
+    // این چک در زمان submit انجام می‌شود
+    return true; // در اینجا true برمی‌گردانیم چون چک اصلی در onChange خواهد بود
+  }
+);
 
 type ProjectFormData = z.infer<typeof projectSchema>;
 
@@ -78,6 +84,8 @@ export default function CreateProject() {
     lng: number;
     address: string;
   } | null>(null);
+  const [qomProvinceId, setQomProvinceId] = useState<string | null>(null);
+  const [isQomSelected, setIsQomSelected] = useState(false);
 
   // دریافت اطلاعات از state
   const preselectedServiceTypeId = location.state?.serviceTypeId;
@@ -151,6 +159,12 @@ export default function CreateProject() {
 
       if (error) throw error;
       setProvinces(data || []);
+      
+      // پیدا کردن ID استان قم
+      const qomProvince = data?.find(p => p.code === 'QOM' || p.name.includes('قم'));
+      if (qomProvince) {
+        setQomProvinceId(qomProvince.id);
+      }
     } catch (error: any) {
       console.error("Error fetching provinces:", error);
     }
@@ -203,6 +217,16 @@ export default function CreateProject() {
   };
 
   const onSubmit = async (data: ProjectFormData) => {
+    // بررسی نهایی که فقط قم قابل ثبت است
+    if (qomProvinceId && data.province_id !== qomProvinceId) {
+      toast({
+        title: "محدودیت منطقه‌ای",
+        description: "خدمات اهرم به زودی به استان شما خواهد رسید. در حال حاضر فقط در استان قم خدمات‌رسانی می‌کنیم.",
+        variant: "default"
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -339,7 +363,22 @@ export default function CreateProject() {
                     <FormItem>
                       <FormLabel>استان *</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          // بررسی اینکه آیا استان انتخاب شده قم است یا نه
+                          if (qomProvinceId && value !== qomProvinceId) {
+                            setIsQomSelected(false);
+                            toast({
+                              title: "محدودیت منطقه‌ای",
+                              description: "خدمات اهرم به زودی به استان شما خواهد رسید. در حال حاضر فقط در استان قم خدمات‌رسانی می‌کنیم.",
+                              variant: "default"
+                            });
+                            // پاک کردن سایر فیلدها
+                            form.setValue("district_id", "");
+                          } else {
+                            setIsQomSelected(true);
+                          }
+                        }}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -517,9 +556,18 @@ export default function CreateProject() {
                   )}
                 />
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={loading || !isQomSelected}
+                >
                   {loading ? <LoadingSpinner /> : "ایجاد پروژه"}
                 </Button>
+                {!isQomSelected && form.watch("province_id") && (
+                  <p className="text-sm text-center text-muted-foreground mt-2">
+                    خدمات اهرم به زودی به استان شما خواهد رسید
+                  </p>
+                )}
               </form>
             </Form>
           </Card>
