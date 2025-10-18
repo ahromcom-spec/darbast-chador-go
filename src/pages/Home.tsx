@@ -234,17 +234,15 @@ export default function Home() {
                         ) : projects.length > 1 ? (
                           <div className="space-y-3">
                             {(() => {
-                              // تفکیک پروژه‌ها بر اساس نوع خدمات انتخاب شده
+                              // فقط پروژه‌های مرتبط با نوع خدمات انتخاب شده
                               const matchingProjects = projects.filter(p => p.service_code === selectedSubcategory);
-                              const otherProjects = projects.filter(p => p.service_code !== selectedSubcategory);
 
                               return (
                                 <>
-                                  {/* پروژه‌های مرتبط با نوع خدمات انتخاب شده */}
                                   {matchingProjects.length > 0 && (
                                     <div className="space-y-2">
                                       <label className="text-xs sm:text-sm font-medium text-primary block">
-                                        پروژه‌های مرتبط با خدمات انتخاب شده:
+                                        پروژه‌های مرتبط با خدمات انتخاب شده - یکی را انتخاب کنید:
                                       </label>
                                       <div className="space-y-2 max-h-48 overflow-y-auto">
                                         {matchingProjects.map((project) => (
@@ -270,40 +268,24 @@ export default function Home() {
                                       </div>
                                     </div>
                                   )}
-
-                                  {/* سایر پروژه‌ها */}
-                                  {otherProjects.length > 0 && (
-                                    <div className="space-y-2">
-                                      <label className="text-xs sm:text-sm font-medium text-muted-foreground block">
-                                        {matchingProjects.length > 0 ? 'سایر پروژه‌ها:' : 'پروژه‌های فعال شما - یکی را انتخاب کنید:'}
-                                      </label>
-                                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                                        {otherProjects.map((project) => (
-                                          <button
-                                            key={project.id}
-                                            onClick={() => handleProjectSelect(project.id)}
-                                            className="w-full text-right p-3 rounded-lg border-2 hover:border-primary hover:bg-primary/5 transition-all smooth-hover"
-                                          >
-                                            <div className="flex items-start gap-2">
-                                              <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                                              <div className="flex-1 min-w-0">
-                                                <div className="font-semibold text-sm">{project.title}</div>
-                                                <div className="text-xs text-muted-foreground truncate">
-                                                  {project.addresses?.line1}, {project.addresses?.city}
-                                                </div>
-                                                <div className="text-xs text-primary mt-1">
-                                                  کلیک کنید تا خدمات جدید اضافه کنید
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
                                 </>
                               );
                             })()}
+
+                            {/* دکمه ایجاد پروژه جدید */}
+                            <div className="pt-2">
+                              <Button 
+                                onClick={handleCreateNewProject}
+                                className="w-full h-auto p-3 sm:p-4 construction-gradient text-sm sm:text-base"
+                              >
+                                <div className="space-y-0.5 sm:space-y-1">
+                                  <div className="font-semibold">+ ایجاد پروژه جدید برای آدرس دیگر</div>
+                                  <div className="text-xs sm:text-sm opacity-90">
+                                    ثبت پروژه جدید با آدرس و مشخصات جدید
+                                  </div>
+                                </div>
+                              </Button>
+                            </div>
                           </div>
                         ) : projects.length === 0 ? (
                           <p className="text-xs sm:text-sm text-muted-foreground text-center py-2">
@@ -311,8 +293,8 @@ export default function Home() {
                           </p>
                         ) : null}
 
-                        {/* Action Buttons - فقط زمانی نمایش داده می‌شود که بیش از یک پروژه داریم یا هیچ پروژه‌ای نداریم */}
-                        {(projects.length === 0 || projects.length > 1) && (
+                        {/* دکمه ایجاد پروژه جدید فقط برای حالت صفر پروژه */}
+                        {projects.length === 0 && (
                           <div className="grid grid-cols-1 gap-3 pt-2">
                             <Button 
                               onClick={handleCreateNewProject}
