@@ -127,35 +127,41 @@ serve(async (req) => {
       
       // Security: No phone logging
     } else {
-      // Security: All real phones (including whitelisted) now use proper OTP verification
-      // Regular OTP verification for real phones
-      const { data: isValid, error: verifyError } = await supabase
-        .rpc('verify_otp_code', { 
-          _phone_number: normalizedPhone, 
-          _code: normalizedCode 
-        });
+      // For whitelisted management phones, accept code 12345
+      // For regular phones, use proper OTP verification
+      if (isWhitelistedPhone && normalizedCode === '12345') {
+        // Whitelisted phones can use test code 12345 for easy access
+        // Security: No phone logging
+      } else {
+        // Regular OTP verification for real phones (including whitelisted with non-12345 codes)
+        const { data: isValid, error: verifyError } = await supabase
+          .rpc('verify_otp_code', { 
+            _phone_number: normalizedPhone, 
+            _code: normalizedCode 
+          });
 
-      if (verifyError) {
-        console.error('OTP verification error');
-        return new Response(
-          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        if (verifyError) {
+          console.error('OTP verification error');
+          return new Response(
+            JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (!isValid) {
+          return new Response(
+            JSON.stringify({ error: 'کد تایید نامعتبر یا منقضی شده است' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Mark OTP as verified for real phones
+        await supabase
+          .from('otp_codes')
+          .update({ verified: true })
+          .eq('phone_number', normalizedPhone)
+          .eq('code', normalizedCode);
       }
-
-      if (!isValid) {
-        return new Response(
-          JSON.stringify({ error: 'کد تایید نامعتبر یا منقضی شده است' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Mark OTP as verified for real phones
-      await supabase
-        .from('otp_codes')
-        .update({ verified: true })
-        .eq('phone_number', normalizedPhone)
-        .eq('code', normalizedCode);
     }
 
     // Check if user exists with this phone number or derived email
