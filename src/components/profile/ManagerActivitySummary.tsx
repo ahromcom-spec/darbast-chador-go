@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, XCircle, Award, TrendingUp } from 'lucide-react';
+import { CheckCircle, XCircle, Award, TrendingUp, Activity } from 'lucide-react';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 interface ManagerActivitySummaryProps {
   userId: string;
 }
 
 export function ManagerActivitySummary({ userId }: ManagerActivitySummaryProps) {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, error } = useQuery({
     queryKey: ['manager-activity-summary', userId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -32,17 +33,36 @@ export function ManagerActivitySummary({ userId }: ManagerActivitySummaryProps) 
         new Date(d.created_at) >= thisMonthStart
       ).length || 0;
 
+      // محاسبه فعالیت‌های امروز
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const todayActions = data?.filter(d => 
+        new Date(d.created_at) >= todayStart
+      ).length || 0;
+
       return {
         totalApprovals,
         totalRejections,
         totalActions,
         thisMonthActions,
+        todayActions,
         approvalRate: totalActions > 0 ? Math.round((totalApprovals / totalActions) * 100) : 0
       };
     }
   });
 
-  if (isLoading || !stats) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <LoadingSpinner />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !stats) {
     return null;
   }
 
@@ -52,48 +72,66 @@ export function ManagerActivitySummary({ userId }: ManagerActivitySummaryProps) 
       value: stats.totalApprovals,
       icon: CheckCircle,
       color: 'text-green-600',
-      bgColor: 'bg-green-50'
+      bgColor: 'bg-green-50',
+      darkBgColor: 'dark:bg-green-950'
     },
     {
       title: 'موارد رد شده',
       value: stats.totalRejections,
       icon: XCircle,
       color: 'text-red-600',
-      bgColor: 'bg-red-50'
+      bgColor: 'bg-red-50',
+      darkBgColor: 'dark:bg-red-950'
+    },
+    {
+      title: 'فعالیت امروز',
+      value: stats.todayActions,
+      icon: Activity,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+      darkBgColor: 'dark:bg-orange-950'
     },
     {
       title: 'فعالیت این ماه',
       value: stats.thisMonthActions,
       icon: TrendingUp,
       color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
+      bgColor: 'bg-blue-50',
+      darkBgColor: 'dark:bg-blue-950'
     },
     {
       title: 'نرخ تایید',
       value: `${stats.approvalRate}%`,
       icon: Award,
       color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
+      bgColor: 'bg-purple-50',
+      darkBgColor: 'dark:bg-purple-950'
     }
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {summaryCards.map((card) => (
-        <Card key={card.title} className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {card.title}
-            </CardTitle>
-            <div className={`p-2 rounded-lg ${card.bgColor}`}>
-              <card.icon className={`h-4 w-4 ${card.color}`} />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{card.value}</div>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Activity className="h-5 w-5 text-primary" />
+        <h3 className="text-lg font-semibold">خلاصه فعالیت‌های مدیریتی</h3>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {summaryCards.map((card) => (
+          <Card key={card.title} className="hover:shadow-md transition-all hover:-translate-y-1">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {card.title}
+              </CardTitle>
+              <div className={`p-2 rounded-lg ${card.bgColor} ${card.darkBgColor}`}>
+                <card.icon className={`h-4 w-4 ${card.color}`} />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{card.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

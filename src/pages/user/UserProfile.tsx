@@ -28,6 +28,7 @@ import { useExecutiveManagerRole } from '@/hooks/useExecutiveManagerRole';
 import { CEOManagementSection } from '@/components/profile/CEOManagementSection';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
+import { RecentActivityFeed } from '@/components/profile/RecentActivityFeed';
 
 interface UserOrder {
   id: string;
@@ -230,9 +231,16 @@ const fetchOrders = async () => {
               onUpdate={handleProfileUpdate}
             />
 
-            {/* Manager Approval History */}
+            {/* Manager Activity Details */}
             {isManager && (
-              <ApprovalHistory userId={user.id} />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <ApprovalHistory userId={user.id} />
+                </div>
+                <div>
+                  <RecentActivityFeed userId={user.id} limit={8} />
+                </div>
+              </div>
             )}
 
             {/* Staff Registration */}

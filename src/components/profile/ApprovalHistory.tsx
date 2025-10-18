@@ -11,7 +11,7 @@ interface ApprovalHistoryProps {
 }
 
 export function ApprovalHistory({ userId }: ApprovalHistoryProps) {
-  const { data: approvals, isLoading } = useQuery({
+  const { data: approvals, isLoading, error } = useQuery({
     queryKey: ['approval-history', userId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -29,9 +29,13 @@ export function ApprovalHistory({ userId }: ApprovalHistoryProps) {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching approval history:', error);
+        throw error;
+      }
       return data || [];
-    }
+    },
+    retry: 1
   });
 
   const getActionLabel = (action: string) => {
@@ -84,9 +88,15 @@ export function ApprovalHistory({ userId }: ApprovalHistoryProps) {
         </p>
       </CardHeader>
       <CardContent>
-        {!approvals || approvals.length === 0 ? (
+        {error ? (
+          <div className="text-center py-8 text-destructive">
+            خطا در بارگذاری تاریخچه فعالیت‌ها
+          </div>
+        ) : !approvals || approvals.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            هیچ فعالیت مدیریتی ثبت نشده است
+            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>هیچ فعالیت مدیریتی ثبت نشده است</p>
+            <p className="text-xs mt-2">تاییدیه‌ها و اقدامات مدیریتی شما در اینجا نمایش داده می‌شود</p>
           </div>
         ) : (
           <div className="rounded-md border overflow-hidden">
