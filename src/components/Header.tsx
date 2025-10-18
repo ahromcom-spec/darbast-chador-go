@@ -7,6 +7,7 @@ import ahromLogo from "@/assets/ahrom-logo.png";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useGeneralManagerRole } from "@/hooks/useGeneralManagerRole";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -14,6 +15,8 @@ const Header = () => {
   const user = auth?.user || null;
   const { isGeneralManager } = useGeneralManagerRole();
   const { toast } = useToast();
+  const { profile } = useUserProfile();
+  const displayName = profile?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
 
   const handleSignOut = async () => {
     try {
@@ -119,7 +122,7 @@ const Header = () => {
                   className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
                 >
                   <User className="h-4 w-4" />
-                  <span className="text-xs sm:text-sm">پروفایل</span>
+                  <span className="text-xs sm:text-sm">{displayName}</span>
                 </Button>
               </>
             ) : (
@@ -234,7 +237,7 @@ const Header = () => {
                   className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
                 >
                   <User className="h-4 w-4" />
-                  <span>پروفایل کاربری</span>
+                  <span>{displayName}</span>
                 </Button>
               </>
             ) : (
