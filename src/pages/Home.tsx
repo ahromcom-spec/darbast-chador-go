@@ -12,6 +12,7 @@ import usePWAInstall from '@/hooks/usePWAInstall';
 import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
 import { useUserProjects } from '@/hooks/useUserProjects';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Home() {
   usePageTitle('صفحه اصلی');
@@ -22,6 +23,7 @@ export default function Home() {
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
   const { navigate, navigateWithAuth } = useNavigation();
+  const { user } = useAuth();
   const { serviceTypes, loading: servicesLoading } = useServiceTypesWithSubcategories();
   const { projects, loading: projectsLoading } = useUserProjects(
     selectedServiceType || undefined,
@@ -49,6 +51,23 @@ export default function Home() {
   // هنگامی که پروژه‌ها لود شدند، هدایت خودکار بر اساس تعداد پروژه‌ها
   useEffect(() => {
     if (!projectsLoading && selectedServiceType && selectedSubcategory) {
+      // اول چک کنیم که کاربر لاگین کرده است
+      if (!user) {
+        toast({
+          title: 'نیاز به ورود',
+          description: 'برای ثبت درخواست خدمات، لطفاً ابتدا وارد حساب کاربری خود شوید',
+          variant: 'default'
+        });
+        navigate('/auth/login', {
+          state: {
+            from: '/user/create-project',
+            serviceTypeId: selectedServiceType,
+            subcategoryCode: selectedSubcategory
+          }
+        });
+        return;
+      }
+
       const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
       const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
       
@@ -86,7 +105,7 @@ export default function Home() {
         }
       }
     }
-  }, [projects, projectsLoading, selectedServiceType, selectedSubcategory, navigate, serviceTypes]);
+  }, [projects, projectsLoading, selectedServiceType, selectedSubcategory, navigate, serviceTypes, user, toast]);
 
   const handleProjectSelect = (projectId: string) => {
     setSelectedProject(projectId);
