@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowRight, Plus, Trash2, AlertCircle } from 'lucide-react';
-import ProjectLocationMap from '@/components/ProjectLocationMap';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
 
@@ -514,11 +514,6 @@ export default function ScaffoldingFacadeForm() {
                 </Alert>
               )}
 
-              {/* Project Location */}
-              <div className="space-y-2">
-                <Label>موقعیت پروژه (اختیاری)</Label>
-                <ProjectLocationMap onLocationSelect={setProjectLocation} />
-              </div>
 
               {/* Submit Button */}
               <div className="flex gap-4 pt-4">

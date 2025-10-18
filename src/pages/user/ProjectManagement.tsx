@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
-import ProjectLocationMap from "@/components/ProjectLocationMap";
+
 
 interface Project {
   id: string;
@@ -111,21 +111,6 @@ export default function ProjectManagement() {
                 <Plus className="w-4 h-4" />
                 پروژه جدید
               </Button>
-            </div>
-            
-            <div className="h-[500px] rounded-lg overflow-hidden border">
-              <ProjectLocationMap
-                existingProjects={projects.map((p) => ({
-                  id: p.id,
-                  code: p.code,
-                  address: p.address,
-                  serviceName: p.subcategory?.service_type?.name || "",
-                }))}
-                onProjectSelect={(projectId) => {
-                  const project = projects.find((p) => p.id === projectId);
-                  if (project) handleSelectProject(project);
-                }}
-              />
             </div>
 
             {selectedProject && (

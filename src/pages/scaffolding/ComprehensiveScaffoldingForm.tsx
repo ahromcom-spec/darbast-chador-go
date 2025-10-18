@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Trash2, AlertCircle, ChevronDown } from 'lucide-react';
-import ProjectLocationMap from '@/components/ProjectLocationMap';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -1251,25 +1251,6 @@ export default function ComprehensiveScaffoldingForm() {
                 قیمت نهایی پس از بررسی کارشناسی اعلام خواهد شد.
               </AlertDescription>
             </Alert>
-          )}
-          
-          {!isFieldsLocked && (
-            <ProjectLocationMap
-              onLocationSelect={(location) => {
-                setProjectLocation(location);
-                
-                // بروزرسانی خودکار distanceRange بر اساس فاصله واقعی
-                if (location.distance <= 15) {
-                  setConditions(prev => ({ ...prev, distanceRange: '0-15' }));
-                } else if (location.distance <= 25) {
-                  setConditions(prev => ({ ...prev, distanceRange: '15-25' }));
-                } else if (location.distance <= 50) {
-                  setConditions(prev => ({ ...prev, distanceRange: '25-50' }));
-                } else if (location.distance <= 85) {
-                  setConditions(prev => ({ ...prev, distanceRange: '50-85' }));
-                }
-              }}
-            />
           )}
           
           {isFieldsLocked && projectLocation && (
