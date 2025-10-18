@@ -879,7 +879,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.length}
                             onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
-                            placeholder="6"
+                            placeholder="مثال: 6"
                           />
                         </div>
                         <div className="space-y-2">
@@ -889,7 +889,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.width}
                             onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
-                            placeholder="1"
+                            placeholder="مثال: 1"
                             disabled={true}
                           />
                         </div>
@@ -900,7 +900,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.height}
                             onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
-                            placeholder="9"
+                            placeholder="مثال: 9"
                           />
                         </div>
                       </div>
@@ -1210,7 +1210,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.length}
                             onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
-                            placeholder="6"
+                            placeholder="مثال: 6"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1220,7 +1220,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.width}
                             onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
-                            placeholder="3"
+                            placeholder="مثال: 1"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1230,7 +1230,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.height}
                             onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
-                            placeholder="9"
+                            placeholder="مثال: 9"
                           />
                         </div>
                       </div>
@@ -1314,7 +1314,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.length}
                             onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
-                            placeholder="6"
+                            placeholder="مثال: 6"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1324,7 +1324,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.width}
                             onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
-                            placeholder="3"
+                            placeholder="مثال: 1"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1334,7 +1334,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.height}
                             onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
-                            placeholder="9"
+                            placeholder="مثال: 9"
                           />
                         </div>
                       </div>
@@ -1417,7 +1417,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.length}
                             onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
-                            placeholder="6"
+                            placeholder="مثال: 6"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1427,7 +1427,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.width}
                             onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
-                            placeholder="3"
+                            placeholder="مثال: 1"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1437,7 +1437,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             step="0.01"
                             value={dim.height}
                             onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
-                            placeholder="9"
+                            placeholder="مثال: 9"
                           />
                         </div>
                       </div>
