@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ahrom-v13-pwa-fix';
+const CACHE_VERSION = 'ahrom-v14-icon-update';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
