@@ -931,56 +931,41 @@ export default function ComprehensiveScaffoldingForm() {
                   {/* 2. ماه چندم */}
                   <div className="space-y-3">
                     <Label className="text-base font-semibold">۲. ماه چندم است که داربست را می‌خواهید؟</Label>
-                    <RadioGroup 
+                    <Select 
                       value={conditions.currentMonth.toString()}
                       onValueChange={(v) => setConditions(prev => ({ ...prev, currentMonth: parseInt(v) }))}
-                      className="space-y-2"
                     >
-                      {Array.from({ length: conditions.totalMonths }, (_, i) => i + 1).map(month => (
-                        <div key={month} className="flex items-center space-x-2 space-x-reverse">
-                          <RadioGroupItem value={month.toString()} id={`month-${month}`} />
-                          <Label htmlFor={`month-${month}`} className="font-normal cursor-pointer">
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        {Array.from({ length: conditions.totalMonths }, (_, i) => i + 1).map(month => (
+                          <SelectItem key={month} value={month.toString()}>
                             ماه {month === 1 ? 'اول' : month === 2 ? 'دوم' : month === 3 ? 'سوم' : month === 4 ? 'چهارم' : month === 5 ? 'پنجم' : 'ششم'}
-                            {month > 1 && <span className="text-xs text-muted-foreground mr-2">(بدون شرایط افزایش قیمت)</span>}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
+                            {month > 1 && ' (بدون شرایط افزایش قیمت)'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* 3. فاصله از مرکز استان */}
                   <div className="space-y-3">
                     <Label className="text-base font-semibold">۳. فاصله آدرس پروژه تا مرکز استان</Label>
-                    <RadioGroup 
+                    <Select 
                       value={conditions.distanceRange}
                       onValueChange={(v: any) => setConditions(prev => ({ ...prev, distanceRange: v }))}
-                      className="space-y-2"
                     >
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="0-15" id="dist-0-15" />
-                        <Label htmlFor="dist-0-15" className="font-normal cursor-pointer">
-                          تا ۱۵ کیلومتری (بدون افزایش قیمت)
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="15-25" id="dist-15-25" />
-                        <Label htmlFor="dist-15-25" className="font-normal cursor-pointer">
-                          ۱۵ تا ۲۵ کیلومتری (+۲۰٪)
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="25-50" id="dist-25-50" />
-                        <Label htmlFor="dist-25-50" className="font-normal cursor-pointer">
-                          ۲۵ تا ۵۰ کیلومتری (+۴۰٪)
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="50-85" id="dist-50-85" />
-                        <Label htmlFor="dist-50-85" className="font-normal cursor-pointer">
-                          ۵۰ تا ۸۵ کیلومتری (+۷۰٪)
-                        </Label>
-                      </div>
-                    </RadioGroup>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="0-15">تا ۱۵ کیلومتری (بدون افزایش قیمت)</SelectItem>
+                        <SelectItem value="15-25">۱۵ تا ۲۵ کیلومتری (+۲۰٪)</SelectItem>
+                        <SelectItem value="25-50">۲۵ تا ۵۰ کیلومتری (+۴۰٪)</SelectItem>
+                        <SelectItem value="50-85">۵۰ تا ۸۵ کیلومتری (+۷۰٪)</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Alert className="bg-yellow-500/10 border-yellow-500/20">
                       <AlertCircle className="h-4 w-4 text-yellow-600" />
                       <AlertDescription className="text-xs">
@@ -992,24 +977,18 @@ export default function ComprehensiveScaffoldingForm() {
                   {/* 4. ارتفاع پای کار */}
                   <div className="space-y-3">
                     <Label className="text-base font-semibold">۴. ارتفاع پای کار داربست فلزی از روی زمین</Label>
-                    <RadioGroup 
+                    <Select 
                       value={onGround ? 'ground' : 'platform'}
                       onValueChange={(v) => setOnGround(v === 'ground')}
-                      className="space-y-3"
                     >
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="ground" id="ground" />
-                        <Label htmlFor="ground" className="font-normal cursor-pointer">
-                          داربست روی زمین بسته می‌شود
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="platform" id="platform" />
-                        <Label htmlFor="platform" className="font-normal cursor-pointer">
-                          داربست روی سکو یا پشت‌بام بسته می‌شود
-                        </Label>
-                      </div>
-                    </RadioGroup>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="ground">داربست روی زمین بسته می‌شود</SelectItem>
+                        <SelectItem value="platform">داربست روی سکو یا پشت‌بام بسته می‌شود</SelectItem>
+                      </SelectContent>
+                    </Select>
 
                     {!onGround && (
                       <Card className="p-4 bg-background/50 space-y-4">
@@ -1059,24 +1038,18 @@ export default function ComprehensiveScaffoldingForm() {
                   {/* 5. فاصله وسیله نقلیه */}
                   <div className="space-y-3">
                     <Label className="text-base font-semibold">۵. فاصله وسیله نقلیه تا پای کار</Label>
-                    <RadioGroup 
+                    <Select 
                       value={vehicleReachesSite ? 'reaches' : 'distance'}
                       onValueChange={(v) => setVehicleReachesSite(v === 'reaches')}
-                      className="space-y-3"
                     >
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="reaches" id="reaches" />
-                        <Label htmlFor="reaches" className="font-normal cursor-pointer">
-                          وسیله نقلیه داربست تا پای کار می‌آید
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="distance" id="distance" />
-                        <Label htmlFor="distance" className="font-normal cursor-pointer">
-                          فاصله وسیله نقلیه تا پای کار را وارد کنید
-                        </Label>
-                      </div>
-                    </RadioGroup>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+                        <SelectItem value="reaches">وسیله نقلیه داربست تا پای کار می‌آید</SelectItem>
+                        <SelectItem value="distance">فاصله وسیله نقلیه تا پای کار را وارد کنید</SelectItem>
+                      </SelectContent>
+                    </Select>
 
                     {!vehicleReachesSite && (
                       <Card className="p-4 bg-background/50">
