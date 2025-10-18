@@ -269,9 +269,10 @@ export default function CreateProject() {
       if (codeError) throw codeError;
 
       // استخراج اعداد از کد پروژه
+      // فرمت: customer_code/project_number/service_code
       const projectParts = projectCode.split('/');
-      const projectNumber = projectParts[0];
-      const serviceCode = projectParts[1];
+      const projectNumber = projectParts[1]; // شماره پروژه
+      const serviceCode = projectParts[2]; // کد خدمات
 
       // ایجاد پروژه
       const { error: projectError } = await supabase.from("projects_v3").insert({
