@@ -1,5 +1,5 @@
-import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ahromLogo from '@/assets/ahrom-logo.png';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -9,16 +9,28 @@ interface LoadingSpinnerProps {
 
 export function LoadingSpinner({ size = 'md', text, className }: LoadingSpinnerProps) {
   const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-8 w-8',
-    lg: 'h-12 w-12'
+    sm: 'h-12 w-12',
+    md: 'h-20 w-20',
+    lg: 'h-32 w-32'
   };
 
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-3", className)}>
-      <Loader2 className={cn("animate-spin text-primary", sizeClasses[size])} />
+    <div className={cn("flex flex-col items-center justify-center gap-4", className)}>
+      <div className="relative">
+        <img 
+          src={ahromLogo} 
+          alt="آهرام" 
+          className={cn(
+            "animate-pulse drop-shadow-[0_0_15px_rgba(var(--primary),0.5)]",
+            sizeClasses[size]
+          )}
+          style={{
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite, float 3s ease-in-out infinite'
+          }}
+        />
+      </div>
       {text && (
-        <p className="text-sm text-muted-foreground animate-pulse">{text}</p>
+        <p className="text-sm text-muted-foreground animate-pulse font-semibold">{text}</p>
       )}
     </div>
   );
