@@ -232,32 +232,78 @@ export default function Home() {
                             <LoadingSpinner />
                           </div>
                         ) : projects.length > 1 ? (
-                          <div className="space-y-2">
-                            <label className="text-xs sm:text-sm font-medium text-foreground block">
-                              پروژه‌های فعال شما - یکی را انتخاب کنید:
-                            </label>
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                              {projects.map((project) => (
-                                <button
-                                  key={project.id}
-                                  onClick={() => handleProjectSelect(project.id)}
-                                  className="w-full text-right p-3 rounded-lg border-2 hover:border-primary hover:bg-primary/5 transition-all smooth-hover"
-                                >
-                                  <div className="flex items-start gap-2">
-                                    <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-semibold text-sm">{project.title}</div>
-                                      <div className="text-xs text-muted-foreground truncate">
-                                        {project.addresses?.line1}, {project.addresses?.city}
-                                      </div>
-                                      <div className="text-xs text-primary mt-1">
-                                        کلیک کنید تا خدمات جدید اضافه کنید
+                          <div className="space-y-3">
+                            {(() => {
+                              // تفکیک پروژه‌ها بر اساس نوع خدمات انتخاب شده
+                              const matchingProjects = projects.filter(p => p.service_code === selectedSubcategory);
+                              const otherProjects = projects.filter(p => p.service_code !== selectedSubcategory);
+
+                              return (
+                                <>
+                                  {/* پروژه‌های مرتبط با نوع خدمات انتخاب شده */}
+                                  {matchingProjects.length > 0 && (
+                                    <div className="space-y-2">
+                                      <label className="text-xs sm:text-sm font-medium text-primary block">
+                                        پروژه‌های مرتبط با خدمات انتخاب شده:
+                                      </label>
+                                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {matchingProjects.map((project) => (
+                                          <button
+                                            key={project.id}
+                                            onClick={() => handleProjectSelect(project.id)}
+                                            className="w-full text-right p-3 rounded-lg border-2 border-primary/40 hover:border-primary hover:bg-primary/10 transition-all smooth-hover"
+                                          >
+                                            <div className="flex items-start gap-2">
+                                              <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                              <div className="flex-1 min-w-0">
+                                                <div className="font-semibold text-sm">{project.title}</div>
+                                                <div className="text-xs text-muted-foreground truncate">
+                                                  {project.addresses?.line1}, {project.addresses?.city}
+                                                </div>
+                                                <div className="text-xs text-primary mt-1">
+                                                  کلیک کنید تا خدمات جدید اضافه کنید
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </button>
+                                        ))}
                                       </div>
                                     </div>
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
+                                  )}
+
+                                  {/* سایر پروژه‌ها */}
+                                  {otherProjects.length > 0 && (
+                                    <div className="space-y-2">
+                                      <label className="text-xs sm:text-sm font-medium text-muted-foreground block">
+                                        {matchingProjects.length > 0 ? 'سایر پروژه‌ها:' : 'پروژه‌های فعال شما - یکی را انتخاب کنید:'}
+                                      </label>
+                                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {otherProjects.map((project) => (
+                                          <button
+                                            key={project.id}
+                                            onClick={() => handleProjectSelect(project.id)}
+                                            className="w-full text-right p-3 rounded-lg border-2 hover:border-primary hover:bg-primary/5 transition-all smooth-hover"
+                                          >
+                                            <div className="flex items-start gap-2">
+                                              <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                              <div className="flex-1 min-w-0">
+                                                <div className="font-semibold text-sm">{project.title}</div>
+                                                <div className="text-xs text-muted-foreground truncate">
+                                                  {project.addresses?.line1}, {project.addresses?.city}
+                                                </div>
+                                                <div className="text-xs text-primary mt-1">
+                                                  کلیک کنید تا خدمات جدید اضافه کنید
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         ) : projects.length === 0 ? (
                           <p className="text-xs sm:text-sm text-muted-foreground text-center py-2">
