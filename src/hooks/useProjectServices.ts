@@ -53,6 +53,20 @@ export const useProjectServices = (projectId?: string) => {
     if (!projectId) return { success: false, error: 'شناسه پروژه یافت نشد' };
 
     try {
+      // ابتدا تعداد خدمات فعلی را بگیریم تا service_number بعدی را مشخص کنیم
+      const { data: existingServices, error: countError } = await supabase
+        .from('services_v3')
+        .select('service_number')
+        .eq('project_id', projectId)
+        .order('service_number', { ascending: false })
+        .limit(1);
+
+      if (countError) throw countError;
+
+      const nextServiceNumber = existingServices && existingServices.length > 0 
+        ? existingServices[0].service_number + 1 
+        : 1;
+
       // تولید کد خدمات
       const { data: serviceCode, error: codeError } = await supabase.rpc(
         'generate_service_code',
@@ -61,15 +75,12 @@ export const useProjectServices = (projectId?: string) => {
 
       if (codeError) throw codeError;
 
-      // استخراج شماره خدمات از کد
-      const serviceNumber = parseInt(serviceCode.split(',')[1]);
-
       // ایجاد خدمات
       const { data, error } = await supabase
         .from('services_v3')
         .insert({
           project_id: projectId,
-          service_number: serviceNumber,
+          service_number: nextServiceNumber,
           service_code: serviceCode,
           description: description,
           notes: notes || null,
