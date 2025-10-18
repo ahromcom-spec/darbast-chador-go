@@ -125,12 +125,7 @@ export default function ProjectManagement() {
               {projects.map((project) => (
                 <Card
                   key={project.id}
-                  className={`p-4 cursor-pointer transition-all hover:shadow-md ${
-                    selectedProject?.id === project.id
-                      ? "border-primary bg-primary/5"
-                      : ""
-                  }`}
-                  onClick={() => handleSelectProject(project)}
+                  className="p-4 transition-all hover:shadow-md"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
