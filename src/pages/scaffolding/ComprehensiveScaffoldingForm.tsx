@@ -805,13 +805,16 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
             <Label className="text-base font-semibold">نوع خدمات داربست</Label>
             <Select 
               value={activeService} 
-              onValueChange={(v) => !isFieldsLocked && setActiveService(v as any)}
-              disabled={isFieldsLocked}
+              onValueChange={(v) => setActiveService(v as any)}
             >
               <SelectTrigger className="bg-background">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-popover backdrop-blur-md border-2 z-[100]">
+              <SelectContent 
+                className="bg-popover backdrop-blur-md border-2 z-[9999]"
+                position="popper"
+                sideOffset={5}
+              >
                 <SelectItem value="facade">نماکاری و سطحی</SelectItem>
                 <SelectItem value="formwork">کفراژ و حجمی</SelectItem>
                 <SelectItem value="ceiling-tiered">زیربتن تیرچه</SelectItem>
