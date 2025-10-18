@@ -56,16 +56,23 @@ serve(async (req) => {
     
     const isWhitelistedPhone = !!whitelistData;
     
-    // Security: Only allow test phones in development environment
-    const isDevelopment = Deno.env.get('ENVIRONMENT') !== 'production';
-    const isTestPhone = isDevelopment && (phone_number.startsWith('aaa') || phone_number.startsWith('bbb'));
+    // Security: Block test phones in production - hardcoded check
+    const isProduction = supabaseUrl.includes('gclbltatkbwbqxqqrcea');
+    const isTestPhone = (phone_number.startsWith('aaa') || phone_number.startsWith('bbb'));
+    
+    // Reject test phones in production
+    if (isProduction && isTestPhone) {
+      return new Response(
+        JSON.stringify({ error: 'شماره تستی در محیط تولید مجاز نیست' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     let maskedPhone: string;
     
     if (isTestPhone) {
       // For test phones only (development), use as-is
       maskedPhone = normalizedPhone;
-      console.log('Processing TEST OTP request for:', maskedPhone);
       
       // For test phones, skip SMS sending - just store OTP in database with fixed code
       const code = '11111';
@@ -103,7 +110,6 @@ serve(async (req) => {
     
     // Mask phone number for logging (security best practice)
     maskedPhone = normalizedPhone.substring(0, 4) + 'XXX' + normalizedPhone.substring(9);
-    console.log('Processing OTP request for:', maskedPhone);
     
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
@@ -168,14 +174,14 @@ serve(async (req) => {
     const allowedProductionHosts = ['ahrom.org'];
     const allowedProductionSuffixes = ['.ahrom.org'];
     
-    // Only allow localhost/127.0.0.1 in development
-    const isLocalhost = isDevelopment && (/^localhost$/.test(baseHost) || /^127\.0\.0\.1$/.test(baseHost));
+    // Only allow localhost/127.0.0.1 in non-production
+    const isLocalhost = !isProduction && (/^localhost$/.test(baseHost) || /^127\.0\.0\.1$/.test(baseHost));
     
     // Production: strict whitelist only
-    // Development: allow localhost + lovableproject.com for testing
+    // Non-production: allow localhost + lovableproject.com for testing
     const isProductionAllowed = allowedProductionHosts.includes(baseHost) || 
                                 allowedProductionSuffixes.some(s => baseHost.endsWith(s));
-    const isDevelopmentAllowed = isDevelopment && (baseHost.endsWith('.lovableproject.com'));
+    const isDevelopmentAllowed = !isProduction && (baseHost.endsWith('.lovableproject.com'));
     
     const isAllowed = hostIsValidFormat && (isProductionAllowed || isLocalhost || isDevelopmentAllowed);
     
@@ -207,19 +213,13 @@ serve(async (req) => {
         signature: apiKey
       });
 
-  console.log('Sending SMS to:', maskedPhone);
-  // Don't log the full URL with API key in production
-  if (Deno.env.get('ENVIRONMENT') !== 'production') {
-    console.log('SMS API endpoint:', apiUrl);
-  }
+  // Security: No phone logging in production
       
       const smsResponse = await fetch(`${apiUrl}?${params.toString()}`, {
         method: 'GET',
       });
 
       const responseText = await smsResponse.text();
-      // Log only success/failure status, not full API response details
-      console.log('SMS send attempt completed with status:', smsResponse.ok ? 'success' : 'failed');
 
       // Parsgreen returns different formats:
       // Success: شناسه عددی (numeric ID)
@@ -253,8 +253,6 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    console.log('OTP sent successfully to:', maskedPhone);
 
     // Always return same response regardless of user existence to prevent enumeration
     return new Response(

@@ -40,9 +40,17 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Security: Only allow test phones in development environment
-    const isDevelopment = Deno.env.get('ENVIRONMENT') !== 'production';
-    const isTestPhone = isDevelopment && (phone_number.startsWith('aaa') || phone_number.startsWith('bbb'));
+    // Security: Block test phones in production - hardcoded check
+    const isProduction = supabaseUrl.includes('gclbltatkbwbqxqqrcea');
+    const isTestPhone = (phone_number.startsWith('aaa') || phone_number.startsWith('bbb'));
+    
+    // Reject test phones in production
+    if (isProduction && isTestPhone) {
+      return new Response(
+        JSON.stringify({ error: 'شماره تستی در محیط تولید مجاز نیست' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     let normalizedPhone: string;
     let authPhone: string;
@@ -109,7 +117,7 @@ serve(async (req) => {
         );
       }
       
-      console.log('Test phone detected - bypassing OTP verification:', normalizedPhone);
+      // Security: No phone logging
     } else {
       // Security: All real phones (including whitelisted) now use proper OTP verification
       // Regular OTP verification for real phones
@@ -281,8 +289,6 @@ serve(async (req) => {
           await supabase
             .from('user_roles')
             .insert(roleInserts);
-          
-          console.log('Auto-assigned roles for special phone:', normalizedPhone, whitelistData.allowed_roles);
         }
       }
     }
