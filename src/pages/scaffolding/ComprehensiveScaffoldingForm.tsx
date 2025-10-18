@@ -20,6 +20,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 interface Dimension {
   id: string;
   length: string;
+  width: string;
   height: string;
 }
 
@@ -56,7 +57,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
   const [projectAddress, setProjectAddress] = useState('');
   const [isFieldsLocked, setIsFieldsLocked] = useState(false);
   const [lockedProjectData, setLockedProjectData] = useState<any>(null);
-  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', height: '' }]);
+  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '', height: '' }]);
   const [projectLocation, setProjectLocation] = useState<{
     address: string;
     coordinates: [number, number];
@@ -216,6 +217,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
             setDimensions(notes.dimensions.map((d: any, i: number) => ({
               id: (i + 1).toString(),
               length: d.length.toString(),
+              width: d.width?.toString() || '',
               height: d.height.toString()
             })));
           }
@@ -307,7 +309,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
   // Dimension management
   const addDimension = () => {
     const newId = (dimensions.length + 1).toString();
-    setDimensions([...dimensions, { id: newId, length: '', height: '' }]);
+    setDimensions([...dimensions, { id: newId, length: '', width: '', height: '' }]);
   };
 
   const removeDimension = (id: string) => {
@@ -316,7 +318,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
     }
   };
 
-  const updateDimension = (id: string, field: 'length' | 'height', value: string) => {
+  const updateDimension = (id: string, field: 'length' | 'width' | 'height', value: string) => {
     setDimensions(dimensions.map(d => 
       d.id === id ? { ...d, [field]: value } : d
     ));
@@ -325,8 +327,9 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
   const calculateTotalArea = (): number => {
     return dimensions.reduce((total, dim) => {
       const length = parseFloat(dim.length) || 0;
+      const width = parseFloat(dim.width) || 0;
       const height = parseFloat(dim.height) || 0;
-      return total + (length * height);
+      return total + (length * width * height);
     }, 0);
   };
 
@@ -515,8 +518,9 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
     try {
       const dimensionsData = dimensions.map(d => ({
         length: parseFloat(d.length) || 0,
+        width: parseFloat(d.width) || 0,
         height: parseFloat(d.height) || 0,
-        area: (parseFloat(d.length) || 0) * (parseFloat(d.height) || 0)
+        area: (parseFloat(d.length) || 0) * (parseFloat(d.width) || 0) * (parseFloat(d.height) || 0)
       }));
 
       const formData = {
@@ -549,10 +553,11 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
 
     dimensions.forEach((dim) => {
       const length = parseFloat(dim.length);
+      const width = parseFloat(dim.width);
       const height = parseFloat(dim.height);
       
-      if (!dim.length || !dim.height) {
-        newErrors[`dimension${dim.id}`] = 'لطفاً طول و ارتفاع را وارد کنید';
+      if (!dim.length || !dim.width || !dim.height) {
+        newErrors[`dimension${dim.id}`] = 'لطفاً طول، عرض و ارتفاع را وارد کنید';
       } else {
         try {
           orderDimensionSchema.parse({ length, height });
@@ -609,8 +614,9 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
 
       const dimensionsData = dimensions.map(d => ({
         length: parseFloat(d.length),
+        width: parseFloat(d.width),
         height: parseFloat(d.height),
-        area: parseFloat(d.length) * parseFloat(d.height)
+        area: parseFloat(d.length) * parseFloat(d.width) * parseFloat(d.height)
       }));
 
       const notesData = JSON.stringify({
@@ -858,7 +864,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 {dimensions.map((dim) => (
                   <Card key={dim.id} className="p-4">
                     <div className="flex items-center gap-4">
-                      <div className="flex-1 grid grid-cols-2 gap-4">
+                      <div className="flex-1 grid grid-cols-3 gap-4">
                         <div className="space-y-2">
                           <Label>طول (متر)</Label>
                           <Input
@@ -867,6 +873,16 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             value={dim.length}
                             onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
                             placeholder="6"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>عرض (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.width}
+                            onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
+                            placeholder="3"
                           />
                         </div>
                         <div className="space-y-2">
@@ -883,7 +899,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-sm text-muted-foreground">متراژ</span>
                         <span className="font-bold text-primary">
-                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م²
+                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م³
                         </span>
                         {dimensions.length > 1 && (
                           <Button
@@ -915,7 +931,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    جمع متراژ: <strong>{totalArea.toFixed(2)} متر مربع</strong>
+                    جمع متراژ: <strong>{totalArea.toFixed(2)} متر مکعب</strong>
                   </AlertDescription>
                 </Alert>
               </div>
@@ -1156,7 +1172,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 {dimensions.map((dim) => (
                   <Card key={dim.id} className="p-4">
                     <div className="flex items-center gap-4">
-                      <div className="flex-1 grid grid-cols-2 gap-4">
+                      <div className="flex-1 grid grid-cols-3 gap-4">
                         <div className="space-y-2">
                           <Label>طول (متر)</Label>
                           <Input
@@ -1165,6 +1181,16 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             value={dim.length}
                             onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
                             placeholder="6"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>عرض (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.width}
+                            onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
+                            placeholder="3"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1181,7 +1207,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-sm text-muted-foreground">متراژ</span>
                         <span className="font-bold text-primary">
-                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م²
+                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م³
                         </span>
                         {dimensions.length > 1 && (
                           <Button
@@ -1211,7 +1237,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 </Button>
 
                 <div className="p-4 bg-primary/5 rounded-lg">
-                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مربع</p>
+                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مکعب</p>
                 </div>
               </div>
             </CardContent>
@@ -1250,7 +1276,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 {dimensions.map((dim) => (
                   <Card key={dim.id} className="p-4">
                     <div className="flex items-center gap-4">
-                      <div className="flex-1 grid grid-cols-2 gap-4">
+                      <div className="flex-1 grid grid-cols-3 gap-4">
                         <div className="space-y-2">
                           <Label>طول (متر)</Label>
                           <Input
@@ -1259,6 +1285,16 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             value={dim.length}
                             onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
                             placeholder="6"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>عرض (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.width}
+                            onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
+                            placeholder="3"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1275,7 +1311,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-sm text-muted-foreground">متراژ</span>
                         <span className="font-bold text-primary">
-                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م²
+                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م³
                         </span>
                         {dimensions.length > 1 && (
                           <Button
@@ -1305,7 +1341,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 </Button>
 
                 <div className="p-4 bg-primary/5 rounded-lg">
-                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مربع</p>
+                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مکعب</p>
                 </div>
               </div>
             </CardContent>
@@ -1343,7 +1379,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 {dimensions.map((dim) => (
                   <Card key={dim.id} className="p-4">
                     <div className="flex items-center gap-4">
-                      <div className="flex-1 grid grid-cols-2 gap-4">
+                      <div className="flex-1 grid grid-cols-3 gap-4">
                         <div className="space-y-2">
                           <Label>طول (متر)</Label>
                           <Input
@@ -1352,6 +1388,16 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                             value={dim.length}
                             onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
                             placeholder="6"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>عرض (متر)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={dim.width}
+                            onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
+                            placeholder="3"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1368,7 +1414,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-sm text-muted-foreground">متراژ</span>
                         <span className="font-bold text-primary">
-                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م²
+                          {((parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0)).toFixed(2)} م³
                         </span>
                         {dimensions.length > 1 && (
                           <Button
@@ -1398,7 +1444,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
                 </Button>
 
                 <div className="p-4 bg-primary/5 rounded-lg">
-                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مربع</p>
+                  <p className="text-sm font-medium">مجموع متراژ کل: {totalArea.toFixed(2)} متر مکعب</p>
                 </div>
               </div>
             </CardContent>
