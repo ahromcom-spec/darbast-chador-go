@@ -575,7 +575,7 @@ export default function ComprehensiveScaffoldingForm({
         newErrors[`dimension${dim.id}`] = 'لطفاً طول، عرض و ارتفاع را وارد کنید';
       } else {
         try {
-          orderDimensionSchema.parse({ length, height });
+          orderDimensionSchema.parse({ length, width, height });
         } catch (error) {
           if (error instanceof z.ZodError) {
             newErrors[`dimension${dim.id}`] = error.errors[0].message;
