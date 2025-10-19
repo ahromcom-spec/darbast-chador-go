@@ -131,26 +131,7 @@ serve(async (req) => {
     // Generate 5-digit OTP code
     const code = Math.floor(10000 + Math.random() * 90000).toString();
 
-    // Save OTP to database (expires in 90 seconds)
-    const expiresAt = new Date(Date.now() + 90 * 1000);
-    const { error: dbError } = await supabase
-      .from('otp_codes')
-      .insert({
-        phone_number: normalizedPhone,
-        code,
-        expires_at: expiresAt.toISOString(),
-        verified: false,
-      });
-
-    if (dbError) {
-      console.error('Error saving OTP:', dbError);
-      return new Response(
-        JSON.stringify({ error: 'خطا در ذخیره کد تایید' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Send SMS via Parsgreen UrlService (HTTP method)
+    // Send SMS via Parsgreen UrlService (HTTP method) FIRST
     const apiKey = Deno.env.get('PARSGREEN_API_KEY');
     
     if (!apiKey) {
@@ -204,6 +185,8 @@ serve(async (req) => {
       console.warn('PARSGREEN_SENDER is not numeric; falling back to default 90000319');
     }
 
+    // Try to send SMS first - only save to DB if successful
+    let smsSent = false;
     try {
       // Use Parsgreen correct API format
       const apiUrl = 'https://sms.parsgreen.ir/UrlService/sendSMS.ashx';
@@ -215,7 +198,7 @@ serve(async (req) => {
         signature: apiKey
       });
 
-  // Security: No phone logging in production
+      // Security: No phone logging in production
       
       const smsResponse = await fetch(`${apiUrl}?${params.toString()}`, {
         method: 'GET',
@@ -241,19 +224,42 @@ serve(async (req) => {
       const hasValidFormat = parts.length === 3 && /^[0-9;]+$/.test(trimmedResponse);
       
       if (!smsResponse.ok || (isError && !hasValidFormat)) {
-        console.error('SMS send failed');
+        console.error('SMS send failed - Parsgreen error. Response:', trimmedResponse.substring(0, 100));
         return new Response(
-          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+          JSON.stringify({ error: 'خطا در ارسال پیامک. لطفا دوباره تلاش کنید.' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      
+      console.log('SMS sent successfully via Parsgreen');
 
     } catch (fetchError) {
       console.error('Network error sending SMS');
       return new Response(
-        JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+        JSON.stringify({ error: 'خطا در ارسال پیامک. لطفا دوباره تلاش کنید.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Only save OTP to database if SMS was sent successfully
+    if (smsSent) {
+      const expiresAt = new Date(Date.now() + 90 * 1000);
+      const { error: dbError } = await supabase
+        .from('otp_codes')
+        .insert({
+          phone_number: normalizedPhone,
+          code,
+          expires_at: expiresAt.toISOString(),
+          verified: false,
+        });
+
+      if (dbError) {
+        console.error('Error saving OTP:', dbError);
+        return new Response(
+          JSON.stringify({ error: 'خطا در ذخیره کد تایید' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Always return same response regardless of user existence to prevent enumeration
