@@ -172,12 +172,13 @@ serve(async (req) => {
     
     // Environment-based host validation
     const allowedProductionHosts = ['ahrom.org'];
-    const allowedProductionSuffixes = ['.ahrom.org'];
+    // In production, allow primary domain and controlled preview domains for this project
+    const allowedProductionSuffixes = ['.ahrom.org', '.lovableproject.com', '.lovable.app'];
     
     // Only allow localhost/127.0.0.1 in non-production
     const isLocalhost = !isProduction && (/^localhost$/.test(baseHost) || /^127\.0\.0\.1$/.test(baseHost));
     
-    // Production: strict whitelist only
+    // Production: strict whitelist only (+ Lovable preview domains)
     // Non-production: allow localhost + lovable domains for testing
     const isProductionAllowed = allowedProductionHosts.includes(baseHost) || 
                                 allowedProductionSuffixes.some(s => baseHost.endsWith(s));
@@ -186,7 +187,8 @@ serve(async (req) => {
     const isAllowed = hostIsValidFormat && (isProductionAllowed || isLocalhost || isDevelopmentAllowed);
     
     if (!isAllowed) {
-      console.warn('Invalid host attempt:', baseHost);
+      const maskedHost = baseHost.replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, 'xxx-xxx');
+      console.warn('Invalid host attempt:', maskedHost);
       return new Response(
         JSON.stringify({ error: 'دامنه نامعتبر' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
