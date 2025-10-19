@@ -101,14 +101,37 @@ export default function MyProjectsHierarchy() {
 
       if (projError) throw projError;
 
-      // Fetch orders
-      const { data: orders, error: ordError } = await supabase
-        .from('orders')
-        .select('id, project_id, payload, status, created_at, notes')
+      // دریافت customer_id برای دریافت سفارشات
+      const { data: customer, error: custErr } = await supabase
+        .from('customers')
+        .select('id')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .maybeSingle();
 
-      if (ordError) throw ordError;
+      if (custErr) throw custErr;
+
+      let orders: Order[] = [];
+      
+      // Fetch orders from projects_v3 (سفارشات)
+      if (customer) {
+        const { data: projectsV3, error: ordErr } = await supabase
+          .from('projects_v3')
+          .select('id, code, status, created_at, notes, province_id, district_id, subcategory_id')
+          .eq('customer_id', customer.id)
+          .order('created_at', { ascending: false });
+
+        if (ordErr) throw ordErr;
+
+        // تبدیل projects_v3 به فرمت Order
+        orders = (projectsV3 || []).map(pv3 => ({
+          id: pv3.id,
+          project_id: pv3.id, // این سفارش خودش یک پروژه است
+          code: pv3.code,
+          status: pv3.status,
+          created_at: pv3.created_at,
+          notes: pv3.notes
+        }));
+      }
 
       // Group projects by location
       const projectsByLocation: { [key: string]: Project[] } = {};
@@ -119,27 +142,29 @@ export default function MyProjectsHierarchy() {
         projectsByLocation[project.location_id].push(project);
       });
 
-      // Group orders by project
-      const ordersByProject: { [key: string]: Order[] } = {};
+      // Group orders by "virtual project" - در اینجا هر سفارش (projects_v3) یک project محسوب می‌شود
+      // ما سفارشات را بر اساس لوکیشن گروه‌بندی می‌کنیم
+      const ordersByLocation: { [key: string]: Order[] } = {};
+      
+      // ابتدا locations را برای projects_v3 شناسایی کنیم
+      const { data: locationsData } = await supabase
+        .from('provinces')
+        .select('id, name');
+      
+      // ایجاد یک mapping مجازی برای نمایش سفارشات بر اساس استان
       orders?.forEach(order => {
-        if (!ordersByProject[order.project_id]) {
-          ordersByProject[order.project_id] = [];
+        // استفاده از province_id به عنوان کلید location
+        const locKey = order.id; // هر سفارش یک آیتم جداگانه است
+        if (!ordersByLocation[locKey]) {
+          ordersByLocation[locKey] = [];
         }
-        const payload = order.payload as any;
-        ordersByProject[order.project_id].push({
-          id: order.id,
-          project_id: order.project_id,
-          code: payload?.code || order.id.slice(0, 8),
-          status: order.status,
-          created_at: order.created_at,
-          notes: order.notes
-        });
+        ordersByLocation[locKey].push(order);
       });
 
       setData({
         addresses: locations || [],
         projects: projectsByLocation,
-        orders: ordersByProject
+        orders: ordersByLocation
       });
 
     } catch (error) {
@@ -173,12 +198,13 @@ export default function MyProjectsHierarchy() {
   const getStatusBadge = (status: string) => {
     const statusConfig: { [key: string]: { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' } } = {
       draft: { label: 'پیش‌نویس', variant: 'secondary' },
-      pending: { label: 'در انتظار', variant: 'outline' },
-      priced: { label: 'قیمت‌گذاری شده', variant: 'default' },
-      confirmed: { label: 'تایید شده', variant: 'default' },
+      pending: { label: 'در انتظار تایید', variant: 'outline' },
+      approved: { label: 'تایید شده', variant: 'default' },
+      rejected: { label: 'رد شده', variant: 'destructive' },
       in_progress: { label: 'در حال اجرا', variant: 'default' },
-      done: { label: 'انجام شده', variant: 'default' },
-      canceled: { label: 'لغو شده', variant: 'destructive' }
+      completed: { label: 'تکمیل شده', variant: 'default' },
+      paid: { label: 'پرداخت شده', variant: 'default' },
+      closed: { label: 'بسته شده', variant: 'secondary' }
     };
 
     const config = statusConfig[status] || { label: status, variant: 'default' };
@@ -334,7 +360,7 @@ export default function MyProjectsHierarchy() {
                                       className="flex items-center justify-between p-2 bg-background rounded-md hover:bg-accent/50 cursor-pointer transition-colors mr-6"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        navigate(`/orders/${order.id}`);
+                                        navigate(`/user/orders/${order.id}`);
                                       }}
                                     >
                                       <div className="flex items-center gap-2">
