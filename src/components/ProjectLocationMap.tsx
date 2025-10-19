@@ -33,7 +33,7 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
-  const mapboxToken = 'pk.eyJ1Ijoia2hhZGFtYXRlLWFocm9tIiwiYSI6ImNtZzZ4ajQ3cTBicHEybW9oazdhd3d5NHUifQ.NYnEZq8GrqvL6ACcYR1fag';
+  const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1Ijoia2hhZGFtYXRlLWFocm9tIiwiYSI6ImNtZzZ4ajQ3cTBicHEybW9oazdhd3d5NHUifQ.NYnEZq8GrqvL6ACcYR1fag';
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('satellite');
   const [selectedLocation, setSelectedLocation] = useState<{
     address: string;
