@@ -68,22 +68,22 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
       ) : (
         <div className="grid gap-3">
           {locations.map((location) => (
-            <LocationCard
-              key={location.id}
-              location={location}
-              selected={selectedLocationId === location.id}
-              onSelect={() => handleSelectLocation(location)}
-              onDelete={() => deleteLocation(location.id)}
-            />
+            <div key={location.id} className="space-y-3">
+              <LocationCard
+                location={location}
+                selected={selectedLocationId === location.id}
+                onSelect={() => handleSelectLocation(location)}
+                onDelete={() => deleteLocation(location.id)}
+              />
+              {selectedLocationId === location.id && (
+                <div className="flex justify-center animate-in slide-in-from-top-2">
+                  <Button onClick={handleConfirm} size="lg" className="w-full sm:w-auto">
+                    تایید و ادامه
+                  </Button>
+                </div>
+              )}
+            </div>
           ))}
-        </div>
-      )}
-
-      {selectedLocationId && (
-        <div className="flex justify-end pt-4 border-t">
-          <Button onClick={handleConfirm} size="lg">
-            تایید و ادامه
-          </Button>
         </div>
       )}
     </div>
