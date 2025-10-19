@@ -178,10 +178,10 @@ serve(async (req) => {
     const isLocalhost = !isProduction && (/^localhost$/.test(baseHost) || /^127\.0\.0\.1$/.test(baseHost));
     
     // Production: strict whitelist only
-    // Non-production: allow localhost + lovableproject.com for testing
+    // Non-production: allow localhost + lovable domains for testing
     const isProductionAllowed = allowedProductionHosts.includes(baseHost) || 
                                 allowedProductionSuffixes.some(s => baseHost.endsWith(s));
-    const isDevelopmentAllowed = !isProduction && (baseHost.endsWith('.lovableproject.com'));
+    const isDevelopmentAllowed = !isProduction && (baseHost.endsWith('.lovableproject.com') || baseHost.endsWith('.lovable.app'));
     
     const isAllowed = hostIsValidFormat && (isProductionAllowed || isLocalhost || isDevelopmentAllowed);
     
