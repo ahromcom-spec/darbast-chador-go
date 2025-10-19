@@ -12,7 +12,7 @@ interface LocationSelectorProps {
 }
 
 export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) => {
-  const { locations, loading, deleteLocation } = useLocations();
+  const { locations, loading, deleteLocation, refetch } = useLocations();
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
 
@@ -26,8 +26,9 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
     }
   };
 
-  const handleLocationCreated = (locationId: string) => {
+  const handleLocationCreated = async (locationId: string) => {
     setShowNewLocationDialog(false);
+    await refetch(); // رفرش لیست آدرس‌ها
     setSelectedLocationId(locationId);
   };
 
