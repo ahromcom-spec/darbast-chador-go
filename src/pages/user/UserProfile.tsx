@@ -129,6 +129,8 @@ const fetchOrders = async () => {
       .eq('user_id', user.id)
       .maybeSingle();
 
+    let normalizedProjects: ProjectOrder[] = [];
+    
     if (!customerError && customer) {
       const { data: projects, error: projectsError } = await supabase
         .from('projects_v3')
@@ -138,9 +140,8 @@ const fetchOrders = async () => {
 
       if (projectsError) {
         console.error('Error fetching projects_v3:', projectsError);
-        setProjectOrders([]);
       } else {
-        const normalized = (projects || []).map((p: any) => {
+        normalizedProjects = (projects || []).map((p: any) => {
           let estimated_price: number | null = null;
           try {
             const n = typeof p.notes === 'string' ? JSON.parse(p.notes) : p.notes;
@@ -155,10 +156,7 @@ const fetchOrders = async () => {
             estimated_price,
           } as ProjectOrder;
         });
-        setProjectOrders(normalized);
       }
-    } else {
-      setProjectOrders([]);
     }
 
     // New simple scaffolding requests (form reset)
@@ -173,6 +171,32 @@ const fetchOrders = async () => {
       setScaffoldingRequests([]);
     } else {
       setScaffoldingRequests(sreqs || []);
+      
+      // ترکیب scaffolding requests با project orders
+      const scaffoldingAsOrders: ProjectOrder[] = (sreqs || []).map(req => {
+        let estimatedPrice = null;
+        try {
+          const details = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
+          estimatedPrice = details?.estimated_price || null;
+        } catch {}
+        
+        return {
+          id: req.id,
+          created_at: req.created_at,
+          code: `REQ-${req.id.slice(0, 8).toUpperCase()}`,
+          status: req.status,
+          address: req.address,
+          estimated_price: estimatedPrice,
+          notes: req.details ? JSON.stringify(req.details) : null,
+        };
+      });
+      
+      // ترکیب همه سفارشات
+      const allOrders = [...normalizedProjects, ...scaffoldingAsOrders].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      
+      setProjectOrders(allOrders);
     }
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -314,7 +338,7 @@ const fetchOrders = async () => {
     </div>
 
     {/* Orders Table */}
-    {orders.length === 0 && projectOrders.length === 0 && scaffoldingRequests.length === 0 ? (
+    {orders.length === 0 && projectOrders.length === 0 ? (
       <EmptyState
         icon={Package}
         title="سفارشی یافت نشد"
@@ -322,44 +346,6 @@ const fetchOrders = async () => {
       />
     ) : (
       <div className="space-y-6">
-        {scaffoldingRequests.length > 0 && (
-          <div>
-            <h3 className="font-semibold mb-2">درخواست‌های داربست (فرم جدید)</h3>
-            <div className="rounded-md border overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="whitespace-nowrap">تاریخ ثبت</TableHead>
-                      <TableHead className="whitespace-nowrap min-w-[150px]">آدرس</TableHead>
-                      <TableHead className="whitespace-nowrap">وضعیت</TableHead>
-                      <TableHead className="whitespace-nowrap">جزئیات</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {scaffoldingRequests.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {new Date(r.created_at).toLocaleDateString('fa-IR')}
-                        </TableCell>
-                        <TableCell className="max-w-[240px] truncate text-sm">
-                          {r.address || '-'}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <StatusBadge status={r.status} />
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {r.details?.service_type ? `نوع: ${r.details.service_type}` : '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </div>
-        )}
-
         {projectOrders.length > 0 && (
           <div>
             <h3 className="font-semibold mb-2">سفارشات ثبت شده</h3>
