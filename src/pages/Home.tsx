@@ -48,35 +48,27 @@ export default function Home() {
     setSelectedProject('');
   };
 
-  // هنگامی که نوع خدمات انتخاب شد، کاربر را به صفحه پروژه‌ها هدایت کنیم
+  // هنگامی که نوع خدمات انتخاب شد، کاربر را به صفحه انتخاب آدرس هدایت کنیم
   useEffect(() => {
     if (selectedServiceType && selectedSubcategory) {
-      // اول چک می‌کنیم که کاربر لاگین کرده است
-      if (!user) {
-        toast({
-          title: 'نیاز به ورود',
-          description: 'برای ثبت درخواست خدمات، لطفاً ابتدا وارد حساب کاربری خود شوید',
-          variant: 'default'
-        });
-        navigate('/auth/login', {
-          state: {
-            from: '/user/projects',
-            serviceTypeId: selectedServiceType,
-            subcategoryCode: selectedSubcategory
-          }
-        });
-        return;
-      }
+      const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
+      const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
       
-      // اگر کاربر لاگین است، به صفحه پروژه‌ها هدایت شود
-      navigate('/user/projects', {
-        state: {
-          serviceTypeId: selectedServiceType,
-          subcategoryCode: selectedSubcategory
-        }
+      // ذخیره اطلاعات انتخاب شده برای استفاده بعد از لاگین
+      const serviceSelection = {
+        serviceTypeId: selectedServiceType,
+        subcategoryId: subcategory?.id,
+        subcategoryCode: selectedSubcategory,
+        serviceName: serviceType?.name,
+        subcategoryName: subcategory?.name
+      };
+      
+      // هدایت به صفحه انتخاب آدرس (اگر کاربر لاگین نباشد، خودش redirect می‌کند)
+      navigate('/select-location', {
+        state: { serviceSelection }
       });
     }
-  }, [selectedServiceType, selectedSubcategory, user, navigate, toast]);
+  }, [selectedServiceType, selectedSubcategory, navigate, serviceTypes]);
 
   // پروژه‌های کاربر را نمایش می‌دهیم و اجازه می‌دهیم انتخاب کند
   // دیگر redirect خودکار نداریم تا کاربر بتواند پروژه‌هایش را ببیند

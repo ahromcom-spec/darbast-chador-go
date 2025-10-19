@@ -62,6 +62,8 @@ const ReputationDashboard = lazy(() => import("./pages/ratings/ReputationDashboa
 const RatingTestPage = lazy(() => import("./pages/ratings/RatingTestPage"));
 const NotificationSettings = lazy(() => import("./pages/settings/NotificationSettings"));
 const InstallApp = lazy(() => import("./pages/settings/InstallApp"));
+const SelectLocation = lazy(() => import("./pages/user/SelectLocation"));
+const MyOrders = lazy(() => import("./pages/user/MyOrders"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 
@@ -158,6 +160,16 @@ const App = () => (
               <Route path="/orders/:id" element={
                 <ProtectedRoute>
                   <OrderDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/select-location" element={
+                <ProtectedRoute>
+                  <SelectLocation />
+                </ProtectedRoute>
+              } />
+              <Route path="/my-orders" element={
+                <ProtectedRoute>
+                  <MyOrders />
                 </ProtectedRoute>
               } />
               <Route path="/tickets" element={<TicketList />} />

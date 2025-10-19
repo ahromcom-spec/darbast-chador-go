@@ -623,6 +623,63 @@ export type Database = {
           },
         ]
       }
+      locations: {
+        Row: {
+          address_line: string
+          created_at: string | null
+          district_id: string | null
+          id: string
+          is_active: boolean | null
+          lat: number
+          lng: number
+          province_id: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          address_line: string
+          created_at?: string | null
+          district_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          lat: number
+          lng: number
+          province_id?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          address_line?: string
+          created_at?: string | null
+          district_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          lat?: number
+          lng?: number
+          province_id?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locations_province_id_fkey"
+            columns: ["province_id"]
+            isOneToOne: false
+            referencedRelation: "provinces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string
@@ -655,6 +712,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      orders: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          payload: Json
+          price: number | null
+          project_id: string
+          status: Database["public"]["Enums"]["order_status"] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payload?: Json
+          price?: number | null
+          project_id: string
+          status?: Database["public"]["Enums"]["order_status"] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payload?: Json
+          price?: number | null
+          project_id?: string
+          status?: Database["public"]["Enums"]["order_status"] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_hierarchy"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organizational_positions: {
         Row: {
@@ -941,6 +1042,64 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      projects_hierarchy: {
+        Row: {
+          created_at: string | null
+          id: string
+          location_id: string
+          service_type_id: string
+          status: string | null
+          subcategory_id: string
+          title: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          location_id: string
+          service_type_id: string
+          status?: string | null
+          subcategory_id: string
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          location_id?: string
+          service_type_id?: string
+          status?: string | null
+          subcategory_id?: string
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_hierarchy_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_hierarchy_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_hierarchy_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects_v2: {
         Row: {
@@ -2349,6 +2508,15 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_or_create_project: {
+        Args: {
+          _location_id: string
+          _service_type_id: string
+          _subcategory_id: string
+          _user_id: string
+        }
+        Returns: string
+      }
       get_orders_with_customer_info: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -2464,6 +2632,15 @@ export type Database = {
         | "INVOICE_ATTACHMENT"
         | "OTHER"
       notification_channel: "EMAIL" | "SMS" | "INAPP" | "WHATSAPP" | "WEBHOOK"
+      order_status:
+        | "draft"
+        | "pending"
+        | "priced"
+        | "confirmed"
+        | "scheduled"
+        | "in_progress"
+        | "done"
+        | "canceled"
       payment_status: "UNBILLED" | "INVOICED" | "PARTIAL" | "SETTLED"
       payment_status_enum: "PENDING" | "PAID" | "FAILED" | "REFUNDED"
       project_status: "ACTIVE" | "ARCHIVED"
@@ -2672,6 +2849,16 @@ export const Constants = {
         "OTHER",
       ],
       notification_channel: ["EMAIL", "SMS", "INAPP", "WHATSAPP", "WEBHOOK"],
+      order_status: [
+        "draft",
+        "pending",
+        "priced",
+        "confirmed",
+        "scheduled",
+        "in_progress",
+        "done",
+        "canceled",
+      ],
       payment_status: ["UNBILLED", "INVOICED", "PARTIAL", "SETTLED"],
       payment_status_enum: ["PENDING", "PAID", "FAILED", "REFUNDED"],
       project_status: ["ACTIVE", "ARCHIVED"],
