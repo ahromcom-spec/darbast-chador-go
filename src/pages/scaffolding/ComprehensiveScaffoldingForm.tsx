@@ -684,9 +684,9 @@ export default function ComprehensiveScaffoldingForm({
         });
 
         setTimeout(() => {
-          navigate('/orders');
+          navigate('/user/orders');
         }, 1500);
-        } else if (projectId && lockedProjectData) {
+      } else if (projectId && lockedProjectData) {
         // حالت سفارش برای پروژه موجود - استفاده از اطلاعات قفل شده
         const { error: projectError } = await supabase
           .from('projects_v3')
