@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { Button } from '@/components/ui/button';
-
+import { useNavigate } from 'react-router-dom';
 interface DashboardStats {
   totalOrders: number;
   pendingOrders: number;
@@ -16,6 +16,7 @@ interface DashboardStats {
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     totalOrders: 0,
     pendingOrders: 0,
@@ -134,7 +135,7 @@ export default function AdminDashboard() {
             <Button 
               variant="outline" 
               className="h-auto flex-col items-start p-4"
-              onClick={() => window.location.href = '/admin/orders'}
+              onClick={() => navigate('/admin/orders')}
             >
               <FileText className="h-5 w-5 mb-2 text-primary" />
               <span className="font-semibold">مدیریت سفارشات</span>
@@ -144,7 +145,7 @@ export default function AdminDashboard() {
             <Button 
               variant="outline" 
               className="h-auto flex-col items-start p-4"
-              onClick={() => window.location.href = '/admin/users'}
+              onClick={() => navigate('/admin/users')}
             >
               <Users className="h-5 w-5 mb-2 text-primary" />
               <span className="font-semibold">مدیریت کاربران</span>
@@ -154,7 +155,7 @@ export default function AdminDashboard() {
             <Button 
               variant="outline" 
               className="h-auto flex-col items-start p-4"
-              onClick={() => window.location.href = '/admin/staff-requests'}
+              onClick={() => navigate('/admin/staff-requests')}
             >
               <CheckCircle className="h-5 w-5 mb-2 text-primary" />
               <span className="font-semibold">درخواست‌های پرسنل</span>

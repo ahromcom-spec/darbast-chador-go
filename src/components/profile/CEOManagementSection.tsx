@@ -11,6 +11,7 @@ interface CEOManagementSectionProps {
 
 export function CEOManagementSection({ userId, userEmail }: CEOManagementSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   const quickActions = [
     {
@@ -101,7 +102,7 @@ export function CEOManagementSection({ userId, userEmail }: CEOManagementSection
               {quickActions.map((action) => (
                 <button
                   key={action.title}
-                  onClick={() => window.location.href = action.href}
+                  onClick={() => navigate(action.href)}
                   className="p-4 rounded-lg border-2 border-border hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group hover:shadow-md"
                 >
                   <div className="flex items-start gap-3">

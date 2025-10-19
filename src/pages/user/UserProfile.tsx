@@ -63,6 +63,7 @@ interface ScaffoldingRequest {
 export default function UserProfile() {
   usePageTitle('پروفایل کاربری');
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { isContractor } = useContractorRole();
   const { isCEO } = useCEORole();
   const { isAdmin } = useAdminRole();
@@ -307,7 +308,7 @@ const fetchOrders = async () => {
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button
-          onClick={() => window.location.href = '/user/projects'}
+          onClick={() => navigate('/user/projects')}
           className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
         >
           <div className="flex items-center gap-3">
@@ -321,7 +322,7 @@ const fetchOrders = async () => {
           </div>
         </button>
         <button
-          onClick={() => window.location.href = '/user/create-project'}
+          onClick={() => navigate('/user/create-project')}
           className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
         >
           <div className="flex items-center gap-3">

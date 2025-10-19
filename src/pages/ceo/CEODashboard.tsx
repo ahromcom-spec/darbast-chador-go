@@ -9,10 +9,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 export const CEODashboard = () => {
   usePageTitle('داشبورد CEO');
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { whitelist, loading: whitelistLoading } = usePhoneWhitelist();
   const {
@@ -173,7 +175,7 @@ export const CEODashboard = () => {
             <Button 
               variant="outline" 
               className="h-auto flex-col items-start p-4"
-              onClick={() => window.location.href = '/ceo/orders'}
+              onClick={() => navigate('/ceo/orders')}
             >
               <FileText className="h-5 w-5 mb-2 text-primary" />
               <span className="font-semibold">مدیریت سفارشات</span>
@@ -183,7 +185,7 @@ export const CEODashboard = () => {
             <Button 
               variant="outline" 
               className="h-auto flex-col items-start p-4"
-              onClick={() => window.location.href = '/ceo/staff-verifications'}
+              onClick={() => navigate('/ceo/staff-verifications')}
             >
               <Users className="h-5 w-5 mb-2 text-primary" />
               <span className="font-semibold">تایید پرسنل</span>
@@ -193,7 +195,7 @@ export const CEODashboard = () => {
             <Button 
               variant="outline" 
               className="h-auto flex-col items-start p-4"
-              onClick={() => window.location.href = '/ceo/contractor-verifications'}
+              onClick={() => navigate('/ceo/contractor-verifications')}
             >
               <UserCheck className="h-5 w-5 mb-2 text-primary" />
               <span className="font-semibold">تایید پیمانکاران</span>
@@ -203,7 +205,7 @@ export const CEODashboard = () => {
             <Button 
               variant="outline" 
               className="h-auto flex-col items-start p-4"
-              onClick={() => window.location.href = '/ceo/phone-whitelist'}
+              onClick={() => navigate('/ceo/phone-whitelist')}
             >
               <Shield className="h-5 w-5 mb-2 text-primary" />
               <span className="font-semibold">مدیریت دسترسی</span>
