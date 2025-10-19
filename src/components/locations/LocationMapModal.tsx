@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import MapboxLanguage from '@mapbox/mapbox-gl-language';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MapPin, X } from 'lucide-react';
@@ -43,6 +44,10 @@ export const LocationMapModal = ({
       zoom: 14,
       pitch: 0,
     });
+
+    // Add language control for Persian/Farsi labels
+    const language = new MapboxLanguage({ defaultLanguage: 'fa' });
+    map.current.addControl(language);
 
     // Ensure proper rendering when inside modal
     map.current.on('load', () => {
