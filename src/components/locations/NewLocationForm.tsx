@@ -200,7 +200,7 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
       </div>
 
       <Button type="submit" className="w-full" disabled={!hasMapPin || !isQomSelected}>
-        ثبت آدرس
+        ثبت و تایید آدرس
       </Button>
     </form>
   );
