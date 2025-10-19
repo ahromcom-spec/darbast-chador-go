@@ -11,6 +11,7 @@ import { MapPin, Info } from 'lucide-react';
 import { locationSchema } from '@/lib/validations';
 import { z } from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { LocationMapModal } from './LocationMapModal';
 
 interface NewLocationFormProps {
   onSuccess: (locationId: string) => void;
@@ -32,6 +33,7 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
   });
 
   const [hasMapPin, setHasMapPin] = useState(false);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
   // شناسایی استان قم
   const qomProvince = provinces.find(p => p.code === '10');
@@ -48,9 +50,11 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
   };
 
   const handleMapPinClick = () => {
-    // TODO: Open map modal to select coordinates
-    // For now, setting dummy coordinates
-    setFormData({ ...formData, lat: 35.6892, lng: 51.3890 });
+    setIsMapModalOpen(true);
+  };
+
+  const handleLocationSelect = (lat: number, lng: number) => {
+    setFormData({ ...formData, lat, lng });
     setHasMapPin(true);
     toast({
       title: 'نقطه روی نقشه انتخاب شد',
@@ -202,6 +206,14 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
       <Button type="submit" className="w-full" disabled={!hasMapPin || !isQomSelected}>
         ثبت و تایید آدرس
       </Button>
+
+      <LocationMapModal
+        isOpen={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        onLocationSelect={handleLocationSelect}
+        initialLat={formData.lat || 34.6416}
+        initialLng={formData.lng || 50.8746}
+      />
     </form>
   );
 };
