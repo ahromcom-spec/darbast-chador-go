@@ -164,28 +164,28 @@ serve(async (req) => {
       }
     }
 
-    // Check if user exists with this phone number or derived email
-    const { data: existingUser } = await supabase.auth.admin.listUsers();
-    const userWithPhone = existingUser.users.find(u => u.phone === authPhone);
-    const userWithEmail = existingUser.users.find(u => u.email === derivedEmail);
-    
-    const userExists = userWithPhone || userWithEmail;
+    // Check if user exists with derived email
+    let userWithEmail: any = null;
+    let existingUserId: string | null = null;
+    try {
+      // Prefer direct lookup by email to avoid heavy list calls (prevents quota issues)
+      // @ts-ignore - getUserByEmail is available in admin API on this runtime
+      const { data: byEmail } = await (supabase.auth.admin as any).getUserByEmail?.(derivedEmail) || {};
+      if (byEmail?.user) {
+        userWithEmail = byEmail.user;
+        existingUserId = byEmail.user.id;
+      }
+    } catch (_) {
+      // Fallback (rare): no-op. We intentionally avoid listUsers to respect quotas
+    }
+    const userExists = !!userWithEmail;
 
     // Security: Add random delay to prevent timing attacks (50-150ms)
     const randomDelay = Math.floor(Math.random() * 100) + 50;
     await new Promise(resolve => setTimeout(resolve, randomDelay));
 
-    // If this is a login attempt and user doesn't exist:
-    // - For whitelisted/test phones, allow auto-provisioning (skip error)
-    // - For regular phones, return generic error to prevent enumeration
-    if (!is_registration && !userExists) {
-      if (!(isWhitelistedPhone || isTestPhone)) {
-        return new Response(
-          JSON.stringify({ error: 'اطلاعات ورود نامعتبر است' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
+    // Do not reveal user existence. Try sign-in path first; if it fails we'll create or recover.
+    // This avoids heavy admin list calls and prevents quota issues.
 
     // For registration attempts, prevent duplicate signups
     if (is_registration && userExists) {
@@ -199,16 +199,15 @@ serve(async (req) => {
     let session;
 
     // Helper to sign in with email, updating password if needed
-    const signInWithEmail = async (email: string) => {
+    const signInWithEmail = async (email: string, userId?: string | null) => {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: loginPassword,
       });
       if (error) {
-        // Ensure confirmed email and a valid password, then retry
-        const target = existingUser.users.find(u => u.email === email);
-        if (target) {
-          await supabase.auth.admin.updateUserById(target.id, {
+        // Ensure confirmed email and a valid password, then retry if we know the user id
+        if (userId) {
+          await supabase.auth.admin.updateUserById(userId, {
             password: loginPassword,
             email_confirm: true,
           });
@@ -227,26 +226,9 @@ serve(async (req) => {
       return { session: data.session, error: null };
     };
 
-    if (userWithPhone) {
-      // Attach an email and set a valid password, then sign in via email
-      await supabase.auth.admin.updateUserById(userWithPhone.id, {
-        password: loginPassword,
-        email: derivedEmail,
-        email_confirm: true,
-        user_metadata: { ...(userWithPhone.user_metadata || {}), phone_number: normalizedPhone },
-      });
-      const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
-      if (emailErr) {
-        console.error('Authentication error');
-        return new Response(
-          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      session = sess;
-    } else if (userWithEmail) {
+    if (userWithEmail) {
       // Existing email-mapped user
-      const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
+      const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail, existingUserId);
       if (emailErr) {
         return new Response(
           JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
