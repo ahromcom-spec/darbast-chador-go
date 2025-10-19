@@ -317,6 +317,77 @@ export default function ComprehensiveScaffoldingForm({
     }
   };
 
+  // New helper to ensure required system data is available before submit
+  const ensureSystemData = async () => {
+    try {
+      // Ensure customer exists
+      if (!customer && user) {
+        let { data: customerData } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!customerData) {
+          const { data: newCustomer } = await supabase
+            .from('customers')
+            .insert({ user_id: user.id } as any)
+            .select()
+            .maybeSingle();
+          customerData = newCustomer || null;
+        }
+        if (customerData) setCustomer(customerData);
+      }
+
+      // Ensure Qom province id
+      if (!qomProvinceId) {
+        const { data: qom } = await supabase
+          .from('provinces')
+          .select('id')
+          .eq('code', '10')
+          .maybeSingle();
+        if (qom?.id) setQomProvinceId(qom.id);
+      }
+
+      // Ensure Qom city id (optional)
+      if (!qomCityId) {
+        const { data: qomCity } = await supabase
+          .from('districts')
+          .select('id')
+          .eq('name', 'شهر قم')
+          .maybeSingle();
+        if (qomCity?.id) setQomCityId(qomCity.id);
+      }
+
+      // Ensure scaffolding service and subcategory ids
+      if (!withMaterialsSubcategoryId) {
+        let scaffId = scaffoldingServiceId;
+        if (!scaffId) {
+          const { data: scaffolding } = await supabase
+            .from('service_types_v3')
+            .select('id')
+            .eq('code', '10')
+            .maybeSingle();
+          if (scaffolding?.id) {
+            scaffId = scaffolding.id;
+            setScaffoldingServiceId(scaffolding.id);
+          }
+        }
+        if (scaffId && !withMaterialsSubcategoryId) {
+          const { data: withMaterials } = await supabase
+            .from('subcategories')
+            .select('id')
+            .eq('service_type_id', scaffId)
+            .eq('code', '10')
+            .maybeSingle();
+          if (withMaterials?.id) setWithMaterialsSubcategoryId(withMaterials.id);
+        }
+      }
+    } catch (e) {
+      console.error('ensureSystemData error:', e);
+    }
+  };
+
   // Dimension management
   const addDimension = () => {
     const newId = (dimensions.length + 1).toString();
@@ -615,9 +686,13 @@ export default function ComprehensiveScaffoldingForm({
     }
 
     if (!customer || !qomProvinceId || !withMaterialsSubcategoryId) {
+      await ensureSystemData();
+    }
+
+    if (!customer || !qomProvinceId || !withMaterialsSubcategoryId) {
       toast({
         title: 'خطا',
-        description: 'اطلاعات سیستم کامل نیست',
+        description: 'اطلاعات سیستم کامل نیست. لطفاً یک‌بار صفحه را رفرش کنید یا مجدداً تلاش کنید.',
         variant: 'destructive',
       });
       return;
