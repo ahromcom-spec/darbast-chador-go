@@ -172,6 +172,11 @@ const App = () => (
                   <MyOrders />
                 </ProtectedRoute>
               } />
+              <Route path="/user/orders" element={
+                <ProtectedRoute>
+                  <MyOrders />
+                </ProtectedRoute>
+              } />
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<NewTicket />} />
               <Route path="/tickets/:id" element={<TicketDetail />} />

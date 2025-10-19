@@ -1,11 +1,24 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Building2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowRight, Building2, MapPin, Package } from 'lucide-react';
 import ComprehensiveScaffoldingForm from './ComprehensiveScaffoldingForm';
 
 export default function ScaffoldingForm() {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get passed data from SelectLocation
+  const {
+    projectId,
+    serviceName,
+    subcategoryName,
+    locationAddress,
+    locationTitle,
+    provinceName,
+    districtName
+  } = location.state || {};
 
   return (
     <div 
@@ -35,14 +48,54 @@ export default function ScaffoldingForm() {
             <CardHeader className="text-center border-b">
               <CardTitle className="text-2xl flex items-center justify-center gap-2">
                 <Building2 className="h-6 w-6 text-primary" />
-                فرم قیمت‌گذاری خدمات داربست فلزی به همراه تمامی اجناس
+                فرم ثبت سفارش {serviceName || 'خدمات ساختمان'}
               </CardTitle>
               <CardDescription>
-                لطفاً نوع خدمات مورد نظر خود را انتخاب کرده و اطلاعات پروژه را وارد کنید
+                {subcategoryName || 'لطفاً اطلاعات پروژه را وارد کنید'}
               </CardDescription>
             </CardHeader>
+
+            {/* نمایش اطلاعات آدرس و سرویس */}
+            {locationAddress && (
+              <CardContent className="pt-6 pb-4 border-b bg-muted/30">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Alert className="border-primary/30">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <AlertDescription>
+                      <div className="space-y-1">
+                        <p className="font-semibold text-sm">آدرس پروژه:</p>
+                        {locationTitle && (
+                          <p className="text-xs text-muted-foreground">{locationTitle}</p>
+                        )}
+                        <p className="text-sm">{locationAddress}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {provinceName && `${provinceName}`}
+                          {districtName && ` • ${districtName}`}
+                        </p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+
+                  <Alert className="border-primary/30">
+                    <Package className="h-4 w-4 text-primary" />
+                    <AlertDescription>
+                      <div className="space-y-1">
+                        <p className="font-semibold text-sm">نوع خدمات:</p>
+                        <p className="text-sm">{serviceName}</p>
+                        <p className="text-xs text-muted-foreground">{subcategoryName}</p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              </CardContent>
+            )}
+
             <CardContent className="p-6">
-              <ComprehensiveScaffoldingForm />
+              <ComprehensiveScaffoldingForm 
+                projectId={projectId}
+                hideAddressField={!!locationAddress}
+                prefilledAddress={locationAddress}
+              />
             </CardContent>
           </Card>
         </div>

@@ -39,9 +39,15 @@ import { sanitizeHtml, getSafeErrorMessage } from '@/lib/security';
 
 interface ComprehensiveScaffoldingFormProps {
   projectId?: string;
+  hideAddressField?: boolean;
+  prefilledAddress?: string;
 }
 
-export default function ComprehensiveScaffoldingForm({ projectId: propProjectId }: ComprehensiveScaffoldingFormProps = {}) {
+export default function ComprehensiveScaffoldingForm({ 
+  projectId: propProjectId,
+  hideAddressField = false,
+  prefilledAddress = ''
+}: ComprehensiveScaffoldingFormProps = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { projectId: paramProjectId } = useParams<{ projectId: string }>();
@@ -54,8 +60,8 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab'>('facade');
 
   // Common fields - locked from project when projectId is provided
-  const [projectAddress, setProjectAddress] = useState('');
-  const [isFieldsLocked, setIsFieldsLocked] = useState(false);
+  const [projectAddress, setProjectAddress] = useState(prefilledAddress || '');
+  const [isFieldsLocked, setIsFieldsLocked] = useState(hideAddressField);
   const [lockedProjectData, setLockedProjectData] = useState<any>(null);
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '' }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
@@ -694,7 +700,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
         });
 
         setTimeout(() => {
-          navigate('/orders');
+          navigate('/user/orders');
         }, 1500);
       } else {
         // حالت ثبت جدید
@@ -734,7 +740,7 @@ export default function ComprehensiveScaffoldingForm({ projectId: propProjectId 
         });
 
         setTimeout(() => {
-          navigate('/orders');
+          navigate('/user/orders');
         }, 1500);
       }
     } catch (error: any) {

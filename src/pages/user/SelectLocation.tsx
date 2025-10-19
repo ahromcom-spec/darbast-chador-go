@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function SelectLocation() {
   const { user } = useAuth();
@@ -47,6 +48,19 @@ export default function SelectLocation() {
 
   const handleLocationSelected = async (locationId: string) => {
     try {
+      // Get location details from database
+      const { data: location, error: locationError } = await supabase
+        .from('locations')
+        .select(`
+          *,
+          provinces(name),
+          districts(name)
+        `)
+        .eq('id', locationId)
+        .single();
+
+      if (locationError) throw locationError;
+
       // Get or create project
       const projectId = await getOrCreateProject(
         locationId,
@@ -54,14 +68,20 @@ export default function SelectLocation() {
         serviceSelection.subcategoryId
       );
 
-      // Navigate to appropriate service form
+      // Navigate to appropriate service form with all needed data
       const formPath = getFormPath(serviceSelection.subcategoryCode);
       navigate(formPath, { 
         state: { 
           projectId,
           locationId,
           serviceTypeId: serviceSelection.serviceTypeId,
-          subcategoryId: serviceSelection.subcategoryId
+          subcategoryId: serviceSelection.subcategoryId,
+          serviceName: serviceSelection.serviceName,
+          subcategoryName: serviceSelection.subcategoryName,
+          locationAddress: location.address_line,
+          locationTitle: location.title || '',
+          provinceName: location.provinces?.name || '',
+          districtName: location.districts?.name || ''
         } 
       });
     } catch (error) {
