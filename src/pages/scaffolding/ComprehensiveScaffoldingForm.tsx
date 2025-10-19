@@ -798,8 +798,8 @@ export default function ComprehensiveScaffoldingForm({
         setTimeout(() => {
           navigate('/user/orders');
         }, 1500);
-      } else if (projectId && lockedProjectData) {
-        // حالت سفارش برای پروژه موجود - استفاده از اطلاعات قفل شده
+      } else if (projectId) {
+        // حالت سفارش برای پروژه موجود - حتی اگر داده‌های قفل‌شده هنوز لود نشده باشد
         const { error: projectError } = await supabase
           .from('projects_v3')
           .update({
@@ -812,7 +812,7 @@ export default function ComprehensiveScaffoldingForm({
 
         toast({
           title: '✅ سفارش با موفقیت ثبت شد',
-          description: `کد پروژه: ${lockedProjectData.code}\nسفارش شما در انتظار تایید مدیر قرار گرفت.`,
+          description: `${lockedProjectData?.code ? `کد پروژه: ${lockedProjectData.code}\n` : ''}سفارش شما در انتظار تایید مدیر قرار گرفت.`,
           duration: 5000,
         });
 
