@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams, useLocation } from 'react-router-dom';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,7 +51,9 @@ export default function ComprehensiveScaffoldingForm({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { projectId: paramProjectId } = useParams<{ projectId: string }>();
-  const projectId = propProjectId || paramProjectId;
+  const locationHook = useLocation();
+  const navState = (locationHook?.state || {}) as any;
+  const projectId = propProjectId || paramProjectId || navState?.projectId;
   const editOrderId = searchParams.get('edit');
   const { toast } = useToast();
   const { user } = useAuth();
@@ -60,8 +62,8 @@ export default function ComprehensiveScaffoldingForm({
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab'>('facade');
 
   // Common fields - locked from project when projectId is provided
-  const [projectAddress, setProjectAddress] = useState(prefilledAddress || '');
-  const [isFieldsLocked, setIsFieldsLocked] = useState(hideAddressField);
+  const [projectAddress, setProjectAddress] = useState((prefilledAddress || navState?.locationAddress || ''));
+  const [isFieldsLocked, setIsFieldsLocked] = useState(hideAddressField || Boolean(projectId));
   const [lockedProjectData, setLockedProjectData] = useState<any>(null);
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '' }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
@@ -318,10 +320,22 @@ export default function ComprehensiveScaffoldingForm({
   };
 
   // New helper to ensure required system data is available before submit
-  const ensureSystemData = async () => {
+  const ensureSystemData = async (): Promise<{
+    customer: any | null;
+    qomProvinceId: string;
+    qomCityId: string;
+    scaffoldingServiceId: string;
+    withMaterialsSubcategoryId: string;
+  }> => {
+    let ensuredCustomer = customer ?? null;
+    let ensuredProvinceId = qomProvinceId ?? '';
+    let ensuredCityId = qomCityId ?? '';
+    let ensuredServiceId = scaffoldingServiceId ?? '';
+    let ensuredSubcategoryId = withMaterialsSubcategoryId ?? '';
+
     try {
       // Ensure customer exists
-      if (!customer && user) {
+      if (!ensuredCustomer && user) {
         let { data: customerData } = await supabase
           .from('customers')
           .select('*')
@@ -336,56 +350,75 @@ export default function ComprehensiveScaffoldingForm({
             .maybeSingle();
           customerData = newCustomer || null;
         }
-        if (customerData) setCustomer(customerData);
+        if (customerData) {
+          ensuredCustomer = customerData;
+          setCustomer(customerData);
+        }
       }
 
       // Ensure Qom province id
-      if (!qomProvinceId) {
+      if (!ensuredProvinceId) {
         const { data: qom } = await supabase
           .from('provinces')
           .select('id')
           .eq('code', '10')
           .maybeSingle();
-        if (qom?.id) setQomProvinceId(qom.id);
+        if (qom?.id) {
+          ensuredProvinceId = qom.id;
+          setQomProvinceId(qom.id);
+        }
       }
 
       // Ensure Qom city id (optional)
-      if (!qomCityId) {
+      if (!ensuredCityId) {
         const { data: qomCity } = await supabase
           .from('districts')
           .select('id')
           .eq('name', 'شهر قم')
           .maybeSingle();
-        if (qomCity?.id) setQomCityId(qomCity.id);
+        if (qomCity?.id) {
+          ensuredCityId = qomCity.id;
+          setQomCityId(qomCity.id);
+        }
       }
 
       // Ensure scaffolding service and subcategory ids
-      if (!withMaterialsSubcategoryId) {
-        let scaffId = scaffoldingServiceId;
-        if (!scaffId) {
+      if (!ensuredSubcategoryId) {
+        if (!ensuredServiceId) {
           const { data: scaffolding } = await supabase
             .from('service_types_v3')
             .select('id')
             .eq('code', '10')
             .maybeSingle();
           if (scaffolding?.id) {
-            scaffId = scaffolding.id;
+            ensuredServiceId = scaffolding.id;
             setScaffoldingServiceId(scaffolding.id);
           }
         }
-        if (scaffId && !withMaterialsSubcategoryId) {
+        if (ensuredServiceId && !ensuredSubcategoryId) {
           const { data: withMaterials } = await supabase
             .from('subcategories')
             .select('id')
-            .eq('service_type_id', scaffId)
+            .eq('service_type_id', ensuredServiceId)
             .eq('code', '10')
             .maybeSingle();
-          if (withMaterials?.id) setWithMaterialsSubcategoryId(withMaterials.id);
+          if (withMaterials?.id) {
+            ensuredSubcategoryId = withMaterials.id;
+            setWithMaterialsSubcategoryId(withMaterials.id);
+          }
         }
       }
     } catch (e) {
       console.error('ensureSystemData error:', e);
     }
+
+    return {
+      customer: ensuredCustomer,
+      qomProvinceId: ensuredProvinceId,
+      qomCityId: ensuredCityId,
+      scaffoldingServiceId: ensuredServiceId,
+      withMaterialsSubcategoryId: ensuredSubcategoryId,
+    };
   };
 
   // Dimension management
@@ -594,12 +627,7 @@ export default function ComprehensiveScaffoldingForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🔵 Form submitted - handleSubmit called');
-    console.log('📊 Current dimensions:', dimensions);
-    console.log('📍 Project address:', projectAddress);
-    console.log('💰 Customer:', customer);
-    console.log('🏢 Province ID:', qomProvinceId);
-    console.log('📦 Subcategory ID:', withMaterialsSubcategoryId);
+    // Logs removed to avoid leaking potentially sensitive data in console
     
     const newErrors: { [key: string]: string } = {};
 
@@ -685,17 +713,26 @@ export default function ComprehensiveScaffoldingForm({
       return;
     }
 
-    if (!customer || !qomProvinceId || !withMaterialsSubcategoryId) {
-      await ensureSystemData();
-    }
+    // Only required when creating a new project (not editing or updating an existing project)
+    const needsSystemData = !editingOrder && !projectId;
+    let effectiveCustomer = customer as any;
+    let effectiveProvinceId = qomProvinceId as string;
+    let effectiveSubcategoryId = withMaterialsSubcategoryId as string;
 
-    if (!customer || !qomProvinceId || !withMaterialsSubcategoryId) {
-      toast({
-        title: 'خطا',
-        description: 'اطلاعات سیستم کامل نیست. لطفاً یک‌بار صفحه را رفرش کنید یا مجدداً تلاش کنید.',
-        variant: 'destructive',
-      });
-      return;
+    if (needsSystemData) {
+      const ensured = await ensureSystemData();
+      effectiveCustomer = effectiveCustomer || ensured.customer;
+      effectiveProvinceId = effectiveProvinceId || ensured.qomProvinceId;
+      effectiveSubcategoryId = effectiveSubcategoryId || ensured.withMaterialsSubcategoryId;
+
+      if (!effectiveCustomer || !effectiveProvinceId || !effectiveSubcategoryId) {
+        toast({
+          title: 'خطا',
+          description: 'اطلاعات سیستم کامل نیست. لطفاً یک‌بار صفحه را رفرش کنید یا مجدداً تلاش کنید.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     setLoading(true);
@@ -786,9 +823,9 @@ export default function ComprehensiveScaffoldingForm({
         // حالت ثبت جدید
         const { data: projectCode, error: codeError } = await supabase
           .rpc('generate_project_code', {
-            _customer_id: customer.id,
-            _province_id: qomProvinceId,
-            _subcategory_id: withMaterialsSubcategoryId
+            _customer_id: (effectiveCustomer as any).id,
+            _province_id: effectiveProvinceId,
+            _subcategory_id: effectiveSubcategoryId
           });
 
         if (codeError) throw codeError;
@@ -798,10 +835,10 @@ export default function ComprehensiveScaffoldingForm({
         const { data: project, error: projectError } = await supabase
           .from('projects_v3')
           .insert({
-            customer_id: customer.id,
-            province_id: qomProvinceId,
+            customer_id: (effectiveCustomer as any).id,
+            province_id: effectiveProvinceId,
             district_id: qomCityId || null,
-            subcategory_id: withMaterialsSubcategoryId,
+            subcategory_id: effectiveSubcategoryId,
             project_number: projectNumber,
             service_code: serviceCode,
             code: projectCode,
