@@ -523,6 +523,12 @@ export default function ComprehensiveScaffoldingForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔵 Form submitted - handleSubmit called');
+    console.log('📊 Current dimensions:', dimensions);
+    console.log('📍 Project address:', projectAddress);
+    console.log('💰 Customer:', customer);
+    console.log('🏢 Province ID:', qomProvinceId);
+    console.log('📦 Subcategory ID:', withMaterialsSubcategoryId);
     
     const newErrors: { [key: string]: string } = {};
 
