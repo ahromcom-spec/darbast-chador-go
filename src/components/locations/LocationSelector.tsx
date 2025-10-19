@@ -26,9 +26,9 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
     }
   };
 
-  const handleLocationCreated = async (locationId: string) => {
+  const handleLocationCreated = (locationId: string) => {
     setShowNewLocationDialog(false);
-    await refetch(); // رفرش لیست آدرس‌ها
+    // لیست آدرس‌ها به صورت خودکار از طریق Realtime به‌روز می‌شود
     setSelectedLocationId(locationId);
   };
 
