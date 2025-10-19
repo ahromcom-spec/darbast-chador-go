@@ -28,14 +28,12 @@ export const LocationMapModal = ({
   useEffect(() => {
     if (!isOpen || !mapContainer.current || map.current) return;
 
-    // استفاده از توکن Mapbox که در secrets ذخیره شده است
-    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
-    
-    if (!mapboxToken) {
-      console.error('MAPBOX_TOKEN تنظیم نشده است');
-      return;
-    }
-    
+    // استفاده از توکن Mapbox (اولویت: ENV -> localStorage -> توکن پیش‌فرض آموزشی)
+    const mapboxToken =
+      import.meta.env.VITE_MAPBOX_TOKEN ||
+      (typeof window !== 'undefined' ? localStorage.getItem('MAPBOX_TOKEN') || undefined : undefined) ||
+      'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
+
     mapboxgl.accessToken = mapboxToken;
     
     map.current = new mapboxgl.Map({
@@ -45,6 +43,15 @@ export const LocationMapModal = ({
       zoom: 14,
       pitch: 0,
     });
+
+    // Ensure proper rendering when inside modal
+    map.current.on('load', () => {
+      map.current?.resize();
+    });
+    map.current.on('error', (e) => {
+      console.error('Mapbox error:', e);
+    });
+    setTimeout(() => map.current?.resize(), 200);
 
     // Add navigation controls
     map.current.addControl(
@@ -119,7 +126,7 @@ export const LocationMapModal = ({
             روی نقشه کلیک کنید یا نشانگر را بکشید تا موقعیت دقیق را انتخاب کنید
           </div>
           
-          <div ref={mapContainer} className="flex-1 w-full" />
+          <div ref={mapContainer} className="flex-1 w-full min-h-[400px]" />
           
           {selectedLocation && (
             <div className="p-4 bg-background border-t">
