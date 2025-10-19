@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { MapPin } from 'lucide-react';
+import { locationSchema } from '@/lib/validations';
+import { z } from 'zod';
 
 interface NewLocationFormProps {
   onSuccess: (locationId: string) => void;
@@ -59,18 +61,38 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
     }
 
     try {
-      const location = await createLocation(formData);
+      // Validate input data
+      const validatedData = locationSchema.parse(formData);
+      
+      // Create location with validated data
+      const location = await createLocation({
+        title: validatedData.title,
+        province_id: validatedData.province_id,
+        district_id: validatedData.district_id,
+        address_line: validatedData.address_line,
+        lat: validatedData.lat,
+        lng: validatedData.lng
+      });
+      
       toast({
         title: 'موفق',
         description: 'آدرس با موفقیت ثبت شد'
       });
       onSuccess(location.id);
     } catch (error) {
-      toast({
-        title: 'خطا',
-        description: 'خطا در ثبت آدرس',
-        variant: 'destructive'
-      });
+      if (error instanceof z.ZodError) {
+        toast({
+          title: 'خطای اعتبارسنجی',
+          description: error.errors[0]?.message || 'داده‌های وارد شده معتبر نیستند',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'خطا',
+          description: 'خطا در ثبت آدرس',
+          variant: 'destructive'
+        });
+      }
     }
   };
 

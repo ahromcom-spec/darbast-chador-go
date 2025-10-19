@@ -160,6 +160,31 @@ export const assignmentSchema = z.object({
   }).optional()
 });
 
+// Location validation
+export const locationSchema = z.object({
+  title: z.string()
+    .trim()
+    .max(100, { message: 'عنوان نباید بیش از 100 کاراکتر باشد' })
+    .transform(sanitizeHtml)
+    .optional(),
+  province_id: z.string()
+    .uuid({ message: 'استان الزامی است' }),
+  district_id: z.string()
+    .uuid({ message: 'شناسه شهرستان نامعتبر است' })
+    .optional(),
+  address_line: z.string()
+    .trim()
+    .min(5, { message: 'آدرس باید حداقل 5 کاراکتر باشد' })
+    .max(500, { message: 'آدرس نباید بیش از 500 کاراکتر باشد' })
+    .transform(sanitizeHtml),
+  lat: z.number()
+    .min(-90, { message: 'عرض جغرافیایی نامعتبر است' })
+    .max(90, { message: 'عرض جغرافیایی نامعتبر است' }),
+  lng: z.number()
+    .min(-180, { message: 'طول جغرافیایی نامعتبر است' })
+    .max(180, { message: 'طول جغرافیایی نامعتبر است' })
+});
+
 // Order edit validation (for projects_v3 table)
 export const orderEditSchema = z.object({
   address: z.string()
