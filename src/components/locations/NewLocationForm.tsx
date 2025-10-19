@@ -75,15 +75,6 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
       return;
     }
 
-    if (!hasMapPin) {
-      toast({
-        title: 'خطا',
-        description: 'لطفاً موقعیت دقیق را روی نقشه انتخاب کنید',
-        variant: 'destructive'
-      });
-      return;
-    }
-
     try {
       // Validate input data
       const validatedData = locationSchema.parse(formData);
@@ -191,7 +182,7 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
       </div>
 
       <div>
-        <Label>موقعیت روی نقشه *</Label>
+        <Label>موقعیت روی نقشه (اختیاری)</Label>
         <Button
           type="button"
           variant={hasMapPin ? 'default' : 'outline'}
@@ -203,7 +194,7 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
         </Button>
       </div>
 
-      <Button type="submit" className="w-full" disabled={!hasMapPin || !isQomSelected}>
+      <Button type="submit" className="w-full" disabled={!isQomSelected}>
         ثبت و تایید آدرس
       </Button>
 
