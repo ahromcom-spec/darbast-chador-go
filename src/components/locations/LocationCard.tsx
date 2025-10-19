@@ -14,7 +14,7 @@ export const LocationCard = ({ location, onSelect, onDelete, selected }: Locatio
   return (
     <Card 
       className={`cursor-pointer transition-all ${
-        selected ? 'ring-2 ring-primary' : 'hover:shadow-md'
+        selected ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'
       }`}
       onClick={onSelect}
     >
