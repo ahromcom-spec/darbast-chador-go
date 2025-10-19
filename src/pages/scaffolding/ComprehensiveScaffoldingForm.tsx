@@ -550,9 +550,6 @@ export default function ComprehensiveScaffoldingForm({
       }
     }
 
-    if (!projectAddress.trim()) {
-      newErrors.projectAddress = 'آدرس پروژه الزامی است';
-    }
 
     // بررسی فاصله بیش از 85 کیلومتر
     if (projectLocation && projectLocation.distance > 85) {
