@@ -36,6 +36,9 @@ export const orderDimensionSchema = z.object({
   length: z.number()
     .positive({ message: 'طول باید بیشتر از صفر باشد' })
     .max(1000, { message: 'طول نباید بیش از 1000 متر باشد' }),
+  width: z.number()
+    .positive({ message: 'عرض باید بیشتر از صفر باشد' })
+    .max(1000, { message: 'عرض نباید بیش از 1000 متر باشد' }),
   height: z.number()
     .positive({ message: 'ارتفاع باید بیشتر از صفر باشد' })
     .max(500, { message: 'ارتفاع نباید بیش از 500 متر باشد' }),
