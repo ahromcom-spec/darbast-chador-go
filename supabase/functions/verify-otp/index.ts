@@ -164,91 +164,34 @@ serve(async (req) => {
       }
     }
 
-    // Check if user exists with derived email
-    let userWithEmail: any = null;
-    let existingUserId: string | null = null;
-    try {
-      // Prefer direct lookup by email to avoid heavy list calls (prevents quota issues)
-      // @ts-ignore - getUserByEmail is available in admin API on this runtime
-      const { data: byEmail } = await (supabase.auth.admin as any).getUserByEmail?.(derivedEmail) || {};
-      if (byEmail?.user) {
-        userWithEmail = byEmail.user;
-        existingUserId = byEmail.user.id;
-      }
-    } catch (_) {
-      // Fallback (rare): no-op. We intentionally avoid listUsers to respect quotas
-    }
-    const userExists = !!userWithEmail;
-
-    // Security: Add random delay to prevent timing attacks (50-150ms)
-    const randomDelay = Math.floor(Math.random() * 100) + 50;
-    await new Promise(resolve => setTimeout(resolve, randomDelay));
-
-    // Do not reveal user existence. Try sign-in path first; if it fails we'll create or recover.
-    // This avoids heavy admin list calls and prevents quota issues.
-
-    // For registration attempts, prevent duplicate signups
-    if (is_registration && userExists) {
-      return new Response(
-        JSON.stringify({ error: 'این شماره قبلاً ثبت نام کرده است. لطفا وارد شوید.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-
+    // Auth: attempt password sign-in first, then create/recover as needed
     let session;
 
-    // Helper to sign in with email, updating password if needed
-    const signInWithEmail = async (email: string, userId?: string | null) => {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: loginPassword,
-      });
-      if (error) {
-        // Ensure confirmed email and a valid password, then retry if we know the user id
-        if (userId) {
-          await supabase.auth.admin.updateUserById(userId, {
-            password: loginPassword,
-            email_confirm: true,
-          });
-          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-            email,
-            password: loginPassword,
-          });
-          if (retryError) {
-            console.error('Sign in error');
-            return { session: null, error: retryError };
-          }
-          return { session: retryData.session, error: null };
-        }
-        return { session: null, error };
-      }
-      return { session: data.session, error: null };
+    const signInDirect = async (email: string) => {
+      return await supabase.auth.signInWithPassword({ email, password: loginPassword });
     };
 
-    if (userWithEmail) {
-      // Existing email-mapped user
-      const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail, existingUserId);
-      if (emailErr) {
-        return new Response(
-          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      session = sess;
-    } else {
-      // Create new user with derived email (no phone provider needed)
-      const { data, error } = await supabase.auth.admin.createUser({
+    // Small random delay to reduce timing side-channels
+    const randomDelay = Math.floor(Math.random() * 100) + 50;
+    await new Promise((r) => setTimeout(r, randomDelay));
+
+    if (is_registration) {
+      // Registration flow: prevent duplicate signups
+      const { data: created, error: createErr } = await supabase.auth.admin.createUser({
         email: derivedEmail,
         password: loginPassword,
         email_confirm: true,
-        user_metadata: {
-          full_name: full_name || '',
-          phone_number: normalizedPhone,
-        },
+        user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
       });
 
-      if (error) {
+      if (createErr) {
+        const msg = (createErr as any)?.message?.toString() || '';
+        if (/already/i.test(msg)) {
+          return new Response(
+            JSON.stringify({ error: 'این شماره قبلاً ثبت نام کرده است. لطفا وارد شوید.' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         console.error('User creation error');
         return new Response(
           JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
@@ -256,35 +199,85 @@ serve(async (req) => {
         );
       }
 
-      // Sign in the new user via email
-      const { session: sess, error: emailErr } = await signInWithEmail(derivedEmail);
-      if (emailErr) {
+      const { data: signInData, error: signInErr } = await signInDirect(derivedEmail);
+      if (signInErr) {
         console.error('Authentication error');
         return new Response(
           JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      session = sess;
-      
-      // If this is a test phone or whitelisted phone, automatically assign roles from whitelist
+      session = signInData.session;
+
+      // Assign roles from whitelist for special phones
       if (isTestPhone || isWhitelistedPhone) {
         const { data: whitelistData } = await supabase
           .from('phone_whitelist')
           .select('allowed_roles')
           .eq('phone_number', normalizedPhone)
           .maybeSingle();
-        
-        if (whitelistData?.allowed_roles && data.user) {
-          // Insert roles for the new user
+        if (whitelistData?.allowed_roles && created?.user) {
           const roleInserts = whitelistData.allowed_roles.map((role: string) => ({
-            user_id: data.user.id,
-            role: role
+            user_id: created.user.id,
+            role,
           }));
-          
-          await supabase
-            .from('user_roles')
-            .insert(roleInserts);
+          await supabase.from('user_roles').insert(roleInserts);
+        }
+      }
+    } else {
+      // Login flow
+      const { data: signInData, error: signInErr } = await signInDirect(derivedEmail);
+      if (!signInErr && signInData?.session) {
+        session = signInData.session;
+      } else {
+        // If sign-in failed, try to recover the account password if user exists
+        // Avoid costly list calls unless necessary
+        if (isWhitelistedPhone || isTestPhone) {
+          // Auto-provision for whitelisted/test numbers
+          const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+            email: derivedEmail,
+            password: loginPassword,
+            email_confirm: true,
+            user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
+          });
+          if (!createErr) {
+            const { data: retry, error: retryErr } = await signInDirect(derivedEmail);
+            if (retryErr) {
+              console.error('Authentication error');
+              return new Response(
+                JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+                { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+            session = retry.session;
+          } else {
+            // If already exists, fall through to recovery
+          }
+        }
+
+        if (!session) {
+          // Last resort: single listUsers call to locate by email and reset password
+          const { data: allUsers } = await supabase.auth.admin.listUsers();
+          const target = allUsers?.users?.find((u: any) => u?.email === derivedEmail);
+          if (!target) {
+            return new Response(
+              JSON.stringify({ error: 'اطلاعات ورود نامعتبر است' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          await supabase.auth.admin.updateUserById(target.id, {
+            password: loginPassword,
+            email_confirm: true,
+          });
+          const { data: retry, error: retryErr } = await signInDirect(derivedEmail);
+          if (retryErr) {
+            console.error('Sign in error');
+            return new Response(
+              JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          session = retry.session;
         }
       }
     }
@@ -293,11 +286,7 @@ serve(async (req) => {
     await supabase.rpc('cleanup_expired_otps');
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        session,
-        message: 'ورود با موفقیت انجام شد' 
-      }),
+      JSON.stringify({ success: true, session, message: 'ورود با موفقیت انجام شد' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
