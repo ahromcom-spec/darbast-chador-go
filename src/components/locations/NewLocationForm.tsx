@@ -32,9 +32,18 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
 
   const [hasMapPin, setHasMapPin] = useState(false);
 
+  // شناسایی استان قم
+  const qomProvince = provinces.find(p => p.code === '10');
+  const isQomSelected = formData.province_id === qomProvince?.id;
+  const isOtherProvinceSelected = formData.province_id && !isQomSelected;
+
   const handleProvinceChange = (provinceId: string) => {
     setFormData({ ...formData, province_id: provinceId, district_id: '' });
-    fetchDistrictsByProvince(provinceId);
+    
+    // فقط برای قم، شهرستان‌ها را بارگذاری کن
+    if (provinceId === qomProvince?.id) {
+      fetchDistrictsByProvince(provinceId);
+    }
   };
 
   const handleMapPinClick = () => {
@@ -50,6 +59,16 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // بررسی انتخاب استان قم
+    if (!isQomSelected) {
+      toast({
+        title: 'محدودیت خدمات',
+        description: 'در حال حاضر فقط امکان ثبت آدرس در استان قم وجود دارد',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     if (!hasMapPin) {
       toast({
@@ -123,6 +142,11 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
               ))}
             </SelectContent>
           </Select>
+          {isOtherProvinceSelected && (
+            <p className="text-sm text-warning mt-1.5">
+              ⚠️ خدمات به استان شما به زودی می‌رسد
+            </p>
+          )}
         </div>
 
         <div>
@@ -170,9 +194,14 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
         </Button>
       </div>
 
-      <Button type="submit" className="w-full" disabled={!hasMapPin}>
+      <Button type="submit" className="w-full" disabled={!hasMapPin || !isQomSelected}>
         ثبت آدرس
       </Button>
+      {isOtherProvinceSelected && (
+        <p className="text-sm text-center text-muted-foreground">
+          در حال حاضر فقط امکان ثبت آدرس در استان قم وجود دارد
+        </p>
+      )}
     </form>
   );
 };
