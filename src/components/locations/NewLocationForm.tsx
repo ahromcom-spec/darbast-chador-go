@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin } from 'lucide-react';
+import { MapPin, Info } from 'lucide-react';
 import { locationSchema } from '@/lib/validations';
 import { z } from 'zod';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface NewLocationFormProps {
   onSuccess: (locationId: string) => void;
@@ -117,6 +118,15 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {isOtherProvinceSelected && (
+        <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900">
+          <Info className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <AlertDescription className="text-orange-800 dark:text-orange-300">
+            خدمات اهرم به زودی به استان شما خواهد رسید
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div>
         <Label htmlFor="title">عنوان آدرس (اختیاری)</Label>
         <Input
@@ -142,11 +152,6 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
               ))}
             </SelectContent>
           </Select>
-          {isOtherProvinceSelected && (
-            <p className="text-sm text-warning mt-1.5">
-              ⚠️ خدمات به استان شما به زودی می‌رسد
-            </p>
-          )}
         </div>
 
         <div>
@@ -197,11 +202,6 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
       <Button type="submit" className="w-full" disabled={!hasMapPin || !isQomSelected}>
         ثبت آدرس
       </Button>
-      {isOtherProvinceSelected && (
-        <p className="text-sm text-center text-muted-foreground">
-          در حال حاضر فقط امکان ثبت آدرس در استان قم وجود دارد
-        </p>
-      )}
     </form>
   );
 };
