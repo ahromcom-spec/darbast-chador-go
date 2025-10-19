@@ -578,8 +578,9 @@ export default function ComprehensiveScaffoldingForm({
       }
     });
 
-    // اعتبارسنجی شرایط برای ماه اول
+    // اعتبارسنجی شرایط برای ماه اول - فقط فیلدهایی که کاربر باید پر کند
     if (conditions.currentMonth === 1) {
+      // اگر روی زمین نیست، باید ارتفاع‌ها را وارد کند
       if (!onGround) {
         if (conditions.platformHeight === null || conditions.platformHeight <= 0) {
           newErrors.platformHeight = 'لطفاً ارتفاع سکو/پشت‌بام را وارد کنید';
@@ -589,9 +590,10 @@ export default function ComprehensiveScaffoldingForm({
         }
       }
       
+      // اگر وسیله نقلیه به سایت نمی‌رسد، باید فاصله را وارد کند
       if (!vehicleReachesSite) {
         if (conditions.vehicleDistance === null || conditions.vehicleDistance <= 0) {
-          newErrors.vehicleDistance = 'لطفاً فاصله وسیله نقلیه را وارد کنید';
+          newErrors.vehicleDistance = 'لطفاً فاصله وسیله نقلیه تا پای کار را وارد کنید';
         }
       }
     }
