@@ -9,7 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { OfflineIndicator } from "@/components/common/OfflineIndicator";
-import { PageLoadProgress } from "@/components/common/PageLoadProgress";
+// import { PageLoadProgress } from "@/components/common/PageLoadProgress";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { PWAInstallBanner } from "@/components/common/PWAInstallBanner";
 import { NotificationBanner } from "@/components/common/NotificationBanner";
@@ -92,7 +92,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <PageLoadProgress />
+            {/* <PageLoadProgress /> */}
             <OfflineIndicator />
       <NotificationBanner />
       <PWAInstallBanner />
