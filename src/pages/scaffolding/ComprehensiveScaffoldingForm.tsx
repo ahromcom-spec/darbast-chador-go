@@ -713,22 +713,27 @@ export default function ComprehensiveScaffoldingForm({
       return;
     }
 
-    // Only required when creating a new project (not editing or updating an existing project)
-    const needsSystemData = !editingOrder && !projectId;
-    let effectiveCustomer = customer as any;
-    let effectiveProvinceId = qomProvinceId as string;
-    let effectiveSubcategoryId = withMaterialsSubcategoryId as string;
+    // Ensure we always have customer data before proceeding
+    let effectiveCustomer = customer;
+    let effectiveProvinceId = qomProvinceId;
+    let effectiveCityId = qomCityId;
+    let effectiveSubcategoryId = withMaterialsSubcategoryId;
 
-    if (needsSystemData) {
+    // If we don't have customer or other required data, try to fetch them
+    if (!effectiveCustomer || !effectiveProvinceId || !effectiveSubcategoryId) {
       const ensured = await ensureSystemData();
       effectiveCustomer = effectiveCustomer || ensured.customer;
       effectiveProvinceId = effectiveProvinceId || ensured.qomProvinceId;
+      effectiveCityId = effectiveCityId || ensured.qomCityId;
       effectiveSubcategoryId = effectiveSubcategoryId || ensured.withMaterialsSubcategoryId;
+    }
 
+    // Final check: we must have these to proceed with new order
+    if (!editingOrder && !projectId) {
       if (!effectiveCustomer || !effectiveProvinceId || !effectiveSubcategoryId) {
         toast({
           title: 'خطا',
-          description: 'اطلاعات سیستم کامل نیست. لطفاً یک‌بار صفحه را رفرش کنید یا مجدداً تلاش کنید.',
+          description: 'اطلاعات سیستم کامل نیست. لطفاً صفحه را رفرش کنید.',
           variant: 'destructive',
         });
         return;
@@ -820,10 +825,14 @@ export default function ComprehensiveScaffoldingForm({
           navigate('/user/orders');
         }, 1500);
       } else {
-        // حالت ثبت جدید
+        // حالت ثبت جدید - باید customer داشته باشیم
+        if (!effectiveCustomer) {
+          throw new Error('اطلاعات مشتری یافت نشد');
+        }
+
         const { data: projectCode, error: codeError } = await supabase
           .rpc('generate_project_code', {
-            _customer_id: (effectiveCustomer as any).id,
+            _customer_id: effectiveCustomer.id,
             _province_id: effectiveProvinceId,
             _subcategory_id: effectiveSubcategoryId
           });
@@ -835,9 +844,9 @@ export default function ComprehensiveScaffoldingForm({
         const { data: project, error: projectError } = await supabase
           .from('projects_v3')
           .insert({
-            customer_id: (effectiveCustomer as any).id,
+            customer_id: effectiveCustomer.id,
             province_id: effectiveProvinceId,
-            district_id: qomCityId || null,
+            district_id: effectiveCityId || null,
             subcategory_id: effectiveSubcategoryId,
             project_number: projectNumber,
             service_code: serviceCode,
