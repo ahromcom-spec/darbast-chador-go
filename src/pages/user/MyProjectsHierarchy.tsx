@@ -20,6 +20,8 @@ import {
 interface Address {
   id: string;
   address_line: string;
+  province_id?: string;
+  district_id?: string;
   provinces?: { name: string };
   districts?: { name: string };
 }
@@ -41,6 +43,9 @@ interface Order {
   status: string;
   created_at: string;
   notes?: string;
+  province_id?: string;
+  district_id?: string;
+  subcategory_id?: string;
 }
 
 interface HierarchyData {
@@ -75,6 +80,8 @@ export default function MyProjectsHierarchy() {
         .select(`
           id,
           address_line,
+          province_id,
+          district_id,
           provinces(name),
           districts(name)
         `)
@@ -129,7 +136,10 @@ export default function MyProjectsHierarchy() {
           code: pv3.code,
           status: pv3.status,
           created_at: pv3.created_at,
-          notes: pv3.notes
+          notes: pv3.notes,
+          province_id: pv3.province_id,
+          district_id: pv3.district_id,
+          subcategory_id: pv3.subcategory_id
         }));
       }
 
@@ -142,29 +152,26 @@ export default function MyProjectsHierarchy() {
         projectsByLocation[project.location_id].push(project);
       });
 
-      // Group orders by "virtual project" - در اینجا هر سفارش (projects_v3) یک project محسوب می‌شود
-      // ما سفارشات را بر اساس لوکیشن گروه‌بندی می‌کنیم
-      const ordersByLocation: { [key: string]: Order[] } = {};
-      
-      // ابتدا locations را برای projects_v3 شناسایی کنیم
-      const { data: locationsData } = await supabase
-        .from('provinces')
-        .select('id, name');
-      
-      // ایجاد یک mapping مجازی برای نمایش سفارشات بر اساس استان
-      orders?.forEach(order => {
-        // استفاده از province_id به عنوان کلید location
-        const locKey = order.id; // هر سفارش یک آیتم جداگانه است
-        if (!ordersByLocation[locKey]) {
-          ordersByLocation[locKey] = [];
-        }
-        ordersByLocation[locKey].push(order);
+      // گروه‌بندی سفارش‌ها بر اساس پروژه کاربر (با تطبیق زیرگروه و موقعیت)
+      const locationById = new Map<string, Address>();
+      (locations || []).forEach((loc) => locationById.set(loc.id, loc));
+
+      const ordersByProject: { [key: string]: Order[] } = {};
+      projects?.forEach((project) => {
+        const loc = locationById.get(project.location_id);
+        ordersByProject[project.id] = (orders || []).filter((o) => {
+          const matchSub = o.subcategory_id === project.subcategory_id;
+          if (!loc) return matchSub;
+          const matchProvince = o.province_id ? o.province_id === loc.province_id : true;
+          const matchDistrict = loc.district_id ? o.district_id === loc.district_id : true;
+          return matchSub && matchProvince && matchDistrict;
+        });
       });
 
       setData({
         addresses: locations || [],
         projects: projectsByLocation,
-        orders: ordersByLocation
+        orders: ordersByProject
       });
 
     } catch (error) {
