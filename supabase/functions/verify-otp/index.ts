@@ -256,19 +256,25 @@ serve(async (req) => {
         }
 
         if (!session) {
-          // Last resort: single listUsers call to locate by email and reset password
-          const { data: allUsers } = await supabase.auth.admin.listUsers();
-          const target = allUsers?.users?.find((u: any) => u?.email === derivedEmail);
-          if (!target) {
+          // Last resort: lookup by phone in profiles to avoid quota-heavy listUsers
+          const { data: profile, error: profileErr } = await supabase
+            .from('profiles')
+            .select('user_id')
+            .eq('phone_number', normalizedPhone)
+            .maybeSingle();
+
+          if (profileErr || !profile?.user_id) {
             return new Response(
               JSON.stringify({ error: 'اطلاعات ورود نامعتبر است' }),
               { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
-          await supabase.auth.admin.updateUserById(target.id, {
+
+          await supabase.auth.admin.updateUserById(profile.user_id, {
             password: loginPassword,
             email_confirm: true,
           });
+
           const { data: retry, error: retryErr } = await signInDirect(derivedEmail);
           if (retryErr) {
             console.error('Sign in error');
