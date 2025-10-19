@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ import { useUserProjects } from '@/hooks/useUserProjects';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function Home() {
+const Home = () => {
   usePageTitle('صفحه اصلی');
   const [selectedServiceType, setSelectedServiceType] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
@@ -340,4 +340,6 @@ export default function Home() {
       </div>
     </>
   );
-}
+};
+
+export default Home;
