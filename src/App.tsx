@@ -12,6 +12,7 @@ import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 import { PageLoadProgress } from "@/components/common/PageLoadProgress";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { PWAInstallBanner } from "@/components/common/PWAInstallBanner";
+import { NotificationBanner } from "@/components/common/NotificationBanner";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 
@@ -90,7 +91,8 @@ const App = () => (
           <AuthProvider>
             <PageLoadProgress />
             <OfflineIndicator />
-            <PWAInstallBanner />
+      <NotificationBanner />
+      <PWAInstallBanner />
             <Suspense fallback={<PageLoader />}>
               <div className="min-h-screen bg-background">
                 <Header />
