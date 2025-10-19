@@ -52,6 +52,14 @@ interface ProjectOrder {
   estimated_price?: number | null;
 }
 
+interface ScaffoldingRequest {
+  id: string;
+  created_at: string;
+  address: string | null;
+  status: string;
+  details: any | null;
+}
+
 export default function UserProfile() {
   usePageTitle('پروفایل کاربری');
   const { user } = useAuth();
@@ -64,6 +72,7 @@ export default function UserProfile() {
   const { isExecutiveManager } = useExecutiveManagerRole();
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [projectOrders, setProjectOrders] = useState<ProjectOrder[]>([]);
+  const [scaffoldingRequests, setScaffoldingRequests] = useState<ScaffoldingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -291,7 +300,7 @@ const fetchOrders = async () => {
     </div>
 
     {/* Orders Table */}
-    {orders.length === 0 && projectOrders.length === 0 ? (
+    {orders.length === 0 && projectOrders.length === 0 && scaffoldingRequests.length === 0 ? (
       <EmptyState
         icon={Package}
         title="سفارشی یافت نشد"
@@ -299,6 +308,44 @@ const fetchOrders = async () => {
       />
     ) : (
       <div className="space-y-6">
+        {scaffoldingRequests.length > 0 && (
+          <div>
+            <h3 className="font-semibold mb-2">درخواست‌های داربست (فرم جدید)</h3>
+            <div className="rounded-md border overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">تاریخ ثبت</TableHead>
+                      <TableHead className="whitespace-nowrap min-w-[150px]">آدرس</TableHead>
+                      <TableHead className="whitespace-nowrap">وضعیت</TableHead>
+                      <TableHead className="whitespace-nowrap">جزئیات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {scaffoldingRequests.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {new Date(r.created_at).toLocaleDateString('fa-IR')}
+                        </TableCell>
+                        <TableCell className="max-w-[240px] truncate text-sm">
+                          {r.address || '-'}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <StatusBadge status={r.status} />
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {r.details?.service_type ? `نوع: ${r.details.service_type}` : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {projectOrders.length > 0 && (
           <div>
             <h3 className="font-semibold mb-2">سفارشات ثبت شده</h3>

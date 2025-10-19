@@ -1589,6 +1589,36 @@ export type Database = {
           },
         ]
       }
+      scaffolding_requests: {
+        Row: {
+          address: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       service_activity_types: {
         Row: {
           created_at: string | null
