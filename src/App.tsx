@@ -83,185 +83,187 @@ const PageLoader = () => (
   </div>
 );
 
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <PageLoadProgress />
-            <OfflineIndicator />
-      <NotificationBanner />
-      <PWAInstallBanner />
-            <Suspense fallback={<PageLoader />}>
-              <div className="min-h-screen bg-background">
-                <Header />
-                <Routes>
-              <Route path="/auth/login" element={<Login />} />
-              <Route path="/auth/register" element={<Register />} />
-              <Route path="/" element={<Home />} />
-              <Route path="/scaffolding/form" element={
-                <ProtectedRoute>
-                  <ScaffoldingForm />
-                </ProtectedRoute>
-              } />
-              <Route path="/scaffolding/form/:projectId" element={
-                <ProtectedRoute>
-                  <ScaffoldingForm />
-                </ProtectedRoute>
-              } />
-              <Route path="/service/request" element={
-                <ProtectedRoute>
-                  <NewServiceRequestForm />
-                </ProtectedRoute>
-              } />
-              <Route path="/service/scaffolding-order/:projectId" element={
-                <ProtectedRoute>
-                  <ComprehensiveScaffoldingForm />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <UserProfile />
-                </ProtectedRoute>
-              } />
-              <Route path="/user/projects" element={
-                <ProtectedRoute>
-                  <ProjectManagement />
-                </ProtectedRoute>
-              } />
-              <Route path="/user/create-project" element={
-                <ProtectedRoute>
-                  <CreateProject />
-                </ProtectedRoute>
-              } />
-              <Route path="/user/add-service/:projectId" element={
-                <ProtectedRoute>
-                  <AddServiceToProject />
-                </ProtectedRoute>
-              } />
-              <Route path="/projects" element={
-                <ProtectedRoute>
-                  <ProjectsDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/projects/:id" element={
-                <ProtectedRoute>
-                  <ProjectDetail />
-                </ProtectedRoute>
-              } />
-              <Route path="/orders" element={
-                <ProtectedRoute>
-                  <OrdersDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/orders/:id" element={
-                <ProtectedRoute>
-                  <OrderDetail />
-                </ProtectedRoute>
-              } />
-              <Route path="/select-location" element={
-                <ProtectedRoute>
-                  <SelectLocation />
-                </ProtectedRoute>
-              } />
-              <Route path="/my-orders" element={
-                <ProtectedRoute>
-                  <MyOrders />
-                </ProtectedRoute>
-              } />
-              <Route path="/user/orders" element={
-                <ProtectedRoute>
-                  <MyOrders />
-                </ProtectedRoute>
-              } />
-              <Route path="/tickets" element={<TicketList />} />
-              <Route path="/tickets/new" element={<NewTicket />} />
-              <Route path="/tickets/:id" element={<TicketDetail />} />
-          <Route path="/contractor/register" element={<ContractorRegister />} />
-          <Route path="/staff/request-role" element={<StaffRoleRequest />} />
-              <Route path="/contractor/dashboard" element={
-                <ProtectedRoute>
-                  <ContractorDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/admin" element={
-                <AdminRoute>
-                  <AdminLayout />
-                </AdminRoute>
-              }>
-                <Route index element={<AdminDashboard />} />
-                <Route path="orders" element={<AdminOrders />} />
-                <Route path="users" element={<UsersList />} />
-                <Route path="users/:userId" element={<UserProfileView />} />
-                <Route path="contractors" element={<ContractorManagement />} />
-                <Route path="staff" element={<StaffManagement />} />
-                <Route path="staff-requests" element={<StaffRequests />} />
-                <Route path="whitelist" element={<WhitelistManagement />} />
-              </Route>
-              <Route path="/ceo" element={<CEOLayout />}>
-                <Route index element={<CEODashboard />} />
-                <Route path="whitelist" element={<PhoneWhitelistManagement />} />
-                <Route path="contractor-verifications" element={<ContractorVerifications />} />
-                <Route path="staff-verifications" element={<StaffVerifications />} />
-                <Route path="orders" element={<CEOOrders />} />
-              </Route>
-              <Route path="/executive" element={
-                <ProtectedRoute>
-                  <ExecutiveLayout />
-                </ProtectedRoute>
-              }>
-                <Route index element={<ExecutiveDashboard />} />
-                <Route path="orders" element={<ExecutiveOrders />} />
-                <Route path="customers" element={<ExecutiveCustomers />} />
-              </Route>
-              <Route path="/sales/orders" element={
-                <ProtectedRoute>
-                  <SalesOrders />
-                </ProtectedRoute>
-              } />
-              <Route path="/finance/orders" element={
-                <ProtectedRoute>
-                  <FinanceOrders />
-                </ProtectedRoute>
-              } />
-              
-              {/* Settings Routes */}
-              <Route path="/settings/notifications" element={
-                <ProtectedRoute>
-                  <NotificationSettings />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings/install" element={<InstallApp />} />
-              
-              {/* Reputation & Ratings */}
-              <Route path="/reputation" element={
-                <ProtectedRoute>
-                  <ReputationDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/reputation/:userId" element={
-                <ProtectedRoute>
-                  <ReputationDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/ratings/test" element={
-                <ProtectedRoute>
-                  <RatingTestPage />
-                </ProtectedRoute>
-              } />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-                </Routes>
-              </div>
-            </Suspense>
-          </AuthProvider>
-        </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-  </ErrorBoundary>
-);
+const App = () => {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              <PageLoadProgress />
+              <OfflineIndicator />
+              <NotificationBanner />
+              <PWAInstallBanner />
+              <Suspense fallback={<PageLoader />}>
+                <div className="min-h-screen bg-background">
+                  <Header />
+                  <Routes>
+                    <Route path="/auth/login" element={<Login />} />
+                    <Route path="/auth/register" element={<Register />} />
+                    <Route path="/" element={<Home />} />
+                    <Route path="/scaffolding/form" element={
+                      <ProtectedRoute>
+                        <ScaffoldingForm />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/scaffolding/form/:projectId" element={
+                      <ProtectedRoute>
+                        <ScaffoldingForm />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/service/request" element={
+                      <ProtectedRoute>
+                        <NewServiceRequestForm />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/service/scaffolding-order/:projectId" element={
+                      <ProtectedRoute>
+                        <ComprehensiveScaffoldingForm />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/profile" element={
+                      <ProtectedRoute>
+                        <UserProfile />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/user/projects" element={
+                      <ProtectedRoute>
+                        <ProjectManagement />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/user/create-project" element={
+                      <ProtectedRoute>
+                        <CreateProject />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/user/add-service/:projectId" element={
+                      <ProtectedRoute>
+                        <AddServiceToProject />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/projects" element={
+                      <ProtectedRoute>
+                        <ProjectsDashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/projects/:id" element={
+                      <ProtectedRoute>
+                        <ProjectDetail />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/orders" element={
+                      <ProtectedRoute>
+                        <OrdersDashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/orders/:id" element={
+                      <ProtectedRoute>
+                        <OrderDetail />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/select-location" element={
+                      <ProtectedRoute>
+                        <SelectLocation />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/my-orders" element={
+                      <ProtectedRoute>
+                        <MyOrders />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/user/orders" element={
+                      <ProtectedRoute>
+                        <MyOrders />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/tickets" element={<TicketList />} />
+                    <Route path="/tickets/new" element={<NewTicket />} />
+                    <Route path="/tickets/:id" element={<TicketDetail />} />
+                    <Route path="/contractor/register" element={<ContractorRegister />} />
+                    <Route path="/staff/request-role" element={<StaffRoleRequest />} />
+                    <Route path="/contractor/dashboard" element={
+                      <ProtectedRoute>
+                        <ContractorDashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin" element={
+                      <AdminRoute>
+                        <AdminLayout />
+                      </AdminRoute>
+                    }>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="orders" element={<AdminOrders />} />
+                      <Route path="users" element={<UsersList />} />
+                      <Route path="users/:userId" element={<UserProfileView />} />
+                      <Route path="contractors" element={<ContractorManagement />} />
+                      <Route path="staff" element={<StaffManagement />} />
+                      <Route path="staff-requests" element={<StaffRequests />} />
+                      <Route path="whitelist" element={<WhitelistManagement />} />
+                    </Route>
+                    <Route path="/ceo" element={<CEOLayout />}>
+                      <Route index element={<CEODashboard />} />
+                      <Route path="whitelist" element={<PhoneWhitelistManagement />} />
+                      <Route path="contractor-verifications" element={<ContractorVerifications />} />
+                      <Route path="staff-verifications" element={<StaffVerifications />} />
+                      <Route path="orders" element={<CEOOrders />} />
+                    </Route>
+                    <Route path="/executive" element={
+                      <ProtectedRoute>
+                        <ExecutiveLayout />
+                      </ProtectedRoute>
+                    }>
+                      <Route index element={<ExecutiveDashboard />} />
+                      <Route path="orders" element={<ExecutiveOrders />} />
+                      <Route path="customers" element={<ExecutiveCustomers />} />
+                    </Route>
+                    <Route path="/sales/orders" element={
+                      <ProtectedRoute>
+                        <SalesOrders />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/finance/orders" element={
+                      <ProtectedRoute>
+                        <FinanceOrders />
+                      </ProtectedRoute>
+                    } />
+                    
+                    {/* Settings Routes */}
+                    <Route path="/settings/notifications" element={
+                      <ProtectedRoute>
+                        <NotificationSettings />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/settings/install" element={<InstallApp />} />
+                    
+                    {/* Reputation & Ratings */}
+                    <Route path="/reputation" element={
+                      <ProtectedRoute>
+                        <ReputationDashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/reputation/:userId" element={
+                      <ProtectedRoute>
+                        <ReputationDashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/ratings/test" element={
+                      <ProtectedRoute>
+                        <RatingTestPage />
+                      </ProtectedRoute>
+                    } />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </div>
+              </Suspense>
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;
