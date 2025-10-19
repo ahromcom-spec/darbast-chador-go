@@ -64,6 +64,7 @@ const NotificationSettings = lazy(() => import("./pages/settings/NotificationSet
 const InstallApp = lazy(() => import("./pages/settings/InstallApp"));
 const SelectLocation = lazy(() => import("./pages/user/SelectLocation"));
 const MyOrders = lazy(() => import("./pages/user/MyOrders"));
+const MyProjectsHierarchy = lazy(() => import("./pages/user/MyProjectsHierarchy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 
@@ -175,6 +176,11 @@ const App = () => (
               <Route path="/user/orders" element={
                 <ProtectedRoute>
                   <MyOrders />
+                </ProtectedRoute>
+              } />
+              <Route path="/projects/my-projects" element={
+                <ProtectedRoute>
+                  <MyProjectsHierarchy />
                 </ProtectedRoute>
               } />
               <Route path="/tickets" element={<TicketList />} />

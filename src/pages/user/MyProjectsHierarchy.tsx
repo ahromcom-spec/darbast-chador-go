@@ -1,0 +1,370 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { toast } from 'sonner';
+import { 
+  ChevronLeft, 
+  ChevronDown, 
+  MapPin, 
+  FolderOpen, 
+  Folder,
+  FileText,
+  Plus,
+  Building2
+} from 'lucide-react';
+
+interface Address {
+  id: string;
+  address_line: string;
+  provinces?: { name: string };
+  districts?: { name: string };
+}
+
+interface Project {
+  id: string;
+  location_id: string;
+  service_type_id: string;
+  subcategory_id: string;
+  title: string;
+  service_types_v3?: { name: string; code: string };
+  subcategories?: { name: string; code: string };
+}
+
+interface Order {
+  id: string;
+  project_id: string;
+  code: string;
+  status: string;
+  created_at: string;
+  notes?: string;
+}
+
+interface HierarchyData {
+  addresses: Address[];
+  projects: { [locationId: string]: Project[] };
+  orders: { [projectId: string]: Order[] };
+}
+
+export default function MyProjectsHierarchy() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<HierarchyData>({
+    addresses: [],
+    projects: {},
+    orders: {}
+  });
+  const [expandedAddresses, setExpandedAddresses] = useState<Set<string>>(new Set());
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    fetchHierarchyData();
+  }, []);
+
+  const fetchHierarchyData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch user's addresses
+      const { data: locations, error: locError } = await supabase
+        .from('locations')
+        .select(`
+          id,
+          address_line,
+          provinces(name),
+          districts(name)
+        `)
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (locError) throw locError;
+
+      // Fetch user's projects with relations
+      const { data: projects, error: projError } = await supabase
+        .from('projects_hierarchy')
+        .select(`
+          id,
+          location_id,
+          service_type_id,
+          subcategory_id,
+          title,
+          service_types_v3(name, code),
+          subcategories(name, code)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (projError) throw projError;
+
+      // Fetch orders
+      const { data: orders, error: ordError } = await supabase
+        .from('orders')
+        .select('id, project_id, payload, status, created_at, notes')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (ordError) throw ordError;
+
+      // Group projects by location
+      const projectsByLocation: { [key: string]: Project[] } = {};
+      projects?.forEach(project => {
+        if (!projectsByLocation[project.location_id]) {
+          projectsByLocation[project.location_id] = [];
+        }
+        projectsByLocation[project.location_id].push(project);
+      });
+
+      // Group orders by project
+      const ordersByProject: { [key: string]: Order[] } = {};
+      orders?.forEach(order => {
+        if (!ordersByProject[order.project_id]) {
+          ordersByProject[order.project_id] = [];
+        }
+        const payload = order.payload as any;
+        ordersByProject[order.project_id].push({
+          id: order.id,
+          project_id: order.project_id,
+          code: payload?.code || order.id.slice(0, 8),
+          status: order.status,
+          created_at: order.created_at,
+          notes: order.notes
+        });
+      });
+
+      setData({
+        addresses: locations || [],
+        projects: projectsByLocation,
+        orders: ordersByProject
+      });
+
+    } catch (error) {
+      console.error('خطا در بارگذاری داده‌ها:', error);
+      toast.error('خطا در بارگذاری اطلاعات');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleAddress = (addressId: string) => {
+    const newExpanded = new Set(expandedAddresses);
+    if (newExpanded.has(addressId)) {
+      newExpanded.delete(addressId);
+    } else {
+      newExpanded.add(addressId);
+    }
+    setExpandedAddresses(newExpanded);
+  };
+
+  const toggleProject = (projectId: string) => {
+    const newExpanded = new Set(expandedProjects);
+    if (newExpanded.has(projectId)) {
+      newExpanded.delete(projectId);
+    } else {
+      newExpanded.add(projectId);
+    }
+    setExpandedProjects(newExpanded);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: { [key: string]: { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' } } = {
+      draft: { label: 'پیش‌نویس', variant: 'secondary' },
+      pending: { label: 'در انتظار', variant: 'outline' },
+      priced: { label: 'قیمت‌گذاری شده', variant: 'default' },
+      confirmed: { label: 'تایید شده', variant: 'default' },
+      in_progress: { label: 'در حال اجرا', variant: 'default' },
+      done: { label: 'انجام شده', variant: 'default' },
+      canceled: { label: 'لغو شده', variant: 'destructive' }
+    };
+
+    const config = statusConfig[status] || { label: status, variant: 'default' };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <LoadingSpinner size="lg" text="در حال بارگذاری پروژه‌ها..." />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">پروژه‌های من</h1>
+          <p className="text-muted-foreground mt-2">
+            مشاهده و مدیریت پروژه‌های خود را بر اساس آدرس
+          </p>
+        </div>
+        <Button onClick={() => navigate('/user/create-project')}>
+          <Plus className="ml-2 h-4 w-4" />
+          پروژه جدید
+        </Button>
+      </div>
+
+      {data.addresses.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <MapPin className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">هنوز آدرسی ثبت نکرده‌اید</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              برای شروع، ابتدا یک آدرس ثبت کنید
+            </p>
+            <Button onClick={() => navigate('/user/create-project')}>
+              ثبت آدرس و پروژه جدید
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {data.addresses.map((address) => {
+            const isExpanded = expandedAddresses.has(address.id);
+            const addressProjects = data.projects[address.id] || [];
+            const projectCount = addressProjects.length;
+
+            return (
+              <Card key={address.id} className="overflow-hidden">
+                <div
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => toggleAddress(address.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    {isExpanded ? (
+                      <FolderOpen className="h-5 w-5 text-primary" />
+                    ) : (
+                      <Folder className="h-5 w-5 text-muted-foreground" />
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="font-semibold">{address.address_line}</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {address.provinces?.name}
+                        {address.districts?.name && ` • ${address.districts.name}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      {projectCount} پروژه
+                    </Badge>
+                    {isExpanded ? (
+                      <ChevronDown className="h-5 w-5" />
+                    ) : (
+                      <ChevronLeft className="h-5 w-5" />
+                    )}
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="border-t bg-accent/20 p-4 space-y-3">
+                    {addressProjects.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>هنوز پروژه‌ای در این آدرس ثبت نشده است</p>
+                      </div>
+                    ) : (
+                      addressProjects.map((project) => {
+                        const isProjectExpanded = expandedProjects.has(project.id);
+                        const projectOrders = data.orders[project.id] || [];
+                        const orderCount = projectOrders.length;
+
+                        return (
+                          <Card key={project.id} className="mr-6">
+                            <div
+                              className="flex items-center justify-between p-3 cursor-pointer hover:bg-accent/50 transition-colors"
+                              onClick={() => toggleProject(project.id)}
+                            >
+                              <div className="flex items-center gap-3">
+                                {isProjectExpanded ? (
+                                  <FolderOpen className="h-4 w-4 text-blue-500" />
+                                ) : (
+                                  <Folder className="h-4 w-4 text-muted-foreground" />
+                                )}
+                                <div>
+                                  <h4 className="font-medium text-sm">
+                                    {project.service_types_v3?.name} - {project.subcategories?.name}
+                                  </h4>
+                                  <p className="text-xs text-muted-foreground">
+                                    کد: {project.service_types_v3?.code}{project.subcategories?.code}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {orderCount} سفارش
+                                </Badge>
+                                {isProjectExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronLeft className="h-4 w-4" />
+                                )}
+                              </div>
+                            </div>
+
+                            {isProjectExpanded && (
+                              <div className="border-t bg-muted/30 p-3 space-y-2">
+                                {projectOrders.length === 0 ? (
+                                  <div className="text-center py-6 text-muted-foreground text-sm">
+                                    <FileText className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                                    <p>هنوز سفارشی ثبت نشده است</p>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="mt-2"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/user/add-service/${project.id}`);
+                                      }}
+                                    >
+                                      افزودن سفارش
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  projectOrders.map((order) => (
+                                    <div
+                                      key={order.id}
+                                      className="flex items-center justify-between p-2 bg-background rounded-md hover:bg-accent/50 cursor-pointer transition-colors mr-6"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/orders/${order.id}`);
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-muted-foreground" />
+                                        <div>
+                                          <p className="text-sm font-medium">
+                                            سفارش #{order.code}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {new Date(order.created_at).toLocaleDateString('fa-IR')}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      {getStatusBadge(order.status)}
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </Card>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
