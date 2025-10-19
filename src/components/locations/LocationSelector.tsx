@@ -26,10 +26,10 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
     }
   };
 
-  const handleLocationCreated = (locationId: string) => {
+  const handleLocationCreated = async (locationId: string) => {
     setShowNewLocationDialog(false);
-    // لیست آدرس‌ها به صورت خودکار از طریق Realtime به‌روز می‌شود
-    setSelectedLocationId(locationId);
+    await refetch(); // رفرش لیست آدرس‌ها
+    setSelectedLocationId(locationId); // انتخاب خودکار آدرس جدید
   };
 
   if (loading) {

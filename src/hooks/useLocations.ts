@@ -47,27 +47,6 @@ export const useLocations = () => {
 
   useEffect(() => {
     fetchLocations();
-
-    // تنظیم Realtime برای به‌روزرسانی خودکار لیست آدرس‌ها
-    const channel = supabase
-      .channel('locations-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'locations'
-        },
-        () => {
-          // وقتی تغییری در جدول locations رخ می‌دهد، لیست را دوباره بارگذاری کن
-          fetchLocations();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const createLocation = async (location: Omit<Location, 'id' | 'user_id' | 'created_at' | 'is_active'>) => {
@@ -81,7 +60,7 @@ export const useLocations = () => {
       .single();
 
     if (error) throw error;
-    // از Realtime برای به‌روزرسانی خودکار استفاده می‌شود
+    await fetchLocations(); // رفرش لیست آدرس‌ها
     return data;
   };
 
@@ -92,7 +71,7 @@ export const useLocations = () => {
       .eq('id', id);
 
     if (error) throw error;
-    // از Realtime برای به‌روزرسانی خودکار استفاده می‌شود
+    await fetchLocations(); // رفرش لیست آدرس‌ها
   };
 
   return {
