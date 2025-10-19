@@ -262,7 +262,7 @@ export default function ComprehensiveScaffoldingForm({
         .from('provinces')
         .select('id')
         .eq('code', '10')
-        .single();
+        .maybeSingle();
       if (qom) setQomProvinceId(qom.id);
 
       const { data: qomCity } = await supabase
@@ -276,7 +276,7 @@ export default function ComprehensiveScaffoldingForm({
         .from('service_types_v3')
         .select('id')
         .eq('code', '10')
-        .single();
+        .maybeSingle();
       if (scaffolding) setScaffoldingServiceId(scaffolding.id);
 
       if (scaffolding) {
@@ -285,7 +285,7 @@ export default function ComprehensiveScaffoldingForm({
           .select('id')
           .eq('service_type_id', scaffolding.id)
           .eq('code', '10')
-          .single();
+          .maybeSingle();
         if (withMaterials) setWithMaterialsSubcategoryId(withMaterials.id);
       }
 
@@ -728,7 +728,7 @@ export default function ComprehensiveScaffoldingForm({
             status: 'pending'
           })
           .select()
-          .single();
+          .maybeSingle();
 
         if (projectError) throw projectError;
 
