@@ -4,17 +4,31 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { PageHeader } from '@/components/common/PageHeader';
+import { Plus, Trash2, AlertCircle, ChevronDown } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Dimension {
+  id: string;
   length: string;
   width: string;
   height: string;
+}
+
+interface ServiceConditions {
+  totalMonths: number;
+  currentMonth: number;
+  distanceRange: '0-15' | '15-25' | '25-50' | '50-85';
+  platformHeight: number | null;
+  scaffoldHeightFromPlatform: number | null;
+  vehicleDistance: number | null;
 }
 
 interface ComprehensiveScaffoldingFormProps {
@@ -22,18 +36,6 @@ interface ComprehensiveScaffoldingFormProps {
   hideAddressField?: boolean;
   prefilledAddress?: string;
 }
-
-const schema = z.object({
-  service_type: z.enum(['facade', 'formwork']).default('facade'),
-  dimensions: z.array(
-    z.object({
-      length: z.string().trim().min(1),
-      width: z.string().trim().min(1),
-      height: z.string().trim().min(1),
-    })
-  ).min(1),
-  notes: z.string().trim().max(500).optional(),
-});
 
 export default function ComprehensiveScaffoldingForm({
   prefilledAddress = '',
@@ -44,17 +46,156 @@ export default function ComprehensiveScaffoldingForm({
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const [serviceType, setServiceType] = useState<'facade' | 'formwork'>('facade');
-  const [dimensions, setDimensions] = useState<Dimension[]>([{ length: '', width: '1', height: '' }]);
-  const [notes, setNotes] = useState('');
+  const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab'>('facade');
+  const address = prefilledAddress || navState?.locationAddress || '';
+  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '' }]);
+  const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
+
+  const [conditions, setConditions] = useState<ServiceConditions>({
+    totalMonths: 1,
+    currentMonth: 1,
+    distanceRange: '0-15',
+    platformHeight: null,
+    scaffoldHeightFromPlatform: null,
+    vehicleDistance: null,
+  });
+
+  const [onGround, setOnGround] = useState(true);
+  const [vehicleReachesSite, setVehicleReachesSite] = useState(true);
+  const [ceilingTieredOpen, setCeilingTieredOpen] = useState(false);
+  const [ceilingSlabOpen, setCeilingSlabOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const address = prefilledAddress || navState?.locationAddress || '';
+  const addDimension = () => {
+    const newId = (dimensions.length + 1).toString();
+    const defaultWidth = activeService === 'facade' ? (isFacadeWidth2m ? '1.5' : '1') : '';
+    setDimensions([...dimensions, { id: newId, length: '', width: defaultWidth, height: '' }]);
+  };
 
-  const addDimension = () => setDimensions((arr) => [...arr, { length: '', width: '1', height: '' }]);
-  const removeDimension = (idx: number) => setDimensions((arr) => arr.filter((_, i) => i !== idx));
-  const updateDimension = (idx: number, key: keyof Dimension, value: string) =>
-    setDimensions((arr) => arr.map((d, i) => (i === idx ? { ...d, [key]: value } : d)));
+  const removeDimension = (id: string) => {
+    if (dimensions.length > 1) {
+      setDimensions(dimensions.filter(d => d.id !== id));
+    }
+  };
+
+  const updateDimension = (id: string, field: 'length' | 'width' | 'height', value: string) => {
+    setDimensions(dimensions.map(d => d.id === id ? { ...d, [field]: value } : d));
+  };
+
+  const calculateTotalArea = (): number => {
+    return dimensions.reduce((total, dim) => {
+      const length = parseFloat(dim.length) || 0;
+      const width = parseFloat(dim.width) || 0;
+      const height = parseFloat(dim.height) || 0;
+      return total + (length * width * height);
+    }, 0);
+  };
+
+  const calculatePrice = (): { total: number; pricePerMeter: number | null; breakdown: string[] } => {
+    const area = calculateTotalArea();
+    let basePrice = 0;
+    let pricePerMeter: number | null = null;
+    const breakdown: string[] = [];
+
+    if (activeService === 'facade') {
+      if (area <= 50) {
+        basePrice = 3200000;
+      } else if (area <= 100) {
+        basePrice = 4200000;
+      } else {
+        pricePerMeter = 45000;
+        basePrice = area * pricePerMeter;
+      }
+    } else if (activeService === 'formwork') {
+      if (area <= 100) {
+        basePrice = 3200000;
+      } else if (area <= 200) {
+        basePrice = 4000000;
+      } else {
+        pricePerMeter = 20000;
+        basePrice = area * pricePerMeter;
+      }
+    } else if (activeService === 'ceiling-tiered') {
+      if (area <= 100) {
+        basePrice = 7500000;
+      } else if (area <= 200) {
+        basePrice = 11000000;
+      } else {
+        pricePerMeter = 45000;
+        basePrice = area * pricePerMeter;
+      }
+    } else if (activeService === 'ceiling-slab') {
+      if (area <= 100) {
+        basePrice = 8000000;
+      } else if (area <= 200) {
+        basePrice = 15000000;
+      } else {
+        pricePerMeter = 70000;
+        basePrice = area * pricePerMeter;
+      }
+    }
+
+    breakdown.push(`قیمت پایه: ${basePrice.toLocaleString('fa-IR')} تومان`);
+
+    if (conditions.currentMonth === 1) {
+      let monthMultiplier = 1;
+
+      if (conditions.distanceRange === '15-25') {
+        monthMultiplier *= 1.2;
+        breakdown.push('فاصله 15-25 کیلومتر: +20%');
+      } else if (conditions.distanceRange === '25-50') {
+        monthMultiplier *= 1.4;
+        breakdown.push('فاصله 25-50 کیلومتر: +40%');
+      } else if (conditions.distanceRange === '50-85') {
+        monthMultiplier *= 1.7;
+        breakdown.push('فاصله 50-85 کیلومتر: +70%');
+      }
+
+      if (!onGround && conditions.platformHeight) {
+        if (conditions.platformHeight <= 3) {
+          monthMultiplier *= 1.2;
+          breakdown.push('ارتفاع پای کار تا 3 متر: +20%');
+        } else if (conditions.platformHeight <= 6) {
+          monthMultiplier *= 1.4;
+          breakdown.push('ارتفاع پای کار 3-6 متر: +40%');
+        } else {
+          monthMultiplier *= 1.6;
+          breakdown.push('ارتفاع پای کار بیش از 6 متر: +60%');
+        }
+      }
+
+      if (!onGround && conditions.scaffoldHeightFromPlatform) {
+        if (conditions.scaffoldHeightFromPlatform > 15) {
+          monthMultiplier *= 1.2;
+          breakdown.push('ارتفاع داربست بیش از 15 متر: +20%');
+        }
+      }
+
+      if (!vehicleReachesSite && conditions.vehicleDistance) {
+        if (conditions.vehicleDistance <= 50) {
+          monthMultiplier *= 1.1;
+          breakdown.push('فاصله خودرو تا 50 متر: +10%');
+        } else if (conditions.vehicleDistance <= 100) {
+          monthMultiplier *= 1.15;
+          breakdown.push('فاصله خودرو 50-100 متر: +15%');
+        } else {
+          monthMultiplier *= 1.25;
+          breakdown.push('فاصله خودرو بیش از 100 متر: +25%');
+        }
+      }
+
+      basePrice *= monthMultiplier;
+    }
+
+    if (conditions.totalMonths > 1) {
+      const additionalMonths = conditions.totalMonths - 1;
+      const additionalCost = basePrice * 0.7 * additionalMonths;
+      breakdown.push(`ماه‌های اضافی (${additionalMonths} ماه): ${additionalCost.toLocaleString('fa-IR')} تومان`);
+      basePrice += additionalCost;
+    }
+
+    return { total: Math.round(basePrice), pricePerMeter, breakdown };
+  };
 
   const onSubmit = async () => {
     if (!user) {
@@ -62,19 +203,15 @@ export default function ComprehensiveScaffoldingForm({
       return;
     }
 
-    const parsed = schema.safeParse({
-      service_type: serviceType,
-      dimensions,
-      notes,
-    });
-
-    if (!parsed.success) {
-      toast({ title: 'خطا', description: 'لطفاً اطلاعات را کامل کنید', variant: 'destructive' });
+    if (dimensions.some(d => !d.length || !d.width || !d.height)) {
+      toast({ title: 'خطا', description: 'لطفاً تمام ابعاد را وارد کنید', variant: 'destructive' });
       return;
     }
 
     try {
       setLoading(true);
+      const priceData = calculatePrice();
+
       const { error } = await supabase
         .from('scaffolding_requests')
         .insert([
@@ -82,9 +219,19 @@ export default function ComprehensiveScaffoldingForm({
             user_id: user.id,
             address: address || null,
             details: {
-              service_type: serviceType,
-              dimensions,
-              notes: notes || undefined,
+              service_type: activeService,
+              dimensions: dimensions.map(d => ({
+                length: parseFloat(d.length),
+                width: parseFloat(d.width),
+                height: parseFloat(d.height),
+              })),
+              isFacadeWidth2m,
+              conditions,
+              onGround,
+              vehicleReachesSite,
+              totalArea: calculateTotalArea(),
+              estimated_price: priceData.total,
+              price_breakdown: priceData.breakdown,
             },
             status: 'submitted',
           } as any
@@ -101,68 +248,307 @@ export default function ComprehensiveScaffoldingForm({
     }
   };
 
+  const priceData = calculatePrice();
+
   return (
     <div className="space-y-6">
-      <PageHeader title="ثبت درخواست داربست" description="اطلاعات پایه را وارد کنید" />
-      <h1 className="sr-only">فرم ساده ثبت داربست</h1>
+      <h1 className="sr-only">فرم ثبت سفارش داربست</h1>
 
       {address && (
         <Alert className="border-primary/30">
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <div className="space-y-1">
-              <p className="font-semibold text-sm">آدرس پروژه</p>
-              <p className="text-sm">{address}</p>
-            </div>
+            <p className="font-semibold text-sm">آدرس: {address}</p>
           </AlertDescription>
         </Alert>
       )}
 
+      {/* Service Type Selection */}
       <Card>
-        <CardContent className="space-y-6 pt-6">
-          {/* Service type */}
-          <div className="space-y-2">
-            <Label htmlFor="service">نوع خدمات</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant={serviceType === 'facade' ? 'default' : 'outline'} onClick={() => setServiceType('facade')}>
-                نمای ساختمان
-              </Button>
-              <Button variant={serviceType === 'formwork' ? 'default' : 'outline'} onClick={() => setServiceType('formwork')}>
-                قالب‌بندی
-              </Button>
-            </div>
+        <CardHeader>
+          <CardTitle>نوع خدمات</CardTitle>
+          <CardDescription>نوع داربست مورد نیاز را انتخاب کنید</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              type="button"
+              variant={activeService === 'facade' ? 'default' : 'outline'}
+              onClick={() => setActiveService('facade')}
+              className="h-auto py-4"
+            >
+              <div className="text-center">
+                <div className="font-semibold">نمای ساختمان</div>
+                <div className="text-xs mt-1 opacity-80">Facade</div>
+              </div>
+            </Button>
+            <Button
+              type="button"
+              variant={activeService === 'formwork' ? 'default' : 'outline'}
+              onClick={() => setActiveService('formwork')}
+              className="h-auto py-4"
+            >
+              <div className="text-center">
+                <div className="font-semibold">قالب‌بندی</div>
+                <div className="text-xs mt-1 opacity-80">Formwork</div>
+              </div>
+            </Button>
           </div>
 
-          {/* Dimensions */}
-          <div className="space-y-3">
-            <Label>ابعاد (متر)</Label>
-            {dimensions.map((d, idx) => (
-              <div key={idx} className="grid grid-cols-3 gap-3">
-                <Input placeholder="طول" value={d.length} onChange={(e) => updateDimension(idx, 'length', e.target.value)} />
-                <Input placeholder="عرض" value={d.width} onChange={(e) => updateDimension(idx, 'width', e.target.value)} />
-                <Input placeholder="ارتفاع" value={d.height} onChange={(e) => updateDimension(idx, 'height', e.target.value)} />
+          <Collapsible open={ceilingTieredOpen} onOpenChange={setCeilingTieredOpen}>
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="ghost" className="w-full justify-between">
+                <span>سقف پله‌ای</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${ceilingTieredOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <Button
+                type="button"
+                variant={activeService === 'ceiling-tiered' ? 'default' : 'outline'}
+                onClick={() => setActiveService('ceiling-tiered')}
+                className="w-full mt-2"
+              >
+                انتخاب سقف پله‌ای
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible open={ceilingSlabOpen} onOpenChange={setCeilingSlabOpen}>
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="ghost" className="w-full justify-between">
+                <span>سقف دال</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${ceilingSlabOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <Button
+                type="button"
+                variant={activeService === 'ceiling-slab' ? 'default' : 'outline'}
+                onClick={() => setActiveService('ceiling-slab')}
+                className="w-full mt-2"
+              >
+                انتخاب سقف دال
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {activeService === 'facade' && (
+            <div className="flex items-center space-x-2 space-x-reverse pt-2">
+              <Checkbox
+                id="facade-width"
+                checked={isFacadeWidth2m}
+                onCheckedChange={(checked) => setIsFacadeWidth2m(checked === true)}
+              />
+              <Label htmlFor="facade-width" className="cursor-pointer">
+                عرض داربست 2 متر (به جای 1 متر)
+              </Label>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dimensions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>ابعاد</CardTitle>
+          <CardDescription>ابعاد به متر وارد شود</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {dimensions.map((dim) => (
+            <div key={dim.id} className="flex gap-2 items-end">
+              <div className="flex-1 space-y-1">
+                <Label>طول (متر)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={dim.length}
+                  onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
+                  placeholder="0"
+                />
               </div>
-            ))}
-            <div className="flex gap-2">
-              <Button type="button" variant="secondary" onClick={addDimension}>+ سطر جدید</Button>
+              <div className="flex-1 space-y-1">
+                <Label>عرض (متر)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={dim.width}
+                  onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <Label>ارتفاع (متر)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={dim.height}
+                  onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
+                  placeholder="0"
+                />
+              </div>
               {dimensions.length > 1 && (
-                <Button type="button" variant="outline" onClick={() => removeDimension(dimensions.length - 1)}>حذف آخرین</Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeDimension(dim.id)}
+                  className="flex-shrink-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               )}
             </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">توضیحات</Label>
-            <Input id="notes" placeholder="توضیحات اضافی" value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
-
-          <div className="pt-2">
-            <Button onClick={onSubmit} disabled={loading} className="w-full">
-              {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
-            </Button>
+          ))}
+          <Button type="button" variant="outline" onClick={addDimension} className="w-full">
+            <Plus className="h-4 w-4 ml-2" />
+            افزودن سطر جدید
+          </Button>
+          <div className="text-sm text-muted-foreground pt-2">
+            مجموع مساحت: <span className="font-semibold">{calculateTotalArea().toFixed(2)}</span> متر مکعب
           </div>
         </CardContent>
       </Card>
+
+      {/* Service Conditions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>شرایط سرویس</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>تعداد کل ماه‌ها</Label>
+              <Input
+                type="number"
+                min="1"
+                value={conditions.totalMonths}
+                onChange={(e) => setConditions({ ...conditions, totalMonths: parseInt(e.target.value) || 1 })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>ماه جاری</Label>
+              <Input
+                type="number"
+                min="1"
+                max={conditions.totalMonths}
+                value={conditions.currentMonth}
+                onChange={(e) => setConditions({ ...conditions, currentMonth: parseInt(e.target.value) || 1 })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>فاصله از مرکز استان</Label>
+            <Select
+              value={conditions.distanceRange}
+              onValueChange={(v: any) => setConditions({ ...conditions, distanceRange: v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0-15">0-15 کیلومتر</SelectItem>
+                <SelectItem value="15-25">15-25 کیلومتر (+20%)</SelectItem>
+                <SelectItem value="25-50">25-50 کیلومتر (+40%)</SelectItem>
+                <SelectItem value="50-85">50-85 کیلومتر (+70%)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-3">
+            <Label>محل نصب داربست</Label>
+            <RadioGroup value={onGround ? 'ground' : 'platform'} onValueChange={(v) => setOnGround(v === 'ground')}>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <RadioGroupItem value="ground" id="ground" />
+                <Label htmlFor="ground" className="cursor-pointer">روی زمین</Label>
+              </div>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <RadioGroupItem value="platform" id="platform" />
+                <Label htmlFor="platform" className="cursor-pointer">روی سکو/پشت‌بام</Label>
+              </div>
+            </RadioGroup>
+
+            {!onGround && (
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="space-y-2">
+                  <Label>ارتفاع پای کار (متر)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={conditions.platformHeight ?? ''}
+                    onChange={(e) => setConditions({ ...conditions, platformHeight: parseFloat(e.target.value) || null })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>ارتفاع داربست از پای کار (متر)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={conditions.scaffoldHeightFromPlatform ?? ''}
+                    onChange={(e) => setConditions({ ...conditions, scaffoldHeightFromPlatform: parseFloat(e.target.value) || null })}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <Label>دسترسی خودرو</Label>
+            <RadioGroup
+              value={vehicleReachesSite ? 'reaches' : 'not-reaches'}
+              onValueChange={(v) => setVehicleReachesSite(v === 'reaches')}
+            >
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <RadioGroupItem value="reaches" id="reaches" />
+                <Label htmlFor="reaches" className="cursor-pointer">خودرو به محل می‌رسد</Label>
+              </div>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <RadioGroupItem value="not-reaches" id="not-reaches" />
+                <Label htmlFor="not-reaches" className="cursor-pointer">خودرو به محل نمی‌رسد</Label>
+              </div>
+            </RadioGroup>
+
+            {!vehicleReachesSite && (
+              <div className="space-y-2 pt-2">
+                <Label>فاصله خودرو تا محل (متر)</Label>
+                <Input
+                  type="number"
+                  step="1"
+                  value={conditions.vehicleDistance ?? ''}
+                  onChange={(e) => setConditions({ ...conditions, vehicleDistance: parseFloat(e.target.value) || null })}
+                />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Price Summary */}
+      <Card className="border-primary">
+        <CardHeader>
+          <CardTitle>خلاصه قیمت</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {priceData.breakdown.map((item, idx) => (
+            <div key={idx} className="text-sm text-muted-foreground">{item}</div>
+          ))}
+          <div className="pt-3 border-t">
+            <div className="text-xl font-bold">
+              قیمت نهایی: <span className="text-primary">{priceData.total.toLocaleString('fa-IR')}</span> تومان
+            </div>
+            {priceData.pricePerMeter && (
+              <div className="text-sm text-muted-foreground mt-1">
+                (قیمت هر متر مکعب: {priceData.pricePerMeter.toLocaleString('fa-IR')} تومان)
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button onClick={onSubmit} disabled={loading} className="w-full" size="lg">
+        {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
+      </Button>
     </div>
   );
 }

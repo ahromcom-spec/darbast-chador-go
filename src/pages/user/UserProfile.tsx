@@ -160,6 +160,20 @@ const fetchOrders = async () => {
     } else {
       setProjectOrders([]);
     }
+
+    // New simple scaffolding requests (form reset)
+    const { data: sreqs, error: sreqsError } = await supabase
+      .from('scaffolding_requests')
+      .select('id, created_at, address, status, details')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (sreqsError) {
+      console.error('Error fetching scaffolding_requests:', sreqsError);
+      setScaffoldingRequests([]);
+    } else {
+      setScaffoldingRequests(sreqs || []);
+    }
   } catch (error) {
     console.error('Error fetching orders:', error);
     toast.error('خطا در دریافت سفارشات');
