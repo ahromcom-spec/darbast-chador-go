@@ -130,7 +130,7 @@ const App = () => (
               } />
               <Route path="/user/projects" element={
                 <ProtectedRoute>
-                  <ProjectManagement />
+                  <MyProjectsHierarchy />
                 </ProtectedRoute>
               } />
               <Route path="/user/create-project" element={

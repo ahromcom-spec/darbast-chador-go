@@ -181,7 +181,7 @@ export default function OrdersDashboard() {
           <div className="grid gap-4 md:grid-cols-2">
             {/* پروژه‌های من */}
             <button
-              onClick={() => navigate('/projects/my-projects')}
+              onClick={() => navigate('/user/projects')}
               className="flex items-start gap-4 p-6 rounded-lg border-2 border-border hover:border-primary transition-colors text-right bg-card hover:bg-accent/5"
             >
               <div className="p-3 rounded-lg bg-primary/10">
