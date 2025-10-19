@@ -275,13 +275,15 @@ export default function ComprehensiveScaffoldingForm({
       if (!locationId) {
         const { data: newLocation, error: locError } = await supabase
           .from('locations')
-          .insert({
+          .insert([{
             user_id: user.id,
             province_id: provinceId,
             district_id: districtId || null,
             address_line: detailedAddress,
+            lat: 0,
+            lng: 0,
             is_active: true
-          })
+          }])
           .select('id')
           .single();
 
@@ -300,14 +302,27 @@ export default function ComprehensiveScaffoldingForm({
       if (projectResult.error) throw projectResult.error;
       const projectId = projectResult.data;
 
+      // Generate project code using RPC function
+      const { data: generatedCode, error: codeError } = await supabase
+        .rpc('generate_project_code', {
+          _customer_id: customerId,
+          _province_id: provinceId,
+          _subcategory_id: subcategory.id
+        });
+
+      if (codeError) throw codeError;
+
       // Create order in projects_v3
       const { data: project, error: projectError } = await supabase
         .from('projects_v3')
-        .insert({
+        .insert([{
           customer_id: customerId,
           province_id: provinceId,
           district_id: districtId || null,
           subcategory_id: subcategory.id,
+          code: generatedCode,
+          project_number: generatedCode.split('/')[1],
+          service_code: generatedCode.split('/')[2],
           address: detailedAddress,
           detailed_address: detailedAddress,
           notes: JSON.stringify({
@@ -326,7 +341,7 @@ export default function ComprehensiveScaffoldingForm({
             price_breakdown: priceData.breakdown,
           }),
           status: 'pending'
-        })
+        }])
         .select()
         .single();
 
