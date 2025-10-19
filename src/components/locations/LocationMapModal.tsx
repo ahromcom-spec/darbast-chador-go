@@ -28,8 +28,14 @@ export const LocationMapModal = ({
   useEffect(() => {
     if (!isOpen || !mapContainer.current || map.current) return;
 
-    // Initialize map - توجه: باید توکن Mapbox را در secrets تنظیم کنید
-    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
+    // استفاده از توکن Mapbox که در secrets ذخیره شده است
+    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+    
+    if (!mapboxToken) {
+      console.error('MAPBOX_TOKEN تنظیم نشده است');
+      return;
+    }
+    
     mapboxgl.accessToken = mapboxToken;
     
     map.current = new mapboxgl.Map({
