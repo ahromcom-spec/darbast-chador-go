@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useCustomer } from '@/hooks/useCustomer';
+import { useProvinces } from '@/hooks/useProvinces';
+import { useDistricts } from '@/hooks/useDistricts';
 
 interface Dimension {
   id: string;
@@ -45,11 +48,19 @@ export default function ComprehensiveScaffoldingForm({
   const navState = (location?.state || {}) as any;
   const { toast } = useToast();
   const { user } = useAuth();
+  const { customerId } = useCustomer();
+  const { provinces } = useProvinces();
 
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab'>('facade');
   const address = prefilledAddress || navState?.locationAddress || '';
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '' }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
+  
+  // Location fields
+  const [provinceId, setProvinceId] = useState<string>('');
+  const [districtId, setDistrictId] = useState<string>('');
+  const [detailedAddress, setDetailedAddress] = useState(address);
+  const { districts } = useDistricts(provinceId);
 
   const [conditions, setConditions] = useState<ServiceConditions>({
     totalMonths: 1,
@@ -203,6 +214,16 @@ export default function ComprehensiveScaffoldingForm({
       return;
     }
 
+    if (!customerId) {
+      toast({ title: 'خطا', description: 'لطفاً ابتدا وارد شوید', variant: 'destructive' });
+      return;
+    }
+
+    if (!provinceId || !detailedAddress) {
+      toast({ title: 'خطا', description: 'لطفاً استان و آدرس را وارد کنید', variant: 'destructive' });
+      return;
+    }
+
     if (dimensions.some(d => !d.length || !d.width || !d.height)) {
       toast({ title: 'خطا', description: 'لطفاً تمام ابعاد را وارد کنید', variant: 'destructive' });
       return;
@@ -212,36 +233,109 @@ export default function ComprehensiveScaffoldingForm({
       setLoading(true);
       const priceData = calculatePrice();
 
-      const { error } = await supabase
-        .from('scaffolding_requests')
-        .insert([
-          {
+      // Map service type to subcategory code
+      const subcategoryCodeMap: Record<string, string> = {
+        'facade': '01', // با اجناس
+        'formwork': '01',
+        'ceiling-tiered': '01',
+        'ceiling-slab': '01'
+      };
+
+      const subcategoryCode = subcategoryCodeMap[activeService];
+
+      // Get service_type_id and subcategory_id
+      const { data: serviceTypes } = await supabase
+        .from('service_types_v3')
+        .select('id, code')
+        .eq('code', '01') // داربست فلزی
+        .single();
+
+      if (!serviceTypes) throw new Error('نوع خدمات یافت نشد');
+
+      const { data: subcategory } = await supabase
+        .from('subcategories')
+        .select('id')
+        .eq('service_type_id', serviceTypes.id)
+        .eq('code', subcategoryCode)
+        .single();
+
+      if (!subcategory) throw new Error('زیرمجموعه یافت نشد');
+
+      // Create or get location
+      const { data: existingLocation } = await supabase
+        .from('locations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('province_id', provinceId)
+        .eq('address_line', detailedAddress)
+        .maybeSingle();
+
+      let locationId = existingLocation?.id;
+
+      if (!locationId) {
+        const { data: newLocation, error: locError } = await supabase
+          .from('locations')
+          .insert({
             user_id: user.id,
-            address: address || null,
-            details: {
-              service_type: activeService,
-              dimensions: dimensions.map(d => ({
-                length: parseFloat(d.length),
-                width: parseFloat(d.width),
-                height: parseFloat(d.height),
-              })),
-              isFacadeWidth2m,
-              conditions,
-              onGround,
-              vehicleReachesSite,
-              totalArea: calculateTotalArea(),
-              estimated_price: priceData.total,
-              price_breakdown: priceData.breakdown,
-            },
-            status: 'submitted',
-          } as any
-        ]);
+            province_id: provinceId,
+            district_id: districtId || null,
+            address_line: detailedAddress,
+            is_active: true
+          })
+          .select('id')
+          .single();
 
-      if (error) throw error;
+        if (locError) throw locError;
+        locationId = newLocation.id;
+      }
 
-      toast({ title: 'ثبت شد', description: 'درخواست شما با موفقیت ثبت شد.' });
-      navigate('/profile');
+      // Get or create project in hierarchy
+      const projectResult = await supabase.rpc('get_or_create_project', {
+        _user_id: user.id,
+        _location_id: locationId,
+        _service_type_id: serviceTypes.id,
+        _subcategory_id: subcategory.id
+      });
+
+      if (projectResult.error) throw projectResult.error;
+      const projectId = projectResult.data;
+
+      // Create order in projects_v3
+      const { data: project, error: projectError } = await supabase
+        .from('projects_v3')
+        .insert({
+          customer_id: customerId,
+          province_id: provinceId,
+          district_id: districtId || null,
+          subcategory_id: subcategory.id,
+          address: detailedAddress,
+          detailed_address: detailedAddress,
+          notes: JSON.stringify({
+            service_type: activeService,
+            dimensions: dimensions.map(d => ({
+              length: parseFloat(d.length),
+              width: parseFloat(d.width),
+              height: parseFloat(d.height),
+            })),
+            isFacadeWidth2m,
+            conditions,
+            onGround,
+            vehicleReachesSite,
+            totalArea: calculateTotalArea(),
+            estimated_price: priceData.total,
+            price_breakdown: priceData.breakdown,
+          }),
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+
+      toast({ title: 'ثبت شد', description: 'سفارش شما با موفقیت ثبت شد و در پروژه‌ها قرار گرفت.' });
+      navigate('/user/projects-hierarchy');
     } catch (e: any) {
+      console.error('Error:', e);
       toast({ title: 'خطا', description: e.message || 'ثبت با مشکل مواجه شد', variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -254,14 +348,58 @@ export default function ComprehensiveScaffoldingForm({
     <div className="space-y-6">
       <h1 className="sr-only">فرم ثبت سفارش داربست</h1>
 
-      {address && (
-        <Alert className="border-primary/30">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <p className="font-semibold text-sm">آدرس: {address}</p>
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Location Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>اطلاعات مکانی</CardTitle>
+          <CardDescription>استان و آدرس پروژه را وارد کنید</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="province">استان *</Label>
+            <Select value={provinceId} onValueChange={setProvinceId}>
+              <SelectTrigger id="province">
+                <SelectValue placeholder="انتخاب استان" />
+              </SelectTrigger>
+              <SelectContent>
+                {provinces.map(province => (
+                  <SelectItem key={province.id} value={province.id}>
+                    {province.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {provinceId && (
+            <div className="space-y-2">
+              <Label htmlFor="district">شهرستان (اختیاری)</Label>
+              <Select value={districtId} onValueChange={setDistrictId}>
+                <SelectTrigger id="district">
+                  <SelectValue placeholder="انتخاب شهرستان" />
+                </SelectTrigger>
+                <SelectContent>
+                  {districts.map(district => (
+                    <SelectItem key={district.id} value={district.id}>
+                      {district.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="address">آدرس دقیق *</Label>
+            <Input
+              id="address"
+              value={detailedAddress}
+              onChange={(e) => setDetailedAddress(e.target.value)}
+              placeholder="آدرس کامل پروژه را وارد کنید"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Service Type Selection */}
       <Card>
