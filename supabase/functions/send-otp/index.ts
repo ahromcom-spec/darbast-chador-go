@@ -190,48 +190,62 @@ serve(async (req) => {
     try {
       // Use Parsgreen correct API format
       const apiUrl = 'https://sms.parsgreen.ir/UrlService/sendSMS.ashx';
-      
-      const params = new URLSearchParams({
-        from: senderNumber,
-        to: normalizedPhone,
-        text: message,
-        signature: apiKey
-      });
 
-      // Security: No phone logging in production
-      
-      const smsResponse = await fetch(`${apiUrl}?${params.toString()}`, {
-        method: 'GET',
-      });
+      // Small helper to send and parse Parsgreen response
+      const sendOnce = async (text: string) => {
+        const params = new URLSearchParams({
+          from: senderNumber,
+          to: normalizedPhone,
+          text,
+          signature: apiKey
+        });
 
-      const responseText = await smsResponse.text();
+        const resp = await fetch(`${apiUrl}?${params.toString()}`, { method: 'GET' });
+        const body = await resp.text();
+        const trimmed = body.trim();
+        const parts = trimmed.split(';');
 
-      // Parsgreen returns different formats:
-      // Success: شناسه عددی (numeric ID)
-      // Or semicolon format: number;status;id where status could be 0 (queued) or 1 (sent)
-      // Error: text message like "FilterationNotAllow" or other error strings
-      
-      const trimmedResponse = responseText.trim();
-      const parts = trimmedResponse.split(';');
-      
-      // Check if it's a pure error message (contains text errors)
-      const isError = trimmedResponse.toLowerCase().includes('error') || 
-                      trimmedResponse.toLowerCase().includes('filteration') ||
-                      trimmedResponse.includes('خطا') ||
-                      trimmedResponse.toLowerCase().includes('request not valid');
-      
-      // If it has semicolons, check status (0 or 1 both mean SMS is processing/sent)
-      const hasValidFormat = parts.length === 3 && /^[0-9;]+$/.test(trimmedResponse);
-      
-      if (!smsResponse.ok || (isError && !hasValidFormat)) {
-        console.error('SMS send failed - Parsgreen error. Response:', trimmedResponse.substring(0, 100));
+        // Success formats: a numeric id OR semicolon numeric triplet
+        const pureNumeric = /^[0-9]+$/.test(trimmed);
+        const hasSemicolonNumeric = parts.length === 3 && parts.every((p) => /^[0-9]+$/.test(p));
+
+        const containsFilteration = trimmed.toLowerCase().includes('filteration');
+        const looksError = trimmed.toLowerCase().includes('error') ||
+                           trimmed.toLowerCase().includes('request not valid') ||
+                           trimmed.includes('خطا');
+
+        const okFormat = resp.ok && (pureNumeric || hasSemicolonNumeric) && !looksError;
+        return { okFormat, containsFilteration, trimmed };
+      };
+
+      // 1) Try with Web OTP binding (may trigger provider filtration)
+      const primaryMessage = message;
+      let result = await sendOnce(primaryMessage);
+
+      if (result.okFormat) {
+        smsSent = true;
+        console.log('SMS sent successfully via Parsgreen');
+      } else if (result.containsFilteration) {
+        // 2) Fallback: send a simpler text without special characters
+        const fallbackMessage = `کد تایید اهرم: ${code}\nلغو11`;
+        const result2 = await sendOnce(fallbackMessage);
+        if (result2.okFormat) {
+          smsSent = true;
+          console.log('SMS sent successfully via Parsgreen (fallback content)');
+        } else {
+          console.error('SMS send failed - Parsgreen error. Response:', result2.trimmed.substring(0, 100));
+          return new Response(
+            JSON.stringify({ error: 'خطا در ارسال پیامک. لطفا دوباره تلاش کنید.' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        console.error('SMS send failed - Parsgreen error. Response:', result.trimmed.substring(0, 100));
         return new Response(
           JSON.stringify({ error: 'خطا در ارسال پیامک. لطفا دوباره تلاش کنید.' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      console.log('SMS sent successfully via Parsgreen');
 
     } catch (fetchError) {
       console.error('Network error sending SMS');
