@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocations } from '@/hooks/useLocations';
 import { useProvinces } from '@/hooks/useProvinces';
 import { useDistricts } from '@/hooks/useDistricts';
@@ -34,11 +34,31 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
 
   const [hasMapPin, setHasMapPin] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // شناسایی استان قم
   const qomProvince = provinces.find(p => p.code === '10');
   const isQomSelected = formData.province_id === qomProvince?.id;
   const isOtherProvinceSelected = formData.province_id && !isQomSelected;
+
+  // تنظیم پیش‌فرض استان قم و شهر قم
+  useEffect(() => {
+    if (!isInitialized && provinces.length > 0 && qomProvince) {
+      setFormData(prev => ({ ...prev, province_id: qomProvince.id }));
+      fetchDistrictsByProvince(qomProvince.id);
+      setIsInitialized(true);
+    }
+  }, [provinces, qomProvince, isInitialized, fetchDistrictsByProvince]);
+
+  // تنظیم پیش‌فرض شهر قم
+  useEffect(() => {
+    if (isQomSelected && districts.length > 0 && !formData.district_id) {
+      const qomCity = districts.find(d => d.name === 'شهر قم' || d.name === 'قم');
+      if (qomCity) {
+        setFormData(prev => ({ ...prev, district_id: qomCity.id }));
+      }
+    }
+  }, [districts, isQomSelected, formData.district_id]);
 
   const handleProvinceChange = (provinceId: string) => {
     setFormData({ ...formData, province_id: provinceId, district_id: '' });
