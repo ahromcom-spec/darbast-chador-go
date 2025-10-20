@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { sanitizeHtml } from '@/lib/security';
 
 interface Province {
   id: string;
@@ -232,6 +234,38 @@ export default function NewServiceRequestForm() {
       return;
     }
 
+    // Validate and sanitize inputs
+    const serviceRequestValidation = z.object({
+      address: z.string()
+        .trim()
+        .min(10, { message: 'آدرس باید حداقل 10 کاراکتر باشد' })
+        .max(500, { message: 'آدرس نباید بیش از 500 کاراکتر باشد' }),
+      detailedAddress: z.string()
+        .max(500, { message: 'آدرس تکمیلی نباید بیش از 500 کاراکتر باشد' })
+        .optional(),
+      notes: z.string()
+        .max(2000, { message: 'یادداشت‌ها نباید بیش از 2000 کاراکتر باشد' })
+        .optional()
+    });
+
+    try {
+      serviceRequestValidation.parse({
+        address: address.trim(),
+        detailedAddress: detailedAddress?.trim(),
+        notes: notes?.trim()
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+        return;
+      }
+    }
+
+    // Sanitize inputs
+    const sanitizedAddress = sanitizeHtml(address.trim());
+    const sanitizedDetailedAddress = detailedAddress ? sanitizeHtml(detailedAddress.trim()) : '';
+    const sanitizedNotes = notes ? sanitizeHtml(notes.trim()) : '';
+
     setLoading(true);
     try {
       // Get service type id
@@ -249,7 +283,7 @@ export default function NewServiceRequestForm() {
         .select('id')
         .eq('user_id', user.id)
         .eq('province_id', selectedProvince)
-        .eq('address_line', address)
+        .eq('address_line', sanitizedAddress)
         .maybeSingle();
 
       let locationId = existingLocation?.id;
@@ -261,7 +295,7 @@ export default function NewServiceRequestForm() {
             user_id: user.id,
             province_id: selectedProvince,
             district_id: selectedDistrict || null,
-            address_line: address,
+            address_line: sanitizedAddress,
             lat: 0,
             lng: 0,
             is_active: true
@@ -292,9 +326,9 @@ export default function NewServiceRequestForm() {
           _district_id: selectedDistrict || null,
           _subcategory_id: selectedSubcategory,
           _hierarchy_project_id: hierarchyProjectId,
-          _address: address,
-          _detailed_address: detailedAddress || null,
-          _notes: notes ? { raw: notes } as any : null
+          _address: sanitizedAddress,
+          _detailed_address: sanitizedDetailedAddress || null,
+          _notes: sanitizedNotes ? { raw: sanitizedNotes } as any : null
         });
 
       if (createError) throw createError;
@@ -458,11 +492,15 @@ export default function NewServiceRequestForm() {
                   id="address"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="آدرس کامل پروژه را وارد کنید"
+                  placeholder="آدرس کامل پروژه را وارد کنید (حداکثر 500 کاراکتر)"
                   required
                   disabled={isOtherProvinceSelected}
                   rows={3}
+                  maxLength={500}
                 />
+                <p className="text-xs text-muted-foreground text-left">
+                  {address.length}/500 کاراکتر
+                </p>
               </div>
 
               {/* آدرس تکمیلی */}
@@ -475,8 +513,12 @@ export default function NewServiceRequestForm() {
                     id="detailedAddress"
                     value={detailedAddress}
                     onChange={(e) => setDetailedAddress(e.target.value)}
-                    placeholder="پلاک، واحد، کوچه و ..."
+                    placeholder="پلاک، واحد، کوچه و ... (حداکثر 500 کاراکتر)"
+                    maxLength={500}
                   />
+                  <p className="text-xs text-muted-foreground text-left">
+                    {detailedAddress.length}/500 کاراکتر
+                  </p>
                 </div>
               )}
 
@@ -490,9 +532,13 @@ export default function NewServiceRequestForm() {
                     id="notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="هر گونه توضیحات اضافی در مورد پروژه..."
+                    placeholder="هر گونه توضیحات اضافی در مورد پروژه... (حداکثر 2000 کاراکتر)"
                     rows={3}
+                    maxLength={2000}
                   />
+                  <p className="text-xs text-muted-foreground text-left">
+                    {notes.length}/2000 کاراکتر
+                  </p>
                 </div>
               )}
 

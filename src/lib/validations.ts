@@ -202,6 +202,7 @@ export const orderEditSchema = z.object({
     .optional(),
   notes: z.string()
     .max(5000, { message: 'یادداشت‌ها نباید بیش از 5000 کاراکتر باشد' })
+    .transform(sanitizeHtml)
     .optional(),
   province_id: z.string()
     .uuid({ message: 'شناسه استان نامعتبر است' }),
@@ -211,4 +212,20 @@ export const orderEditSchema = z.object({
     .nullable(),
   subcategory_id: z.string()
     .uuid({ message: 'شناسه زیرمجموعه نامعتبر است' })
+});
+
+// Scaffolding-specific form validation
+export const scaffoldingFormSchema = z.object({
+  detailedAddress: z.string()
+    .trim()
+    .min(10, { message: 'آدرس باید حداقل 10 کاراکتر باشد' })
+    .max(500, { message: 'آدرس نباید بیش از 500 کاراکتر باشد' })
+    .transform(sanitizeHtml),
+  dimensions: z.array(orderDimensionSchema)
+    .min(1, { message: 'حداقل یک ابعاد باید وارد شود' })
+    .max(50, { message: 'حداکثر 50 ابعاد مجاز است' }),
+  notes: z.string()
+    .max(2000, { message: 'یادداشت‌ها نباید بیش از 2000 کاراکتر باشد' })
+    .transform(sanitizeHtml)
+    .optional()
 });

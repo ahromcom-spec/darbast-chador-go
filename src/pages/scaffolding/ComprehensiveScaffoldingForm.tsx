@@ -17,6 +17,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useCustomer } from '@/hooks/useCustomer';
 import { useProvinces } from '@/hooks/useProvinces';
 import { useDistricts } from '@/hooks/useDistricts';
+import { sanitizeHtml } from '@/lib/security';
+import { scaffoldingFormSchema } from '@/lib/validations';
 
 interface Dimension {
   id: string;
@@ -232,6 +234,26 @@ export default function ComprehensiveScaffoldingForm({
       return;
     }
 
+    // Validate using Zod schema
+    try {
+      scaffoldingFormSchema.parse({
+        detailedAddress: detailedAddress.trim(),
+        dimensions: dimensions.map(d => ({
+          length: parseFloat(d.length),
+          width: parseFloat(d.width),
+          height: parseFloat(d.height)
+        }))
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({ title: 'خطای اعتبارسنجی', description: error.errors[0].message, variant: 'destructive' });
+        return;
+      }
+    }
+
+    // Sanitize address
+    const sanitizedAddress = sanitizeHtml(detailedAddress.trim());
+
     try {
       setLoading(true);
       const priceData = calculatePrice();
@@ -295,7 +317,7 @@ export default function ComprehensiveScaffoldingForm({
           .select('id')
           .eq('user_id', user.id)
           .eq('province_id', provinceId)
-          .eq('address_line', detailedAddress)
+          .eq('address_line', sanitizedAddress)
           .maybeSingle();
 
         let locationId = existingLocation?.id;
@@ -307,7 +329,7 @@ export default function ComprehensiveScaffoldingForm({
               user_id: user.id,
               province_id: provinceId,
               district_id: districtId || null,
-              address_line: detailedAddress,
+              address_line: sanitizedAddress,
               lat: 0,
               lng: 0,
               is_active: true
@@ -334,8 +356,8 @@ export default function ComprehensiveScaffoldingForm({
         _district_id: districtId || null,
         _subcategory_id: finalSubcategoryId,
         _hierarchy_project_id: projectId,
-        _address: detailedAddress,
-        _detailed_address: detailedAddress,
+        _address: sanitizedAddress,
+        _detailed_address: sanitizedAddress,
         _notes: {
           service_type: activeService,
           dimensions: dimensions.map(d => ({
