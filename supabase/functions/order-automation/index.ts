@@ -62,23 +62,16 @@ serve(async (req) => {
       .select('user_id')
       .in('role', ['ceo', 'general_manager'])
 
+    console.log('تعداد مدیران یافت شده:', ceoAndManagers?.length || 0)
+
     // ایجاد نوتیفیکیشن برای CEO و مدیران کل
     if (ceoAndManagers && ceoAndManagers.length > 0) {
       const notifications = ceoAndManagers.map(manager => ({
         user_id: manager.user_id,
-        type: 'order_approval',
+        type: 'info',
         title: `سفارش جدید ${order.code}`,
-        message: `سفارش جدید از ${customerProfile?.full_name || 'مشتری'} در ${order.provinces?.name || ''} ${order.address} ثبت شد و منتظر تأیید است.`,
-        metadata: {
-          order_id: order.id,
-          order_code: order.code,
-          customer_name: customerProfile?.full_name,
-          address: order.address,
-          province: order.provinces?.name,
-          district: order.districts?.name,
-          service_type: order.service_types_v3?.name,
-          subcategory: order.subcategories?.name
-        }
+        body: `سفارش جدید از ${customerProfile?.full_name || 'مشتری'} در ${order.provinces?.name || ''} ${order.address} ثبت شد و منتظر تأیید است.`,
+        link: '/ceo/orders'
       }))
 
       const { error: managersNotifError } = await supabase
@@ -88,16 +81,15 @@ serve(async (req) => {
       if (managersNotifError) {
         console.error('خطا در ایجاد نوتیفیکیشن مدیران:', managersNotifError)
       } else {
-        console.log(`نوتیفیکیشن برای ${ceoAndManagers.length} مدیر ارسال شد`)
+        console.log(`✅ نوتیفیکیشن برای ${ceoAndManagers.length} مدیر ارسال شد`)
       }
     }
-
 
     // ثبت log در audit_log
     const { error: auditError } = await supabase
       .from('audit_log')
       .insert({
-        actor_user_id: order.customers?.user_id,
+        actor_user_id: order.customers.user_id,
         entity: 'projects_v3',
         entity_id: order.id,
         action: 'automation_started',
@@ -117,22 +109,16 @@ serve(async (req) => {
       .from('notifications')
       .insert({
         user_id: order.customers.user_id,
-        type: 'order_created',
+        type: 'success',
         title: `سفارش ${order.code} ثبت شد`,
-        message: `سفارش شما با کد ${order.code} برای ${order.subcategories?.name || 'خدمات داربست'} با موفقیت ثبت شد و در حال بررسی توسط مدیریت است.`,
-        metadata: {
-          order_id: order.id,
-          order_code: order.code,
-          status: order.status,
-          service_type: order.service_types_v3?.name,
-          subcategory: order.subcategories?.name
-        }
+        body: `سفارش شما با کد ${order.code} برای ${order.subcategories?.name || 'خدمات داربست'} با موفقیت ثبت شد و در حال بررسی توسط مدیریت است.`,
+        link: '/user/my-orders'
       })
 
     if (customerNotifError) {
       console.error('خطا در ایجاد نوتیفیکیشن مشتری:', customerNotifError)
     } else {
-      console.log('نوتیفیکیشن برای مشتری ارسال شد')
+      console.log('✅ نوتیفیکیشن برای مشتری ارسال شد')
     }
 
     return new Response(
