@@ -15,6 +15,8 @@ export default function ScaffoldingForm() {
     hierarchyProjectId,
     projectId,
     locationId,
+    provinceId,
+    districtId,
     serviceTypeId,
     subcategoryId,
     subcategoryCode,
@@ -122,6 +124,8 @@ export default function ScaffoldingForm() {
                 hierarchyProjectId={hierarchyProjectId}
                 projectId={projectId}
                 locationId={locationId}
+                provinceId={provinceId}
+                districtId={districtId}
                 serviceTypeId={serviceTypeId}
                 subcategoryId={subcategoryId}
                 subcategoryCode={subcategoryCode}

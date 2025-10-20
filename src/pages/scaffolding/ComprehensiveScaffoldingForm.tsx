@@ -40,6 +40,8 @@ interface ComprehensiveScaffoldingFormProps {
   hierarchyProjectId?: string;
   projectId?: string;
   locationId?: string;
+  provinceId?: string;
+  districtId?: string;
   serviceTypeId?: string;
   subcategoryId?: string;
   subcategoryCode?: string;
@@ -53,6 +55,8 @@ export default function ComprehensiveScaffoldingForm({
   hierarchyProjectId: propHierarchyProjectId,
   projectId: propProjectId,
   locationId: propLocationId,
+  provinceId: propProvinceId,
+  districtId: propDistrictId,
   serviceTypeId: propServiceTypeId,
   subcategoryId: propSubcategoryId,
   subcategoryCode: propSubcategoryCode,
@@ -71,6 +75,8 @@ export default function ComprehensiveScaffoldingForm({
   // دریافت hierarchyProjectId از props یا state برای لینک کردن سفارش
   const hierarchyProjectId = propHierarchyProjectId || navState?.hierarchyProjectId || null;
   const locationId = propLocationId || navState?.locationId;
+  const provinceId = propProvinceId || navState?.provinceId || null;
+  const districtId = propDistrictId || navState?.districtId || null;
   const serviceTypeId = propServiceTypeId || navState?.serviceTypeId;
   const subcategoryId = propSubcategoryId || navState?.subcategoryId;
 
@@ -79,11 +85,9 @@ export default function ComprehensiveScaffoldingForm({
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '' }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
   
-  // Location fields - دریافت از state
-  const [provinceId, setProvinceId] = useState<string>(navState?.provinceId || '');
-  const [districtId, setDistrictId] = useState<string>(navState?.districtId || '');
+  // Location fields - دریافت از state (در صورت عدم وجود در props)
   const [detailedAddress, setDetailedAddress] = useState(navState?.detailedAddress || address);
-  const { districts } = useDistricts(provinceId);
+  const { districts } = useDistricts(provinceId || '');
 
   const [conditions, setConditions] = useState<ServiceConditions>({
     totalMonths: 1,
@@ -402,12 +406,16 @@ export default function ComprehensiveScaffoldingForm({
       }
 
       // ایجاد سفارش به‌صورت اتمیک در دیتابیس با لینک به پروژه سلسله‌مراتبی
+      // مطمئن شویم که provinceId و districtId UUID معتبر یا null هستند
+      const validProvinceId = provinceId && provinceId.trim() !== '' ? provinceId : null;
+      const validDistrictId = districtId && districtId.trim() !== '' ? districtId : null;
+      
       const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', {
         _customer_id: customerId,
-        _province_id: provinceId,
-        _district_id: districtId || null,
+        _province_id: validProvinceId,
+        _district_id: validDistrictId,
         _subcategory_id: finalSubcategoryId,
-        _hierarchy_project_id: hierarchyProjectId,
+        _hierarchy_project_id: projectId || hierarchyProjectId,
         _address: sanitizedAddress,
         _detailed_address: sanitizedAddress,
         _notes: {
