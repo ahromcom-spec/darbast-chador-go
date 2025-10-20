@@ -1214,10 +1214,8 @@ export type Database = {
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
           payment_method: string | null
-          project_number: string
           province_id: string
           rejection_reason: string | null
-          service_code: string
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           transaction_reference: string | null
@@ -1249,10 +1247,8 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
           payment_method?: string | null
-          project_number: string
           province_id: string
           rejection_reason?: string | null
-          service_code: string
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           transaction_reference?: string | null
@@ -1284,10 +1280,8 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
           payment_method?: string | null
-          project_number?: string
           province_id?: string
           rejection_reason?: string | null
-          service_code?: string
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id?: string
           transaction_reference?: string | null
