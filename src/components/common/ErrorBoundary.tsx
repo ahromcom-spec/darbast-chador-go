@@ -2,6 +2,7 @@ import { Component, ReactNode } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
+import { getSafeErrorMessage } from '@/lib/security';
 
 interface Props {
   children: ReactNode;
@@ -39,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </p>
               {this.state.error && (
                 <p className="text-xs mb-4 opacity-75">
-                  {this.state.error.message}
+                  {getSafeErrorMessage(this.state.error)}
                 </p>
               )}
               <Button
