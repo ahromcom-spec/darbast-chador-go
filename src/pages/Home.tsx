@@ -163,7 +163,7 @@ const Home = () => {
         <main className="flex-1 flex items-start md:items-center justify-center py-4 sm:py-6 md:py-8 px-4 sm:px-6 relative z-10" role="main">
           <article className="w-full max-w-2xl mt-2 sm:mt-4 md:mt-0">
             {/* Service Selection Card */}
-            <Card className="shadow-xl md:shadow-2xl persian-slide bg-card/95 backdrop-blur-md border-2 smooth-hover">
+            <Card className="shadow-xl md:shadow-2xl persian-slide bg-card/95 backdrop-blur-md border-2 smooth-hover" data-tour="create-project">
               <CardHeader className="text-center pb-3 sm:pb-4 md:pb-6 px-4 sm:px-6">
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight tracking-tight primary-gradient bg-clip-text text-transparent mb-2 whitespace-nowrap">
                   خدمات ساختمانی و منزل خود را انتخاب کنید

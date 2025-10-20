@@ -51,7 +51,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
   ];
 
   const userItems = user ? [
-    { title: 'پروفایل کاربری', url: '/profile', icon: User },
+    { title: 'پروفایل کاربری', url: '/profile', icon: User, dataTour: 'profile' },
     { title: 'پروژه‌های من', url: '/user/projects', icon: Building2 },
     { title: 'تیکت‌های پشتیبانی', url: '/tickets', icon: MessageSquare },
   ] : [];
@@ -134,7 +134,12 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                 {userItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
-                      <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
+                      <NavLink 
+                        to={item.url} 
+                        className={getNavClass} 
+                        onClick={handleClick}
+                        data-tour={item.dataTour}
+                      >
                         <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
                         {open && <span>{item.title}</span>}
                       </NavLink>

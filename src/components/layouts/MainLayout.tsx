@@ -111,7 +111,7 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
           </main>
 
           {/* Floating Sidebar Toggle - Bottom Left */}
-          <div className="hidden md:block fixed bottom-6 left-6 z-50">
+          <div className="hidden md:block fixed bottom-6 left-6 z-50" data-tour="sidebar-trigger">
             <SidebarTrigger className="rounded-full h-12 w-12 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all">
               <PanelLeft className="h-5 w-5" />
             </SidebarTrigger>

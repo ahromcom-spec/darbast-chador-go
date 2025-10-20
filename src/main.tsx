@@ -4,6 +4,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { AuthProvider } from "./contexts/AuthContext";
 import { GuideProvider } from "./contexts/GuideContext";
+import { OnboardingProvider } from "./contexts/OnboardingContext";
 
 // ثبت Service Worker برای PWA
 if ('serviceWorker' in navigator) {
@@ -41,7 +42,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
       <GuideProvider>
-        <App />
+        <OnboardingProvider>
+          <App />
+        </OnboardingProvider>
       </GuideProvider>
     </AuthProvider>
   </StrictMode>

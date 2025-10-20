@@ -15,6 +15,7 @@ import { PWAInstallBanner } from "@/components/common/PWAInstallBanner";
 import { NotificationBanner } from "@/components/common/NotificationBanner";
 import { SecurityGuard } from "@/components/security/SecurityGuard";
 import { applySecurityMeasures, protectGlobalScope } from "@/lib/securityConfig";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 
@@ -106,9 +107,10 @@ const App = () => {
               <OfflineIndicator />
               <NotificationBanner />
               <PWAInstallBanner />
+              <OnboardingTour />
               <Suspense fallback={<PageLoader />}>
-              <div className="min-h-screen bg-background">
-                <Header />
+                <div className="min-h-screen bg-background">
+                  <Header />
                 <Routes>
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
