@@ -30,6 +30,10 @@ import { CEOManagementSection } from '@/components/profile/CEOManagementSection'
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { RecentActivityFeed } from '@/components/profile/RecentActivityFeed';
+import { useGuide } from '@/contexts/GuideContext';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { HelpCircle } from 'lucide-react';
 
 interface UserOrder {
   id: string;
@@ -79,6 +83,7 @@ export default function UserProfile() {
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [staffDialogOpen, setStaffDialogOpen] = useState(false);
+  const { isGuideEnabled, toggleGuide } = useGuide();
 
   const isManager = isCEO || isAdmin || isGeneralManager || isSalesManager || isFinanceManager || isExecutiveManager;
 
@@ -272,6 +277,30 @@ const fetchOrders = async () => {
             {isManager && (
               <ManagerActivitySummary userId={user.id} />
             )}
+
+            {/* Guide Toggle Section */}
+            <div className="p-6 rounded-lg border-2 border-primary/20 bg-card">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <HelpCircle className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <Label htmlFor="guide-toggle" className="text-base font-semibold cursor-pointer">
+                      راهنمای صفحات
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      نمایش راهنمای مختصر در بالای هر صفحه
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="guide-toggle"
+                  checked={isGuideEnabled}
+                  onCheckedChange={toggleGuide}
+                />
+              </div>
+            </div>
 
             <ProfileForm
               userId={user.id}

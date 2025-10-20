@@ -1,6 +1,9 @@
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { AuthProvider } from "./contexts/AuthContext";
+import { GuideProvider } from "./contexts/GuideContext";
 
 // ثبت Service Worker برای PWA
 if ('serviceWorker' in navigator) {
@@ -34,4 +37,12 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <AuthProvider>
+      <GuideProvider>
+        <App />
+      </GuideProvider>
+    </AuthProvider>
+  </StrictMode>
+);
