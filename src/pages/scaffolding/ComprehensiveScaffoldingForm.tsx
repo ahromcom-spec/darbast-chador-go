@@ -285,6 +285,7 @@ export default function ComprehensiveScaffoldingForm({
 
       // استفاده از hierarchyProjectId اگر وجود داشت (از SelectLocation)
       let projectId = hierarchyProjectId;
+      let finalLocationId: string | undefined;
 
       // اگر hierarchyProjectId نداشتیم، باید location و project را ایجاد کنیم
       if (!projectId) {
@@ -318,6 +319,9 @@ export default function ComprehensiveScaffoldingForm({
           locationId = newLocation.id;
         }
 
+        // ذخیره برای استفاده در navigation
+        finalLocationId = locationId;
+        
         // Get or create project in hierarchy
         const projectResult = await supabase.rpc('get_or_create_project', {
           _user_id: user.id,
@@ -376,8 +380,19 @@ export default function ComprehensiveScaffoldingForm({
 
       if (projectError) throw projectError;
 
-      toast({ title: 'ثبت شد', description: 'سفارش شما با موفقیت ثبت شد و در پروژه‌ها قرار گرفت.' });
-      navigate('/user/projects-hierarchy');
+      toast({ 
+        title: 'ثبت شد', 
+        description: `سفارش شما با کد ${project.code} ثبت شد و در انتظار تایید است.` 
+      });
+
+      // هدایت کاربر به صفحه پروژه‌های من
+      navigate('/user/projects', {
+        state: {
+          expandLocationId: finalLocationId,
+          expandProjectId: projectId,
+          highlightOrderId: project.id
+        }
+      });
     } catch (e: any) {
       console.error('Error:', e);
       toast({ title: 'خطا', description: e.message || 'ثبت با مشکل مواجه شد', variant: 'destructive' });

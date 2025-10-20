@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,7 @@ interface HierarchyData {
 
 export default function MyProjectsHierarchy() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<HierarchyData>({
     addresses: [],
@@ -64,10 +65,27 @@ export default function MyProjectsHierarchy() {
   });
   const [expandedAddresses, setExpandedAddresses] = useState<Set<string>>(new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [highlightedOrderId, setHighlightedOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchHierarchyData();
   }, []);
+
+  // باز کردن خودکار آدرس و پروژه مورد نظر
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.expandLocationId) {
+      setExpandedAddresses(new Set([state.expandLocationId]));
+    }
+    if (state?.expandProjectId) {
+      setExpandedProjects(new Set([state.expandProjectId]));
+    }
+    if (state?.highlightOrderId) {
+      setHighlightedOrderId(state.highlightOrderId);
+      // حذف هایلایت بعد از 3 ثانیه
+      setTimeout(() => setHighlightedOrderId(null), 3000);
+    }
+  }, [location.state]);
 
   const fetchHierarchyData = async () => {
     try {
@@ -352,16 +370,18 @@ export default function MyProjectsHierarchy() {
                                       افزودن سفارش
                                     </Button>
                                   </div>
-                                ) : (
-                                  projectOrders.map((order) => (
-                                    <div
-                                      key={order.id}
-                                      className="flex items-center justify-between p-2 bg-background rounded-md hover:bg-accent/50 cursor-pointer transition-colors mr-6"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/user/orders/${order.id}`);
-                                      }}
-                                    >
+                                 ) : (
+                                   projectOrders.map((order) => (
+                                     <div
+                                       key={order.id}
+                                       className={`flex items-center justify-between p-2 bg-background rounded-md hover:bg-accent/50 cursor-pointer transition-all mr-6 ${
+                                         highlightedOrderId === order.id ? 'ring-2 ring-primary shadow-lg' : ''
+                                       }`}
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         navigate(`/orders/${order.id}`);
+                                       }}
+                                     >
                                       <div className="flex items-center gap-2">
                                         <FileText className="h-4 w-4 text-muted-foreground" />
                                         <div>
