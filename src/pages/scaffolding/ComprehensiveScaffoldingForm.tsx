@@ -355,18 +355,32 @@ export default function ComprehensiveScaffoldingForm({
         // ذخیره برای استفاده در navigation
         finalLocationId = locationId;
         
-        // در این نسخه لینک به پروژه سلسله‌مراتبی را موقتاً حذف می‌کنیم تا ثبت سفارش بدون خطا انجام شود
-        // projectId را خالی می‌گذاریم و فقط از location برای ناوبری استفاده می‌کنیم
-        projectId = null as any;
+        // ایجاد پروژه سلسله‌مراتبی برای لینک
+        if (locationId && finalServiceTypeId && finalSubcategoryId) {
+          try {
+            const { data: newProjectId, error: hierarchyError } = await supabase.rpc('get_or_create_project', {
+              _user_id: user.id,
+              _location_id: locationId,
+              _service_type_id: finalServiceTypeId,
+              _subcategory_id: finalSubcategoryId
+            });
+            
+            if (!hierarchyError && newProjectId) {
+              projectId = newProjectId;
+            }
+          } catch (error) {
+            console.error('خطا در ایجاد پروژه سلسله‌مراتبی:', error);
+          }
+        }
       }
 
-      // ایجاد سفارش به‌صورت اتمیک در دیتابیس (جلوگیری از تکراری شدن کد)
+      // ایجاد سفارش به‌صورت اتمیک در دیتابیس با لینک به پروژه سلسله‌مراتبی
       const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', {
         _customer_id: customerId,
         _province_id: provinceId,
         _district_id: districtId || null,
         _subcategory_id: finalSubcategoryId,
-        _hierarchy_project_id: projectId,
+        _hierarchy_project_id: hierarchyProjectId,
         _address: sanitizedAddress,
         _detailed_address: sanitizedAddress,
         _notes: {

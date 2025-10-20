@@ -9,8 +9,6 @@ export interface UserProject {
   status: string;
   created_at: string;
   title: string;
-  service_code?: string;
-  project_number?: string;
   addresses?: {
     line1: string;
     line2?: string;
@@ -76,7 +74,13 @@ export const useUserProjects = (serviceTypeId?: string, subcategoryCode?: string
         .in('status', ['draft', 'pending', 'approved']);
 
       if (subcategoryCode) {
-        query = query.eq('service_code', subcategoryCode);
+        query = query.eq('subcategory_id', (
+          await supabase
+            .from('subcategories')
+            .select('id')
+            .eq('code', subcategoryCode)
+            .single()
+        ).data?.id || '');
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -91,8 +95,6 @@ export const useUserProjects = (serviceTypeId?: string, subcategoryCode?: string
         status: item.status,
         created_at: item.created_at,
         title: `${item.subcategory?.service_type?.name || ''} - ${item.address}`,
-        service_code: item.service_code || undefined,
-        project_number: item.project_number || undefined,
         addresses: {
           line1: item.address,
           line2: item.detailed_address || undefined,

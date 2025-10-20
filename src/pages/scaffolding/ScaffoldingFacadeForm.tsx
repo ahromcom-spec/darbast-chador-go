@@ -295,15 +295,36 @@ export default function ScaffoldingFacadeForm() {
         area: parseFloat(d.length) * parseFloat(d.height)
       }));
 
-      // ایجاد سفارش به صورت اتمیک برای جلوگیری از تکراری شدن کد
+      // ایجاد یا پیدا کردن پروژه در ساختار سلسله‌مراتبی
+      let hierarchyProjectId: string | null = null;
+      const locationId = localStorage.getItem('selectedLocationId');
+      
+      if (locationId && scaffoldingServiceId && withMaterialsSubcategoryId) {
+        try {
+          const { data: projectId, error: hierarchyError } = await supabase.rpc('get_or_create_project', {
+            _user_id: user.id,
+            _location_id: locationId,
+            _service_type_id: scaffoldingServiceId,
+            _subcategory_id: withMaterialsSubcategoryId
+          });
+          
+          if (!hierarchyError && projectId) {
+            hierarchyProjectId = projectId;
+          }
+        } catch (error) {
+          console.error('خطا در ایجاد پروژه سلسله‌مراتبی:', error);
+        }
+      }
+
+      // ایجاد سفارش به صورت اتمیک با لینک به پروژه سلسله‌مراتبی
       const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', {
         _customer_id: customer.id,
         _province_id: qomProvinceId,
         _district_id: qomCityId || null,
         _subcategory_id: withMaterialsSubcategoryId,
-        _hierarchy_project_id: null,
+        _hierarchy_project_id: hierarchyProjectId,
         _address: projectAddress,
-        _detailed_address: projectLocation 
+        _detailed_address: projectLocation
           ? `موقعیت: ${projectLocation.coordinates[1]},${projectLocation.coordinates[0]} - فاصله: ${projectLocation.distance}km`
           : null,
         _notes: {

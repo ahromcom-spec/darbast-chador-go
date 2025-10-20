@@ -211,8 +211,8 @@ const Home = () => {
                         ) : projects.length > 0 ? (
                           <div className="space-y-3">
                             {(() => {
-                              // فقط پروژه‌های مرتبط با نوع خدمات انتخاب شده
-                              const matchingProjects = projects.filter(p => p.service_code === selectedSubcategory);
+                              // فقط پروژه‌های مرتبط با نوع خدمات انتخاب شده - حذف فیلتر service_code
+                              const matchingProjects = projects;
 
                               return (
                                 <>
