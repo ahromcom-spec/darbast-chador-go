@@ -315,6 +315,10 @@ export default function ScaffoldingFacadeForm() {
         } as any
       });
 
+      if (createError) throw createError;
+      const createdProject = createdRows?.[0];
+      if (!createdProject) throw new Error('خطا در ایجاد سفارش');
+
       // Clear the saved form data after successful submission
       clearForm();
 
