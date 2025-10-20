@@ -34,8 +34,7 @@ serve(async (req) => {
         customers!inner (
           id,
           customer_code,
-          user_id,
-          profiles (full_name, phone_number)
+          user_id
         ),
         provinces (name),
         districts (name),
@@ -44,35 +43,55 @@ serve(async (req) => {
       `)
       .eq('id', orderId)
       .single()
-
+    
     if (orderError) throw orderError
     if (!order) throw new Error('سفارش یافت نشد')
 
+    // دریافت اطلاعات پروفایل مشتری
+    const { data: customerProfile } = await supabase
+      .from('profiles')
+      .select('full_name, phone_number')
+      .eq('user_id', order.customers.user_id)
+      .single()
+
     console.log('اطلاعات سفارش بارگذاری شد:', order.code)
 
-    // ایجاد نوتیفیکیشن برای مدیر اجرایی
-    const { error: execNotifError } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: null, // برای همه مدیران اجرایی
+    // دریافت لیست CEO و مدیران کل برای ارسال نوتیفیکیشن
+    const { data: ceoAndManagers } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .in('role', ['ceo', 'general_manager'])
+
+    // ایجاد نوتیفیکیشن برای CEO و مدیران کل
+    if (ceoAndManagers && ceoAndManagers.length > 0) {
+      const notifications = ceoAndManagers.map(manager => ({
+        user_id: manager.user_id,
         type: 'order_approval',
         title: `سفارش جدید ${order.code}`,
-        message: `سفارش جدید از ${order.customers?.profiles?.full_name} در ${order.address} ثبت شد و منتظر تأیید است.`,
+        message: `سفارش جدید از ${customerProfile?.full_name || 'مشتری'} در ${order.provinces?.name || ''} ${order.address} ثبت شد و منتظر تأیید است.`,
         metadata: {
           order_id: order.id,
           order_code: order.code,
-          customer_name: order.customers?.profiles?.full_name,
+          customer_name: customerProfile?.full_name,
           address: order.address,
+          province: order.provinces?.name,
+          district: order.districts?.name,
           service_type: order.service_types_v3?.name,
           subcategory: order.subcategories?.name
         }
-      })
+      }))
 
-    if (execNotifError) {
-      console.error('خطا در ایجاد نوتیفیکیشن مدیر اجرایی:', execNotifError)
-    } else {
-      console.log('نوتیفیکیشن برای مدیر اجرایی ارسال شد')
+      const { error: managersNotifError } = await supabase
+        .from('notifications')
+        .insert(notifications)
+
+      if (managersNotifError) {
+        console.error('خطا در ایجاد نوتیفیکیشن مدیران:', managersNotifError)
+      } else {
+        console.log(`نوتیفیکیشن برای ${ceoAndManagers.length} مدیر ارسال شد`)
+      }
     }
+
 
     // ثبت log در audit_log
     const { error: auditError } = await supabase
@@ -97,14 +116,16 @@ serve(async (req) => {
     const { error: customerNotifError } = await supabase
       .from('notifications')
       .insert({
-        user_id: order.customers?.user_id,
+        user_id: order.customers.user_id,
         type: 'order_created',
         title: `سفارش ${order.code} ثبت شد`,
-        message: `سفارش شما با کد ${order.code} با موفقیت ثبت شد و در حال بررسی است.`,
+        message: `سفارش شما با کد ${order.code} برای ${order.subcategories?.name || 'خدمات داربست'} با موفقیت ثبت شد و در حال بررسی توسط مدیریت است.`,
         metadata: {
           order_id: order.id,
           order_code: order.code,
-          status: order.status
+          status: order.status,
+          service_type: order.service_types_v3?.name,
+          subcategory: order.subcategories?.name
         }
       })
 
