@@ -61,10 +61,10 @@ export default function ComprehensiveScaffoldingForm({
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '' }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
   
-  // Location fields
-  const [provinceId, setProvinceId] = useState<string>('');
-  const [districtId, setDistrictId] = useState<string>('');
-  const [detailedAddress, setDetailedAddress] = useState(address);
+  // Location fields - دریافت از state
+  const [provinceId, setProvinceId] = useState<string>(navState?.provinceId || '');
+  const [districtId, setDistrictId] = useState<string>(navState?.districtId || '');
+  const [detailedAddress, setDetailedAddress] = useState(navState?.detailedAddress || address);
   const { districts } = useDistricts(provinceId);
 
   const [conditions, setConditions] = useState<ServiceConditions>({
@@ -225,7 +225,7 @@ export default function ComprehensiveScaffoldingForm({
     }
 
     if (!provinceId || !detailedAddress) {
-      toast({ title: 'خطا', description: 'لطفاً استان و آدرس را وارد کنید', variant: 'destructive' });
+      toast({ title: 'خطا', description: 'اطلاعات آدرس از مرحله قبل دریافت نشد', variant: 'destructive' });
       return;
     }
 
@@ -416,144 +416,6 @@ export default function ComprehensiveScaffoldingForm({
   return (
     <div className="space-y-6">
       <h1 className="sr-only">فرم ثبت سفارش داربست</h1>
-
-      {/* Location Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>اطلاعات مکانی</CardTitle>
-          <CardDescription>استان و آدرس پروژه را وارد کنید</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="province">استان *</Label>
-            <Select value={provinceId} onValueChange={setProvinceId}>
-              <SelectTrigger id="province">
-                <SelectValue placeholder="انتخاب استان" />
-              </SelectTrigger>
-              <SelectContent>
-                {provinces.map(province => (
-                  <SelectItem key={province.id} value={province.id}>
-                    {province.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {provinceId && (
-            <div className="space-y-2">
-              <Label htmlFor="district">شهرستان (اختیاری)</Label>
-              <Select value={districtId} onValueChange={setDistrictId}>
-                <SelectTrigger id="district">
-                  <SelectValue placeholder="انتخاب شهرستان" />
-                </SelectTrigger>
-                <SelectContent>
-                  {districts.map(district => (
-                    <SelectItem key={district.id} value={district.id}>
-                      {district.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="address">آدرس دقیق *</Label>
-            <Input
-              id="address"
-              value={detailedAddress}
-              onChange={(e) => setDetailedAddress(e.target.value)}
-              placeholder="آدرس کامل پروژه را وارد کنید"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Service Type Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>نوع خدمات</CardTitle>
-          <CardDescription>نوع داربست مورد نیاز را انتخاب کنید</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              type="button"
-              variant={activeService === 'facade' ? 'default' : 'outline'}
-              onClick={() => setActiveService('facade')}
-              className="h-auto py-4"
-            >
-              <div className="text-center">
-                <div className="font-semibold">نمای ساختمان</div>
-                <div className="text-xs mt-1 opacity-80">Facade</div>
-              </div>
-            </Button>
-            <Button
-              type="button"
-              variant={activeService === 'formwork' ? 'default' : 'outline'}
-              onClick={() => setActiveService('formwork')}
-              className="h-auto py-4"
-            >
-              <div className="text-center">
-                <div className="font-semibold">قالب‌بندی</div>
-                <div className="text-xs mt-1 opacity-80">Formwork</div>
-              </div>
-            </Button>
-          </div>
-
-          <Collapsible open={ceilingTieredOpen} onOpenChange={setCeilingTieredOpen}>
-            <CollapsibleTrigger asChild>
-              <Button type="button" variant="ghost" className="w-full justify-between">
-                <span>سقف پله‌ای</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${ceilingTieredOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <Button
-                type="button"
-                variant={activeService === 'ceiling-tiered' ? 'default' : 'outline'}
-                onClick={() => setActiveService('ceiling-tiered')}
-                className="w-full mt-2"
-              >
-                انتخاب سقف پله‌ای
-              </Button>
-            </CollapsibleContent>
-          </Collapsible>
-
-          <Collapsible open={ceilingSlabOpen} onOpenChange={setCeilingSlabOpen}>
-            <CollapsibleTrigger asChild>
-              <Button type="button" variant="ghost" className="w-full justify-between">
-                <span>سقف دال</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${ceilingSlabOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <Button
-                type="button"
-                variant={activeService === 'ceiling-slab' ? 'default' : 'outline'}
-                onClick={() => setActiveService('ceiling-slab')}
-                className="w-full mt-2"
-              >
-                انتخاب سقف دال
-              </Button>
-            </CollapsibleContent>
-          </Collapsible>
-
-          {activeService === 'facade' && (
-            <div className="flex items-center space-x-2 space-x-reverse pt-2">
-              <Checkbox
-                id="facade-width"
-                checked={isFacadeWidth2m}
-                onCheckedChange={(checked) => setIsFacadeWidth2m(checked === true)}
-              />
-              <Label htmlFor="facade-width" className="cursor-pointer">
-                عرض داربست 2 متر (به جای 1 متر)
-              </Label>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Dimensions */}
       <Card>
