@@ -21,6 +21,8 @@ import { toastError } from '@/lib/errorHandler';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { AlertCircle, Check, X, Eye, Edit2 } from 'lucide-react';
 import { z } from 'zod';
+import { useOrderApprovals } from '@/hooks/useOrderApprovals';
+import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 
 // Define zod schema for order notes validation (security improvement)
 const orderNotesSchema = z.object({
@@ -118,20 +120,21 @@ export const CEOOrders = () => {
 
   const handleApprove = async (order: Order) => {
     try {
-      const { error } = await supabase
-        .from('projects_v3')
+      // Record CEO approval in order_approvals table
+      const { error: approvalError } = await supabase
+        .from('order_approvals')
         .update({
-          status: 'approved',
-          approved_by: user?.id,
-          approved_at: new Date().toISOString(),
+          approver_user_id: user?.id,
+          approved_at: new Date().toISOString()
         })
-        .eq('id', order.id);
+        .eq('order_id', order.id)
+        .eq('approver_role', 'ceo');
 
-      if (error) throw error;
+      if (approvalError) throw approvalError;
 
       toast({
-        title: 'سفارش تایید شد',
-        description: `سفارش ${order.code} با موفقیت تایید شد.`,
+        title: 'تایید شما ثبت شد',
+        description: `تایید شما برای سفارش ${order.code} ثبت شد.`,
       });
 
       fetchOrders();
@@ -295,6 +298,100 @@ export const CEOOrders = () => {
     return <LoadingSpinner />;
   }
 
+  // Component for order card with approvals
+  const OrderCardWithApprovals = ({ 
+    order, 
+    details, 
+    onViewDetails, 
+    onEdit, 
+    onApprove, 
+    onReject,
+    getServiceTypeName 
+  }: any) => {
+    const { approvals, loading: approvalsLoading } = useOrderApprovals(order.id);
+
+    return (
+      <Card className="hover:shadow-lg transition-shadow">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-xl">
+                کد سفارش: {order.code}
+              </CardTitle>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>مشتری: {order.customer_name || 'نامشخص'}</p>
+                <p>تلفن: {order.customer_phone || 'ندارد'}</p>
+                <p>نوع خدمات: {getServiceTypeName(order.notes)}</p>
+                <p>
+                  تاریخ ثبت:{' '}
+                  {new Date(order.created_at).toLocaleDateString('fa-IR')}
+                </p>
+              </div>
+            </div>
+            <Badge variant="secondary">در انتظار</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-secondary/30 p-4 rounded-lg space-y-2">
+            <p className="text-sm">
+              <strong>آدرس:</strong> {order.address}
+            </p>
+            {details && (
+              <>
+                <p className="text-sm">
+                  <strong>متراژ کل:</strong>{' '}
+                  {details.totalArea.toFixed(2)} متر مربع
+                </p>
+                <p className="text-sm">
+                  <strong>قیمت تخمینی:</strong>{' '}
+                  {details.estimatedPrice.toLocaleString('fa-IR')} تومان
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Approval Progress */}
+          <ApprovalProgress approvals={approvals} loading={approvalsLoading} />
+
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onViewDetails}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              جزئیات
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onEdit}
+            >
+              <Edit2 className="h-4 w-4 mr-2" />
+              ویرایش
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onApprove}
+            >
+              <Check className="h-4 w-4 mr-2" />
+              تایید
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={onReject}
+            >
+              <X className="h-4 w-4 mr-2" />
+              رد
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -318,90 +415,25 @@ export const CEOOrders = () => {
           {orders.map((order) => {
             const details = getOrderDetails(order.notes);
             return (
-              <Card key={order.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-xl">
-                        کد سفارش: {order.code}
-                      </CardTitle>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p>مشتری: {order.customer_name || 'نامشخص'}</p>
-                        <p>تلفن: {order.customer_phone || 'ندارد'}</p>
-                        <p>نوع خدمات: {getServiceTypeName(order.notes)}</p>
-                        <p>
-                          تاریخ ثبت:{' '}
-                          {new Date(order.created_at).toLocaleDateString('fa-IR')}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary">در انتظار</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-secondary/30 p-4 rounded-lg space-y-2">
-                    <p className="text-sm">
-                      <strong>آدرس:</strong> {order.address}
-                    </p>
-                    {details && (
-                      <>
-                        <p className="text-sm">
-                          <strong>متراژ کل:</strong>{' '}
-                          {details.totalArea.toFixed(2)} متر مربع
-                        </p>
-                        <p className="text-sm">
-                          <strong>قیمت تخمینی:</strong>{' '}
-                          {details.estimatedPrice.toLocaleString('fa-IR')} تومان
-                        </p>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setDetailsOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      جزئیات
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleEditOrder(order)}
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" />
-                      ویرایش
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setActionType('approve');
-                      }}
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      تایید
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setActionType('reject');
-                      }}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      رد
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <OrderCardWithApprovals 
+                key={order.id} 
+                order={order} 
+                details={details}
+                onViewDetails={() => {
+                  setSelectedOrder(order);
+                  setDetailsOpen(true);
+                }}
+                onEdit={() => handleEditOrder(order)}
+                onApprove={() => {
+                  setSelectedOrder(order);
+                  setActionType('approve');
+                }}
+                onReject={() => {
+                  setSelectedOrder(order);
+                  setActionType('reject');
+                }}
+                getServiceTypeName={getServiceTypeName}
+              />
             );
           })}
         </div>
