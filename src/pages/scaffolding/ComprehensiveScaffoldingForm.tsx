@@ -322,16 +322,9 @@ export default function ComprehensiveScaffoldingForm({
         // ذخیره برای استفاده در navigation
         finalLocationId = locationId;
         
-        // Get or create project in hierarchy
-        const projectResult = await supabase.rpc('get_or_create_project', {
-          _user_id: user.id,
-          _location_id: locationId,
-          _service_type_id: finalServiceTypeId,
-          _subcategory_id: finalSubcategoryId
-        });
-
-        if (projectResult.error) throw projectResult.error;
-        projectId = projectResult.data;
+        // در این نسخه لینک به پروژه سلسله‌مراتبی را موقتاً حذف می‌کنیم تا ثبت سفارش بدون خطا انجام شود
+        // projectId را خالی می‌گذاریم و فقط از location برای ناوبری استفاده می‌کنیم
+        projectId = null as any;
       }
 
       // ایجاد سفارش به‌صورت اتمیک در دیتابیس (جلوگیری از تکراری شدن کد)
