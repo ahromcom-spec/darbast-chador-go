@@ -284,43 +284,25 @@ export default function NewServiceRequestForm() {
 
       if (hierarchyError) throw hierarchyError;
 
-      // تولید کد پروژه
-      const { data: projectCode, error: codeError } = await supabase
-        .rpc('generate_project_code', {
+      // ایجاد سفارش به صورت اتمیک و لینک به hierarchy
+      const { data: createdRows, error: createError } = await supabase
+        .rpc('create_project_v3', {
           _customer_id: customer.id,
           _province_id: selectedProvince,
-          _subcategory_id: selectedSubcategory
+          _district_id: selectedDistrict || null,
+          _subcategory_id: selectedSubcategory,
+          _hierarchy_project_id: hierarchyProjectId,
+          _address: address,
+          _detailed_address: detailedAddress || null,
+          _notes: notes ? { raw: notes } as any : null
         });
 
-      if (codeError) throw codeError;
-
-      // استخراج اطلاعات از کد پروژه
-      const [projectNumber, serviceCode] = projectCode.split('/');
-
-      // ایجاد پروژه و لینک به hierarchy
-      const { data: project, error: projectError } = await supabase
-        .from('projects_v3')
-        .insert({
-          customer_id: customer.id,
-          province_id: selectedProvince,
-          district_id: selectedDistrict,
-          subcategory_id: selectedSubcategory,
-          hierarchy_project_id: hierarchyProjectId, // لینک به پروژه در hierarchy
-          project_number: projectNumber,
-          service_code: serviceCode,
-          code: projectCode,
-          address: address,
-          detailed_address: detailedAddress || null,
-          notes: notes || null,
-          status: 'pending'
-        })
-        .select()
-        .single();
-
-      if (projectError) throw projectError;
+      if (createError) throw createError;
+      const createdProject = createdRows?.[0];
+      if (!createdProject) throw new Error('خطا در ایجاد پروژه');
 
       toast.success('درخواست شما با موفقیت ثبت شد', {
-        description: `کد پروژه: ${projectCode}`
+        description: `کد پروژه: ${createdProject.code}`
       });
 
       // انتقال به داشبورد پروژه‌ها

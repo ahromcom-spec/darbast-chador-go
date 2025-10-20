@@ -289,60 +289,38 @@ export default function ScaffoldingFacadeForm() {
       const totalArea = calculateTotalArea();
       const estimatedPrice = calculatePrice(totalArea, durationMonths);
 
-      // تولید کد پروژه
-      const { data: projectCode, error: codeError } = await supabase
-        .rpc('generate_project_code', {
-          _customer_id: customer.id,
-          _province_id: qomProvinceId,
-          _subcategory_id: withMaterialsSubcategoryId
-        });
-
-      if (codeError) throw codeError;
-
-      const [projectNumber, serviceCode] = projectCode.split('/');
-
-      // حفظ بيانات الأبعاد كـ JSON
       const dimensionsData = dimensions.map(d => ({
         length: parseFloat(d.length),
         height: parseFloat(d.height),
         area: parseFloat(d.length) * parseFloat(d.height)
       }));
 
-      // إنشاء المشروع
-      const { data: project, error: projectError } = await supabase
-        .from('projects_v3')
-        .insert({
-          customer_id: customer.id,
-          province_id: qomProvinceId,
-          district_id: qomCityId || null,
-          subcategory_id: withMaterialsSubcategoryId,
-          project_number: projectNumber,
-          service_code: serviceCode,
-          code: projectCode,
-          address: projectAddress,
-          detailed_address: projectLocation 
-            ? `موقعیت: ${projectLocation.coordinates[1]},${projectLocation.coordinates[0]} - فاصله: ${projectLocation.distance}km`
-            : null,
-          notes: JSON.stringify({
-            service_type: 'facade_with_materials',
-            dimensions: dimensionsData,
-            total_area: totalArea,
-            duration_months: durationMonths,
-            estimated_price: estimatedPrice
-          }),
-          status: 'pending'
-        })
-        .select()
-        .single();
-
-      if (projectError) throw projectError;
+      // ایجاد سفارش به صورت اتمیک برای جلوگیری از تکراری شدن کد
+      const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', {
+        _customer_id: customer.id,
+        _province_id: qomProvinceId,
+        _district_id: qomCityId || null,
+        _subcategory_id: withMaterialsSubcategoryId,
+        _hierarchy_project_id: null,
+        _address: projectAddress,
+        _detailed_address: projectLocation 
+          ? `موقعیت: ${projectLocation.coordinates[1]},${projectLocation.coordinates[0]} - فاصله: ${projectLocation.distance}km`
+          : null,
+        _notes: {
+          service_type: 'facade_with_materials',
+          dimensions: dimensionsData,
+          total_area: totalArea,
+          duration_months: durationMonths,
+          estimated_price: estimatedPrice
+        } as any
+      });
 
       // Clear the saved form data after successful submission
       clearForm();
 
       toast({
         title: '✅ سفارش با موفقیت ثبت شد',
-        description: `کد پروژه: ${projectCode}\nسفارش شما در انتظار تایید مدیرعامل است.`,
+        description: `کد پروژه: ${createdProject.code}\nسفارش شما در انتظار تایید مدیرعامل است.`,
         duration: 5000,
       });
 

@@ -334,55 +334,39 @@ export default function ComprehensiveScaffoldingForm({
         projectId = projectResult.data;
       }
 
-      // Generate project code using RPC function
-      const { data: generatedCode, error: codeError } = await supabase
-        .rpc('generate_project_code', {
-          _customer_id: customerId,
-          _province_id: provinceId,
-          _subcategory_id: finalSubcategoryId
-        });
+      // ایجاد سفارش به‌صورت اتمیک در دیتابیس (جلوگیری از تکراری شدن کد)
+      const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', {
+        _customer_id: customerId,
+        _province_id: provinceId,
+        _district_id: districtId || null,
+        _subcategory_id: finalSubcategoryId,
+        _hierarchy_project_id: projectId,
+        _address: detailedAddress,
+        _detailed_address: detailedAddress,
+        _notes: {
+          service_type: activeService,
+          dimensions: dimensions.map(d => ({
+            length: parseFloat(d.length),
+            width: parseFloat(d.width),
+            height: parseFloat(d.height),
+          })),
+          isFacadeWidth2m,
+          conditions,
+          onGround,
+          vehicleReachesSite,
+          totalArea: calculateTotalArea(),
+          estimated_price: priceData.total,
+          price_breakdown: priceData.breakdown,
+        } as any
+      });
 
-      if (codeError) throw codeError;
-
-      // Create order in projects_v3 and link it to hierarchy project
-      const { data: project, error: projectError } = await supabase
-        .from('projects_v3')
-        .insert([{
-          customer_id: customerId,
-          province_id: provinceId,
-          district_id: districtId || null,
-          subcategory_id: finalSubcategoryId,
-          hierarchy_project_id: projectId, // لینک به پروژه در hierarchy
-          code: generatedCode,
-          project_number: generatedCode.split('/')[1],
-          service_code: generatedCode.split('/')[2],
-          address: detailedAddress,
-          detailed_address: detailedAddress,
-          notes: JSON.stringify({
-            service_type: activeService,
-            dimensions: dimensions.map(d => ({
-              length: parseFloat(d.length),
-              width: parseFloat(d.width),
-              height: parseFloat(d.height),
-            })),
-            isFacadeWidth2m,
-            conditions,
-            onGround,
-            vehicleReachesSite,
-            totalArea: calculateTotalArea(),
-            estimated_price: priceData.total,
-            price_breakdown: priceData.breakdown,
-          }),
-          status: 'pending'
-        }])
-        .select()
-        .single();
-
-      if (projectError) throw projectError;
+      if (createError) throw createError;
+      const createdProject = createdRows?.[0];
+      if (!createdProject) throw new Error('خطا در ایجاد سفارش');
 
       toast({ 
         title: 'ثبت شد', 
-        description: `سفارش شما با کد ${project.code} ثبت شد و در انتظار تایید است.` 
+        description: `سفارش شما با کد ${createdProject.code} ثبت شد و در انتظار تایید است.` 
       });
 
       // هدایت کاربر به صفحه پروژه‌های من
@@ -390,7 +374,7 @@ export default function ComprehensiveScaffoldingForm({
         state: {
           expandLocationId: finalLocationId,
           expandProjectId: projectId,
-          highlightOrderId: project.id
+          highlightOrderId: createdProject.id
         }
       });
     } catch (e: any) {
