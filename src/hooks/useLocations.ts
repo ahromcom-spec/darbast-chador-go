@@ -78,12 +78,22 @@ export const useLocations = () => {
   };
 
   const deleteLocation = async (id: string) => {
-    const { error } = await supabase
+    // حذف نرم: آدرس را غیرفعال می‌کنیم تا از لیست خارج شود و وابستگی‌های پروژه‌ها حفظ شود
+    const { error: softError } = await supabase
       .from('locations')
-      .delete()
+      .update({ is_active: false })
       .eq('id', id);
 
-    if (error) throw error;
+    if (softError) {
+      // در صورتی که به هر دلیل آپدیت ناموفق بود، تلاش برای حذف سخت (در صورت نبود وابستگی)
+      const { error: hardError } = await supabase
+        .from('locations')
+        .delete()
+        .eq('id', id);
+
+      if (hardError) throw hardError;
+    }
+
     await fetchLocations(); // رفرش لیست آدرس‌ها
   };
 

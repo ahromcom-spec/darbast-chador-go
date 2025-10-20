@@ -59,6 +59,9 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
     if (deletingLocationId) {
       try {
         await deleteLocation(deletingLocationId);
+        if (selectedLocationId === deletingLocationId) {
+          setSelectedLocationId(null);
+        }
         toast.success('آدرس با موفقیت حذف شد');
         setShowDeleteDialog(false);
         setDeletingLocationId(null);
