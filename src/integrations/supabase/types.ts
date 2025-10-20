@@ -2565,6 +2565,22 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      create_project_v3: {
+        Args: {
+          _address: string
+          _customer_id: string
+          _detailed_address: string
+          _district_id: string
+          _hierarchy_project_id: string
+          _notes?: Json
+          _province_id: string
+          _subcategory_id: string
+        }
+        Returns: {
+          code: string
+          id: string
+        }[]
+      }
       generate_customer_code: {
         Args: Record<PropertyKey, never>
         Returns: string
