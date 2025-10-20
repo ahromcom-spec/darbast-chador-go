@@ -236,33 +236,48 @@ export default function ComprehensiveScaffoldingForm({
       setLoading(true);
       const priceData = calculatePrice();
 
-      // Map service type to subcategory code
-      const subcategoryCodeMap: Record<string, string> = {
-        'facade': '01', // با اجناس
-        'formwork': '01',
-        'ceiling-tiered': '01',
-        'ceiling-slab': '01'
-      };
+      // دریافت نوع خدمات و subcategory از state که از صفحه قبلی آمده
+      const serviceTypeId = navState?.serviceTypeId;
+      const subcategoryId = navState?.subcategoryId;
 
-      const subcategoryCode = subcategoryCodeMap[activeService];
+      // اگر از state دریافت نشد، از دیتابیس بگیریم
+      let finalServiceTypeId = serviceTypeId;
+      let finalSubcategoryId = subcategoryId;
 
-      // Get service_type_id and subcategory_id
-      const { data: serviceTypes } = await supabase
-        .from('service_types_v3')
-        .select('id, code')
-        .eq('code', '01') // داربست فلزی
-        .single();
+      if (!finalServiceTypeId || !finalSubcategoryId) {
+        // Map service type to subcategory code
+        const subcategoryCodeMap: Record<string, string> = {
+          'facade': '10', // با مصالح
+          'formwork': '10',
+          'ceiling-tiered': '10',
+          'ceiling-slab': '10'
+        };
 
-      if (!serviceTypes) throw new Error('نوع خدمات یافت نشد');
+        const subcategoryCode = subcategoryCodeMap[activeService];
 
-      const { data: subcategory } = await supabase
-        .from('subcategories')
-        .select('id')
-        .eq('service_type_id', serviceTypes.id)
-        .eq('code', subcategoryCode)
-        .single();
+        // Get service_type_id - داربست فلزی کد 10 دارد
+        const { data: serviceTypes } = await supabase
+          .from('service_types_v3')
+          .select('id, code')
+          .eq('code', '10') // داربست فلزی
+          .single();
 
-      if (!subcategory) throw new Error('زیرمجموعه یافت نشد');
+        if (!serviceTypes) throw new Error('نوع خدمات یافت نشد');
+
+        finalServiceTypeId = serviceTypes.id;
+
+        // Get subcategory_id
+        const { data: subcategory } = await supabase
+          .from('subcategories')
+          .select('id')
+          .eq('service_type_id', serviceTypes.id)
+          .eq('code', subcategoryCode)
+          .single();
+
+        if (!subcategory) throw new Error('زیرمجموعه یافت نشد');
+
+        finalSubcategoryId = subcategory.id;
+      }
 
       // استفاده از hierarchyProjectId اگر وجود داشت (از SelectLocation)
       let projectId = hierarchyProjectId;
@@ -303,8 +318,8 @@ export default function ComprehensiveScaffoldingForm({
         const projectResult = await supabase.rpc('get_or_create_project', {
           _user_id: user.id,
           _location_id: locationId,
-          _service_type_id: serviceTypes.id,
-          _subcategory_id: subcategory.id
+          _service_type_id: finalServiceTypeId,
+          _subcategory_id: finalSubcategoryId
         });
 
         if (projectResult.error) throw projectResult.error;
@@ -316,7 +331,7 @@ export default function ComprehensiveScaffoldingForm({
         .rpc('generate_project_code', {
           _customer_id: customerId,
           _province_id: provinceId,
-          _subcategory_id: subcategory.id
+          _subcategory_id: finalSubcategoryId
         });
 
       if (codeError) throw codeError;
@@ -328,7 +343,7 @@ export default function ComprehensiveScaffoldingForm({
           customer_id: customerId,
           province_id: provinceId,
           district_id: districtId || null,
-          subcategory_id: subcategory.id,
+          subcategory_id: finalSubcategoryId,
           hierarchy_project_id: projectId, // لینک به پروژه در hierarchy
           code: generatedCode,
           project_number: generatedCode.split('/')[1],
