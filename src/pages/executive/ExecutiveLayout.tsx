@@ -1,6 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { LayoutDashboard, ShoppingCart, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageGuide } from '@/components/common/PageGuide';
 
 const navItems = [
   {
@@ -48,7 +49,10 @@ export function ExecutiveLayout() {
           </nav>
         </div>
       </div>
-      <Outlet />
+      <div className="container mx-auto p-6">
+        <PageGuide />
+        <Outlet />
+      </div>
     </div>
   );
 }
