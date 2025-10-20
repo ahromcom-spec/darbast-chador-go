@@ -72,6 +72,7 @@ export default function SelectLocation() {
       const formPath = getFormPath(serviceSelection.subcategoryCode);
       navigate(formPath, { 
         state: { 
+          hierarchyProjectId: projectId, // شناسه پروژه در hierarchy برای لینک کردن سفارش
           projectId,
           locationId,
           serviceTypeId: serviceSelection.serviceTypeId,

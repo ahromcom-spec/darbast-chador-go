@@ -1207,6 +1207,7 @@ export type Database = {
           executive_completion_date: string | null
           financial_confirmed_at: string | null
           financial_confirmed_by: string | null
+          hierarchy_project_id: string | null
           id: string
           notes: string | null
           payment_amount: number | null
@@ -1241,6 +1242,7 @@ export type Database = {
           executive_completion_date?: string | null
           financial_confirmed_at?: string | null
           financial_confirmed_by?: string | null
+          hierarchy_project_id?: string | null
           id?: string
           notes?: string | null
           payment_amount?: number | null
@@ -1275,6 +1277,7 @@ export type Database = {
           executive_completion_date?: string | null
           financial_confirmed_at?: string | null
           financial_confirmed_by?: string | null
+          hierarchy_project_id?: string | null
           id?: string
           notes?: string | null
           payment_amount?: number | null
@@ -1310,6 +1313,13 @@ export type Database = {
             columns: ["district_id"]
             isOneToOne: false
             referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_v3_hierarchy_project_id_fkey"
+            columns: ["hierarchy_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_hierarchy"
             referencedColumns: ["id"]
           },
           {

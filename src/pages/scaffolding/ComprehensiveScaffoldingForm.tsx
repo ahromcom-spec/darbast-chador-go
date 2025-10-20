@@ -50,6 +50,9 @@ export default function ComprehensiveScaffoldingForm({
   const { user } = useAuth();
   const { customerId } = useCustomer();
   const { provinces } = useProvinces();
+  
+  // دریافت hierarchyProjectId از state برای لینک کردن سفارش
+  const hierarchyProjectId = navState?.hierarchyProjectId || null;
 
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab'>('facade');
   const address = prefilledAddress || navState?.locationAddress || '';
@@ -261,46 +264,52 @@ export default function ComprehensiveScaffoldingForm({
 
       if (!subcategory) throw new Error('زیرمجموعه یافت نشد');
 
-      // Create or get location
-      const { data: existingLocation } = await supabase
-        .from('locations')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('province_id', provinceId)
-        .eq('address_line', detailedAddress)
-        .maybeSingle();
+      // استفاده از hierarchyProjectId اگر وجود داشت (از SelectLocation)
+      let projectId = hierarchyProjectId;
 
-      let locationId = existingLocation?.id;
-
-      if (!locationId) {
-        const { data: newLocation, error: locError } = await supabase
+      // اگر hierarchyProjectId نداشتیم، باید location و project را ایجاد کنیم
+      if (!projectId) {
+        // Create or get location
+        const { data: existingLocation } = await supabase
           .from('locations')
-          .insert([{
-            user_id: user.id,
-            province_id: provinceId,
-            district_id: districtId || null,
-            address_line: detailedAddress,
-            lat: 0,
-            lng: 0,
-            is_active: true
-          }])
           .select('id')
-          .single();
+          .eq('user_id', user.id)
+          .eq('province_id', provinceId)
+          .eq('address_line', detailedAddress)
+          .maybeSingle();
 
-        if (locError) throw locError;
-        locationId = newLocation.id;
+        let locationId = existingLocation?.id;
+
+        if (!locationId) {
+          const { data: newLocation, error: locError } = await supabase
+            .from('locations')
+            .insert([{
+              user_id: user.id,
+              province_id: provinceId,
+              district_id: districtId || null,
+              address_line: detailedAddress,
+              lat: 0,
+              lng: 0,
+              is_active: true
+            }])
+            .select('id')
+            .single();
+
+          if (locError) throw locError;
+          locationId = newLocation.id;
+        }
+
+        // Get or create project in hierarchy
+        const projectResult = await supabase.rpc('get_or_create_project', {
+          _user_id: user.id,
+          _location_id: locationId,
+          _service_type_id: serviceTypes.id,
+          _subcategory_id: subcategory.id
+        });
+
+        if (projectResult.error) throw projectResult.error;
+        projectId = projectResult.data;
       }
-
-      // Get or create project in hierarchy
-      const projectResult = await supabase.rpc('get_or_create_project', {
-        _user_id: user.id,
-        _location_id: locationId,
-        _service_type_id: serviceTypes.id,
-        _subcategory_id: subcategory.id
-      });
-
-      if (projectResult.error) throw projectResult.error;
-      const projectId = projectResult.data;
 
       // Generate project code using RPC function
       const { data: generatedCode, error: codeError } = await supabase
@@ -312,7 +321,7 @@ export default function ComprehensiveScaffoldingForm({
 
       if (codeError) throw codeError;
 
-      // Create order in projects_v3
+      // Create order in projects_v3 and link it to hierarchy project
       const { data: project, error: projectError } = await supabase
         .from('projects_v3')
         .insert([{
@@ -320,6 +329,7 @@ export default function ComprehensiveScaffoldingForm({
           province_id: provinceId,
           district_id: districtId || null,
           subcategory_id: subcategory.id,
+          hierarchy_project_id: projectId, // لینک به پروژه در hierarchy
           code: generatedCode,
           project_number: generatedCode.split('/')[1],
           service_code: generatedCode.split('/')[2],

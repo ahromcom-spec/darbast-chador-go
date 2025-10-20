@@ -119,11 +119,11 @@ export default function MyProjectsHierarchy() {
 
       let orders: Order[] = [];
       
-      // Fetch orders from projects_v3 (سفارشات)
+      // Fetch orders from projects_v3 (سفارشات) با لینک به hierarchy
       if (customer) {
         const { data: projectsV3, error: ordErr } = await supabase
           .from('projects_v3')
-          .select('id, code, status, created_at, notes, province_id, district_id, subcategory_id')
+          .select('id, code, status, created_at, notes, province_id, district_id, subcategory_id, hierarchy_project_id')
           .eq('customer_id', customer.id)
           .order('created_at', { ascending: false });
 
@@ -132,7 +132,7 @@ export default function MyProjectsHierarchy() {
         // تبدیل projects_v3 به فرمت Order
         orders = (projectsV3 || []).map(pv3 => ({
           id: pv3.id,
-          project_id: pv3.id, // این سفارش خودش یک پروژه است
+          project_id: pv3.hierarchy_project_id || pv3.id, // استفاده از hierarchy_project_id برای لینک
           code: pv3.code,
           status: pv3.status,
           created_at: pv3.created_at,
@@ -152,20 +152,12 @@ export default function MyProjectsHierarchy() {
         projectsByLocation[project.location_id].push(project);
       });
 
-      // گروه‌بندی سفارش‌ها بر اساس پروژه کاربر (با تطبیق زیرگروه و موقعیت)
-      const locationById = new Map<string, Address>();
-      (locations || []).forEach((loc) => locationById.set(loc.id, loc));
-
+      // گروه‌بندی سفارش‌ها بر اساس hierarchy_project_id
       const ordersByProject: { [key: string]: Order[] } = {};
       projects?.forEach((project) => {
-        const loc = locationById.get(project.location_id);
-        ordersByProject[project.id] = (orders || []).filter((o) => {
-          const matchSub = o.subcategory_id === project.subcategory_id;
-          if (!loc) return matchSub;
-          const matchProvince = o.province_id ? o.province_id === loc.province_id : true;
-          const matchDistrict = loc.district_id ? o.district_id === loc.district_id : true;
-          return matchSub && matchProvince && matchDistrict;
-        });
+        ordersByProject[project.id] = (orders || []).filter((o) => 
+          o.project_id === project.id
+        );
       });
 
       setData({

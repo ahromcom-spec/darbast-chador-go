@@ -234,6 +234,56 @@ export default function NewServiceRequestForm() {
 
     setLoading(true);
     try {
+      // Get service type id
+      const { data: serviceTypeData } = await supabase
+        .from('service_types_v3')
+        .select('id')
+        .eq('id', selectedServiceType)
+        .single();
+
+      if (!serviceTypeData) throw new Error('نوع خدمات یافت نشد');
+
+      // Create or get location
+      const { data: existingLocation } = await supabase
+        .from('locations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('province_id', selectedProvince)
+        .eq('address_line', address)
+        .maybeSingle();
+
+      let locationId = existingLocation?.id;
+
+      if (!locationId) {
+        const { data: newLocation, error: locError } = await supabase
+          .from('locations')
+          .insert([{
+            user_id: user.id,
+            province_id: selectedProvince,
+            district_id: selectedDistrict || null,
+            address_line: address,
+            lat: 0,
+            lng: 0,
+            is_active: true
+          }])
+          .select('id')
+          .single();
+
+        if (locError) throw locError;
+        locationId = newLocation.id;
+      }
+
+      // Get or create project in hierarchy
+      const { data: hierarchyProjectId, error: hierarchyError } = await supabase
+        .rpc('get_or_create_project', {
+          _user_id: user.id,
+          _location_id: locationId,
+          _service_type_id: serviceTypeData.id,
+          _subcategory_id: selectedSubcategory
+        });
+
+      if (hierarchyError) throw hierarchyError;
+
       // تولید کد پروژه
       const { data: projectCode, error: codeError } = await supabase
         .rpc('generate_project_code', {
@@ -247,7 +297,7 @@ export default function NewServiceRequestForm() {
       // استخراج اطلاعات از کد پروژه
       const [projectNumber, serviceCode] = projectCode.split('/');
 
-      // ایجاد پروژه
+      // ایجاد پروژه و لینک به hierarchy
       const { data: project, error: projectError } = await supabase
         .from('projects_v3')
         .insert({
@@ -255,6 +305,7 @@ export default function NewServiceRequestForm() {
           province_id: selectedProvince,
           district_id: selectedDistrict,
           subcategory_id: selectedSubcategory,
+          hierarchy_project_id: hierarchyProjectId, // لینک به پروژه در hierarchy
           project_number: projectNumber,
           service_code: serviceCode,
           code: projectCode,

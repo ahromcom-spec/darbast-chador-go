@@ -11,6 +11,7 @@ export default function ScaffoldingForm() {
   
   // Get passed data from SelectLocation
   const {
+    hierarchyProjectId,
     projectId,
     serviceName,
     subcategoryName,
