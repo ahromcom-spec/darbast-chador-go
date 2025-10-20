@@ -200,7 +200,7 @@ export default function NewServiceRequestForm() {
       setSubcategories(data || []);
 
       // تنظیم پیش‌فرض "با مصالح"
-      const withMaterials = data?.find(sc => sc.code === '10');
+      const withMaterials = data?.find(sc => sc.code === '01');
       if (withMaterials) {
         setSelectedSubcategory(withMaterials.id);
       }

@@ -125,7 +125,7 @@ export default function ScaffoldingFacadeForm() {
           .from('subcategories')
           .select('id')
           .eq('service_type_id', scaffolding.id)
-          .eq('code', '10')
+          .eq('code', '01')
           .single();
         
         if (withMaterials) setWithMaterialsSubcategoryId(withMaterials.id);

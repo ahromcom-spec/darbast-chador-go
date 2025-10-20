@@ -299,6 +299,17 @@ export default function ComprehensiveScaffoldingForm({
             finalSubcategoryId = sc2.id;
           }
         }
+
+        // پیش‌فرض امن: اگر هنوز زیرشاخه مشخص نشده، زیرشاخه "با مصالح" (کد 01) را انتخاب کن
+        if (finalServiceTypeId && !finalSubcategoryId) {
+          const { data: scDefault } = await supabase
+            .from('subcategories')
+            .select('id')
+            .eq('service_type_id', finalServiceTypeId)
+            .eq('code', '01')
+            .maybeSingle();
+          if (scDefault) finalSubcategoryId = scDefault.id;
+        }
       }
 
       if (!finalServiceTypeId || !finalSubcategoryId) {
