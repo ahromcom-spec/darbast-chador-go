@@ -75,6 +75,8 @@ export default function SelectLocation() {
           hierarchyProjectId: projectId, // شناسه پروژه در hierarchy برای لینک کردن سفارش
           projectId,
           locationId,
+          provinceId: location.province_id, // ✅ اضافه کردن ID استان
+          districtId: location.district_id, // ✅ اضافه کردن ID شهرستان
           serviceTypeId: serviceSelection.serviceTypeId,
           subcategoryId: serviceSelection.subcategoryId,
           subcategoryCode: serviceSelection.subcategoryCode,
