@@ -45,31 +45,8 @@ export const OnboardingTour = () => {
   if (!isActive || !currentStepData) return null;
 
   const getTooltipStyles = () => {
-    const baseStyles = 'fixed z-[9999] transition-all duration-300 ease-out';
-    
-    if (tooltipPosition === 'center') {
-      return `${baseStyles} top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2`;
-    }
-
-    const offset = 20;
-    let positionStyles = '';
-
-    switch (tooltipPosition) {
-      case 'top':
-        positionStyles = `top-[${position.top - offset}px] left-[${position.left}px] -translate-x-1/2 -translate-y-full`;
-        break;
-      case 'bottom':
-        positionStyles = `top-[${position.top + offset}px] left-[${position.left}px] -translate-x-1/2`;
-        break;
-      case 'left':
-        positionStyles = `top-[${position.top}px] left-[${position.left - offset}px] -translate-x-full -translate-y-1/2`;
-        break;
-      case 'right':
-        positionStyles = `top-[${position.top}px] left-[${position.left + offset}px] -translate-y-1/2`;
-        break;
-    }
-
-    return `${baseStyles} ${positionStyles}`;
+    // همیشه در وسط صفحه برای دسترسی آسان در موبایل
+    return 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] w-[90vw] max-w-md';
   };
 
   return (
@@ -80,7 +57,7 @@ export const OnboardingTour = () => {
         onClick={skipTour}
       />
 
-      {/* Spotlight برای هایلایت المان */}
+      {/* Spotlight برای هایلایت المان - با pointer-events-none برای عدم مسدود کردن کلیک */}
       {currentStepData.target && (
         <div
           className="fixed pointer-events-none z-[9997] transition-all duration-300"
@@ -89,7 +66,7 @@ export const OnboardingTour = () => {
             left: position.left - 60,
             width: 120,
             height: 120,
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
+            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
             borderRadius: '12px',
           }}
         />
@@ -97,7 +74,7 @@ export const OnboardingTour = () => {
 
       {/* Tooltip با محتوا */}
       <div className={getTooltipStyles()}>
-        <div className="bg-card border-2 border-primary/30 rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-scale-in overflow-hidden">
+        <div className="bg-card border-2 border-primary/30 rounded-2xl shadow-2xl w-full animate-scale-in overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-6 relative">
             <Button
@@ -165,20 +142,6 @@ export const OnboardingTour = () => {
           </div>
         </div>
 
-        {/* فلش اشاره‌گر */}
-        {tooltipPosition !== 'center' && (
-          <div
-            className={`absolute w-0 h-0 border-8 ${
-              tooltipPosition === 'top'
-                ? 'bottom-0 left-1/2 -translate-x-1/2 translate-y-full border-t-card border-x-transparent border-b-transparent'
-                : tooltipPosition === 'bottom'
-                ? 'top-0 left-1/2 -translate-x-1/2 -translate-y-full border-b-card border-x-transparent border-t-transparent'
-                : tooltipPosition === 'left'
-                ? 'right-0 top-1/2 -translate-y-1/2 translate-x-full border-l-card border-y-transparent border-r-transparent'
-                : 'left-0 top-1/2 -translate-y-1/2 -translate-x-full border-r-card border-y-transparent border-l-transparent'
-            }`}
-          />
-        )}
       </div>
 
       {/* استایل برای highlight */}
