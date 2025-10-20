@@ -101,15 +101,19 @@ export const CEOOrders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      // Use optimized database function to avoid N+1 queries (security fix)
+      // Fetch directly from projects_v3 to ensure consistent results (rpc filtering on functions can be unreliable across clients)
       const { data, error } = await supabase
-        .rpc('get_orders_with_customer_info')
+        .from('projects_v3')
+        .select(`
+          id, code, customer_id, province_id, district_id, subcategory_id,
+          address, detailed_address, notes, status, created_at
+        `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setOrders(data || []);
+      setOrders((data as any) || []);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
       toast(toastError(error, 'خطا در بارگذاری سفارشات'));

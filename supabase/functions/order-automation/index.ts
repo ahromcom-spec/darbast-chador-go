@@ -38,8 +38,7 @@ serve(async (req) => {
         ),
         provinces (name),
         districts (name),
-        subcategories (name, code, service_type_id),
-        service_types_v3 (name, code)
+        subcategories (name, code, service_type_id)
       `)
       .eq('id', orderId)
       .single()
