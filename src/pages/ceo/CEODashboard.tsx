@@ -1,19 +1,20 @@
-import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, UserCheck, Users, Clock, FileText, TrendingUp } from 'lucide-react';
+import { Shield, UserCheck, Users, Clock, ShoppingCart } from 'lucide-react';
 import { usePhoneWhitelist } from '@/hooks/usePhoneWhitelist';
 import { useContractorVerificationRequests } from '@/hooks/useContractorVerificationRequests';
 import { useStaffVerificationRequests } from '@/hooks/useStaffVerificationRequests';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useAuth } from '@/contexts/AuthContext';
-import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
-import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
+import { useOrderStats } from '@/hooks/useOrderStats';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { QuickStatsGrid } from '@/components/ceo/QuickStatsGrid';
+import { OrdersOverviewChart } from '@/components/ceo/OrdersOverviewChart';
+import { OrdersStatusChart } from '@/components/ceo/OrdersStatusChart';
+import { RecentOrdersList } from '@/components/ceo/RecentOrdersList';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export const CEODashboard = () => {
-  usePageTitle('داشبورد CEO');
-  const { user } = useAuth();
+  usePageTitle('داشبورد مدیرعامل');
   const navigate = useNavigate();
 
   const { whitelist, loading: whitelistLoading } = usePhoneWhitelist();
@@ -25,54 +26,62 @@ export const CEODashboard = () => {
     pendingRequests: pendingStaff,
     loading: staffLoading,
   } = useStaffVerificationRequests();
+  const { stats: orderStats, trends, loading: statsLoading } = useOrderStats();
 
-  const stats = [
+  const quickAccessStats = [
+    {
+      title: 'سفارشات در انتظار',
+      value: statsLoading ? '...' : orderStats.pending,
+      icon: ShoppingCart,
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-50 dark:bg-orange-950',
+      onClick: () => navigate('/ceo/orders'),
+    },
     {
       title: 'شماره‌های مجاز',
       value: whitelistLoading ? '...' : whitelist.length,
       icon: Shield,
       color: 'text-blue-500',
-      bgColor: 'bg-blue-50',
+      bgColor: 'bg-blue-50 dark:bg-blue-950',
+      onClick: () => navigate('/ceo/whitelist'),
     },
     {
       title: 'درخواست‌های پیمانکار',
       value: contractorsLoading ? '...' : pendingContractors.length,
       icon: UserCheck,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-50',
+      color: 'text-green-500',
+      bgColor: 'bg-green-50 dark:bg-green-950',
+      onClick: () => navigate('/ceo/contractor-verifications'),
     },
     {
       title: 'درخواست‌های پرسنل',
       value: staffLoading ? '...' : pendingStaff.length,
       icon: Users,
-      color: 'text-green-500',
-      bgColor: 'bg-green-50',
-    },
-    {
-      title: 'در انتظار بررسی',
-      value:
-        contractorsLoading || staffLoading
-          ? '...'
-          : pendingContractors.length + pendingStaff.length,
-      icon: Clock,
       color: 'text-purple-500',
-      bgColor: 'bg-purple-50',
+      bgColor: 'bg-purple-50 dark:bg-purple-950',
+      onClick: () => navigate('/ceo/staff-verifications'),
     },
   ];
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">داشبورد مدیریت</h1>
+        <h1 className="text-3xl font-bold">داشبورد مدیرعامل</h1>
         <p className="text-muted-foreground mt-2">
-          خلاصه‌ای از وضعیت سیستم مدیریت دسترسی و تأیید کاربران
+          مدیریت جامع سفارشات، دسترسی‌ها و عملکرد سیستم
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+      {/* Quick Access Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {quickAccessStats.map((stat) => (
+          <Card 
+            key={stat.title} 
+            className="hover:shadow-lg transition-all cursor-pointer hover-scale"
+            onClick={stat.onClick}
+          >
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
@@ -81,7 +90,7 @@ export const CEODashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">
+              <div className="text-2xl font-bold">
                 {stat.value}
               </div>
             </CardContent>
@@ -89,131 +98,141 @@ export const CEODashboard = () => {
         ))}
       </div>
 
-      {/* Manager Activity Summary */}
-      {user && <ManagerActivitySummary userId={user.id} />}
+      {/* Tabs for different views */}
+      <Tabs defaultValue="orders" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="orders">سفارشات</TabsTrigger>
+          <TabsTrigger value="management">مدیریت</TabsTrigger>
+        </TabsList>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>درخواست‌های اخیر پیمانکاران</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {contractorsLoading ? (
-              <p className="text-muted-foreground">در حال بارگذاری...</p>
-            ) : pendingContractors.length === 0 ? (
-              <p className="text-muted-foreground">درخواست جدیدی وجود ندارد</p>
-            ) : (
-              <div className="space-y-3">
-                {pendingContractors.slice(0, 5).map((request) => (
-                  <div
-                    key={request.id}
-                    className="flex items-center justify-between p-3 border border-border rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {request.company_name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {request.phone_number}
-                      </p>
-                    </div>
-                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                      در انتظار
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Orders Tab */}
+        <TabsContent value="orders" className="space-y-6">
+          {/* Order Statistics */}
+          <QuickStatsGrid stats={orderStats} loading={statsLoading} />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>درخواست‌های اخیر پرسنل</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {staffLoading ? (
-              <p className="text-muted-foreground">در حال بارگذاری...</p>
-            ) : pendingStaff.length === 0 ? (
-              <p className="text-muted-foreground">درخواست جدیدی وجود ندارد</p>
-            ) : (
-              <div className="space-y-3">
-                {pendingStaff.slice(0, 5).map((request) => (
-                  <div
-                    key={request.id}
-                    className="flex items-center justify-between p-3 border border-border rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {request.profiles?.full_name || 'نام نامشخص'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        نقش: {request.requested_role}
-                      </p>
-                    </div>
-                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                      در انتظار
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Approval History */}
-      {user && <ApprovalHistory userId={user.id} />}
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>دسترسی سریع</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button 
-              variant="outline" 
-              className="h-auto flex-col items-start p-4"
-              onClick={() => navigate('/ceo/orders')}
-            >
-              <FileText className="h-5 w-5 mb-2 text-primary" />
-              <span className="font-semibold">مدیریت سفارشات</span>
-              <span className="text-xs text-muted-foreground mt-1">بررسی و تایید سفارشات</span>
-            </Button>
-
-            <Button 
-              variant="outline" 
-              className="h-auto flex-col items-start p-4"
-              onClick={() => navigate('/ceo/staff-verifications')}
-            >
-              <Users className="h-5 w-5 mb-2 text-primary" />
-              <span className="font-semibold">تایید پرسنل</span>
-              <span className="text-xs text-muted-foreground mt-1">بررسی درخواست‌های پرسنل</span>
-            </Button>
-
-            <Button 
-              variant="outline" 
-              className="h-auto flex-col items-start p-4"
-              onClick={() => navigate('/ceo/contractor-verifications')}
-            >
-              <UserCheck className="h-5 w-5 mb-2 text-primary" />
-              <span className="font-semibold">تایید پیمانکاران</span>
-              <span className="text-xs text-muted-foreground mt-1">بررسی درخواست‌های پیمانکاری</span>
-            </Button>
-
-            <Button 
-              variant="outline" 
-              className="h-auto flex-col items-start p-4"
-              onClick={() => navigate('/ceo/phone-whitelist')}
-            >
-              <Shield className="h-5 w-5 mb-2 text-primary" />
-              <span className="font-semibold">مدیریت دسترسی</span>
-              <span className="text-xs text-muted-foreground mt-1">لیست شماره‌های مجاز</span>
-            </Button>
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <OrdersOverviewChart data={trends} />
+            <OrdersStatusChart stats={orderStats} />
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Recent Orders */}
+          <RecentOrdersList />
+        </TabsContent>
+
+        {/* Management Tab */}
+        <TabsContent value="management" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>درخواست‌های اخیر پیمانکاران</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {contractorsLoading ? (
+                  <p className="text-muted-foreground">در حال بارگذاری...</p>
+                ) : pendingContractors.length === 0 ? (
+                  <p className="text-muted-foreground">درخواست جدیدی وجود ندارد</p>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingContractors.slice(0, 5).map((request) => (
+                      <div
+                        key={request.id}
+                        className="flex items-center justify-between p-3 border border-border rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {request.company_name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {request.phone_number}
+                          </p>
+                        </div>
+                        <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-full">
+                          در انتظار
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>درخواست‌های اخیر پرسنل</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {staffLoading ? (
+                  <p className="text-muted-foreground">در حال بارگذاری...</p>
+                ) : pendingStaff.length === 0 ? (
+                  <p className="text-muted-foreground">درخواست جدیدی وجود ندارد</p>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingStaff.slice(0, 5).map((request) => (
+                      <div
+                        key={request.id}
+                        className="flex items-center justify-between p-3 border border-border rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {request.profiles?.full_name || 'نام نامشخص'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            نقش: {request.requested_role}
+                          </p>
+                        </div>
+                        <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-full">
+                          در انتظار
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Actions for Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle>دسترسی سریع</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Button 
+                  variant="outline" 
+                  className="h-auto flex-col items-start p-4"
+                  onClick={() => navigate('/ceo/staff-verifications')}
+                >
+                  <Users className="h-5 w-5 mb-2 text-primary" />
+                  <span className="font-semibold">تایید پرسنل</span>
+                  <span className="text-xs text-muted-foreground mt-1">بررسی درخواست‌های پرسنل</span>
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  className="h-auto flex-col items-start p-4"
+                  onClick={() => navigate('/ceo/contractor-verifications')}
+                >
+                  <UserCheck className="h-5 w-5 mb-2 text-primary" />
+                  <span className="font-semibold">تایید پیمانکاران</span>
+                  <span className="text-xs text-muted-foreground mt-1">بررسی درخواست‌های پیمانکاری</span>
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  className="h-auto flex-col items-start p-4"
+                  onClick={() => navigate('/ceo/whitelist')}
+                >
+                  <Shield className="h-5 w-5 mb-2 text-primary" />
+                  <span className="font-semibold">مدیریت دسترسی</span>
+                  <span className="text-xs text-muted-foreground mt-1">لیست شماره‌های مجاز</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
