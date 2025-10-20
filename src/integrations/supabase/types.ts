@@ -1196,6 +1196,7 @@ export type Database = {
           code: string
           contractor_id: string | null
           created_at: string | null
+          customer_completion_date: string | null
           customer_id: string
           detailed_address: string | null
           district_id: string | null
@@ -1203,6 +1204,7 @@ export type Database = {
           execution_confirmed_at: string | null
           execution_end_date: string | null
           execution_start_date: string | null
+          executive_completion_date: string | null
           financial_confirmed_at: string | null
           financial_confirmed_by: string | null
           id: string
@@ -1228,6 +1230,7 @@ export type Database = {
           code: string
           contractor_id?: string | null
           created_at?: string | null
+          customer_completion_date?: string | null
           customer_id: string
           detailed_address?: string | null
           district_id?: string | null
@@ -1235,6 +1238,7 @@ export type Database = {
           execution_confirmed_at?: string | null
           execution_end_date?: string | null
           execution_start_date?: string | null
+          executive_completion_date?: string | null
           financial_confirmed_at?: string | null
           financial_confirmed_by?: string | null
           id?: string
@@ -1260,6 +1264,7 @@ export type Database = {
           code?: string
           contractor_id?: string | null
           created_at?: string | null
+          customer_completion_date?: string | null
           customer_id?: string
           detailed_address?: string | null
           district_id?: string | null
@@ -1267,6 +1272,7 @@ export type Database = {
           execution_confirmed_at?: string | null
           execution_end_date?: string | null
           execution_start_date?: string | null
+          executive_completion_date?: string | null
           financial_confirmed_at?: string | null
           financial_confirmed_by?: string | null
           id?: string

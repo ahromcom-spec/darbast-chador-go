@@ -18,6 +18,8 @@ interface Order {
   detailed_address: string | null;
   execution_start_date: string | null;
   execution_end_date: string | null;
+  customer_completion_date: string | null;
+  executive_completion_date: string | null;
   created_at: string;
   customer_name: string;
   customer_phone: string;
@@ -28,6 +30,8 @@ export default function ExecutiveOrders() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [executionDate, setExecutionDate] = useState('');
+  const [completionDate, setCompletionDate] = useState('');
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -46,12 +50,14 @@ export default function ExecutiveOrders() {
           detailed_address,
           execution_start_date,
           execution_end_date,
+          customer_completion_date,
+          executive_completion_date,
           created_at,
           customer_id,
           customers!inner(user_id),
           profiles:customers(profiles!inner(full_name, phone_number))
         `)
-        .in('status', ['approved', 'in_progress'])
+        .in('status', ['approved', 'in_progress', 'paid'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -64,6 +70,8 @@ export default function ExecutiveOrders() {
         detailed_address: order.detailed_address,
         execution_start_date: order.execution_start_date,
         execution_end_date: order.execution_end_date,
+        customer_completion_date: order.customer_completion_date,
+        executive_completion_date: order.executive_completion_date,
         created_at: order.created_at,
         customer_name: order.profiles?.[0]?.profiles?.full_name || 'نامشخص',
         customer_phone: order.profiles?.[0]?.profiles?.phone_number || ''
@@ -135,7 +143,7 @@ export default function ExecutiveOrders() {
 
       toast({
         title: '✓ موفق',
-        description: 'اجرای سفارش با موفقیت تایید شد'
+        description: 'اجرای سفارش با موفقیت تایید شد و به قسمت فروش ارسال شد'
       });
 
       fetchOrders();
@@ -149,10 +157,38 @@ export default function ExecutiveOrders() {
     }
   };
 
+  const handleSetExecutiveCompletion = async (orderId: string, completionDate: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          executive_completion_date: new Date(completionDate).toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ موفق',
+        description: 'تاریخ اتمام شما ثبت شد'
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error setting completion date:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'ثبت تاریخ اتمام با خطا مواجه شد'
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
       approved: { label: 'تایید شده', className: 'bg-yellow-500/10 text-yellow-600' },
-      in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' }
+      in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
+      paid: { label: 'پرداخت شده - در انتظار اتمام', className: 'bg-green-500/10 text-green-600' }
     };
 
     const { label, className } = statusMap[status] || { label: status, className: '' };
@@ -233,6 +269,49 @@ export default function ExecutiveOrders() {
                       تایید اجرا
                     </Button>
                   )}
+
+                  {order.status === 'paid' && !order.executive_completion_date && (
+                    <Button
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setShowCompletionDialog(true);
+                      }}
+                      size="sm"
+                      className="gap-2 bg-purple-600 hover:bg-purple-700"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      تایید اتمام
+                    </Button>
+                  )}
+
+                  {order.status === 'paid' && (
+                    <div className="w-full mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg text-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <span className="font-semibold text-blue-900 dark:text-blue-100">
+                          وضعیت تایید اتمام
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-1">
+                          {order.customer_completion_date ? (
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Clock className="h-3 w-3 text-yellow-600" />
+                          )}
+                          <span>مشتری: {order.customer_completion_date ? '✓' : 'منتظر'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {order.executive_completion_date ? (
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Clock className="h-3 w-3 text-yellow-600" />
+                          )}
+                          <span>شما: {order.executive_completion_date ? '✓' : 'منتظر'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -240,7 +319,7 @@ export default function ExecutiveOrders() {
         )}
       </div>
 
-      {selectedOrder && (
+      {selectedOrder && !showCompletionDialog && (
         <Card className="border-2 border-primary shadow-lg">
           <CardHeader>
             <CardTitle>ثبت زمان اجرا برای سفارش {selectedOrder.code}</CardTitle>
@@ -268,6 +347,57 @@ export default function ExecutiveOrders() {
                 onClick={() => {
                   setSelectedOrder(null);
                   setExecutionDate('');
+                }}
+              >
+                انصراف
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedOrder && showCompletionDialog && (
+        <Card className="border-2 border-purple-500 shadow-lg">
+          <CardHeader>
+            <CardTitle>تایید اتمام پروژه - سفارش {selectedOrder.code}</CardTitle>
+            <CardDescription>مشتری: {selectedOrder.customer_name}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              با ثبت تاریخ اتمام، تایید می‌کنید که پروژه به درستی انجام شده است.
+            </p>
+            <div>
+              <Label htmlFor="completion-date">تاریخ اتمام پروژه</Label>
+              <Input
+                id="completion-date"
+                type="date"
+                value={completionDate}
+                onChange={(e) => setCompletionDate(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button 
+                onClick={() => {
+                  if (completionDate) {
+                    handleSetExecutiveCompletion(selectedOrder.id, completionDate);
+                    setShowCompletionDialog(false);
+                    setSelectedOrder(null);
+                    setCompletionDate('');
+                  }
+                }} 
+                className="gap-2 bg-purple-600 hover:bg-purple-700"
+              >
+                <CheckCircle className="h-4 w-4" />
+                تایید اتمام
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowCompletionDialog(false);
+                  setSelectedOrder(null);
+                  setCompletionDate('');
                 }}
               >
                 انصراف

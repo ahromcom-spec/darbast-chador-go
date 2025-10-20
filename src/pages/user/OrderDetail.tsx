@@ -20,6 +20,8 @@ import {
   XCircle,
   Clock
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { z } from "zod";
 
 interface Order {
@@ -36,6 +38,11 @@ interface Order {
   approved_by?: string;
   project_number: string;
   service_code: string;
+  execution_start_date?: string;
+  payment_amount?: number;
+  payment_method?: string;
+  customer_completion_date?: string;
+  executive_completion_date?: string;
   subcategory?: {
     name: string;
     code: string;
@@ -67,11 +74,12 @@ const getStatusInfo = (status: string) => {
   const statusMap: Record<string, { label: string; icon: any; color: string }> = {
     draft: { label: 'پیش‌نویس', icon: FileText, color: 'text-muted-foreground' },
     pending: { label: 'در انتظار تایید', icon: Clock, color: 'text-yellow-600' },
-    approved: { label: 'تایید شده', icon: CheckCircle, color: 'text-green-600' },
+    approved: { label: 'تایید شده - در انتظار اجرا', icon: CheckCircle, color: 'text-green-600' },
     rejected: { label: 'رد شده', icon: XCircle, color: 'text-destructive' },
-    active: { label: 'در حال انجام', icon: Clock, color: 'text-blue-600' },
-    pending_execution: { label: 'در انتظار اجرا', icon: Clock, color: 'text-blue-600' },
-    completed: { label: 'تکمیل شده', icon: CheckCircle, color: 'text-green-600' },
+    in_progress: { label: 'در حال اجرا', icon: Clock, color: 'text-blue-600' },
+    completed: { label: 'اجرا شده - در انتظار پرداخت', icon: CheckCircle, color: 'text-orange-600' },
+    paid: { label: 'پرداخت شده - در انتظار اتمام', icon: CheckCircle, color: 'text-purple-600' },
+    closed: { label: 'به اتمام رسیده', icon: CheckCircle, color: 'text-gray-600' },
   };
   
   return statusMap[status] || { label: status, icon: FileText, color: 'text-muted-foreground' };
@@ -82,6 +90,7 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [parsedNotes, setParsedNotes] = useState<any>(null);
+  const [completionDate, setCompletionDate] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -177,6 +186,41 @@ export default function OrderDetail() {
 
   // Security: Only draft orders are editable, pending orders are locked
   const canEdit = order?.status === 'draft';
+
+  const handleSetCompletionDate = async () => {
+    if (!order || !completionDate) {
+      toast({
+        title: 'خطا',
+        description: 'لطفا تاریخ اتمام را وارد کنید',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          customer_completion_date: new Date(completionDate).toISOString()
+        })
+        .eq('id', order.id);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ موفق',
+        description: 'تاریخ اتمام شما ثبت شد'
+      });
+
+      fetchOrderDetails();
+    } catch (error: any) {
+      toast({
+        title: 'خطا',
+        description: 'ثبت تاریخ اتمام با خطا مواجه شد',
+        variant: 'destructive'
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -396,6 +440,135 @@ export default function OrderDetail() {
                     </p>
                     <p className="text-sm text-green-700 dark:text-green-300">
                       سفارش شما توسط مدیریت تایید شده و به زودی عملیات اجرایی آغاز خواهد شد.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {order.status === 'in_progress' && order.execution_start_date && (
+            <Card className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                      در حال اجرا
+                    </p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      سفارش شما از تاریخ {new Date(order.execution_start_date).toLocaleDateString('fa-IR')} در حال اجراست.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {order.status === 'completed' && order.payment_amount && (
+            <Card className="border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/20">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-orange-900 dark:text-orange-100 mb-1">
+                      اجرا تکمیل شد
+                    </p>
+                    <p className="text-sm text-orange-700 dark:text-orange-300">
+                      مبلغ قابل پرداخت: {order.payment_amount.toLocaleString('fa-IR')} تومان
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {order.status === 'paid' && (
+            <>
+              <Card className="border-purple-200 dark:border-purple-900 bg-purple-50 dark:bg-purple-950/20">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-purple-900 dark:text-purple-100 mb-1">
+                          پرداخت انجام شد
+                        </p>
+                        <p className="text-sm text-purple-700 dark:text-purple-300">
+                          پرداخت شما ثبت شد. جهت تایید نهایی اتمام پروژه، لطفا تاریخ اتمام را مشخص کنید.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-white dark:bg-gray-900 rounded-lg">
+                      <h4 className="font-semibold mb-2 text-sm">وضعیت تایید اتمام</h4>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-1">
+                          {order.customer_completion_date ? (
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Clock className="h-3 w-3 text-yellow-600" />
+                          )}
+                          <span>تایید شما: {order.customer_completion_date 
+                            ? new Date(order.customer_completion_date).toLocaleDateString('fa-IR')
+                            : 'در انتظار'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {order.executive_completion_date ? (
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Clock className="h-3 w-3 text-yellow-600" />
+                          )}
+                          <span>مدیر اجرایی: {order.executive_completion_date 
+                            ? new Date(order.executive_completion_date).toLocaleDateString('fa-IR')
+                            : 'در انتظار'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {!order.customer_completion_date && (
+                <Card className="border-2 border-primary">
+                  <CardHeader>
+                    <CardTitle className="text-lg">تایید اتمام پروژه</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      با ثبت تاریخ اتمام، تایید می‌کنید که پروژه به درستی انجام شده است.
+                    </p>
+                    <div>
+                      <Label htmlFor="completion-date">تاریخ اتمام پروژه</Label>
+                      <Input
+                        id="completion-date"
+                        type="date"
+                        value={completionDate}
+                        onChange={(e) => setCompletionDate(e.target.value)}
+                        className="mt-2"
+                      />
+                    </div>
+                    <Button onClick={handleSetCompletionDate} className="gap-2 w-full">
+                      <CheckCircle className="h-4 w-4" />
+                      تایید اتمام پروژه
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+
+          {order.status === 'closed' && (
+            <Card className="border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950/20">
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <CheckCircle className="h-12 w-12 text-green-600" />
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+                      پروژه با موفقیت به اتمام رسید
+                    </p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      از اعتماد شما سپاسگزاریم
                     </p>
                   </div>
                 </div>
