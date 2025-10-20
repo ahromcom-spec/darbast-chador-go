@@ -37,13 +37,28 @@ interface ServiceConditions {
 }
 
 interface ComprehensiveScaffoldingFormProps {
+  hierarchyProjectId?: string;
   projectId?: string;
+  locationId?: string;
+  serviceTypeId?: string;
+  subcategoryId?: string;
+  subcategoryCode?: string;
   hideAddressField?: boolean;
   prefilledAddress?: string;
+  prefilledProvince?: string;
+  prefilledDistrict?: string;
 }
 
 export default function ComprehensiveScaffoldingForm({
+  hierarchyProjectId: propHierarchyProjectId,
+  projectId: propProjectId,
+  locationId: propLocationId,
+  serviceTypeId: propServiceTypeId,
+  subcategoryId: propSubcategoryId,
+  subcategoryCode: propSubcategoryCode,
   prefilledAddress = '',
+  prefilledProvince = '',
+  prefilledDistrict = '',
 }: ComprehensiveScaffoldingFormProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,8 +68,11 @@ export default function ComprehensiveScaffoldingForm({
   const { customerId } = useCustomer();
   const { provinces } = useProvinces();
   
-  // دریافت hierarchyProjectId از state برای لینک کردن سفارش
-  const hierarchyProjectId = navState?.hierarchyProjectId || null;
+  // دریافت hierarchyProjectId از props یا state برای لینک کردن سفارش
+  const hierarchyProjectId = propHierarchyProjectId || navState?.hierarchyProjectId || null;
+  const locationId = propLocationId || navState?.locationId;
+  const serviceTypeId = propServiceTypeId || navState?.serviceTypeId;
+  const subcategoryId = propSubcategoryId || navState?.subcategoryId;
 
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab'>('facade');
   const address = prefilledAddress || navState?.locationAddress || '';
@@ -408,6 +426,26 @@ export default function ComprehensiveScaffoldingForm({
         title: 'ثبت شد', 
         description: `سفارش شما با کد ${createdProject.code} ثبت شد و در انتظار تایید است.` 
       });
+
+      // شروع اتوماسیون اداری بعد از 5 ثانیه
+      setTimeout(async () => {
+        try {
+          const { error: automationError } = await supabase.functions.invoke('order-automation', {
+            body: {
+              orderId: createdProject.id,
+              orderCode: createdProject.code
+            }
+          });
+
+          if (automationError) {
+            console.error('خطا در اتوماسیون اداری:', automationError);
+          } else {
+            console.log('اتوماسیون اداری با موفقیت شروع شد');
+          }
+        } catch (error) {
+          console.error('خطا در فراخوانی اتوماسیون:', error);
+        }
+      }, 5000);
 
       // هدایت کاربر به صفحه پروژه‌های من
       navigate('/user/projects', {

@@ -9,17 +9,43 @@ export default function ScaffoldingForm() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Get passed data from SelectLocation
+  // Get passed data from SelectLocation or previous steps
+  const state = location.state || {};
   const {
     hierarchyProjectId,
     projectId,
+    locationId,
+    serviceTypeId,
+    subcategoryId,
+    subcategoryCode,
     serviceName,
     subcategoryName,
     locationAddress,
     locationTitle,
     provinceName,
     districtName
-  } = location.state || {};
+  } = state;
+
+  // If no data passed, show error
+  if (!locationAddress || !serviceName) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-destructive">خطا</CardTitle>
+            <CardDescription>
+              اطلاعات آدرس و مرحله قبل دریافت نشد
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => navigate('/')} className="w-full">
+              بازگشت به صفحه اصلی
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -93,9 +119,16 @@ export default function ScaffoldingForm() {
 
             <CardContent className="p-6">
               <ComprehensiveScaffoldingForm 
+                hierarchyProjectId={hierarchyProjectId}
                 projectId={projectId}
+                locationId={locationId}
+                serviceTypeId={serviceTypeId}
+                subcategoryId={subcategoryId}
+                subcategoryCode={subcategoryCode}
                 hideAddressField={!!locationAddress}
                 prefilledAddress={locationAddress}
+                prefilledProvince={provinceName}
+                prefilledDistrict={districtName}
               />
             </CardContent>
           </Card>
