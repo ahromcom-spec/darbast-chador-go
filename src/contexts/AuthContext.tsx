@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const sendOTP = async (phoneNumber: string) => {
+  const sendOTP = useCallback(async (phoneNumber: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('send-otp', {
         body: { phone_number: phoneNumber }
@@ -71,12 +71,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       return { error };
     }
-  };
+  }, []);
 
-  const verifyOTP = async (phoneNumber: string, code: string, fullName?: string, isRegistration: boolean = false) => {
+  const verifyOTP = useCallback(async (phoneNumber: string, code: string, fullName?: string, isRegistration: boolean = false) => {
     try {
-      // ⚠️ Removed sensitive logging (phone, OTP) - security improvement
-      
       const { data, error } = await supabase.functions.invoke('verify-otp', {
         body: { 
           phone_number: phoneNumber,
@@ -86,23 +84,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       });
 
-      // Check if response contains an error message (even with HTTP error)
       if (data?.error) {
         return { error: { message: data.error }, session: null };
       }
 
-      // Check for network/HTTP errors
       if (error) {
         if (import.meta.env.DEV) {
           console.error('Error verifying OTP:', error);
         }
-        // Try to extract error message from response
         const errorMessage = error.message || 'کد تایید نامعتبر است.';
         return { error: { message: errorMessage }, session: null };
       }
 
       if (data?.session) {
-        // Correctly set session using access and refresh tokens
         const access_token = data.session.access_token as string | undefined;
         const refresh_token = data.session.refresh_token as string | undefined;
         if (access_token && refresh_token) {
@@ -113,10 +107,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (!setErr) {
             setSession(setData.session);
             setUser(setData.session?.user ?? null);
-          } else {
-            if (import.meta.env.DEV) {
-              console.error('Error setting session:', setErr);
-            }
+          } else if (import.meta.env.DEV) {
+            console.error('Error setting session:', setErr);
           }
         }
       }
@@ -128,35 +120,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       return { error, session: null };
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error && import.meta.env.DEV) {
         console.error('Logout error:', error);
       }
-      // Clear local state regardless of server response
       setSession(null);
       setUser(null);
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Logout error:', error);
       }
-      // Clear local state even if there's an error
       setSession(null);
       setUser(null);
     }
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     session,
     sendOTP,
     verifyOTP,
     signOut,
     loading,
-  };
+  }), [user, session, sendOTP, verifyOTP, signOut, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

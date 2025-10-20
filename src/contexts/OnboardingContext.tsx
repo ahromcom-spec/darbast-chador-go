@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 
 interface OnboardingStep {
   id: string;
@@ -80,48 +80,48 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const startTour = () => {
+  const startTour = useCallback(() => {
     setCurrentStep(0);
     setIsActive(true);
-  };
+  }, []);
 
-  const nextStep = () => {
+  const nextStep = useCallback(() => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
       completeTour();
     }
-  };
+  }, [currentStep, steps.length]);
 
-  const prevStep = () => {
+  const prevStep = useCallback(() => {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
     }
-  };
+  }, [currentStep]);
 
-  const skipTour = () => {
+  const skipTour = useCallback(() => {
     setIsActive(false);
     localStorage.setItem(ONBOARDING_KEY, 'true');
-  };
+  }, []);
 
-  const completeTour = () => {
+  const completeTour = useCallback(() => {
     setIsActive(false);
     localStorage.setItem(ONBOARDING_KEY, 'true');
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    isActive,
+    currentStep,
+    steps,
+    startTour,
+    nextStep,
+    prevStep,
+    skipTour,
+    completeTour,
+  }), [isActive, currentStep, steps, startTour, nextStep, prevStep, skipTour, completeTour]);
 
   return (
-    <OnboardingContext.Provider
-      value={{
-        isActive,
-        currentStep,
-        steps,
-        startTour,
-        nextStep,
-        prevStep,
-        skipTour,
-        completeTour,
-      }}
-    >
+    <OnboardingContext.Provider value={value}>
       {children}
     </OnboardingContext.Provider>
   );

@@ -37,9 +37,7 @@ const ContractorVerifications = lazy(() => import("@/pages/ceo/ContractorVerific
 const StaffVerifications = lazy(() => import("@/pages/ceo/StaffVerifications").then(m => ({ default: m.StaffVerifications })));
 const CEOOrders = lazy(() => import("@/pages/ceo/CEOOrders").then(m => ({ default: m.CEOOrders })));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
-const ProjectsDashboard = lazy(() => import("@/pages/user/ProjectsDashboard"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
-const OrdersDashboard = lazy(() => import("@/pages/user/OrdersDashboard"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
 const ProjectManagement = lazy(() => import("@/pages/user/ProjectManagement"));
 const CreateProject = lazy(() => import("@/pages/user/CreateProject"));
@@ -74,8 +72,14 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 10, // 10 minutes
+      staleTime: 1000 * 60 * 5, // 5 دقیقه
+      gcTime: 1000 * 60 * 30, // 30 دقیقه (افزایش cache time)
+      retry: 1, // کاهش تلاش مجدد
+      refetchOnWindowFocus: false, // غیرفعال کردن refetch خودکار
+      refetchOnReconnect: false,
+    },
+    mutations: {
+      retry: 1,
     },
   },
 });
@@ -155,19 +159,14 @@ const App = () => {
                   <AddServiceToProject />
                 </ProtectedRoute>
               } />
-              <Route path="/projects" element={
-                <ProtectedRoute>
-                  <ProjectsDashboard />
-                </ProtectedRoute>
-              } />
               <Route path="/projects/:id" element={
                 <ProtectedRoute>
                   <ProjectDetail />
                 </ProtectedRoute>
               } />
-              <Route path="/orders" element={
+              <Route path="/user/orders" element={
                 <ProtectedRoute>
-                  <OrdersDashboard />
+                  <MyOrders />
                 </ProtectedRoute>
               } />
               <Route path="/orders/:id" element={
@@ -178,21 +177,6 @@ const App = () => {
               <Route path="/select-location" element={
                 <ProtectedRoute>
                   <SelectLocation />
-                </ProtectedRoute>
-              } />
-              <Route path="/my-orders" element={
-                <ProtectedRoute>
-                  <MyOrders />
-                </ProtectedRoute>
-              } />
-              <Route path="/user/orders" element={
-                <ProtectedRoute>
-                  <MyOrders />
-                </ProtectedRoute>
-              } />
-              <Route path="/projects/my-projects" element={
-                <ProtectedRoute>
-                  <MyProjectsHierarchy />
                 </ProtectedRoute>
               } />
               <Route path="/tickets" element={<TicketList />} />

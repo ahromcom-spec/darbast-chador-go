@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 
 interface GuideContextType {
   isGuideEnabled: boolean;
@@ -17,12 +17,17 @@ export const GuideProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('guide-enabled', isGuideEnabled.toString());
   }, [isGuideEnabled]);
 
-  const toggleGuide = () => {
+  const toggleGuide = useCallback(() => {
     setIsGuideEnabled(prev => !prev);
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    isGuideEnabled,
+    toggleGuide
+  }), [isGuideEnabled, toggleGuide]);
 
   return (
-    <GuideContext.Provider value={{ isGuideEnabled, toggleGuide }}>
+    <GuideContext.Provider value={value}>
       {children}
     </GuideContext.Provider>
   );
