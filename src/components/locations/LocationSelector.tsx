@@ -6,6 +6,8 @@ import { Plus, MapPin } from 'lucide-react';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { NewLocationForm } from './NewLocationForm';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 interface LocationSelectorProps {
   onLocationSelected: (locationId: string) => void;
@@ -15,6 +17,10 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
   const { locations, loading, deleteLocation, refetch } = useLocations();
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingLocationId, setDeletingLocationId] = useState<string | null>(null);
 
   const handleSelectLocation = (location: Location) => {
     setSelectedLocationId(location.id);
@@ -30,6 +36,36 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
     setShowNewLocationDialog(false);
     await refetch(); // رفرش لیست آدرس‌ها
     setSelectedLocationId(locationId); // انتخاب خودکار آدرس جدید
+  };
+
+  const handleLocationUpdated = async () => {
+    setShowEditDialog(false);
+    setEditingLocation(null);
+    await refetch();
+    toast.success('آدرس با موفقیت ویرایش شد');
+  };
+
+  const handleEditLocation = (location: Location) => {
+    setEditingLocation(location);
+    setShowEditDialog(true);
+  };
+
+  const handleDeleteClick = (locationId: string) => {
+    setDeletingLocationId(locationId);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deletingLocationId) {
+      try {
+        await deleteLocation(deletingLocationId);
+        toast.success('آدرس با موفقیت حذف شد');
+        setShowDeleteDialog(false);
+        setDeletingLocationId(null);
+      } catch (error) {
+        toast.error('خطا در حذف آدرس');
+      }
+    }
   };
 
   if (loading) {
@@ -73,7 +109,8 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
                 location={location}
                 selected={selectedLocationId === location.id}
                 onSelect={() => handleSelectLocation(location)}
-                onDelete={() => deleteLocation(location.id)}
+                onEdit={() => handleEditLocation(location)}
+                onDelete={() => handleDeleteClick(location.id)}
               />
               {selectedLocationId === location.id && (
                 <div className="flex justify-center animate-in slide-in-from-top-2">
@@ -86,6 +123,39 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
           ))}
         </div>
       )}
+
+      {/* Dialog for editing location */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ویرایش آدرس</DialogTitle>
+          </DialogHeader>
+          {editingLocation && (
+            <NewLocationForm 
+              onSuccess={handleLocationUpdated}
+              initialData={editingLocation}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Alert dialog for delete confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف آدرس</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف این آدرس اطمینان دارید؟ این عملیات قابل بازگشت نیست.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>انصراف</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90">
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

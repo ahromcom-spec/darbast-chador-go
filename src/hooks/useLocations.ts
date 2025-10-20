@@ -64,6 +64,19 @@ export const useLocations = () => {
     return data;
   };
 
+  const updateLocation = async (id: string, location: Partial<Omit<Location, 'id' | 'user_id' | 'created_at' | 'is_active'>>) => {
+    const { data, error } = await supabase
+      .from('locations')
+      .update(location)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    await fetchLocations(); // رفرش لیست آدرس‌ها
+    return data;
+  };
+
   const deleteLocation = async (id: string) => {
     const { error } = await supabase
       .from('locations')
@@ -78,6 +91,7 @@ export const useLocations = () => {
     locations,
     loading,
     createLocation,
+    updateLocation,
     deleteLocation,
     refetch: fetchLocations
   };

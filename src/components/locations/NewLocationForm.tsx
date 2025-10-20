@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocations } from '@/hooks/useLocations';
+import { useLocations, Location } from '@/hooks/useLocations';
 import { useProvinces } from '@/hooks/useProvinces';
 import { useDistricts } from '@/hooks/useDistricts';
 import { Button } from '@/components/ui/button';
@@ -15,24 +15,26 @@ import { LocationMapModal } from './LocationMapModal';
 
 interface NewLocationFormProps {
   onSuccess: (locationId: string) => void;
+  initialData?: Location;
 }
 
-export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
-  const { createLocation } = useLocations();
+export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps) => {
+  const { createLocation, updateLocation } = useLocations();
   const { provinces } = useProvinces();
   const { districts, fetchDistrictsByProvince } = useDistricts();
   const { toast } = useToast();
+  const isEditMode = !!initialData;
 
   const [formData, setFormData] = useState({
-    title: '',
-    province_id: '',
-    district_id: '',
-    address_line: '',
-    lat: 0,
-    lng: 0
+    title: initialData?.title || '',
+    province_id: initialData?.province_id || '',
+    district_id: initialData?.district_id || '',
+    address_line: initialData?.address_line || '',
+    lat: initialData?.lat || 0,
+    lng: initialData?.lng || 0
   });
 
-  const [hasMapPin, setHasMapPin] = useState(false);
+  const [hasMapPin, setHasMapPin] = useState(!!initialData?.lat && !!initialData?.lng);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -43,12 +45,16 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
 
   // تنظیم پیش‌فرض استان قم و شهر قم
   useEffect(() => {
-    if (!isInitialized && provinces.length > 0 && qomProvince) {
+    if (initialData?.province_id) {
+      // برای ویرایش، استان و شهرستان موجود را بارگذاری کن
+      fetchDistrictsByProvince(initialData.province_id);
+      setIsInitialized(true);
+    } else if (!isInitialized && provinces.length > 0 && qomProvince) {
       setFormData(prev => ({ ...prev, province_id: qomProvince.id }));
       fetchDistrictsByProvince(qomProvince.id);
       setIsInitialized(true);
     }
-  }, [provinces, qomProvince, isInitialized, fetchDistrictsByProvince]);
+  }, [provinces, qomProvince, isInitialized, fetchDistrictsByProvince, initialData]);
 
   // تنظیم پیش‌فرض شهر قم
   useEffect(() => {
@@ -99,21 +105,39 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
       // Validate input data
       const validatedData = locationSchema.parse(formData);
       
-      // Create location with validated data
-      const location = await createLocation({
-        title: validatedData.title,
-        province_id: validatedData.province_id,
-        district_id: validatedData.district_id,
-        address_line: validatedData.address_line,
-        lat: validatedData.lat,
-        lng: validatedData.lng
-      });
-      
-      toast({
-        title: 'موفق',
-        description: 'آدرس با موفقیت ثبت شد'
-      });
-      onSuccess(location.id);
+      if (isEditMode && initialData) {
+        // Update existing location
+        await updateLocation(initialData.id, {
+          title: validatedData.title,
+          province_id: validatedData.province_id,
+          district_id: validatedData.district_id,
+          address_line: validatedData.address_line,
+          lat: validatedData.lat,
+          lng: validatedData.lng
+        });
+        
+        toast({
+          title: 'موفق',
+          description: 'آدرس با موفقیت ویرایش شد'
+        });
+        onSuccess(initialData.id);
+      } else {
+        // Create new location
+        const location = await createLocation({
+          title: validatedData.title,
+          province_id: validatedData.province_id,
+          district_id: validatedData.district_id,
+          address_line: validatedData.address_line,
+          lat: validatedData.lat,
+          lng: validatedData.lng
+        });
+        
+        toast({
+          title: 'موفق',
+          description: 'آدرس با موفقیت ثبت شد'
+        });
+        onSuccess(location.id);
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -124,7 +148,7 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
       } else {
         toast({
           title: 'خطا',
-          description: 'خطا در ثبت آدرس',
+          description: isEditMode ? 'خطا در ویرایش آدرس' : 'خطا در ثبت آدرس',
           variant: 'destructive'
         });
       }
@@ -215,7 +239,7 @@ export const NewLocationForm = ({ onSuccess }: NewLocationFormProps) => {
       </div>
 
       <Button type="submit" className="w-full" disabled={!isQomSelected}>
-        ثبت و تایید آدرس
+        {isEditMode ? 'ذخیره تغییرات' : 'ثبت و تایید آدرس'}
       </Button>
 
       <LocationMapModal
