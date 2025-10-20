@@ -77,6 +77,7 @@ export default function SelectLocation() {
           locationId,
           serviceTypeId: serviceSelection.serviceTypeId,
           subcategoryId: serviceSelection.subcategoryId,
+          subcategoryCode: serviceSelection.subcategoryCode,
           serviceName: serviceSelection.serviceName,
           subcategoryName: serviceSelection.subcategoryName,
           locationAddress: location.address_line,

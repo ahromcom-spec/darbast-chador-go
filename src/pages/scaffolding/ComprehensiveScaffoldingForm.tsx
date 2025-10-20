@@ -236,47 +236,51 @@ export default function ComprehensiveScaffoldingForm({
       setLoading(true);
       const priceData = calculatePrice();
 
-      // دریافت نوع خدمات و subcategory از state که از صفحه قبلی آمده
-      const serviceTypeId = navState?.serviceTypeId;
-      const subcategoryId = navState?.subcategoryId;
+      // دریافت نوع خدمات و subcategory از state یا حافظه
+      const pendingSel = JSON.parse(localStorage.getItem('pendingServiceSelection') || 'null');
+      let finalServiceTypeId: string | null = navState?.serviceTypeId || pendingSel?.serviceTypeId || null;
+      let finalSubcategoryId: string | null = navState?.subcategoryId || pendingSel?.subcategoryId || null;
 
-      // اگر از state دریافت نشد، از دیتابیس بگیریم
-      let finalServiceTypeId = serviceTypeId;
-      let finalSubcategoryId = subcategoryId;
+      // اگر هنوز مشخص نشد، بر اساس نام‌ها یا کد زیرشاخه تلاش کن
+      if (!finalServiceTypeId || !finalSubcategoryId) {
+        // تلاش بر اساس نام نوع خدمت
+        if (!finalServiceTypeId && navState?.serviceName) {
+          const { data: st } = await supabase
+            .from('service_types_v3')
+            .select('id')
+            .ilike('name', navState.serviceName)
+            .maybeSingle();
+          if (st) finalServiceTypeId = st.id;
+        }
+
+        // تلاش بر اساس نام زیرشاخه در صورت داشتن serviceTypeId
+        if (finalServiceTypeId && !finalSubcategoryId && navState?.subcategoryName) {
+          const { data: sc } = await supabase
+            .from('subcategories')
+            .select('id')
+            .eq('service_type_id', finalServiceTypeId)
+            .ilike('name', navState.subcategoryName)
+            .maybeSingle();
+          if (sc) finalSubcategoryId = sc.id;
+        }
+
+        // تلاش بر اساس کد زیرشاخه (در state یا حافظه) اگر هنوز نامشخص است
+        if ((!finalServiceTypeId || !finalSubcategoryId) && (navState?.subcategoryCode || pendingSel?.subcategoryCode)) {
+          const subCode = navState?.subcategoryCode || pendingSel?.subcategoryCode;
+          const { data: sc2 } = await supabase
+            .from('subcategories')
+            .select('id, service_type_id')
+            .eq('code', subCode)
+            .maybeSingle();
+          if (sc2) {
+            finalServiceTypeId = sc2.service_type_id;
+            finalSubcategoryId = sc2.id;
+          }
+        }
+      }
 
       if (!finalServiceTypeId || !finalSubcategoryId) {
-        // Map service type to subcategory code
-        const subcategoryCodeMap: Record<string, string> = {
-          'facade': '10', // با مصالح
-          'formwork': '10',
-          'ceiling-tiered': '10',
-          'ceiling-slab': '10'
-        };
-
-        const subcategoryCode = subcategoryCodeMap[activeService];
-
-        // Get service_type_id - داربست فلزی کد 10 دارد
-        const { data: serviceTypes } = await supabase
-          .from('service_types_v3')
-          .select('id, code')
-          .eq('code', '10') // داربست فلزی
-          .single();
-
-        if (!serviceTypes) throw new Error('نوع خدمات یافت نشد');
-
-        finalServiceTypeId = serviceTypes.id;
-
-        // Get subcategory_id
-        const { data: subcategory } = await supabase
-          .from('subcategories')
-          .select('id')
-          .eq('service_type_id', serviceTypes.id)
-          .eq('code', subcategoryCode)
-          .single();
-
-        if (!subcategory) throw new Error('زیرمجموعه یافت نشد');
-
-        finalSubcategoryId = subcategory.id;
+        throw new Error('نوع خدمات یا زیرشاخه یافت نشد');
       }
 
       // استفاده از hierarchyProjectId اگر وجود داشت (از SelectLocation)
