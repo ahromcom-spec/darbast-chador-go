@@ -713,6 +713,41 @@ export type Database = {
         }
         Relationships: []
       }
+      order_approvals: {
+        Row: {
+          approved_at: string | null
+          approver_role: string
+          approver_user_id: string | null
+          created_at: string | null
+          id: string
+          order_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approver_role: string
+          approver_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          order_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approver_role?: string
+          approver_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_approvals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string | null
