@@ -13,8 +13,6 @@ import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { PWAInstallBanner } from "@/components/common/PWAInstallBanner";
 import { NotificationBanner } from "@/components/common/NotificationBanner";
-import { SecurityGuard } from "@/components/security/SecurityGuard";
-import { applySecurityMeasures, protectGlobalScope } from "@/lib/securityConfig";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import Header from "./components/Header";
 import Home from "./pages/Home";
@@ -92,17 +90,10 @@ const PageLoader = () => (
 );
 
 const App = () => {
-  useEffect(() => {
-    // اعمال تنظیمات امنیتی
-    applySecurityMeasures();
-    protectGlobalScope();
-  }, []);
-
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <SecurityGuard />
           <Toaster />
           <Sonner />
           <BrowserRouter>

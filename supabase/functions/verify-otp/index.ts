@@ -127,10 +127,11 @@ serve(async (req) => {
       
       // Security: No phone logging
     } else {
-      // Security: Allow hardcoded 12345 for whitelisted phones only when ALLOW_TEST_OTP is enabled
+      // Security: Allow hardcoded 12345 ONLY in development for whitelisted phones
+      const isProduction = Deno.env.get('ENVIRONMENT') === 'production';
       const allowEnv = (Deno.env.get('ALLOW_TEST_OTP') || '').toString().trim().toLowerCase();
       const allowTestOTP = ['1', 'true', 'yes', 'on', 'y'].includes(allowEnv);
-      const allowHardcodedOTP = isWhitelistedPhone && normalizedCode === '12345' && allowTestOTP;
+      const allowHardcodedOTP = !isProduction && isWhitelistedPhone && normalizedCode === '12345' && allowTestOTP;
       
       if (allowHardcodedOTP) {
         // Whitelisted phones can use test code 12345 when enabled
@@ -199,17 +200,11 @@ serve(async (req) => {
       });
 
       if (createErr) {
-        const msg = (createErr as any)?.message?.toString() || '';
-        if (/already/i.test(msg)) {
-          return new Response(
-            JSON.stringify({ error: 'این شماره قبلاً ثبت نام کرده است. لطفا وارد شوید.' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        // Security: Use generic error message to prevent user enumeration
         console.error('User creation error');
         return new Response(
-          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'خطا در احراز هویت. لطفا دوباره تلاش کنید.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
