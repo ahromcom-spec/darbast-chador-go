@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
     <link rel="icon" href="/ahrom-app-icon.png" type="image/png" />
     
+    <!-- Security Headers -->
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Referrer-Policy" content="no-referrer" />
+    <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://gclbltatkbwbqxqqrcea.supabase.co;" />
+    
     <!-- DNS Prefetch برای بهبود سرعت -->
     <link rel="dns-prefetch" href="https://gclbltatkbwbqxqqrcea.supabase.co" />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />

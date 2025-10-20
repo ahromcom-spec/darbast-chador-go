@@ -99,6 +99,10 @@ export default defineConfig(({ mode }) => ({
           'supabase': ['@supabase/supabase-js'],
           'form': ['react-hook-form', 'zod'],
         },
+        // حذف اطلاعات فریمورک از نام فایل‌ها
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       },
     },
     cssCodeSplit: true,
@@ -107,7 +111,17 @@ export default defineConfig(({ mode }) => ({
       compress: {
         drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info']
+        pure_funcs: ['console.log', 'console.info', 'console.warn'],
+        passes: 2
+      },
+      mangle: {
+        // مخفی کردن نام متغیرها و توابع
+        toplevel: true,
+        properties: false
+      },
+      format: {
+        // حذف کامنت‌ها
+        comments: false
       }
     },
     chunkSizeWarningLimit: 1000,

@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,8 @@ import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { PWAInstallBanner } from "@/components/common/PWAInstallBanner";
 import { NotificationBanner } from "@/components/common/NotificationBanner";
+import { SecurityGuard } from "@/components/security/SecurityGuard";
+import { applySecurityMeasures, protectGlobalScope } from "@/lib/securityConfig";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 
@@ -84,19 +86,27 @@ const PageLoader = () => (
   </div>
 );
 
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            {/* <PageLoadProgress /> */}
-            <OfflineIndicator />
-      <NotificationBanner />
-      <PWAInstallBanner />
-            <Suspense fallback={<PageLoader />}>
+const App = () => {
+  useEffect(() => {
+    // اعمال تنظیمات امنیتی
+    applySecurityMeasures();
+    protectGlobalScope();
+  }, []);
+
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <SecurityGuard />
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              {/* <PageLoadProgress /> */}
+              <OfflineIndicator />
+              <NotificationBanner />
+              <PWAInstallBanner />
+              <Suspense fallback={<PageLoader />}>
               <div className="min-h-screen bg-background">
                 <Header />
                 <Routes>
@@ -265,9 +275,10 @@ const App = () => (
             </Suspense>
           </AuthProvider>
         </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-  </ErrorBoundary>
-);
+      </TooltipProvider>
+    </QueryClientProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;
