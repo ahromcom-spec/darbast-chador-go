@@ -242,20 +242,24 @@ export default function ComprehensiveScaffoldingForm({
       return;
     }
 
-    if (!provinceId || !detailedAddress) {
-      toast({ title: 'خطا', description: 'اطلاعات آدرس از مرحله قبل دریافت نشد', variant: 'destructive' });
+    // بازخوانی آدرس از بالای فرم (از prefilledAddress که از مرحله قبل آمده)
+    const finalAddress = prefilledAddress || address || detailedAddress;
+    
+    if (!finalAddress) {
+      toast({ title: 'خطا', description: 'آدرس پروژه از مرحله قبل دریافت نشد', variant: 'destructive' });
       return;
     }
 
+    // فقط چک کردن ابعاد به‌عنوان فیلد ضروری
     if (dimensions.some(d => !d.length || !d.width || !d.height)) {
       toast({ title: 'خطا', description: 'لطفاً تمام ابعاد را وارد کنید', variant: 'destructive' });
       return;
     }
 
-    // Validate using Zod schema
+    // Validate using Zod schema - فقط ابعاد
     try {
       scaffoldingFormSchema.parse({
-        detailedAddress: detailedAddress.trim(),
+        detailedAddress: finalAddress.trim(),
         dimensions: dimensions.map(d => ({
           length: parseFloat(d.length),
           width: parseFloat(d.width),
@@ -269,8 +273,8 @@ export default function ComprehensiveScaffoldingForm({
       }
     }
 
-    // Sanitize address
-    const sanitizedAddress = sanitizeHtml(detailedAddress.trim());
+    // Sanitize address - استفاده از آدرس بازخوانی شده از بالای فرم
+    const sanitizedAddress = sanitizeHtml(finalAddress.trim());
 
     try {
       setLoading(true);
@@ -340,34 +344,39 @@ export default function ComprehensiveScaffoldingForm({
 
       // اگر hierarchyProjectId نداشتیم، باید location و project را ایجاد کنیم
       if (!projectId) {
-        // Create or get location
-        const { data: existingLocation } = await supabase
-          .from('locations')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('province_id', provinceId)
-          .eq('address_line', sanitizedAddress)
-          .maybeSingle();
-
-        let locationId = existingLocation?.id;
-
+        // استفاده از locationId که از مرحله قبل آمده یا ایجاد جدید
+        let locationId = propLocationId;
+        
+        // اگر locationId نداریم، location جدید ایجاد می‌کنیم
         if (!locationId) {
-          const { data: newLocation, error: locError } = await supabase
+          // Create or get location
+          const { data: existingLocation } = await supabase
             .from('locations')
-            .insert([{
-              user_id: user.id,
-              province_id: provinceId,
-              district_id: districtId || null,
-              address_line: sanitizedAddress,
-              lat: 0,
-              lng: 0,
-              is_active: true
-            }])
             .select('id')
-            .single();
+            .eq('user_id', user.id)
+            .eq('address_line', sanitizedAddress)
+            .maybeSingle();
 
-          if (locError) throw locError;
-          locationId = newLocation.id;
+          locationId = existingLocation?.id;
+
+          if (!locationId) {
+            const { data: newLocation, error: locError } = await supabase
+              .from('locations')
+              .insert([{
+                user_id: user.id,
+                province_id: provinceId || null,
+                district_id: districtId || null,
+                address_line: sanitizedAddress,
+                lat: 0,
+                lng: 0,
+                is_active: true
+              }])
+              .select('id')
+              .single();
+
+            if (locError) throw locError;
+            locationId = newLocation.id;
+          }
         }
 
         // ذخیره برای استفاده در navigation
@@ -667,7 +676,12 @@ export default function ComprehensiveScaffoldingForm({
         </CardContent>
       </Card>
 
-      <Button onClick={onSubmit} disabled={loading} className="w-full" size="lg">
+      <Button 
+        onClick={onSubmit} 
+        disabled={loading || dimensions.some(d => !d.length || !d.width || !d.height)} 
+        className="w-full" 
+        size="lg"
+      >
         {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
       </Button>
     </div>
