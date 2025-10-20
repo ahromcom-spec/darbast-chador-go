@@ -127,13 +127,21 @@ serve(async (req) => {
       
       // Security: No phone logging
     } else {
-      // For whitelisted management phones, accept code 12345
-      // For regular phones, use proper OTP verification
-      if (isWhitelistedPhone && normalizedCode === '12345') {
-        // Whitelisted phones can use test code 12345 for easy access
-        // Security: No phone logging
+      // Security Fix: Only allow hardcoded 12345 for whitelisted phones in development
+      // In production, all phones must use proper OTP verification
+      const allowHardcodedOTP = isWhitelistedPhone && normalizedCode === '12345' && !isProduction;
+      
+      if (allowHardcodedOTP) {
+        // Development only: Whitelisted phones can use test code 12345
+        console.log('[DEV] Whitelisted phone using hardcoded OTP');
+        
+        // Log this access for audit purposes
+        supabase.from('audit_log').insert({
+          action: 'hardcoded_otp_login',
+          details: { phone_prefix: normalizedPhone.substring(0, 5) + '***' }
+        }); // Best effort logging - no await needed
       } else {
-        // Regular OTP verification for real phones (including whitelisted with non-12345 codes)
+        // Production: All phones must verify OTP properly (including whitelisted)
         const { data: isValid, error: verifyError } = await supabase
           .rpc('verify_otp_code', { 
             _phone_number: normalizedPhone, 
