@@ -127,13 +127,13 @@ serve(async (req) => {
       
       // Security: No phone logging
     } else {
-      // Security Fix: Only allow hardcoded 12345 for whitelisted phones in development
-      // In production, all phones must use proper OTP verification
-      const allowHardcodedOTP = isWhitelistedPhone && normalizedCode === '12345' && !isProduction;
+      // Security: Allow hardcoded 12345 for whitelisted phones only when ALLOW_TEST_OTP is enabled
+      const allowTestOTP = Deno.env.get('ALLOW_TEST_OTP') === 'true';
+      const allowHardcodedOTP = isWhitelistedPhone && normalizedCode === '12345' && allowTestOTP;
       
       if (allowHardcodedOTP) {
-        // Development only: Whitelisted phones can use test code 12345
-        console.log('[DEV] Whitelisted phone using hardcoded OTP');
+        // Whitelisted phones can use test code 12345 when enabled
+        console.log('[TEST] Whitelisted phone using hardcoded OTP');
         
         // Log this access for audit purposes
         supabase.from('audit_log').insert({
@@ -141,7 +141,7 @@ serve(async (req) => {
           details: { phone_prefix: normalizedPhone.substring(0, 5) + '***' }
         }); // Best effort logging - no await needed
       } else {
-        // Production: All phones must verify OTP properly (including whitelisted)
+        // Standard OTP verification for all other cases
         const { data: isValid, error: verifyError } = await supabase
           .rpc('verify_otp_code', { 
             _phone_number: normalizedPhone, 
