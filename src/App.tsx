@@ -158,6 +158,11 @@ const App = () => {
                   <ProjectDetail />
                 </ProtectedRoute>
               } />
+              <Route path="/user/my-orders" element={
+                <ProtectedRoute>
+                  <MyOrders />
+                </ProtectedRoute>
+              } />
               <Route path="/user/orders" element={
                 <ProtectedRoute>
                   <MyOrders />
