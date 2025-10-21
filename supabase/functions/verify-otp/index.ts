@@ -89,15 +89,38 @@ serve(async (req) => {
 
     // Normalize OTP code to ASCII digits (handles Persian/Arabic numerals)
     const normalizeOtpCode = (input: string) => {
+      if (!input || typeof input !== 'string') {
+        return '';
+      }
+      
+      // Limit input length for security
+      const limitedInput = input.slice(0, 20);
+      
       const persian = '۰۱۲۳۴۵۶۷۸۹';
       const arabic = '٠١٢٣٤٥٦٧٨٩';
-      return String(input ?? '')
+      
+      const normalized = limitedInput
         .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
         .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)))
-        .replace(/[^0-9]/g, '')
-        .slice(0, 5); // Changed from 6 to 5 to match send-otp
+        .replace(/[^0-9]/g, '');
+      
+      // Must be exactly 5 digits
+      if (normalized.length !== 5) {
+        return '';
+      }
+      
+      return normalized;
     };
+    
     const normalizedCode = normalizeOtpCode(code);
+    
+    // Validate OTP code length
+    if (!normalizedCode || normalizedCode.length !== 5) {
+      return new Response(
+        JSON.stringify({ error: 'کد تایید باید دقیقاً 5 رقم باشد' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     // Build a strong per-login password from OTP to satisfy password policy
     const loginPassword = `otp-${normalizedCode}-x`;
 
