@@ -2566,13 +2566,42 @@ export type Database = {
           _detailed_address: string
           _district_id: string
           _hierarchy_project_id: string
-          _notes?: Json
+          _notes: Json
           _province_id: string
           _subcategory_id: string
         }
         Returns: {
+          address: string
+          approved_at: string | null
+          approved_by: string | null
+          closed_at: string | null
           code: string
+          contractor_id: string | null
+          created_at: string | null
+          customer_completion_date: string | null
+          customer_id: string
+          detailed_address: string | null
+          district_id: string | null
+          executed_by: string | null
+          execution_confirmed_at: string | null
+          execution_end_date: string | null
+          execution_start_date: string | null
+          executive_completion_date: string | null
+          financial_confirmed_at: string | null
+          financial_confirmed_by: string | null
+          hierarchy_project_id: string | null
           id: string
+          notes: string | null
+          payment_amount: number | null
+          payment_confirmed_at: string | null
+          payment_confirmed_by: string | null
+          payment_method: string | null
+          province_id: string
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["project_status_v3"] | null
+          subcategory_id: string
+          transaction_reference: string | null
+          updated_at: string | null
         }[]
       }
       generate_customer_code: {
@@ -2661,6 +2690,10 @@ export type Database = {
           _entity_id: string
           _meta?: Json
         }
+        Returns: string
+      }
+      next_project_code: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       notify_role: {
