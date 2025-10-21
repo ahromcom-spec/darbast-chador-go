@@ -1,252 +1,221 @@
-import { useState } from 'react';
-import { useLocations } from '@/hooks/useLocations';
-import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
-import { useOrders, OrderStatus } from '@/hooks/useOrders';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, ChevronDown, ChevronLeft, Package } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Package, MapPin, Calendar, FileText } from 'lucide-react';
+import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
+import { useOrderApprovals } from '@/hooks/useOrderApprovals';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface Order {
+  id: string;
+  code: string;
+  status: string;
+  address: string;
+  detailed_address: string | null;
+  created_at: string;
+  notes: any;
+  subcategories?: { name: string };
+  provinces?: { name: string };
+  districts?: { name: string };
+}
 
 export default function MyOrders() {
-  const { locations, loading: locationsLoading } = useLocations();
-  const { projects, loading: projectsLoading } = useProjectsHierarchy();
-  const { orders, loading: ordersLoading } = useOrders();
-  
-  const [expandedLocations, setExpandedLocations] = useState<Set<string>>(new Set());
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [filterStatus, setFilterStatus] = useState<OrderStatus | 'all'>('all');
-  const [filterLocation, setFilterLocation] = useState<string>('all');
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const loading = locationsLoading || projectsLoading || ordersLoading;
+  useEffect(() => {
+    fetchOrders();
+  }, [user]);
 
-  const toggleLocation = (locationId: string) => {
-    const newSet = new Set(expandedLocations);
-    if (newSet.has(locationId)) {
-      newSet.delete(locationId);
-    } else {
-      newSet.add(locationId);
+  const fetchOrders = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!customerData) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('projects_v3')
+        .select(`
+          id,
+          code,
+          status,
+          address,
+          detailed_address,
+          created_at,
+          notes,
+          subcategories(name),
+          provinces(name),
+          districts(name)
+        `)
+        .eq('customer_id', customerData.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setOrders(data || []);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
     }
-    setExpandedLocations(newSet);
   };
 
-  const toggleProject = (projectId: string) => {
-    const newSet = new Set(expandedProjects);
-    if (newSet.has(projectId)) {
-      newSet.delete(projectId);
-    } else {
-      newSet.add(projectId);
-    }
-    setExpandedProjects(newSet);
-  };
-
-  const getStatusBadge = (status: OrderStatus) => {
-    const statusMap: Record<OrderStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
       draft: { label: 'پیش‌نویس', variant: 'outline' },
-      pending: { label: 'در انتظار', variant: 'secondary' },
-      priced: { label: 'قیمت‌گذاری شده', variant: 'default' },
-      confirmed: { label: 'تایید شده', variant: 'default' },
-      scheduled: { label: 'زمان‌بندی شده', variant: 'default' },
+      pending: { label: 'در انتظار تایید', variant: 'secondary' },
+      approved: { label: 'تایید شده', variant: 'default' },
       in_progress: { label: 'در حال اجرا', variant: 'default' },
-      done: { label: 'انجام شده', variant: 'default' },
-      canceled: { label: 'لغو شده', variant: 'destructive' }
+      completed: { label: 'تکمیل شده', variant: 'default' },
+      paid: { label: 'پرداخت شده', variant: 'default' },
+      closed: { label: 'بسته شده', variant: 'default' },
+      rejected: { label: 'رد شده', variant: 'destructive' }
     };
-    const { label, variant } = statusMap[status];
+    const { label, variant } = statusMap[status] || { label: status, variant: 'outline' };
     return <Badge variant={variant}>{label}</Badge>;
   };
 
-  // Group orders by location and project
-  const groupedData = locations.map(location => {
-    const locationProjects = projects.filter(p => p.location_id === location.id);
-    const projectsWithOrders = locationProjects.map(project => {
-      const projectOrders = orders.filter(o => o.project_id === project.id);
-      return { ...project, orders: projectOrders };
-    }).filter(p => p.orders.length > 0);
-    
-    return {
-      location,
-      projects: projectsWithOrders
-    };
-  }).filter(loc => loc.projects.length > 0);
+  const OrderCard = ({ order }: { order: Order }) => {
+    const { approvals, loading: approvalsLoading } = useOrderApprovals(order.id);
 
-  // Apply filters
-  const filteredData = groupedData
-    .filter(loc => filterLocation === 'all' || loc.location.id === filterLocation)
-    .map(loc => ({
-      ...loc,
-      projects: loc.projects.map(proj => ({
-        ...proj,
-        orders: proj.orders.filter(order => 
-          filterStatus === 'all' || order.status === filterStatus
-        )
-      })).filter(proj => proj.orders.length > 0)
-    }))
-    .filter(loc => loc.projects.length > 0);
+    return (
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
+              <CardDescription className="mt-1 flex items-center gap-2">
+                <Calendar className="h-3 w-3" />
+                {new Date(order.created_at).toLocaleDateString('fa-IR')}
+              </CardDescription>
+            </div>
+            {getStatusBadge(order.status)}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm">{order.address}</p>
+                {order.detailed_address && (
+                  <p className="text-sm text-muted-foreground">{order.detailed_address}</p>
+                )}
+              </div>
+            </div>
+            
+            {order.subcategories && (
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm">{order.subcategories.name}</p>
+              </div>
+            )}
+          </div>
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+          {order.status === 'pending' && (
+            <ApprovalProgress approvals={approvals} loading={approvalsLoading} />
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedOrder(order);
+              setDetailsOpen(true);
+            }}
+            className="w-full"
+          >
+            مشاهده جزئیات
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-6xl">
       <PageHeader
         title="سفارشات من"
-        description="مشاهده و مدیریت سفارشات به تفکیک آدرس و پروژه"
+        description="مشاهده تمام سفارشات شما و وضعیت آن‌ها"
       />
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 mb-6">
-        <div>
-          <label className="text-sm font-medium mb-2 block">فیلتر بر اساس آدرس</label>
-          <Select value={filterLocation} onValueChange={setFilterLocation}>
-            <SelectTrigger>
-              <SelectValue placeholder="همه آدرس‌ها" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">همه آدرس‌ها</SelectItem>
-              {locations.map(loc => (
-                <SelectItem key={loc.id} value={loc.id}>
-                  {loc.title || loc.address_line}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="text-sm font-medium mb-2 block">فیلتر بر اساس وضعیت</label>
-          <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as OrderStatus | 'all')}>
-            <SelectTrigger>
-              <SelectValue placeholder="همه وضعیت‌ها" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">همه وضعیت‌ها</SelectItem>
-              <SelectItem value="pending">در انتظار</SelectItem>
-              <SelectItem value="priced">قیمت‌گذاری شده</SelectItem>
-              <SelectItem value="confirmed">تایید شده</SelectItem>
-              <SelectItem value="in_progress">در حال اجرا</SelectItem>
-              <SelectItem value="done">انجام شده</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Hierarchical View */}
-      {filteredData.length === 0 ? (
-        <Card>
+      {orders.length === 0 ? (
+        <Card className="mt-6">
           <CardContent className="py-12 text-center">
             <Package className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">هیچ سفارشی یافت نشد</h3>
             <p className="text-muted-foreground">
-              {filterStatus !== 'all' || filterLocation !== 'all'
-                ? 'فیلترهای دیگری را امتحان کنید'
-                : 'هنوز سفارشی ثبت نکرده‌اید'}
+              هنوز سفارشی ثبت نکرده‌اید
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {filteredData.map(({ location, projects }) => (
-            <Card key={location.id}>
-              <CardHeader 
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => toggleLocation(location.id)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {expandedLocations.has(location.id) ? (
-                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                    ) : (
-                      <ChevronLeft className="w-5 h-5 text-muted-foreground" />
-                    )}
-                    <MapPin className="w-5 h-5 text-primary" />
-                    <div>
-                      <CardTitle className="text-lg">
-                        {location.title || 'آدرس پروژه'}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {location.address_line}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary">{projects.length} پروژه</Badge>
-                </div>
-              </CardHeader>
-
-              {expandedLocations.has(location.id) && (
-                <CardContent className="pt-0">
-                  <div className="space-y-3 pr-8">
-                    {projects.map(project => (
-                      <Card key={project.id} className="shadow-sm">
-                        <CardHeader 
-                          className="cursor-pointer hover:bg-accent/30 transition-colors pb-3"
-                          onClick={() => toggleProject(project.id)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              {expandedProjects.has(project.id) ? (
-                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                              ) : (
-                                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-                              )}
-                              <div>
-                                <h4 className="font-semibold">{project.title}</h4>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {project.service_types_v3?.name} • {project.subcategories?.name}
-                                </p>
-                              </div>
-                            </div>
-                            <Badge variant="outline">{project.orders.length} سفارش</Badge>
-                          </div>
-                        </CardHeader>
-
-                        {expandedProjects.has(project.id) && (
-                          <CardContent className="pt-0">
-                            <div className="space-y-2 pr-7">
-                              {project.orders.map(order => (
-                                <Card key={order.id} className="shadow-none border-l-4 border-l-primary">
-                                  <CardContent className="p-4">
-                                    <div className="flex items-start justify-between gap-4">
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
-                                          {getStatusBadge(order.status)}
-                                          <span className="text-xs text-muted-foreground">
-                                            {new Date(order.created_at).toLocaleDateString('fa-IR')}
-                                          </span>
-                                        </div>
-                                        {order.price && (
-                                          <p className="text-sm font-semibold">
-                                            قیمت: {order.price.toLocaleString('fa-IR')} تومان
-                                          </p>
-                                        )}
-                                        {order.notes && (
-                                          <p className="text-xs text-muted-foreground mt-1">
-                                            {order.notes}
-                                          </p>
-                                        )}
-                                      </div>
-                                      <Button variant="outline" size="sm">
-                                        جزئیات
-                                      </Button>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </div>
-                          </CardContent>
-                        )}
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              )}
-            </Card>
+        <div className="grid gap-4 mt-6 md:grid-cols-2 lg:grid-cols-3">
+          {orders.map(order => (
+            <OrderCard key={order.id} order={order} />
           ))}
         </div>
       )}
+
+      {/* Details Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-semibold mb-1">وضعیت</p>
+                {getStatusBadge(selectedOrder.status)}
+              </div>
+              <div>
+                <p className="text-sm font-semibold mb-1">آدرس</p>
+                <p className="text-sm">{selectedOrder.address}</p>
+                {selectedOrder.detailed_address && (
+                  <p className="text-sm text-muted-foreground">{selectedOrder.detailed_address}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-semibold mb-1">تاریخ ثبت</p>
+                <p className="text-sm">{new Date(selectedOrder.created_at).toLocaleDateString('fa-IR')}</p>
+              </div>
+              {selectedOrder.subcategories && (
+                <div>
+                  <p className="text-sm font-semibold mb-1">نوع خدمت</p>
+                  <p className="text-sm">{selectedOrder.subcategories.name}</p>
+                </div>
+              )}
+              {selectedOrder.notes && (
+                <div>
+                  <p className="text-sm font-semibold mb-1">جزئیات سفارش</p>
+                  <pre className="text-xs bg-secondary p-3 rounded mt-1 overflow-auto max-h-60">
+                    {JSON.stringify(selectedOrder.notes, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
