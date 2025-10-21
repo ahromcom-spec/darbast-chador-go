@@ -2620,6 +2620,10 @@ export type Database = {
         Args: { _project_id: string }
         Returns: string
       }
+      generate_unique_order_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_contractor_contact_info: {
         Args: { _contractor_id: string }
         Returns: {
