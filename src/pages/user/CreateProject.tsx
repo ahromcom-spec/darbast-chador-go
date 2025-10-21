@@ -256,46 +256,29 @@ export default function CreateProject() {
 
       if (!customerData) throw new Error("خطا در ایجاد اطلاعات مشتری");
 
-      // تولید کد پروژه
-      const { data: projectCode, error: codeError } = await supabase.rpc(
-        "generate_project_code",
-        {
+      // ایجاد سفارش با استفاده از تابع امن backend (همسوسازی با کد 7 رقمی جدید)
+      const plaqueText = data.plaque || "ثبت نشده";
+      const postalText = data.postal_code || "ثبت نشده";
+
+      const { data: createdRows, error: createError } = await supabase
+        .rpc('create_project_v3', {
           _customer_id: customerData.id,
           _province_id: data.province_id,
+          _district_id: data.district_id || null,
           _subcategory_id: data.subcategory_id,
-        }
-      );
+          _hierarchy_project_id: null,
+          _address: data.address,
+          _detailed_address: data.detailed_address || null,
+          _notes: { plaque: plaqueText, postal_code: postalText } as any
+        });
 
-      if (codeError) throw codeError;
-
-      // استخراج اعداد از کد پروژه
-      // فرمت: customer_code/project_number/service_code
-      const projectParts = projectCode.split('/');
-      const projectNumber = projectParts[1]; // شماره پروژه
-      const serviceCode = projectParts[2]; // کد خدمات
-
-      // ایجاد پروژه
-      const { error: projectError } = await supabase.from("projects_v3").insert({
-        customer_id: customerData.id,
-        province_id: data.province_id,
-        district_id: data.district_id,
-        subcategory_id: data.subcategory_id,
-        address: data.address,
-        detailed_address: data.detailed_address || null,
-        notes: `پلاک: ${data.plaque || "ثبت نشده"} | کد پستی: ${
-          data.postal_code || "ثبت نشده"
-        }`,
-        code: projectCode,
-        project_number: projectNumber,
-        service_code: serviceCode,
-        status: "draft",
-      });
-
-      if (projectError) throw projectError;
+      if (createError) throw createError;
+      const createdProject = createdRows?.[0];
+      if (!createdProject) throw new Error("خطا در ایجاد پروژه");
 
       toast({
         title: "موفقیت",
-        description: "پروژه با موفقیت ایجاد شد",
+        description: `پروژه با موفقیت ایجاد شد. کد: ${createdProject.code}`,
       });
 
       navigate("/user/projects");
