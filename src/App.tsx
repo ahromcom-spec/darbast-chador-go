@@ -55,7 +55,10 @@ const ExecutiveLayout = lazy(() => import("./pages/executive/ExecutiveLayout").t
 const ExecutiveDashboard = lazy(() => import("./pages/executive/ExecutiveDashboard"));
 const ExecutiveOrders = lazy(() => import("./pages/executive/ExecutiveOrders"));
 const ExecutiveCustomers = lazy(() => import("./pages/executive/ExecutiveCustomers"));
+const ExecutivePendingOrders = lazy(() => import("./pages/executive/ExecutivePendingOrders"));
 const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
+const SalesPendingOrders = lazy(() => import("./pages/sales/SalesPendingOrders"));
+const SalesDashboard = lazy(() => import("./pages/sales/SalesDashboard"));
 const FinanceOrders = lazy(() => import("./pages/finance/FinanceOrders"));
 const ReputationDashboard = lazy(() => import("./pages/ratings/ReputationDashboard"));
 const RatingTestPage = lazy(() => import("./pages/ratings/RatingTestPage"));
@@ -208,11 +211,22 @@ const App = () => {
               }>
                 <Route index element={<ExecutiveDashboard />} />
                 <Route path="orders" element={<ExecutiveOrders />} />
+                <Route path="pending-orders" element={<ExecutivePendingOrders />} />
                 <Route path="customers" element={<ExecutiveCustomers />} />
               </Route>
+              <Route path="/sales" element={
+                <ProtectedRoute>
+                  <SalesDashboard />
+                </ProtectedRoute>
+              } />
               <Route path="/sales/orders" element={
                 <ProtectedRoute>
                   <SalesOrders />
+                </ProtectedRoute>
+              } />
+              <Route path="/sales/pending-orders" element={
+                <ProtectedRoute>
+                  <SalesPendingOrders />
                 </ProtectedRoute>
               } />
               <Route path="/finance/orders" element={

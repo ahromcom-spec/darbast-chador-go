@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Users, ShoppingCart, Clock, CheckCircle } from 'lucide-react';
+import { Users, ShoppingCart, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { StatCard } from '@/components/common/StatCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
@@ -11,6 +13,7 @@ import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 
 export default function ExecutiveDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: stats, isLoading } = useQuery({
     queryKey: ['executive-stats'],
     queryFn: async () => {
@@ -21,6 +24,15 @@ export default function ExecutiveDashboard() {
 
       if (error) throw error;
 
+      // Count pending approvals for executive manager
+      const { data: pendingApprovals, error: approvalsError } = await supabase
+        .from('order_approvals')
+        .select('order_id')
+        .eq('approver_role', 'scaffold_executive_manager')
+        .is('approved_at', null);
+
+      if (approvalsError) throw approvalsError;
+
       const uniqueCustomers = new Set(orders?.map(o => o.customer_id) || []).size;
       const pending = orders?.filter(o => o.status === 'approved').length || 0;
       const inProgress = orders?.filter(o => o.status === 'in_progress').length || 0;
@@ -30,7 +42,8 @@ export default function ExecutiveDashboard() {
         totalCustomers: uniqueCustomers,
         pendingExecution: pending,
         inProgress,
-        completed
+        completed,
+        awaitingApproval: pendingApprovals?.length || 0
       };
     }
   });
@@ -45,6 +58,25 @@ export default function ExecutiveDashboard() {
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card 
+          className="hover:shadow-md hover:-translate-y-1 transition-all duration-300 border-2 cursor-pointer"
+          onClick={() => navigate('/executive/pending-orders')}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">در انتظار تایید</CardTitle>
+            <div className="p-2 rounded-lg bg-orange-500/10">
+              <AlertCircle className="h-5 w-5 text-orange-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.awaitingApproval || 0}</div>
+            <p className="text-xs text-muted-foreground mt-2">سفارشات نیاز به تایید شما</p>
+            <Button variant="link" className="p-0 h-auto text-xs mt-2">
+              مشاهده و تایید →
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card className="hover:shadow-md hover:-translate-y-1 transition-all duration-300 border-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">مشتریان فعال</CardTitle>
