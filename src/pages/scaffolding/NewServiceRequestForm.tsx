@@ -339,25 +339,7 @@ export default function NewServiceRequestForm() {
         description: `کد پروژه: ${createdProject.code}`
       });
 
-      // شروع اتوماسیون اداری بعد از 5 ثانیه
-      setTimeout(async () => {
-        try {
-          const { error: automationError } = await supabase.functions.invoke('order-automation', {
-            body: {
-              orderId: createdProject.id,
-              orderCode: createdProject.code
-            }
-          });
-
-          if (automationError) {
-            console.error('خطا در اتوماسیون اداری:', automationError);
-          } else {
-            console.log('اتوماسیون اداری با موفقیت شروع شد');
-          }
-        } catch (error) {
-          console.error('خطا در فراخوانی اتوماسیون:', error);
-        }
-      }, 5000);
+      // اتوماسیون اداری حالا با database trigger اجرا می‌شود (order-automation function حذف شد)
 
       // انتقال به داشبورد پروژه‌ها
       navigate('/user/projects');
