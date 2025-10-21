@@ -137,10 +137,71 @@ const Home = () => {
         <p>
           شرکت خدمات ساختمانی اهرم ارائه دهنده خدمات تخصصی داربست فلزی، داربست ساختمانی، نصب و اجرای داربست در قم و تمام نقاط ایران.
         </p>
-        <h2>خدمات داربست فلزی</h2>
-        <p>نصب داربست فلزی برای پروژه‌های ساختمانی، بازسازی و نماسازی</p>
-        <h2>چادر برزنتی ساختمانی</h2>
-        <p>خدمات چادر برزنتی برای محافظت از ساختمان در حین اجرا</p>
+        
+        {/* All Service Types and Subcategories for SEO */}
+        {serviceTypes.map((serviceType) => (
+          <section key={serviceType.id}>
+            <h2>{serviceType.name} - خدمات {serviceType.name} در قم و سراسر ایران</h2>
+            <p>ارائه خدمات تخصصی {serviceType.name} با بهترین کیفیت و قیمت مناسب توسط شرکت اهرم</p>
+            
+            {serviceType.subcategories.map((subcategory) => (
+              <div key={subcategory.id}>
+                <h3>{subcategory.name} - {serviceType.name}</h3>
+                <p>
+                  خدمات {subcategory.name} در زمینه {serviceType.name} | 
+                  {subcategory.name} حرفه‌ای در قم و ایران | 
+                  قیمت {subcategory.name} | 
+                  پیمانکار {subcategory.name} | 
+                  اجرای {subcategory.name} استاندارد
+                </p>
+              </div>
+            ))}
+          </section>
+        ))}
+
+        {/* JSON-LD Structured Data for Service Organization */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "شرکت خدمات ساختمانی اهرم",
+            "url": "https://ahrom.org",
+            "logo": "https://ahrom.org/assets/ahrom-logo.png",
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "contactType": "Customer Service",
+              "areaServed": "IR"
+            },
+            "address": {
+              "@type": "PostalAddress",
+              "addressRegion": "قم",
+              "addressCountry": "IR"
+            }
+          })}
+        </script>
+
+        {/* JSON-LD for Service List */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            "itemListElement": serviceTypes.flatMap((serviceType, stIndex) => 
+              serviceType.subcategories.map((subcategory, scIndex) => ({
+                "@type": "ListItem",
+                "position": stIndex * 100 + scIndex + 1,
+                "item": {
+                  "@type": "Service",
+                  "name": `${subcategory.name} - ${serviceType.name}`,
+                  "provider": {
+                    "@type": "Organization",
+                    "name": "شرکت خدمات ساختمانی اهرم"
+                  },
+                  "areaServed": "IR"
+                }
+              }))
+            )
+          })}
+        </script>
       </div>
 
       <div className="min-h-screen flex flex-col relative bg-background">
