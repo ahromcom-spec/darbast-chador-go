@@ -46,7 +46,7 @@ export const OnboardingTour = () => {
 
   const getTooltipStyles = () => {
     // همیشه در وسط صفحه برای دسترسی آسان در موبایل
-    return 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] w-[90vw] max-w-md';
+    return 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] w-[92vw] max-w-md mx-2';
   };
 
   return (
@@ -74,69 +74,69 @@ export const OnboardingTour = () => {
 
       {/* Tooltip با محتوا */}
       <div className={getTooltipStyles()}>
-        <div className="bg-card border-2 border-primary/30 rounded-2xl shadow-2xl w-full animate-scale-in overflow-hidden">
+        <div className="bg-card border-2 border-primary/30 rounded-2xl shadow-2xl w-full animate-scale-in overflow-hidden max-h-[85vh] flex flex-col">
           {/* Header */}
-          <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-6 relative">
+          <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-4 sm:p-6 relative flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={skipTour}
-              className="absolute left-2 top-2 h-8 w-8 p-0 hover:bg-primary/20"
+              className="absolute left-2 top-2 h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-primary/20"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
             
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-full bg-primary/20 animate-pulse">
-                <Sparkles className="h-5 w-5 text-primary" />
+            <div className="flex items-start gap-2 sm:gap-3 mb-2 pr-0">
+              <div className="p-1.5 sm:p-2 rounded-full bg-primary/20 animate-pulse flex-shrink-0">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
-              <h3 className="text-xl font-bold text-foreground">
+              <h3 className="text-base sm:text-xl font-bold text-foreground leading-tight">
                 {currentStepData.title}
               </h3>
             </div>
             
-            <p className="text-sm text-muted-foreground leading-relaxed pr-8">
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed pr-0 max-h-[40vh] overflow-y-auto">
               {currentStepData.description}
             </p>
           </div>
 
           {/* Footer با دکمه‌ها */}
-          <div className="p-4 bg-background/50 flex items-center justify-between">
-            <div className="flex gap-1">
+          <div className="p-3 sm:p-4 bg-background/50 flex items-center justify-between flex-shrink-0 gap-2">
+            <div className="flex gap-0.5 sm:gap-1">
               {steps.map((_, index) => (
                 <div
                   key={index}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                  className={`h-1 sm:h-1.5 rounded-full transition-all duration-300 ${
                     index === currentStep
-                      ? 'w-8 bg-primary'
+                      ? 'w-6 sm:w-8 bg-primary'
                       : index < currentStep
-                      ? 'w-1.5 bg-primary/50'
-                      : 'w-1.5 bg-muted'
+                      ? 'w-1 sm:w-1.5 bg-primary/50'
+                      : 'w-1 sm:w-1.5 bg-muted'
                   }`}
                 />
               ))}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-1.5 sm:gap-2">
               {currentStep > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={prevStep}
-                  className="gap-2"
+                  className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
                 >
-                  <ArrowRight className="h-4 w-4" />
-                  قبلی
+                  <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden xs:inline">قبلی</span>
                 </Button>
               )}
               
               <Button
                 size="sm"
                 onClick={nextStep}
-                className="gap-2 bg-primary hover:bg-primary/90"
+                className="gap-1 sm:gap-2 bg-primary hover:bg-primary/90 text-xs sm:text-sm px-3 sm:px-4 h-8 sm:h-9"
               >
-                {currentStep === steps.length - 1 ? 'شروع' : 'بعدی'}
-                <ArrowLeft className="h-4 w-4" />
+                <span>{currentStep === steps.length - 1 ? 'شروع' : 'بعدی'}</span>
+                <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             </div>
           </div>

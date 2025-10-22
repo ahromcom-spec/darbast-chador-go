@@ -105,8 +105,11 @@ const Header = () => {
           <div className="flex items-center justify-end gap-2 py-2 pr-2">
             {user ? (
               <>
-                <NotificationBell />
+                <div data-tour="notifications">
+                  <NotificationBell />
+                </div>
                 <Button
+                  data-tour="ratings"
                   variant="outline"
                   size="sm"
                   onClick={() => navigate("/ratings/test")}
@@ -116,6 +119,7 @@ const Header = () => {
                   <span className="text-xs sm:text-sm">امتیازات</span>
                 </Button>
                 <Button
+                  data-tour="profile"
                   variant="outline"
                   size="sm"
                   onClick={() => navigate("/profile")}
@@ -222,8 +226,11 @@ const Header = () => {
           <div className="flex items-center justify-end gap-4 py-3 pr-4">
             {user ? (
               <>
-                <NotificationBell />
+                <div data-tour="notifications">
+                  <NotificationBell />
+                </div>
                 <Button
+                  data-tour="ratings"
                   variant="outline"
                   onClick={() => navigate("/ratings/test")}
                   className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
@@ -232,6 +239,7 @@ const Header = () => {
                   <span>سیستم امتیازدهی</span>
                 </Button>
                 <Button
+                  data-tour="profile"
                   variant="outline"
                   onClick={() => navigate("/profile")}
                   className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
