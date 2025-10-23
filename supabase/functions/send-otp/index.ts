@@ -152,7 +152,7 @@ serve(async (req) => {
     const baseHost = host.replace(/:.*$/, '');
     
     // Environment-based host validation
-    const allowedProductionHosts = ['ahrom.org', 'ahrom.ir'];
+    const allowedProductionHosts = ['ahrom.org', 'www.ahrom.org', 'ahrom.ir', 'www.ahrom.ir'];
     // In production, allow primary domain and controlled preview domains for this project
     const allowedProductionSuffixes = ['.ahrom.org', '.ahrom.ir', '.lovableproject.com', '.lovable.app'];
     
