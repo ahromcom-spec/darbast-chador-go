@@ -231,8 +231,8 @@ serve(async (req) => {
         smsSent = true;
         console.log('SMS sent successfully via Parsgreen');
       } else if (result.containsFilteration) {
-        // 2) Fallback: send a simpler text without special characters
-        const fallbackMessage = `کد تایید اهرم: ${code}\nلغو11`;
+        // 2) Fallback: send a simpler text while KEEPING a single Web OTP binding for autofill
+        const fallbackMessage = `کد تایید اهرم: ${code}\n@${apexHost} #${code}\nلغو11`;
         const result2 = await sendOnce(fallbackMessage);
         if (result2.okFormat) {
           smsSent = true;
