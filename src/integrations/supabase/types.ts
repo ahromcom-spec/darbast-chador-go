@@ -1804,7 +1804,7 @@ export type Database = {
           id: string
           length: number
           location_address: string | null
-          location_coordinates: unknown | null
+          location_coordinates: unknown
           location_distance: number | null
           project_id: string | null
           service_type: string
@@ -1820,7 +1820,7 @@ export type Database = {
           id?: string
           length: number
           location_address?: string | null
-          location_coordinates?: unknown | null
+          location_coordinates?: unknown
           location_distance?: number | null
           project_id?: string | null
           service_type: string
@@ -1836,7 +1836,7 @@ export type Database = {
           id?: string
           length?: number
           location_address?: string | null
-          location_coordinates?: unknown | null
+          location_coordinates?: unknown
           location_distance?: number | null
           project_id?: string | null
           service_type?: string
@@ -2555,10 +2555,7 @@ export type Database = {
           is_whitelisted: boolean
         }[]
       }
-      cleanup_expired_otps: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_expired_otps: { Args: never; Returns: undefined }
       create_project_v3: {
         Args: {
           _address: string
@@ -2603,11 +2600,14 @@ export type Database = {
           transaction_reference: string | null
           updated_at: string | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "projects_v3"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
-      generate_customer_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_customer_code: { Args: never; Returns: string }
       generate_project_code: {
         Args: {
           _customer_id: string
@@ -2616,14 +2616,8 @@ export type Database = {
         }
         Returns: string
       }
-      generate_service_code: {
-        Args: { _project_id: string }
-        Returns: string
-      }
-      generate_unique_order_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_service_code: { Args: { _project_id: string }; Returns: string }
+      generate_unique_order_code: { Args: never; Returns: string }
       get_contractor_contact_info: {
         Args: { _contractor_id: string }
         Returns: {
@@ -2642,7 +2636,7 @@ export type Database = {
         Returns: string
       }
       get_orders_with_customer_info: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           address: string
           approved_at: string
@@ -2667,7 +2661,7 @@ export type Database = {
         }[]
       }
       get_public_contractors: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           company_name: string
           created_at: string
@@ -2696,10 +2690,7 @@ export type Database = {
         }
         Returns: string
       }
-      next_project_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      next_project_code: { Args: never; Returns: string }
       notify_role: {
         Args: {
           _body: string
@@ -2727,10 +2718,7 @@ export type Database = {
         }
         Returns: string
       }
-      validate_phone_number: {
-        Args: { _phone: string }
-        Returns: boolean
-      }
+      validate_phone_number: { Args: { _phone: string }; Returns: boolean }
       verify_otp_code: {
         Args: { _code: string; _phone_number: string }
         Returns: boolean
