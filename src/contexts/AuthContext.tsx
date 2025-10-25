@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  sendOTP: (phoneNumber: string) => Promise<{ error: any; userExists?: boolean }>;
+  sendOTP: (phoneNumber: string, isRegistration?: boolean) => Promise<{ error: any; userExists?: boolean }>;
   verifyOTP: (phoneNumber: string, code: string, fullName?: string, isRegistration?: boolean) => Promise<{ error: any; session?: Session | null }>;
   signOut: () => Promise<void>;
   loading: boolean;
@@ -50,10 +50,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const sendOTP = useCallback(async (phoneNumber: string) => {
+  const sendOTP = useCallback(async (phoneNumber: string, isRegistration: boolean = false) => {
     try {
       const { data, error } = await supabase.functions.invoke('send-otp', {
-        body: { phone_number: phoneNumber }
+        body: { 
+          phone_number: phoneNumber,
+          is_registration: isRegistration
+        }
       });
 
       if (error) {
@@ -63,7 +66,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error };
       }
 
-      // Always return success without exposing user existence (security fix)
+      // Check if there's an error in the response data
+      if (data?.error) {
+        return { 
+          error: { message: data.error },
+          userExists: data.user_exists
+        };
+      }
+
       return { error: null };
     } catch (error) {
       if (import.meta.env.DEV) {

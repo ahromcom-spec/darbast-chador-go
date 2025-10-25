@@ -110,15 +110,23 @@ export default function Register() {
 
     setLoading(true);
 
-    const { error } = await sendOTP(phoneNumber);
+    const { error, userExists } = await sendOTP(phoneNumber, true);
     
     setLoading(false);
 
     if (error) {
+      const errorMessage = error.message || 'خطا در ارسال کد تایید';
+      
+      // If user already exists, show login prompt
+      if (errorMessage.includes('قبلاً ثبت') || errorMessage.includes('قبلا ثبت') || userExists === true) {
+        setStep('already-registered');
+        return;
+      }
+      
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: 'خطا در ارسال کد تایید. لطفا دوباره تلاش کنید.',
+        description: errorMessage,
       });
       return;
     }
@@ -133,7 +141,7 @@ export default function Register() {
 
   const handleResendOTP = async () => {
     setLoading(true);
-    const { error } = await sendOTP(phoneNumber);
+    const { error } = await sendOTP(phoneNumber, true);
     setLoading(false);
 
     if (error) {
@@ -220,94 +228,19 @@ export default function Register() {
                 <AlertDescription className="text-center">
                   شماره موبایل <span className="font-bold">{phoneNumber}</span> قبلاً در سامانه ثبت شده است.
                   <br />
-                  کد تایید برای ورود به حساب شما ارسال شد.
+                  لطفاً از صفحه ورود وارد شوید.
                 </AlertDescription>
               </Alert>
-              <div className="space-y-2">
-                <Label>کد تایید</Label>
-                <div className="flex justify-center" dir="ltr">
-                  <InputOTP
-                    maxLength={5}
-                    value={otpCode}
-                    onChange={(value) => setOtpCode(value)}
-                  >
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                {countdown > 0 ? (
-                  <p className="text-sm text-center text-muted-foreground">
-                    زمان باقی‌مانده: <span className="font-bold text-primary">{countdown}</span> ثانیه
-                  </p>
-                ) : (
-                  <Alert variant="destructive" className="mt-2">
-                    <AlertDescription className="text-center">
-                      کد تایید منقضی شده است. لطفا مجدداً درخواست کنید.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                {errors.otp && (
-                  <p className="text-sm text-destructive text-center">{errors.otp}</p>
-                )}
-                <p className="text-sm text-center text-muted-foreground">
-                  کد تایید باید 5 رقم باشد
-                </p>
-              </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
               <Button 
-                onClick={async (e) => {
-                  e.preventDefault();
-                  setErrors({});
-
-                  if (otpCode.length !== 5) {
-                    setErrors({ otp: 'کد تایید باید 5 رقم باشد' });
-                    return;
-                  }
-
-                  setLoading(true);
-                  // For already registered users, use login flow
-                  const { error } = await verifyOTP(phoneNumber, otpCode, undefined, false);
-                  setLoading(false);
-
-                  if (error) {
-                    const errorMessage = error.message || 'کد تایید نامعتبر است.';
-                    toast({
-                      variant: 'destructive',
-                      title: 'خطا',
-                      description: errorMessage,
-                    });
-                    setErrors({ otp: errorMessage });
-                    return;
-                  }
-
-                  toast({
-                    title: 'خوش آمدید',
-                    description: 'با موفقیت وارد شدید.',
-                  });
-                  navigate('/', { replace: true });
-                }}
-                className="w-full construction-gradient hover:opacity-90" 
-                disabled={loading || countdown === 0}
+                asChild
+                className="w-full construction-gradient hover:opacity-90"
               >
-                {loading ? 'در حال بررسی...' : 'تایید و ورود'}
+                <Link to="/auth/login" state={{ phone: phoneNumber }}>
+                  رفتن به صفحه ورود
+                </Link>
               </Button>
-              {countdown === 0 && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full"
-                  onClick={handleResendOTP}
-                  disabled={loading}
-                >
-                  {loading ? 'در حال ارسال...' : 'ارسال مجدد کد تایید'}
-                </Button>
-              )}
               <Button
                 type="button"
                 variant="outline"

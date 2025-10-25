@@ -96,20 +96,27 @@ export default function Login() {
 
     setLoading(true);
 
-    const { error } = await sendOTP(phoneNumber);
+    const { error, userExists } = await sendOTP(phoneNumber, false);
     
     setLoading(false);
 
     if (error) {
+      const errorMessage = error.message || 'خطا در ارسال کد تایید';
+      
+      // If user doesn't exist, show registration prompt
+      if (errorMessage.includes('ثبت نشده') || userExists === false) {
+        setStep('not-registered');
+        return;
+      }
+      
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: 'خطا در ارسال کد تایید. لطفا دوباره تلاش کنید.',
+        description: errorMessage,
       });
       return;
     }
 
-    // Do not reveal user existence to prevent enumeration; always proceed to OTP entry
     toast({
       title: 'موفق',
       description: 'کد تایید به شماره شما ارسال شد.',
@@ -120,7 +127,7 @@ export default function Login() {
 
   const handleResendOTP = async () => {
     setLoading(true);
-    const { error } = await sendOTP(phoneNumber);
+    const { error } = await sendOTP(phoneNumber, false);
     setLoading(false);
 
     if (error) {

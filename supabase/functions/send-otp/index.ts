@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { phone_number } = await req.json();
+    const { phone_number, is_registration } = await req.json();
 
     if (!phone_number) {
       return new Response(
@@ -112,6 +112,32 @@ serve(async (req) => {
     maskedPhone = normalizedPhone.substring(0, 4) + 'XXX' + normalizedPhone.substring(9);
     
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
+    
+    // Check if user exists in auth.users table
+    const { data: existingUser } = await supabase.auth.admin.listUsers();
+    const userExists = existingUser?.users?.some(u => u.email === derivedEmail) || false;
+    
+    // If this is a login attempt and user doesn't exist, reject without sending OTP
+    if (!is_registration && !userExists) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'این شماره در سامانه ثبت نشده است',
+          user_exists: false
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // If this is a registration attempt and user already exists, reject without sending OTP
+    if (is_registration && userExists) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'این شماره قبلاً در سامانه ثبت شده است',
+          user_exists: true
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Check rate limit
     const { data: rateLimitOk, error: rateLimitError } = await supabase
