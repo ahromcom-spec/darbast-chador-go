@@ -119,18 +119,18 @@ const Home = () => {
     if (isIOS) {
       toast({
         title: 'نصب روی iOS',
-        description: 'در Safari روی دکمه اشتراک‌گذاری بزنید و گزینه "Add to Home Screen" را انتخاب کنید.'
-      });
-    } else {
-      toast({
-        title: 'راهنمای نصب',
-        description: 'از منوی مرورگر گزینه "Install" یا "Add to Home Screen" را انتخاب کنید.'
-      });
-    }
-  };
+          description: 'در Safari روی دکمه اشتراک‌گذاری بزنید و گزینه "Add to Home Screen" را انتخاب کنید.'
+        });
+      } else {
+        toast({
+          title: 'راهنمای نصب',
+          description: 'از منوی مرورگر گزینه "Install" یا "Add to Home Screen" را انتخاب کنید.'
+        });
+      }
+    };
 
   return (
-    <>
+    <div data-tour="create-project">
       {/* SEO Hidden Content */}
       <div className="sr-only">
         <h1>خدمات داربست فلزی اهرم - داربست فلزی در قم و سراسر ایران</h1>
@@ -399,7 +399,7 @@ const Home = () => {
           </div>
         </footer>
       </div>
-    </>
+    </div>
   );
 };
 

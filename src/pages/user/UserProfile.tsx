@@ -331,7 +331,7 @@ const fetchOrders = async () => {
 <TabsContent value="orders" className="mt-4">
   <div className="space-y-6">
     {/* Project Management Section - در سفارشات */}
-    <div className="space-y-4 p-4 rounded-lg border-2 border-primary/20 bg-card">
+    <div className="space-y-4 p-4 rounded-lg border-2 border-primary/20 bg-card" data-tour="my-projects">
       <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
         <FolderKanban className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
         <span>مدیریت پروژه‌ها</span>
@@ -378,7 +378,7 @@ const fetchOrders = async () => {
     ) : (
       <div className="space-y-6">
         {projectOrders.length > 0 && (
-          <div>
+          <div data-tour="my-orders">
             <h3 className="font-semibold mb-2">سفارشات ثبت شده</h3>
             <div className="rounded-md border overflow-hidden">
               <div className="overflow-x-auto">

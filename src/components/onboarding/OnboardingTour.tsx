@@ -1,45 +1,97 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Button } from '@/components/ui/button';
 import { X, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export const OnboardingTour = () => {
   const { isActive, currentStep, steps, nextStep, prevStep, skipTour } = useOnboarding();
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom' | 'left' | 'right' | 'center'>('center');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const [elementFound, setElementFound] = useState(false);
+  const navigationDone = useRef(false);
+  const retryCount = useRef(0);
 
   const currentStepData = steps[currentStep];
 
+  // Navigate to required page when step changes
+  useEffect(() => {
+    if (!isActive || !currentStepData) return;
+    
+    navigationDone.current = false;
+    retryCount.current = 0;
+
+    // Navigate if needed
+    if (currentStepData.navigateTo && location.pathname !== currentStepData.navigateTo) {
+      navigate(currentStepData.navigateTo);
+      // Wait a bit for navigation to complete
+      setTimeout(() => {
+        navigationDone.current = true;
+      }, 500);
+    } else {
+      navigationDone.current = true;
+    }
+  }, [currentStep, currentStepData, isActive, navigate, location.pathname]);
+
+  // Find and highlight the target element
   useEffect(() => {
     if (!isActive || !currentStepData) return;
 
-    if (currentStepData.target) {
-      const element = document.querySelector(currentStepData.target) as HTMLElement;
-      if (element) {
-        const rect = element.getBoundingClientRect();
-        setPosition({
-          top: rect.top + rect.height / 2,
-          left: rect.left + rect.width / 2,
-        });
-        setTooltipPosition(currentStepData.position || 'bottom');
+    const findAndHighlightElement = () => {
+      if (currentStepData.target) {
+        const element = document.querySelector(currentStepData.target) as HTMLElement;
+        
+        if (element) {
+          setElementFound(true);
+          retryCount.current = 0;
 
-        // اسکرول به المان
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const rect = element.getBoundingClientRect();
+          setPosition({
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+          });
 
-        // اضافه کردن highlight
-        element.classList.add('onboarding-highlight');
-        return () => {
-          element.classList.remove('onboarding-highlight');
-        };
+          // Scroll to element smoothly
+          setTimeout(() => {
+            element.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'center'
+            });
+          }, 100);
+
+          // Add highlight class
+          element.classList.add('onboarding-highlight');
+          
+          return () => {
+            element.classList.remove('onboarding-highlight');
+          };
+        } else if (currentStepData.waitForElement && retryCount.current < 20) {
+          // Retry finding element if it should exist
+          retryCount.current++;
+          setTimeout(findAndHighlightElement, 200);
+        } else {
+          setElementFound(false);
+        }
+      } else {
+        setElementFound(true);
       }
-    } else {
-      // مرکز صفحه
-      setPosition({
-        top: window.innerHeight / 2,
-        left: window.innerWidth / 2,
-      });
-      setTooltipPosition('center');
-    }
+    };
+
+    // Wait for navigation before finding element
+    const checkInterval = setInterval(() => {
+      if (navigationDone.current) {
+        clearInterval(checkInterval);
+        findAndHighlightElement();
+      }
+    }, 100);
+
+    return () => {
+      clearInterval(checkInterval);
+    };
   }, [isActive, currentStep, currentStepData]);
 
   if (!isActive || !currentStepData) return null;
@@ -57,17 +109,18 @@ export const OnboardingTour = () => {
         onClick={skipTour}
       />
 
-      {/* Spotlight برای هایلایت المان - با pointer-events-none برای عدم مسدود کردن کلیک */}
-      {currentStepData.target && (
+      {/* Spotlight برای هایلایت المان - جلوگیری از کلیک روی backdrop */}
+      {currentStepData.target && elementFound && (
         <div
-          className="fixed pointer-events-none z-[9997] transition-all duration-300"
+          className="fixed pointer-events-none z-[9997] transition-all duration-500 ease-out"
           style={{
-            top: position.top - 60,
-            left: position.left - 60,
-            width: 120,
-            height: 120,
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
-            borderRadius: '12px',
+            top: position.top - 8,
+            left: position.left - 8,
+            width: position.width + 16,
+            height: position.height + 16,
+            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 40px 8px hsl(var(--primary) / 0.6)',
+            borderRadius: '16px',
+            border: '3px solid hsl(var(--primary))',
           }}
         />
       )}
@@ -144,20 +197,22 @@ export const OnboardingTour = () => {
 
       </div>
 
-      {/* استایل برای highlight */}
+      {/* استایل برای highlight با انیمیشن قوی‌تر */}
       <style>{`
         .onboarding-highlight {
           position: relative;
           z-index: 9999 !important;
-          animation: pulse-highlight 2s ease-in-out infinite;
+          animation: pulse-highlight 1.5s ease-in-out infinite;
         }
 
         @keyframes pulse-highlight {
           0%, 100% {
-            box-shadow: 0 0 0 0 rgba(var(--primary), 0.7);
+            transform: scale(1);
+            filter: brightness(1);
           }
           50% {
-            box-shadow: 0 0 0 15px rgba(var(--primary), 0);
+            transform: scale(1.02);
+            filter: brightness(1.1);
           }
         }
       `}</style>
