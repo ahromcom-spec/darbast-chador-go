@@ -105,7 +105,7 @@ export const OnboardingTour = () => {
     <>
       {/* Backdrop با تاریکی ملایم */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] animate-fade-in"
+        className="hidden"
         onClick={skipTour}
       />
 
@@ -118,7 +118,7 @@ export const OnboardingTour = () => {
             left: position.left - 8,
             width: position.width + 16,
             height: position.height + 16,
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 40px 8px hsl(var(--primary) / 0.6)',
+            boxShadow: '0 0 0 0 rgba(0, 0, 0, 0), 0 0 30px 6px hsl(var(--primary) / 0.5)',
             borderRadius: '16px',
             border: '3px solid hsl(var(--primary))',
           }}
