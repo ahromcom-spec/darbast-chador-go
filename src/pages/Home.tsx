@@ -224,7 +224,7 @@ const Home = () => {
         <main className="flex-1 flex items-start md:items-center justify-center py-4 sm:py-6 md:py-8 px-4 sm:px-6 relative z-10" role="main">
           <article className="w-full max-w-2xl mt-2 sm:mt-4 md:mt-0">
             {/* Service Selection Card */}
-            <Card className="shadow-xl md:shadow-2xl persian-slide bg-card/95 backdrop-blur-md border-2 smooth-hover" data-tour="create-project">
+            <Card className="shadow-xl md:shadow-2xl bg-card/95 backdrop-blur-md border-2" data-tour="create-project">
               <CardHeader className="text-center pb-3 sm:pb-4 md:pb-6 px-4 sm:px-6">
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight tracking-tight primary-gradient bg-clip-text text-transparent mb-2 whitespace-nowrap">
                   خدمات ساختمانی و منزل خود را انتخاب کنید
@@ -242,7 +242,7 @@ const Home = () => {
                 ) : (
                   <>
                     {/* Service Type Selection */}
-                    <div className="space-y-2.5 sm:space-y-3 slide-up">
+                    <div className="space-y-2.5 sm:space-y-3">
                       <label htmlFor="service-type-select" className="text-xs sm:text-sm font-medium text-foreground block">
                         انتخاب نوع خدمات:
                       </label>
@@ -256,7 +256,7 @@ const Home = () => {
 
                     {/* Show Projects and Actions when service is selected */}
                     {selectedServiceType && selectedSubcategory && (
-                      <section className="space-y-3 sm:space-y-4 p-4 sm:p-5 md:p-6 bg-secondary/50 rounded-lg border-2 border-construction/20 scale-in">
+                      <section className="space-y-3 sm:space-y-4 p-4 sm:p-5 md:p-6 bg-secondary/50 rounded-lg border-2 border-construction/20">
                         <div className="flex items-center gap-2 sm:gap-2.5">
                           <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
                           <h3 className="font-semibold text-primary text-sm sm:text-base">
@@ -286,8 +286,8 @@ const Home = () => {
                                         {matchingProjects.map((project) => (
                                           <button
                                             key={project.id}
-                                            onClick={() => handleProjectSelect(project.id)}
-                                            className="w-full text-right p-3 rounded-lg border-2 border-primary/40 hover:border-primary hover:bg-primary/10 transition-all smooth-hover"
+                                           onClick={() => handleProjectSelect(project.id)}
+                                            className="w-full text-right p-3 rounded-lg border-2 border-primary/40 hover:border-primary hover:bg-primary/10 transition-all"
                                           >
                                             <div className="flex items-start gap-2">
                                               <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
