@@ -80,6 +80,7 @@ export default function ComprehensiveScaffoldingForm({
   const serviceTypeId = propServiceTypeId || navState?.serviceTypeId;
   const subcategoryId = propSubcategoryId || navState?.subcategoryId;
 
+  const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade'>('facade');
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab'>('facade');
   const address = prefilledAddress || navState?.locationAddress || '';
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '' }]);
@@ -467,6 +468,41 @@ export default function ComprehensiveScaffoldingForm({
   return (
     <div className="space-y-6">
       <h1 className="sr-only">فرم ثبت سفارش داربست</h1>
+
+      {/* نوع داربست */}
+      <Card>
+        <CardHeader>
+          <CardTitle>نوع خدمات داربست</CardTitle>
+          <CardDescription>نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="scaffold-type-select">انتخاب نوع داربست:</Label>
+            <Select
+              value={scaffoldType}
+              onValueChange={(value: 'formwork' | 'ceiling' | 'facade') => {
+                setScaffoldType(value);
+                if (value === 'formwork') {
+                  setActiveService('formwork');
+                } else if (value === 'ceiling') {
+                  setActiveService('ceiling-tiered');
+                } else {
+                  setActiveService('facade');
+                }
+              }}
+            >
+              <SelectTrigger id="scaffold-type-select" className="w-full bg-background">
+                <SelectValue placeholder="نوع داربست را انتخاب کنید" />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                <SelectItem value="facade">داربست سطحی نما</SelectItem>
+                <SelectItem value="formwork">داربست کفراژ</SelectItem>
+                <SelectItem value="ceiling">داربست زیر بتن (سقف)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Dimensions */}
       <Card>
