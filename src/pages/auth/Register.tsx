@@ -131,6 +131,16 @@ export default function Register() {
       return;
     }
 
+    // Even if no error, backend may signal existing account (anti-enumeration)
+    if (userExists === true) {
+      setStep('already-registered');
+      toast({
+        title: 'حساب موجود است',
+        description: 'این شماره قبلاً ثبت‌نام شده است. لطفاً وارد شوید.',
+      });
+      return;
+    }
+
     toast({
       title: 'موفق',
       description: 'کد تایید به شماره شما ارسال شد.',

@@ -117,6 +117,16 @@ export default function Login() {
       return;
     }
 
+    // Even if no error, backend may indicate user is not registered (anti-enumeration)
+    if (userExists === false) {
+      setStep('not-registered');
+      toast({
+        title: 'نیاز به ثبت‌نام',
+        description: 'این شماره در سامانه ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+      });
+      return;
+    }
+
     toast({
       title: 'موفق',
       description: 'کد تایید به شماره شما ارسال شد.',

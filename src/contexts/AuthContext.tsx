@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error };
       }
 
-      // Check if there's an error in the response data
+      // Return potential user existence flag and any error from function
       if (data?.error) {
         return { 
           error: { message: data.error },
@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
       }
 
-      return { error: null };
+      return { error: null, userExists: data?.user_exists };
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Error sending OTP:', error);
