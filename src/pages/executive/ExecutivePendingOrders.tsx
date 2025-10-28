@@ -95,6 +95,7 @@ export default function ExecutivePendingOrders() {
     if (!selectedOrder || !user) return;
 
     try {
+      // Record executive manager approval
       const { error } = await supabase
         .from('order_approvals')
         .update({
@@ -108,7 +109,7 @@ export default function ExecutivePendingOrders() {
 
       toast({
         title: '✓ تایید شما ثبت شد',
-        description: `تایید شما برای سفارش ${selectedOrder.code} ثبت شد.`
+        description: `تایید شما برای سفارش ${selectedOrder.code} ثبت شد. سفارش برای تایید نهایی مدیرعامل ارسال شد.`
       });
 
       setActionType(null);

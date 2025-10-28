@@ -124,7 +124,27 @@ export const CEOOrders = () => {
 
   const handleApprove = async (order: Order) => {
     try {
-      // Record CEO approval in order_approvals table
+      // Check if all previous approvals are done
+      const { data: approvals, error: fetchError } = await supabase
+        .from('order_approvals')
+        .select('*')
+        .eq('order_id', order.id)
+        .order('created_at', { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      // Find CEO approval
+      const ceoApproval = approvals?.find(a => a.approver_role === 'ceo');
+      if (!ceoApproval) {
+        toast({
+          variant: 'destructive',
+          title: 'خطا',
+          description: 'رکورد تایید مدیرعامل یافت نشد'
+        });
+        return;
+      }
+
+      // Record CEO approval
       const { error: approvalError } = await supabase
         .from('order_approvals')
         .update({
@@ -136,10 +156,34 @@ export const CEOOrders = () => {
 
       if (approvalError) throw approvalError;
 
-      toast({
-        title: 'تایید شما ثبت شد',
-        description: `تایید شما برای سفارش ${order.code} ثبت شد.`,
-      });
+      // Check if this was the last approval needed
+      const allApproved = approvals?.every(a => 
+        a.approver_role === 'ceo' || a.approved_at !== null
+      );
+
+      // If all approvals are done, update order status to approved
+      if (allApproved) {
+        const { error: updateError } = await supabase
+          .from('projects_v3')
+          .update({
+            status: 'approved',
+            approved_by: user?.id,
+            approved_at: new Date().toISOString()
+          })
+          .eq('id', order.id);
+
+        if (updateError) throw updateError;
+
+        toast({
+          title: '✓ سفارش تایید نهایی شد',
+          description: `سفارش ${order.code} توسط شما تایید و به مرحله اجرا ارسال شد.`,
+        });
+      } else {
+        toast({
+          title: '✓ تایید شما ثبت شد',
+          description: `تایید شما برای سفارش ${order.code} ثبت شد.`,
+        });
+      }
 
       fetchOrders();
       setSelectedOrder(null);

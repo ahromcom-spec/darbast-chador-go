@@ -3,11 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Package, MapPin, Calendar, FileText } from 'lucide-react';
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
+import { OrderWorkflowStatus } from '@/components/orders/OrderWorkflowStatus';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -77,18 +77,7 @@ export default function MyOrders() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      draft: { label: 'پیش‌نویس', variant: 'outline' },
-      pending: { label: 'در انتظار تایید', variant: 'secondary' },
-      approved: { label: 'تایید شده', variant: 'default' },
-      in_progress: { label: 'در حال اجرا', variant: 'default' },
-      completed: { label: 'تکمیل شده', variant: 'default' },
-      paid: { label: 'پرداخت شده', variant: 'default' },
-      closed: { label: 'بسته شده', variant: 'default' },
-      rejected: { label: 'رد شده', variant: 'destructive' }
-    };
-    const { label, variant } = statusMap[status] || { label: status, variant: 'outline' };
-    return <Badge variant={variant}>{label}</Badge>;
+    return <OrderWorkflowStatus status={status} />;
   };
 
   const OrderCard = ({ order }: { order: Order }) => {

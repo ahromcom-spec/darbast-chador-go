@@ -30,6 +30,7 @@ const ContractorManagement = lazy(() => import("@/pages/admin/ContractorManageme
 const StaffManagement = lazy(() => import("@/pages/admin/StaffManagement"));
 const CEOLayout = lazy(() => import("@/pages/ceo/CEOLayout").then(m => ({ default: m.CEOLayout })));
 const CEODashboard = lazy(() => import("@/pages/ceo/CEODashboard").then(m => ({ default: m.CEODashboard })));
+const CEODashboardEnhanced = lazy(() => import("@/pages/ceo/CEODashboardEnhanced"));
 const PhoneWhitelistManagement = lazy(() => import("@/pages/ceo/PhoneWhitelistManagement").then(m => ({ default: m.PhoneWhitelistManagement })));
 const ContractorVerifications = lazy(() => import("@/pages/ceo/ContractorVerifications").then(m => ({ default: m.ContractorVerifications })));
 const StaffVerifications = lazy(() => import("@/pages/ceo/StaffVerifications").then(m => ({ default: m.StaffVerifications })));
@@ -203,7 +204,8 @@ const App = () => {
                 <Route path="whitelist" element={<WhitelistManagement />} />
               </Route>
               <Route path="/ceo" element={<CEOLayout />}>
-                <Route index element={<CEODashboard />} />
+                <Route index element={<CEODashboardEnhanced />} />
+                <Route path="dashboard-old" element={<CEODashboard />} />
                 <Route path="whitelist" element={<PhoneWhitelistManagement />} />
                 <Route path="contractor-verifications" element={<ContractorVerifications />} />
                 <Route path="staff-verifications" element={<StaffVerifications />} />
