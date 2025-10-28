@@ -2,7 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { GeneralManagerSidebar } from '@/components/GeneralManagerSidebar';
-import { PageGuide } from '@/components/common/PageGuide';
+
 
 export default function AdminLayout() {
   const location = useLocation();
@@ -20,7 +20,7 @@ export default function AdminLayout() {
             </h1>
           </header>
           <main className="flex-1 p-6">
-            <PageGuide />
+            
             <Outlet />
           </main>
         </div>

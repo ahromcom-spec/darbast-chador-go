@@ -4,7 +4,7 @@ import { CEOSidebar } from '@/components/ceo/CEOSidebar';
 import Header from '@/components/Header';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { PageGuide } from '@/components/common/PageGuide';
+
 
 export const CEOLayout = () => {
   const { user, loading: authLoading } = useAuth();
@@ -65,7 +65,7 @@ export const CEOLayout = () => {
       <div className="flex">
         <CEOSidebar />
         <main className="flex-1 p-6">
-          <PageGuide />
+          
           <Outlet />
         </main>
       </div>

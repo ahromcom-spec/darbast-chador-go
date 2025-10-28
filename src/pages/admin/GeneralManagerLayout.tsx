@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { GeneralManagerSidebar } from '@/components/GeneralManagerSidebar';
-import { PageGuide } from '@/components/common/PageGuide';
+
 
 export default function GeneralManagerLayout() {
   return (
@@ -14,7 +14,7 @@ export default function GeneralManagerLayout() {
             <h1 className="text-lg font-semibold">پنل مدیرعامل احرم</h1>
           </header>
           <main className="flex-1 p-6">
-            <PageGuide />
+            
             <Outlet />
           </main>
         </div>

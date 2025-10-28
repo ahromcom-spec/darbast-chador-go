@@ -8,7 +8,7 @@ import { LogOut, Menu, PanelLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useMediaQuery } from '@/hooks/useResponsive';
-import { PageGuide } from '@/components/common/PageGuide';
+
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -105,7 +105,7 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
           {/* Page Content */}
           <main className="flex-1 w-full">
             <div className="container mx-auto py-4 sm:py-6 px-4">
-              <PageGuide />
+              
               {children}
             </div>
           </main>
