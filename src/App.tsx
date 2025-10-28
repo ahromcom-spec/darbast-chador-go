@@ -13,7 +13,7 @@ import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { PWAInstallBanner } from "@/components/common/PWAInstallBanner";
 import { NotificationBanner } from "@/components/common/NotificationBanner";
-import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+
 import Header from "./components/Header";
 import Home from "./pages/Home";
 
@@ -106,7 +106,7 @@ const App = () => {
               <OfflineIndicator />
               <NotificationBanner />
               <PWAInstallBanner />
-              <OnboardingTour />
+              
               <Suspense fallback={<PageLoader />}>
                 <div className="min-h-screen bg-background">
                   <Header />
