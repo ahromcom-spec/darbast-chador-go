@@ -216,6 +216,13 @@ const fetchOrders = async () => {
     return type === 'with-materials' ? 'به همراه اجناس' : 'بدون اجناس';
   };
 
+  // Safely format dates to avoid runtime errors on invalid/empty values
+  const formatDate = (d?: string | null) => {
+    if (!d) return '-';
+    const t = new Date(d);
+    return isNaN(t.getTime()) ? '-' : t.toLocaleDateString('fa-IR');
+  };
+
   if (loading || !user) {
     return (
       <MainLayout>
@@ -364,10 +371,9 @@ const fetchOrders = async () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {projectOrders.map((po) => (
                       <TableRow key={po.id}>
                         <TableCell className="whitespace-nowrap text-sm">
-                          {new Date(po.created_at).toLocaleDateString('fa-IR')}
+                          {formatDate(po.created_at)}
                         </TableCell>
                         <TableCell dir="ltr" className="whitespace-nowrap text-sm">
                           {po.code}
