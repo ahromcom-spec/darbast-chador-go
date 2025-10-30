@@ -10,23 +10,22 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Home } from 'lucide-react';
 import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'نام و نام خانوادگی باید حداقل 2 کاراکتر باشد' }),
   phone: z.string()
     .length(11, { message: 'شماره موبایل باید 11 رقم باشد' })
     .regex(/^09\d{9}$/, { message: 'فرمت صحیح: 09123456789' }),
-  email: z.string().email({ message: 'ایمیل نامعتبر است' }).optional().or(z.literal('')),
 });
 
 export default function Register() {
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [step, setStep] = useState<'info' | 'otp' | 'already-registered'>('info');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ fullName?: string; phone?: string; email?: string; otp?: string }>({});
+  const [errors, setErrors] = useState<{ fullName?: string; phone?: string; otp?: string }>({});
   const [countdown, setCountdown] = useState(90);
   
   const { user, sendOTP, verifyOTP } = useAuth();
@@ -94,7 +93,7 @@ export default function Register() {
     setErrors({});
 
     try {
-      registerSchema.parse({ fullName, phone: phoneNumber, email });
+      registerSchema.parse({ fullName, phone: phoneNumber });
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: any = {};
@@ -110,33 +109,44 @@ export default function Register() {
 
     setLoading(true);
 
-    const { error, userExists } = await sendOTP(phoneNumber, true);
-    
-    setLoading(false);
+    // Check if user already exists in profiles table before sending OTP
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('phone_number')
+      .eq('phone_number', phoneNumber)
+      .maybeSingle();
 
-    if (error) {
-      const errorMessage = error.message || 'خطا در ارسال کد تایید';
-      
-      // If user already exists, show login prompt
-      if (errorMessage.includes('قبلاً ثبت') || errorMessage.includes('قبلا ثبت') || userExists === true) {
-        setStep('already-registered');
-        return;
-      }
-      
+    if (profileError && profileError.code !== 'PGRST116') {
+      setLoading(false);
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: errorMessage,
+        description: 'خطا در بررسی اطلاعات. لطفاً دوباره تلاش کنید.',
       });
       return;
     }
 
-    // Even if no error, backend may signal existing account (anti-enumeration)
-    if (userExists === true) {
+    // If profile found with this phone number, user already registered
+    if (profileData) {
+      setLoading(false);
       setStep('already-registered');
       toast({
         title: 'حساب موجود است',
-        description: 'این شماره قبلاً ثبت‌نام شده است. لطفاً وارد شوید.',
+        description: 'شما قبلاً ثبت‌نام کرده‌اید. لطفاً وارد شوید.',
+      });
+      return;
+    }
+
+    // User doesn't exist, proceed with registration
+    const { error } = await sendOTP(phoneNumber, true);
+    
+    setLoading(false);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: error.message || 'خطا در ارسال کد تایید',
       });
       return;
     }
@@ -304,22 +314,6 @@ export default function Register() {
                 />
                 {errors.phone && (
                   <p className="text-sm text-destructive">{errors.phone}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">ایمیل (اختیاری)</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="example@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  dir="ltr"
-                  className={errors.email ? 'border-destructive' : ''}
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
                 )}
               </div>
             </CardContent>

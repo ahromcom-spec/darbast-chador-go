@@ -10,6 +10,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Home } from 'lucide-react';
 import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
 
 const phoneSchema = z.object({
   phone: z.string()
@@ -96,33 +97,44 @@ export default function Login() {
 
     setLoading(true);
 
-    const { error, userExists } = await sendOTP(phoneNumber, false);
-    
-    setLoading(false);
+    // Check if user exists in profiles table before sending OTP
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('phone_number')
+      .eq('phone_number', phoneNumber)
+      .maybeSingle();
 
-    if (error) {
-      const errorMessage = error.message || 'خطا در ارسال کد تایید';
-      
-      // If user doesn't exist, show registration prompt
-      if (errorMessage.includes('ثبت نشده') || userExists === false) {
-        setStep('not-registered');
-        return;
-      }
-      
+    if (profileError && profileError.code !== 'PGRST116') {
+      setLoading(false);
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: errorMessage,
+        description: 'خطا در بررسی اطلاعات. لطفاً دوباره تلاش کنید.',
       });
       return;
     }
 
-    // Even if no error, backend may indicate user is not registered (anti-enumeration)
-    if (userExists === false) {
+    // If no profile found with this phone number
+    if (!profileData) {
+      setLoading(false);
       setStep('not-registered');
       toast({
         title: 'نیاز به ثبت‌نام',
         description: 'این شماره در سامانه ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+      });
+      return;
+    }
+
+    // User exists, proceed with sending OTP
+    const { error } = await sendOTP(phoneNumber, false);
+    
+    setLoading(false);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: error.message || 'خطا در ارسال کد تایید',
       });
       return;
     }
