@@ -109,44 +109,23 @@ export default function Register() {
 
     setLoading(true);
 
-    // Check if user already exists in profiles table before sending OTP
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('phone_number')
-      .eq('phone_number', phoneNumber)
-      .maybeSingle();
+    // Skip client-side profile existence check due to RLS restrictions.
+    // Rely on backend (send-otp) to return user_exists and friendly messages.
 
-    if (profileError && profileError.code !== 'PGRST116') {
-      setLoading(false);
-      toast({
-        variant: 'destructive',
-        title: 'خطا',
-        description: 'خطا در بررسی اطلاعات. لطفاً دوباره تلاش کنید.',
-      });
-      return;
-    }
-
-    // If profile found with this phone number, user already registered
-    if (profileData) {
-      setLoading(false);
-      setStep('already-registered');
-      toast({
-        title: 'حساب موجود است',
-        description: 'شما قبلاً ثبت‌نام کرده‌اید. لطفاً وارد شوید.',
-      });
-      return;
-    }
-
-    // User doesn't exist, proceed with registration
     const { error } = await sendOTP(phoneNumber, true);
     
     setLoading(false);
 
     if (error) {
+      const msg = error.message || 'خطا در ارسال کد تایید';
+      // If backend indicates this phone already has an account, guide user to login
+      if (msg.includes('قبلاً') || msg.includes('قبلا')) {
+        setStep('already-registered');
+      }
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: error.message || 'خطا در ارسال کد تایید',
+        description: msg,
       });
       return;
     }

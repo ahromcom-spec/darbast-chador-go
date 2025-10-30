@@ -131,10 +131,15 @@ export default function Login() {
     setLoading(false);
 
     if (error) {
+      const msg = error.message || 'خطا در ارسال کد تایید';
+      // If backend indicates phone is not registered, guide user to registration
+      if (msg.includes('ثبت نشده')) {
+        setStep('not-registered');
+      }
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: error.message || 'خطا در ارسال کد تایید',
+        description: msg,
       });
       return;
     }

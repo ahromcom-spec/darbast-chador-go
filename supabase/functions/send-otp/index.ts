@@ -113,29 +113,45 @@ serve(async (req) => {
     
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
     
-    // Check if user exists in auth.users table
-    const { data: existingUser } = await supabase.auth.admin.listUsers();
-    const userExists = existingUser?.users?.some(u => u.email === derivedEmail) || false;
+    // Robust check: see if user already exists (by derived email) and also via profiles table
+    let userExists = false;
+    try {
+      const { data: page1 } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      userExists = !!page1?.users?.some((u: any) => (u.email || '').toLowerCase() === derivedEmail.toLowerCase());
+    } catch (_) {
+      // ignore admin errors and fall back to profiles lookup
+    }
+
+    if (!userExists) {
+      const { data: profileMatch } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle();
+      userExists = !!profileMatch;
+    }
     
-    // If this is a login attempt and user doesn't exist, reject without sending OTP
+    // If this is a login attempt and user doesn't exist, return a friendly message (200 to allow frontend handling)
     if (!is_registration && !userExists) {
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: 'این شماره در سامانه ثبت نشده است',
           user_exists: false
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // If this is a registration attempt and user already exists, reject without sending OTP
+    // If this is a registration attempt and user already exists, return friendly message (200)
     if (is_registration && userExists) {
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: 'این شماره قبلاً در سامانه ثبت شده است',
           user_exists: true
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
