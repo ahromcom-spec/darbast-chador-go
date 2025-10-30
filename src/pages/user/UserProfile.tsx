@@ -371,6 +371,7 @@ const fetchOrders = async () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {projectOrders.map((po) => (
                       <TableRow key={po.id}>
                         <TableCell className="whitespace-nowrap text-sm">
                           {formatDate(po.created_at)}
