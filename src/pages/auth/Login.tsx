@@ -126,15 +126,20 @@ export default function Login() {
     }
 
     // User exists, proceed with sending OTP
-    const { error } = await sendOTP(phoneNumber, false);
+    const { error, userExists } = await sendOTP(phoneNumber, false);
     
     setLoading(false);
 
     if (error) {
       const msg = error.message || 'خطا در ارسال کد تایید';
       // If backend indicates phone is not registered, guide user to registration
-      if (msg.includes('ثبت نشده')) {
+      if (msg.includes('ثبت نشده') || userExists === false) {
         setStep('not-registered');
+        toast({
+          title: 'حساب یافت نشد',
+          description: 'این شماره در سامانه ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+        });
+        return;
       }
       toast({
         variant: 'destructive',

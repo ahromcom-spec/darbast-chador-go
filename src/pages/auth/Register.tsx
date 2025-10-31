@@ -109,18 +109,20 @@ export default function Register() {
 
     setLoading(true);
 
-    // Skip client-side profile existence check due to RLS restrictions.
-    // Rely on backend (send-otp) to return user_exists and friendly messages.
-
-    const { error } = await sendOTP(phoneNumber, true);
+    const { error, userExists } = await sendOTP(phoneNumber, true);
     
     setLoading(false);
 
     if (error) {
       const msg = error.message || 'خطا در ارسال کد تایید';
       // If backend indicates this phone already has an account, guide user to login
-      if (msg.includes('قبلاً') || msg.includes('قبلا')) {
+      if (msg.includes('قبلاً') || msg.includes('قبلا') || userExists === true) {
         setStep('already-registered');
+        toast({
+          title: 'حساب موجود است',
+          description: 'شما قبلاً ثبت‌نام کرده‌اید. لطفاً وارد شوید.',
+        });
+        return;
       }
       toast({
         variant: 'destructive',
