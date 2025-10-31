@@ -113,14 +113,24 @@ export default function Register() {
     
     setLoading(false);
 
+    // اگر این شماره قبلاً ثبت‌نام کرده باشد، مستقیماً کاربر را به ورود هدایت کنیم
+    if (userExists === true && !error) {
+      setStep('already-registered');
+      toast({
+        title: 'این شماره قبلاً ثبت‌نام شده است',
+        description: 'لطفاً از بخش ورود وارد سامانه شوید.',
+      });
+      return;
+    }
+
     if (error) {
       const msg = error.message || 'خطا در ارسال کد تایید';
       // If backend indicates this phone already has an account, guide user to login
       if (msg.includes('قبلاً') || msg.includes('قبلا') || userExists === true) {
         setStep('already-registered');
         toast({
-          title: 'حساب موجود است',
-          description: 'شما قبلاً ثبت‌نام کرده‌اید. لطفاً وارد شوید.',
+          title: 'این شماره قبلاً ثبت‌نام شده است',
+          description: 'لطفاً از بخش ورود وارد سامانه شوید.',
         });
         return;
       }
