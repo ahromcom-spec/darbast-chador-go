@@ -97,49 +97,63 @@ export default function Login() {
 
     setLoading(true);
 
-    // ارسال کد تایید بدون بررسی اولیه پروفایل — بک‌اند خودش وضعیت ثبت‌نام را تعیین می‌کند
+// ارسال کد تایید بدون بررسی اولیه پروفایل — بک‌اند خودش وضعیت ثبت‌نام را تعیین می‌کند
     const { error, userExists } = await sendOTP(phoneNumber, false);
     
     setLoading(false);
 
+    // اگر کاربر ثبت‌نام نکرده باشد (چه در پاسخ موفق چه خطا)، پیام راهنمای ثبت‌نام نمایش دهیم
+    const needsRegistration = userExists === false;
+
     if (error) {
       const msg = error.message || 'خطا در ارسال کد تایید';
-      // If backend indicates phone is not registered, guide user to registration
-      if (msg.includes('ثبت نشده') || userExists === false) {
-        navigate('/auth/register', { state: { phone: phoneNumber } });
+      const isGenericEdgeError = /non-2xx|Edge Function returned/i.test(msg);
+      if (needsRegistration || isGenericEdgeError || msg.includes('ثبت نشده')) {
+        setStep('not-registered');
         toast({
           title: 'نیاز به ثبت‌نام',
-          description: 'شماره شما در سامانه یافت نشد. لطفاً ثبت‌نام را تکمیل کنید.',
+          description: 'برای ورود به سامانه، ابتدا ثبت‌نام کنید.',
         });
         return;
       }
+      toast({ variant: 'destructive', title: 'خطا', description: msg });
+      return;
+    }
+
+    if (needsRegistration) {
+      setStep('not-registered');
       toast({
-        variant: 'destructive',
-        title: 'خطا',
-        description: msg,
+        title: 'نیاز به ثبت‌نام',
+        description: 'برای ورود به سامانه، ابتدا ثبت‌نام کنید.',
       });
       return;
     }
 
-    toast({
-      title: 'موفق',
-      description: 'کد تایید به شماره شما ارسال شد.',
-    });
+    toast({ title: 'موفق', description: 'کد تایید به شماره شما ارسال شد.' });
     setCountdown(90);
     setStep('otp');
   };
 
-  const handleResendOTP = async () => {
+const handleResendOTP = async () => {
     setLoading(true);
-    const { error } = await sendOTP(phoneNumber, false);
+    const { error, userExists } = await sendOTP(phoneNumber, false);
     setLoading(false);
 
     if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'خطا',
-        description: 'خطا در ارسال مجدد کد تایید.',
-      });
+      const msg = error.message || 'خطا در ارسال مجدد کد تایید.';
+      const isGenericEdgeError = /non-2xx|Edge Function returned/i.test(msg);
+      if (userExists === false || isGenericEdgeError || msg.includes('ثبت نشده')) {
+        setStep('not-registered');
+        toast({ title: 'نیاز به ثبت‌نام', description: 'برای ورود به سامانه، ابتدا ثبت‌نام کنید.' });
+        return;
+      }
+      toast({ variant: 'destructive', title: 'خطا', description: msg });
+      return;
+    }
+
+    if (userExists === false) {
+      setStep('not-registered');
+      toast({ title: 'نیاز به ثبت‌نام', description: 'برای ورود به سامانه، ابتدا ثبت‌نام کنید.' });
       return;
     }
 
@@ -169,8 +183,9 @@ export default function Login() {
 
     if (error) {
       const errorMessage = error.message || 'کد تایید نامعتبر است.';
+      const isGenericEdgeError = /non-2xx|Edge Function returned/i.test(errorMessage);
       // If backend says number is not registered, guide user to registration step
-      if (errorMessage.includes('ثبت نشده')) {
+      if (errorMessage.includes('ثبت نشده') || isGenericEdgeError) {
         navigate('/auth/register', { state: { phone: phoneNumber } });
         toast({ title: 'نیاز به ثبت‌نام', description: 'برای ادامه، لطفاً ثبت‌نام کنید.' });
         return;
