@@ -97,35 +97,7 @@ export default function Login() {
 
     setLoading(true);
 
-    // Check if user exists in profiles table before sending OTP
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('phone_number')
-      .eq('phone_number', phoneNumber)
-      .maybeSingle();
-
-    if (profileError && profileError.code !== 'PGRST116') {
-      setLoading(false);
-      toast({
-        variant: 'destructive',
-        title: 'خطا',
-        description: 'خطا در بررسی اطلاعات. لطفاً دوباره تلاش کنید.',
-      });
-      return;
-    }
-
-    // If no profile found with this phone number
-    if (!profileData) {
-      setLoading(false);
-      setStep('not-registered');
-      toast({
-        title: 'نیاز به ثبت‌نام',
-        description: 'این شماره در سامانه ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
-      });
-      return;
-    }
-
-    // User exists, proceed with sending OTP
+    // ارسال کد تایید بدون بررسی اولیه پروفایل — بک‌اند خودش وضعیت ثبت‌نام را تعیین می‌کند
     const { error, userExists } = await sendOTP(phoneNumber, false);
     
     setLoading(false);
@@ -134,10 +106,10 @@ export default function Login() {
       const msg = error.message || 'خطا در ارسال کد تایید';
       // If backend indicates phone is not registered, guide user to registration
       if (msg.includes('ثبت نشده') || userExists === false) {
-        setStep('not-registered');
+        navigate('/auth/register', { state: { phone: phoneNumber } });
         toast({
-          title: 'حساب یافت نشد',
-          description: 'این شماره در سامانه ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.',
+          title: 'نیاز به ثبت‌نام',
+          description: 'شماره شما در سامانه یافت نشد. لطفاً ثبت‌نام را تکمیل کنید.',
         });
         return;
       }
@@ -199,7 +171,8 @@ export default function Login() {
       const errorMessage = error.message || 'کد تایید نامعتبر است.';
       // If backend says number is not registered, guide user to registration step
       if (errorMessage.includes('ثبت نشده')) {
-        setStep('not-registered');
+        navigate('/auth/register', { state: { phone: phoneNumber } });
+        toast({ title: 'نیاز به ثبت‌نام', description: 'برای ادامه، لطفاً ثبت‌نام کنید.' });
         return;
       }
       toast({
