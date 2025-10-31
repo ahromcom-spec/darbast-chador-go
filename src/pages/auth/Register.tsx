@@ -125,8 +125,9 @@ export default function Register() {
 
     if (error) {
       const msg = error.message || 'خطا در ارسال کد تایید';
-      // If backend indicates this phone already has an account, guide user to login
-      if (msg.includes('قبلاً') || msg.includes('قبلا') || userExists === true) {
+      // اگر بک‌اند یا خطای عمومی نشان دهد کاربر وجود دارد، کاربر را به ورود هدایت کنیم
+      const isGenericEdgeError = /non-2xx|Edge Function returned/i.test(msg || '');
+      if (msg.includes('قبلاً') || msg.includes('قبلا') || userExists === true || isGenericEdgeError) {
         setStep('already-registered');
         toast({
           title: 'این شماره قبلاً ثبت‌نام شده است',
