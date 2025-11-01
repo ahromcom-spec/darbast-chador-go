@@ -186,7 +186,7 @@ const Header = () => {
             <div className="flex items-center gap-4 justify-start">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity" aria-label="تماس">
+                  <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity md:-translate-x-6 lg:translate-x-0" aria-label="تماس">
                     <img 
                       src={contactButton} 
                       alt="تماس" 
