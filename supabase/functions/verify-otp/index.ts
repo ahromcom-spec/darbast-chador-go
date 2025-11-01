@@ -124,16 +124,8 @@ serve(async (req) => {
     // Build a strong per-login password from OTP to satisfy password policy
     const loginPassword = `otp-${normalizedCode}-x`;
 
-    // For test phones only, bypass OTP verification if code is 12345
+    // For test phones, verify against database OTP like regular phones
     if (isTestPhone) {
-      // Check if code is the test code (12345)
-      if (normalizedCode !== '12345') {
-        return new Response(
-          JSON.stringify({ error: 'کد تایید نامعتبر است. برای شماره‌های تست از کد 12345 استفاده کنید.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
       // Check if phone is in whitelist
       const { data: whitelistData } = await supabase
         .from('phone_whitelist')
@@ -148,13 +140,37 @@ serve(async (req) => {
         );
       }
       
-      // Security: No phone logging
+      // Verify OTP code from database (same as real phones)
+      const { data: isValid, error: verifyError } = await supabase
+        .rpc('verify_otp_code', { 
+          _phone_number: normalizedPhone, 
+          _code: normalizedCode 
+        });
+
+      if (verifyError) {
+        console.error('OTP verification error');
+        return new Response(
+          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!isValid) {
+        return new Response(
+          JSON.stringify({ error: 'کد تایید نامعتبر یا منقضی شده است' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Mark OTP as verified
+      await supabase
+        .from('otp_codes')
+        .update({ verified: true })
+        .eq('phone_number', normalizedPhone)
+        .eq('code', normalizedCode);
     } else {
-      // For whitelisted phones (management), accept code 12345 in test mode
-      if (isWhitelistedPhone && normalizedCode === '12345') {
-        // Accept the test code for whitelisted phones
-        console.log('Test code 12345 accepted for whitelisted phone');
-      } else {
+      // For whitelisted phones, verify against database (no hardcoded test codes)
+      if (isWhitelistedPhone) {
         // All other real phones must use proper OTP verification
         const { data: isValid, error: verifyError } = await supabase
           .rpc('verify_otp_code', { 

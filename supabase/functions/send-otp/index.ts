@@ -74,8 +74,8 @@ serve(async (req) => {
       // For test phones only (development), use as-is
       maskedPhone = normalizedPhone;
       
-      // For test phones, skip SMS sending - just store OTP in database with fixed code
-      const code = '11111';
+      // For test phones, generate a random OTP code (not hardcoded)
+      const code = Math.floor(10000 + Math.random() * 90000).toString();
       const expiresAt = new Date(Date.now() + 90 * 1000);
       
       await supabase
