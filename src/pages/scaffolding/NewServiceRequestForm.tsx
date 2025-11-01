@@ -341,8 +341,14 @@ export default function NewServiceRequestForm() {
 
       // اتوماسیون اداری حالا با database trigger اجرا می‌شود (order-automation function حذف شد)
 
-      // انتقال به داشبورد پروژه‌ها
-      navigate('/user/projects');
+      // انتقال به داشبورد پروژه‌ها با باز کردن خودکار آدرس، پروژه و هایلایت سفارش
+      navigate('/user/projects', {
+        state: {
+          expandLocationId: locationId,
+          expandProjectId: hierarchyProjectId,
+          highlightOrderId: createdProject.id
+        }
+      });
     } catch (error: any) {
       console.error('Error creating project:', error);
       toast.error('خطا در ثبت درخواست: ' + error.message);
