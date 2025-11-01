@@ -3,12 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 export function PWAInstallBanner() {
-  const { canInstall, isStandalone } = usePWAInstall();
+  const { canInstall, isStandalone, promptInstall } = usePWAInstall();
   const [show, setShow] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     // اگر برنامه نصب شده است، منطق متفاوت دارد
@@ -60,8 +58,11 @@ export function PWAInstallBanner() {
     setShow(false);
   };
 
-  const handleInstall = () => {
-    navigate('/settings/install');
+  const handleInstall = async () => {
+    const result = await promptInstall();
+    if (result.outcome === 'accepted') {
+      setShow(false);
+    }
   };
 
   // فقط اگر نصب شده باشد و شرایط نمایش مجدد فراهم نباشد، نشان نده
