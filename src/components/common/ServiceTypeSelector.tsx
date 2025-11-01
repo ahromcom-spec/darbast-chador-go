@@ -110,13 +110,12 @@ export function ServiceTypeSelector({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[calc(100vw-2rem)] sm:w-[450px] p-0 bg-popover border-2" 
+        className="w-[calc(100vw-2rem)] sm:w-[450px] p-0 bg-popover border-2 z-[99999]" 
         align="start"
         sideOffset={4}
-        style={{ zIndex: 9999 }}
       >
         <Command className="w-full" shouldFilter={false}>
-          <div className="sticky top-0 z-10 bg-popover border-b">
+          <div className="sticky top-0 z-[100000] bg-popover border-b">
             <CommandInput 
               placeholder="جستجوی خدمات..." 
               className="h-11 text-base"
