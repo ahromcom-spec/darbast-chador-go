@@ -63,8 +63,8 @@ serve(async (req) => {
     // Reject test phones in production
     if (isProduction && isTestPhone) {
       return new Response(
-        JSON.stringify({ error: 'شماره تستی در محیط تولید مجاز نیست' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'شماره تلفن نامعتبر است' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
