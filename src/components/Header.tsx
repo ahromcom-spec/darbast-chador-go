@@ -66,11 +66,11 @@ const Header = () => {
             <div className="flex items-center gap-1.5">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity">
+                  <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity" aria-label="تماس">
                     <img 
                       src={contactButton} 
                       alt="تماس" 
-                      className="h-10 sm:h-11 w-auto object-contain"
+                      className="h-11 sm:h-12 w-auto object-contain"
                     />
                   </button>
                 </DropdownMenuTrigger>
@@ -186,11 +186,11 @@ const Header = () => {
             <div className="flex items-center gap-4 justify-start">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity">
+                  <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity" aria-label="تماس">
                     <img 
                       src={contactButton} 
                       alt="تماس" 
-                      className="h-[72px] w-auto object-contain"
+                      className="h-20 w-auto object-contain"
                     />
                   </button>
                 </DropdownMenuTrigger>
