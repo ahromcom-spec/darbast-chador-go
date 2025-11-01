@@ -112,7 +112,7 @@ export default function Login() {
         setStep('not-registered');
         toast({
           title: 'نیاز به ثبت‌نام',
-          description: 'برای ورود به سامانه، ابتدا ثبت‌نام کنید.',
+          description: 'برای ورود به اهرم، ابتدا ثبت‌نام کنید.',
         });
         return;
       }
@@ -124,7 +124,7 @@ export default function Login() {
       setStep('not-registered');
       toast({
         title: 'نیاز به ثبت‌نام',
-        description: 'برای ورود به سامانه، ابتدا ثبت‌نام کنید.',
+        description: 'برای ورود به اهرم، ابتدا ثبت‌نام کنید.',
       });
       return;
     }
@@ -144,7 +144,7 @@ const handleResendOTP = async () => {
       const isGenericEdgeError = /non-2xx|Edge Function returned/i.test(msg);
       if (userExists === false || isGenericEdgeError || msg.includes('ثبت نشده')) {
         setStep('not-registered');
-        toast({ title: 'نیاز به ثبت‌نام', description: 'برای ورود به سامانه، ابتدا ثبت‌نام کنید.' });
+        toast({ title: 'نیاز به ثبت‌نام', description: 'برای ورود به اهرم، ابتدا ثبت‌نام کنید.' });
         return;
       }
       toast({ variant: 'destructive', title: 'خطا', description: msg });
@@ -153,7 +153,7 @@ const handleResendOTP = async () => {
 
     if (userExists === false) {
       setStep('not-registered');
-      toast({ title: 'نیاز به ثبت‌نام', description: 'برای ورود به سامانه، ابتدا ثبت‌نام کنید.' });
+      toast({ title: 'نیاز به ثبت‌نام', description: 'برای ورود به اهرم، ابتدا ثبت‌نام کنید.' });
       return;
     }
 
@@ -222,7 +222,7 @@ const handleResendOTP = async () => {
       <div className="w-full max-w-md">
         <Card className="shadow-xl border-border">
           <CardHeader className="text-center space-y-2 pb-4">
-            <CardTitle className="text-3xl font-bold">ورود به سامانه</CardTitle>
+            <CardTitle className="text-3xl font-bold">ورود به اهرم</CardTitle>
             <CardDescription className="text-base">
               {step === 'phone' 
                 ? 'شماره موبایل خود را وارد کنید' 
@@ -250,7 +250,7 @@ const handleResendOTP = async () => {
                   size="lg"
                 >
                   <Link to="/auth/register" state={{ phone: phoneNumber }}>
-                    ثبت‌نام در سامانه
+                    ثبت‌نام در اهرم
                   </Link>
                 </Button>
                 <Button
@@ -319,7 +319,7 @@ const handleResendOTP = async () => {
                   asChild
                 >
                   <Link to="/auth/register">
-                    ثبت‌نام در سامانه
+                    ثبت‌نام در اهرم
                   </Link>
                 </Button>
                 <Button
