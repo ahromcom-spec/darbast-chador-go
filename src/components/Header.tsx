@@ -4,6 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ahromLogo from "@/assets/ahrom-logo.png";
+import contactButton from "@/assets/contact-button.png";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useGeneralManagerRole } from "@/hooks/useGeneralManagerRole";
 import { useToast } from "@/hooks/use-toast";
@@ -65,14 +66,13 @@ const Header = () => {
             <div className="flex items-center gap-1.5">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-1.5 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium px-2.5"
-                  >
-                    <Phone className="h-4 w-4" />
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
+                  <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity">
+                    <img 
+                      src={contactButton} 
+                      alt="تماس" 
+                      className="h-11 sm:h-12 w-auto object-contain"
+                    />
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-sm border shadow-xl z-50 min-w-[200px]">
                   <div className="p-2">
@@ -186,14 +186,13 @@ const Header = () => {
             <div className="flex items-center gap-4 justify-start">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium px-4 py-2 h-auto"
-                  >
-                    <Phone className="h-4 w-4" />
-                    <span>تماس</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
+                  <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity">
+                    <img 
+                      src={contactButton} 
+                      alt="تماس" 
+                      className="h-20 w-auto object-contain"
+                    />
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-sm border shadow-xl z-50 min-w-[200px]">
                   <div className="p-2">
