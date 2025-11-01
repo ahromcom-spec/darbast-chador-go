@@ -218,7 +218,7 @@ const Home = () => {
           role="presentation" 
           aria-hidden="true" 
         />
-        <div className="fixed inset-0 bg-black/40 z-0" aria-hidden="true" />
+        <div className="fixed inset-0 bg-black/10 z-0" aria-hidden="true" />
 
         {/* Main Content */}
         <main className="flex-1 flex items-start md:items-center justify-center py-4 sm:py-6 md:py-8 px-4 sm:px-6 relative z-10" role="main">
