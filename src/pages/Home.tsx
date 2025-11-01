@@ -222,8 +222,10 @@ const Home = () => {
           <style dangerouslySetInnerHTML={{ __html: `
             @media (max-width: 768px) {
               .fixed.inset-0.z-0 {
-                background-size: auto 60% !important;
-                background-position: 70% 45% !important;
+                /* Ensure the background fully covers viewport height on mobile */
+                background-size: cover !important;
+                background-position: center top !important;
+                background-attachment: scroll !important; /* better mobile behavior */
               }
             }
           `}} />
