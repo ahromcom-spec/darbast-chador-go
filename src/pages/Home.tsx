@@ -222,10 +222,10 @@ const Home = () => {
           <style dangerouslySetInnerHTML={{ __html: `
             @media (max-width: 768px) {
               .fixed.inset-0.z-0 {
-                /* Ensure the background fully covers viewport height on mobile */
+                /* Show more buildings by positioning toward the sea/buildings side */
                 background-size: cover !important;
-                background-position: center top !important;
-                background-attachment: scroll !important; /* better mobile behavior */
+                background-position: 65% center !important;
+                background-attachment: scroll !important;
               }
             }
           `}} />
