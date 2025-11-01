@@ -60,11 +60,13 @@ interface Order {
 
 const orderNotesSchema = z.object({
   dimensions: z.array(z.object({
-    length: z.string(),
-    height: z.string(),
-    area: z.number()
+    length: z.union([z.string(), z.number()]),
+    width: z.union([z.string(), z.number()]).optional(),
+    height: z.union([z.string(), z.number()]),
+    area: z.number().optional()
   })).optional(),
   totalArea: z.number().optional(),
+  estimated_price: z.number().optional(),
   estimatedPrice: z.number().optional()
 }).passthrough();
 
@@ -355,19 +357,26 @@ export default function OrderDetail() {
               <CardContent className="space-y-4">
                 {parsedNotes?.dimensions && parsedNotes.dimensions.length > 0 && (
                   <div>
-                    <h3 className="font-medium mb-3">ابعاد نما</h3>
+                    <h3 className="font-medium mb-3">ابعاد</h3>
                     <div className="space-y-2">
-                      {parsedNotes.dimensions.map((dim: any, index: number) => (
-                        <div key={index} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
-                          <span className="font-medium">نما {index + 1}:</span>
-                          <span>طول: {dim.length} متر</span>
-                          <span>×</span>
-                          <span>ارتفاع: {dim.height} متر</span>
-                          <span className="text-muted-foreground">
-                            = {dim.area} متر مربع
-                          </span>
-                        </div>
-                      ))}
+                      {parsedNotes.dimensions.map((dim: any, index: number) => {
+                        const length = typeof dim.length === 'number' ? dim.length : parseFloat(dim.length);
+                        const width = dim.width ? (typeof dim.width === 'number' ? dim.width : parseFloat(dim.width)) : null;
+                        const height = typeof dim.height === 'number' ? dim.height : parseFloat(dim.height);
+                        const area = dim.area || (length * (width || 1) * height);
+                        
+                        return (
+                          <div key={index} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg flex-wrap">
+                            <span className="font-medium">بعد {index + 1}:</span>
+                            <span>طول: {length} متر</span>
+                            {width && <span>× عرض: {width} متر</span>}
+                            <span>× ارتفاع: {height} متر</span>
+                            <span className="text-muted-foreground">
+                              = {area.toFixed(2)} متر مکعب
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -375,15 +384,15 @@ export default function OrderDetail() {
                 {parsedNotes?.totalArea && (
                   <div className="flex items-center gap-2 p-4 bg-primary/10 rounded-lg">
                     <span className="font-medium">مساحت کل:</span>
-                    <span className="text-lg font-bold">{parsedNotes.totalArea} متر مربع</span>
+                    <span className="text-lg font-bold">{parsedNotes.totalArea.toFixed(2)} متر مکعب</span>
                   </div>
                 )}
 
-                {(parsedNotes?.estimatedPrice || order.payment_amount) && (
+                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount) && (
                   <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
                     <span className="font-medium">قیمت:</span>
-                    <span className="text-lg font-bold">
-                      {(parsedNotes?.estimatedPrice || order.payment_amount)?.toLocaleString('fa-IR')} تومان
+                    <span className="text-lg font-bold text-green-700 dark:text-green-300">
+                      {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount)?.toLocaleString('fa-IR')} تومان
                     </span>
                   </div>
                 )}
