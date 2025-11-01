@@ -224,7 +224,7 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary p-4">
       <Card className="w-full max-w-md shadow-elegant">
         <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-2xl font-bold text-primary">ثبت نام در سامانه</CardTitle>
+          <CardTitle className="text-2xl font-bold text-primary">ثبت نام در اهرم</CardTitle>
           <CardDescription>
             {step === 'info' 
               ? 'اطلاعات خود را وارد کنید' 
