@@ -212,8 +212,7 @@ const Home = () => {
             backgroundImage: 'url(/hero-background-optimized.webp)',
             backgroundSize: 'cover',
             backgroundPosition: 'center center',
-            backgroundRepeat: 'no-repeat',
-            backgroundAttachment: 'fixed'
+            backgroundRepeat: 'no-repeat'
           }} 
           role="presentation" 
           aria-hidden="true" 
