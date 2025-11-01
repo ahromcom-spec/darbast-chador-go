@@ -374,12 +374,49 @@ export default function MyProjectsHierarchy() {
                                   </div>
                                  ) : (
                                    projectOrders.map((order) => {
-                                     const dimensions = order.notes?.dimensions || [];
-                                     const totalArea = order.notes?.totalArea || 0;
-                                     const estimatedPrice = order.notes?.estimated_price || order.payment_amount || 0;
-                                     const dimensionsText = dimensions.length > 0 
-                                       ? dimensions.map((d: any) => `${d.length}×${d.width}×${d.height}`).join(' + ')
+                                     // سازگاری با ساختارهای مختلف notes (رشته یا آبجکت)
+                                     const rawNotes = order.notes as any;
+                                     let notes: any = rawNotes;
+                                     try {
+                                       if (typeof rawNotes === 'string') notes = JSON.parse(rawNotes);
+                                     } catch {
+                                       notes = rawNotes;
+                                     }
+
+                                     const dims = Array.isArray(notes?.dimensions) ? notes.dimensions : [];
+                                     const hasWidth = dims.length > 0 && ("width" in dims[0] || dims.some((d: any) => "width" in d));
+
+                                     const dimensionsText = dims.length > 0
+                                       ? dims.map((d: any) => {
+                                           const l = d.length ?? d.L ?? d.l;
+                                           const w = d.width ?? d.W ?? d.w;
+                                           const h = d.height ?? d.H ?? d.h;
+                                           return hasWidth ? `${l}×${w}×${h}` : `${l}×${h}`;
+                                         }).join(' + ')
                                        : 'نامشخص';
+
+                                     // پشتیبانی از totalArea (حجم) و total_area (مساحت)
+                                     const computedFromDims = () => {
+                                       if (dims.length === 0) return 0;
+                                       return dims.reduce((sum: number, d: any) => {
+                                         const l = parseFloat(d.length ?? d.L ?? d.l ?? 0) || 0;
+                                         const w = parseFloat(d.width ?? d.W ?? d.w ?? 0) || 0;
+                                         const h = parseFloat(d.height ?? d.H ?? d.h ?? 0) || 0;
+                                         return sum + (hasWidth ? (l * w * h) : (l * h));
+                                       }, 0);
+                                     };
+
+                                     const totalValue = typeof notes?.totalArea === 'number'
+                                       ? notes.totalArea
+                                       : (typeof notes?.total_area === 'number' ? notes.total_area : computedFromDims());
+
+                                     const isArea = (notes && ("total_area" in notes)) || (!hasWidth && dims.length > 0);
+                                     const metricLabel = 'متراژ:';
+                                     const unit = isArea ? 'متر مربع' : 'متر مکعب';
+
+                                     const estimatedPrice = typeof notes?.estimated_price === 'number'
+                                       ? notes.estimated_price
+                                       : (order.payment_amount || 0);
 
                                      return (
                                        <div
@@ -414,12 +451,12 @@ export default function MyProjectsHierarchy() {
                                          <div className="grid grid-cols-2 gap-2 text-xs mr-6">
                                            <div className="flex items-center gap-1">
                                              <span className="text-muted-foreground">ابعاد:</span>
-                                             <span className="font-medium" dir="ltr">{dimensionsText} متر</span>
+                                             <span className="font-medium" dir="ltr">{dimensionsText}{dims.length > 0 ? ' متر' : ''}</span>
                                            </div>
-                                           {totalArea > 0 && (
+                                           {totalValue > 0 && (
                                              <div className="flex items-center gap-1">
-                                               <span className="text-muted-foreground">مساحت:</span>
-                                               <span className="font-medium" dir="ltr">{totalArea.toFixed(2)} متر مکعب</span>
+                                               <span className="text-muted-foreground">{metricLabel}</span>
+                                               <span className="font-medium" dir="ltr">{totalValue.toFixed(2)} {unit}</span>
                                              </div>
                                            )}
                                            {estimatedPrice > 0 && (
