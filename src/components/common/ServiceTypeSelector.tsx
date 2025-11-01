@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -32,6 +32,7 @@ export function ServiceTypeSelector({
 }: ServiceTypeSelectorProps) {
   const [open, setOpen] = useState(false);
   const [expandedServiceType, setExpandedServiceType] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Parse current value
   const [selectedServiceTypeId, selectedSubcategoryCode] = value ? value.split(':') : ['', ''];
@@ -46,11 +47,38 @@ export function ServiceTypeSelector({
     onChange(`${serviceTypeId}:${subcategoryCode}`);
     setOpen(false);
     setExpandedServiceType(null);
+    setSearchQuery('');
   };
 
   const handleServiceTypeClick = (serviceTypeId: string) => {
     setExpandedServiceType(expandedServiceType === serviceTypeId ? null : serviceTypeId);
   };
+
+  // Filter service types and subcategories based on search
+  const filteredServiceTypes = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return serviceTypes;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return serviceTypes.map(serviceType => {
+      const typeMatches = serviceType.name.toLowerCase().includes(query);
+      const matchingSubcategories = serviceType.subcategories.filter(sub =>
+        sub.name.toLowerCase().includes(query)
+      );
+
+      // Include service type if it matches OR if any subcategory matches
+      if (typeMatches || matchingSubcategories.length > 0) {
+        return {
+          ...serviceType,
+          subcategories: typeMatches ? serviceType.subcategories : matchingSubcategories,
+          // Auto-expand if subcategories match
+          autoExpand: !typeMatches && matchingSubcategories.length > 0
+        };
+      }
+      return null;
+    }).filter(Boolean) as (ServiceTypeWithSubcategories & { autoExpand?: boolean })[];
+  }, [serviceTypes, searchQuery]);
 
   if (loading) {
     return (
@@ -81,50 +109,66 @@ export function ServiceTypeSelector({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-popover border-2 z-[100]" align="start">
-        <Command className="w-full">
-          <CommandInput placeholder="جستجوی خدمات..." className="h-9" />
-          <CommandList>
+      <PopoverContent 
+        className="w-[calc(100vw-2rem)] sm:w-[450px] p-0 bg-popover border-2" 
+        align="start"
+        sideOffset={4}
+        style={{ zIndex: 9999 }}
+      >
+        <Command className="w-full" shouldFilter={false}>
+          <div className="sticky top-0 z-10 bg-popover border-b">
+            <CommandInput 
+              placeholder="جستجوی خدمات..." 
+              className="h-11 text-base"
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+          </div>
+          <CommandList className="max-h-[300px] overflow-y-auto">
             <CommandEmpty>خدمتی یافت نشد.</CommandEmpty>
             <CommandGroup>
-              {serviceTypes.map((serviceType) => (
-                <div key={serviceType.id}>
-                  <CommandItem
-                    value={serviceType.name}
-                    onSelect={() => handleServiceTypeClick(serviceType.id)}
-                    className="font-semibold text-primary cursor-pointer"
-                  >
-                    <div className="flex w-full items-center justify-between">
-                      <span>{serviceType.name}</span>
-                      <ChevronLeft className={cn(
-                        "h-4 w-4 transition-transform",
-                        expandedServiceType === serviceType.id && "rotate-180"
-                      )} />
-                    </div>
-                  </CommandItem>
+              {filteredServiceTypes.map((serviceType) => {
+                const shouldExpand = expandedServiceType === serviceType.id || ('autoExpand' in serviceType && serviceType.autoExpand);
+                
+                return (
+                  <div key={serviceType.id}>
+                    <CommandItem
+                      value={serviceType.name}
+                      onSelect={() => handleServiceTypeClick(serviceType.id)}
+                      className="font-semibold text-primary cursor-pointer"
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <span>{serviceType.name}</span>
+                        <ChevronLeft className={cn(
+                          "h-4 w-4 transition-transform",
+                          shouldExpand && "rotate-180"
+                        )} />
+                      </div>
+                    </CommandItem>
 
-                  {expandedServiceType === serviceType.id && (
-                    <div className="pr-4 pb-1 animate-in fade-in-0 slide-in-from-top-1">
-                      {serviceType.subcategories.length > 0 ? (
-                        serviceType.subcategories.map((subcategory) => (
-                          <CommandItem
-                            key={subcategory.id}
-                            value={`${serviceType.name} ${subcategory.name}`}
-                            onSelect={() => handleSelect(serviceType.id, subcategory.code)}
-                            className="text-sm sm:text-base cursor-pointer"
-                          >
-                            <span>{subcategory.name}</span>
-                          </CommandItem>
-                        ))
-                      ) : (
-                        <div className="px-4 py-2 text-xs text-muted-foreground">
-                          زیرشاخه‌ای موجود نیست
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+                    {shouldExpand && (
+                      <div className="pr-4 pb-1 animate-in fade-in-0 slide-in-from-top-1">
+                        {serviceType.subcategories.length > 0 ? (
+                          serviceType.subcategories.map((subcategory) => (
+                            <CommandItem
+                              key={subcategory.id}
+                              value={`${serviceType.name} ${subcategory.name}`}
+                              onSelect={() => handleSelect(serviceType.id, subcategory.code)}
+                              className="text-sm sm:text-base cursor-pointer"
+                            >
+                              <span>{subcategory.name}</span>
+                            </CommandItem>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2 text-xs text-muted-foreground">
+                            زیرشاخه‌ای موجود نیست
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>
