@@ -70,7 +70,7 @@ const Header = () => {
                     <img 
                       src={contactButton} 
                       alt="تماس" 
-                      className="h-12 sm:h-14 w-auto object-contain"
+                      className="h-14 sm:h-16 w-auto object-contain"
                     />
                   </button>
                 </DropdownMenuTrigger>
@@ -190,7 +190,7 @@ const Header = () => {
                     <img 
                       src={contactButton} 
                       alt="تماس" 
-                      className="h-24 w-auto object-contain"
+                      className="h-28 w-auto object-contain"
                     />
                   </button>
                 </DropdownMenuTrigger>
