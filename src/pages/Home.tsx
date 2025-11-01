@@ -370,34 +370,6 @@ const Home = () => {
           </article>
         </main>
         
-        {/* PWA Install Card */}
-        {!isStandalone && (
-          <div className="relative z-10 container mx-auto px-4 sm:px-6 pb-4">
-            <Card className="max-w-2xl mx-auto shadow-xl border-2 border-primary/20 bg-card/90 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Smartphone className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm">نصب اپلیکیشن اهرم</h3>
-                      <p className="text-xs text-muted-foreground">{canInstall || isIOS ? 'دسترسی سریع‌تر به خدمات' : 'اگر دکمه غیرفعال است، از منوی مرورگر گزینه Install/Add to Home Screen را بزنید'}</p>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={handleInstallApp} 
-                    size="sm"
-                    className="construction-gradient"
-                  >
-                    <Download className="h-4 w-4 ml-1" />
-                    نصب
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
         {/* Footer */}
         <footer className="relative z-10 border-t bg-card/80 backdrop-blur-md py-4 px-4">
