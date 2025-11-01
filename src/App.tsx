@@ -11,6 +11,7 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 // import { PageLoadProgress } from "@/components/common/PageLoadProgress";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PWAInstallBanner } from "@/components/common/PWAInstallBanner";
 
 import { NotificationBanner } from "@/components/common/NotificationBanner";
 
@@ -105,6 +106,7 @@ const App = () => {
               {/* <PageLoadProgress /> */}
               <OfflineIndicator />
               <NotificationBanner />
+              <PWAInstallBanner />
               
               <Suspense fallback={<PageLoader />}>
                 <div className="min-h-screen bg-background">

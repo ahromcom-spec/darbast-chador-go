@@ -8,13 +8,36 @@ import { useNavigate } from 'react-router-dom';
 export function PWAInstallBanner() {
   const { canInstall, isStandalone } = usePWAInstall();
   const [dismissed, setDismissed] = useState(false);
+  const [show, setShow] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // بررسی آخرین باز دیدن
+    const lastVisit = localStorage.getItem('pwa-last-visit');
+    const now = Date.now();
+    
+    // اگر 7 روز گذشته باشد، دوباره نشان بده
+    if (lastVisit) {
+      const daysSinceLastVisit = (now - parseInt(lastVisit)) / (1000 * 60 * 60 * 24);
+      if (daysSinceLastVisit >= 7) {
+        localStorage.removeItem('pwa-banner-dismissed');
+      }
+    }
+    
+    localStorage.setItem('pwa-last-visit', now.toString());
+
+    // بررسی اینکه آیا قبلاً بسته شده
     const wasDismissed = localStorage.getItem('pwa-banner-dismissed');
     if (wasDismissed) {
       setDismissed(true);
     }
+
+    // نمایش بعد از 15 ثانیه
+    const timer = setTimeout(() => {
+      setShow(true);
+    }, 15000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleDismiss = () => {
@@ -26,7 +49,7 @@ export function PWAInstallBanner() {
     navigate('/settings/install');
   };
 
-  if (!canInstall || isStandalone || dismissed) {
+  if (!canInstall || isStandalone || dismissed || !show) {
     return null;
   }
 
