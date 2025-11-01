@@ -224,7 +224,7 @@ const Home = () => {
               .fixed.inset-0.z-0 {
                 /* Show more buildings by positioning toward the sea/buildings side */
                 background-size: cover !important;
-                background-position: 65% center !important;
+                background-position: 80% center !important;
                 background-attachment: scroll !important;
               }
             }
