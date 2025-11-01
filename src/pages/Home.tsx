@@ -252,9 +252,6 @@ const Home = () => {
                   <>
                     {/* Service Type Selection */}
                     <div>
-                      <label htmlFor="service-type-select" className="text-xs sm:text-sm font-medium text-foreground block mb-2">
-                        انتخاب نوع خدمات:
-                      </label>
                       <ServiceTypeSelector
                         serviceTypes={serviceTypes}
                         value={selectedServiceType ? `${selectedServiceType}:${selectedSubcategory}` : ''}
