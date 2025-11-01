@@ -51,8 +51,8 @@ const Header = () => {
                 className="h-11 sm:h-12 w-auto object-contain"
                 loading="eager"
               />
-              <h1 className="text-[10px] sm:text-xs font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent whitespace-nowrap">
-                خدمات ساختمان و منزل اهرم
+              <h1 className="text-xs sm:text-sm font-extrabold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent whitespace-nowrap">
+                خدمات ساختمانی و منزل اهرم
               </h1>
             </div>
             <div className="flex items-center gap-1.5">
@@ -61,10 +61,9 @@ const Header = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
+                    className="gap-1.5 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium px-2.5"
                   >
                     <Phone className="h-4 w-4" />
-                    <span className="text-xs sm:text-sm">تماس</span>
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
