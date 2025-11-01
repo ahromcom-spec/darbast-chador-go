@@ -11,11 +11,11 @@ export function PWAInstallBanner() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const lastVisit = localStorage.getItem('pwa-last-visit');
-    const now = Date.now();
-    
-    // اگر نصب شده است
+    // اگر برنامه نصب شده است، منطق متفاوت دارد
     if (isStandalone) {
+      const lastVisit = localStorage.getItem('pwa-last-visit');
+      const now = Date.now();
+      
       // فقط اگر 7 روز گذشته باشد
       if (lastVisit) {
         const daysSinceLastVisit = (now - parseInt(lastVisit)) / (1000 * 60 * 60 * 24);
@@ -36,9 +36,9 @@ export function PWAInstallBanner() {
           localStorage.setItem('pwa-reminder-shown', now.toString());
         }
       }
+      
+      localStorage.setItem('pwa-last-visit', now.toString());
     }
-    
-    localStorage.setItem('pwa-last-visit', now.toString());
 
     // نمایش بعد از 15 ثانیه
     const showTimer = setTimeout(() => {
@@ -64,7 +64,9 @@ export function PWAInstallBanner() {
     navigate('/settings/install');
   };
 
-  if (!canInstall || !show) {
+  // فقط اگر نصب شده باشد و شرایط نمایش مجدد فراهم نباشد، نشان نده
+  // در غیر این صورت، به همه نشان بده (حتی iOS)
+  if (!show) {
     return null;
   }
 
