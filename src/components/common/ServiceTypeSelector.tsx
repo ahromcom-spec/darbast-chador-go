@@ -73,7 +73,7 @@ export function ServiceTypeSelector({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between h-11 sm:h-12 text-sm sm:text-base smooth-hover"
+          className="w-full justify-between h-11 sm:h-12 text-sm sm:text-base smooth-hover border-2 border-[#D4AF37] hover:border-[#F4D03F] shadow-[0_0_15px_rgba(212,175,55,0.3)] hover:shadow-[0_0_20px_rgba(244,208,63,0.5)] transition-all duration-300"
         >
           <span className={cn(!displayValue && "text-muted-foreground")}>
             {displayValue || "لطفاً نوع خدمات مورد نظر خود را انتخاب کنید..."}
