@@ -217,7 +217,17 @@ const Home = () => {
           }} 
           role="presentation" 
           aria-hidden="true" 
-        />
+        >
+          {/* Mobile-specific background adjustment */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media (max-width: 768px) {
+              .fixed.inset-0.z-0 {
+                background-size: auto 85% !important;
+                background-position: center 35% !important;
+              }
+            }
+          `}} />
+        </div>
         <div className="fixed inset-0 bg-black/10 z-0" aria-hidden="true" />
 
         {/* Main Content */}
