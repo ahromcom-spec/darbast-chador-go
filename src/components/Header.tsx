@@ -163,7 +163,7 @@ const Header = () => {
           <div className="grid grid-cols-3 items-center py-4 border-b border-border/50">
             {/* Logo - Right side (RTL) */}
             <div className="flex justify-end">
-              <div className="cursor-pointer" onClick={() => navigate('/')}>
+              <div className="cursor-pointer md:translate-x-4 lg:translate-x-6 xl:translate-x-0" onClick={() => navigate('/')}>
                 <img 
                   src={ahromLogo} 
                   alt="لوگوی اهرم" 
