@@ -241,9 +241,6 @@ const Home = () => {
                 <h2 className="text-lg sm:text-2xl md:text-3xl font-bold leading-tight tracking-tight primary-gradient bg-clip-text text-transparent mb-2">
                   خدمات ساختمانی و منزل خود را انتخاب کنید
                 </h2>
-                <CardDescription className="text-sm sm:text-base md:text-lg">
-                  خدمات ساختمانی و داربست در قم و سراسر ایران
-                </CardDescription>
               </CardHeader>
               
               <CardContent className="space-y-4 sm:space-y-5 md:space-y-6 px-4 sm:px-6 pb-6 sm:pb-8">
