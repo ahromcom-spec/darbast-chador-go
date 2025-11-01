@@ -42,10 +42,11 @@ interface Order {
   code: string;
   status: string;
   created_at: string;
-  notes?: string;
+  notes?: any;
   province_id?: string;
   district_id?: string;
   subcategory_id?: string;
+  payment_amount?: number;
 }
 
 interface HierarchyData {
@@ -141,7 +142,7 @@ export default function MyProjectsHierarchy() {
       if (customer) {
         const { data: projectsV3, error: ordErr } = await supabase
           .from('projects_v3')
-          .select('id, code, status, created_at, notes, province_id, district_id, subcategory_id, hierarchy_project_id')
+          .select('id, code, status, created_at, notes, province_id, district_id, subcategory_id, hierarchy_project_id, payment_amount')
           .eq('customer_id', customer.id)
           .order('created_at', { ascending: false });
 
@@ -157,7 +158,8 @@ export default function MyProjectsHierarchy() {
           notes: pv3.notes,
           province_id: pv3.province_id,
           district_id: pv3.district_id,
-          subcategory_id: pv3.subcategory_id
+          subcategory_id: pv3.subcategory_id,
+          payment_amount: pv3.payment_amount
         }));
       }
 
@@ -371,32 +373,66 @@ export default function MyProjectsHierarchy() {
                                     </Button>
                                   </div>
                                  ) : (
-                                   projectOrders.map((order) => (
-                                     <div
-                                       key={order.id}
-                                       className={`flex items-center justify-between p-2 bg-background rounded-md hover:bg-accent/50 cursor-pointer transition-all mr-6 ${
-                                         highlightedOrderId === order.id ? 'ring-2 ring-primary shadow-lg' : ''
-                                       }`}
-                                       onClick={(e) => {
-                                         e.stopPropagation();
-                                         navigate(`/orders/${order.id}`);
-                                       }}
-                                     >
-                                      <div className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4 text-muted-foreground" />
-                                        <div>
-                                          <p className="text-sm font-medium">
-                                            سفارش #{order.code}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {new Date(order.created_at).toLocaleDateString('fa-IR')}
-                                          </p>
-                                        </div>
-                                      </div>
-                                      {getStatusBadge(order.status)}
-                                    </div>
-                                  ))
-                                )}
+                                   projectOrders.map((order) => {
+                                     const dimensions = order.notes?.dimensions || [];
+                                     const totalArea = order.notes?.totalArea || 0;
+                                     const estimatedPrice = order.notes?.estimated_price || order.payment_amount || 0;
+                                     const dimensionsText = dimensions.length > 0 
+                                       ? dimensions.map((d: any) => `${d.length}×${d.width}×${d.height}`).join(' + ')
+                                       : 'نامشخص';
+
+                                     return (
+                                       <div
+                                         key={order.id}
+                                         className={`p-3 bg-background rounded-md hover:bg-accent/50 cursor-pointer transition-all mr-6 ${
+                                           highlightedOrderId === order.id ? 'ring-2 ring-primary shadow-lg' : ''
+                                         }`}
+                                         onClick={(e) => {
+                                           e.stopPropagation();
+                                           navigate(`/orders/${order.id}`);
+                                         }}
+                                       >
+                                         <div className="flex items-start justify-between mb-2">
+                                           <div className="flex items-center gap-2">
+                                             <FileText className="h-4 w-4 text-muted-foreground" />
+                                             <div>
+                                               <p className="text-sm font-medium">سفارش #{order.code}</p>
+                                               <p className="text-xs text-muted-foreground">
+                                                 {new Date(order.created_at).toLocaleDateString('fa-IR', {
+                                                   year: 'numeric',
+                                                   month: 'long',
+                                                   day: 'numeric'
+                                                 })} - {new Date(order.created_at).toLocaleTimeString('fa-IR', {
+                                                   hour: '2-digit',
+                                                   minute: '2-digit'
+                                                 })}
+                                               </p>
+                                             </div>
+                                           </div>
+                                           {getStatusBadge(order.status)}
+                                         </div>
+                                         <div className="grid grid-cols-2 gap-2 text-xs mr-6">
+                                           <div className="flex items-center gap-1">
+                                             <span className="text-muted-foreground">ابعاد:</span>
+                                             <span className="font-medium" dir="ltr">{dimensionsText} متر</span>
+                                           </div>
+                                           {totalArea > 0 && (
+                                             <div className="flex items-center gap-1">
+                                               <span className="text-muted-foreground">مساحت:</span>
+                                               <span className="font-medium" dir="ltr">{totalArea.toFixed(2)} متر مکعب</span>
+                                             </div>
+                                           )}
+                                           {estimatedPrice > 0 && (
+                                             <div className="flex items-center gap-1 col-span-2">
+                                               <span className="text-muted-foreground">قیمت:</span>
+                                               <span className="font-medium">{estimatedPrice.toLocaleString('fa-IR')} تومان</span>
+                                             </div>
+                                           )}
+                                         </div>
+                                       </div>
+                                     );
+                                   })
+                                 )}
                               </div>
                             )}
                           </Card>
