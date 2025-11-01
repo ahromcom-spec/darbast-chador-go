@@ -574,19 +574,6 @@ export default function OrderDetail() {
             </Card>
           )}
 
-          {order.notes && !parsedNotes && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  یادداشت‌ها
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{order.notes}</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </MainLayout>
