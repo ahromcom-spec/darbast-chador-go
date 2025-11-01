@@ -110,12 +110,15 @@ export function ServiceTypeSelector({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[calc(100vw-2rem)] sm:w-[450px] p-0 bg-popover border-2 z-[99999]" 
+        className="group flex flex-col w-[calc(100vw-2rem)] sm:w-[450px] p-0 bg-popover border-2 z-[99999]" 
         align="start"
         sideOffset={4}
       >
         <Command className="w-full" shouldFilter={false}>
-          <div className="sticky top-0 z-[100000] bg-popover border-b">
+          {/* Search bar: always stick to the edge near the trigger */}
+          <div
+            className="search-header z-[100000] bg-popover border-b group-data-[side=top]:border-b-0 group-data-[side=top]:border-t group-data-[side=bottom]:border-b group-data-[side=bottom]:border-t-0 group-data-[side=top]:order-last group-data-[side=bottom]:order-first"
+          >
             <CommandInput 
               placeholder="جستجوی خدمات..." 
               className="h-11 text-base"
@@ -123,7 +126,9 @@ export function ServiceTypeSelector({
               onValueChange={setSearchQuery}
             />
           </div>
-          <CommandList className="max-h-[300px] overflow-y-auto">
+
+          {/* List: flips position relative to search based on opening side */}
+          <CommandList className="max-h=[300px] max-h-[300px] overflow-y-auto group-data-[side=top]:order-first group-data-[side=bottom]:order-last">
             <CommandEmpty>خدمتی یافت نشد.</CommandEmpty>
             <CommandGroup>
               {filteredServiceTypes.map((serviceType) => {
