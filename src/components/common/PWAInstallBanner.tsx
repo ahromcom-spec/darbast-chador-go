@@ -7,49 +7,64 @@ import { useNavigate } from 'react-router-dom';
 
 export function PWAInstallBanner() {
   const { canInstall, isStandalone } = usePWAInstall();
-  const [dismissed, setDismissed] = useState(false);
   const [show, setShow] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // بررسی آخرین باز دیدن
     const lastVisit = localStorage.getItem('pwa-last-visit');
     const now = Date.now();
     
-    // اگر 7 روز گذشته باشد، دوباره نشان بده
-    if (lastVisit) {
-      const daysSinceLastVisit = (now - parseInt(lastVisit)) / (1000 * 60 * 60 * 24);
-      if (daysSinceLastVisit >= 7) {
-        localStorage.removeItem('pwa-banner-dismissed');
+    // اگر نصب شده است
+    if (isStandalone) {
+      // فقط اگر 7 روز گذشته باشد
+      if (lastVisit) {
+        const daysSinceLastVisit = (now - parseInt(lastVisit)) / (1000 * 60 * 60 * 24);
+        if (daysSinceLastVisit < 7) {
+          return; // نشان نده
+        }
+        
+        // اگر 7 روز گذشته، فقط برای 3 روز نشان بده
+        const reminderShownDate = localStorage.getItem('pwa-reminder-shown');
+        if (reminderShownDate) {
+          const daysSinceReminder = (now - parseInt(reminderShownDate)) / (1000 * 60 * 60 * 24);
+          if (daysSinceReminder < 3) {
+            // در این 3 روز نشان بده
+          } else {
+            return; // 3 روز تمام شده، نشان نده
+          }
+        } else {
+          localStorage.setItem('pwa-reminder-shown', now.toString());
+        }
       }
     }
     
     localStorage.setItem('pwa-last-visit', now.toString());
 
-    // بررسی اینکه آیا قبلاً بسته شده
-    const wasDismissed = localStorage.getItem('pwa-banner-dismissed');
-    if (wasDismissed) {
-      setDismissed(true);
-    }
-
     // نمایش بعد از 15 ثانیه
-    const timer = setTimeout(() => {
+    const showTimer = setTimeout(() => {
       setShow(true);
     }, 15000);
 
-    return () => clearTimeout(timer);
-  }, []);
+    // محو شدن خودکار بعد از 15 ثانیه دیگر (کل 30 ثانیه)
+    const hideTimer = setTimeout(() => {
+      setShow(false);
+    }, 30000);
+
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+    };
+  }, [isStandalone]);
 
   const handleDismiss = () => {
-    setDismissed(true);
-    localStorage.setItem('pwa-banner-dismissed', 'true');
+    setShow(false);
   };
 
   const handleInstall = () => {
     navigate('/settings/install');
   };
 
-  if (!canInstall || isStandalone || dismissed || !show) {
+  if (!canInstall || !show) {
     return null;
   }
 
