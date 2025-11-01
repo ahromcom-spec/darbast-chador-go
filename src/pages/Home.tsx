@@ -222,8 +222,8 @@ const Home = () => {
           <style dangerouslySetInnerHTML={{ __html: `
             @media (max-width: 768px) {
               .fixed.inset-0.z-0 {
-                background-size: auto 85% !important;
-                background-position: center 35% !important;
+                background-size: auto 70% !important;
+                background-position: center 45% !important;
               }
             }
           `}} />
