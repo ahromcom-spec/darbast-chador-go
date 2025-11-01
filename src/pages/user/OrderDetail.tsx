@@ -346,14 +346,14 @@ export default function OrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Order Details from Notes */}
-          {parsedNotes && (
+          {/* Order Details from Notes or Payment Amount */}
+          {(parsedNotes || order.payment_amount) && (
             <Card>
               <CardHeader>
                 <CardTitle>جزئیات سفارش</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {parsedNotes.dimensions && parsedNotes.dimensions.length > 0 && (
+                {parsedNotes?.dimensions && parsedNotes.dimensions.length > 0 && (
                   <div>
                     <h3 className="font-medium mb-3">ابعاد نما</h3>
                     <div className="space-y-2">
@@ -372,18 +372,18 @@ export default function OrderDetail() {
                   </div>
                 )}
 
-                {parsedNotes.totalArea && (
+                {parsedNotes?.totalArea && (
                   <div className="flex items-center gap-2 p-4 bg-primary/10 rounded-lg">
                     <span className="font-medium">مساحت کل:</span>
                     <span className="text-lg font-bold">{parsedNotes.totalArea} متر مربع</span>
                   </div>
                 )}
 
-                {parsedNotes.estimatedPrice && (
+                {(parsedNotes?.estimatedPrice || order.payment_amount) && (
                   <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                    <span className="font-medium">قیمت تخمینی:</span>
+                    <span className="font-medium">قیمت:</span>
                     <span className="text-lg font-bold">
-                      {parsedNotes.estimatedPrice.toLocaleString('fa-IR')} تومان
+                      {(parsedNotes?.estimatedPrice || order.payment_amount)?.toLocaleString('fa-IR')} تومان
                     </span>
                   </div>
                 )}
