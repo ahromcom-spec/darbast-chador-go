@@ -5,7 +5,7 @@ const Index = () => {
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ 
-          backgroundImage: 'url(/hero-city.webp)',
+          backgroundImage: 'url(/hero-background.webp)',
         }}
       >
         {/* Overlay gradient for better text readability */}
