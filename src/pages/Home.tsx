@@ -251,8 +251,8 @@ const Home = () => {
                 ) : (
                   <>
                     {/* Service Type Selection */}
-                    <div className="space-y-2.5 sm:space-y-3">
-                      <label htmlFor="service-type-select" className="text-xs sm:text-sm font-medium text-foreground block">
+                    <div>
+                      <label htmlFor="service-type-select" className="text-xs sm:text-sm font-medium text-foreground block mb-2">
                         انتخاب نوع خدمات:
                       </label>
                       <ServiceTypeSelector
