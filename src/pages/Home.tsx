@@ -209,10 +209,11 @@ const Home = () => {
         <div 
           className="fixed inset-0 z-0" 
           style={{
-            backgroundImage: 'url(/hero-background-optimized.webp)',
+            backgroundImage: 'url(/hero-background.webp)',
             backgroundSize: 'cover',
             backgroundPosition: 'center center',
-            backgroundRepeat: 'no-repeat'
+            backgroundRepeat: 'no-repeat',
+            backgroundAttachment: 'fixed'
           }} 
           role="presentation" 
           aria-hidden="true" 
