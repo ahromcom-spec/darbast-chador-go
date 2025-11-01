@@ -209,9 +209,9 @@ const Home = () => {
         <div 
           className="fixed inset-0 z-0" 
           style={{
-            backgroundImage: 'url(/hero-background.webp)',
-            backgroundSize: 'contain',
-            backgroundPosition: 'center top',
+            backgroundImage: 'url(/hero-background-optimized.webp)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center center',
             backgroundRepeat: 'no-repeat',
             backgroundAttachment: 'fixed'
           }} 
