@@ -43,7 +43,7 @@ const Header = () => {
           {/* First Row: Logo, Company Name (Centered), Contact */}
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 py-3 border-b border-border/30 px-1">
             {/* Logo - Right side (RTL) */}
-            <div className="cursor-pointer order-3" onClick={() => navigate('/')}>
+            <div className="cursor-pointer" onClick={() => navigate('/')}>
               <img 
                 src={ahromLogo} 
                 alt="لوگوی اهرم" 
@@ -55,14 +55,14 @@ const Header = () => {
             </div>
 
             {/* Company Name - Center */}
-            <div className="flex justify-center order-2">
+            <div className="flex justify-center">
               <h1 className="text-sm sm:text-base font-black text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent text-center">
                 خدمات ساختمانی و منزل اهرم
               </h1>
             </div>
             
             {/* Contact Button - Left side (RTL) */}
-            <div className="flex items-center gap-1.5 order-1">
+            <div className="flex items-center gap-1.5">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
