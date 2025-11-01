@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,7 +67,7 @@ export default function MyProjectsHierarchy() {
   const [expandedAddresses, setExpandedAddresses] = useState<Set<string>>(new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [highlightedOrderId, setHighlightedOrderId] = useState<string | null>(null);
-
+  const orderRefs = useRef<Record<string, HTMLDivElement | null>>({});
   useEffect(() => {
     fetchHierarchyData();
   }, []);
@@ -87,6 +87,16 @@ export default function MyProjectsHierarchy() {
       setTimeout(() => setHighlightedOrderId(null), 3000);
     }
   }, [location.state]);
+
+  // Scroll to the highlighted order when available
+  useEffect(() => {
+    if (!highlightedOrderId || loading) return;
+    // give the DOM a tick to render expanded sections
+    const el = orderRefs.current[highlightedOrderId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightedOrderId, loading]);
 
   const fetchHierarchyData = async () => {
     try {
@@ -421,6 +431,7 @@ export default function MyProjectsHierarchy() {
                                      return (
                                        <div
                                          key={order.id}
+                                         ref={(el) => { orderRefs.current[order.id] = el; }}
                                          className={`p-3 bg-background rounded-md hover:bg-accent/50 cursor-pointer transition-all mr-6 ${
                                            highlightedOrderId === order.id ? 'ring-2 ring-primary shadow-lg' : ''
                                          }`}
