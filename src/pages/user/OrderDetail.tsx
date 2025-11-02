@@ -184,8 +184,8 @@ export default function OrderDetail() {
     }
   };
 
-  // Security: Only draft orders are editable, pending orders are locked
-  const canEdit = order?.status === 'draft';
+  // Security: Draft and pending orders are editable until approved by manager
+  const canEdit = order?.status === 'draft' || order?.status === 'pending';
 
   const handleSetCompletionDate = async () => {
     if (!order || !completionDate) {
@@ -355,6 +355,20 @@ export default function OrderDetail() {
                 <CardTitle>جزئیات سفارش</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* نوع خدمت */}
+                {parsedNotes?.service_type && (
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <span className="font-medium">نوع داربست: </span>
+                    <span className="text-lg">
+                      {parsedNotes.service_type === 'facade' && 'داربست سطحی نما'}
+                      {parsedNotes.service_type === 'formwork' && 'داربست کفراژ'}
+                      {parsedNotes.service_type === 'ceiling-tiered' && 'داربست زیر بتن - تیرچه'}
+                      {parsedNotes.service_type === 'ceiling-slab' && 'داربست زیر بتن - دال بتنی'}
+                    </span>
+                  </div>
+                )}
+
+                {/* ابعاد */}
                 {parsedNotes?.dimensions && parsedNotes.dimensions.length > 0 && (
                   <div>
                     <h3 className="font-medium mb-3">ابعاد</h3>
@@ -369,7 +383,7 @@ export default function OrderDetail() {
                           <div key={index} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg flex-wrap">
                             <span className="font-medium">بعد {index + 1}:</span>
                             <span>طول: {length} متر</span>
-                            {width && <span>× عرض: {width} متر</span>}
+                            {width && width !== 1 && <span>× عرض: {width} متر</span>}
                             <span>× ارتفاع: {height} متر</span>
                             <span className="text-muted-foreground">
                               = {area.toFixed(2)} متر مکعب
@@ -381,19 +395,98 @@ export default function OrderDetail() {
                   </div>
                 )}
 
+                {/* متراژ کل */}
                 {parsedNotes?.totalArea && (
                   <div className="flex items-center gap-2 p-4 bg-primary/10 rounded-lg">
-                    <span className="font-medium">مساحت کل:</span>
+                    <span className="font-medium">متراژ کل:</span>
                     <span className="text-lg font-bold">{parsedNotes.totalArea.toFixed(2)} متر مکعب</span>
                   </div>
                 )}
 
+                {/* شرایط خدمات */}
+                {parsedNotes?.conditions && (
+                  <div>
+                    <h3 className="font-medium mb-3">شرایط خدمات</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {parsedNotes.conditions.totalMonths && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">مدت قرارداد: </span>
+                          <span className="font-medium">{parsedNotes.conditions.totalMonths} ماه</span>
+                        </div>
+                      )}
+                      {parsedNotes.conditions.currentMonth && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">ماه جاری: </span>
+                          <span className="font-medium">ماه {parsedNotes.conditions.currentMonth}</span>
+                        </div>
+                      )}
+                      {parsedNotes.conditions.distanceRange && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">فاصله: </span>
+                          <span className="font-medium">{parsedNotes.conditions.distanceRange} کیلومتر</span>
+                        </div>
+                      )}
+                      {parsedNotes.onGround !== undefined && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">محل نصب: </span>
+                          <span className="font-medium">{parsedNotes.onGround ? 'روی زمین' : 'روی سکو/پشت‌بام'}</span>
+                        </div>
+                      )}
+                      {!parsedNotes.onGround && parsedNotes.conditions.platformHeight && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">ارتفاع پای کار: </span>
+                          <span className="font-medium">{parsedNotes.conditions.platformHeight} متر</span>
+                        </div>
+                      )}
+                      {!parsedNotes.onGround && parsedNotes.conditions.scaffoldHeightFromPlatform && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">ارتفاع داربست از پای کار: </span>
+                          <span className="font-medium">{parsedNotes.conditions.scaffoldHeightFromPlatform} متر</span>
+                        </div>
+                      )}
+                      {parsedNotes.vehicleReachesSite !== undefined && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">دسترسی خودرو: </span>
+                          <span className="font-medium">{parsedNotes.vehicleReachesSite ? 'خودرو به محل می‌رسد' : 'خودرو به محل نمی‌رسد'}</span>
+                        </div>
+                      )}
+                      {!parsedNotes.vehicleReachesSite && parsedNotes.conditions.vehicleDistance && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">فاصله خودرو تا محل: </span>
+                          <span className="font-medium">{parsedNotes.conditions.vehicleDistance} متر</span>
+                        </div>
+                      )}
+                      {parsedNotes.isFacadeWidth2m !== undefined && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">عرض داربست نما: </span>
+                          <span className="font-medium">{parsedNotes.isFacadeWidth2m ? '2 متر' : '1 متر'}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* قیمت */}
                 {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount) && (
-                  <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                    <span className="font-medium">قیمت:</span>
-                    <span className="text-lg font-bold text-green-700 dark:text-green-300">
+                  <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border-2 border-green-200 dark:border-green-800">
+                    <span className="font-medium text-lg">قیمت:</span>
+                    <span className="text-2xl font-bold text-green-700 dark:text-green-300">
                       {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount)?.toLocaleString('fa-IR')} تومان
                     </span>
+                  </div>
+                )}
+
+                {/* جزئیات قیمت */}
+                {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
+                  <div>
+                    <h3 className="font-medium mb-3">جزئیات محاسبه قیمت</h3>
+                    <div className="space-y-2">
+                      {parsedNotes.price_breakdown.map((item: string, index: number) => (
+                        <div key={index} className="text-sm text-muted-foreground p-2 bg-muted/30 rounded">
+                          {item}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -406,13 +499,12 @@ export default function OrderDetail() {
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
                   <Clock className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
                       در انتظار تایید مدیریت
                     </p>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                      سفارش شما در حال بررسی است و به زودی نتیجه به شما اطلاع داده خواهد شد.
-                      پس از ثبت سفارش، امکان ویرایش وجود ندارد.
+                      سفارش شما در حال بررسی است. تا زمان تایید توسط مدیر، می‌توانید سفارش خود را ویرایش کنید.
                     </p>
                   </div>
                 </div>

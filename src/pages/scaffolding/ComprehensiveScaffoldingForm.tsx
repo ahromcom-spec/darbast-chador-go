@@ -447,14 +447,8 @@ export default function ComprehensiveScaffoldingForm({
 
       // اتوماسیون اداری حالا با database trigger اجرا می‌شود (order-automation function حذف شد)
 
-      // هدایت کاربر به صفحه پروژه‌های من
-      navigate('/user/projects', {
-        state: {
-          expandLocationId: finalLocationId,
-          expandProjectId: projectId,
-          highlightOrderId: createdProject.id
-        }
-      });
+      // هدایت کاربر به صفحه جزئیات سفارش
+      navigate(`/orders/${createdProject.id}`);
     } catch (e: any) {
       console.error('Error:', e);
       toast({ title: 'خطا', description: e.message || 'ثبت با مشکل مواجه شد', variant: 'destructive' });
