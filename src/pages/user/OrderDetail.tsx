@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import OrderChat from "@/components/orders/OrderChat";
 import {
   ArrowRight,
   MapPin,
@@ -674,6 +675,9 @@ export default function OrderDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* بخش چت و تعامل با مدیریت */}
+          <OrderChat orderId={order.id} orderStatus={order.status} />
 
         </div>
       </div>
