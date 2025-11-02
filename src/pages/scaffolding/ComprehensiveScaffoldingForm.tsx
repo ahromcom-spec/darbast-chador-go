@@ -598,7 +598,7 @@ export default function ComprehensiveScaffoldingForm({
         <h1 className="sr-only">فرم ثبت سفارش داربست</h1>
 
       {/* نوع داربست */}
-      <Card className="shadow-2xl bg-card/10 backdrop-blur-md border-2">
+      <Card className="shadow-2xl bg-white dark:bg-card border-2">
         <CardHeader>
           <CardTitle className="text-foreground">نوع خدمات داربست</CardTitle>
           <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
@@ -633,7 +633,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* Dimensions */}
-      <Card className="shadow-2xl bg-card/10 backdrop-blur-md border-2">
+      <Card className="shadow-2xl bg-white dark:bg-card border-2">
         <CardHeader>
           <CardTitle className="text-foreground">ابعاد</CardTitle>
           <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">ابعاد به متر وارد شود</CardDescription>
@@ -695,7 +695,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* Service Conditions */}
-      <Card className="shadow-2xl bg-card/10 backdrop-blur-md border-2">
+      <Card className="shadow-2xl bg-white dark:bg-card border-2">
         <CardHeader>
           <CardTitle className="text-foreground">شرایط سرویس</CardTitle>
         </CardHeader>
@@ -819,7 +819,7 @@ export default function ComprehensiveScaffoldingForm({
       />
 
       {/* Price Summary */}
-      <Card className="shadow-2xl bg-card/10 backdrop-blur-md border-2 border-primary">
+      <Card className="shadow-2xl bg-white dark:bg-card border-2 border-primary">
         <CardHeader>
           <CardTitle className="text-foreground">خلاصه قیمت</CardTitle>
         </CardHeader>
