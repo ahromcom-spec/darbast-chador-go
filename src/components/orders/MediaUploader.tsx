@@ -59,50 +59,13 @@ export function MediaUploader({
       return false;
     }
 
-    // Try to check video duration. If the browser cannot read metadata (codec not supported),
-    // allow upload anyway and just warn the user that preview may not work.
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-
-      let timedOut = false;
-      const timeout = window.setTimeout(() => {
-        timedOut = true;
-        toast({
-          title: 'اطلاع',
-          description: 'فرمت ویدیو در مرورگر شما پیش‌نمایش نمی‌شود، اما آپلود انجام خواهد شد.',
-        });
-        resolve(true);
-      }, 4000);
-      
-      video.onloadedmetadata = () => {
-        if (timedOut) return;
-        window.clearTimeout(timeout);
-        window.URL.revokeObjectURL(video.src);
-        if (video.duration > maxVideoDuration) {
-          toast({
-            title: 'خطا',
-            description: `مدت زمان ویدیو نباید بیشتر از ${maxVideoDuration / 60} دقیقه باشد`,
-            variant: 'destructive'
-          });
-          resolve(false);
-        } else {
-          resolve(true);
-        }
-      };
-
-      video.onerror = () => {
-        if (timedOut) return;
-        window.clearTimeout(timeout);
-        toast({
-          title: 'اطلاع',
-          description: 'پیش‌نمایش این فرمت ویدیو پشتیبانی نمی‌شود، اما آپلود انجام می‌شود.',
-        });
-        resolve(true);
-      };
-
-      video.src = URL.createObjectURL(file);
+    // Accept all video formats - just show a notification that upload will proceed
+    toast({
+      title: 'در حال آپلود',
+      description: 'ویدیو شما در حال آپلود است...',
     });
+    
+    return true;
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
@@ -259,7 +222,7 @@ export function MediaUploader({
           <input
             id="video-upload"
             type="file"
-            accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
+            accept="video/*"
             multiple
             className="hidden"
             onChange={(e) => handleFileSelect(e, 'video')}
