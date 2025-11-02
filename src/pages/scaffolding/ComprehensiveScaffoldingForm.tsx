@@ -686,7 +686,7 @@ export default function ComprehensiveScaffoldingForm({
           ))}
           <Button type="button" variant="outline" onClick={addDimension} className="w-full">
             <Plus className="h-4 w-4 ml-2" />
-            افزودن سطر جدید
+            افزودن ابعاد اضافی
           </Button>
           <div className="text-sm text-slate-700 dark:text-slate-300 pt-2">
             مجموع مساحت: <span className="font-semibold">{Math.round(calculateTotalArea())}</span> متر مکعب
