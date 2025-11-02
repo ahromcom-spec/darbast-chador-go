@@ -314,7 +314,8 @@ export default function ComprehensiveScaffoldingForm({
           .from('order-media')
           .upload(filePath, file, {
             cacheControl: '3600',
-            upsert: false
+            upsert: false,
+            contentType: file.type || undefined,
           });
 
         if (uploadError) {

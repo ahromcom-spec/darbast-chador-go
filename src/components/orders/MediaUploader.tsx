@@ -59,12 +59,25 @@ export function MediaUploader({
       return false;
     }
 
-    // Check video duration
+    // Try to check video duration. If the browser cannot read metadata (codec not supported),
+    // allow upload anyway and just warn the user that preview may not work.
     return new Promise((resolve) => {
       const video = document.createElement('video');
       video.preload = 'metadata';
+
+      let timedOut = false;
+      const timeout = window.setTimeout(() => {
+        timedOut = true;
+        toast({
+          title: 'اطلاع',
+          description: 'فرمت ویدیو در مرورگر شما پیش‌نمایش نمی‌شود، اما آپلود انجام خواهد شد.',
+        });
+        resolve(true);
+      }, 4000);
       
       video.onloadedmetadata = () => {
+        if (timedOut) return;
+        window.clearTimeout(timeout);
         window.URL.revokeObjectURL(video.src);
         if (video.duration > maxVideoDuration) {
           toast({
@@ -79,12 +92,13 @@ export function MediaUploader({
       };
 
       video.onerror = () => {
+        if (timedOut) return;
+        window.clearTimeout(timeout);
         toast({
-          title: 'خطا',
-          description: 'خطا در بارگذاری ویدیو',
-          variant: 'destructive'
+          title: 'اطلاع',
+          description: 'پیش‌نمایش این فرمت ویدیو پشتیبانی نمی‌شود، اما آپلود انجام می‌شود.',
         });
-        resolve(false);
+        resolve(true);
       };
 
       video.src = URL.createObjectURL(file);
@@ -245,7 +259,7 @@ export function MediaUploader({
           <input
             id="video-upload"
             type="file"
-            accept="video/mp4,video/quicktime,video/x-msvideo"
+            accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
             multiple
             className="hidden"
             onChange={(e) => handleFileSelect(e, 'video')}
