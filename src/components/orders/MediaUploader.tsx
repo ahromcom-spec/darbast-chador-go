@@ -131,7 +131,7 @@ export function MediaUploader({
     }
   };
 
-  // Extract thumbnail from video middle
+  // Extract thumbnail from video beginning
   const extractVideoThumbnail = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
@@ -139,8 +139,8 @@ export function MediaUploader({
       video.muted = true;
       
       video.onloadedmetadata = () => {
-        // Seek to middle of video
-        video.currentTime = video.duration / 2;
+        // Seek to beginning of video (0.1 seconds to ensure frame is loaded)
+        video.currentTime = 0.1;
       };
       
       video.onseeked = () => {
