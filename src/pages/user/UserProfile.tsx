@@ -250,19 +250,19 @@ const fetchOrders = async () => {
           <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto gap-2 bg-muted/50 p-1">
             <TabsTrigger 
               value="info" 
-              className="text-sm sm:text-base py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+              className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               اطلاعات کاربری
             </TabsTrigger>
             <TabsTrigger 
               value="orders" 
-              className="text-sm sm:text-base py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+              className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               سفارشات من
             </TabsTrigger>
             <TabsTrigger 
               value="actions" 
-              className="text-sm sm:text-base py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+              className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               دسترسی سریع
             </TabsTrigger>
@@ -310,7 +310,7 @@ const fetchOrders = async () => {
   <div className="space-y-6">
     {/* Project Management Section - در سفارشات */}
     <div className="space-y-4 p-4 rounded-lg border-2 border-primary/20 bg-card" data-tour="my-projects">
-      <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+      <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
         <FolderKanban className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
         <span>مدیریت پروژه‌ها</span>
       </h3>
@@ -324,7 +324,7 @@ const fetchOrders = async () => {
               <FolderKanban className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="font-semibold text-sm">پروژه‌های من</div>
+              <div className="font-bold text-sm text-foreground">پروژه‌های من</div>
               <div className="text-xs text-muted-foreground">مشاهده و مدیریت پروژه‌ها</div>
             </div>
           </div>
@@ -338,7 +338,7 @@ const fetchOrders = async () => {
               <Package className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="font-semibold text-sm">پروژه جدید</div>
+              <div className="font-bold text-sm text-foreground">پروژه جدید</div>
               <div className="text-xs text-muted-foreground">ایجاد پروژه با آدرس و خدمات</div>
             </div>
           </div>
@@ -353,7 +353,7 @@ const fetchOrders = async () => {
           <TabsContent value="actions" className="space-y-6 mt-4">
             {/* Support Ticket Section */}
             <div className="space-y-4">
-              <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
                 <span>ثبت تیکت پشتیبانی</span>
               </h3>
