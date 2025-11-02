@@ -10,7 +10,8 @@ import {
   FileText,
   Users,
   ClipboardList,
-  Hammer
+  Hammer,
+  PanelLeft
 } from 'lucide-react';
 import {
   Sidebar,
@@ -21,6 +22,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
+  SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -105,6 +108,13 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
       className="border-l" 
       collapsible={staticMode ? 'none' : 'icon'}
     >
+      {!staticMode && (
+        <SidebarHeader className="border-b p-2">
+          <SidebarTrigger className="h-9 w-9">
+            <PanelLeft className="h-4 w-4" />
+          </SidebarTrigger>
+        </SidebarHeader>
+      )}
       <SidebarContent>
         {/* عمومی */}
         <SidebarGroup>
