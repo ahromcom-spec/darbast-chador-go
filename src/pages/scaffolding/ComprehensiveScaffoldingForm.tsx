@@ -343,10 +343,33 @@ export default function ComprehensiveScaffoldingForm({
       setLoading(true);
       const priceData = calculatePrice();
 
-      // دریافت نوع خدمات و subcategory از state یا حافظه
+      // دریافت نوع خدمات و subcategory از state یا حافظه یا داده‌های موجود در ویرایش
       const pendingSel = JSON.parse(localStorage.getItem('pendingServiceSelection') || 'null');
-      let finalServiceTypeId: string | null = navState?.serviceTypeId || pendingSel?.serviceTypeId || null;
-      let finalSubcategoryId: string | null = navState?.subcategoryId || pendingSel?.subcategoryId || null;
+      let finalServiceTypeId: string | null = null;
+      let finalSubcategoryId: string | null = null;
+
+      // در حالت ویرایش، ابتدا از existingOrderData استفاده کن
+      if (editOrderId && existingOrderData) {
+        // گرفتن service_type_id از طریق subcategory
+        if (existingOrderData.subcategory_id) {
+          const { data: subData } = await supabase
+            .from('subcategories')
+            .select('id, service_type_id')
+            .eq('id', existingOrderData.subcategory_id)
+            .maybeSingle();
+          
+          if (subData) {
+            finalServiceTypeId = subData.service_type_id;
+            finalSubcategoryId = subData.id;
+          }
+        }
+      }
+
+      // اگر از ویرایش پیدا نشد، از navigation state یا localStorage استفاده کن
+      if (!finalServiceTypeId || !finalSubcategoryId) {
+        finalServiceTypeId = navState?.serviceTypeId || pendingSel?.serviceTypeId || null;
+        finalSubcategoryId = navState?.subcategoryId || pendingSel?.subcategoryId || null;
+      }
 
       // اگر هنوز مشخص نشد، بر اساس نام‌ها یا کد زیرشاخه تلاش کن
       if (!finalServiceTypeId || !finalSubcategoryId) {
