@@ -42,6 +42,9 @@ export default function SelectLocation() {
   }, [user, serviceSelection]);
 
   const handleLocationSelected = async (locationId: string) => {
+    // Scroll to top for better UX
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
     try {
       // Get location details from database
       const { data: location, error: locationError } = await supabase

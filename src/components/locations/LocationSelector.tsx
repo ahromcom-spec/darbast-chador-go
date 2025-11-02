@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocations, Location } from '@/hooks/useLocations';
 import { LocationCard } from './LocationCard';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,13 @@ interface LocationSelectorProps {
 export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) => {
   const { locations, loading, deleteLocation, refetch } = useLocations();
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+
+  // Auto-select first location when locations load
+  useEffect(() => {
+    if (locations.length > 0 && !selectedLocationId) {
+      setSelectedLocationId(locations[0].id);
+    }
+  }, [locations, selectedLocationId]);
   const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
