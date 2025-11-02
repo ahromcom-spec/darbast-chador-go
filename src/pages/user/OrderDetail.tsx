@@ -106,6 +106,9 @@ export default function OrderDetail() {
   const [completionDate, setCompletionDate] = useState('');
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; poster?: string } | null>(null);
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -115,6 +118,44 @@ export default function OrderDetail() {
     }
   }, [id]);
 
+  // مدیریت منبع ویدیو و آزادسازی blob ها
+  useEffect(() => {
+    if (selectedVideo) {
+      setVideoSrc(selectedVideo.url);
+      setVideoLoading(false);
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        setBlobUrl(null);
+      }
+    } else {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        setBlobUrl(null);
+      }
+      setVideoSrc(null);
+    }
+  }, [selectedVideo]);
+
+  // در صورت خطا در پخش مستقیم، به blob تبدیل کنیم تا مشکل Content-Disposition/CORS برطرف شود
+  const fallbackToBlob = async () => {
+    if (!selectedVideo || blobUrl) return;
+    try {
+      setVideoLoading(true);
+      const res = await fetch(selectedVideo.url);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setBlobUrl(url);
+      setVideoSrc(url);
+    } catch (err) {
+      toast({
+        title: "خطا در پخش ویدیو",
+        description: "در تبدیل ویدیو برای پخش مشکلی رخ داد.",
+        variant: "destructive"
+      });
+    } finally {
+      setVideoLoading(false);
+    }
+  };
   const fetchOrderDetails = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -833,23 +874,34 @@ export default function OrderDetail() {
 
           {/* Video Player Dialog */}
           <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
-            <DialogContent className="max-w-4xl w-full p-0">
+            <DialogContent className="max-w-5xl w-full p-0">
               <DialogHeader className="p-6 pb-4">
                 <DialogTitle>پخش ویدیو</DialogTitle>
               </DialogHeader>
               <div className="px-6 pb-6">
                 {selectedVideo && (
                   <div className="space-y-3">
-                    <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
+                      {videoLoading && (
+                        <div className="absolute inset-0 grid place-items-center text-white text-sm">
+                          در حال آماده‌سازی ویدیو...
+                        </div>
+                      )}
                       <video
-                        key={selectedVideo.url}
-                        src={selectedVideo.url}
+                        key={(videoSrc || selectedVideo.url) as string}
+                        src={(videoSrc || selectedVideo.url) as string}
                         controls
                         className="w-full h-full"
                         poster={selectedVideo.poster}
                         preload="metadata"
                         playsInline
+                        crossOrigin="anonymous"
+                        onError={() => {
+                          // اگر پخش مستقیم شکست خورد، به blob تبدیل کنیم
+                          void fallbackToBlob();
+                        }}
                       >
+                        <source src={(videoSrc || selectedVideo.url) as string} type="video/mp4" />
                         مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
                       </video>
                     </div>
