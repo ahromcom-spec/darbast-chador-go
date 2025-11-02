@@ -300,6 +300,9 @@ export default function ComprehensiveScaffoldingForm({
   const uploadMediaFiles = async (projectId: string, files: File[]) => {
     if (!user) return;
 
+    let successCount = 0;
+    let failCount = 0;
+
     for (const file of files) {
       try {
         const fileExt = file.name.split('.').pop();
@@ -316,12 +319,18 @@ export default function ComprehensiveScaffoldingForm({
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
+          toast({
+            title: 'خطا در آپلود',
+            description: `خطا در آپلود ${file.name}: ${uploadError.message}`,
+            variant: 'destructive'
+          });
+          failCount++;
           continue;
         }
 
         // Save metadata to database
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        await supabase
+        const { error: dbError } = await supabase
           .from('project_media')
           .insert({
             project_id: projectId,
@@ -332,9 +341,34 @@ export default function ComprehensiveScaffoldingForm({
             mime_type: file.type
           });
 
+        if (dbError) {
+          console.error('Database error:', dbError);
+          toast({
+            title: 'خطا در ذخیره اطلاعات',
+            description: `خطا در ذخیره اطلاعات ${file.name}`,
+            variant: 'destructive'
+          });
+          failCount++;
+        } else {
+          successCount++;
+        }
+
       } catch (error) {
         console.error('Error uploading file:', error);
+        toast({
+          title: 'خطا',
+          description: `خطای غیرمنتظره در آپلود ${file.name}`,
+          variant: 'destructive'
+        });
+        failCount++;
       }
+    }
+
+    if (successCount > 0) {
+      toast({
+        title: 'موفق',
+        description: `${successCount} فایل با موفقیت آپلود شد`,
+      });
     }
   };
 
