@@ -28,8 +28,8 @@ export function MediaUploader({
   maxImages = 4,
   maxVideos = 2,
   maxImageSize = 10,
-  maxVideoSize = 150,
-  maxVideoDuration = 180, // 3 minutes
+  maxVideoSize = 50,
+  maxVideoDuration = 600, // 10 minutes
 }: MediaUploaderProps) {
   const { toast } = useToast();
   const [files, setFiles] = useState<MediaFile[]>([]);

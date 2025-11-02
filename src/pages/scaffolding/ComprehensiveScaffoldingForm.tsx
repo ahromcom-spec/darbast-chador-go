@@ -319,9 +319,14 @@ export default function ComprehensiveScaffoldingForm({
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
+          const statusCode = (uploadError as any)?.statusCode;
+          let message = (uploadError as any)?.message || 'خطای نامشخص';
+          if (statusCode === 413 || /payload too large|too large|exceeds/i.test(message)) {
+            message = 'حجم فایل بیش از حد مجاز است. حداکثر 50MB برای هر ویدیو مجاز است.';
+          }
           toast({
             title: 'خطا در آپلود',
-            description: `خطا در آپلود ${file.name}: ${uploadError.message}`,
+            description: `خطا در آپلود ${file.name}: ${message}`,
             variant: 'destructive'
           });
           failCount++;
