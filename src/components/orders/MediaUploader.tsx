@@ -21,6 +21,7 @@ interface MediaFile {
   remoteUrl?: string; // public URL after upload
   previewError?: boolean; // when browser can't play the format
   uploadProgress?: number; // 0-100
+  thumbnail?: string; // For videos: extracted frame from middle
 }
 
 interface MediaUploaderProps {
@@ -130,6 +131,45 @@ export function MediaUploader({
     }
   };
 
+  // Extract thumbnail from video middle
+  const extractVideoThumbnail = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      
+      video.onloadedmetadata = () => {
+        // Seek to middle of video
+        video.currentTime = video.duration / 2;
+      };
+      
+      video.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Cannot get canvas context'));
+          return;
+        }
+        
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.7);
+        
+        URL.revokeObjectURL(video.src);
+        resolve(thumbnailUrl);
+      };
+      
+      video.onerror = () => {
+        URL.revokeObjectURL(video.src);
+        reject(new Error('Cannot load video'));
+      };
+      
+      video.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
     const selectedFiles = event.target.files;
     if (!selectedFiles) return;
@@ -157,13 +197,26 @@ export function MediaUploader({
       if (!isValid) continue;
 
       const preview = URL.createObjectURL(file);
-      newMedia.push({
+      const mediaItem: MediaFile = {
         id: Math.random().toString(36).slice(2),
         file,
         preview,
         type,
         status: 'pending',
-      });
+      };
+      
+      // Extract thumbnail for videos
+      if (type === 'video') {
+        extractVideoThumbnail(file)
+          .then(thumbnailUrl => {
+            setFilePartial(mediaItem.id, { thumbnail: thumbnailUrl });
+          })
+          .catch(() => {
+            // Thumbnail extraction failed, continue without it
+          });
+      }
+      
+      newMedia.push(mediaItem);
     }
 
     if (newMedia.length) {
@@ -308,8 +361,19 @@ export function MediaUploader({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {files.filter(f => f.type === 'video').map((file) => (
                 <div key={file.id} className="relative group aspect-video rounded-lg overflow-hidden border bg-muted">
-                  {/* Video preview if possible; gracefully degrade */}
-                  {!file.previewError ? (
+                  {/* Show thumbnail if available, otherwise video preview */}
+                  {file.thumbnail && !file.previewError ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={file.thumbnail}
+                        alt="پیش‌نمایش ویدیو"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                        <Film className="w-12 h-12 text-white opacity-80" />
+                      </div>
+                    </div>
+                  ) : !file.previewError ? (
                     <video
                       src={file.remoteUrl || file.preview}
                       className="w-full h-full object-cover"
