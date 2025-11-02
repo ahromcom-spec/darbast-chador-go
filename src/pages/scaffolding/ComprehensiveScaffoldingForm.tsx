@@ -601,7 +601,7 @@ export default function ComprehensiveScaffoldingForm({
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
         <CardHeader>
           <CardTitle className="text-foreground">نوع خدمات داربست</CardTitle>
-          <CardDescription className="text-foreground/80 font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
+          <CardDescription className="text-slate-800 dark:text-slate-300 font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -636,7 +636,7 @@ export default function ComprehensiveScaffoldingForm({
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
         <CardHeader>
           <CardTitle className="text-foreground">ابعاد</CardTitle>
-          <CardDescription className="text-foreground/80 font-semibold">ابعاد به متر وارد شود</CardDescription>
+          <CardDescription className="text-slate-800 dark:text-slate-300 font-semibold">ابعاد به متر وارد شود</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {dimensions.map((dim) => (
@@ -688,7 +688,7 @@ export default function ComprehensiveScaffoldingForm({
             <Plus className="h-4 w-4 ml-2" />
             افزودن سطر جدید
           </Button>
-          <div className="text-sm text-foreground/80 pt-2">
+          <div className="text-sm text-slate-800 dark:text-slate-300 pt-2">
             مجموع مساحت: <span className="font-semibold">{Math.round(calculateTotalArea())}</span> متر مکعب
           </div>
         </CardContent>
@@ -825,14 +825,14 @@ export default function ComprehensiveScaffoldingForm({
         </CardHeader>
         <CardContent className="space-y-3">
           {priceData.breakdown.map((item, idx) => (
-            <div key={idx} className="text-sm text-foreground/80">{item}</div>
+            <div key={idx} className="text-sm text-slate-800 dark:text-slate-300">{item}</div>
           ))}
           <div className="pt-3 border-t">
             <div className="text-xl font-bold">
               قیمت نهایی: <span className="text-primary">{priceData.total.toLocaleString('fa-IR')}</span> تومان
             </div>
             {priceData.pricePerMeter && (
-              <div className="text-sm text-foreground/80 mt-1">
+              <div className="text-sm text-slate-800 dark:text-slate-300 mt-1">
                 (قیمت هر متر مکعب: {priceData.pricePerMeter.toLocaleString('fa-IR')} تومان)
               </div>
             )}
