@@ -75,6 +75,13 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
           <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-14 items-center justify-between px-4">
               <div className="flex items-center gap-3">
+                {/* Desktop Sidebar Trigger */}
+                <div className="hidden md:block">
+                  <SidebarTrigger className="h-9 w-9">
+                    <PanelLeft className="h-4 w-4" />
+                  </SidebarTrigger>
+                </div>
+
                 {/* Mobile Menu */}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild className="md:hidden">
@@ -109,13 +116,6 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
               {children}
             </div>
           </main>
-
-          {/* Floating Sidebar Toggle - Bottom Left */}
-          <div className="hidden md:block fixed bottom-6 left-6 z-50" data-tour="sidebar-trigger">
-            <SidebarTrigger className="rounded-full h-12 w-12 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all">
-              <PanelLeft className="h-5 w-5" />
-            </SidebarTrigger>
-          </div>
         </div>
       </div>
     </SidebarProvider>
