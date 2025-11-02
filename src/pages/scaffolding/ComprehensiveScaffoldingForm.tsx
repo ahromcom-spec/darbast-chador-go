@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2, AlertCircle, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -595,7 +595,10 @@ export default function ComprehensiveScaffoldingForm({
 
       {/* Content */}
       <div className="relative z-10 space-y-6 pb-8">
-        <h1 className="sr-only">فرم ثبت سفارش داربست</h1>
+        <div className="flex items-center justify-center gap-3 mb-6 bg-white dark:bg-card rounded-lg p-4 shadow-lg">
+          <ClipboardList className="w-6 h-6 text-slate-600 dark:text-slate-200" />
+          <h1 className="text-xl font-bold text-slate-600 dark:text-slate-200">فرم ثبت سفارش داربست فلزی</h1>
+        </div>
 
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
