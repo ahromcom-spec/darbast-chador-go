@@ -26,7 +26,7 @@ export function PageHeader({
         <div>
           <h1 className="text-3xl font-bold text-foreground">{title}</h1>
           {description && (
-            <p className="text-muted-foreground mt-1">{description}</p>
+            <p className="text-primary mt-2 bg-background/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-primary/20">{description}</p>
           )}
         </div>
         <div className="flex gap-2">
