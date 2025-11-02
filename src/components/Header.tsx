@@ -50,14 +50,14 @@ const Header = () => {
                 alt="لوگوی اهرم" 
                 width="140"
                 height="80"
-                className="h-8 sm:h-9 w-auto object-contain"
+                className="h-11 sm:h-12 w-auto object-contain"
                 loading="eager"
               />
             </div>
 
             {/* Company Name - Center */}
             <div className="flex justify-center">
-              <h1 className="text-xs sm:text-sm font-black text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent text-center">
+              <h1 className="text-sm sm:text-base font-black text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent text-center">
                 خدمات ساختمانی و منزل اهرم
               </h1>
             </div>
@@ -169,7 +169,7 @@ const Header = () => {
                   alt="لوگوی اهرم" 
                   width="140"
                   height="80"
-                  className="h-14 w-auto object-contain"
+                  className="h-20 w-auto object-contain"
                   loading="eager"
                 />
               </div>
@@ -177,7 +177,7 @@ const Header = () => {
 
             {/* Company Name - Center */}
             <div className="flex justify-center">
-              <h1 className="text-lg md:text-xl font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent whitespace-nowrap">
+              <h1 className="text-xl md:text-2xl font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent whitespace-nowrap">
                 خدمات ساختمان و منزل اهرم
               </h1>
             </div>
@@ -190,7 +190,7 @@ const Header = () => {
                     <img 
                       src={contactButton} 
                       alt="تماس" 
-                      className="h-20 w-auto object-contain"
+                      className="h-28 w-auto object-contain"
                     />
                   </button>
                 </DropdownMenuTrigger>
