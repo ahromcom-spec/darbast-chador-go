@@ -350,8 +350,11 @@ export default function ComprehensiveScaffoldingForm({
 
       // در حالت ویرایش، ابتدا از existingOrderData استفاده کن
       if (editOrderId && existingOrderData) {
-        // گرفتن service_type_id از طریق subcategory
+        // استفاده از subcategory_id مستقیم از existingOrderData
         if (existingOrderData.subcategory_id) {
+          finalSubcategoryId = existingOrderData.subcategory_id;
+          
+          // گرفتن service_type_id از طریق subcategory
           const { data: subData } = await supabase
             .from('subcategories')
             .select('id, service_type_id')
@@ -360,15 +363,14 @@ export default function ComprehensiveScaffoldingForm({
           
           if (subData) {
             finalServiceTypeId = subData.service_type_id;
-            finalSubcategoryId = subData.id;
           }
         }
       }
 
-      // اگر از ویرایش پیدا نشد، از navigation state یا localStorage استفاده کن
+      // اگر از ویرایش پیدا نشد، از navigation state یا localStorage یا props استفاده کن
       if (!finalServiceTypeId || !finalSubcategoryId) {
-        finalServiceTypeId = navState?.serviceTypeId || pendingSel?.serviceTypeId || null;
-        finalSubcategoryId = navState?.subcategoryId || pendingSel?.subcategoryId || null;
+        finalServiceTypeId = propServiceTypeId || serviceTypeId || navState?.serviceTypeId || pendingSel?.serviceTypeId || null;
+        finalSubcategoryId = propSubcategoryId || subcategoryId || navState?.subcategoryId || pendingSel?.subcategoryId || null;
       }
 
       // اگر هنوز مشخص نشد، بر اساس نام‌ها یا کد زیرشاخه تلاش کن
