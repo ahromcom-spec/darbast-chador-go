@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -103,6 +104,7 @@ export default function OrderDetail() {
   const [parsedNotes, setParsedNotes] = useState<any>(null);
   const [completionDate, setCompletionDate] = useState('');
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -726,60 +728,72 @@ export default function OrderDetail() {
                       .from('order-media')
                       .getPublicUrl(media.file_path);
                     
+                    const handleDownload = async () => {
+                      try {
+                        const response = await fetch(data.publicUrl);
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = media.file_path.split('/').pop() || 'video.mp4';
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        toast({ title: 'موفق', description: 'دانلود ویدیو شروع شد' });
+                      } catch (error) {
+                        toast({ title: 'خطا', description: 'خطا در دانلود ویدیو', variant: 'destructive' });
+                      }
+                    };
+                    
                     return (
                       <div key={media.id} className="relative group col-span-2">
-                        <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
-                          <video
-                            src={data.publicUrl}
-                            controls
-                            controlsList="nodownload"
-                            className="w-full h-full object-cover"
-                            poster={data.publicUrl}
-                          >
-                            مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
-                          </video>
+                        <div 
+                          className="aspect-video rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                          onClick={() => setSelectedVideo(data.publicUrl)}
+                        >
+                          <div className="relative w-full h-full bg-black/5 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                            <Film className="w-16 h-16 text-primary opacity-60" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
+                                <Play className="w-8 h-8 text-primary fill-primary" />
+                              </div>
+                            </div>
+                          </div>
                         </div>
                         
-                        {/* Download and Play buttons */}
-                        <div className="absolute top-2 left-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Action buttons */}
+                        <div className="absolute top-3 left-3 flex gap-2">
                           <Button
                             size="sm"
                             variant="secondary"
-                            className="shadow-lg"
-                            asChild
+                            className="shadow-lg bg-white/95 hover:bg-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload();
+                            }}
                           >
-                            <a
-                              href={data.publicUrl}
-                              download
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1"
-                            >
-                              <Download className="w-4 h-4" />
-                              دانلود
-                            </a>
+                            <Download className="w-4 h-4 ml-1" />
+                            دانلود
                           </Button>
                           <Button
                             size="sm"
                             variant="secondary"
-                            className="shadow-lg"
-                            asChild
+                            className="shadow-lg bg-white/95 hover:bg-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedVideo(data.publicUrl);
+                            }}
                           >
-                            <a
-                              href={data.publicUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1"
-                            >
-                              <Play className="w-4 h-4" />
-                              باز کردن
-                            </a>
+                            <Play className="w-4 h-4 ml-1" />
+                            پخش
                           </Button>
                         </div>
                         
-                        {/* File size badge */}
-                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                          <Film className="w-3 h-3" />
+                        {/* File info badge */}
+                        <div className="absolute bottom-3 left-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
+                          <Film className="w-3.5 h-3.5" />
                           ویدیو
                         </div>
                       </div>
@@ -789,6 +803,30 @@ export default function OrderDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Video Player Dialog */}
+          <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
+            <DialogContent className="max-w-4xl w-full p-0">
+              <DialogHeader className="p-6 pb-4">
+                <DialogTitle>پخش ویدیو</DialogTitle>
+              </DialogHeader>
+              <div className="px-6 pb-6">
+                {selectedVideo && (
+                  <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                    <video
+                      src={selectedVideo}
+                      controls
+                      autoPlay
+                      className="w-full h-full"
+                      controlsList="nodownload"
+                    >
+                      مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                    </video>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
