@@ -822,26 +822,28 @@ export default function ComprehensiveScaffoldingForm({
       />
 
       {/* Price Summary */}
-      <Card className="shadow-2xl bg-white dark:bg-card border-2 border-primary">
-        <CardHeader>
-          <CardTitle className="text-blue-800 dark:text-blue-300">خلاصه قیمت</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {priceData.breakdown.map((item, idx) => (
-            <div key={idx} className="text-sm text-slate-700 dark:text-slate-300">{item}</div>
-          ))}
-          <div className="pt-3 border-t">
-            <div className="text-xl font-bold">
-              قیمت نهایی: <span className="text-primary">{priceData.total.toLocaleString('fa-IR')}</span> تومان
-            </div>
-            {priceData.pricePerMeter && (
-              <div className="text-sm text-slate-700 dark:text-slate-300 mt-1">
-                (قیمت هر متر مکعب: {priceData.pricePerMeter.toLocaleString('fa-IR')} تومان)
+      {calculateTotalArea() > 0 && (
+        <Card className="shadow-2xl bg-white dark:bg-card border-2 border-primary">
+          <CardHeader>
+            <CardTitle className="text-blue-800 dark:text-blue-300">خلاصه قیمت</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {priceData.breakdown.map((item, idx) => (
+              <div key={idx} className="text-sm text-slate-700 dark:text-slate-300">{item}</div>
+            ))}
+            <div className="pt-3 border-t">
+              <div className="text-xl font-bold">
+                قیمت نهایی: <span className="text-primary">{priceData.total.toLocaleString('fa-IR')}</span> تومان
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              {priceData.pricePerMeter && (
+                <div className="text-sm text-slate-700 dark:text-slate-300 mt-1">
+                  (قیمت هر متر مکعب: {priceData.pricePerMeter.toLocaleString('fa-IR')} تومان)
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Button 
         onClick={onSubmit} 
