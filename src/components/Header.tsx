@@ -42,7 +42,7 @@ const Header = () => {
         {/* Mobile & Tablet Layout - Two Rows */}
         <div className="md:hidden">
           {/* First Row: Logo, Company Name (Centered), Contact */}
-          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 py-3 border-b border-border/30 px-1">
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 py-1.5 border-b border-border/30 px-1">
             {/* Logo - Right side (RTL) */}
             <div className="cursor-pointer" onClick={() => navigate('/')}>
               <img 
@@ -50,14 +50,14 @@ const Header = () => {
                 alt="لوگوی اهرم" 
                 width="140"
                 height="80"
-                className="h-11 sm:h-12 w-auto object-contain"
+                className="h-8 sm:h-9 w-auto object-contain"
                 loading="eager"
               />
             </div>
 
             {/* Company Name - Center */}
             <div className="flex justify-center">
-              <h1 className="text-sm sm:text-base font-black text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent text-center">
+              <h1 className="text-xs sm:text-sm font-black text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent text-center">
                 خدمات ساختمانی و منزل اهرم
               </h1>
             </div>
@@ -108,7 +108,7 @@ const Header = () => {
           </div>
 
           {/* Second Row: Auth Buttons, Notifications - Horizontal Layout */}
-          <div className="flex items-center justify-end gap-2 py-2 pr-2">
+          <div className="flex items-center justify-end gap-2 py-1.5 pr-2">
             {user ? (
               <>
                 <div data-tour="notifications">
@@ -160,7 +160,7 @@ const Header = () => {
         {/* Desktop Layout - Two Rows */}
         <div className="hidden md:block">
           {/* First Row: Logo, Company Name, Contact - Symmetrical */}
-          <div className="grid grid-cols-3 items-center py-4 border-b border-border/50">
+          <div className="grid grid-cols-3 items-center py-2 border-b border-border/50">
             {/* Logo - Right side (RTL) */}
             <div className="flex justify-end">
               <div className="cursor-pointer md:translate-x-4 lg:translate-x-6 xl:translate-x-0" onClick={() => navigate('/')}>
@@ -169,7 +169,7 @@ const Header = () => {
                   alt="لوگوی اهرم" 
                   width="140"
                   height="80"
-                  className="h-20 w-auto object-contain"
+                  className="h-14 w-auto object-contain"
                   loading="eager"
                 />
               </div>
@@ -177,7 +177,7 @@ const Header = () => {
 
             {/* Company Name - Center */}
             <div className="flex justify-center">
-              <h1 className="text-xl md:text-2xl font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent whitespace-nowrap">
+              <h1 className="text-lg md:text-xl font-bold text-foreground font-vazir bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent whitespace-nowrap">
                 خدمات ساختمان و منزل اهرم
               </h1>
             </div>
@@ -190,7 +190,7 @@ const Header = () => {
                     <img 
                       src={contactButton} 
                       alt="تماس" 
-                      className="h-28 w-auto object-contain"
+                      className="h-20 w-auto object-contain"
                     />
                   </button>
                 </DropdownMenuTrigger>
@@ -228,7 +228,7 @@ const Header = () => {
           </div>
 
           {/* Second Row: Login/Register - Right aligned */}
-          <div className="flex items-center justify-end gap-4 py-3 pr-4">
+          <div className="flex items-center justify-end gap-4 py-2 pr-4">
             {user ? (
               <>
                 <div data-tour="notifications">
