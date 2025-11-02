@@ -164,7 +164,7 @@ export function MediaUploader({
   return (
     <Card className="shadow-2xl bg-white dark:bg-card border-2">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-slate-600 dark:text-slate-200">
+        <CardTitle className="flex items-center gap-2 text-blue-800 dark:text-blue-300">
           <Upload className="w-5 h-5" />
           تصاویر و ویدیوهای پروژه
         </CardTitle>
