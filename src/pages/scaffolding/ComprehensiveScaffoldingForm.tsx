@@ -600,8 +600,8 @@ export default function ComprehensiveScaffoldingForm({
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
         <CardHeader>
-          <CardTitle className="text-[hsl(220,70%,30%)]">نوع خدمات داربست</CardTitle>
-          <CardDescription className="text-[hsl(220,70%,35%)] font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
+          <CardTitle className="text-primary">نوع خدمات داربست</CardTitle>
+          <CardDescription className="text-primary-light font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -635,14 +635,14 @@ export default function ComprehensiveScaffoldingForm({
       {/* Dimensions */}
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
         <CardHeader>
-          <CardTitle className="text-[hsl(220,70%,30%)]">ابعاد</CardTitle>
-          <CardDescription className="text-[hsl(220,70%,35%)] font-semibold">ابعاد به متر وارد شود</CardDescription>
+          <CardTitle className="text-primary">ابعاد</CardTitle>
+          <CardDescription className="text-primary-light font-semibold">ابعاد به متر وارد شود</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {dimensions.map((dim) => (
             <div key={dim.id} className="flex gap-2 items-end">
               <div className="flex-1 space-y-1">
-                <Label className="text-[hsl(220,70%,30%)] font-semibold">طول (متر)</Label>
+                <Label className="text-primary font-semibold">طول (متر)</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -652,7 +652,7 @@ export default function ComprehensiveScaffoldingForm({
                 />
               </div>
               <div className="flex-1 space-y-1">
-                <Label className="text-[hsl(220,70%,30%)] font-semibold">عرض (متر)</Label>
+                <Label className="text-primary font-semibold">عرض (متر)</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -662,7 +662,7 @@ export default function ComprehensiveScaffoldingForm({
                 />
               </div>
               <div className="flex-1 space-y-1">
-                <Label className="text-[hsl(220,70%,30%)] font-semibold">ارتفاع (متر)</Label>
+                <Label className="text-primary font-semibold">ارتفاع (متر)</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -697,12 +697,12 @@ export default function ComprehensiveScaffoldingForm({
       {/* Service Conditions */}
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
         <CardHeader>
-          <CardTitle className="text-[hsl(220,70%,30%)]">شرایط سرویس</CardTitle>
+          <CardTitle className="text-primary">شرایط سرویس</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-[hsl(220,70%,30%)] font-semibold">تعداد کل ماه‌ها</Label>
+              <Label className="text-primary font-semibold">تعداد کل ماه‌ها</Label>
               <Input
                 type="number"
                 min="1"
@@ -711,7 +711,7 @@ export default function ComprehensiveScaffoldingForm({
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[hsl(220,70%,30%)] font-semibold">ماه جاری</Label>
+              <Label className="text-primary font-semibold">ماه جاری</Label>
               <Input
                 type="number"
                 min="1"
@@ -723,7 +723,7 @@ export default function ComprehensiveScaffoldingForm({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[hsl(220,70%,30%)] font-semibold">فاصله از مرکز استان</Label>
+            <Label className="text-primary font-semibold">فاصله از مرکز استان</Label>
             <Select
               value={conditions.distanceRange}
               onValueChange={(v: any) => setConditions({ ...conditions, distanceRange: v })}
@@ -741,7 +741,7 @@ export default function ComprehensiveScaffoldingForm({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[hsl(220,70%,30%)] font-semibold">محل نصب داربست</Label>
+            <Label className="text-primary font-semibold">محل نصب داربست</Label>
             <RadioGroup value={onGround ? 'ground' : 'platform'} onValueChange={(v) => setOnGround(v === 'ground')}>
               <div className="flex items-center space-x-2 space-x-reverse">
                 <RadioGroupItem value="ground" id="ground" />
@@ -756,7 +756,7 @@ export default function ComprehensiveScaffoldingForm({
             {!onGround && (
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="space-y-2">
-                  <Label className="text-[hsl(220,70%,30%)] font-semibold">ارتفاع پای کار (متر)</Label>
+                  <Label className="text-primary font-semibold">ارتفاع پای کار (متر)</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -765,7 +765,7 @@ export default function ComprehensiveScaffoldingForm({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[hsl(220,70%,30%)] font-semibold">ارتفاع داربست از پای کار (متر)</Label>
+                  <Label className="text-primary font-semibold">ارتفاع داربست از پای کار (متر)</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -778,7 +778,7 @@ export default function ComprehensiveScaffoldingForm({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[hsl(220,70%,30%)] font-semibold">دسترسی خودرو</Label>
+            <Label className="text-primary font-semibold">دسترسی خودرو</Label>
             <RadioGroup
               value={vehicleReachesSite ? 'reaches' : 'not-reaches'}
               onValueChange={(v) => setVehicleReachesSite(v === 'reaches')}
@@ -795,7 +795,7 @@ export default function ComprehensiveScaffoldingForm({
 
             {!vehicleReachesSite && (
               <div className="space-y-2 pt-2">
-                <Label className="text-[hsl(220,70%,30%)] font-semibold">فاصله خودرو تا محل (متر)</Label>
+                <Label className="text-primary font-semibold">فاصله خودرو تا محل (متر)</Label>
                 <Input
                   type="number"
                   step="1"
@@ -821,7 +821,7 @@ export default function ComprehensiveScaffoldingForm({
       {/* Price Summary */}
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2 border-primary">
         <CardHeader>
-          <CardTitle className="text-[hsl(220,70%,30%)]">خلاصه قیمت</CardTitle>
+          <CardTitle className="text-primary">خلاصه قیمت</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {priceData.breakdown.map((item, idx) => (
