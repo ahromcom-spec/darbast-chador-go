@@ -9,6 +9,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useGeneralManagerRole } from "@/hooks/useGeneralManagerRole";
 import { useToast } from "@/hooks/use-toast";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -109,6 +110,7 @@ const Header = () => {
 
           {/* Second Row: Auth Buttons, Notifications - Horizontal Layout */}
           <div className="flex items-center justify-end gap-2 py-2 pr-2">
+            <ThemeToggle />
             {user ? (
               <>
                 <div data-tour="notifications">
@@ -229,6 +231,7 @@ const Header = () => {
 
           {/* Second Row: Login/Register - Right aligned */}
           <div className="flex items-center justify-end gap-4 py-3 pr-4">
+            <ThemeToggle />
             {user ? (
               <>
                 <div data-tour="notifications">
