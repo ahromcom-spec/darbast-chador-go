@@ -372,13 +372,10 @@ export default function OrderDetail() {
                 <div className="flex-1">
                   <p className="font-medium mb-1">آدرس</p>
                   <p>{order.address}</p>
-                  {order.detailed_address && (
-                    <p className="text-muted-foreground mt-1">{order.detailed_address}</p>
-                  )}
                   {order.province && (
                     <p className="text-sm text-muted-foreground mt-1">
                       استان {order.province.name}
-                      {order.district && ` - ${order.district.name}`}
+                      {order.district && ` - شهر ${order.district.name}`}
                     </p>
                   )}
                 </div>
