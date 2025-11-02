@@ -48,7 +48,11 @@ export function ServiceTypeSelector({
     setOpen(false);
     setExpandedServiceType(null);
     setSearchQuery('');
-    onChange(`${serviceTypeId}:${subcategoryCode}`);
+    // Delay onChange slightly so the popover fully unmounts before route change
+    // This prevents the dropdown from lingering on the next page
+    window.requestAnimationFrame(() => {
+      setTimeout(() => onChange(`${serviceTypeId}:${subcategoryCode}`), 120);
+    });
   };
 
   const handleServiceTypeClick = (serviceTypeId: string) => {
@@ -111,9 +115,10 @@ export function ServiceTypeSelector({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="group flex flex-col w-[calc(100vw-2rem)] sm:w-[450px] p-0 bg-popover border-2 z-[99999]" 
+        className="group flex flex-col w-[calc(100vw-2rem)] sm:w-[450px] p-0 bg-popover border-2 z-[99999]"
         align="start"
         sideOffset={4}
+        avoidCollisions
       >
         <Command className="w-full" shouldFilter={false}>
           {/* Search bar: always stick to the edge near the trigger */}

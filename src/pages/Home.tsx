@@ -48,6 +48,17 @@ const Home = () => {
     setSelectedProject('');
   };
 
+  // Ensure popovers/menus are closed before navigating to avoid lingering UI
+  const safeNavigate = (path: string, state?: any) => {
+    // Close any open Radix popovers by sending Escape
+    try {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' } as any));
+      (document.activeElement as HTMLElement | null)?.blur?.();
+    } catch {}
+    // Let closing animation finish
+    setTimeout(() => navigate(path, state ? state : undefined), 120);
+  };
+
   // هنگامی که نوع خدمات انتخاب شد، کاربر را به صفحه انتخاب آدرس هدایت کنیم
   useEffect(() => {
     if (selectedServiceType && selectedSubcategory) {
@@ -70,20 +81,15 @@ const Home = () => {
           description: 'لطفا ابتدا وارد حساب خود شوید و بعد ثبت سفارش کنید',
           variant: 'default'
         });
-        
         localStorage.setItem('pendingServiceSelection', JSON.stringify(serviceSelection));
-        navigate('/auth/login', {
-          state: { from: '/select-location', serviceSelection }
-        });
+        safeNavigate('/auth/login', { state: { from: '/select-location', serviceSelection } });
         return;
       }
       
       // هدایت به صفحه انتخاب آدرس
-      navigate('/select-location', {
-        state: { serviceSelection }
-      });
+      safeNavigate('/select-location', { state: { serviceSelection } });
     }
-  }, [selectedServiceType, selectedSubcategory, navigate, serviceTypes, user, toast]);
+  }, [selectedServiceType, selectedSubcategory, serviceTypes, user, toast]);
 
   // پروژه‌های کاربر را نمایش می‌دهیم و اجازه می‌دهیم انتخاب کند
   // دیگر redirect خودکار نداریم تا کاربر بتواند پروژه‌هایش را ببیند
