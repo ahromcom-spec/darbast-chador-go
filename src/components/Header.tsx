@@ -42,7 +42,7 @@ const Header = () => {
         {/* Mobile & Tablet Layout - Two Rows */}
         <div className="md:hidden">
           {/* First Row: Logo, Company Name (Centered), Contact */}
-          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 py-1.5 border-b border-border/30 px-1">
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 py-0.5 border-b border-border/30 px-1">
             {/* Logo - Right side (RTL) */}
             <div className="cursor-pointer" onClick={() => navigate('/')}>
               <img 
@@ -108,7 +108,7 @@ const Header = () => {
           </div>
 
           {/* Second Row: Auth Buttons, Notifications - Horizontal Layout */}
-          <div className="flex items-center justify-end gap-2 py-1.5 pr-2">
+          <div className="flex items-center justify-end gap-2 py-0.5 pr-2">
             {user ? (
               <>
                 <div data-tour="notifications">
@@ -160,7 +160,7 @@ const Header = () => {
         {/* Desktop Layout - Two Rows */}
         <div className="hidden md:block">
           {/* First Row: Logo, Company Name, Contact - Symmetrical */}
-          <div className="grid grid-cols-3 items-center py-2 border-b border-border/50">
+          <div className="grid grid-cols-3 items-center py-1 border-b border-border/50">
             {/* Logo - Right side (RTL) */}
             <div className="flex justify-end">
               <div className="cursor-pointer md:translate-x-4 lg:translate-x-6 xl:translate-x-0" onClick={() => navigate('/')}>
@@ -228,7 +228,7 @@ const Header = () => {
           </div>
 
           {/* Second Row: Login/Register - Right aligned */}
-          <div className="flex items-center justify-end gap-4 py-2 pr-4">
+          <div className="flex items-center justify-end gap-4 py-1 pr-4">
             {user ? (
               <>
                 <div data-tour="notifications">
