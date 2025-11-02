@@ -341,115 +341,120 @@ export default function ComprehensiveScaffoldingForm({
     });
   };
 
+  // آپلود یک فایل منفرد
+  const uploadSingleFile = async (projectId: string, file: File): Promise<boolean> => {
+    try {
+      // Enforce backend upload limit: skip oversized videos (>50MB)
+      const isVideo = file.type?.startsWith('video/');
+      const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+      if (isVideo && file.size > MAX_VIDEO_BYTES) {
+        toast({
+          title: 'حجم ویدیو زیاد است',
+          description: `حجم ${file.name} بیشتر از 50MB است. لطفاً فایل را کوچکتر کنید.`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user!.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = fileName;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('order-media')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type || undefined,
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        const statusCode = (uploadError as any)?.statusCode;
+        let message = (uploadError as any)?.message || 'خطای نامشخص';
+        if (statusCode === 413 || /payload too large|too large|exceeds/i.test(message)) {
+          message = 'حجم فایل بیش از حد مجاز است. حداکثر 50MB برای هر ویدیو مجاز است.';
+        }
+        toast({
+          title: 'خطا در آپلود',
+          description: `خطا در آپلود ${file.name}: ${message}`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+
+      // Generate and upload thumbnail for videos
+      let thumbnailPath: string | null = null;
+      if (isVideo) {
+        try {
+          const thumbnailBlob = await extractVideoThumbnail(file);
+          const thumbnailFileName = `${user!.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(7)}_thumb.jpg`;
+          
+          const { error: thumbUploadError } = await supabase.storage
+            .from('order-media')
+            .upload(thumbnailFileName, thumbnailBlob, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: 'image/jpeg',
+            });
+          
+          if (!thumbUploadError) {
+            thumbnailPath = thumbnailFileName;
+          }
+        } catch (error) {
+          console.error('Error generating thumbnail:', error);
+          // Continue without thumbnail
+        }
+      }
+
+      // Save metadata to database
+      const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+      const { error: dbError } = await supabase
+        .from('project_media')
+        .insert({
+          project_id: projectId,
+          user_id: user!.id,
+          file_path: filePath,
+          file_type: fileType,
+          file_size: file.size,
+          mime_type: file.type,
+          thumbnail_path: thumbnailPath
+        });
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        toast({
+          title: 'خطا در ذخیره اطلاعات',
+          description: `خطا در ذخیره اطلاعات ${file.name}`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: 'خطا',
+        description: `خطای غیرمنتظره در آپلود ${file.name}`,
+        variant: 'destructive'
+      });
+      return false;
+    }
+  };
+
+  // آپلود همه فایل‌ها به صورت موازی
   const uploadMediaFiles = async (projectId: string, files: File[]) => {
     if (!user) return;
 
-    let successCount = 0;
-    let failCount = 0;
+    // آپلود همه فایل‌ها به صورت موازی (Parallel)
+    const uploadPromises = files.map(file => uploadSingleFile(projectId, file));
+    const results = await Promise.allSettled(uploadPromises);
 
-    for (const file of files) {
-      try {
-        // Enforce backend upload limit: skip oversized videos (>50MB)
-        const isVideo = file.type?.startsWith('video/');
-        const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
-        if (isVideo && file.size > MAX_VIDEO_BYTES) {
-          toast({
-            title: 'حجم ویدیو زیاد است',
-            description: `حجم ${file.name} بیشتر از 50MB است. لطفاً فایل را کوچکتر کنید.`,
-            variant: 'destructive'
-          });
-        	failCount++;
-        	continue;
-        }
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = fileName;
-
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from('order-media')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: file.type || undefined,
-          });
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          const statusCode = (uploadError as any)?.statusCode;
-          let message = (uploadError as any)?.message || 'خطای نامشخص';
-          if (statusCode === 413 || /payload too large|too large|exceeds/i.test(message)) {
-            message = 'حجم فایل بیش از حد مجاز است. حداکثر 50MB برای هر ویدیو مجاز است.';
-          }
-          toast({
-            title: 'خطا در آپلود',
-            description: `خطا در آپلود ${file.name}: ${message}`,
-            variant: 'destructive'
-          });
-          failCount++;
-          continue;
-        }
-
-        // Generate and upload thumbnail for videos
-        let thumbnailPath: string | null = null;
-        if (isVideo) {
-          try {
-            const thumbnailBlob = await extractVideoThumbnail(file);
-            const thumbnailFileName = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(7)}_thumb.jpg`;
-            
-            const { error: thumbUploadError } = await supabase.storage
-              .from('order-media')
-              .upload(thumbnailFileName, thumbnailBlob, {
-                cacheControl: '3600',
-                upsert: false,
-                contentType: 'image/jpeg',
-              });
-            
-            if (!thumbUploadError) {
-              thumbnailPath = thumbnailFileName;
-            }
-          } catch (error) {
-            console.error('Error generating thumbnail:', error);
-            // Continue without thumbnail
-          }
-        }
-
-        // Save metadata to database
-        const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        const { error: dbError } = await supabase
-          .from('project_media')
-          .insert({
-            project_id: projectId,
-            user_id: user.id,
-            file_path: filePath,
-            file_type: fileType,
-            file_size: file.size,
-            mime_type: file.type,
-            thumbnail_path: thumbnailPath
-          });
-
-        if (dbError) {
-          console.error('Database error:', dbError);
-          toast({
-            title: 'خطا در ذخیره اطلاعات',
-            description: `خطا در ذخیره اطلاعات ${file.name}`,
-            variant: 'destructive'
-          });
-          failCount++;
-        } else {
-          successCount++;
-        }
-
-      } catch (error) {
-        console.error('Error uploading file:', error);
-        toast({
-          title: 'خطا',
-          description: `خطای غیرمنتظره در آپلود ${file.name}`,
-          variant: 'destructive'
-        });
-        failCount++;
-      }
-    }
+    // شمارش موفقیت و شکست
+    const successCount = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
+    const failCount = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value === false)).length;
 
     if (successCount > 0) {
       toast({
@@ -682,15 +687,17 @@ export default function ComprehensiveScaffoldingForm({
 
         if (updateError) throw updateError;
 
-        // آپلود فایل‌ها به storage اگر وجود داشتند
-        if (mediaFiles && mediaFiles.length > 0) {
-          await uploadMediaFiles(editOrderId, mediaFiles);
-        }
-
         toast({ 
           title: 'بروزرسانی شد', 
           description: 'سفارش شما با موفقیت ویرایش شد' 
         });
+
+        // آپلود فایل‌ها در پس‌زمینه (بدون انتظار)
+        if (mediaFiles && mediaFiles.length > 0) {
+          uploadMediaFiles(editOrderId, mediaFiles).catch(err => {
+            console.error('Background upload error:', err);
+          });
+        }
 
         navigate(`/orders/${editOrderId}`);
       } else {
@@ -728,19 +735,21 @@ export default function ComprehensiveScaffoldingForm({
         const createdProject = createdRows?.[0];
         if (!createdProject) throw new Error('خطا در ایجاد سفارش');
 
-        // آپلود فایل‌ها به storage اگر وجود داشتند
-        if (mediaFiles && mediaFiles.length > 0) {
-          await uploadMediaFiles(createdProject.id, mediaFiles);
-        }
-
         toast({ 
           title: 'ثبت شد', 
           description: `سفارش شما با کد ${createdProject.code} ثبت شد و در انتظار تایید است.` 
         });
 
+        // آپلود فایل‌ها در پس‌زمینه (بدون انتظار) - کاربر بلافاصله هدایت می‌شود
+        if (mediaFiles && mediaFiles.length > 0) {
+          uploadMediaFiles(createdProject.id, mediaFiles).catch(err => {
+            console.error('Background upload error:', err);
+          });
+        }
+
         // اتوماسیون اداری حالا با database trigger اجرا می‌شود (order-automation function حذف شد)
 
-        // هدایت کاربر به صفحه جزئیات سفارش
+        // هدایت کاربر به صفحه جزئیات سفارش بلافاصله
         navigate(`/orders/${createdProject.id}`);
       }
     } catch (e: any) {
