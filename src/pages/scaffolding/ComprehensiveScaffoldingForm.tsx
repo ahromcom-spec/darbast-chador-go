@@ -296,6 +296,48 @@ export default function ComprehensiveScaffoldingForm({
     return { total: Math.round(basePrice), pricePerMeter, breakdown };
   };
 
+  // Function to upload media files to storage
+  const uploadMediaFiles = async (projectId: string, files: File[]) => {
+    if (!user) return;
+
+    for (const file of files) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = fileName;
+
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from('order-media')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          continue;
+        }
+
+        // Save metadata to database
+        const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+        await supabase
+          .from('project_media')
+          .insert({
+            project_id: projectId,
+            user_id: user.id,
+            file_path: filePath,
+            file_type: fileType,
+            file_size: file.size,
+            mime_type: file.type
+          });
+
+      } catch (error) {
+        console.error('Error uploading file:', error);
+      }
+    }
+  };
+
   const onSubmit = async () => {
     if (!user) {
       navigate('/auth/login');
@@ -519,6 +561,11 @@ export default function ComprehensiveScaffoldingForm({
 
         if (updateError) throw updateError;
 
+        // آپلود فایل‌ها به storage اگر وجود داشتند
+        if (mediaFiles && mediaFiles.length > 0) {
+          await uploadMediaFiles(editOrderId, mediaFiles);
+        }
+
         toast({ 
           title: 'بروزرسانی شد', 
           description: 'سفارش شما با موفقیت ویرایش شد' 
@@ -559,6 +606,11 @@ export default function ComprehensiveScaffoldingForm({
         if (createError) throw createError;
         const createdProject = createdRows?.[0];
         if (!createdProject) throw new Error('خطا در ایجاد سفارش');
+
+        // آپلود فایل‌ها به storage اگر وجود داشتند
+        if (mediaFiles && mediaFiles.length > 0) {
+          await uploadMediaFiles(createdProject.id, mediaFiles);
+        }
 
         toast({ 
           title: 'ثبت شد', 

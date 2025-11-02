@@ -59,6 +59,13 @@ interface Order {
   };
 }
 
+interface MediaFile {
+  id: string;
+  file_path: string;
+  file_type: 'image' | 'video';
+  created_at: string;
+}
+
 const orderNotesSchema = z.object({
   dimensions: z.array(z.object({
     length: z.union([z.string(), z.number()]),
@@ -92,6 +99,7 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [parsedNotes, setParsedNotes] = useState<any>(null);
   const [completionDate, setCompletionDate] = useState('');
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -171,6 +179,17 @@ export default function OrderDetail() {
           console.error('Error parsing notes:', e);
           setParsedNotes(null);
         }
+      }
+
+      // Fetch media files
+      const { data: mediaData } = await supabase
+        .from('project_media')
+        .select('*')
+        .eq('project_id', id)
+        .order('created_at', { ascending: false });
+
+      if (mediaData) {
+        setMediaFiles(mediaData as MediaFile[]);
       }
 
     } catch (error: any) {
@@ -671,6 +690,49 @@ export default function OrderDetail() {
                       از اعتماد شما سپاسگزاریم
                     </p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* بخش نمایش عکس‌ها و ویدیوها */}
+          {mediaFiles.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>تصاویر و ویدیوهای پروژه</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {mediaFiles.filter(m => m.file_type === 'image').map((media) => {
+                    const { data } = supabase.storage
+                      .from('order-media')
+                      .getPublicUrl(media.file_path);
+                    
+                    return (
+                      <div key={media.id} className="relative aspect-square rounded-lg overflow-hidden border">
+                        <img
+                          src={data.publicUrl}
+                          alt="تصویر سفارش"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    );
+                  })}
+                  {mediaFiles.filter(m => m.file_type === 'video').map((media) => {
+                    const { data } = supabase.storage
+                      .from('order-media')
+                      .getPublicUrl(media.file_path);
+                    
+                    return (
+                      <div key={media.id} className="relative aspect-video rounded-lg overflow-hidden border col-span-2">
+                        <video
+                          src={data.publicUrl}
+                          controls
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

@@ -1033,6 +1033,50 @@ export type Database = {
           },
         ]
       }
+      project_media: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          mime_type: string
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          mime_type: string
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          mime_type?: string
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_media_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_progress_stages: {
         Row: {
           completed_at: string | null
