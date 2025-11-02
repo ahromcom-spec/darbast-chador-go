@@ -997,8 +997,8 @@ export default function ComprehensiveScaffoldingForm({
       {/* Media Upload Section */}
       <MediaUploader
         onFilesChange={setMediaFiles}
-        maxImages={4}
-        maxVideos={2}
+        maxImages={6}
+        maxVideos={5}
         maxImageSize={10}
         maxVideoSize={50}
         maxVideoDuration={180}
