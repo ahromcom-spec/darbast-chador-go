@@ -19,7 +19,10 @@ import {
   Hash,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Download,
+  Play,
+  Film
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -724,12 +727,61 @@ export default function OrderDetail() {
                       .getPublicUrl(media.file_path);
                     
                     return (
-                      <div key={media.id} className="relative aspect-video rounded-lg overflow-hidden border col-span-2">
-                        <video
-                          src={data.publicUrl}
-                          controls
-                          className="w-full h-full object-cover"
-                        />
+                      <div key={media.id} className="relative group col-span-2">
+                        <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
+                          <video
+                            src={data.publicUrl}
+                            controls
+                            controlsList="nodownload"
+                            className="w-full h-full object-cover"
+                            poster={data.publicUrl}
+                          >
+                            مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                          </video>
+                        </div>
+                        
+                        {/* Download and Play buttons */}
+                        <div className="absolute top-2 left-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="shadow-lg"
+                            asChild
+                          >
+                            <a
+                              href={data.publicUrl}
+                              download
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1"
+                            >
+                              <Download className="w-4 h-4" />
+                              دانلود
+                            </a>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="shadow-lg"
+                            asChild
+                          >
+                            <a
+                              href={data.publicUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1"
+                            >
+                              <Play className="w-4 h-4" />
+                              باز کردن
+                            </a>
+                          </Button>
+                        </div>
+                        
+                        {/* File size badge */}
+                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                          <Film className="w-3 h-3" />
+                          ویدیو
+                        </div>
                       </div>
                     );
                   })}
