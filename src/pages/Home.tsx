@@ -63,12 +63,27 @@ const Home = () => {
         subcategoryName: subcategory?.name
       };
       
-      // هدایت به صفحه انتخاب آدرس (اگر کاربر لاگین نباشد، خودش redirect می‌کند)
+      // اگر کاربر لاگین نیست، ابتدا پیام بده و به صفحه لاگین هدایت کن
+      if (!user) {
+        toast({
+          title: 'نیاز به ورود',
+          description: 'لطفا ابتدا وارد حساب خود شوید و بعد ثبت سفارش کنید',
+          variant: 'default'
+        });
+        
+        localStorage.setItem('pendingServiceSelection', JSON.stringify(serviceSelection));
+        navigate('/auth/login', {
+          state: { from: '/select-location', serviceSelection }
+        });
+        return;
+      }
+      
+      // هدایت به صفحه انتخاب آدرس
       navigate('/select-location', {
         state: { serviceSelection }
       });
     }
-  }, [selectedServiceType, selectedSubcategory, navigate, serviceTypes]);
+  }, [selectedServiceType, selectedSubcategory, navigate, serviceTypes, user, toast]);
 
   // پروژه‌های کاربر را نمایش می‌دهیم و اجازه می‌دهیم انتخاب کند
   // دیگر redirect خودکار نداریم تا کاربر بتواند پروژه‌هایش را ببیند
