@@ -372,6 +372,10 @@ export function MediaUploader({
                       <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                         <Film className="w-12 h-12 text-white opacity-80" />
                       </div>
+                      {/* Label showing video name */}
+                      <div className="absolute top-2 left-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded truncate">
+                        {file.file.name}
+                      </div>
                     </div>
                   ) : !file.previewError ? (
                     <video

@@ -814,6 +814,10 @@ export default function OrderDetail() {
                                   <Play className="w-8 h-8 text-primary fill-primary" />
                                 </div>
                               </div>
+                              {/* Label showing video name */}
+                              <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
+                                {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
+                              </div>
                             </div>
                           ) : (
                             <div className="relative w-full h-full bg-black/5 flex items-center justify-center">
@@ -823,6 +827,10 @@ export default function OrderDetail() {
                                 <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
                                   <Play className="w-8 h-8 text-primary fill-primary" />
                                 </div>
+                              </div>
+                              {/* Label showing video name even without thumbnail */}
+                              <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
+                                {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
                               </div>
                             </div>
                           )}
