@@ -91,8 +91,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
 
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
     isActive
-      ? 'bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm'
-      : 'text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200';
+      ? 'bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-sm'
+      : 'text-foreground font-medium hover:bg-sidebar-accent hover:text-foreground transition-all duration-200';
 
   const handleClick = () => {
     if (onNavigate) {
@@ -108,7 +108,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
       <SidebarContent>
         {/* عمومی */}
         <SidebarGroup>
-          {open && <SidebarGroupLabel>عمومی</SidebarGroupLabel>}
+          {open && <SidebarGroupLabel className="font-bold text-foreground">عمومی</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {publicItems.map((item) => (
@@ -128,7 +128,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* کاربری */}
         {userItems.length > 0 && (
           <SidebarGroup>
-            {open && <SidebarGroupLabel>کاربری</SidebarGroupLabel>}
+            {open && <SidebarGroupLabel className="font-bold text-foreground">کاربری</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {userItems.map((item) => (
@@ -154,7 +154,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* خدمات */}
         {serviceItems.length > 0 && (
           <SidebarGroup>
-            {open && <SidebarGroupLabel>خدمات</SidebarGroupLabel>}
+            {open && <SidebarGroupLabel className="font-bold text-foreground">خدمات</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {serviceItems.map((item) => (
@@ -175,7 +175,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* پیمانکار */}
         {contractorItems.length > 0 && (
           <SidebarGroup>
-            {open && <SidebarGroupLabel>پیمانکار</SidebarGroupLabel>}
+            {open && <SidebarGroupLabel className="font-bold text-foreground">پیمانکار</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {contractorItems.map((item) => (
@@ -196,7 +196,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* مدیریت */}
         {adminItems.length > 0 && (
           <SidebarGroup>
-            {open && <SidebarGroupLabel>مدیریت</SidebarGroupLabel>}
+            {open && <SidebarGroupLabel className="font-bold text-foreground">مدیریت</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {adminItems.map((item) => (
@@ -217,7 +217,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* مدیرکل */}
         {gmItems.length > 0 && (
           <SidebarGroup>
-            {open && <SidebarGroupLabel>مدیرکل</SidebarGroupLabel>}
+            {open && <SidebarGroupLabel className="font-bold text-foreground">مدیرکل</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {gmItems.map((item) => (
@@ -238,7 +238,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* مدیر اجرایی */}
         {executiveItems.length > 0 && (
           <SidebarGroup>
-            {open && <SidebarGroupLabel>اجرا</SidebarGroupLabel>}
+            {open && <SidebarGroupLabel className="font-bold text-foreground">اجرا</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {executiveItems.map((item) => (
@@ -259,7 +259,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* مدیر فروش */}
         {salesItems.length > 0 && (
           <SidebarGroup>
-            {open && <SidebarGroupLabel>فروش</SidebarGroupLabel>}
+            {open && <SidebarGroupLabel className="font-bold text-foreground">فروش</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {salesItems.map((item) => (
@@ -280,7 +280,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
         {/* مدیر مالی */}
         {financeItems.length > 0 && (
           <SidebarGroup>
-            {open && <SidebarGroupLabel>مالی</SidebarGroupLabel>}
+            {open && <SidebarGroupLabel className="font-bold text-foreground">مالی</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
                 {financeItems.map((item) => (
