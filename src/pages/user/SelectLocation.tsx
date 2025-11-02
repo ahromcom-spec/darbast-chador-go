@@ -31,13 +31,8 @@ export default function SelectLocation() {
       return;
     }
 
-    // If no service selection, redirect to home
+    // If no service selection, redirect to home silently
     if (!serviceSelection?.serviceTypeId || !serviceSelection?.subcategoryId) {
-      toast({
-        title: 'خطا',
-        description: 'لطفاً ابتدا نوع خدمات را انتخاب کنید',
-        variant: 'destructive'
-      });
       navigate('/');
       return;
     }
