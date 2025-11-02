@@ -20,6 +20,7 @@ interface MediaFile {
   storagePath?: string; // <userId>/<filename>
   remoteUrl?: string; // public URL after upload
   previewError?: boolean; // when browser can't play the format
+  uploadProgress?: number; // 0-100
 }
 
 interface MediaUploaderProps {
@@ -43,8 +44,14 @@ export function MediaUploader({
   const [files, setFiles] = useState<MediaFile[]>([]);
 
   // Utilities
-  const setFilePartial = (id: string, patch: Partial<MediaFile>) => {
-    setFiles(prev => prev.map(f => (f.id === id ? { ...f, ...patch } : f)));
+  const setFilePartial = (id: string, patch: Partial<MediaFile> | ((prev: MediaFile) => Partial<MediaFile>)) => {
+    setFiles(prev => prev.map(f => {
+      if (f.id === id) {
+        const update = typeof patch === 'function' ? patch(f) : patch;
+        return { ...f, ...update };
+      }
+      return f;
+    }));
   };
 
   // Validation (size only)
@@ -75,7 +82,7 @@ export function MediaUploader({
     return true;
   };
 
-  // Upload to storage
+  // Upload to storage with progress tracking
   const uploadToStorage = async (media: MediaFile) => {
     try {
       const { data: auth } = await supabase.auth.getUser();
@@ -86,7 +93,7 @@ export function MediaUploader({
         return;
       }
 
-      setFilePartial(media.id, { status: 'uploading' });
+      setFilePartial(media.id, { status: 'uploading', uploadProgress: 0 });
 
       const extFromName = media.file.name.split('.').pop() || '';
       const ext = extFromName ? `.${extFromName}` : '';
@@ -94,20 +101,31 @@ export function MediaUploader({
       const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}${ext ? '' : ''}`;
       const storagePath = `${user.id}/${fileName}`;
 
+      // Simulate progress for better UX (Supabase client doesn't expose upload progress)
+      const progressInterval = setInterval(() => {
+        setFilePartial(media.id, (prev) => ({
+          uploadProgress: Math.min((prev.uploadProgress || 0) + 10, 90)
+        }));
+      }, 200);
+
       const { error: uploadError } = await supabase.storage
         .from('order-media')
         .upload(storagePath, media.file, { contentType: media.file.type, upsert: false });
 
+      clearInterval(progressInterval);
+
       if (uploadError) {
-        setFilePartial(media.id, { status: 'error' });
+        setFilePartial(media.id, { status: 'error', uploadProgress: 0 });
         toast({ title: 'خطا در آپلود', description: uploadError.message, variant: 'destructive' });
         return;
       }
 
       const { data: publicData } = supabase.storage.from('order-media').getPublicUrl(storagePath);
-      setFilePartial(media.id, { status: 'done', storagePath, remoteUrl: publicData.publicUrl });
+      setFilePartial(media.id, { status: 'done', storagePath, remoteUrl: publicData.publicUrl, uploadProgress: 100 });
+      
+      toast({ title: 'موفق', description: 'فایل با موفقیت آپلود شد', variant: 'default' });
     } catch (e: any) {
-      setFilePartial(media.id, { status: 'error' });
+      setFilePartial(media.id, { status: 'error', uploadProgress: 0 });
       toast({ title: 'خطا در آپلود', description: e?.message || 'مشکلی پیش آمد.', variant: 'destructive' });
     }
   };
@@ -228,12 +246,26 @@ export function MediaUploader({
                     loading="lazy"
                   />
 
+                  {/* Upload Progress Overlay */}
+                  {file.status === 'uploading' && (
+                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                      <div className="w-3/4 bg-white/20 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="h-full bg-white transition-all duration-300"
+                          style={{ width: `${file.uploadProgress || 0}%` }}
+                        />
+                      </div>
+                      <span className="text-white text-sm font-medium">{file.uploadProgress || 0}%</span>
+                    </div>
+                  )}
+
                   {/* Status badge */}
                   <div className="absolute left-1 bottom-1 text-xs rounded px-2 py-0.5 bg-black/60 text-white">
-                    {file.status === 'uploading' && 'در حال آپلود'}
-                    {file.status === 'done' && 'آپلود شد'}
-                    {file.status === 'error' && 'خطا'}
-                    {!file.status || file.status === 'pending' ? 'در صف آپلود' : null}
+                    {file.status === 'uploading' && `در حال آپلود (${file.uploadProgress || 0}%)`}
+                    {file.status === 'done' && 'آپلود شد ✓'}
+                    {file.status === 'error' && 'خطا ✗'}
+                    {!file.status || file.status === 'pending' ? 'در صف' : null}
                   </div>
 
                   <button
@@ -295,15 +327,31 @@ export function MediaUploader({
                     </div>
                   )}
 
+                  {/* Upload Progress Overlay for Videos */}
+                  {file.status === 'uploading' && (
+                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-3 z-10">
+                      <Loader2 className="w-10 h-10 text-white animate-spin" />
+                      <div className="w-3/4 bg-white/20 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="h-full bg-white transition-all duration-300"
+                          style={{ width: `${file.uploadProgress || 0}%` }}
+                        />
+                      </div>
+                      <span className="text-white text-base font-medium">در حال آپلود: {file.uploadProgress || 0}%</span>
+                    </div>
+                  )}
+
                   {/* Status badge */}
                   <div className="absolute left-2 bottom-2 text-xs rounded px-2 py-1 bg-black/70 text-white">
                     {(file.file.size / (1024 * 1024)).toFixed(1)} MB •
                     {file.status === 'uploading' ? (
-                      <span className="inline-flex items-center gap-1 ml-1"><Loader2 className="w-3 h-3 animate-spin" /> در حال آپلود</span>
+                      <span className="inline-flex items-center gap-1 ml-1">
+                        <Loader2 className="w-3 h-3 animate-spin" /> {file.uploadProgress || 0}%
+                      </span>
                     ) : file.status === 'done' ? (
-                      <span className="ml-1">آپلود شد</span>
+                      <span className="ml-1">آپلود شد ✓</span>
                     ) : file.status === 'error' ? (
-                      <span className="ml-1">خطا</span>
+                      <span className="ml-1">خطا ✗</span>
                     ) : (
                       <span className="ml-1">در صف</span>
                     )}
