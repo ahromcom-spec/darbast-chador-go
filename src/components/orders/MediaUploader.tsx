@@ -168,7 +168,7 @@ export function MediaUploader({
           <Upload className="w-5 h-5" />
           تصاویر و ویدیوهای پروژه
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-foreground/80">
           حداکثر {maxImages} عکس (هر کدام {maxImageSize}MB) و {maxVideos} ویدیو (هر کدام {maxVideoSize}MB و {maxVideoDuration / 60} دقیقه)
         </CardDescription>
       </CardHeader>
@@ -279,7 +279,7 @@ export function MediaUploader({
         {files.length === 0 && (
           <div className="border-2 border-dashed rounded-lg p-8 text-center">
             <FileWarning className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-foreground/80">
               هنوز فایلی آپلود نشده است
             </p>
           </div>
