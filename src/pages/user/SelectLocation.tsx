@@ -110,26 +110,40 @@ export default function SelectLocation() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-4xl">
-      <Button
-        variant="ghost"
-        onClick={() => navigate('/')}
-        className="mb-4"
+    <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Hero Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ 
+          backgroundImage: 'url(/hero-background.webp)',
+        }}
       >
-        <ArrowRight className="w-4 h-4 ml-2" />
-        بازگشت
-      </Button>
+        {/* Overlay gradient for better readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+      </div>
 
-      <PageHeader
-        title="انتخاب آدرس پروژه"
-        description={`برای ثبت سفارش ${serviceSelection.serviceName} - ${serviceSelection.subcategoryName}، لطفاً آدرس پروژه را انتخاب یا ثبت کنید`}
-      />
+      {/* Content */}
+      <div className="relative z-10 container mx-auto py-6 px-4 max-w-4xl">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="mb-4 text-white hover:bg-white/10"
+        >
+          <ArrowRight className="w-4 h-4 ml-2" />
+          بازگشت
+        </Button>
 
-      <Card className="mt-6">
-        <CardContent className="p-6">
-          <LocationSelector onLocationSelected={handleLocationSelected} />
-        </CardContent>
-      </Card>
+        <PageHeader
+          title="انتخاب آدرس پروژه"
+          description={`برای ثبت سفارش ${serviceSelection.serviceName} - ${serviceSelection.subcategoryName}، لطفاً آدرس پروژه را انتخاب یا ثبت کنید`}
+        />
+
+        <Card className="mt-6 shadow-2xl bg-card/95 backdrop-blur-md border-2">
+          <CardContent className="p-6">
+            <LocationSelector onLocationSelected={handleLocationSelected} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
