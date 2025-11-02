@@ -9,7 +9,40 @@ interface ProfileHeaderProps {
   roles?: string[];
 }
 
+// Transliteration map for Persian to English
+const persianToEnglish: { [key: string]: string } = {
+  'آ': 'a', 'ا': 'a', 'ب': 'b', 'پ': 'p', 'ت': 't', 'ث': 's', 'ج': 'j', 'چ': 'ch',
+  'ح': 'h', 'خ': 'kh', 'd': 'd', 'ذ': 'z', 'ر': 'r', 'ز': 'z', 'ژ': 'zh', 'س': 's',
+  'ش': 'sh', 'ص': 's', 'ض': 'z', 'ط': 't', 'ظ': 'z', 'ع': 'a', 'غ': 'gh', 'ف': 'f',
+  'ق': 'gh', 'ک': 'k', 'گ': 'g', 'ل': 'l', 'م': 'm', 'ن': 'n', 'و': 'v', 'ه': 'h',
+  'ی': 'i', 'ئ': 'i', 'ة': 'e'
+};
+
+function transliteratePersianToEnglish(text: string): string {
+  if (!text) return '';
+  
+  let result = '';
+  for (let char of text.toLowerCase()) {
+    if (persianToEnglish[char]) {
+      result += persianToEnglish[char];
+    } else if (/[a-z0-9]/.test(char)) {
+      result += char;
+    } else if (char === ' ') {
+      result += '-';
+    }
+  }
+  
+  // Remove consecutive dashes and trim
+  return result.replace(/-+/g, '-').replace(/^-|-$/g, '');
+}
+
+function generateUsername(fullName: string): string {
+  const transliterated = transliteratePersianToEnglish(fullName);
+  return transliterated ? `${transliterated}@ahrom.ir` : '';
+}
+
 export function ProfileHeader({ user, fullName, roles = [] }: ProfileHeaderProps) {
+  const username = generateUsername(fullName);
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -19,9 +52,11 @@ export function ProfileHeader({ user, fullName, roles = [] }: ProfileHeaderProps
           </div>
           <div className="flex-1">
             <CardTitle className="text-2xl">{fullName || 'کاربر'}</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1" dir="ltr">
-              {user.email}
-            </p>
+            {username && (
+              <p className="text-sm text-muted-foreground mt-1" dir="ltr">
+                {username}
+              </p>
+            )}
           </div>
           {roles.length > 0 && (
             <div className="flex gap-2 flex-wrap">
