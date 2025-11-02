@@ -837,6 +837,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          parent_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -844,6 +845,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          parent_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -851,8 +853,17 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          parent_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organizational_positions_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "organizational_positions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       otp_codes: {
         Row: {
@@ -2344,7 +2355,7 @@ export type Database = {
       }
       staff_whitelist: {
         Row: {
-          allowed_role: Database["public"]["Enums"]["app_role"]
+          allowed_position_ids: string[] | null
           created_at: string | null
           created_by: string | null
           id: string
@@ -2352,7 +2363,7 @@ export type Database = {
           phone: string
         }
         Insert: {
-          allowed_role: Database["public"]["Enums"]["app_role"]
+          allowed_position_ids?: string[] | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -2360,7 +2371,7 @@ export type Database = {
           phone: string
         }
         Update: {
-          allowed_role?: Database["public"]["Enums"]["app_role"]
+          allowed_position_ids?: string[] | null
           created_at?: string | null
           created_by?: string | null
           id?: string
