@@ -649,7 +649,7 @@ export default function ComprehensiveScaffoldingForm({
             افزودن سطر جدید
           </Button>
           <div className="text-sm text-muted-foreground pt-2">
-            مجموع مساحت: <span className="font-semibold">{calculateTotalArea().toFixed(2)}</span> متر مکعب
+            مجموع مساحت: <span className="font-semibold">{Math.round(calculateTotalArea())}</span> متر مکعب
           </div>
         </CardContent>
       </Card>
