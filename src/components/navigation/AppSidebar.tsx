@@ -109,8 +109,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
       collapsible={staticMode ? 'none' : 'icon'}
     >
       {!staticMode && (
-        <SidebarHeader className="border-b p-2">
-          <SidebarTrigger className="h-9 w-9">
+        <SidebarHeader className="border-b p-2 flex items-center justify-end">
+          <SidebarTrigger className="h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow">
             <PanelLeft className="h-4 w-4" />
           </SidebarTrigger>
         </SidebarHeader>
