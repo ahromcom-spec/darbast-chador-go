@@ -162,7 +162,7 @@ export function MediaUploader({
   const videoCount = files.filter(f => f.type === 'video').length;
 
   return (
-    <Card>
+    <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="w-5 h-5" />

@@ -581,11 +581,24 @@ export default function ComprehensiveScaffoldingForm({
   const priceData = calculatePrice();
 
   return (
-    <div className="space-y-6">
-      <h1 className="sr-only">فرم ثبت سفارش داربست</h1>
+    <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Hero Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ 
+          backgroundImage: 'url(/hero-background.webp)',
+        }}
+      >
+        {/* Overlay gradient for better readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 space-y-6 pb-8">
+        <h1 className="sr-only">فرم ثبت سفارش داربست</h1>
 
       {/* نوع داربست */}
-      <Card>
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader>
           <CardTitle>نوع خدمات داربست</CardTitle>
           <CardDescription>نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
@@ -620,7 +633,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* Dimensions */}
-      <Card>
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader>
           <CardTitle>ابعاد</CardTitle>
           <CardDescription>ابعاد به متر وارد شود</CardDescription>
@@ -682,7 +695,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* Service Conditions */}
-      <Card>
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader>
           <CardTitle>شرایط سرویس</CardTitle>
         </CardHeader>
@@ -806,7 +819,7 @@ export default function ComprehensiveScaffoldingForm({
       />
 
       {/* Price Summary */}
-      <Card className="border-primary">
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-primary">
         <CardHeader>
           <CardTitle>خلاصه قیمت</CardTitle>
         </CardHeader>
@@ -835,6 +848,7 @@ export default function ComprehensiveScaffoldingForm({
       >
         {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
       </Button>
+      </div>
     </div>
   );
 }
