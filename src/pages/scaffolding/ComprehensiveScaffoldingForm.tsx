@@ -297,6 +297,50 @@ export default function ComprehensiveScaffoldingForm({
   };
 
   // Function to upload media files to storage
+  // Extract thumbnail from video beginning
+  const extractVideoThumbnail = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      
+      video.onloadedmetadata = () => {
+        // Seek to beginning of video (0.1 seconds to ensure frame is loaded)
+        video.currentTime = 0.1;
+      };
+      
+      video.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Cannot get canvas context'));
+          return;
+        }
+        
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(video.src);
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create thumbnail'));
+          }
+        }, 'image/jpeg', 0.7);
+      };
+      
+      video.onerror = () => {
+        URL.revokeObjectURL(video.src);
+        reject(new Error('Cannot load video'));
+      };
+      
+      video.src = URL.createObjectURL(file);
+    });
+  };
+
   const uploadMediaFiles = async (projectId: string, files: File[]) => {
     if (!user) return;
 
@@ -346,6 +390,30 @@ export default function ComprehensiveScaffoldingForm({
           continue;
         }
 
+        // Generate and upload thumbnail for videos
+        let thumbnailPath: string | null = null;
+        if (isVideo) {
+          try {
+            const thumbnailBlob = await extractVideoThumbnail(file);
+            const thumbnailFileName = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(7)}_thumb.jpg`;
+            
+            const { error: thumbUploadError } = await supabase.storage
+              .from('order-media')
+              .upload(thumbnailFileName, thumbnailBlob, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: 'image/jpeg',
+              });
+            
+            if (!thumbUploadError) {
+              thumbnailPath = thumbnailFileName;
+            }
+          } catch (error) {
+            console.error('Error generating thumbnail:', error);
+            // Continue without thumbnail
+          }
+        }
+
         // Save metadata to database
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
         const { error: dbError } = await supabase
@@ -356,7 +424,8 @@ export default function ComprehensiveScaffoldingForm({
             file_path: filePath,
             file_type: fileType,
             file_size: file.size,
-            mime_type: file.type
+            mime_type: file.type,
+            thumbnail_path: thumbnailPath
           });
 
         if (dbError) {

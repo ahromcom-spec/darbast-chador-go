@@ -67,6 +67,7 @@ interface MediaFile {
   id: string;
   file_path: string;
   file_type: 'image' | 'video';
+  thumbnail_path?: string;
   created_at: string;
 }
 
@@ -728,6 +729,11 @@ export default function OrderDetail() {
                       .from('order-media')
                       .getPublicUrl(media.file_path);
                     
+                    // Get thumbnail if available
+                    const thumbnailData = media.thumbnail_path 
+                      ? supabase.storage.from('order-media').getPublicUrl(media.thumbnail_path)
+                      : null;
+                    
                     const handleDownload = async () => {
                       try {
                         const response = await fetch(data.publicUrl);
@@ -752,15 +758,30 @@ export default function OrderDetail() {
                           className="aspect-video rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                           onClick={() => setSelectedVideo(data.publicUrl)}
                         >
-                          <div className="relative w-full h-full bg-black/5 flex items-center justify-center">
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                            <Film className="w-16 h-16 text-primary opacity-60" />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
-                                <Play className="w-8 h-8 text-primary fill-primary" />
+                          {thumbnailData?.data.publicUrl ? (
+                            <div className="relative w-full h-full">
+                              <img
+                                src={thumbnailData.data.publicUrl}
+                                alt="پیش‌نمایش ویدیو"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
+                                  <Play className="w-8 h-8 text-primary fill-primary" />
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="relative w-full h-full bg-black/5 flex items-center justify-center">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                              <Film className="w-16 h-16 text-primary opacity-60" />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
+                                  <Play className="w-8 h-8 text-primary fill-primary" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                         
                         {/* Action buttons */}

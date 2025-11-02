@@ -1042,6 +1042,7 @@ export type Database = {
           id: string
           mime_type: string
           project_id: string
+          thumbnail_path: string | null
           updated_at: string
           user_id: string
         }
@@ -1053,6 +1054,7 @@ export type Database = {
           id?: string
           mime_type: string
           project_id: string
+          thumbnail_path?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1064,6 +1066,7 @@ export type Database = {
           id?: string
           mime_type?: string
           project_id?: string
+          thumbnail_path?: string | null
           updated_at?: string
           user_id?: string
         }
