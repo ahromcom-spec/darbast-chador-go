@@ -1,13 +1,23 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowRight, Building2, MapPin, Package } from 'lucide-react';
 import ComprehensiveScaffoldingForm from './ComprehensiveScaffoldingForm';
+import { supabase } from '@/integrations/supabase/client';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ScaffoldingForm() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  const editOrderId = searchParams.get('edit');
+  
+  const [loading, setLoading] = useState(false);
+  const [orderData, setOrderData] = useState<any>(null);
   
   // Get passed data from SelectLocation or previous steps
   const state = location.state || {};
@@ -28,8 +38,85 @@ export default function ScaffoldingForm() {
     districtName
   } = state;
 
-  // If no data passed, show error
-  if (!locationAddress || !serviceName) {
+  // Fetch order data if editing
+  useEffect(() => {
+    if (editOrderId) {
+      fetchOrderData();
+    }
+  }, [editOrderId]);
+
+  const fetchOrderData = async () => {
+    if (!editOrderId) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('projects_v3')
+        .select(`
+          *,
+          subcategory:subcategories!projects_v3_subcategory_id_fkey (
+            id,
+            name,
+            code,
+            service_type:service_types_v3!subcategories_service_type_id_fkey (
+              id,
+              name,
+              code
+            )
+          ),
+          province:provinces!projects_v3_province_id_fkey (
+            id,
+            name,
+            code
+          ),
+          district:districts!projects_v3_district_id_fkey (
+            id,
+            name
+          )
+        `)
+        .eq('id', editOrderId)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data) {
+        setOrderData(data);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'خطا',
+        description: 'خطا در بارگذاری اطلاعات سفارش',
+        variant: 'destructive'
+      });
+      navigate('/orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show loading spinner while fetching order data
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" text="در حال بارگذاری..." />
+      </div>
+    );
+  }
+
+  // If editing, use order data; otherwise use state data
+  const finalLocationAddress = orderData?.address || locationAddress;
+  const finalServiceName = orderData?.subcategory?.service_type?.name || serviceName;
+  const finalSubcategoryName = orderData?.subcategory?.name || subcategoryName;
+  const finalProvinceName = orderData?.province?.name || provinceName;
+  const finalDistrictName = orderData?.district?.name || districtName;
+  const finalProvinceId = orderData?.province_id || provinceId;
+  const finalDistrictId = orderData?.district_id || districtId;
+  const finalSubcategoryId = orderData?.subcategory_id || subcategoryId;
+  const finalSubcategoryCode = orderData?.subcategory?.code || subcategoryCode;
+  const finalServiceTypeId = orderData?.subcategory?.service_type?.id || serviceTypeId;
+
+  // If no data passed and not editing, show error
+  if (!finalLocationAddress || !finalServiceName) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="max-w-md">
@@ -77,15 +164,15 @@ export default function ScaffoldingForm() {
             <CardHeader className="text-center border-b">
               <CardTitle className="text-2xl flex items-center justify-center gap-2">
                 <Building2 className="h-6 w-6 text-primary" />
-                فرم ثبت سفارش {serviceName || 'خدمات ساختمان'}
+                {editOrderId ? 'ویرایش سفارش' : `فرم ثبت سفارش ${finalServiceName || 'خدمات ساختمان'}`}
               </CardTitle>
               <CardDescription>
-                {subcategoryName || 'لطفاً اطلاعات پروژه را وارد کنید'}
+                {finalSubcategoryName || 'لطفاً اطلاعات پروژه را وارد کنید'}
               </CardDescription>
             </CardHeader>
 
             {/* نمایش اطلاعات آدرس و سرویس */}
-            {locationAddress && (
+            {finalLocationAddress && (
               <CardContent className="pt-6 pb-4 border-b bg-muted/30">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Alert className="border-primary/30">
@@ -96,10 +183,10 @@ export default function ScaffoldingForm() {
                         {locationTitle && (
                           <p className="text-xs text-muted-foreground">{locationTitle}</p>
                         )}
-                        <p className="text-sm">{locationAddress}</p>
+                        <p className="text-sm">{finalLocationAddress}</p>
                         <p className="text-xs text-muted-foreground">
-                          {provinceName && `${provinceName}`}
-                          {districtName && ` • ${districtName}`}
+                          {finalProvinceName && `${finalProvinceName}`}
+                          {finalDistrictName && ` • ${finalDistrictName}`}
                         </p>
                       </div>
                     </AlertDescription>
@@ -110,8 +197,8 @@ export default function ScaffoldingForm() {
                     <AlertDescription>
                       <div className="space-y-1">
                         <p className="font-semibold text-sm">نوع خدمات:</p>
-                        <p className="text-sm">{serviceName}</p>
-                        <p className="text-xs text-muted-foreground">{subcategoryName}</p>
+                        <p className="text-sm">{finalServiceName}</p>
+                        <p className="text-xs text-muted-foreground">{finalSubcategoryName}</p>
                       </div>
                     </AlertDescription>
                   </Alert>
@@ -121,18 +208,20 @@ export default function ScaffoldingForm() {
 
             <CardContent className="p-6">
               <ComprehensiveScaffoldingForm 
+                editOrderId={editOrderId || undefined}
+                existingOrderData={orderData}
                 hierarchyProjectId={hierarchyProjectId}
                 projectId={projectId}
                 locationId={locationId}
-                provinceId={provinceId}
-                districtId={districtId}
-                serviceTypeId={serviceTypeId}
-                subcategoryId={subcategoryId}
-                subcategoryCode={subcategoryCode}
-                hideAddressField={!!locationAddress}
-                prefilledAddress={locationAddress}
-                prefilledProvince={provinceName}
-                prefilledDistrict={districtName}
+                provinceId={finalProvinceId}
+                districtId={finalDistrictId}
+                serviceTypeId={finalServiceTypeId}
+                subcategoryId={finalSubcategoryId}
+                subcategoryCode={finalSubcategoryCode}
+                hideAddressField={!!finalLocationAddress}
+                prefilledAddress={finalLocationAddress}
+                prefilledProvince={finalProvinceName}
+                prefilledDistrict={finalDistrictName}
               />
             </CardContent>
           </Card>

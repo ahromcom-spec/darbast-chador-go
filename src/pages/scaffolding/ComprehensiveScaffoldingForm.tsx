@@ -37,6 +37,8 @@ interface ServiceConditions {
 }
 
 interface ComprehensiveScaffoldingFormProps {
+  editOrderId?: string;
+  existingOrderData?: any;
   hierarchyProjectId?: string;
   projectId?: string;
   locationId?: string;
@@ -52,6 +54,8 @@ interface ComprehensiveScaffoldingFormProps {
 }
 
 export default function ComprehensiveScaffoldingForm({
+  editOrderId,
+  existingOrderData,
   hierarchyProjectId: propHierarchyProjectId,
   projectId: propProjectId,
   locationId: propLocationId,
@@ -104,6 +108,60 @@ export default function ComprehensiveScaffoldingForm({
   const [ceilingTieredOpen, setCeilingTieredOpen] = useState(false);
   const [ceilingSlabOpen, setCeilingSlabOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Load existing order data when editing
+  useEffect(() => {
+    if (editOrderId && existingOrderData) {
+      try {
+        // Parse notes to get form data
+        const notes = typeof existingOrderData.notes === 'string' 
+          ? JSON.parse(existingOrderData.notes) 
+          : existingOrderData.notes;
+
+        if (notes) {
+          // Set service type
+          if (notes.service_type) {
+            setActiveService(notes.service_type);
+            if (notes.service_type === 'formwork') {
+              setScaffoldType('formwork');
+            } else if (notes.service_type === 'ceiling-tiered' || notes.service_type === 'ceiling-slab') {
+              setScaffoldType('ceiling');
+            } else {
+              setScaffoldType('facade');
+            }
+          }
+
+          // Set dimensions
+          if (notes.dimensions && Array.isArray(notes.dimensions)) {
+            setDimensions(notes.dimensions.map((dim: any, index: number) => ({
+              id: (index + 1).toString(),
+              length: dim.length?.toString() || '',
+              width: dim.width?.toString() || '',
+              height: dim.height?.toString() || ''
+            })));
+          }
+
+          // Set conditions
+          if (notes.conditions) {
+            setConditions(notes.conditions);
+          }
+
+          // Set other fields
+          if (notes.isFacadeWidth2m !== undefined) {
+            setIsFacadeWidth2m(notes.isFacadeWidth2m);
+          }
+          if (notes.onGround !== undefined) {
+            setOnGround(notes.onGround);
+          }
+          if (notes.vehicleReachesSite !== undefined) {
+            setVehicleReachesSite(notes.vehicleReachesSite);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading order data:', error);
+      }
+    }
+  }, [editOrderId, existingOrderData]);
 
   const addDimension = () => {
     const newId = (dimensions.length + 1).toString();
@@ -406,49 +464,85 @@ export default function ComprehensiveScaffoldingForm({
         }
       }
 
-      // ایجاد سفارش به‌صورت اتمیک در دیتابیس با لینک به پروژه سلسله‌مراتبی
-      // مطمئن شویم که provinceId و districtId UUID معتبر یا null هستند
-      const validProvinceId = provinceId && provinceId.trim() !== '' ? provinceId : null;
-      const validDistrictId = districtId && districtId.trim() !== '' ? districtId : null;
-      
-      const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', {
-        _customer_id: customerId,
-        _province_id: validProvinceId,
-        _district_id: validDistrictId,
-        _subcategory_id: finalSubcategoryId,
-        _hierarchy_project_id: projectId || hierarchyProjectId,
-        _address: sanitizedAddress,
-        _detailed_address: sanitizedAddress,
-        _notes: {
-          service_type: activeService,
-          dimensions: dimensions.map(d => ({
-            length: parseFloat(d.length),
-            width: parseFloat(d.width),
-            height: parseFloat(d.height),
-          })),
-          isFacadeWidth2m,
-          conditions,
-          onGround,
-          vehicleReachesSite,
-          totalArea: calculateTotalArea(),
-          estimated_price: priceData.total,
-          price_breakdown: priceData.breakdown,
-        } as any
-      });
+      // Check if editing or creating new order
+      if (editOrderId) {
+        // Update existing order
+        const { error: updateError } = await supabase
+          .from('projects_v3')
+          .update({
+            address: sanitizedAddress,
+            detailed_address: sanitizedAddress,
+            notes: {
+              service_type: activeService,
+              dimensions: dimensions.map(d => ({
+                length: parseFloat(d.length),
+                width: parseFloat(d.width),
+                height: parseFloat(d.height),
+              })),
+              isFacadeWidth2m,
+              conditions,
+              onGround,
+              vehicleReachesSite,
+              totalArea: calculateTotalArea(),
+              estimated_price: priceData.total,
+              price_breakdown: priceData.breakdown,
+            } as any
+          })
+          .eq('id', editOrderId);
 
-      if (createError) throw createError;
-      const createdProject = createdRows?.[0];
-      if (!createdProject) throw new Error('خطا در ایجاد سفارش');
+        if (updateError) throw updateError;
 
-      toast({ 
-        title: 'ثبت شد', 
-        description: `سفارش شما با کد ${createdProject.code} ثبت شد و در انتظار تایید است.` 
-      });
+        toast({ 
+          title: 'بروزرسانی شد', 
+          description: 'سفارش شما با موفقیت ویرایش شد' 
+        });
 
-      // اتوماسیون اداری حالا با database trigger اجرا می‌شود (order-automation function حذف شد)
+        navigate(`/orders/${editOrderId}`);
+      } else {
+        // ایجاد سفارش جدید به‌صورت اتمیک در دیتابیس با لینک به پروژه سلسله‌مراتبی
+        // مطمئن شویم که provinceId و districtId UUID معتبر یا null هستند
+        const validProvinceId = provinceId && provinceId.trim() !== '' ? provinceId : null;
+        const validDistrictId = districtId && districtId.trim() !== '' ? districtId : null;
+        
+        const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', {
+          _customer_id: customerId,
+          _province_id: validProvinceId,
+          _district_id: validDistrictId,
+          _subcategory_id: finalSubcategoryId,
+          _hierarchy_project_id: projectId || hierarchyProjectId,
+          _address: sanitizedAddress,
+          _detailed_address: sanitizedAddress,
+          _notes: {
+            service_type: activeService,
+            dimensions: dimensions.map(d => ({
+              length: parseFloat(d.length),
+              width: parseFloat(d.width),
+              height: parseFloat(d.height),
+            })),
+            isFacadeWidth2m,
+            conditions,
+            onGround,
+            vehicleReachesSite,
+            totalArea: calculateTotalArea(),
+            estimated_price: priceData.total,
+            price_breakdown: priceData.breakdown,
+          } as any
+        });
 
-      // هدایت کاربر به صفحه جزئیات سفارش
-      navigate(`/orders/${createdProject.id}`);
+        if (createError) throw createError;
+        const createdProject = createdRows?.[0];
+        if (!createdProject) throw new Error('خطا در ایجاد سفارش');
+
+        toast({ 
+          title: 'ثبت شد', 
+          description: `سفارش شما با کد ${createdProject.code} ثبت شد و در انتظار تایید است.` 
+        });
+
+        // اتوماسیون اداری حالا با database trigger اجرا می‌شود (order-automation function حذف شد)
+
+        // هدایت کاربر به صفحه جزئیات سفارش
+        navigate(`/orders/${createdProject.id}`);
+      }
     } catch (e: any) {
       console.error('Error:', e);
       toast({ title: 'خطا', description: e.message || 'ثبت با مشکل مواجه شد', variant: 'destructive' });
