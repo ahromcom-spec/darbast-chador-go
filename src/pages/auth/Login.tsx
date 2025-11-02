@@ -32,7 +32,10 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/';
+  // Don't redirect to form pages that require state data
+  const isFormPage = location.state?.from?.pathname?.includes('/form') || 
+                     location.state?.from?.pathname?.includes('/scaffolding');
+  const from = isFormPage ? '/' : (location.state?.from?.pathname || '/');
 
   useEffect(() => {
     if (user) {
