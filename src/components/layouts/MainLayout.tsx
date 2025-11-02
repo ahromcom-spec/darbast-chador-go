@@ -96,7 +96,7 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
                   <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:inline">خروج</span>
+                  <span>خروج</span>
                 </Button>
               </div>
             </div>
