@@ -105,7 +105,7 @@ export default function OrderDetail() {
   const [parsedNotes, setParsedNotes] = useState<any>(null);
   const [completionDate, setCompletionDate] = useState('');
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
-  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string; poster?: string } | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -756,7 +756,10 @@ export default function OrderDetail() {
                       <div key={media.id} className="relative group col-span-2">
                         <div 
                           className="aspect-video rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                          onClick={() => setSelectedVideo(data.publicUrl)}
+                          onClick={() => setSelectedVideo({ 
+                            url: data.publicUrl, 
+                            poster: thumbnailData?.data.publicUrl 
+                          })}
                         >
                           {thumbnailData?.data.publicUrl ? (
                             <div className="relative w-full h-full">
@@ -804,7 +807,10 @@ export default function OrderDetail() {
                             className="shadow-lg bg-white/95 hover:bg-white"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedVideo(data.publicUrl);
+                              setSelectedVideo({ 
+                                url: data.publicUrl, 
+                                poster: thumbnailData?.data.publicUrl 
+                              });
                             }}
                           >
                             <Play className="w-4 h-4 ml-1" />
@@ -833,16 +839,28 @@ export default function OrderDetail() {
               </DialogHeader>
               <div className="px-6 pb-6">
                 {selectedVideo && (
-                  <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                    <video
-                      src={selectedVideo}
-                      controls
-                      autoPlay
-                      className="w-full h-full"
-                      controlsList="nodownload"
-                    >
-                      مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
-                    </video>
+                  <div className="space-y-3">
+                    <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                      <video
+                        key={selectedVideo.url}
+                        src={selectedVideo.url}
+                        controls
+                        className="w-full h-full"
+                        poster={selectedVideo.poster}
+                        preload="metadata"
+                        playsInline
+                      >
+                        مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                      </video>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button asChild variant="secondary">
+                        <a href={selectedVideo.url} target="_blank" rel="noreferrer">باز کردن در تب جدید</a>
+                      </Button>
+                      <Button asChild>
+                        <a href={selectedVideo.url} download>دانلود ویدیو</a>
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
