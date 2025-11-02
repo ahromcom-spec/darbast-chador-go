@@ -257,7 +257,7 @@ export default function MyProjectsHierarchy() {
             مشاهده و مدیریت پروژه‌های خود را بر اساس آدرس
           </p>
         </div>
-        <Button onClick={() => navigate('/user/create-project')}>
+        <Button onClick={() => navigate('/')}>
           <Plus className="ml-2 h-4 w-4" />
           پروژه جدید
         </Button>
@@ -271,7 +271,7 @@ export default function MyProjectsHierarchy() {
             <p className="text-muted-foreground text-center mb-4">
               برای شروع، ابتدا یک آدرس ثبت کنید
             </p>
-            <Button onClick={() => navigate('/user/create-project')}>
+            <Button onClick={() => navigate('/')}>
               ثبت آدرس و پروژه جدید
             </Button>
           </CardContent>

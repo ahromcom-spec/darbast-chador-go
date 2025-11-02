@@ -330,7 +330,7 @@ const fetchOrders = async () => {
           </div>
         </button>
         <button
-          onClick={() => navigate('/user/create-project')}
+          onClick={() => navigate('/')}
           className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
         >
           <div className="flex items-center gap-3">
