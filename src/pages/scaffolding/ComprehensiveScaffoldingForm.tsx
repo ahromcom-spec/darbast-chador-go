@@ -600,7 +600,7 @@ export default function ComprehensiveScaffoldingForm({
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
         <CardHeader>
-          <CardTitle className="text-foreground">نوع خدمات داربست</CardTitle>
+          <CardTitle className="text-slate-600 dark:text-slate-200">نوع خدمات داربست</CardTitle>
           <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
         </CardHeader>
         <CardContent>
@@ -635,7 +635,7 @@ export default function ComprehensiveScaffoldingForm({
       {/* Dimensions */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
         <CardHeader>
-          <CardTitle className="text-foreground">ابعاد</CardTitle>
+          <CardTitle className="text-slate-600 dark:text-slate-200">ابعاد</CardTitle>
           <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">ابعاد به متر وارد شود</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -697,7 +697,7 @@ export default function ComprehensiveScaffoldingForm({
       {/* Service Conditions */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
         <CardHeader>
-          <CardTitle className="text-foreground">شرایط سرویس</CardTitle>
+          <CardTitle className="text-slate-600 dark:text-slate-200">شرایط سرویس</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -821,7 +821,7 @@ export default function ComprehensiveScaffoldingForm({
       {/* Price Summary */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2 border-primary">
         <CardHeader>
-          <CardTitle className="text-foreground">خلاصه قیمت</CardTitle>
+          <CardTitle className="text-slate-600 dark:text-slate-200">خلاصه قیمت</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {priceData.breakdown.map((item, idx) => (
