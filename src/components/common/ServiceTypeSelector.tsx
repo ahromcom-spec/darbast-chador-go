@@ -44,10 +44,11 @@ export function ServiceTypeSelector({
     : '';
 
   const handleSelect = (serviceTypeId: string, subcategoryCode: string) => {
-    onChange(`${serviceTypeId}:${subcategoryCode}`);
+    // Close popover immediately before any navigation happens
     setOpen(false);
     setExpandedServiceType(null);
     setSearchQuery('');
+    onChange(`${serviceTypeId}:${subcategoryCode}`);
   };
 
   const handleServiceTypeClick = (serviceTypeId: string) => {
