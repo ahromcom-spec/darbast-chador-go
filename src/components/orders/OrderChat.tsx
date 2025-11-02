@@ -166,8 +166,8 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   };
 
-  // نمایش چت فقط برای سفارشات pending و approved
-  if (!['pending', 'approved', 'in_progress'].includes(orderStatus)) {
+  // نمایش چت برای همه سفارشات غیر از rejected و closed
+  if (['rejected', 'closed'].includes(orderStatus)) {
     return null;
   }
 
