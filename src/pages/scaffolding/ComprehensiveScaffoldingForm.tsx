@@ -305,6 +305,18 @@ export default function ComprehensiveScaffoldingForm({
 
     for (const file of files) {
       try {
+        // Enforce backend upload limit: skip oversized videos (>50MB)
+        const isVideo = file.type?.startsWith('video/');
+        const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+        if (isVideo && file.size > MAX_VIDEO_BYTES) {
+          toast({
+            title: 'حجم ویدیو زیاد است',
+            description: `حجم ${file.name} بیشتر از 50MB است. لطفاً فایل را کوچکتر کنید.`,
+            variant: 'destructive'
+          });
+        	failCount++;
+        	continue;
+        }
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = fileName;
@@ -910,7 +922,7 @@ export default function ComprehensiveScaffoldingForm({
         maxImages={4}
         maxVideos={2}
         maxImageSize={10}
-        maxVideoSize={150}
+        maxVideoSize={50}
         maxVideoDuration={180}
       />
 
