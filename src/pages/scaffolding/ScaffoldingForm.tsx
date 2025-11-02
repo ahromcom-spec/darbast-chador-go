@@ -137,19 +137,19 @@ export default function ScaffoldingForm() {
   }
 
   return (
-    <div 
-      className="min-h-screen py-8 relative"
-      style={{
-        backgroundImage: 'url(/background-building.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed'
-      }}
-    >
-      <div className="absolute inset-0 bg-black/50 z-0" />
+    <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Hero Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ 
+          backgroundImage: 'url(/hero-background.webp)',
+        }}
+      >
+        {/* Overlay gradient for better readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+      </div>
       
-      <div className="container mx-auto px-4 max-w-7xl relative z-10">
+      <div className="relative z-10 container mx-auto px-4 max-w-7xl py-8">
         <div className="space-y-6">
           <Button
             variant="ghost"
@@ -160,7 +160,7 @@ export default function ScaffoldingForm() {
             بازگشت
           </Button>
 
-            <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
+            <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
             <CardHeader className="text-center border-b">
               <CardTitle className="text-2xl flex items-center justify-center gap-2">
                 <Building2 className="h-6 w-6 text-primary" />
