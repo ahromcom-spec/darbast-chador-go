@@ -600,7 +600,7 @@ export default function ComprehensiveScaffoldingForm({
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
         <CardHeader>
-          <CardTitle className="text-primary">نوع خدمات داربست</CardTitle>
+          <CardTitle className="text-foreground">نوع خدمات داربست</CardTitle>
           <CardDescription className="text-primary-light font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
         </CardHeader>
         <CardContent>
@@ -635,7 +635,7 @@ export default function ComprehensiveScaffoldingForm({
       {/* Dimensions */}
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
         <CardHeader>
-          <CardTitle className="text-primary">ابعاد</CardTitle>
+          <CardTitle className="text-foreground">ابعاد</CardTitle>
           <CardDescription className="text-primary-light font-semibold">ابعاد به متر وارد شود</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -697,7 +697,7 @@ export default function ComprehensiveScaffoldingForm({
       {/* Service Conditions */}
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
         <CardHeader>
-          <CardTitle className="text-primary">شرایط سرویس</CardTitle>
+          <CardTitle className="text-foreground">شرایط سرویس</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -821,7 +821,7 @@ export default function ComprehensiveScaffoldingForm({
       {/* Price Summary */}
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2 border-primary">
         <CardHeader>
-          <CardTitle className="text-primary">خلاصه قیمت</CardTitle>
+          <CardTitle className="text-foreground">خلاصه قیمت</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {priceData.breakdown.map((item, idx) => (

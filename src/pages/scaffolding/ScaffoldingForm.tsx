@@ -162,8 +162,8 @@ export default function ScaffoldingForm() {
 
             <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
             <CardHeader className="text-center border-b">
-              <CardTitle className="text-2xl flex items-center justify-center gap-2 text-primary">
-                <Building2 className="h-6 w-6 text-primary" />
+              <CardTitle className="text-2xl flex items-center justify-center gap-2 text-foreground">
+                <Building2 className="h-6 w-6 text-foreground" />
                 {editOrderId ? 'ویرایش سفارش' : `فرم ثبت سفارش ${finalServiceName || 'خدمات ساختمان'}`}
               </CardTitle>
               <CardDescription className="text-primary-light font-semibold">
