@@ -600,7 +600,7 @@ export default function ComprehensiveScaffoldingForm({
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-card/20 backdrop-blur-md border-2">
         <CardHeader>
-          <CardTitle className="text-foreground">نوع خدمات داربست</CardTitle>
+          <CardTitle className="text-slate-700 dark:text-slate-200">نوع خدمات داربست</CardTitle>
           <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
         </CardHeader>
         <CardContent>
