@@ -221,8 +221,21 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary p-4">
-      <Card className="w-full max-w-md shadow-elegant">
+    <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Hero Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ 
+          backgroundImage: 'url(/hero-background.webp)',
+        }}
+      >
+        {/* Overlay gradient for better readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-2xl font-bold text-primary">ثبت نام در اهرم</CardTitle>
           <CardDescription>
@@ -420,6 +433,7 @@ export default function Register() {
           </form>
         )}
       </Card>
+      </div>
     </div>
   );
 }

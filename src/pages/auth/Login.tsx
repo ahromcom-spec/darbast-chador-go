@@ -216,222 +216,234 @@ const handleResendOTP = async () => {
   };
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5"
-    >
-      <div className="w-full max-w-md">
-        <Card className="shadow-xl border-border">
-          <CardHeader className="text-center space-y-2 pb-4">
-            <CardTitle className="text-3xl font-bold">ورود به اهرم</CardTitle>
-            <CardDescription className="text-base">
-              {step === 'phone' 
-                ? 'شماره موبایل خود را وارد کنید' 
-                : step === 'not-registered'
-                ? 'حساب کاربری یافت نشد'
-                : 'کد تایید ارسال شده را وارد کنید'}
-            </CardDescription>
-          </CardHeader>
+    <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Hero Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ 
+          backgroundImage: 'url(/hero-background.webp)',
+        }}
+      >
+        {/* Overlay gradient for better readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+      </div>
 
-          {step === 'not-registered' ? (
-            <>
-              <CardContent className="space-y-4 px-6">
-                <Alert variant="destructive">
-                  <AlertDescription className="text-center">
-                    شماره موبایل <span className="font-bold">{phoneNumber}</span> در سامانه ثبت نشده است.
-                    <br />
-                    لطفا ابتدا ثبت‌نام کنید.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-              <CardFooter className="flex flex-col space-y-3 px-6 pt-4">
-                <Button 
-                  asChild
-                  className="w-full"
-                  size="lg"
-                >
-                  <Link to="/auth/register" state={{ phone: phoneNumber }}>
-                    ثبت‌نام در اهرم
-                  </Link>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleBackToPhone}
-                >
-                  تغییر شماره موبایل
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  asChild
-                >
-                  <Link to="/">
-                    <Home className="ml-2 h-4 w-4" />
-                    بازگشت به صفحه اصلی
-                  </Link>
-                </Button>
-              </CardFooter>
-            </>
-          ) : step === 'phone' ? (
-            <form onSubmit={handleSendOTP}>
-              <CardContent className="space-y-4 px-6">
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-base">شماره موبایل</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="09123456789"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    maxLength={11}
-                    dir="ltr"
-                    className={`h-12 text-lg text-center ${errors.phone ? 'border-destructive' : ''}`}
-                    autoFocus
-                  />
-                  {errors.phone && (
-                    <p className="text-sm text-destructive text-center">{errors.phone}</p>
-                  )}
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col space-y-3 px-6 pt-4">
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  size="lg"
-                  disabled={loading}
-                >
-                  {loading ? 'در حال ارسال...' : 'ارسال کد تایید'}
-                </Button>
-                <div className="relative w-full">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-card px-2 text-muted-foreground">یا</span>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  asChild
-                >
-                  <Link to="/auth/register">
-                    ثبت‌نام در اهرم
-                  </Link>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  asChild
-                >
-                  <Link to="/">
-                    <Home className="ml-2 h-4 w-4" />
-                    بازگشت به صفحه اصلی
-                  </Link>
-                </Button>
-              </CardFooter>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOTP}>
-              <CardContent className="space-y-6 px-6">
-                <div className="space-y-4">
-                  <Label className="text-base text-center block">کد تایید 5 رقمی</Label>
-                  <div className="flex justify-center" dir="ltr">
-                    <InputOTP
-                      maxLength={5}
-                      value={otpCode}
-                      onChange={(value) => setOtpCode(value)}
-                      inputMode="numeric"
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
+            <CardHeader className="text-center space-y-2 pb-4">
+              <CardTitle className="text-3xl font-bold">ورود به اهرم</CardTitle>
+              <CardDescription className="text-base">
+                {step === 'phone' 
+                  ? 'شماره موبایل خود را وارد کنید' 
+                  : step === 'not-registered'
+                  ? 'حساب کاربری یافت نشد'
+                  : 'کد تایید ارسال شده را وارد کنید'}
+              </CardDescription>
+            </CardHeader>
+
+            {step === 'not-registered' ? (
+              <>
+                <CardContent className="space-y-4 px-6">
+                  <Alert variant="destructive">
+                    <AlertDescription className="text-center">
+                      شماره موبایل <span className="font-bold">{phoneNumber}</span> در سامانه ثبت نشده است.
+                      <br />
+                      لطفا ابتدا ثبت‌نام کنید.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-3 px-6 pt-4">
+                  <Button 
+                    asChild
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Link to="/auth/register" state={{ phone: phoneNumber }}>
+                      ثبت‌نام در اهرم
+                    </Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleBackToPhone}
+                  >
+                    تغییر شماره موبایل
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    asChild
+                  >
+                    <Link to="/">
+                      <Home className="ml-2 h-4 w-4" />
+                      بازگشت به صفحه اصلی
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </>
+            ) : step === 'phone' ? (
+              <form onSubmit={handleSendOTP}>
+                <CardContent className="space-y-4 px-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-base">شماره موبایل</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="09123456789"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      maxLength={11}
+                      dir="ltr"
+                      className={`h-12 text-lg text-center ${errors.phone ? 'border-destructive' : ''}`}
                       autoFocus
-                    >
-                      <InputOTPGroup className="gap-2">
-                        <InputOTPSlot index={0} className="w-12 h-14 text-xl" />
-                        <InputOTPSlot index={1} className="w-12 h-14 text-xl" />
-                        <InputOTPSlot index={2} className="w-12 h-14 text-xl" />
-                        <InputOTPSlot index={3} className="w-12 h-14 text-xl" />
-                        <InputOTPSlot index={4} className="w-12 h-14 text-xl" />
-                      </InputOTPGroup>
-                    </InputOTP>
+                    />
+                    {errors.phone && (
+                      <p className="text-sm text-destructive text-center">{errors.phone}</p>
+                    )}
                   </div>
-                  
-                  <div className="text-center space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      کد به شماره <span className="font-bold text-foreground" dir="ltr">{phoneNumber}</span> ارسال شد
-                    </p>
-                    {countdown > 0 ? (
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-3 px-6 pt-4">
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    size="lg"
+                    disabled={loading}
+                  >
+                    {loading ? 'در حال ارسال...' : 'ارسال کد تایید'}
+                  </Button>
+                  <div className="relative w-full">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-card px-2 text-muted-foreground">یا</span>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    asChild
+                  >
+                    <Link to="/auth/register">
+                      ثبت‌نام در اهرم
+                    </Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    asChild
+                  >
+                    <Link to="/">
+                      <Home className="ml-2 h-4 w-4" />
+                      بازگشت به صفحه اصلی
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyOTP}>
+                <CardContent className="space-y-6 px-6">
+                  <div className="space-y-4">
+                    <Label className="text-base text-center block">کد تایید 5 رقمی</Label>
+                    <div className="flex justify-center" dir="ltr">
+                      <InputOTP
+                        maxLength={5}
+                        value={otpCode}
+                        onChange={(value) => setOtpCode(value)}
+                        inputMode="numeric"
+                        autoFocus
+                      >
+                        <InputOTPGroup className="gap-2">
+                          <InputOTPSlot index={0} className="w-12 h-14 text-xl" />
+                          <InputOTPSlot index={1} className="w-12 h-14 text-xl" />
+                          <InputOTPSlot index={2} className="w-12 h-14 text-xl" />
+                          <InputOTPSlot index={3} className="w-12 h-14 text-xl" />
+                          <InputOTPSlot index={4} className="w-12 h-14 text-xl" />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                    
+                    <div className="text-center space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        زمان باقی‌مانده: <span className="font-bold text-primary">{countdown}</span> ثانیه
+                        کد به شماره <span className="font-bold text-foreground" dir="ltr">{phoneNumber}</span> ارسال شد
                       </p>
-                    ) : (
+                      {countdown > 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          زمان باقی‌مانده: <span className="font-bold text-primary">{countdown}</span> ثانیه
+                        </p>
+                      ) : (
+                        <Alert variant="destructive">
+                          <AlertDescription className="text-center text-sm">
+                            کد تایید منقضی شده است. لطفا مجدداً درخواست کنید.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                    
+                    {errors.otp && (
                       <Alert variant="destructive">
-                        <AlertDescription className="text-center text-sm">
-                          کد تایید منقضی شده است. لطفا مجدداً درخواست کنید.
-                        </AlertDescription>
+                        <AlertDescription className="text-center">{errors.otp}</AlertDescription>
                       </Alert>
                     )}
                   </div>
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-3 px-6 pt-4">
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    size="lg"
+                    disabled={loading || countdown === 0 || otpCode.length !== 5}
+                  >
+                    {loading ? 'در حال بررسی...' : 'تایید و ورود'}
+                  </Button>
                   
-                  {errors.otp && (
-                    <Alert variant="destructive">
-                      <AlertDescription className="text-center">{errors.otp}</AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col space-y-3 px-6 pt-4">
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  size="lg"
-                  disabled={loading || countdown === 0 || otpCode.length !== 5}
-                >
-                  {loading ? 'در حال بررسی...' : 'تایید و ورود'}
-                </Button>
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleResendOTP}
-                  disabled={loading || countdown > 0}
-                >
-                  {countdown > 0 
-                    ? `ارسال مجدد (${countdown}s)` 
-                    : loading 
-                    ? 'در حال ارسال...' 
-                    : 'ارسال مجدد کد'}
-                </Button>
-                
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={handleBackToPhone}
-                  disabled={loading}
-                >
-                  تغییر شماره موبایل
-                </Button>
-                
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full"
-                  asChild
-                >
-                  <Link to="/">
-                    <Home className="ml-2 h-4 w-4" />
-                    بازگشت به صفحه اصلی
-                  </Link>
-                </Button>
-              </CardFooter>
-            </form>
-          )}
-        </Card>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleResendOTP}
+                    disabled={loading || countdown > 0}
+                  >
+                    {countdown > 0 
+                      ? `ارسال مجدد (${countdown}s)` 
+                      : loading 
+                      ? 'در حال ارسال...' 
+                      : 'ارسال مجدد کد'}
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={handleBackToPhone}
+                    disabled={loading}
+                  >
+                    تغییر شماره موبایل
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    asChild
+                  >
+                    <Link to="/">
+                      <Home className="ml-2 h-4 w-4" />
+                      بازگشت به صفحه اصلی
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </form>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );

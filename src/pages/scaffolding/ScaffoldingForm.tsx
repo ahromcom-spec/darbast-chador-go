@@ -160,7 +160,7 @@ export default function ScaffoldingForm() {
             بازگشت
           </Button>
 
-          <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
+            <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
             <CardHeader className="text-center border-b">
               <CardTitle className="text-2xl flex items-center justify-center gap-2">
                 <Building2 className="h-6 w-6 text-primary" />
