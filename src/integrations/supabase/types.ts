@@ -721,6 +721,7 @@ export type Database = {
           created_at: string | null
           id: string
           order_id: string
+          subcategory_id: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -729,6 +730,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           order_id: string
+          subcategory_id?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -737,6 +739,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           order_id?: string
+          subcategory_id?: string | null
         }
         Relationships: [
           {
@@ -744,6 +747,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_approvals_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
             referencedColumns: ["id"]
           },
         ]
