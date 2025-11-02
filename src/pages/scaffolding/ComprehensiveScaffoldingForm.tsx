@@ -19,6 +19,7 @@ import { useProvinces } from '@/hooks/useProvinces';
 import { useDistricts } from '@/hooks/useDistricts';
 import { sanitizeHtml } from '@/lib/security';
 import { scaffoldingFormSchema } from '@/lib/validations';
+import { MediaUploader } from '@/components/orders/MediaUploader';
 
 interface Dimension {
   id: string;
@@ -108,6 +109,7 @@ export default function ComprehensiveScaffoldingForm({
   const [ceilingTieredOpen, setCeilingTieredOpen] = useState(false);
   const [ceilingSlabOpen, setCeilingSlabOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
 
   // Load existing order data when editing
   useEffect(() => {
@@ -792,6 +794,16 @@ export default function ComprehensiveScaffoldingForm({
           </div>
         </CardContent>
       </Card>
+
+      {/* Media Upload Section */}
+      <MediaUploader
+        onFilesChange={setMediaFiles}
+        maxImages={4}
+        maxVideos={2}
+        maxImageSize={2}
+        maxVideoSize={50}
+        maxVideoDuration={180}
+      />
 
       {/* Price Summary */}
       <Card className="border-primary">
