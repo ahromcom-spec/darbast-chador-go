@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { CheckCircle, X, Eye } from 'lucide-react';
+import { CheckCircle, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -32,7 +32,7 @@ interface Order {
   notes: any;
 }
 
-export default function ExecutivePendingOrders() {
+export default function GeneralManagerPendingOrders() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,10 +105,10 @@ export default function ExecutivePendingOrders() {
       // Determine the approval role based on subcategory
       const isExecutionWithMaterials = orderData?.subcategory_id === '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d';
       const approverRole = isExecutionWithMaterials 
-        ? 'executive_manager_scaffold_execution_with_materials' 
-        : 'scaffold_executive_manager';
+        ? 'general_manager_scaffold_execution_with_materials' 
+        : 'ceo';
 
-      // Record executive manager approval
+      // Record general manager approval
       const { error } = await supabase
         .from('order_approvals')
         .update({
@@ -200,9 +200,9 @@ export default function ExecutivePendingOrders() {
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
         title="سفارشات در انتظار تایید شما"
-        description="سفارشاتی که نیاز به تایید مدیر اجرایی دارند"
+        description="سفارشاتی که نیاز به تایید مدیرعامل دارند"
         showBackButton={true}
-        backTo="/executive"
+        backTo="/admin/general-manager"
       />
 
       <div className="grid gap-4">

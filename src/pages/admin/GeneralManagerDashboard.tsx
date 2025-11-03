@@ -171,11 +171,14 @@ export const GeneralManagerDashboard = () => {
       <div className="mb-6">
         <h2 className="text-base sm:text-lg font-semibold mb-4">آمار کلی</h2>
         <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800">
+          <Card 
+            className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate('/admin/general-manager/pending-orders')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">در انتظار</p>
+                  <p className="text-sm font-medium text-muted-foreground">سفارشات در انتظار تایید</p>
                   <p className="text-3xl sm:text-4xl font-bold mt-2">{stats.pending}</p>
                 </div>
                 <div className="h-12 w-12 shrink-0 rounded-full bg-orange-200 dark:bg-orange-800 flex items-center justify-center">

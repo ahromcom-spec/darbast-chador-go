@@ -95,6 +95,19 @@ export default function SalesPendingOrders() {
     if (!selectedOrder || !user) return;
 
     try {
+      // Check which subcategory to determine the approval role
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('subcategory_id')
+        .eq('id', selectedOrder.id)
+        .single();
+
+      // Determine the approval role based on subcategory
+      const isExecutionWithMaterials = orderData?.subcategory_id === '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d';
+      const approverRole = isExecutionWithMaterials 
+        ? 'sales_manager_scaffold_execution_with_materials' 
+        : 'sales_manager';
+
       const { error } = await supabase
         .from('order_approvals')
         .update({
@@ -102,7 +115,7 @@ export default function SalesPendingOrders() {
           approved_at: new Date().toISOString()
         })
         .eq('order_id', selectedOrder.id)
-        .eq('approver_role', 'sales_manager');
+        .eq('approver_role', approverRole);
 
       if (error) throw error;
 
