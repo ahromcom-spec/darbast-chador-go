@@ -30,6 +30,7 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   notes: any;
+  subcategory_id?: string;
 }
 
 export default function ExecutivePendingOrders() {
@@ -57,6 +58,7 @@ export default function ExecutivePendingOrders() {
           detailed_address,
           created_at,
           notes,
+          subcategory_id,
           customer_id,
           customers!inner(user_id),
           profiles:customers(profiles!inner(full_name, phone_number))
@@ -66,19 +68,36 @@ export default function ExecutivePendingOrders() {
 
       if (error) throw error;
 
-      const formattedOrders = data?.map((order: any) => ({
-        id: order.id,
-        code: order.code,
-        status: order.status,
-        address: order.address,
-        detailed_address: order.detailed_address,
-        created_at: order.created_at,
-        notes: order.notes,
-        customer_name: order.profiles?.[0]?.profiles?.full_name || 'نامشخص',
-        customer_phone: order.profiles?.[0]?.profiles?.phone_number || ''
-      })) || [];
+      // Filter only orders that have pending approval for executive manager
+      const filteredOrders = await Promise.all(
+        (data || []).map(async (order: any) => {
+          // Check if this order has a pending approval for executive manager
+          const { data: approvalData } = await supabase
+            .from('order_approvals')
+            .select('approver_role, approved_at')
+            .eq('order_id', order.id)
+            .in('approver_role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
+            .is('approved_at', null)
+            .maybeSingle();
 
-      setOrders(formattedOrders);
+          if (!approvalData) return null;
+
+          return {
+            id: order.id,
+            code: order.code,
+            status: order.status,
+            address: order.address,
+            detailed_address: order.detailed_address,
+            created_at: order.created_at,
+            notes: order.notes,
+            subcategory_id: order.subcategory_id,
+            customer_name: order.profiles?.[0]?.profiles?.full_name || 'نامشخص',
+            customer_phone: order.profiles?.[0]?.profiles?.phone_number || ''
+          };
+        })
+      );
+
+      setOrders(filteredOrders.filter(Boolean) as Order[]);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({

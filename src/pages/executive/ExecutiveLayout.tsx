@@ -10,6 +10,11 @@ const navItems = [
     icon: LayoutDashboard
   },
   {
+    title: 'سفارشات در انتظار',
+    href: '/executive/pending-orders',
+    icon: ShoppingCart
+  },
+  {
     title: 'سفارشات',
     href: '/executive/orders',
     icon: ShoppingCart
