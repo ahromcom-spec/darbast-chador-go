@@ -59,7 +59,11 @@ export default function ExecutivePendingOrders() {
           created_at,
           notes,
           subcategory_id,
-          customer_id
+          customer_id,
+          customers!inner(
+            user_id,
+            profiles!inner(full_name, phone_number)
+          )
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -89,8 +93,8 @@ export default function ExecutivePendingOrders() {
             created_at: order.created_at,
             notes: order.notes,
             subcategory_id: order.subcategory_id,
-            customer_name: 'نامشخص',
-            customer_phone: ''
+            customer_name: (order as any).customers?.profiles?.full_name || 'نامشخص',
+            customer_phone: (order as any).customers?.profiles?.phone_number || ''
           };
         })
       );
