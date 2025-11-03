@@ -101,7 +101,8 @@ export const CEOOrders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      // Fetch directly from projects_v3 to ensure consistent results (rpc filtering on functions can be unreliable across clients)
+      // Fetch directly from projects_v3 to ensure consistent results
+      // فقط سفارشاتی که نیاز به تایید CEO دارند (subcategory != داربست با اجناس)
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
@@ -113,17 +114,30 @@ export const CEOOrders = () => {
           )
         `)
         .eq('status', 'pending')
+        .neq('subcategory_id', '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const formattedOrders = data?.map((order: any) => ({
-        ...order,
-        customer_name: order.customers?.profiles?.full_name || 'نامشخص',
-        customer_phone: order.customers?.profiles?.phone_number || ''
-      })) || [];
+      // فیلتر کردن سفارشاتی که هنوز نیاز به تایید CEO دارند
+      const filtered = await Promise.all(
+        (data || []).map(async (order: any) => {
+          const { data: approval } = await supabase
+            .from('order_approvals')
+            .select('approved_at')
+            .eq('order_id', order.id)
+            .eq('approver_role', 'ceo')
+            .single();
+          
+          return approval && !approval.approved_at ? {
+            ...order,
+            customer_name: order.customers?.profiles?.full_name || 'نامشخص',
+            customer_phone: order.customers?.profiles?.phone_number || ''
+          } : null;
+        })
+      );
 
-      setOrders(formattedOrders);
+      setOrders(filtered.filter(o => o !== null) as Order[]);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
       toast(toastError(error, 'خطا در بارگذاری سفارشات'));

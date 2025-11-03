@@ -47,6 +47,7 @@ export default function GeneralManagerPendingOrders() {
 
   const fetchOrders = async () => {
     try {
+      // فقط سفارشاتی که نیاز به تایید general manager دارند
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
@@ -58,29 +59,43 @@ export default function GeneralManagerPendingOrders() {
           created_at,
           notes,
           customer_id,
+          subcategory_id,
           customers!inner(
             user_id,
             profiles!inner(full_name, phone_number)
           )
         `)
         .eq('status', 'pending')
+        .eq('subcategory_id', '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const formattedOrders = data?.map((order: any) => ({
-        id: order.id,
-        code: order.code,
-        status: order.status,
-        address: order.address,
-        detailed_address: order.detailed_address,
-        created_at: order.created_at,
-        notes: order.notes,
-        customer_name: order.customers?.profiles?.full_name || 'نامشخص',
-        customer_phone: order.customers?.profiles?.phone_number || ''
-      })) || [];
+      // فیلتر کردن سفارشاتی که هنوز نیاز به تایید general manager دارند
+      const filtered = await Promise.all(
+        (data || []).map(async (order: any) => {
+          const { data: approval } = await supabase
+            .from('order_approvals')
+            .select('approved_at')
+            .eq('order_id', order.id)
+            .eq('approver_role', 'general_manager_scaffold_execution_with_materials')
+            .single();
+          
+          return approval && !approval.approved_at ? {
+            id: order.id,
+            code: order.code,
+            status: order.status,
+            address: order.address,
+            detailed_address: order.detailed_address,
+            created_at: order.created_at,
+            notes: order.notes,
+            customer_name: order.customers?.profiles?.full_name || 'نامشخص',
+            customer_phone: order.customers?.profiles?.phone_number || ''
+          } : null;
+        })
+      );
 
-      setOrders(formattedOrders);
+      setOrders(filtered.filter(o => o !== null) as Order[]);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
