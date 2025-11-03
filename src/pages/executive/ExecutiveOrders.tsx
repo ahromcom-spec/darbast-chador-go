@@ -38,6 +38,7 @@ export default function ExecutiveOrders() {
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -389,7 +390,20 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {order.status === 'paid' && !order.executive_completion_date && (
+                   <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setShowDetailsDialog(true);
+                      }}
+                      className="gap-2"
+                    >
+                      <AlertCircle className="h-4 w-4" />
+                      جزئیات کامل
+                    </Button>
+
+                   {order.status === 'paid' && !order.executive_completion_date && (
                     <Button
                       onClick={() => {
                         setSelectedOrder(order);
@@ -515,6 +529,105 @@ export default function ExecutiveOrders() {
             >
               <CheckCircle className="h-4 w-4" />
               تایید اتمام
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>جزئیات کامل سفارش {selectedOrder?.code}</DialogTitle>
+            <DialogDescription>اطلاعات جامع سفارش</DialogDescription>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">نام مشتری</Label>
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    {selectedOrder.customer_name}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">شماره تماس</Label>
+                  <p className="text-sm font-medium flex items-center gap-2" dir="ltr">
+                    <Phone className="h-4 w-4 text-primary" />
+                    {selectedOrder.customer_phone}
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">آدرس</Label>
+                <p className="text-sm flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                  <span>{selectedOrder.address}</span>
+                </p>
+                {selectedOrder.detailed_address && (
+                  <p className="text-sm text-muted-foreground mr-6">{selectedOrder.detailed_address}</p>
+                )}
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">وضعیت</Label>
+                  <div>{getStatusBadge(selectedOrder.status)}</div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">تاریخ ثبت</Label>
+                  <p className="text-sm">{new Date(selectedOrder.created_at).toLocaleDateString('fa-IR')}</p>
+                </div>
+              </div>
+
+              {selectedOrder.execution_start_date && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">تاریخ شروع اجرا</Label>
+                    <p className="text-sm flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      {new Date(selectedOrder.execution_start_date).toLocaleDateString('fa-IR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {(selectedOrder.customer_completion_date || selectedOrder.executive_completion_date) && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <Label className="text-xs text-muted-foreground">تاییدات اتمام کار</Label>
+                    {selectedOrder.customer_completion_date && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span>تایید مشتری: {new Date(selectedOrder.customer_completion_date).toLocaleDateString('fa-IR')}</span>
+                      </div>
+                    )}
+                    {selectedOrder.executive_completion_date && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span>تایید مدیر اجرایی: {new Date(selectedOrder.executive_completion_date).toLocaleDateString('fa-IR')}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
+              بستن
             </Button>
           </DialogFooter>
         </DialogContent>

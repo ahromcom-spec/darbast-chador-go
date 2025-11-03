@@ -29,7 +29,7 @@ export default function ExecutiveDashboard() {
       const { data: pendingApprovals, error: approvalsError } = await supabase
         .from('order_approvals')
         .select('order_id')
-        .in('approver_role', ['scaffold_executive_manager','executive_manager_scaffold_execution_with_materials'])
+        .in('approver_role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
         .is('approved_at', null);
 
       if (approvalsError) throw approvalsError;
