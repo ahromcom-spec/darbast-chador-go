@@ -53,9 +53,7 @@ export default function ExecutiveOrders() {
           customer_completion_date,
           executive_completion_date,
           created_at,
-          customer_id,
-          customers!inner(user_id),
-          profiles:customers(profiles!inner(full_name, phone_number))
+          customer_id
         `)
         .in('status', ['approved', 'in_progress', 'paid'])
         .order('created_at', { ascending: false });
@@ -73,8 +71,8 @@ export default function ExecutiveOrders() {
         customer_completion_date: order.customer_completion_date,
         executive_completion_date: order.executive_completion_date,
         created_at: order.created_at,
-        customer_name: order.profiles?.[0]?.profiles?.full_name || 'نامشخص',
-        customer_phone: order.profiles?.[0]?.profiles?.phone_number || ''
+        customer_name: 'نامشخص',
+        customer_phone: ''
       })) || [];
 
       setOrders(formattedOrders);
