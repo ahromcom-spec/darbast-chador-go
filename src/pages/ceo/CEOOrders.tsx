@@ -106,14 +106,24 @@ export const CEOOrders = () => {
         .from('projects_v3')
         .select(`
           id, code, customer_id, province_id, district_id, subcategory_id,
-          address, detailed_address, notes, status, created_at
+          address, detailed_address, notes, status, created_at,
+          customers!inner(
+            user_id,
+            profiles!inner(full_name, phone_number)
+          )
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setOrders((data as any) || []);
+      const formattedOrders = data?.map((order: any) => ({
+        ...order,
+        customer_name: order.customers?.profiles?.full_name || 'نامشخص',
+        customer_phone: order.customers?.profiles?.phone_number || ''
+      })) || [];
+
+      setOrders(formattedOrders);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
       toast(toastError(error, 'خطا در بارگذاری سفارشات'));

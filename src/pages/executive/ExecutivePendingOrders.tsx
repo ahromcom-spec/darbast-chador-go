@@ -93,8 +93,8 @@ export default function ExecutivePendingOrders() {
             created_at: order.created_at,
             notes: order.notes,
             subcategory_id: order.subcategory_id,
-            customer_name: (order as any).customers?.profiles?.full_name || 'نامشخص',
-            customer_phone: (order as any).customers?.profiles?.phone_number || ''
+            customer_name: order.customers?.profiles?.full_name || 'نامشخص',
+            customer_phone: order.customers?.profiles?.phone_number || ''
           };
         })
       );

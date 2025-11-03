@@ -58,8 +58,10 @@ export default function SalesPendingOrders() {
           created_at,
           notes,
           customer_id,
-          customers!inner(user_id),
-          profiles:customers(profiles!inner(full_name, phone_number))
+          customers!inner(
+            user_id,
+            profiles!inner(full_name, phone_number)
+          )
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -74,8 +76,8 @@ export default function SalesPendingOrders() {
         detailed_address: order.detailed_address,
         created_at: order.created_at,
         notes: order.notes,
-        customer_name: order.profiles?.[0]?.profiles?.full_name || 'نامشخص',
-        customer_phone: order.profiles?.[0]?.profiles?.phone_number || ''
+        customer_name: order.customers?.profiles?.full_name || 'نامشخص',
+        customer_phone: order.customers?.profiles?.phone_number || ''
       })) || [];
 
       setOrders(formattedOrders);
