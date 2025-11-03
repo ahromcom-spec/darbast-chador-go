@@ -56,7 +56,7 @@ const ROLE_LABELS: Record<string, string> = {
 interface WhitelistEntry {
   id: string;
   phone: string;
-  allowed_role: string;
+  allowed_position_ids: string[];
   note?: string;
   created_at: string;
 }
@@ -235,7 +235,7 @@ export const WhitelistManagement = () => {
                       {entry.phone}
                     </TableCell>
                     <TableCell>
-                      {ROLE_LABELS[entry.allowed_role] || entry.allowed_role}
+                      {entry.allowed_position_ids?.map(id => ROLE_LABELS[id] || id).join(', ') || '-'}
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
                       {entry.note || '-'}
