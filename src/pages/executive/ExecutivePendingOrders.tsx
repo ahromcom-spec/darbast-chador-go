@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { CheckCircle, X, Eye } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -19,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
+import { Separator } from '@/components/ui/separator';
 
 interface Order {
   id: string;
@@ -31,20 +33,39 @@ interface Order {
   customer_phone: string;
   notes: any;
   subcategory_id?: string;
+  province_id?: string;
+  district_id?: string;
 }
 
 export default function ExecutivePendingOrders() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [actionType, setActionType] = useState<'approve' | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredOrders(orders);
+    } else {
+      const term = searchTerm.toLowerCase();
+      const filtered = orders.filter(order => 
+        order.code.toLowerCase().includes(term) ||
+        order.customer_name.toLowerCase().includes(term) ||
+        order.customer_phone.includes(term) ||
+        order.address.toLowerCase().includes(term)
+      );
+      setFilteredOrders(filtered);
+    }
+  }, [searchTerm, orders]);
 
   const fetchOrders = async () => {
     try {
@@ -59,6 +80,8 @@ export default function ExecutivePendingOrders() {
           created_at,
           notes,
           subcategory_id,
+          province_id,
+          district_id,
           customer_id,
           customers!inner(
             user_id,
@@ -93,6 +116,8 @@ export default function ExecutivePendingOrders() {
             created_at: order.created_at,
             notes: order.notes,
             subcategory_id: order.subcategory_id,
+            province_id: order.province_id,
+            district_id: order.district_id,
             customer_name: order.customers?.profiles?.full_name || 'نامشخص',
             customer_phone: order.customers?.profiles?.phone_number || ''
           };
@@ -161,28 +186,64 @@ export default function ExecutivePendingOrders() {
 
   const OrderCardWithApprovals = ({ order }: { order: Order }) => {
     const { approvals, loading: approvalsLoading } = useOrderApprovals(order.id);
+    
+    const getServiceInfo = () => {
+      try {
+        const notes = order.notes;
+        if (notes?.total_area) {
+          return `مساحت کل: ${notes.total_area} متر مربع`;
+        }
+        if (notes?.dimensions?.length > 0) {
+          return `تعداد ابعاد: ${notes.dimensions.length}`;
+        }
+        return 'داربست با اجناس';
+      } catch {
+        return 'داربست با اجناس';
+      }
+    };
 
     return (
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-orange-500">
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
-              <CardDescription className="mt-1">
-                مشتری: {order.customer_name} • {order.customer_phone}
-              </CardDescription>
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
+                <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+                  در انتظار تایید
+                </Badge>
+              </div>
+              
+              <div className="space-y-1 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span>{order.customer_name}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Phone className="h-4 w-4" />
+                  <span dir="ltr" className="text-left">{order.customer_phone}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span className="line-clamp-1">{order.address}</span>
+                </div>
+              </div>
             </div>
-            <Badge variant="secondary">در انتظار تایید</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label className="text-sm text-muted-foreground">آدرس</Label>
-            <p className="text-sm mt-1">{order.address}</p>
-            {order.detailed_address && (
-              <p className="text-sm text-muted-foreground mt-1">{order.detailed_address}</p>
-            )}
+          <Separator />
+          
+          <div className="bg-muted/50 p-3 rounded-lg">
+            <div className="text-xs text-muted-foreground mb-1">نوع خدمات</div>
+            <div className="text-sm font-medium">{getServiceInfo()}</div>
           </div>
+
+          {order.detailed_address && (
+            <div className="text-xs text-muted-foreground">
+              <span className="font-medium">آدرس تفصیلی:</span> {order.detailed_address}
+            </div>
+          )}
 
           <ApprovalProgress approvals={approvals} loading={approvalsLoading} />
 
@@ -194,9 +255,10 @@ export default function ExecutivePendingOrders() {
                 setSelectedOrder(order);
                 setDetailsOpen(true);
               }}
+              className="gap-2"
             >
-              <Eye className="h-4 w-4 mr-2" />
-              جزئیات
+              <Eye className="h-4 w-4" />
+              جزئیات کامل
             </Button>
             <Button
               size="sm"
@@ -204,10 +266,10 @@ export default function ExecutivePendingOrders() {
                 setSelectedOrder(order);
                 setActionType('approve');
               }}
-              className="gap-2"
+              className="gap-2 bg-green-600 hover:bg-green-700"
             >
               <CheckCircle className="h-4 w-4" />
-              تایید
+              تایید سفارش
             </Button>
           </div>
         </CardContent>
@@ -221,21 +283,43 @@ export default function ExecutivePendingOrders() {
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
         title="سفارشات در انتظار تایید شما"
-        description="سفارشاتی که نیاز به تایید مدیر اجرایی دارند"
+        description={`${orders.length} سفارش نیاز به تایید مدیر اجرایی`}
         showBackButton={true}
         backTo="/executive"
       />
 
+      {/* Search Bar */}
+      {orders.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="جستجو بر اساس کد سفارش، نام مشتری، شماره تلفن یا آدرس..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-10"
+              />
+            </div>
+            {searchTerm && (
+              <div className="mt-2 text-sm text-muted-foreground">
+                {filteredOrders.length} سفارش یافت شد
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4">
-        {orders.length === 0 ? (
+        {filteredOrders.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center text-muted-foreground">
               <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-40" />
-              <p>سفارشی در انتظار تایید شما وجود ندارد</p>
+              <p>{searchTerm ? 'سفارشی با این جستجو یافت نشد' : 'سفارشی در انتظار تایید شما وجود ندارد'}</p>
             </CardContent>
           </Card>
         ) : (
-          orders.map((order) => (
+          filteredOrders.map((order) => (
             <OrderCardWithApprovals key={order.id} order={order} />
           ))
         )}
@@ -276,29 +360,76 @@ export default function ExecutivePendingOrders() {
             <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-4">
-              <div>
-                <Label className="font-semibold">مشتری</Label>
-                <p className="text-sm">{selectedOrder.customer_name} • {selectedOrder.customer_phone}</p>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">نام مشتری</Label>
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    {selectedOrder.customer_name}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">شماره تماس</Label>
+                  <p className="text-sm font-medium flex items-center gap-2" dir="ltr">
+                    <Phone className="h-4 w-4 text-primary" />
+                    {selectedOrder.customer_phone}
+                  </p>
+                </div>
               </div>
-              <div>
-                <Label className="font-semibold">آدرس</Label>
-                <p className="text-sm">{selectedOrder.address}</p>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">آدرس</Label>
+                <p className="text-sm flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                  <span>{selectedOrder.address}</span>
+                </p>
                 {selectedOrder.detailed_address && (
-                  <p className="text-sm text-muted-foreground">{selectedOrder.detailed_address}</p>
+                  <p className="text-sm text-muted-foreground mr-6">{selectedOrder.detailed_address}</p>
                 )}
               </div>
-              <div>
-                <Label className="font-semibold">تاریخ ثبت</Label>
-                <p className="text-sm">{new Date(selectedOrder.created_at).toLocaleDateString('fa-IR')}</p>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">تاریخ ثبت سفارش</Label>
+                <p className="text-sm">{new Date(selectedOrder.created_at).toLocaleDateString('fa-IR', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}</p>
               </div>
+
               {selectedOrder.notes && (
-                <div>
-                  <Label className="font-semibold">جزئیات سفارش</Label>
-                  <pre className="text-xs bg-secondary p-3 rounded mt-1 overflow-auto max-h-60">
-                    {JSON.stringify(selectedOrder.notes, null, 2)}
-                  </pre>
-                </div>
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">جزئیات فنی سفارش</Label>
+                    <div className="bg-muted p-4 rounded-lg">
+                      {selectedOrder.notes.total_area && (
+                        <div className="mb-2">
+                          <span className="font-semibold">مساحت کل:</span> {selectedOrder.notes.total_area} متر مربع
+                        </div>
+                      )}
+                      {selectedOrder.notes.dimensions && selectedOrder.notes.dimensions.length > 0 && (
+                        <div>
+                          <span className="font-semibold">ابعاد:</span>
+                          <ul className="mt-2 space-y-1 mr-4">
+                            {selectedOrder.notes.dimensions.map((dim: any, idx: number) => (
+                              <li key={idx} className="text-sm">
+                                طول: {dim.length}م × ارتفاع: {dim.height}م = {dim.area} متر مربع
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           )}

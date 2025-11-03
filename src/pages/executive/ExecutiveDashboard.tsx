@@ -10,6 +10,7 @@ import { StatCard } from '@/components/common/StatCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
+import { ExecutiveOrdersSummary } from '@/components/executive/ExecutiveOrdersSummary';
 
 export default function ExecutiveDashboard() {
   const { user } = useAuth();
@@ -129,6 +130,9 @@ export default function ExecutiveDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Orders Summary */}
+      <ExecutiveOrdersSummary />
 
       {/* Manager Activity Summary */}
       {user && <ManagerActivitySummary userId={user.id} />}
