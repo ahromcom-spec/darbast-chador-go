@@ -57,12 +57,7 @@ export default function SalesPendingOrders() {
           detailed_address,
           created_at,
           notes,
-          customer_id,
-          subcategory_id,
-          customers!inner(
-            user_id,
-            profiles!inner(full_name, phone_number)
-          )
+          subcategory_id
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -72,19 +67,16 @@ export default function SalesPendingOrders() {
       // فیلتر کردن سفارشاتی که هنوز نیاز به تایید sales manager دارند
       const filtered = await Promise.all(
         (data || []).map(async (order: any) => {
-          const isExecutionWithMaterials = order.subcategory_id === '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d';
-          const approverRole = isExecutionWithMaterials 
-            ? 'sales_manager_scaffold_execution_with_materials'
-            : 'sales_manager';
-
+          // بررسی وجود ردیف تایید در انتظار برای نقش‌های فروش
           const { data: approval } = await supabase
             .from('order_approvals')
-            .select('approved_at')
+            .select('approver_role, approved_at')
             .eq('order_id', order.id)
-            .eq('approver_role', approverRole)
-            .single();
+            .in('approver_role', ['sales_manager', 'sales_manager_scaffold_execution_with_materials'])
+            .is('approved_at', null)
+            .maybeSingle();
           
-          return approval && !approval.approved_at ? {
+          return approval ? {
             id: order.id,
             code: order.code,
             status: order.status,
@@ -92,8 +84,8 @@ export default function SalesPendingOrders() {
             detailed_address: order.detailed_address,
             created_at: order.created_at,
             notes: order.notes,
-            customer_name: order.customers?.profiles?.full_name || 'نامشخص',
-            customer_phone: order.customers?.profiles?.phone_number || ''
+            customer_name: 'نامشخص',
+            customer_phone: ''
           } : null;
         })
       );
@@ -115,18 +107,18 @@ export default function SalesPendingOrders() {
     if (!selectedOrder || !user) return;
 
     try {
-      // Check which subcategory to determine the approval role
-      const { data: orderData } = await supabase
-        .from('projects_v3')
-        .select('subcategory_id')
-        .eq('id', selectedOrder.id)
-        .single();
+      // یافتن ردیف تایید در انتظار برای این سفارش (نقش‌های فروش)
+      const { data: pendingApproval, error: fetchApprovalError } = await supabase
+        .from('order_approvals')
+        .select('approver_role')
+        .eq('order_id', selectedOrder.id)
+        .in('approver_role', ['sales_manager', 'sales_manager_scaffold_execution_with_materials'])
+        .is('approved_at', null)
+        .maybeSingle();
 
-      // Determine the approval role based on subcategory
-      const isExecutionWithMaterials = orderData?.subcategory_id === '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d';
-      const approverRole = isExecutionWithMaterials 
-        ? 'sales_manager_scaffold_execution_with_materials' 
-        : 'sales_manager';
+      if (fetchApprovalError || !pendingApproval) {
+        throw new Error('هیچ تایید در انتظار برای مدیر فروش یافت نشد');
+      }
 
       const { error } = await supabase
         .from('order_approvals')
@@ -135,7 +127,8 @@ export default function SalesPendingOrders() {
           approved_at: new Date().toISOString()
         })
         .eq('order_id', selectedOrder.id)
-        .eq('approver_role', approverRole);
+        .eq('approver_role', pendingApproval.approver_role)
+        .is('approved_at', null);
 
       if (error) throw error;
 

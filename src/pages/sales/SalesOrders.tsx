@@ -49,12 +49,9 @@ export default function SalesOrders() {
           payment_amount,
           payment_method,
           transaction_reference,
-          created_at,
-          customer_id,
-          customers!inner(user_id),
-          profiles:customers(profiles!inner(full_name, phone_number))
+          created_at
         `)
-        .in('status', ['completed', 'paid'])
+        .eq('status', 'completed')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
