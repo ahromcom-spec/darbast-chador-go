@@ -82,11 +82,7 @@ export default function ExecutivePendingOrders() {
           subcategory_id,
           province_id,
           district_id,
-          customer_id,
-          customers!inner(
-            user_id,
-            profiles!inner(full_name, phone_number)
-          )
+          customer_id
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -118,8 +114,8 @@ export default function ExecutivePendingOrders() {
             subcategory_id: order.subcategory_id,
             province_id: order.province_id,
             district_id: order.district_id,
-            customer_name: order.customers?.profiles?.full_name || 'نامشخص',
-            customer_phone: order.customers?.profiles?.phone_number || ''
+            customer_name: 'نامشخص',
+            customer_phone: ''
           };
         })
       );
@@ -141,20 +137,20 @@ export default function ExecutivePendingOrders() {
     if (!selectedOrder || !user) return;
 
     try {
-      // Check which subcategory to determine the approval role
-      const { data: orderData } = await supabase
-        .from('projects_v3')
-        .select('subcategory_id')
-        .eq('id', selectedOrder.id)
-        .single();
+      // Find the pending approval row for executive manager for this order
+      const { data: pendingApproval, error: fetchApprovalError } = await supabase
+        .from('order_approvals')
+        .select('approver_role')
+        .eq('order_id', selectedOrder.id)
+        .in('approver_role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
+        .is('approved_at', null)
+        .maybeSingle();
 
-      // Determine the approval role based on subcategory
-      const isExecutionWithMaterials = orderData?.subcategory_id === '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d';
-      const approverRole = isExecutionWithMaterials 
-        ? 'executive_manager_scaffold_execution_with_materials' 
-        : 'scaffold_executive_manager';
+      if (fetchApprovalError || !pendingApproval) {
+        throw new Error('هیچ تایید در انتظار برای مدیر اجرایی یافت نشد');
+      }
 
-      // Record executive manager approval
+      // Record executive manager approval on the pending row
       const { error } = await supabase
         .from('order_approvals')
         .update({
@@ -162,7 +158,8 @@ export default function ExecutivePendingOrders() {
           approved_at: new Date().toISOString()
         })
         .eq('order_id', selectedOrder.id)
-        .eq('approver_role', approverRole);
+        .eq('approver_role', pendingApproval.approver_role)
+        .is('approved_at', null);
 
       if (error) throw error;
 
