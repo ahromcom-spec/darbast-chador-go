@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle, X, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -31,8 +31,6 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   notes: any;
-  province_name?: string;
-  district_name?: string;
 }
 
 export default function SalesPendingOrders() {
@@ -51,56 +49,55 @@ export default function SalesPendingOrders() {
 
   const fetchOrders = async () => {
     try {
-      // دریافت سفارشات از RPC
+      // دریافت سفارشات از RPC (امنیت سمت سرور)
       const { data: rpcData, error: ordersError } = await supabase
         .rpc('get_sales_pending_orders');
 
       if (ordersError) throw ordersError;
 
-      // دریافت اطلاعات کامل برای هر سفارش
-      const ordersWithFullInfo = await Promise.all(
+      // دریافت اطلاعات مشتری برای هر سفارش
+      const ordersWithCustomerInfo = await Promise.all(
         (rpcData || []).map(async (order: any) => {
-          // دریافت اطلاعات مشتری
+          // دریافت customer_id از جدول projects_v3
           const { data: projectData } = await supabase
             .from('projects_v3')
-            .select(`
-              customer_id,
-              province_id,
-              district_id,
-              customers!inner(user_id),
-              provinces(name),
-              districts(name)
-            `)
+            .select('customer_id')
             .eq('id', order.id)
             .single();
 
-          if (projectData?.customers?.user_id) {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('full_name, phone_number')
-              .eq('user_id', projectData.customers.user_id)
+          if (projectData?.customer_id) {
+            // دریافت user_id از جدول customers
+            const { data: customerData } = await supabase
+              .from('customers')
+              .select('user_id')
+              .eq('id', projectData.customer_id)
               .single();
 
-            return {
-              ...order,
-              customer_name: profileData?.full_name || 'نامشخص',
-              customer_phone: profileData?.phone_number || '',
-              province_name: (projectData.provinces as any)?.name || '',
-              district_name: (projectData.districts as any)?.name || ''
-            };
+            if (customerData?.user_id) {
+              // دریافت اطلاعات مشتری از profiles
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('full_name, phone_number')
+                .eq('user_id', customerData.user_id)
+                .single();
+
+              return {
+                ...order,
+                customer_name: profileData?.full_name || 'نامشخص',
+                customer_phone: profileData?.phone_number || ''
+              };
+            }
           }
 
           return {
             ...order,
             customer_name: 'نامشخص',
-            customer_phone: '',
-            province_name: '',
-            district_name: ''
+            customer_phone: ''
           };
         })
       );
 
-      setOrders(ordersWithFullInfo);
+      setOrders(ordersWithCustomerInfo);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -117,6 +114,7 @@ export default function SalesPendingOrders() {
     if (!selectedOrder || !user) return;
 
     try {
+      // استفاده از RPC امن برای تایید (بررسی نقش در سمت سرور)
       const { error } = await supabase
         .rpc('approve_order_as_sales_manager', {
           _order_id: selectedOrder.id
@@ -147,7 +145,7 @@ export default function SalesPendingOrders() {
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: 'لطفا دلیل رد کردن را وارد کنید'
+        description: 'لطفا دلیل رد سفارش را وارد کنید'
       });
       return;
     }
@@ -162,9 +160,8 @@ export default function SalesPendingOrders() {
       if (error) throw error;
 
       toast({
-        title: '✓ سفارش رد شد',
-        description: `سفارش ${selectedOrder.code} رد شد.`,
-        variant: 'destructive'
+        title: 'سفارش رد شد',
+        description: `سفارش ${selectedOrder.code} با موفقیت رد شد.`
       });
 
       setActionType(null);
@@ -176,7 +173,7 @@ export default function SalesPendingOrders() {
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: error.message || 'رد کردن سفارش با خطا مواجه شد'
+        description: error.message || 'رد سفارش با خطا مواجه شد'
       });
     }
   };
@@ -232,8 +229,8 @@ export default function SalesPendingOrders() {
               تایید
             </Button>
             <Button
-              size="sm"
               variant="destructive"
+              size="sm"
               onClick={() => {
                 setSelectedOrder(order);
                 setActionType('reject');
@@ -303,7 +300,7 @@ export default function SalesPendingOrders() {
         </DialogContent>
       </Dialog>
 
-      {/* Rejection Dialog */}
+      {/* Reject Dialog */}
       <Dialog
         open={actionType === 'reject'}
         onOpenChange={(open) => {
@@ -318,17 +315,15 @@ export default function SalesPendingOrders() {
           <DialogHeader>
             <DialogTitle>رد سفارش</DialogTitle>
             <DialogDescription>
-              لطفا دلیل رد کردن سفارش {selectedOrder?.code} را وارد کنید:
+              لطفا دلیل رد سفارش {selectedOrder?.code} را وارد کنید:
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Label htmlFor="rejection-reason">دلیل رد</Label>
-            <Input
-              id="rejection-reason"
+            <Textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="مثال: آدرس ناقص است، قیمت مناسب نیست، و..."
-              className="mt-2"
+              placeholder="دلیل رد سفارش را بنویسید..."
+              rows={4}
             />
           </div>
           <DialogFooter>
@@ -339,7 +334,7 @@ export default function SalesPendingOrders() {
               انصراف
             </Button>
             <Button variant="destructive" onClick={handleReject}>
-              رد نهایی
+              رد سفارش
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -359,13 +354,9 @@ export default function SalesPendingOrders() {
               </div>
               <div>
                 <Label className="font-semibold">آدرس</Label>
-                <p className="text-sm">
-                  {selectedOrder.province_name && `${selectedOrder.province_name} - `}
-                  {selectedOrder.district_name && `${selectedOrder.district_name} - `}
-                  {selectedOrder.address}
-                </p>
+                <p className="text-sm">{selectedOrder.address}</p>
                 {selectedOrder.detailed_address && (
-                  <p className="text-sm text-muted-foreground mt-1">{selectedOrder.detailed_address}</p>
+                  <p className="text-sm text-muted-foreground">{selectedOrder.detailed_address}</p>
                 )}
               </div>
               <div>
