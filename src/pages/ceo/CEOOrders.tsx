@@ -115,16 +115,12 @@ export const CEOOrders = () => {
         return;
       }
 
-      // دریافت سفارشات pending که در انتظار تایید CEO هستند
+      // دریافت سفارشات pending
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
           id, code, customer_id, province_id, district_id, subcategory_id,
-          address, detailed_address, notes, status, created_at,
-          customers!inner(
-            user_id,
-            profiles!inner(full_name, phone_number)
-          )
+          address, detailed_address, notes, status, created_at
         `)
         .eq('status', 'pending')
         .eq('subcategory_id', subcategoryData.id)
@@ -132,9 +128,16 @@ export const CEOOrders = () => {
 
       if (error) throw error;
 
+      if (!data || data.length === 0) {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
+
       // فیلتر کردن سفارشاتی که هنوز نیاز به تایید CEO دارند
       const filtered = await Promise.all(
-        (data || []).map(async (order: any) => {
+        data.map(async (order: any) => {
+          // بررسی approval
           const { data: approval } = await supabase
             .from('order_approvals')
             .select('approved_at')
@@ -142,12 +145,38 @@ export const CEOOrders = () => {
             .eq('approver_role', 'ceo')
             .maybeSingle();
           
-          // فقط سفارشاتی که approval دارند و هنوز تایید نشده‌اند
-          return approval && !approval.approved_at ? {
+          if (!approval || approval.approved_at) {
+            return null;
+          }
+
+          // دریافت اطلاعات مشتری
+          const { data: customer } = await supabase
+            .from('customers')
+            .select('user_id')
+            .eq('id', order.customer_id)
+            .maybeSingle();
+
+          let customer_name = 'نامشخص';
+          let customer_phone = '';
+
+          if (customer?.user_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, phone_number')
+              .eq('user_id', customer.user_id)
+              .maybeSingle();
+
+            if (profile) {
+              customer_name = profile.full_name || 'نامشخص';
+              customer_phone = profile.phone_number || '';
+            }
+          }
+          
+          return {
             ...order,
-            customer_name: order.customers?.profiles?.full_name || 'نامشخص',
-            customer_phone: order.customers?.profiles?.phone_number || ''
-          } : null;
+            customer_name,
+            customer_phone
+          };
         })
       );
 
