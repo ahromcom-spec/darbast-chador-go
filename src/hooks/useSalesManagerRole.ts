@@ -19,17 +19,15 @@ export const useSalesManagerRole = () => {
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .eq('role', 'sales_manager')
+          .maybeSingle();
 
         if (error) {
           console.error('Error checking sales manager role:', error);
           setIsSalesManager(false);
         } else {
-          const roles = (data || []).map((r: any) => r.role as string);
-          setIsSalesManager(
-            roles.includes('sales_manager') ||
-            roles.includes('sales_manager_scaffold_execution_with_materials')
-          );
+          setIsSalesManager(!!data);
         }
       } catch (error) {
         console.error('Error checking sales manager role:', error);

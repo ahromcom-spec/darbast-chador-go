@@ -24,11 +24,11 @@ export default function SalesDashboard() {
 
       if (error) throw error;
 
-      // Count pending approvals for sales manager (general or specialized)
+      // Count pending approvals for sales manager
       const { data: pendingApprovals, error: approvalsError } = await supabase
         .from('order_approvals')
         .select('order_id')
-        .in('approver_role', ['sales_manager', 'sales_manager_scaffold_execution_with_materials'])
+        .eq('approver_role', 'sales_manager')
         .is('approved_at', null);
 
       if (approvalsError) throw approvalsError;
