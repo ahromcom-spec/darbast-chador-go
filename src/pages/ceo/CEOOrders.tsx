@@ -101,8 +101,7 @@ export const CEOOrders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      // Fetch directly from projects_v3 to ensure consistent results
-      // فقط سفارشاتی که نیاز به تایید CEO دارند (subcategory != داربست با اجناس)
+      // دریافت سفارشات pending که در انتظار تایید CEO هستند
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
@@ -114,7 +113,6 @@ export const CEOOrders = () => {
           )
         `)
         .eq('status', 'pending')
-        .neq('subcategory_id', '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -127,8 +125,9 @@ export const CEOOrders = () => {
             .select('approved_at')
             .eq('order_id', order.id)
             .eq('approver_role', 'ceo')
-            .single();
+            .maybeSingle();
           
+          // فقط سفارشاتی که approval دارند و هنوز تایید نشده‌اند
           return approval && !approval.approved_at ? {
             ...order,
             customer_name: order.customers?.profiles?.full_name || 'نامشخص',
