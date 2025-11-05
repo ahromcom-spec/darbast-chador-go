@@ -2840,6 +2840,14 @@ export type Database = {
         }
         Returns: string
       }
+      set_order_schedule: {
+        Args: {
+          _execution_end_date?: string
+          _execution_start_date: string
+          _order_id: string
+        }
+        Returns: undefined
+      }
       validate_phone_number: { Args: { _phone: string }; Returns: boolean }
       verify_otp_code: {
         Args: { _code: string; _phone_number: string }
@@ -2893,6 +2901,7 @@ export type Database = {
         | "in_progress"
         | "paid"
         | "closed"
+        | "scheduled"
       rating_context:
         | "project_completion"
         | "service_quality"
@@ -3111,6 +3120,7 @@ export const Constants = {
         "in_progress",
         "paid",
         "closed",
+        "scheduled",
       ],
       rating_context: [
         "project_completion",

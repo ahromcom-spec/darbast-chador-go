@@ -88,7 +88,7 @@ export default function ExecutiveOrders() {
             profiles!inner(full_name, phone_number)
           )
         `)
-        .in('status', ['approved', 'in_progress', 'paid'])
+        .in('status', ['approved', 'scheduled', 'in_progress', 'paid'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -132,34 +132,30 @@ export default function ExecutiveOrders() {
     }
 
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      
-      const { error } = await supabase
-        .from('projects_v3')
-        .update({
-          execution_start_date: new Date(executionDate).toISOString(),
-          executed_by: userData.user?.id,
-          status: 'in_progress'
-        })
-        .eq('id', selectedOrder.id);
+      // Use the new RPC function for scheduling
+      const { error } = await supabase.rpc('set_order_schedule', {
+        _order_id: selectedOrder.id,
+        _execution_start_date: new Date(executionDate).toISOString(),
+        _execution_end_date: null
+      });
 
       if (error) throw error;
 
       toast({
         title: '✓ موفق',
-        description: 'زمان اجرا ثبت و وضعیت سفارش به "در حال اجرا" تغییر کرد'
+        description: 'زمان اجرا ثبت و سفارش زمان‌بندی شد'
       });
 
       setSelectedOrder(null);
       setExecutionDate('');
       setShowExecutionDialog(false);
       fetchOrders();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error setting execution date:', error);
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: 'ثبت زمان اجرا با خطا مواجه شد'
+        description: error.message || 'ثبت زمان اجرا با خطا مواجه شد'
       });
     }
   };
@@ -234,6 +230,7 @@ export default function ExecutiveOrders() {
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
       approved: { label: 'تایید شده', className: 'bg-yellow-500/10 text-yellow-600' },
+      scheduled: { label: 'زمان‌بندی شده', className: 'bg-purple-500/10 text-purple-600' },
       in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
       paid: { label: 'پرداخت شده - در انتظار اتمام', className: 'bg-green-500/10 text-green-600' }
     };
@@ -283,6 +280,13 @@ export default function ExecutiveOrders() {
                 تایید شده ({orders.filter(o => o.status === 'approved').length})
               </Button>
               <Button
+                variant={statusFilter === 'scheduled' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('scheduled')}
+              >
+                زمان‌بندی شده ({orders.filter(o => o.status === 'scheduled').length})
+              </Button>
+              <Button
                 variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setStatusFilter('in_progress')}
@@ -313,6 +317,7 @@ export default function ExecutiveOrders() {
           filteredOrders.map((order) => (
             <Card key={order.id} className={`hover:shadow-lg transition-all duration-200 ${
               order.status === 'approved' ? 'border-l-4 border-l-yellow-500' :
+              order.status === 'scheduled' ? 'border-l-4 border-l-purple-500' :
               order.status === 'in_progress' ? 'border-l-4 border-l-blue-500' :
               'border-l-4 border-l-green-500'
             }`}>
