@@ -10,14 +10,25 @@ export const useCEOPendingCount = () => {
     queryFn: async () => {
       if (!isCEO) return 0;
 
-      // ابتدا subcategory با کد '10' را پیدا می‌کنیم (داربست با اجناس)
-      const { data: subcategoryData } = await supabase
-        .from('subcategories')
+      // ابتدا subcategory «داربست با اجناس» را بر اساس نوع خدمت «داربست» پیدا می‌کنیم
+      // 1) نوع خدمت داربست با کد 10
+      const { data: serviceType } = await supabase
+        .from('service_types_v3')
         .select('id')
         .eq('code', '10')
         .maybeSingle();
 
-      if (!subcategoryData) return 0;
+      if (!serviceType) return 0;
+
+      // 2) زیرشاخه «با اجناس» با کد 10 برای همین نوع خدمت
+      const { data: subcategory } = await supabase
+        .from('subcategories')
+        .select('id')
+        .eq('service_type_id', serviceType.id)
+        .eq('code', '10')
+        .maybeSingle();
+
+      if (!subcategory) return 0;
 
       // دریافت سفارشات pending که هنوز توسط CEO تایید نشده‌اند
       const { data: orders, error } = await supabase
