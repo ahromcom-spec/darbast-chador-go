@@ -101,6 +101,20 @@ export const CEOOrders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
+      
+      // ابتدا subcategory با کد '10' را پیدا می‌کنیم (داربست با اجناس)
+      const { data: subcategoryData } = await supabase
+        .from('subcategories')
+        .select('id')
+        .eq('code', '10')
+        .maybeSingle();
+
+      if (!subcategoryData) {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
+
       // دریافت سفارشات pending که در انتظار تایید CEO هستند
       const { data, error } = await supabase
         .from('projects_v3')
@@ -113,6 +127,7 @@ export const CEOOrders = () => {
           )
         `)
         .eq('status', 'pending')
+        .eq('subcategory_id', subcategoryData.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

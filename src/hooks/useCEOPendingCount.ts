@@ -10,11 +10,21 @@ export const useCEOPendingCount = () => {
     queryFn: async () => {
       if (!isCEO) return 0;
 
+      // ابتدا subcategory با کد '10' را پیدا می‌کنیم (داربست با اجناس)
+      const { data: subcategoryData } = await supabase
+        .from('subcategories')
+        .select('id')
+        .eq('code', '10')
+        .maybeSingle();
+
+      if (!subcategoryData) return 0;
+
       // دریافت سفارشات pending که هنوز توسط CEO تایید نشده‌اند
       const { data: orders, error } = await supabase
         .from('projects_v3')
         .select('id')
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .eq('subcategory_id', subcategoryData.id);
 
       if (error) {
         console.error('Error fetching CEO pending count:', error);
