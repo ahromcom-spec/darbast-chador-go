@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import OrderChat from "@/components/orders/OrderChat";
+import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import {
   ArrowRight,
   MapPin,
@@ -42,6 +43,7 @@ interface Order {
   approved_at?: string;
   approved_by?: string;
   execution_start_date?: string;
+  execution_end_date?: string;
   payment_amount?: number;
   payment_method?: string;
   customer_completion_date?: string;
@@ -61,6 +63,12 @@ interface Order {
   district?: {
     name: string;
   };
+}
+
+interface Approval {
+  approver_role: string;
+  approved_at: string | null;
+  approver_user_id: string | null;
 }
 
 interface MediaFile {
@@ -87,9 +95,10 @@ const getStatusInfo = (status: string) => {
   const statusMap: Record<string, { label: string; icon: any; color: string }> = {
     draft: { label: 'پیش‌نویس', icon: FileText, color: 'text-muted-foreground' },
     pending: { label: 'در انتظار تایید', icon: Clock, color: 'text-yellow-600' },
-    approved: { label: 'تایید شده - در انتظار اجرا', icon: CheckCircle, color: 'text-green-600' },
+    pending_execution: { label: 'در انتظار اجرا', icon: Clock, color: 'text-blue-600' },
+    approved: { label: 'تایید شده', icon: CheckCircle, color: 'text-green-600' },
     rejected: { label: 'رد شده', icon: XCircle, color: 'text-destructive' },
-    in_progress: { label: 'در حال اجرا', icon: Clock, color: 'text-blue-600' },
+    in_progress: { label: 'در حال اجرا', icon: Play, color: 'text-blue-600' },
     completed: { label: 'اجرا شده - در انتظار پرداخت', icon: CheckCircle, color: 'text-orange-600' },
     paid: { label: 'پرداخت شده - در انتظار اتمام', icon: CheckCircle, color: 'text-purple-600' },
     closed: { label: 'به اتمام رسیده', icon: CheckCircle, color: 'text-gray-600' },
@@ -101,6 +110,7 @@ const getStatusInfo = (status: string) => {
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<Order | null>(null);
+  const [approvals, setApprovals] = useState<Approval[]>([]);
   const [loading, setLoading] = useState(true);
   const [parsedNotes, setParsedNotes] = useState<any>(null);
   const [completionDate, setCompletionDate] = useState('');
@@ -117,6 +127,45 @@ export default function OrderDetail() {
     if (id) {
       fetchOrderDetails();
     }
+  }, [id]);
+
+  // Realtime updates for order status and approvals
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel('order-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects_v3',
+          filter: `id=eq.${id}`
+        },
+        (payload) => {
+          console.log('Order updated:', payload);
+          fetchOrderDetails();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'order_approvals',
+          filter: `order_id=eq.${id}`
+        },
+        (payload) => {
+          console.log('Approval updated:', payload);
+          fetchOrderDetails();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
   // مدیریت منبع ویدیو و آزادسازی blob ها
@@ -238,6 +287,17 @@ export default function OrderDetail() {
 
       if (mediaData) {
         setMediaFiles(mediaData as MediaFile[]);
+      }
+
+      // Fetch order approvals
+      const { data: approvalsData } = await supabase
+        .from('order_approvals')
+        .select('approver_role, approved_at, approver_user_id')
+        .eq('order_id', id)
+        .order('created_at', { ascending: true });
+
+      if (approvalsData) {
+        setApprovals(approvalsData as Approval[]);
       }
 
     } catch (error: any) {
@@ -412,6 +472,18 @@ export default function OrderDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Timeline */}
+          <OrderTimeline
+            orderStatus={order.status}
+            createdAt={order.created_at}
+            approvedAt={order.approved_at}
+            executionStartDate={order.execution_start_date}
+            executionEndDate={order.execution_end_date}
+            customerCompletionDate={order.customer_completion_date}
+            rejectionReason={order.rejection_reason}
+            approvals={approvals}
+          />
 
           {/* Order Details from Notes or Payment Amount */}
           {(parsedNotes || order.payment_amount) && (

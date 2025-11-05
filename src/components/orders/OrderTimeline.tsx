@@ -1,0 +1,266 @@
+import { Check, Clock, Package, PlayCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
+interface TimelineStep {
+  status: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  date?: string;
+  completed: boolean;
+  active: boolean;
+  rejected?: boolean;
+  details?: string;
+}
+
+interface OrderTimelineProps {
+  orderStatus: string;
+  createdAt: string;
+  approvedAt?: string;
+  executionStartDate?: string;
+  executionEndDate?: string;
+  customerCompletionDate?: string;
+  rejectionReason?: string;
+  approvals?: Array<{
+    approver_role: string;
+    approved_at: string | null;
+    approver_user_id: string | null;
+  }>;
+}
+
+const statusMap: Record<string, string> = {
+  'draft': 'پیش‌نویس',
+  'pending': 'در انتظار تایید',
+  'pending_execution': 'در انتظار اجرا',
+  'approved': 'تایید شده',
+  'in_progress': 'در حال اجرا',
+  'completed': 'تکمیل شده',
+  'paid': 'پرداخت شده',
+  'closed': 'بسته شده',
+  'rejected': 'رد شده',
+};
+
+const roleNameMap: Record<string, string> = {
+  'ceo': 'مدیرعامل',
+  'sales_manager': 'مدیر فروش',
+  'scaffold_executive_manager': 'مدیر اجرایی',
+  'general_manager': 'مدیر کل',
+};
+
+export const OrderTimeline = ({
+  orderStatus,
+  createdAt,
+  approvedAt,
+  executionStartDate,
+  executionEndDate,
+  customerCompletionDate,
+  rejectionReason,
+  approvals = [],
+}: OrderTimelineProps) => {
+  const isRejected = orderStatus === 'rejected';
+
+  // محاسبه تاریخ تایید کامل (زمانی که همه مدیران تایید کردند)
+  const allApprovalsCompleted = approvals.length > 0 && approvals.every(a => a.approved_at);
+  const finalApprovalDate = allApprovalsCompleted 
+    ? approvals.reduce((latest, a) => {
+        if (!a.approved_at) return latest;
+        return !latest || new Date(a.approved_at) > new Date(latest) ? a.approved_at : latest;
+      }, '')
+    : approvedAt;
+
+  const steps: TimelineStep[] = [
+    {
+      status: 'created',
+      label: 'ثبت سفارش',
+      icon: Package,
+      date: createdAt,
+      completed: true,
+      active: orderStatus === 'draft',
+      details: 'سفارش شما با موفقیت ثبت شد',
+    },
+    {
+      status: 'pending',
+      label: 'در انتظار تایید مدیران',
+      icon: Clock,
+      date: createdAt,
+      completed: ['pending_execution', 'approved', 'in_progress', 'completed', 'paid', 'closed'].includes(orderStatus),
+      active: orderStatus === 'pending',
+      rejected: isRejected,
+      details: isRejected 
+        ? `رد شده: ${rejectionReason || 'دلیل مشخص نشده'}`
+        : approvals.length > 0 
+          ? `تایید ${approvals.filter(a => a.approved_at).length} از ${approvals.length} مدیر`
+          : undefined,
+    },
+    {
+      status: 'pending_execution',
+      label: 'در انتظار اجرا',
+      icon: Clock,
+      date: finalApprovalDate,
+      completed: ['in_progress', 'completed', 'paid', 'closed'].includes(orderStatus),
+      active: orderStatus === 'pending_execution',
+      details: 'سفارش تایید شد و منتظر شروع اجراست',
+    },
+    {
+      status: 'in_progress',
+      label: 'در حال اجرا',
+      icon: PlayCircle,
+      date: executionStartDate,
+      completed: ['completed', 'paid', 'closed'].includes(orderStatus),
+      active: orderStatus === 'in_progress',
+      details: executionStartDate 
+        ? `شروع: ${new Date(executionStartDate).toLocaleDateString('fa-IR')}`
+        : undefined,
+    },
+    {
+      status: 'completed',
+      label: 'تکمیل شده',
+      icon: CheckCircle2,
+      date: executionEndDate || customerCompletionDate,
+      completed: ['completed', 'paid', 'closed'].includes(orderStatus),
+      active: orderStatus === 'completed',
+      details: executionEndDate 
+        ? `پایان: ${new Date(executionEndDate).toLocaleDateString('fa-IR')}`
+        : undefined,
+    },
+  ];
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('fa-IR'),
+      time: date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+    };
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">مراحل پیشرفت سفارش</CardTitle>
+          <Badge variant={isRejected ? 'destructive' : 'default'}>
+            {statusMap[orderStatus] || orderStatus}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            const dateInfo = formatDate(step.date);
+            const isLast = index === steps.length - 1;
+
+            return (
+              <div key={step.status} className="relative">
+                {/* خط اتصال */}
+                {!isLast && (
+                  <div
+                    className={cn(
+                      'absolute right-4 top-10 h-full w-0.5',
+                      step.completed && !step.rejected
+                        ? 'bg-primary'
+                        : step.rejected
+                        ? 'bg-destructive'
+                        : 'bg-border'
+                    )}
+                  />
+                )}
+
+                <div className="flex items-start gap-4">
+                  {/* آیکون */}
+                  <div
+                    className={cn(
+                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                      step.completed && !step.rejected
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : step.rejected
+                        ? 'border-destructive bg-destructive text-destructive-foreground'
+                        : step.active
+                        ? 'border-primary bg-background text-primary'
+                        : 'border-border bg-background text-muted-foreground'
+                    )}
+                  >
+                    {step.rejected ? (
+                      <XCircle className="h-4 w-4" />
+                    ) : step.completed ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Icon className="h-4 w-4" />
+                    )}
+                  </div>
+
+                  {/* محتوا */}
+                  <div className="flex-1 pb-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <h4
+                        className={cn(
+                          'font-semibold',
+                          step.completed && !step.rejected
+                            ? 'text-foreground'
+                            : step.rejected
+                            ? 'text-destructive'
+                            : step.active
+                            ? 'text-primary'
+                            : 'text-muted-foreground'
+                        )}
+                      >
+                        {step.label}
+                      </h4>
+                      {dateInfo && (
+                        <div className="text-left text-sm text-muted-foreground">
+                          <div>{dateInfo.date}</div>
+                          <div className="text-xs">{dateInfo.time}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* جزئیات */}
+                    {step.details && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {step.details}
+                      </p>
+                    )}
+
+                    {/* نمایش جزئیات تاییدات */}
+                    {step.status === 'pending' && approvals.length > 0 && !isRejected && (
+                      <div className="mt-3 space-y-2">
+                        {approvals.map((approval) => {
+                          const approvalDate = formatDate(approval.approved_at || undefined);
+                          return (
+                            <div
+                              key={approval.approver_role}
+                              className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2 text-sm"
+                            >
+                              <div className="flex items-center gap-2">
+                                {approval.approved_at ? (
+                                  <Check className="h-4 w-4 text-primary" />
+                                ) : (
+                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                )}
+                                <span>
+                                  {roleNameMap[approval.approver_role] || approval.approver_role}
+                                </span>
+                              </div>
+                              {approvalDate && (
+                                <div className="text-left text-xs text-muted-foreground">
+                                  <div>{approvalDate.date}</div>
+                                  <div>{approvalDate.time}</div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};

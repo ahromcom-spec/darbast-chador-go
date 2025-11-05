@@ -24,6 +24,12 @@ export const OrderWorkflowStatus = ({ status }: OrderWorkflowStatusProps) => {
       variant: 'secondary',
       className: 'bg-yellow-100 text-yellow-800 border-yellow-300'
     },
+    pending_execution: {
+      label: 'در انتظار اجرا',
+      icon: <Clock className="h-3 w-3" />,
+      variant: 'default',
+      className: 'bg-sky-100 text-sky-800 border-sky-300'
+    },
     approved: {
       label: 'تایید شده',
       icon: <CheckCircle className="h-3 w-3" />,
