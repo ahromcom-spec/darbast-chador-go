@@ -81,7 +81,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
   ] : [];
 
   const salesItems = isSalesManager ? [
-    { title: 'مدیریت فروش', url: '/sales/orders', icon: ClipboardList },
+    { title: 'سفارشات در انتظار تایید', url: '/sales/pending-orders', icon: ClipboardList },
+    { title: 'مدیریت تسویه سفارشات', url: '/sales/orders', icon: ClipboardList },
   ] : [];
 
   const financeItems = isFinanceManager ? [
