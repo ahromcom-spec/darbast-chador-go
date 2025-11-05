@@ -12,6 +12,8 @@ import { OrdersOverviewChart } from '@/components/ceo/OrdersOverviewChart';
 import { OrdersStatusChart } from '@/components/ceo/OrdersStatusChart';
 import { RecentOrdersList } from '@/components/ceo/RecentOrdersList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { useCEOPendingCount } from '@/hooks/useCEOPendingCount';
 
 export const CEODashboard = () => {
   usePageTitle('داشبورد مدیرعامل');
@@ -27,15 +29,17 @@ export const CEODashboard = () => {
     loading: staffLoading,
   } = useStaffVerificationRequests();
   const { stats: orderStats, trends, loading: statsLoading } = useOrderStats();
+  const { data: ceoPendingCount = 0 } = useCEOPendingCount();
 
   const quickAccessStats = [
     {
-      title: 'سفارشات در انتظار',
-      value: statsLoading ? '...' : orderStats.pending,
+      title: 'سفارشات در انتظار تایید شما',
+      value: ceoPendingCount || '0',
       icon: ShoppingCart,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50 dark:bg-orange-950',
       onClick: () => navigate('/ceo/orders'),
+      badge: ceoPendingCount > 0,
     },
     {
       title: 'شماره‌های مجاز',
@@ -85,8 +89,16 @@ export const CEODashboard = () => {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+              <div className={`p-2 rounded-lg ${stat.bgColor} relative`}>
                 <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                {stat.badge && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                  >
+                    {stat.value}
+                  </Badge>
+                )}
               </div>
             </CardHeader>
             <CardContent>

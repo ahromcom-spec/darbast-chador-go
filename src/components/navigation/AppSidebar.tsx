@@ -35,6 +35,7 @@ import { useSalesManagerRole } from '@/hooks/useSalesManagerRole';
 import { useFinanceManagerRole } from '@/hooks/useFinanceManagerRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSalesPendingCount } from '@/hooks/useSalesPendingCount';
+import { useCEOPendingCount } from '@/hooks/useCEOPendingCount';
 
 interface AppSidebarProps {
   onNavigate?: () => void;

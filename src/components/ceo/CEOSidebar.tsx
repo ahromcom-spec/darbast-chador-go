@@ -8,6 +8,8 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { useCEOPendingCount } from '@/hooks/useCEOPendingCount';
 
 const menuItems = [
   {
@@ -38,6 +40,8 @@ const menuItems = [
 ];
 
 export const CEOSidebar = () => {
+  const { data: pendingCount = 0 } = useCEOPendingCount();
+
   return (
     <aside className="w-64 bg-card border-l border-border min-h-screen">
       <div className="p-6 border-b border-border">
@@ -62,6 +66,11 @@ export const CEOSidebar = () => {
           >
             <item.icon className="h-5 w-5" />
             <span className="flex-1">{item.title}</span>
+            {item.href === '/ceo/orders' && pendingCount > 0 && (
+              <Badge variant="destructive" className="mr-auto">
+                {pendingCount}
+              </Badge>
+            )}
             <ChevronRight className="h-4 w-4" />
           </NavLink>
         ))}
