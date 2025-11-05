@@ -42,7 +42,12 @@ serve(async (req) => {
 
     // Security: Block test phones in production - hardcoded check
     const isProduction = supabaseUrl.includes('gclbltatkbwbqxqqrcea');
-    const isTestPhone = (phone_number.startsWith('aaa') || phone_number.startsWith('bbb'));
+    // Test phones include: aaa*, bbb*, and special pattern test numbers (repeating digits)
+    const isTestPhone = (
+      phone_number.startsWith('aaa') || 
+      phone_number.startsWith('bbb') ||
+      /^(091{8}|092{8}|093{8}|094{8}|095{8}|096{8}|0901{8}|09012{8}|09013{8}|09014{8}|09015{8}|09016{8})/.test(phone_number)
+    );
     
     // Reject test phones in production
     if (isProduction && isTestPhone) {
