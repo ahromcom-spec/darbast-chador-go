@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { CheckCircle, X, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -30,6 +31,8 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   notes: any;
+  province_name?: string;
+  district_name?: string;
 }
 
 export default function SalesPendingOrders() {
@@ -37,8 +40,9 @@ export default function SalesPendingOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [actionType, setActionType] = useState<'approve' | null>(null);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,86 +51,56 @@ export default function SalesPendingOrders() {
 
   const fetchOrders = async () => {
     try {
-      // دریافت سفارشات از RPC (امنیت سمت سرور)
+      // دریافت سفارشات از RPC
       const { data: rpcData, error: ordersError } = await supabase
         .rpc('get_sales_pending_orders');
 
       if (ordersError) throw ordersError;
 
-      // اضافه کردن سفارشات «اجرای داربست با اجناس» که ممکن است با نقش تخصصی ثبت شده باشند
-      // برخی سفارش‌ها با approver_role = 'sales_manager_scaffold_execution_with_materials' ایجاد می‌شوند
-      const { data: extraApprovals, error: extraApprovalsError } = await supabase
-        .from('order_approvals')
-        .select('order_id')
-        .eq('approver_role', 'sales_manager_scaffold_execution_with_materials')
-        .is('approved_at', null);
-
-      if (extraApprovalsError) throw extraApprovalsError;
-
-      const existingIds = new Set<string>((rpcData || []).map((o: any) => o.id));
-      const extraIds = (extraApprovals || [])
-        .map((a: any) => a.order_id as string)
-        .filter((id: string | null) => !!id && !existingIds.has(id as string)) as string[];
-
-      let extraOrders: any[] = [];
-      if (extraIds.length > 0) {
-        const { data: projectsData, error: projectsError } = await supabase
-          .from('projects_v3')
-          .select('id, code, status, address, detailed_address, created_at, notes')
-          .in('id', extraIds);
-
-        if (projectsError) throw projectsError;
-        extraOrders = projectsData || [];
-      }
-
-      const combinedOrders = ([...(rpcData || []), ...extraOrders]);
-
-      // دریافت اطلاعات مشتری برای هر سفارش (همان منطق قبلی)
-      const ordersWithCustomerInfo = await Promise.all(
-        combinedOrders.map(async (order: any) => {
-          // دریافت customer_id از جدول projects_v3
+      // دریافت اطلاعات کامل برای هر سفارش
+      const ordersWithFullInfo = await Promise.all(
+        (rpcData || []).map(async (order: any) => {
+          // دریافت اطلاعات مشتری
           const { data: projectData } = await supabase
             .from('projects_v3')
-            .select('customer_id')
+            .select(`
+              customer_id,
+              province_id,
+              district_id,
+              customers!inner(user_id),
+              provinces(name),
+              districts(name)
+            `)
             .eq('id', order.id)
             .single();
 
-          if (projectData?.customer_id) {
-            // دریافت user_id از جدول customers
-            const { data: customerData } = await supabase
-              .from('customers')
-              .select('user_id')
-              .eq('id', projectData.customer_id)
+          if (projectData?.customers?.user_id) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('full_name, phone_number')
+              .eq('user_id', projectData.customers.user_id)
               .single();
 
-            if (customerData?.user_id) {
-              // دریافت اطلاعات مشتری از profiles
-              const { data: profileData } = await supabase
-                .from('profiles')
-                .select('full_name, phone_number')
-                .eq('user_id', customerData.user_id)
-                .single();
-
-              return {
-                ...order,
-                customer_name: profileData?.full_name || 'نامشخص',
-                customer_phone: profileData?.phone_number || ''
-              };
-            }
+            return {
+              ...order,
+              customer_name: profileData?.full_name || 'نامشخص',
+              customer_phone: profileData?.phone_number || '',
+              province_name: (projectData.provinces as any)?.name || '',
+              district_name: (projectData.districts as any)?.name || ''
+            };
           }
 
           return {
             ...order,
             customer_name: 'نامشخص',
-            customer_phone: ''
+            customer_phone: '',
+            province_name: '',
+            district_name: ''
           };
         })
       );
 
-      // مرتب‌سازی بر اساس تاریخ ایجاد (جدیدترین در بالا)
-      ordersWithCustomerInfo.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-      setOrders(ordersWithCustomerInfo);
+      setOrders(ordersWithFullInfo);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -143,7 +117,6 @@ export default function SalesPendingOrders() {
     if (!selectedOrder || !user) return;
 
     try {
-      // استفاده از RPC امن برای تایید (بررسی نقش در سمت سرور)
       const { error } = await supabase
         .rpc('approve_order_as_sales_manager', {
           _order_id: selectedOrder.id
@@ -165,6 +138,45 @@ export default function SalesPendingOrders() {
         variant: 'destructive',
         title: 'خطا',
         description: error.message || 'تایید سفارش با خطا مواجه شد'
+      });
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedOrder || !user || !rejectionReason.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'لطفا دلیل رد کردن را وارد کنید'
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .rpc('reject_order_as_sales_manager', {
+          _order_id: selectedOrder.id,
+          _rejection_reason: rejectionReason
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ سفارش رد شد',
+        description: `سفارش ${selectedOrder.code} رد شد.`,
+        variant: 'destructive'
+      });
+
+      setActionType(null);
+      setSelectedOrder(null);
+      setRejectionReason('');
+      fetchOrders();
+    } catch (error: any) {
+      console.error('Error rejecting order:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: error.message || 'رد کردن سفارش با خطا مواجه شد'
       });
     }
   };
@@ -218,6 +230,18 @@ export default function SalesPendingOrders() {
             >
               <CheckCircle className="h-4 w-4" />
               تایید
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                setSelectedOrder(order);
+                setActionType('reject');
+              }}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              رد
             </Button>
           </div>
         </CardContent>
@@ -279,6 +303,48 @@ export default function SalesPendingOrders() {
         </DialogContent>
       </Dialog>
 
+      {/* Rejection Dialog */}
+      <Dialog
+        open={actionType === 'reject'}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActionType(null);
+            setSelectedOrder(null);
+            setRejectionReason('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>رد سفارش</DialogTitle>
+            <DialogDescription>
+              لطفا دلیل رد کردن سفارش {selectedOrder?.code} را وارد کنید:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="rejection-reason">دلیل رد</Label>
+            <Input
+              id="rejection-reason"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="مثال: آدرس ناقص است، قیمت مناسب نیست، و..."
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setActionType(null);
+              setRejectionReason('');
+            }}>
+              انصراف
+            </Button>
+            <Button variant="destructive" onClick={handleReject}>
+              رد نهایی
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -293,9 +359,13 @@ export default function SalesPendingOrders() {
               </div>
               <div>
                 <Label className="font-semibold">آدرس</Label>
-                <p className="text-sm">{selectedOrder.address}</p>
+                <p className="text-sm">
+                  {selectedOrder.province_name && `${selectedOrder.province_name} - `}
+                  {selectedOrder.district_name && `${selectedOrder.district_name} - `}
+                  {selectedOrder.address}
+                </p>
                 {selectedOrder.detailed_address && (
-                  <p className="text-sm text-muted-foreground">{selectedOrder.detailed_address}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{selectedOrder.detailed_address}</p>
                 )}
               </div>
               <div>

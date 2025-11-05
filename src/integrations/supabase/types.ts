@@ -2823,6 +2823,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      reject_order_as_sales_manager: {
+        Args: { _order_id: string; _rejection_reason: string }
+        Returns: undefined
+      }
       remove_role_from_user: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
