@@ -49,15 +49,26 @@ export default function SalesPendingOrders() {
 
   const fetchOrders = async () => {
     try {
-      // دریافت سفارشات از RPC (امنیت سمت سرور)
+      // تلاش اول: استفاده از RPC (اگر وجود داشته باشد)
       const { data: rpcData, error: ordersError } = await supabase
         .rpc('get_sales_pending_orders');
 
-      if (ordersError) throw ordersError;
+      // اگر RPC خطا داد یا داده‌ای برنگشت، از کوئری مستقیم با اتکا به RLS استفاده می‌کنیم
+      let baseOrders = rpcData || [];
+      if (ordersError || !baseOrders || baseOrders.length === 0) {
+        const { data: selectData, error: selectError } = await supabase
+          .from('projects_v3')
+          .select('id, code, status, address, detailed_address, created_at, notes')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+
+        if (selectError) throw selectError;
+        baseOrders = selectData || [];
+      }
 
       // دریافت اطلاعات مشتری برای هر سفارش
       const ordersWithCustomerInfo = await Promise.all(
-        (rpcData || []).map(async (order: any) => {
+        (baseOrders || []).map(async (order: any) => {
           // دریافت customer_id از جدول projects_v3
           const { data: projectData } = await supabase
             .from('projects_v3')
