@@ -2,10 +2,13 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Home, AlertCircle, DollarSign } from 'lucide-react';
+import { useSalesPendingCount } from '@/hooks/useSalesPendingCount';
 
 export default function SalesLayout() {
   const navigate = useNavigate();
+  const { data: pendingCount = 0 } = useSalesPendingCount();
 
   return (
     <MainLayout>
@@ -26,10 +29,15 @@ export default function SalesLayout() {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate('/sales/pending-orders')}
-                className="gap-2"
+                className="gap-2 relative"
               >
                 <AlertCircle className="h-4 w-4" />
                 سفارشات در انتظار
+                {pendingCount > 0 && (
+                  <Badge variant="destructive" className="mr-2 text-xs">
+                    {pendingCount}
+                  </Badge>
+                )}
               </Button>
               <Button
                 variant="outline"

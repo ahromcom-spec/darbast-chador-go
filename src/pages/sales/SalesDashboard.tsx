@@ -3,16 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { DollarSign, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
+import { useSalesPendingCount } from '@/hooks/useSalesPendingCount';
 
 export default function SalesDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { data: pendingCount = 0 } = useSalesPendingCount();
   
   const { data: stats, isLoading } = useQuery({
     queryKey: ['sales-stats'],
@@ -66,8 +69,15 @@ export default function SalesDashboard() {
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">در انتظار تایید</CardTitle>
-            <div className="p-2 rounded-lg bg-orange-500/10">
-              <AlertCircle className="h-5 w-5 text-orange-600" />
+            <div className="flex items-center gap-2">
+              {pendingCount > 0 && (
+                <Badge variant="destructive" className="text-xs">
+                  {pendingCount}
+                </Badge>
+              )}
+              <div className="p-2 rounded-lg bg-orange-500/10">
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -131,11 +141,18 @@ export default function SalesDashboard() {
         <CardContent className="space-y-2">
           <Button 
             variant="outline" 
-            className="w-full justify-start gap-2"
+            className="w-full justify-between gap-2"
             onClick={() => navigate('/sales/pending-orders')}
           >
-            <AlertCircle className="h-4 w-4" />
-            سفارشات در انتظار تایید
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>سفارشات در انتظار تایید</span>
+            </div>
+            {pendingCount > 0 && (
+              <Badge variant="destructive" className="text-xs">
+                {pendingCount}
+              </Badge>
+            )}
           </Button>
           <Button 
             variant="outline" 

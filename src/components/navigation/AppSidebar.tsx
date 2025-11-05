@@ -26,6 +26,7 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Badge } from '@/components/ui/badge';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
 import { useContractorRole } from '@/hooks/useContractorRole';
@@ -33,6 +34,7 @@ import { useExecutiveManagerRole } from '@/hooks/useExecutiveManagerRole';
 import { useSalesManagerRole } from '@/hooks/useSalesManagerRole';
 import { useFinanceManagerRole } from '@/hooks/useFinanceManagerRole';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSalesPendingCount } from '@/hooks/useSalesPendingCount';
 
 interface AppSidebarProps {
   onNavigate?: () => void;
@@ -48,6 +50,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
   const { isExecutiveManager } = useExecutiveManagerRole();
   const { isSalesManager } = useSalesManagerRole();
   const { isFinanceManager } = useFinanceManagerRole();
+  const { data: pendingCount = 0 } = useSalesPendingCount();
 
   const publicItems = [
     { title: 'صفحه اصلی', url: '/', icon: Home },
@@ -278,7 +281,12 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                     <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
                         <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
-                        {open && <span>{item.title}</span>}
+                        {open && <span className="flex-1">{item.title}</span>}
+                        {open && item.url === '/sales/pending-orders' && pendingCount > 0 && (
+                          <Badge variant="destructive" className="mr-auto text-xs">
+                            {pendingCount}
+                          </Badge>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
