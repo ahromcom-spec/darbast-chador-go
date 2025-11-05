@@ -47,24 +47,55 @@ export default function SalesPendingOrders() {
 
   const fetchOrders = async () => {
     try {
-      // استفاده از RPC امن برای دریافت سفارشات در انتظار تایید فروش
-      const { data, error } = await supabase.rpc('get_sales_pending_orders');
+      // استفاده از RPC برای دریافت سفارشات (امنیت سمت سرور)
+      const { data: ordersData, error: ordersError } = await supabase
+        .rpc('get_sales_pending_orders');
 
-      if (error) throw error;
+      if (ordersError) throw ordersError;
 
-      const orders = (data || []).map((order: any) => ({
-        id: order.id,
-        code: order.code,
-        status: 'pending',
-        address: order.address,
-        detailed_address: order.detailed_address,
-        created_at: order.created_at,
-        notes: order.notes,
-        customer_name: 'مشتری',
-        customer_phone: ''
-      }));
+      // دریافت اطلاعات مشتری برای هر سفارش
+      const ordersWithCustomerInfo = await Promise.all(
+        (ordersData || []).map(async (order: any) => {
+          // دریافت customer_id از جدول projects_v3
+          const { data: projectData } = await supabase
+            .from('projects_v3')
+            .select('customer_id')
+            .eq('id', order.id)
+            .single();
 
-      setOrders(orders);
+          if (projectData?.customer_id) {
+            // دریافت user_id از جدول customers
+            const { data: customerData } = await supabase
+              .from('customers')
+              .select('user_id')
+              .eq('id', projectData.customer_id)
+              .single();
+
+            if (customerData?.user_id) {
+              // دریافت اطلاعات مشتری از profiles
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('full_name, phone_number')
+                .eq('user_id', customerData.user_id)
+                .single();
+
+              return {
+                ...order,
+                customer_name: profileData?.full_name || 'نامشخص',
+                customer_phone: profileData?.phone_number || ''
+              };
+            }
+          }
+
+          return {
+            ...order,
+            customer_name: 'نامشخص',
+            customer_phone: ''
+          };
+        })
+      );
+
+      setOrders(ordersWithCustomerInfo);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -81,16 +112,17 @@ export default function SalesPendingOrders() {
     if (!selectedOrder || !user) return;
 
     try {
-      // استفاده از RPC امن برای تایید سفارش
-      const { error } = await supabase.rpc('approve_order_as_sales_manager', {
-        _order_id: selectedOrder.id
-      });
+      // استفاده از RPC امن برای تایید (بررسی نقش در سمت سرور)
+      const { error } = await supabase
+        .rpc('approve_order_as_sales_manager', {
+          _order_id: selectedOrder.id
+        });
 
       if (error) throw error;
 
       toast({
-        title: '✓ تایید فروش ثبت شد',
-        description: `سفارش ${selectedOrder.code} توسط شما تایید شد.`
+        title: '✓ تایید شما ثبت شد',
+        description: `تایید شما برای سفارش ${selectedOrder.code} ثبت شد.`
       });
 
       setActionType(null);
