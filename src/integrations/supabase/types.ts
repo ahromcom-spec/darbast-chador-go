@@ -2615,6 +2615,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_order_as_sales_manager: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       assign_role_to_user: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2777,6 +2781,17 @@ export type Database = {
           id: string
           is_approved: boolean
           services: Json
+        }[]
+      }
+      get_sales_pending_orders: {
+        Args: never
+        Returns: {
+          address: string
+          code: string
+          created_at: string
+          detailed_address: string
+          id: string
+          notes: Json
         }[]
       }
       has_role: {

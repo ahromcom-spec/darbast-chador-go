@@ -47,50 +47,24 @@ export default function SalesPendingOrders() {
 
   const fetchOrders = async () => {
     try {
-      const { data, error } = await supabase
-        .from('projects_v3')
-        .select(`
-          id,
-          code,
-          status,
-          address,
-          detailed_address,
-          created_at,
-          notes,
-          subcategory_id
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+      // استفاده از RPC امن برای دریافت سفارشات در انتظار تایید فروش
+      const { data, error } = await supabase.rpc('get_sales_pending_orders');
 
       if (error) throw error;
 
-      // فیلتر کردن سفارشاتی که هنوز نیاز به تایید sales manager دارند
-      const filtered = await Promise.all(
-        (data || []).map(async (order: any) => {
-          // بررسی وجود ردیف تایید در انتظار برای نقش‌های فروش
-          const { data: approval } = await supabase
-            .from('order_approvals')
-            .select('approver_role, approved_at')
-            .eq('order_id', order.id)
-            .in('approver_role', ['sales_manager', 'sales_manager_scaffold_execution_with_materials'])
-            .is('approved_at', null)
-            .maybeSingle();
-          
-          return approval ? {
-            id: order.id,
-            code: order.code,
-            status: order.status,
-            address: order.address,
-            detailed_address: order.detailed_address,
-            created_at: order.created_at,
-            notes: order.notes,
-            customer_name: 'نامشخص',
-            customer_phone: ''
-          } : null;
-        })
-      );
+      const orders = (data || []).map((order: any) => ({
+        id: order.id,
+        code: order.code,
+        status: 'pending',
+        address: order.address,
+        detailed_address: order.detailed_address,
+        created_at: order.created_at,
+        notes: order.notes,
+        customer_name: 'مشتری',
+        customer_phone: ''
+      }));
 
-      setOrders(filtered.filter(o => o !== null) as Order[]);
+      setOrders(orders);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -107,45 +81,27 @@ export default function SalesPendingOrders() {
     if (!selectedOrder || !user) return;
 
     try {
-      // یافتن ردیف تایید در انتظار برای این سفارش (نقش‌های فروش)
-      const { data: pendingApproval, error: fetchApprovalError } = await supabase
-        .from('order_approvals')
-        .select('approver_role')
-        .eq('order_id', selectedOrder.id)
-        .in('approver_role', ['sales_manager', 'sales_manager_scaffold_execution_with_materials'])
-        .is('approved_at', null)
-        .maybeSingle();
-
-      if (fetchApprovalError || !pendingApproval) {
-        throw new Error('هیچ تایید در انتظار برای مدیر فروش یافت نشد');
-      }
-
-      const { error } = await supabase
-        .from('order_approvals')
-        .update({
-          approver_user_id: user.id,
-          approved_at: new Date().toISOString()
-        })
-        .eq('order_id', selectedOrder.id)
-        .eq('approver_role', pendingApproval.approver_role)
-        .is('approved_at', null);
+      // استفاده از RPC امن برای تایید سفارش
+      const { error } = await supabase.rpc('approve_order_as_sales_manager', {
+        _order_id: selectedOrder.id
+      });
 
       if (error) throw error;
 
       toast({
-        title: '✓ تایید شما ثبت شد',
-        description: `تایید شما برای سفارش ${selectedOrder.code} ثبت شد.`
+        title: '✓ تایید فروش ثبت شد',
+        description: `سفارش ${selectedOrder.code} توسط شما تایید شد.`
       });
 
       setActionType(null);
       setSelectedOrder(null);
       fetchOrders();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving order:', error);
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: 'تایید سفارش با خطا مواجه شد'
+        description: error.message || 'تایید سفارش با خطا مواجه شد'
       });
     }
   };
