@@ -47,15 +47,43 @@ export default function SalesPendingOrders() {
 
   const fetchOrders = async () => {
     try {
-      // استفاده از RPC برای دریافت سفارشات (امنیت سمت سرور)
-      const { data: ordersData, error: ordersError } = await supabase
+      // دریافت سفارشات از RPC (امنیت سمت سرور)
+      const { data: rpcData, error: ordersError } = await supabase
         .rpc('get_sales_pending_orders');
 
       if (ordersError) throw ordersError;
 
-      // دریافت اطلاعات مشتری برای هر سفارش
+      // اضافه کردن سفارشات «اجرای داربست با اجناس» که ممکن است با نقش تخصصی ثبت شده باشند
+      // برخی سفارش‌ها با approver_role = 'sales_manager_scaffold_execution_with_materials' ایجاد می‌شوند
+      const { data: extraApprovals, error: extraApprovalsError } = await supabase
+        .from('order_approvals')
+        .select('order_id')
+        .eq('approver_role', 'sales_manager_scaffold_execution_with_materials')
+        .is('approved_at', null);
+
+      if (extraApprovalsError) throw extraApprovalsError;
+
+      const existingIds = new Set<string>((rpcData || []).map((o: any) => o.id));
+      const extraIds = (extraApprovals || [])
+        .map((a: any) => a.order_id as string)
+        .filter((id: string | null) => !!id && !existingIds.has(id as string)) as string[];
+
+      let extraOrders: any[] = [];
+      if (extraIds.length > 0) {
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('projects_v3')
+          .select('id, code, status, address, detailed_address, created_at, notes')
+          .in('id', extraIds);
+
+        if (projectsError) throw projectsError;
+        extraOrders = projectsData || [];
+      }
+
+      const combinedOrders = ([...(rpcData || []), ...extraOrders]);
+
+      // دریافت اطلاعات مشتری برای هر سفارش (همان منطق قبلی)
       const ordersWithCustomerInfo = await Promise.all(
-        (ordersData || []).map(async (order: any) => {
+        combinedOrders.map(async (order: any) => {
           // دریافت customer_id از جدول projects_v3
           const { data: projectData } = await supabase
             .from('projects_v3')
@@ -94,6 +122,9 @@ export default function SalesPendingOrders() {
           };
         })
       );
+
+      // مرتب‌سازی بر اساس تاریخ ایجاد (جدیدترین در بالا)
+      ordersWithCustomerInfo.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       setOrders(ordersWithCustomerInfo);
     } catch (error) {
