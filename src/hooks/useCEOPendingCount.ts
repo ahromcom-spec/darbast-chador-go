@@ -10,8 +10,7 @@ export const useCEOPendingCount = () => {
     queryFn: async () => {
       if (!isCEO) return 0;
 
-      // ابتدا subcategory «داربست با اجناس» را بر اساس نوع خدمت «داربست» پیدا می‌کنیم
-      // 1) نوع خدمت داربست با کد 10
+      // 1) نوع خدمت داربست با کد '10'
       const { data: serviceType } = await supabase
         .from('service_types_v3')
         .select('id')
@@ -20,7 +19,7 @@ export const useCEOPendingCount = () => {
 
       if (!serviceType) return 0;
 
-      // 2) زیرشاخه «با اجناس» با کد 10 برای همین نوع خدمت
+      // 2) زیرشاخه «با اجناس» با کد '10' برای همان نوع خدمت
       const { data: subcategory } = await supabase
         .from('subcategories')
         .select('id')
@@ -35,7 +34,7 @@ export const useCEOPendingCount = () => {
         .from('projects_v3')
         .select('id')
         .eq('status', 'pending')
-        .eq('subcategory_id', subcategoryData.id);
+        .eq('subcategory_id', subcategory.id);
 
       if (error) {
         console.error('Error fetching CEO pending count:', error);
@@ -52,8 +51,6 @@ export const useCEOPendingCount = () => {
           .eq('order_id', order.id)
           .eq('approver_role', 'ceo')
           .maybeSingle();
-        
-        // اگر approval وجود داشته باشد و approved_at خالی باشد، پس منتظر تایید است
         return approval && !approval.approved_at ? 1 : 0;
       });
 

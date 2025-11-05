@@ -102,14 +102,28 @@ export const CEOOrders = () => {
     try {
       setLoading(true);
       
-      // ابتدا subcategory با کد '10' را پیدا می‌کنیم (داربست با اجناس)
-      const { data: subcategoryData } = await supabase
-        .from('subcategories')
+      // گام 1: یافتن نوع خدمت داربست (کد '10')
+      const { data: serviceType } = await supabase
+        .from('service_types_v3')
         .select('id')
         .eq('code', '10')
         .maybeSingle();
 
-      if (!subcategoryData) {
+      if (!serviceType) {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
+
+      // گام 2: یافتن زیرشاخه «با اجناس» (کد '10') برای همان نوع خدمت
+      const { data: subcategory } = await supabase
+        .from('subcategories')
+        .select('id')
+        .eq('service_type_id', serviceType.id)
+        .eq('code', '10')
+        .maybeSingle();
+
+      if (!subcategory) {
         setOrders([]);
         setLoading(false);
         return;
@@ -123,7 +137,7 @@ export const CEOOrders = () => {
           address, detailed_address, notes, status, created_at
         `)
         .eq('status', 'pending')
-        .eq('subcategory_id', subcategoryData.id)
+        .eq('subcategory_id', subcategory.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
