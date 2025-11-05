@@ -33,7 +33,7 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
-  const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1Ijoia2hhZGFtYXRlLWFocm9tIiwiYSI6ImNtZ3hnM2NmdjEweWYybXI3NWZlMGZzZ2wifQ.ud3f1d_bUuY8ghGJUJWGoQ';
+  const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('satellite');
   const [selectedLocation, setSelectedLocation] = useState<{
     address: string;
@@ -98,6 +98,12 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({
   // راه‌اندازی نقشه
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
+
+    if (!mapboxToken) {
+      console.error('Mapbox token not configured');
+      toast.error('خطا در بارگذاری نقشه - توکن Mapbox تنظیم نشده است');
+      return;
+    }
 
     try {
       mapboxgl.accessToken = mapboxToken;
