@@ -58,6 +58,10 @@ const ExecutiveDashboard = lazy(() => import("./pages/executive/ExecutiveDashboa
 const ExecutiveOrders = lazy(() => import("./pages/executive/ExecutiveOrders"));
 const ExecutiveCustomers = lazy(() => import("./pages/executive/ExecutiveCustomers"));
 const ExecutivePendingOrders = lazy(() => import("./pages/executive/ExecutivePendingOrders"));
+const ExecutivePending = lazy(() => import("./pages/executive/ExecutivePending"));
+const ExecutiveReady = lazy(() => import("./pages/executive/ExecutiveReady"));
+const ExecutiveInProgress = lazy(() => import("./pages/executive/ExecutiveInProgress"));
+const ExecutiveCompleted = lazy(() => import("./pages/executive/ExecutiveCompleted"));
 const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
 const SalesPendingOrders = lazy(() => import("./pages/sales/SalesPendingOrders"));
 const SalesCompletedOrders = lazy(() => import("./pages/sales/SalesCompletedOrders"));
@@ -220,7 +224,11 @@ const App = () => {
                 </ProtectedRoute>
               }>
                 <Route index element={<ExecutiveDashboard />} />
-                <Route path="orders" element={<ExecutiveOrders />} />
+                <Route path="pending" element={<ExecutivePending />} />
+                <Route path="ready" element={<ExecutiveReady />} />
+                <Route path="in-progress" element={<ExecutiveInProgress />} />
+                <Route path="completed" element={<ExecutiveCompleted />} />
+                <Route path="all-orders" element={<ExecutiveOrders />} />
                 <Route path="pending-orders" element={<ExecutivePendingOrders />} />
                 <Route path="customers" element={<ExecutiveCustomers />} />
               </Route>
