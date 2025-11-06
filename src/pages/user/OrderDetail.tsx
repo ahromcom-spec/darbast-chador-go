@@ -24,8 +24,12 @@ import {
   Clock,
   Download,
   Play,
-  Film
+  Film,
+  Star
 } from "lucide-react";
+import { RatingForm } from "@/components/ratings/RatingForm";
+import { useRatingCriteria, useProjectRatings, useCreateRating } from "@/hooks/useRatings";
+import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { z } from "zod";
@@ -126,8 +130,19 @@ export default function OrderDetail() {
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [showRatingForm, setShowRatingForm] = useState(false);
+  const [ratingType, setRatingType] = useState<'customer_to_staff' | 'customer_to_contractor'>('customer_to_staff');
+  const [staffId, setStaffId] = useState<string | null>(null);
+  const [contractorId, setContractorId] = useState<string | null>(null);
+  const [ratedUserName, setRatedUserName] = useState<string>('');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Fetch rating data
+  const { data: staffCriteria } = useRatingCriteria('customer_to_staff');
+  const { data: contractorCriteria } = useRatingCriteria('customer_to_contractor');
+  const { data: projectRatings, refetch: refetchRatings } = useProjectRatings(id || '');
 
   useEffect(() => {
     if (id) {
@@ -1062,6 +1077,176 @@ export default function OrderDetail() {
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
+
+          {/* بخش امتیازدهی - فقط برای سفارشات تکمیل شده یا بسته شده */}
+          {(order.status === 'completed' || order.status === 'paid' || order.status === 'closed') && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  امتیازدهی به سفارش
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  لطفا تجربه خود از همکاری با پرسنل و پیمانکار را با ما به اشتراک بگذارید.
+                </p>
+
+                {/* نمایش امتیازهای ثبت شده */}
+                {projectRatings && projectRatings.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm">امتیازهای ثبت شده شما:</h4>
+                    {projectRatings
+                      .filter(r => r.rater_id === user?.id)
+                      .map((rating) => (
+                        <div key={rating.id} className="p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-sm">
+                              {rating.rating_type === 'customer_to_staff' ? 'امتیاز به پرسنل' : 'امتیاز به پیمانکار'}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                              <span className="font-bold">{rating.overall_score.toFixed(1)}</span>
+                            </div>
+                          </div>
+                          {rating.comment && (
+                            <p className="text-xs text-muted-foreground">{rating.comment}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(rating.created_at).toLocaleDateString('fa-IR')}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                )}
+
+                {/* دکمه‌های امتیازدهی */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      // Get staff who worked on this project
+                      const { data: approvals } = await supabase
+                        .from('order_approvals')
+                        .select('approver_user_id, approver_role')
+                        .eq('order_id', order.id)
+                        .not('approver_user_id', 'is', null);
+                      
+                      const staffApproval = approvals?.find(a => 
+                        a.approver_role === 'scaffold_executive_manager' || 
+                        a.approver_role === 'sales_manager'
+                      );
+                      
+                      if (staffApproval?.approver_user_id) {
+                        // Get staff name
+                        const { data: profile } = await supabase
+                          .from('profiles')
+                          .select('full_name')
+                          .eq('user_id', staffApproval.approver_user_id)
+                          .single();
+                        
+                        setStaffId(staffApproval.approver_user_id);
+                        setRatedUserName(profile?.full_name || 'پرسنل');
+                        setRatingType('customer_to_staff');
+                        setShowRatingForm(true);
+                      } else {
+                        toast({
+                          title: 'خطا',
+                          description: 'پرسنلی برای این سفارش یافت نشد',
+                          variant: 'destructive'
+                        });
+                      }
+                    }}
+                    className="gap-2"
+                    disabled={projectRatings?.some(r => r.rater_id === user?.id && r.rating_type === 'customer_to_staff')}
+                  >
+                    <Star className="h-4 w-4" />
+                    {projectRatings?.some(r => r.rater_id === user?.id && r.rating_type === 'customer_to_staff')
+                      ? 'امتیاز به پرسنل ثبت شده'
+                      : 'امتیازدهی به پرسنل'}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      // Get contractor assigned to this project
+                      if (order.status === 'completed' || order.status === 'paid' || order.status === 'closed') {
+                        const { data: projectData } = await supabase
+                          .from('projects_v3')
+                          .select('contractor_id')
+                          .eq('id', order.id)
+                          .single();
+                        
+                        if (projectData?.contractor_id) {
+                          // Get contractor's user_id and name
+                          const { data: contractorData } = await supabase
+                            .from('contractors')
+                            .select('user_id, company_name')
+                            .eq('id', projectData.contractor_id)
+                            .single();
+                          
+                          if (contractorData?.user_id) {
+                            setContractorId(contractorData.user_id);
+                            setRatedUserName(contractorData.company_name || 'پیمانکار');
+                            setRatingType('customer_to_contractor');
+                            setShowRatingForm(true);
+                          } else {
+                            toast({
+                              title: 'اطلاع',
+                              description: 'پیمانکاری برای این سفارش تخصیص داده نشده',
+                              variant: 'default'
+                            });
+                          }
+                        } else {
+                          toast({
+                            title: 'اطلاع',
+                            description: 'پیمانکاری برای این سفارش تخصیص داده نشده',
+                            variant: 'default'
+                          });
+                        }
+                      }
+                    }}
+                    className="gap-2"
+                    disabled={projectRatings?.some(r => r.rater_id === user?.id && r.rating_type === 'customer_to_contractor')}
+                  >
+                    <Star className="h-4 w-4" />
+                    {projectRatings?.some(r => r.rater_id === user?.id && r.rating_type === 'customer_to_contractor')
+                      ? 'امتیاز به پیمانکار ثبت شده'
+                      : 'امتیازدهی به پیمانکار'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* فرم امتیازدهی */}
+          <Dialog open={showRatingForm} onOpenChange={setShowRatingForm}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {ratingType === 'customer_to_staff' ? 'امتیازدهی به پرسنل' : 'امتیازدهی به پیمانکار'}
+                </DialogTitle>
+              </DialogHeader>
+              {showRatingForm && (
+                <RatingForm
+                  projectId={order.id}
+                  ratedUserId={ratingType === 'customer_to_staff' ? staffId! : contractorId!}
+                  ratedUserName={ratedUserName}
+                  ratingType={ratingType}
+                  criteria={ratingType === 'customer_to_staff' ? staffCriteria || [] : contractorCriteria || []}
+                  onSuccess={() => {
+                    setShowRatingForm(false);
+                    refetchRatings();
+                    toast({
+                      title: '✓ موفق',
+                      description: 'امتیاز شما با موفقیت ثبت شد'
+                    });
+                  }}
+                  onCancel={() => setShowRatingForm(false)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
 
         </div>
       </div>
