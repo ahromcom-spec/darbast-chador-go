@@ -506,18 +506,6 @@ export default function OrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Timeline */}
-          <OrderTimeline
-            orderStatus={order.status}
-            createdAt={order.created_at}
-            approvedAt={order.approved_at}
-            executionStartDate={order.execution_start_date}
-            executionEndDate={order.execution_end_date}
-            customerCompletionDate={order.customer_completion_date}
-            rejectionReason={order.rejection_reason}
-            approvals={approvals}
-          />
-
           {/* Order Details from Notes or Payment Amount */}
           {(parsedNotes || order.payment_amount) && (
             <Card>
@@ -662,6 +650,18 @@ export default function OrderDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Timeline */}
+          <OrderTimeline
+            orderStatus={order.status}
+            createdAt={order.created_at}
+            approvedAt={order.approved_at}
+            executionStartDate={order.execution_start_date}
+            executionEndDate={order.execution_end_date}
+            customerCompletionDate={order.customer_completion_date}
+            rejectionReason={order.rejection_reason}
+            approvals={approvals}
+          />
 
           {/* Status Messages */}
           {order.status === 'pending' && (
