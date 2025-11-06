@@ -16,12 +16,12 @@ export const useExecutiveManagerRole = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'scaffold_executive_manager')
-          .maybeSingle();
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .in('role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
+        .maybeSingle();
 
         if (error) {
           console.error('Error checking executive manager role:', error);

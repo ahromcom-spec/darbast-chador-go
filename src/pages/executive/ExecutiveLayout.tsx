@@ -15,8 +15,8 @@ const navItems = [
     icon: ShoppingCart
   },
   {
-    title: 'تمام سفارشات',
-    href: '/executive/orders',
+    title: 'همه سفارشات',
+    href: '/executive/all-orders',
     icon: ShoppingCart
   },
   {

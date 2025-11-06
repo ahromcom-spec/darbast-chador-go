@@ -80,7 +80,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
 
   const executiveItems = isExecutiveManager ? [
     { title: 'داشبورد اجرا', url: '/executive', icon: Hammer },
-    { title: 'سفارشات', url: '/executive/orders', icon: ClipboardList },
+    { title: 'کارتابل اجرایی', url: '/executive/pending-orders', icon: ClipboardList },
+    { title: 'تمام سفارشات', url: '/executive/all-orders', icon: ClipboardList },
     { title: 'مشتریان', url: '/executive/customers', icon: Users },
   ] : [];
 

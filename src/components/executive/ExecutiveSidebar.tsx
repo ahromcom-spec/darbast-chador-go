@@ -104,7 +104,7 @@ export function ExecutiveSidebar() {
       badge: completedCount
     },
     {
-      title: 'تمام سفارشات',
+      title: 'همه سفارشات',
       href: '/executive/all-orders',
       icon: CheckCircle2
     },

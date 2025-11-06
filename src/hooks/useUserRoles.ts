@@ -9,7 +9,8 @@ export type UserRole =
   | 'general_manager'
   | 'sales_manager'
   | 'finance_manager'
-  | 'scaffold_executive_manager';
+  | 'scaffold_executive_manager'
+  | 'executive_manager_scaffold_execution_with_materials';
 
 interface UseUserRolesReturn {
   roles: UserRole[];
@@ -72,7 +73,7 @@ export const useUserRoles = (): UseUserRolesReturn => {
     isGeneralManager: hasRole('general_manager'),
     isSalesManager: hasRole('sales_manager'),
     isFinanceManager: hasRole('finance_manager'),
-    isExecutiveManager: hasRole('scaffold_executive_manager'),
+    isExecutiveManager: hasRole('scaffold_executive_manager') || hasRole('executive_manager_scaffold_execution_with_materials'),
     loading,
     hasRole,
     hasAnyRole,
