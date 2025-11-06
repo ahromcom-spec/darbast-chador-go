@@ -64,6 +64,7 @@ const SalesDashboard = lazy(() => import("./pages/sales/SalesDashboard"));
 const FinanceOrders = lazy(() => import("./pages/finance/FinanceOrders"));
 const ReputationDashboard = lazy(() => import("./pages/ratings/ReputationDashboard"));
 const RatingTestPage = lazy(() => import("./pages/ratings/RatingTestPage"));
+const TopRatedUsers = lazy(() => import("./pages/ratings/TopRatedUsers"));
 const NotificationSettings = lazy(() => import("./pages/settings/NotificationSettings"));
 const InstallApp = lazy(() => import("./pages/settings/InstallApp"));
 const SelectLocation = lazy(() => import("./pages/user/SelectLocation"));
@@ -265,6 +266,11 @@ const App = () => {
               <Route path="/ratings/test" element={
                 <ProtectedRoute>
                   <RatingTestPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/ratings/top-users" element={
+                <ProtectedRoute>
+                  <TopRatedUsers />
                 </ProtectedRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

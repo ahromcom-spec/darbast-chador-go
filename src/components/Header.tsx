@@ -1,4 +1,4 @@
-import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award } from "lucide-react";
+import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
@@ -125,6 +125,16 @@ const Header = () => {
                   <span className="text-xs sm:text-sm">امتیازات</span>
                 </Button>
                 <Button
+                  data-tour="top-users"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/ratings/top-users")}
+                  className="gap-2 border-green-500/30 hover:border-green-500 bg-green-500/5 hover:bg-green-500/10 text-green-600"
+                >
+                  <TrendingUp className="h-3 w-3" />
+                  <span className="text-xs sm:text-sm">برترین‌ها</span>
+                </Button>
+                <Button
                   data-tour="profile"
                   variant="outline"
                   size="sm"
@@ -242,6 +252,15 @@ const Header = () => {
                 >
                   <Award className="h-4 w-4" />
                   <span>سیستم امتیازدهی</span>
+                </Button>
+                <Button
+                  data-tour="top-users"
+                  variant="outline"
+                  onClick={() => navigate("/ratings/top-users")}
+                  className="gap-2 border-green-500/30 hover:border-green-500 bg-green-500/5 hover:bg-green-500/10 text-green-600 font-medium"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  <span>برترین کاربران</span>
                 </Button>
                 <Button
                   data-tour="profile"
