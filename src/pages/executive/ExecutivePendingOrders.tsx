@@ -88,7 +88,7 @@ export default function ExecutivePendingOrders() {
           district_id,
           customer_id
         `)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'approved', 'in_progress'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -155,6 +155,63 @@ export default function ExecutivePendingOrders() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStartExecution = async (orderId: string, orderCode: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({ 
+          status: 'in_progress',
+          executed_by: user?.id,
+          execution_confirmed_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ اجرا آغاز شد',
+        description: `سفارش ${orderCode} به مرحله در حال اجرا منتقل شد.`
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error starting execution:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در شروع اجرا'
+      });
+    }
+  };
+
+  const handleCompleteExecution = async (orderId: string, orderCode: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({ 
+          status: 'completed',
+          executive_completion_date: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ اجرا تکمیل شد',
+        description: `سفارش ${orderCode} به مرحله در انتظار پرداخت منتقل شد.`
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error completing execution:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در تکمیل اجرا'
+      });
     }
   };
 
@@ -264,8 +321,18 @@ export default function ExecutivePendingOrders() {
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
-                <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
-                  در انتظار تایید
+                <Badge variant={
+                  order.status === 'pending' ? 'secondary' : 
+                  order.status === 'approved' ? 'default' : 
+                  'outline'
+                } className={
+                  order.status === 'pending' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :
+                  order.status === 'approved' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                  'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                }>
+                  {order.status === 'pending' ? 'در انتظار تایید' : 
+                   order.status === 'approved' ? 'آماده اجرا' : 
+                   'در حال اجرا'}
                 </Badge>
               </div>
               
@@ -315,17 +382,42 @@ export default function ExecutivePendingOrders() {
               <Eye className="h-4 w-4" />
               جزئیات کامل
             </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setSelectedOrder(order);
-                setActionType('approve');
-              }}
-              className="gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle className="h-4 w-4" />
-              تایید سفارش
-            </Button>
+            
+            {order.status === 'pending' && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setActionType('approve');
+                }}
+                className="gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4" />
+                تایید سفارش
+              </Button>
+            )}
+            
+            {order.status === 'approved' && (
+              <Button
+                size="sm"
+                onClick={() => handleStartExecution(order.id, order.code)}
+                className="gap-2 bg-blue-600 hover:bg-blue-700"
+              >
+                <CheckCircle className="h-4 w-4" />
+                شروع اجرا
+              </Button>
+            )}
+            
+            {order.status === 'in_progress' && (
+              <Button
+                size="sm"
+                onClick={() => handleCompleteExecution(order.id, order.code)}
+                className="gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4" />
+                اتمام اجرا
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -337,8 +429,8 @@ export default function ExecutivePendingOrders() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
-        title="سفارشات در انتظار تایید شما"
-        description={`${orders.length} سفارش نیاز به تایید مدیر اجرایی`}
+        title="کارتابل مدیر اجرایی"
+        description={`${orders.length} سفارش در انتظار تایید، در حال اجرا و آماده تحویل`}
         showBackButton={true}
         backTo="/executive"
       />

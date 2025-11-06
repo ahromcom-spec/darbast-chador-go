@@ -60,6 +60,7 @@ const ExecutiveCustomers = lazy(() => import("./pages/executive/ExecutiveCustome
 const ExecutivePendingOrders = lazy(() => import("./pages/executive/ExecutivePendingOrders"));
 const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
 const SalesPendingOrders = lazy(() => import("./pages/sales/SalesPendingOrders"));
+const SalesCompletedOrders = lazy(() => import("./pages/sales/SalesCompletedOrders"));
 const SalesDashboard = lazy(() => import("./pages/sales/SalesDashboard"));
 const FinanceOrders = lazy(() => import("./pages/finance/FinanceOrders"));
 const ReputationDashboard = lazy(() => import("./pages/ratings/ReputationDashboard"));
@@ -236,6 +237,11 @@ const App = () => {
               <Route path="/sales/pending-orders" element={
                 <ProtectedRoute>
                   <SalesPendingOrders />
+                </ProtectedRoute>
+              } />
+              <Route path="/sales/completed-orders" element={
+                <ProtectedRoute>
+                  <SalesCompletedOrders />
                 </ProtectedRoute>
               } />
               <Route path="/finance/orders" element={
