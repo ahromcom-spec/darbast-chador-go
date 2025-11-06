@@ -59,10 +59,8 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   }, [orderId]);
 
-  // اسکرول به پایین هنگام دریافت پیام جدید
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  // اسکرول به پایین فقط هنگام ارسال پیام جدید توسط کاربر
+  // (حذف اسکرول خودکار هنگام بارگذاری اولیه صفحه)
 
   const fetchMessages = async () => {
     try {
@@ -124,6 +122,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
   };
 
   const scrollToBottom = () => {
+    // اسکرول فقط زمانی که کاربر پیام ارسال می‌کند
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -144,6 +143,8 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       if (error) throw error;
 
       setNewMessage('');
+      // اسکرول به پایین فقط بعد از ارسال موفق پیام
+      scrollToBottom();
       toast({
         title: 'پیام ارسال شد',
         description: 'پیام شما با موفقیت ارسال شد'
