@@ -19,6 +19,7 @@ import {
 
 interface Address {
   id: string;
+  title?: string;
   address_line: string;
   province_id?: string;
   district_id?: string;
@@ -108,6 +109,7 @@ export default function MyProjectsHierarchy() {
         .from('locations')
         .select(`
           id,
+          title,
           address_line,
           province_id,
           district_id,
@@ -297,6 +299,11 @@ export default function MyProjectsHierarchy() {
                       <Folder className="h-5 w-5 text-muted-foreground" />
                     )}
                     <div>
+                      {address.title && (
+                        <p className="text-sm font-medium text-foreground mb-1">
+                          {address.title}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                         <h3 className="font-semibold">{address.address_line}</h3>
