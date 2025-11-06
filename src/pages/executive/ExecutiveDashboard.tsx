@@ -5,23 +5,57 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Users, ShoppingCart, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { StatCard } from '@/components/common/StatCard';
+import { Users, ShoppingCart, Clock, CheckCircle, AlertCircle, Package, Calendar, TrendingUp, PlayCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { ExecutiveOrdersSummary } from '@/components/executive/ExecutiveOrdersSummary';
+import { 
+  BarChart, 
+  Bar, 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
+
+interface MonthlyData {
+  month: string;
+  completed: number;
+  avgDays: number;
+}
+
+interface StatusData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+const COLORS = {
+  approved: 'hsl(var(--chart-1))',
+  inProgress: 'hsl(var(--chart-2))',
+  completed: 'hsl(var(--chart-3))',
+  paid: 'hsl(var(--chart-4))',
+};
 
 export default function ExecutiveDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  
   const { data: stats, isLoading } = useQuery({
     queryKey: ['executive-stats'],
     queryFn: async () => {
       const { data: orders, error } = await supabase
         .from('projects_v3')
-        .select('status, customer_id')
-        .in('status', ['approved', 'in_progress', 'completed']);
+        .select('*')
+        .in('status', ['approved', 'in_progress', 'completed', 'paid']);
 
       if (error) throw error;
 
@@ -37,14 +71,81 @@ export default function ExecutiveDashboard() {
       const uniqueCustomers = new Set(orders?.map(o => o.customer_id) || []).size;
       const pending = orders?.filter(o => o.status === 'approved').length || 0;
       const inProgress = orders?.filter(o => o.status === 'in_progress').length || 0;
-      const completed = orders?.filter(o => o.status === 'completed').length || 0;
+      const completed = orders?.filter(o => o.status === 'completed' || o.status === 'paid').length || 0;
+
+      // Calculate completion time
+      const completedWithDates = orders?.filter(
+        o => (o.status === 'completed' || o.status === 'paid') && 
+             o.execution_start_date && 
+             o.execution_end_date
+      ) || [];
+
+      let totalCompletionDays = 0;
+      completedWithDates.forEach(order => {
+        const start = new Date(order.execution_start_date!);
+        const end = new Date(order.execution_end_date!);
+        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        totalCompletionDays += days;
+      });
+
+      const avgCompletionDays = completedWithDates.length > 0 
+        ? Math.round(totalCompletionDays / completedWithDates.length) 
+        : 0;
+
+      // Status distribution
+      const statusData: StatusData[] = [
+        { name: 'آماده اجرا', value: pending, color: COLORS.approved },
+        { name: 'در حال اجرا', value: inProgress, color: COLORS.inProgress },
+        { name: 'تکمیل شده', value: completed, color: COLORS.completed },
+      ].filter(item => item.value > 0);
+
+      // Monthly completion data (last 6 months)
+      const monthlyMap = new Map<string, { completed: number; totalDays: number; count: number }>();
+      
+      completedWithDates.forEach(order => {
+        const endDate = new Date(order.execution_end_date!);
+        const monthKey = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        const start = new Date(order.execution_start_date!);
+        const days = Math.ceil((endDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (!monthlyMap.has(monthKey)) {
+          monthlyMap.set(monthKey, { completed: 0, totalDays: 0, count: 0 });
+        }
+        
+        const data = monthlyMap.get(monthKey)!;
+        data.completed += 1;
+        data.totalDays += days;
+        data.count += 1;
+      });
+
+      const monthNames = [
+        'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+        'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+      ];
+
+      const monthlyData: MonthlyData[] = Array.from(monthlyMap.entries())
+        .map(([key, value]) => {
+          const [year, month] = key.split('-');
+          return {
+            month: monthNames[parseInt(month) - 1],
+            completed: value.completed,
+            avgDays: Math.round(value.totalDays / value.count),
+          };
+        })
+        .slice(-6);
 
       return {
         totalCustomers: uniqueCustomers,
+        totalOrders: orders?.length || 0,
         pendingExecution: pending,
         inProgress,
         completed,
-        awaitingApproval: pendingApprovals?.length || 0
+        awaitingApproval: pendingApprovals?.length || 0,
+        avgCompletionDays,
+        totalCompletionDays,
+        statusData,
+        monthlyData,
       };
     }
   });
@@ -80,14 +181,14 @@ export default function ExecutiveDashboard() {
 
         <Card className="hover:shadow-md hover:-translate-y-1 transition-all duration-300 border-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">مشتریان فعال</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">کل پروژه‌ها</CardTitle>
             <div className="p-2 rounded-lg bg-purple-500/10">
-              <Users className="h-5 w-5 text-purple-600" />
+              <Package className="h-5 w-5 text-purple-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.totalCustomers || 0}</div>
-            <p className="text-xs text-muted-foreground mt-2">کل مشتریان با سفارش</p>
+            <div className="text-3xl font-bold">{stats?.totalOrders || 0}</div>
+            <p className="text-xs text-muted-foreground mt-2">تعداد کل سفارشات</p>
           </CardContent>
         </Card>
 
@@ -108,7 +209,7 @@ export default function ExecutiveDashboard() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">در حال اجرا</CardTitle>
             <div className="p-2 rounded-lg bg-blue-500/10">
-              <ShoppingCart className="h-5 w-5 text-blue-600" />
+              <PlayCircle className="h-5 w-5 text-blue-600" />
             </div>
           </CardHeader>
           <CardContent>
@@ -129,7 +230,105 @@ export default function ExecutiveDashboard() {
             <p className="text-xs text-muted-foreground mt-2">سفارشات اجرا شده</p>
           </CardContent>
         </Card>
+
+        <Card className="hover:shadow-md hover:-translate-y-1 transition-all duration-300 border-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">میانگین زمان تکمیل</CardTitle>
+            <div className="p-2 rounded-lg bg-indigo-500/10">
+              <Calendar className="h-5 w-5 text-indigo-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.avgCompletionDays || 0}</div>
+            <p className="text-xs text-muted-foreground mt-2">روز میانگین اجرا</p>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Performance Charts */}
+      {stats && stats.monthlyData && stats.monthlyData.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Status Distribution */}
+          {stats.statusData && stats.statusData.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>توزیع وضعیت پروژه‌ها</CardTitle>
+                <CardDescription>نمای کلی از وضعیت‌های مختلف سفارشات</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={stats.statusData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {stats.statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Monthly Completion Trend */}
+          <Card>
+            <CardHeader>
+              <CardTitle>روند تکمیل ماهانه</CardTitle>
+              <CardDescription>تعداد پروژه‌های تکمیل شده در ماه‌های اخیر</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={stats.monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="completed" fill={COLORS.completed} name="تعداد تکمیل شده" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Average Completion Time Trend */}
+      {stats && stats.monthlyData && stats.monthlyData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>روند میانگین زمان تکمیل</CardTitle>
+            <CardDescription>میانگین روزهای صرف شده برای تکمیل پروژه‌ها در هر ماه</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={stats.monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="avgDays" 
+                  stroke={COLORS.inProgress} 
+                  name="میانگین روز تکمیل"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Orders Summary */}
       <ExecutiveOrdersSummary />
