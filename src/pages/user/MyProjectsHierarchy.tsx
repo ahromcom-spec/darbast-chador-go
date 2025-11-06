@@ -14,7 +14,8 @@ import {
   Folder,
   FileText,
   Plus,
-  Building2
+  Building2,
+  ArrowRight
 } from 'lucide-react';
 
 interface Address {
@@ -253,6 +254,15 @@ export default function MyProjectsHierarchy() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <Button
+        variant="ghost"
+        onClick={() => navigate('/user/orders')}
+        className="mb-4 gap-2"
+      >
+        <ArrowRight className="h-4 w-4" />
+        بازگشت به سفارشات من
+      </Button>
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">پروژه‌های من</h1>
