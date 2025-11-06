@@ -544,7 +544,7 @@ export default function OrderDetail() {
                             {width && width !== 1 && <span>× عرض: {width} متر</span>}
                             <span>× ارتفاع: {height} متر</span>
                             <span className="text-muted-foreground">
-                              = {area.toFixed(2)} متر مکعب
+                              = {area % 1 === 0 ? area : area.toFixed(2)} متر مکعب
                             </span>
                           </div>
                         );
@@ -557,7 +557,7 @@ export default function OrderDetail() {
                 {parsedNotes?.totalArea && (
                   <div className="flex items-center gap-2 p-4 bg-primary/10 rounded-lg">
                     <span className="font-medium">متراژ کل:</span>
-                    <span className="text-lg font-bold">{parsedNotes.totalArea.toFixed(2)} متر مکعب</span>
+                    <span className="text-lg font-bold">{parsedNotes.totalArea % 1 === 0 ? parsedNotes.totalArea : parsedNotes.totalArea.toFixed(2)} متر مکعب</span>
                   </div>
                 )}
 
