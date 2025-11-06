@@ -132,6 +132,23 @@ export default function ExecutiveReady() {
 
   const handleStartExecution = async (orderId: string, orderCode: string) => {
     try {
+      // دریافت اطلاعات مشتری
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('customer_id')
+        .eq('id', orderId)
+        .single();
+
+      if (!orderData) throw new Error('سفارش یافت نشد');
+
+      // دریافت user_id مشتری
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('user_id')
+        .eq('id', orderData.customer_id)
+        .single();
+
+      // به‌روزرسانی وضعیت سفارش
       const { error } = await supabase
         .from('projects_v3')
         .update({ 
@@ -143,9 +160,20 @@ export default function ExecutiveReady() {
 
       if (error) throw error;
 
+      // ارسال اعلان به مشتری
+      if (customerData?.user_id) {
+        await supabase.rpc('send_notification', {
+          _user_id: customerData.user_id,
+          _title: '🚀 اجرای سفارش آغاز شد',
+          _body: `سفارش شما با کد ${orderCode} در حال اجرا قرار گرفت و تیم اجرایی مشغول انجام کار هستند.`,
+          _link: '/user/my-orders',
+          _type: 'info'
+        });
+      }
+
       toast({
         title: '✓ اجرا آغاز شد',
-        description: `سفارش ${orderCode} به مرحله در حال اجرا منتقل شد.`
+        description: `سفارش ${orderCode} به مرحله در حال اجرا منتقل شد و به مشتری اطلاع داده شد.`
       });
 
       fetchOrders();
