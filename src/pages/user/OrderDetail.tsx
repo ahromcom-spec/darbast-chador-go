@@ -37,7 +37,6 @@ interface Order {
   created_at: string;
   updated_at: string;
   address: string;
-  detailed_address?: string;
   notes?: string;
   rejection_reason?: string;
   approved_at?: string;
@@ -48,6 +47,7 @@ interface Order {
   payment_method?: string;
   customer_completion_date?: string;
   executive_completion_date?: string;
+  hierarchy_project_id?: string;
   subcategory?: {
     name: string;
     code: string;
@@ -62,6 +62,12 @@ interface Order {
   };
   district?: {
     name: string;
+  };
+  hierarchy_project?: {
+    location?: {
+      title: string | null;
+      address_line: string;
+    };
   };
 }
 
@@ -243,7 +249,10 @@ export default function OrderDetail() {
             service_type:service_types_v3(name, code)
           ),
           province:provinces(name, code),
-          district:districts(name)
+          district:districts(name),
+          hierarchy_project:projects_hierarchy!hierarchy_project_id(
+            location:locations(title, address_line)
+          )
         `)
         .eq("id", id)
         .eq("customer_id", customer.id)
@@ -431,6 +440,11 @@ export default function OrderDetail() {
                 <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="font-medium mb-1">آدرس</p>
+                  {order.hierarchy_project?.location?.title && (
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">
+                      {order.hierarchy_project.location.title}
+                    </p>
+                  )}
                   <p>{order.address}</p>
                   {order.province && (
                     <p className="text-sm text-muted-foreground mt-1">

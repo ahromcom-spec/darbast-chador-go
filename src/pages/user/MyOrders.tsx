@@ -16,12 +16,18 @@ interface Order {
   code: string;
   status: string;
   address: string;
-  detailed_address: string | null;
   created_at: string;
   notes: any;
+  hierarchy_project_id: string | null;
   subcategories?: { name: string };
   provinces?: { name: string };
   districts?: { name: string };
+  hierarchy_project?: {
+    location?: {
+      title: string | null;
+      address_line: string;
+    };
+  };
 }
 
 export default function MyOrders() {
@@ -57,12 +63,15 @@ export default function MyOrders() {
           code,
           status,
           address,
-          detailed_address,
           created_at,
           notes,
+          hierarchy_project_id,
           subcategories(name),
           provinces(name),
-          districts(name)
+          districts(name),
+          hierarchy_project:projects_hierarchy!hierarchy_project_id(
+            location:locations(title, address_line)
+          )
         `)
         .eq('customer_id', customerData.id)
         .order('created_at', { ascending: false });
@@ -102,10 +111,12 @@ export default function MyOrders() {
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm">{order.address}</p>
-                {order.detailed_address && (
-                  <p className="text-sm text-muted-foreground">{order.detailed_address}</p>
+                {order.hierarchy_project?.location?.title && (
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">
+                    {order.hierarchy_project.location.title}
+                  </p>
                 )}
+                <p className="text-sm">{order.address}</p>
               </div>
             </div>
             
@@ -178,10 +189,12 @@ export default function MyOrders() {
               </div>
               <div>
                 <p className="text-sm font-semibold mb-1">آدرس</p>
-                <p className="text-sm">{selectedOrder.address}</p>
-                {selectedOrder.detailed_address && (
-                  <p className="text-sm text-muted-foreground">{selectedOrder.detailed_address}</p>
+                {selectedOrder.hierarchy_project?.location?.title && (
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">
+                    {selectedOrder.hierarchy_project.location.title}
+                  </p>
                 )}
+                <p className="text-sm">{selectedOrder.address}</p>
               </div>
               <div>
                 <p className="text-sm font-semibold mb-1">تاریخ ثبت</p>
