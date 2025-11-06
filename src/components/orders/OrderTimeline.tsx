@@ -1,4 +1,4 @@
-import { Check, Clock, Package, PlayCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Check, Clock, Package, PlayCircle, CheckCircle2, XCircle, DollarSign, PackageX, PackageCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -35,7 +35,10 @@ const statusMap: Record<string, string> = {
   'pending_execution': 'در انتظار اجرا',
   'approved': 'تایید شده',
   'in_progress': 'در حال اجرا',
-  'completed': 'تکمیل شده',
+  'awaiting_payment': 'در انتظار پرداخت',
+  'awaiting_collection': 'سفارش در انتظار جمع‌آوری',
+  'collecting': 'سفارش در حال جمع‌آوری',
+  'completed': 'اتمام سفارش',
   'paid': 'پرداخت شده',
   'closed': 'بسته شده',
   'rejected': 'رد شده',
@@ -84,7 +87,7 @@ export const OrderTimeline = ({
       label: 'در انتظار تایید مدیران',
       icon: Clock,
       date: createdAt,
-      completed: ['pending_execution', 'approved', 'in_progress', 'completed', 'paid', 'closed'].includes(orderStatus),
+      completed: ['pending_execution', 'approved', 'in_progress', 'awaiting_payment', 'awaiting_collection', 'collecting', 'completed', 'paid', 'closed'].includes(orderStatus),
       active: orderStatus === 'pending',
       rejected: isRejected,
       details: isRejected 
@@ -98,7 +101,7 @@ export const OrderTimeline = ({
       label: 'در انتظار اجرا',
       icon: Clock,
       date: finalApprovalDate,
-      completed: ['in_progress', 'completed', 'paid', 'closed'].includes(orderStatus),
+      completed: ['in_progress', 'awaiting_payment', 'awaiting_collection', 'collecting', 'completed', 'paid', 'closed'].includes(orderStatus),
       active: orderStatus === 'pending_execution',
       details: 'سفارش تایید شد و منتظر شروع اجراست',
     },
@@ -107,22 +110,45 @@ export const OrderTimeline = ({
       label: 'در حال اجرا',
       icon: PlayCircle,
       date: executionStartDate,
-      completed: ['completed', 'paid', 'closed'].includes(orderStatus),
+      completed: ['awaiting_payment', 'awaiting_collection', 'collecting', 'completed', 'paid', 'closed'].includes(orderStatus),
       active: orderStatus === 'in_progress',
-      details: executionStartDate 
-        ? `شروع: ${new Date(executionStartDate).toLocaleDateString('fa-IR')}`
-        : undefined,
+      details: 'سفارش تایید شد و منتظر شروع اجراست',
+    },
+    {
+      status: 'awaiting_payment',
+      label: 'در انتظار پرداخت',
+      icon: DollarSign,
+      date: executionEndDate,
+      completed: ['awaiting_collection', 'collecting', 'completed', 'paid', 'closed'].includes(orderStatus),
+      active: orderStatus === 'awaiting_payment',
+      details: 'سفارش اجرا شده',
+    },
+    {
+      status: 'awaiting_collection',
+      label: 'سفارش در انتظار جمع‌آوری',
+      icon: PackageX,
+      date: undefined,
+      completed: ['collecting', 'completed', 'paid', 'closed'].includes(orderStatus),
+      active: orderStatus === 'awaiting_collection',
+      details: undefined,
+    },
+    {
+      status: 'collecting',
+      label: 'سفارش در حال جمع‌آوری',
+      icon: PackageCheck,
+      date: undefined,
+      completed: ['completed', 'paid', 'closed'].includes(orderStatus),
+      active: orderStatus === 'collecting',
+      details: undefined,
     },
     {
       status: 'completed',
-      label: 'تکمیل شده',
+      label: 'اتمام سفارش',
       icon: CheckCircle2,
-      date: executionEndDate || customerCompletionDate,
+      date: customerCompletionDate,
       completed: ['completed', 'paid', 'closed'].includes(orderStatus),
       active: orderStatus === 'completed',
-      details: executionEndDate 
-        ? `پایان: ${new Date(executionEndDate).toLocaleDateString('fa-IR')}`
-        : undefined,
+      details: undefined,
     },
   ];
 
