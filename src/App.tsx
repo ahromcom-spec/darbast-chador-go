@@ -229,6 +229,7 @@ const App = () => {
                 <Route path="in-progress" element={<ExecutiveInProgress />} />
                 <Route path="completed" element={<ExecutiveCompleted />} />
                 <Route path="all-orders" element={<ExecutiveOrders />} />
+                <Route path="orders" element={<ExecutiveOrders />} />
                 <Route path="pending-orders" element={<ExecutivePendingOrders />} />
                 <Route path="customers" element={<ExecutiveCustomers />} />
               </Route>

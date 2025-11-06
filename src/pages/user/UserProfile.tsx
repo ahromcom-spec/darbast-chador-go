@@ -82,6 +82,16 @@ export default function UserProfile() {
 
   const isManager = isCEO || isAdmin || isGeneralManager || isSalesManager || isFinanceManager || isExecutiveManager;
 
+  // Compute roles for display in ProfileHeader
+  const roles: string[] = [];
+  if (isAdmin) roles.push('مدیر سیستم');
+  if (isCEO) roles.push('مدیر عامل');
+  if (isGeneralManager) roles.push('مدیر ارشد');
+  if (isExecutiveManager) roles.push('مدیر اجرایی');
+  if (isSalesManager) roles.push('مدیر فروش');
+  if (isFinanceManager) roles.push('مدیر مالی');
+  if (isContractor) roles.push('پیمانکار');
+
   useEffect(() => {
     if (user) {
       fetchUserData();
@@ -243,7 +253,7 @@ const fetchOrders = async () => {
         />
 
         {/* Profile Header */}
-        <ProfileHeader user={user} fullName={fullName} />
+        <ProfileHeader user={user} fullName={fullName} roles={roles} />
 
         {/* Tabs */}
         <Tabs defaultValue="info" className="w-full">
