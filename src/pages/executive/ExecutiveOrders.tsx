@@ -74,6 +74,7 @@ export default function ExecutiveOrders() {
 
   const fetchOrders = async () => {
     try {
+      // 1) Read raw orders without deep nested joins (FKs may be missing)
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
@@ -87,33 +88,57 @@ export default function ExecutiveOrders() {
           customer_completion_date,
           executive_completion_date,
           created_at,
-          customer_id,
-          customers(
-            user_id,
-            profiles(full_name, phone_number)
-          )
+          customer_id
         `)
         .in('status', ['approved', 'in_progress', 'completed', 'paid'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const formattedOrders = data?.map((order: any) => ({
-        id: order.id,
-        code: order.code,
-        status: order.status,
-        address: order.address,
-        detailed_address: order.detailed_address,
-        execution_start_date: order.execution_start_date,
-        execution_end_date: order.execution_end_date,
-        customer_completion_date: order.customer_completion_date,
-        executive_completion_date: order.executive_completion_date,
-        created_at: order.created_at,
-        customer_name: order.customers?.profiles?.full_name || 'نامشخص',
-        customer_phone: order.customers?.profiles?.phone_number || ''
-      })) || [];
+      // 2) Enrich each order with customer profile safely
+      const ordersWithCustomer = await Promise.all(
+        (data || []).map(async (order: any) => {
+          let customerName = 'نامشخص';
+          let customerPhone = '';
 
-      setOrders(formattedOrders);
+          if (order.customer_id) {
+            const { data: customerData } = await supabase
+              .from('customers')
+              .select('user_id')
+              .eq('id', order.customer_id)
+              .maybeSingle();
+
+            const userId = customerData?.user_id;
+            if (userId) {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('full_name, phone_number')
+                .eq('user_id', userId)
+                .maybeSingle();
+
+              customerName = profileData?.full_name || 'نامشخص';
+              customerPhone = profileData?.phone_number || '';
+            }
+          }
+
+          return {
+            id: order.id,
+            code: order.code,
+            status: order.status,
+            address: order.address,
+            detailed_address: order.detailed_address,
+            execution_start_date: order.execution_start_date,
+            execution_end_date: order.execution_end_date,
+            customer_completion_date: order.customer_completion_date,
+            executive_completion_date: order.executive_completion_date,
+            created_at: order.created_at,
+            customer_name: customerName,
+            customer_phone: customerPhone,
+          } as Order;
+        })
+      );
+
+      setOrders(ordersWithCustomer);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -125,7 +150,6 @@ export default function ExecutiveOrders() {
       setLoading(false);
     }
   };
-
   const handleSetExecutionDate = async () => {
     if (!selectedOrder || !executionDate) {
       toast({
