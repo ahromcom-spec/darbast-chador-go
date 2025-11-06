@@ -11,6 +11,8 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
 
 interface Order {
   id: string;
@@ -429,23 +431,11 @@ export default function ExecutiveOrders() {
                     </div>
                     <p className="text-sm font-medium flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-blue-600" />
-                      {new Date(order.execution_start_date).toLocaleDateString('fa-IR', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {formatPersianDateTimeFull(order.execution_start_date)}
                     </p>
                     {order.execution_end_date && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        تا: {new Date(order.execution_end_date).toLocaleDateString('fa-IR', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        تا: {formatPersianDateTimeFull(order.execution_end_date)}
                       </p>
                     )}
                   </div>
@@ -590,13 +580,14 @@ export default function ExecutiveOrders() {
             </p>
             <div>
               <Label htmlFor="completion-date">تاریخ اتمام پروژه</Label>
-              <Input
-                id="completion-date"
-                type="date"
-                value={completionDate}
-                onChange={(e) => setCompletionDate(e.target.value)}
-                className="mt-2"
-              />
+              <div className="mt-2">
+                <PersianDatePicker
+                  value={completionDate}
+                  onChange={setCompletionDate}
+                  placeholder="انتخاب تاریخ اتمام"
+                  showTime={false}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -669,7 +660,7 @@ export default function ExecutiveOrders() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">تاریخ ثبت</Label>
-                  <p className="text-sm">{new Date(selectedOrder.created_at).toLocaleDateString('fa-IR')}</p>
+                  <p className="text-sm">{formatPersianDate(selectedOrder.created_at, { showDayOfWeek: true })}</p>
                 </div>
               </div>
 
@@ -680,11 +671,7 @@ export default function ExecutiveOrders() {
                     <Label className="text-xs text-muted-foreground">تاریخ شروع اجرا</Label>
                     <p className="text-sm flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-blue-600" />
-                      {new Date(selectedOrder.execution_start_date).toLocaleDateString('fa-IR', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
+                      {formatPersianDateTimeFull(selectedOrder.execution_start_date)}
                     </p>
                   </div>
                 </>
@@ -698,13 +685,13 @@ export default function ExecutiveOrders() {
                     {selectedOrder.customer_completion_date && (
                       <div className="flex items-center gap-2 text-sm">
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span>تایید مشتری: {new Date(selectedOrder.customer_completion_date).toLocaleDateString('fa-IR')}</span>
+                        <span>تایید مشتری: {formatPersianDate(selectedOrder.customer_completion_date, { showDayOfWeek: true })}</span>
                       </div>
                     )}
                     {selectedOrder.executive_completion_date && (
                       <div className="flex items-center gap-2 text-sm">
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span>تایید مدیر اجرایی: {new Date(selectedOrder.executive_completion_date).toLocaleDateString('fa-IR')}</span>
+                        <span>تایید مدیر اجرایی: {formatPersianDate(selectedOrder.executive_completion_date, { showDayOfWeek: true })}</span>
                       </div>
                     )}
                   </div>
@@ -745,23 +732,21 @@ export default function ExecutiveOrders() {
 
               <div className="space-y-2">
                 <Label htmlFor="edit-start-date">تاریخ شروع اجرا</Label>
-                <Input
-                  id="edit-start-date"
-                  type="datetime-local"
+                <PersianDatePicker
                   value={editStartDate}
-                  onChange={(e) => setEditStartDate(e.target.value)}
-                  required
+                  onChange={setEditStartDate}
+                  placeholder="انتخاب تاریخ و ساعت شروع"
+                  showTime={true}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="edit-end-date">تاریخ پایان اجرا (تخمینی)</Label>
-                <Input
-                  id="edit-end-date"
-                  type="datetime-local"
+                <PersianDatePicker
                   value={editEndDate}
-                  onChange={(e) => setEditEndDate(e.target.value)}
-                  required
+                  onChange={setEditEndDate}
+                  placeholder="انتخاب تاریخ و ساعت پایان"
+                  showTime={true}
                 />
               </div>
             </div>

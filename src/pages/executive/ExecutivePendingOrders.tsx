@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { formatPersianDate } from '@/lib/dateUtils';
 import {
   Dialog,
   DialogContent,
@@ -413,23 +415,21 @@ export default function ExecutivePendingOrders() {
 
               <div className="space-y-2">
                 <Label htmlFor="start-date">تاریخ شروع اجرا</Label>
-                <Input
-                  id="start-date"
-                  type="datetime-local"
+                <PersianDatePicker
                   value={executionStartDate}
-                  onChange={(e) => setExecutionStartDate(e.target.value)}
-                  required
+                  onChange={setExecutionStartDate}
+                  placeholder="انتخاب تاریخ و ساعت شروع"
+                  showTime={true}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="end-date">تاریخ پایان اجرا (تخمینی)</Label>
-                <Input
-                  id="end-date"
-                  type="datetime-local"
+                <PersianDatePicker
                   value={executionEndDate}
-                  onChange={(e) => setExecutionEndDate(e.target.value)}
-                  required
+                  onChange={setExecutionEndDate}
+                  placeholder="انتخاب تاریخ و ساعت پایان"
+                  showTime={true}
                 />
               </div>
             </div>
@@ -495,12 +495,9 @@ export default function ExecutivePendingOrders() {
 
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">تاریخ ثبت سفارش</Label>
-                <p className="text-sm">{new Date(selectedOrder.created_at).toLocaleDateString('fa-IR', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
+                <p className="text-sm">{formatPersianDate(selectedOrder.created_at, { 
+                  showDayOfWeek: true,
+                  showTime: true
                 })}</p>
               </div>
 
