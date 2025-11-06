@@ -228,6 +228,7 @@ export default function MyProjectsHierarchy() {
     const statusConfig: { [key: string]: { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' } } = {
       draft: { label: 'پیش‌نویس', variant: 'secondary' },
       pending: { label: 'در انتظار تایید', variant: 'outline' },
+      pending_execution: { label: 'در انتظار اجرا', variant: 'outline' },
       approved: { label: 'تایید شده', variant: 'default' },
       rejected: { label: 'رد شده', variant: 'destructive' },
       in_progress: { label: 'در حال اجرا', variant: 'default' },
