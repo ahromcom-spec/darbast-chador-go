@@ -8,6 +8,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ProgressMediaUploader } from '@/components/executive/ProgressMediaUploader';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/common/StatusBadge';
@@ -246,6 +247,13 @@ export default function ExecutiveCompleted() {
                   <p className="font-medium">{selectedOrder.detailed_address}</p>
                 </div>
               )}
+
+              {/* آپلود تصاویر - مرحله تکمیل شده */}
+              <ProgressMediaUploader
+                projectId={selectedOrder.id}
+                stage="completed"
+                stageName="تکمیل شده"
+              />
             </div>
           )}
         </DialogContent>
