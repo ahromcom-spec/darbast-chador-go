@@ -7,7 +7,8 @@ import {
   CheckCircle2,
   DollarSign,
   Package,
-  Users
+  Users,
+  FileText
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
@@ -73,11 +74,44 @@ export function ExecutiveSidebar() {
     refetchInterval: 30000
   });
 
+  // کارتابل: تعداد کل سفارشات نیازمند توجه (pending + approved + in_progress)
+  const { data: workbenchCount = 0 } = useQuery({
+    queryKey: ['executive-workbench-count'],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return 0;
+
+      // سفارشات در انتظار تایید (که approval row دارند)
+      const { data: pendingApprovals } = await supabase
+        .from('order_approvals')
+        .select('order_id')
+        .in('approver_role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
+        .is('approved_at', null);
+
+      const pendingApprovalCount = pendingApprovals?.length || 0;
+
+      // سفارشات approved + in_progress
+      const { count: activeCount } = await supabase
+        .from('projects_v3')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['approved', 'in_progress']);
+
+      return pendingApprovalCount + (activeCount || 0);
+    },
+    refetchInterval: 30000
+  });
+
   const navItems: NavItem[] = [
     {
       title: 'داشبورد',
       href: '/executive',
       icon: LayoutDashboard
+    },
+    {
+      title: 'کارتابل',
+      href: '/executive/pending-orders',
+      icon: FileText,
+      badge: workbenchCount
     },
     {
       title: 'در انتظار تایید',
