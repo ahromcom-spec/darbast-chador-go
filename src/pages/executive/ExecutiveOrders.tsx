@@ -93,7 +93,7 @@ export default function ExecutiveOrders() {
             profiles!inner(full_name, phone_number)
           )
         `)
-        .in('status', ['approved', 'scheduled', 'in_progress', 'paid'])
+        .in('status', ['approved', 'in_progress', 'completed', 'paid'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -165,12 +165,12 @@ export default function ExecutiveOrders() {
     }
   };
 
-  const handleConfirmExecution = async (orderId: string) => {
+  const handleStartExecution = async (orderId: string) => {
     try {
       const { error } = await supabase
         .from('projects_v3')
         .update({
-          status: 'completed',
+          status: 'in_progress',
           execution_confirmed_at: new Date().toISOString()
         })
         .eq('id', orderId);
@@ -179,12 +179,40 @@ export default function ExecutiveOrders() {
 
       toast({
         title: '✓ موفق',
-        description: 'اجرای سفارش با موفقیت تایید شد و به قسمت فروش ارسال شد'
+        description: 'سفارش به مرحله در حال اجرا منتقل شد'
       });
 
       fetchOrders();
     } catch (error) {
-      console.error('Error confirming execution:', error);
+      console.error('Error starting execution:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'شروع اجرا با خطا مواجه شد'
+      });
+    }
+  };
+
+  const handleCompleteExecution = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          status: 'completed',
+          executive_completion_date: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ موفق',
+        description: 'خدمات شما اجرا شده و در انتظار پرداخت می‌باشد'
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error completing execution:', error);
       toast({
         variant: 'destructive',
         title: 'خطا',
@@ -284,10 +312,10 @@ export default function ExecutiveOrders() {
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
-      approved: { label: 'تایید شده', className: 'bg-yellow-500/10 text-yellow-600' },
-      scheduled: { label: 'زمان‌بندی شده', className: 'bg-purple-500/10 text-purple-600' },
+      approved: { label: 'آماده اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
       in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
-      paid: { label: 'پرداخت شده - در انتظار اتمام', className: 'bg-green-500/10 text-green-600' }
+      completed: { label: 'اجرا شده - در انتظار پرداخت', className: 'bg-purple-500/10 text-purple-600' },
+      paid: { label: 'پرداخت شده - در انتظار فک', className: 'bg-green-500/10 text-green-600' }
     };
 
     const { label, className } = statusMap[status] || { label: status, className: '' };
@@ -335,11 +363,11 @@ export default function ExecutiveOrders() {
                 تایید شده ({orders.filter(o => o.status === 'approved').length})
               </Button>
               <Button
-                variant={statusFilter === 'scheduled' ? 'default' : 'outline'}
+                variant={statusFilter === 'completed' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setStatusFilter('scheduled')}
+                onClick={() => setStatusFilter('completed')}
               >
-                زمان‌بندی شده ({orders.filter(o => o.status === 'scheduled').length})
+                اجرا شده ({orders.filter(o => o.status === 'completed').length})
               </Button>
               <Button
                 variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
@@ -372,8 +400,8 @@ export default function ExecutiveOrders() {
           filteredOrders.map((order) => (
             <Card key={order.id} className={`hover:shadow-lg transition-all duration-200 ${
               order.status === 'approved' ? 'border-l-4 border-l-yellow-500' :
-              order.status === 'scheduled' ? 'border-l-4 border-l-purple-500' :
               order.status === 'in_progress' ? 'border-l-4 border-l-blue-500' :
+              order.status === 'completed' ? 'border-l-4 border-l-purple-500' :
               'border-l-4 border-l-green-500'
             }`}>
               <CardHeader>
@@ -444,27 +472,35 @@ export default function ExecutiveOrders() {
                 <div className="flex gap-2 flex-wrap pt-2">
                   {order.status === 'approved' && (
                     <Button
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setShowExecutionDialog(true);
-                      }}
+                      onClick={() => handleStartExecution(order.id)}
                       size="sm"
-                      className="gap-2"
+                      className="gap-2 bg-blue-600 hover:bg-blue-700"
                     >
-                      <Calendar className="h-4 w-4" />
-                      ثبت زمان اجرا
+                      <CheckCircle className="h-4 w-4" />
+                      شروع اجرا
                     </Button>
                   )}
 
                   {order.status === 'in_progress' && (
                     <Button
-                      onClick={() => handleConfirmExecution(order.id)}
+                      onClick={() => handleCompleteExecution(order.id)}
                       size="sm"
                       className="gap-2 bg-green-600 hover:bg-green-700"
                     >
                       <CheckCircle className="h-4 w-4" />
-                      تایید اجرا
+                      اتمام اجرا
                     </Button>
+                  )}
+
+                  {order.status === 'completed' && (
+                    <div className="bg-purple-50 dark:bg-purple-950/20 p-3 rounded-lg w-full">
+                      <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                        ✓ خدمات اجرا شده و در انتظار پرداخت می‌باشد
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        سفارش به بخش فروش ارجاع داده شده است
+                      </p>
+                    </div>
                   )}
 
                    <Button
