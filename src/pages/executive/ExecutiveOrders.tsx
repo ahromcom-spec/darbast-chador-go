@@ -88,9 +88,9 @@ export default function ExecutiveOrders() {
           executive_completion_date,
           created_at,
           customer_id,
-          customers!inner(
+          customers(
             user_id,
-            profiles!inner(full_name, phone_number)
+            profiles(full_name, phone_number)
           )
         `)
         .in('status', ['approved', 'in_progress', 'completed', 'paid'])

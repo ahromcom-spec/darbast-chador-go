@@ -41,9 +41,9 @@ export default function ExecutiveCustomers() {
           user_id,
           customer_code,
           created_at,
-          profiles!inner(full_name, phone_number)
+          profiles(full_name, phone_number)
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false});
 
       if (error) throw error;
 
