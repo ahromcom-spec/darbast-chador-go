@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -39,6 +39,9 @@ export default function ExecutiveOrders() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showEditScheduleDialog, setShowEditScheduleDialog] = useState(false);
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -227,6 +230,56 @@ export default function ExecutiveOrders() {
     }
   };
 
+  const handleUpdateSchedule = async () => {
+    if (!selectedOrder || !editStartDate || !editEndDate) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'لطفاً هر دو تاریخ شروع و پایان را مشخص کنید'
+      });
+      return;
+    }
+
+    if (new Date(editEndDate) <= new Date(editStartDate)) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'زمان پایان باید بعد از زمان شروع باشد'
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          execution_start_date: editStartDate,
+          execution_end_date: editEndDate
+        })
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ موفق',
+        description: 'زمان‌بندی اجرا با موفقیت به‌روزرسانی شد'
+      });
+
+      setSelectedOrder(null);
+      setEditStartDate('');
+      setEditEndDate('');
+      setShowEditScheduleDialog(false);
+      fetchOrders();
+    } catch (error) {
+      console.error('Error updating schedule:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'به‌روزرسانی زمان‌بندی با خطا مواجه شد'
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
       approved: { label: 'تایید شده', className: 'bg-yellow-500/10 text-yellow-600' },
@@ -357,15 +410,44 @@ export default function ExecutiveOrders() {
 
                 {order.execution_start_date && (
                   <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg">
-                    <div className="text-xs text-muted-foreground mb-1">زمان شروع اجرا</div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-xs text-muted-foreground">زمان شروع اجرا</div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setEditStartDate(order.execution_start_date || '');
+                          setEditEndDate(order.execution_end_date || '');
+                          setShowEditScheduleDialog(true);
+                        }}
+                        className="h-6 px-2 gap-1"
+                      >
+                        <Edit className="h-3 w-3" />
+                        ویرایش
+                      </Button>
+                    </div>
                     <p className="text-sm font-medium flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-blue-600" />
                       {new Date(order.execution_start_date).toLocaleDateString('fa-IR', {
                         year: 'numeric',
                         month: 'long',
-                        day: 'numeric'
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })}
                     </p>
+                    {order.execution_end_date && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        تا: {new Date(order.execution_end_date).toLocaleDateString('fa-IR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -633,6 +715,74 @@ export default function ExecutiveOrders() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
               بستن
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Schedule Dialog */}
+      <Dialog open={showEditScheduleDialog} onOpenChange={setShowEditScheduleDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>ویرایش زمان‌بندی اجرا</DialogTitle>
+            <DialogDescription>
+              زمان‌بندی اجرای سفارش {selectedOrder?.code} را ویرایش کنید
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedOrder && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">شماره تماس مشتری</Label>
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <Phone className="h-4 w-4 text-primary" />
+                  <span dir="ltr" className="font-medium">{selectedOrder.customer_phone}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  در صورت نیاز با مشتری تماس بگیرید و تغییرات را هماهنگ کنید
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-start-date">تاریخ شروع اجرا</Label>
+                <Input
+                  id="edit-start-date"
+                  type="datetime-local"
+                  value={editStartDate}
+                  onChange={(e) => setEditStartDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-end-date">تاریخ پایان اجرا (تخمینی)</Label>
+                <Input
+                  id="edit-end-date"
+                  type="datetime-local"
+                  value={editEndDate}
+                  onChange={(e) => setEditEndDate(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowEditScheduleDialog(false);
+                setEditStartDate('');
+                setEditEndDate('');
+              }}
+            >
+              انصراف
+            </Button>
+            <Button 
+              onClick={handleUpdateSchedule} 
+              disabled={!editStartDate || !editEndDate}
+            >
+              ذخیره تغییرات
             </Button>
           </DialogFooter>
         </DialogContent>
