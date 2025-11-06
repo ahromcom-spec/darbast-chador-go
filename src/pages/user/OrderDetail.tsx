@@ -33,6 +33,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { z } from "zod";
+import { formatPersianDate, formatPersianDateTimeFull } from "@/lib/dateUtils";
 
 interface Order {
   id: string;
@@ -495,13 +496,7 @@ export default function OrderDetail() {
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Calendar className="h-4 w-4" />
                   <span>
-                    ثبت شده: {new Date(order.created_at).toLocaleDateString("fa-IR", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit"
-                    })}
+                    ثبت شده: {formatPersianDateTimeFull(order.created_at)}
                   </span>
                 </div>
 
@@ -509,11 +504,7 @@ export default function OrderDetail() {
                   <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <CheckCircle className="h-4 w-4" />
                     <span>
-                      تایید شده: {new Date(order.approved_at).toLocaleDateString("fa-IR", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric"
-                      })}
+                      تایید شده: {formatPersianDate(order.approved_at, { showDayOfWeek: true })}
                     </span>
                   </div>
                 )}
@@ -741,7 +732,7 @@ export default function OrderDetail() {
                       در حال اجرا
                     </p>
                     <p className="text-sm text-blue-700 dark:text-blue-300">
-                      سفارش شما از تاریخ {new Date(order.execution_start_date).toLocaleDateString('fa-IR')} در حال اجراست.
+                      سفارش شما از تاریخ {formatPersianDate(order.execution_start_date, { showDayOfWeek: true })} در حال اجراست.
                     </p>
                   </div>
                 </div>
@@ -794,7 +785,7 @@ export default function OrderDetail() {
                             <Clock className="h-3 w-3 text-yellow-600" />
                           )}
                           <span>تایید شما: {order.customer_completion_date 
-                            ? new Date(order.customer_completion_date).toLocaleDateString('fa-IR')
+                            ? formatPersianDate(order.customer_completion_date, { showDayOfWeek: true })
                             : 'در انتظار'}</span>
                         </div>
                         <div className="flex items-center gap-1">
@@ -804,7 +795,7 @@ export default function OrderDetail() {
                             <Clock className="h-3 w-3 text-yellow-600" />
                           )}
                           <span>مدیر اجرایی: {order.executive_completion_date 
-                            ? new Date(order.executive_completion_date).toLocaleDateString('fa-IR')
+                            ? formatPersianDate(order.executive_completion_date, { showDayOfWeek: true })
                             : 'در انتظار'}</span>
                         </div>
                       </div>
@@ -1113,7 +1104,7 @@ export default function OrderDetail() {
                             <p className="text-xs text-muted-foreground">{rating.comment}</p>
                           )}
                           <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(rating.created_at).toLocaleDateString('fa-IR')}
+                            {formatPersianDate(rating.created_at, { showDayOfWeek: true })}
                           </p>
                         </div>
                       ))}

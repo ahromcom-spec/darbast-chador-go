@@ -10,6 +10,7 @@ import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { OrderWorkflowStatus } from '@/components/orders/OrderWorkflowStatus';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatPersianDate } from '@/lib/dateUtils';
 
 interface Order {
   id: string;
@@ -100,7 +101,7 @@ export default function MyOrders() {
               <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
               <CardDescription className="mt-1 flex items-center gap-2">
                 <Calendar className="h-3 w-3" />
-                {new Date(order.created_at).toLocaleDateString('fa-IR')}
+                {formatPersianDate(order.created_at, { showDayOfWeek: true })}
               </CardDescription>
             </div>
             {getStatusBadge(order.status)}
@@ -198,7 +199,7 @@ export default function MyOrders() {
               </div>
               <div>
                 <p className="text-sm font-semibold mb-1">تاریخ ثبت</p>
-                <p className="text-sm">{new Date(selectedOrder.created_at).toLocaleDateString('fa-IR')}</p>
+                <p className="text-sm">{formatPersianDate(selectedOrder.created_at, { showDayOfWeek: true })}</p>
               </div>
               {selectedOrder.subcategories && (
                 <div>

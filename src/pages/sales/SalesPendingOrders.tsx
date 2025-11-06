@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
+import { formatPersianDate } from '@/lib/dateUtils';
 
 interface Order {
   id: string;
@@ -372,7 +373,7 @@ export default function SalesPendingOrders() {
               </div>
               <div>
                 <Label className="font-semibold">تاریخ ثبت</Label>
-                <p className="text-sm">{new Date(selectedOrder.created_at).toLocaleDateString('fa-IR')}</p>
+                <p className="text-sm">{formatPersianDate(selectedOrder.created_at, { showDayOfWeek: true })}</p>
               </div>
               {selectedOrder.notes && (
                 <div>
