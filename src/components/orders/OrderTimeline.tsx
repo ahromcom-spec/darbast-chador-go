@@ -72,6 +72,15 @@ export const OrderTimeline = ({
       }, '')
     : approvedAt;
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('fa-IR'),
+      time: date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+    };
+  };
+
   const steps: TimelineStep[] = [
     {
       status: 'created',
@@ -103,7 +112,9 @@ export const OrderTimeline = ({
       date: finalApprovalDate,
       completed: ['in_progress', 'awaiting_payment', 'awaiting_collection', 'collecting', 'completed', 'paid', 'closed'].includes(orderStatus),
       active: orderStatus === 'pending_execution',
-      details: 'سفارش تایید شد و منتظر شروع اجراست',
+      details: executionStartDate 
+        ? `زمان شروع اجرا: ${formatDate(executionStartDate)?.date} - ${formatDate(executionStartDate)?.time}`
+        : 'سفارش تایید شد و منتظر شروع اجراست',
     },
     {
       status: 'in_progress',
@@ -112,7 +123,9 @@ export const OrderTimeline = ({
       date: executionStartDate,
       completed: ['awaiting_payment', 'awaiting_collection', 'collecting', 'completed', 'paid', 'closed'].includes(orderStatus),
       active: orderStatus === 'in_progress',
-      details: 'سفارش تایید شد و منتظر شروع اجراست',
+      details: executionEndDate 
+        ? `مدت زمان اجرا: تا ${formatDate(executionEndDate)?.date} - ${formatDate(executionEndDate)?.time}`
+        : undefined,
     },
     {
       status: 'awaiting_payment',
@@ -151,15 +164,6 @@ export const OrderTimeline = ({
       details: undefined,
     },
   ];
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return null;
-    const date = new Date(dateString);
-    return {
-      date: date.toLocaleDateString('fa-IR'),
-      time: date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
-    };
-  };
 
   return (
     <Card>

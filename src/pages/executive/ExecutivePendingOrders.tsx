@@ -46,6 +46,8 @@ export default function ExecutivePendingOrders() {
   const [actionType, setActionType] = useState<'approve' | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [executionStartDate, setExecutionStartDate] = useState('');
+  const [executionEndDate, setExecutionEndDate] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -103,6 +105,27 @@ export default function ExecutivePendingOrders() {
 
           if (!approvalData) return null;
 
+          // Fetch customer details
+          const { data: customerData } = await supabase
+            .from('customers')
+            .select('user_id')
+            .eq('id', order.customer_id)
+            .maybeSingle();
+
+          let customerName = 'نامشخص';
+          let customerPhone = '';
+
+          if (customerData?.user_id) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('full_name, phone_number')
+              .eq('user_id', customerData.user_id)
+              .maybeSingle();
+
+            customerName = profileData?.full_name || 'نامشخص';
+            customerPhone = profileData?.phone_number || '';
+          }
+
           return {
             id: order.id,
             code: order.code,
@@ -114,8 +137,8 @@ export default function ExecutivePendingOrders() {
             subcategory_id: order.subcategory_id,
             province_id: order.province_id,
             district_id: order.district_id,
-            customer_name: 'نامشخص',
-            customer_phone: ''
+            customer_name: customerName,
+            customer_phone: customerPhone
           };
         })
       );
@@ -136,6 +159,25 @@ export default function ExecutivePendingOrders() {
   const handleApprove = async () => {
     if (!selectedOrder || !user) return;
 
+    // Validate dates
+    if (!executionStartDate || !executionEndDate) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'لطفاً زمان شروع و پایان اجرا را مشخص کنید'
+      });
+      return;
+    }
+
+    if (new Date(executionEndDate) <= new Date(executionStartDate)) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'زمان پایان باید بعد از زمان شروع باشد'
+      });
+      return;
+    }
+
     try {
       // Find the pending approval row for executive manager for this order
       const { data: pendingApproval, error: fetchApprovalError } = await supabase
@@ -151,7 +193,7 @@ export default function ExecutivePendingOrders() {
       }
 
       // Record executive manager approval on the pending row
-      const { error } = await supabase
+      const { error: approvalError } = await supabase
         .from('order_approvals')
         .update({
           approver_user_id: user.id,
@@ -161,15 +203,29 @@ export default function ExecutivePendingOrders() {
         .eq('approver_role', pendingApproval.approver_role)
         .is('approved_at', null);
 
-      if (error) throw error;
+      if (approvalError) throw approvalError;
+
+      // Update execution dates in the order
+      const { error: updateError } = await supabase
+        .from('projects_v3')
+        .update({
+          execution_start_date: executionStartDate,
+          execution_end_date: executionEndDate,
+          executed_by: user.id
+        })
+        .eq('id', selectedOrder.id);
+
+      if (updateError) throw updateError;
 
       toast({
         title: '✓ تایید شما ثبت شد',
-        description: `تایید شما برای سفارش ${selectedOrder.code} ثبت شد.`
+        description: `تایید شما برای سفارش ${selectedOrder.code} با زمان‌بندی اجرا ثبت شد.`
       });
 
       setActionType(null);
       setSelectedOrder(null);
+      setExecutionStartDate('');
+      setExecutionEndDate('');
       fetchOrders();
     } catch (error) {
       console.error('Error approving order:', error);
@@ -329,22 +385,69 @@ export default function ExecutivePendingOrders() {
           if (!open) {
             setActionType(null);
             setSelectedOrder(null);
+            setExecutionStartDate('');
+            setExecutionEndDate('');
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>تایید سفارش</DialogTitle>
+            <DialogTitle>تایید سفارش و تعیین زمان‌بندی اجرا</DialogTitle>
             <DialogDescription>
-              آیا از تایید سفارش {selectedOrder?.code} اطمینان دارید؟
+              لطفاً زمان شروع و پایان اجرای سفارش {selectedOrder?.code} را مشخص کنید
             </DialogDescription>
           </DialogHeader>
+          
+          {selectedOrder && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">شماره تماس مشتری</Label>
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <Phone className="h-4 w-4 text-primary" />
+                  <span dir="ltr" className="font-medium">{selectedOrder.customer_phone}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  لطفاً با مشتری تماس بگیرید و زمان‌بندی را هماهنگ کنید
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="start-date">تاریخ شروع اجرا</Label>
+                <Input
+                  id="start-date"
+                  type="datetime-local"
+                  value={executionStartDate}
+                  onChange={(e) => setExecutionStartDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="end-date">تاریخ پایان اجرا (تخمینی)</Label>
+                <Input
+                  id="end-date"
+                  type="datetime-local"
+                  value={executionEndDate}
+                  onChange={(e) => setExecutionEndDate(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActionType(null)}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setActionType(null);
+                setExecutionStartDate('');
+                setExecutionEndDate('');
+              }}
+            >
               انصراف
             </Button>
-            <Button onClick={handleApprove}>
-              تایید نهایی
+            <Button onClick={handleApprove} disabled={!executionStartDate || !executionEndDate}>
+              تایید و ثبت زمان‌بندی
             </Button>
           </DialogFooter>
         </DialogContent>
