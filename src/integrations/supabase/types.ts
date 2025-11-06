@@ -2924,6 +2924,7 @@ export type Database = {
         | "security_manager"
         | "ceo"
         | "scaffold_executive_manager"
+        | "executive_manager_scaffold_execution_with_materials"
       inventory_tracking: "NONE" | "SN" | "SN_LOT"
       invoice_status: "DRAFT" | "SENT" | "PAID" | "VOID"
       media_type:
@@ -3140,6 +3141,7 @@ export const Constants = {
         "security_manager",
         "ceo",
         "scaffold_executive_manager",
+        "executive_manager_scaffold_execution_with_materials",
       ],
       inventory_tracking: ["NONE", "SN", "SN_LOT"],
       invoice_status: ["DRAFT", "SENT", "PAID", "VOID"],
