@@ -10,7 +10,8 @@ interface PersianDatePickerProps {
   value?: string; // ISO string
   onChange: (value: string) => void;
   placeholder?: string;
-  showTime?: boolean;
+  showTime?: boolean; // deprecated - use timeMode instead
+  timeMode?: 'none' | 'ampm' | 'full'; // none: no time, ampm: AM/PM only, full: hours and minutes
   disabled?: boolean;
 }
 
@@ -21,10 +22,22 @@ export function PersianDatePicker({
   onChange, 
   placeholder = 'انتخاب تاریخ',
   showTime = true,
+  timeMode,
   disabled = false
 }: PersianDatePickerProps) {
+  // Determine actual time mode
+  const actualTimeMode = timeMode || (showTime ? 'full' : 'none');
+  
+  const [ampm, setAmpm] = useState<'AM' | 'PM'>(() => {
+    if (value && actualTimeMode === 'ampm') {
+      const date = new Date(value);
+      return date.getHours() >= 12 ? 'PM' : 'AM';
+    }
+    return 'AM';
+  });
+
   const [time, setTime] = useState(() => {
-    if (value) {
+    if (value && actualTimeMode === 'full') {
       const date = new Date(value);
       return {
         hour: date.getHours().toString().padStart(2, '0'),
@@ -40,7 +53,18 @@ export function PersianDatePicker({
     if (!date) return;
     
     const newDate = new Date(date);
-    newDate.setHours(parseInt(time.hour), parseInt(time.minute), 0, 0);
+    
+    if (actualTimeMode === 'ampm') {
+      // Set time based on AM/PM - AM = 9:00, PM = 14:00
+      const hour = ampm === 'AM' ? 9 : 14;
+      newDate.setHours(hour, 0, 0, 0);
+    } else if (actualTimeMode === 'full') {
+      newDate.setHours(parseInt(time.hour), parseInt(time.minute), 0, 0);
+    } else {
+      // timeMode === 'none' - set to noon to avoid timezone issues
+      newDate.setHours(12, 0, 0, 0);
+    }
+    
     onChange(newDate.toISOString());
   };
 
@@ -55,13 +79,27 @@ export function PersianDatePicker({
     }
   };
 
+  const handleAmPmChange = (newAmPm: 'AM' | 'PM') => {
+    setAmpm(newAmPm);
+    
+    if (selectedDate) {
+      const newDate = new Date(selectedDate);
+      const hour = newAmPm === 'AM' ? 9 : 14;
+      newDate.setHours(hour, 0, 0, 0);
+      onChange(newDate.toISOString());
+    }
+  };
+
   const formatDisplayDate = () => {
     if (!selectedDate) return placeholder;
     
     const dayOfWeek = persianDays[selectedDate.getDay()];
     const jalaliDate = formatJalali(selectedDate, 'yyyy/MM/dd');
     
-    if (showTime) {
+    if (actualTimeMode === 'ampm') {
+      const ampmText = ampm === 'AM' ? 'قبل از ظهر' : 'بعد از ظهر';
+      return `${dayOfWeek} ${jalaliDate} - ${ampmText}`;
+    } else if (actualTimeMode === 'full') {
       return `${dayOfWeek} ${jalaliDate} ساعت ${time.hour}:${time.minute}`;
     }
     return `${dayOfWeek} ${jalaliDate}`;
@@ -90,7 +128,32 @@ export function PersianDatePicker({
           initialFocus
           className="p-3 pointer-events-auto"
         />
-        {showTime && (
+        {actualTimeMode === 'ampm' && (
+          <div className="border-t p-3 space-y-2">
+            <div className="text-sm font-medium text-center mb-2">انتخاب زمان</div>
+            <div className="flex items-center justify-center gap-3">
+              <Button
+                type="button"
+                variant={ampm === 'AM' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleAmPmChange('AM')}
+                className="flex-1"
+              >
+                قبل از ظهر
+              </Button>
+              <Button
+                type="button"
+                variant={ampm === 'PM' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleAmPmChange('PM')}
+                className="flex-1"
+              >
+                بعد از ظهر
+              </Button>
+            </div>
+          </div>
+        )}
+        {actualTimeMode === 'full' && (
           <div className="border-t p-3 space-y-2">
             <div className="text-sm font-medium text-center mb-2">انتخاب ساعت</div>
             <div className="flex items-center justify-center gap-2" dir="ltr">

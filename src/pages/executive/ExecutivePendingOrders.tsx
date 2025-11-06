@@ -418,8 +418,8 @@ export default function ExecutivePendingOrders() {
                 <PersianDatePicker
                   value={executionStartDate}
                   onChange={setExecutionStartDate}
-                  placeholder="انتخاب تاریخ و ساعت شروع"
-                  showTime={true}
+                  placeholder="انتخاب تاریخ شروع"
+                  timeMode="ampm"
                 />
               </div>
 
@@ -428,8 +428,8 @@ export default function ExecutivePendingOrders() {
                 <PersianDatePicker
                   value={executionEndDate}
                   onChange={setExecutionEndDate}
-                  placeholder="انتخاب تاریخ و ساعت پایان"
-                  showTime={true}
+                  placeholder="انتخاب تاریخ پایان"
+                  timeMode="none"
                 />
               </div>
             </div>

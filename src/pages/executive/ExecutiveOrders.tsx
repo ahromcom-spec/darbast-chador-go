@@ -585,7 +585,7 @@ export default function ExecutiveOrders() {
                   value={completionDate}
                   onChange={setCompletionDate}
                   placeholder="انتخاب تاریخ اتمام"
-                  showTime={false}
+                  timeMode="none"
                 />
               </div>
             </div>
@@ -735,8 +735,8 @@ export default function ExecutiveOrders() {
                 <PersianDatePicker
                   value={editStartDate}
                   onChange={setEditStartDate}
-                  placeholder="انتخاب تاریخ و ساعت شروع"
-                  showTime={true}
+                  placeholder="انتخاب تاریخ شروع"
+                  timeMode="ampm"
                 />
               </div>
 
@@ -745,8 +745,8 @@ export default function ExecutiveOrders() {
                 <PersianDatePicker
                   value={editEndDate}
                   onChange={setEditEndDate}
-                  placeholder="انتخاب تاریخ و ساعت پایان"
-                  showTime={true}
+                  placeholder="انتخاب تاریخ پایان"
+                  timeMode="none"
                 />
               </div>
             </div>
