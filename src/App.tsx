@@ -76,6 +76,7 @@ const SelectLocation = lazy(() => import("./pages/user/SelectLocation"));
 const MyOrders = lazy(() => import("./pages/user/MyOrders"));
 const MyProjectsHierarchy = lazy(() => import("./pages/user/MyProjectsHierarchy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
 
 
 const queryClient = new QueryClient({
@@ -209,6 +210,7 @@ const App = () => {
                 <Route path="staff" element={<StaffManagement />} />
                 <Route path="staff-requests" element={<StaffRequests />} />
                 <Route path="whitelist" element={<WhitelistManagement />} />
+                <Route path="test-order" element={<TestOrderCreator />} />
               </Route>
               <Route path="/ceo" element={<CEOLayout />}>
                 <Route index element={<CEODashboardEnhanced />} />
@@ -217,6 +219,7 @@ const App = () => {
                 <Route path="contractor-verifications" element={<ContractorVerifications />} />
                 <Route path="staff-verifications" element={<StaffVerifications />} />
                 <Route path="orders" element={<CEOOrders />} />
+                <Route path="test-order" element={<TestOrderCreator />} />
               </Route>
               <Route path="/executive" element={
                 <ProtectedRoute>
