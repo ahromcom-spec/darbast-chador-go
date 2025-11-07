@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Users } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
@@ -12,7 +12,22 @@ const navItems = [
   {
     title: 'کارتابل اجرایی',
     href: '/executive/pending-orders',
-    icon: ShoppingCart
+    icon: ClipboardCheck
+  },
+  {
+    title: 'آماده اجرا',
+    href: '/executive/ready',
+    icon: Play
+  },
+  {
+    title: 'در حال اجرا',
+    href: '/executive/in-progress',
+    icon: Loader
+  },
+  {
+    title: 'تکمیل شده',
+    href: '/executive/completed',
+    icon: CheckCircle
   },
   {
     title: 'همه سفارشات',
