@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CheckCircle2, Eye, Search, MapPin, Phone, User, Calendar, Clock } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CheckCircle2, Eye, Search, MapPin, Phone, User, Calendar, Clock, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -26,8 +27,16 @@ interface Order {
   execution_start_date: string | null;
   execution_end_date: string | null;
   execution_confirmed_at: string | null;
+  execution_stage: string | null;
   notes: any;
 }
+
+const stageLabels: Record<string, string> = {
+  awaiting_payment: 'در انتظار پرداخت',
+  order_executed: 'سفارش اجرا شده',
+  awaiting_collection: 'سفارش در انتظار جمع‌آوری',
+  in_collection: 'سفارش در حال جمع‌آوری'
+};
 
 export default function ExecutiveInProgress() {
   const { user } = useAuth();
@@ -36,6 +45,7 @@ export default function ExecutiveInProgress() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [updatingStage, setUpdatingStage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
@@ -72,6 +82,7 @@ export default function ExecutiveInProgress() {
           execution_start_date,
           execution_end_date,
           execution_confirmed_at,
+          execution_stage,
           notes,
           customer_id
         `)
@@ -120,6 +131,37 @@ export default function ExecutiveInProgress() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStageUpdate = async (orderId: string, newStage: string, orderCode: string) => {
+    setUpdatingStage(true);
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({ 
+          execution_stage: newStage as 'awaiting_payment' | 'order_executed' | 'awaiting_collection' | 'in_collection',
+          execution_stage_updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ مرحله به‌روزرسانی شد',
+        description: `مرحله سفارش ${orderCode} به "${stageLabels[newStage]}" تغییر یافت.`
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error updating stage:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در به‌روزرسانی مرحله'
+      });
+    } finally {
+      setUpdatingStage(false);
     }
   };
 
@@ -272,6 +314,35 @@ export default function ExecutiveInProgress() {
                     </div>
                   )}
                 </div>
+
+                {order.execution_stage && (
+                  <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <RefreshCw className="h-4 w-4 text-purple-600" />
+                        <span className="font-medium">مرحله فعلی:</span>
+                        <span className="text-purple-700 dark:text-purple-300 font-medium">
+                          {stageLabels[order.execution_stage] || order.execution_stage}
+                        </span>
+                      </div>
+                      <Select
+                        value={order.execution_stage}
+                        onValueChange={(value) => handleStageUpdate(order.id, value, order.code)}
+                        disabled={updatingStage}
+                      >
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="awaiting_payment">در انتظار پرداخت</SelectItem>
+                          <SelectItem value="order_executed">سفارش اجرا شده</SelectItem>
+                          <SelectItem value="awaiting_collection">در انتظار جمع‌آوری</SelectItem>
+                          <SelectItem value="in_collection">در حال جمع‌آوری</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-2 flex-wrap">
                   <Button

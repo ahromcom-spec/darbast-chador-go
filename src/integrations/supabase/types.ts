@@ -1359,6 +1359,8 @@ export type Database = {
           executed_by: string | null
           execution_confirmed_at: string | null
           execution_end_date: string | null
+          execution_stage: Database["public"]["Enums"]["execution_stage"] | null
+          execution_stage_updated_at: string | null
           execution_start_date: string | null
           executive_completion_date: string | null
           financial_confirmed_at: string | null
@@ -1392,6 +1394,10 @@ export type Database = {
           executed_by?: string | null
           execution_confirmed_at?: string | null
           execution_end_date?: string | null
+          execution_stage?:
+            | Database["public"]["Enums"]["execution_stage"]
+            | null
+          execution_stage_updated_at?: string | null
           execution_start_date?: string | null
           executive_completion_date?: string | null
           financial_confirmed_at?: string | null
@@ -1425,6 +1431,10 @@ export type Database = {
           executed_by?: string | null
           execution_confirmed_at?: string | null
           execution_end_date?: string | null
+          execution_stage?:
+            | Database["public"]["Enums"]["execution_stage"]
+            | null
+          execution_stage_updated_at?: string | null
           execution_start_date?: string | null
           executive_completion_date?: string | null
           financial_confirmed_at?: string | null
@@ -2742,6 +2752,8 @@ export type Database = {
           executed_by: string | null
           execution_confirmed_at: string | null
           execution_end_date: string | null
+          execution_stage: Database["public"]["Enums"]["execution_stage"] | null
+          execution_stage_updated_at: string | null
           execution_start_date: string | null
           executive_completion_date: string | null
           financial_confirmed_at: string | null
@@ -2925,6 +2937,11 @@ export type Database = {
         | "ceo"
         | "scaffold_executive_manager"
         | "executive_manager_scaffold_execution_with_materials"
+      execution_stage:
+        | "awaiting_payment"
+        | "order_executed"
+        | "awaiting_collection"
+        | "in_collection"
       inventory_tracking: "NONE" | "SN" | "SN_LOT"
       invoice_status: "DRAFT" | "SENT" | "PAID" | "VOID"
       media_type:
@@ -3142,6 +3159,12 @@ export const Constants = {
         "ceo",
         "scaffold_executive_manager",
         "executive_manager_scaffold_execution_with_materials",
+      ],
+      execution_stage: [
+        "awaiting_payment",
+        "order_executed",
+        "awaiting_collection",
+        "in_collection",
       ],
       inventory_tracking: ["NONE", "SN", "SN_LOT"],
       invoice_status: ["DRAFT", "SENT", "PAID", "VOID"],

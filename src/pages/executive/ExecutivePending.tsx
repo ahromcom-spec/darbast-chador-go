@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckCircle, Eye, Search, MapPin, Phone, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -45,6 +46,7 @@ export default function ExecutivePending() {
   const [searchTerm, setSearchTerm] = useState('');
   const [executionStartDate, setExecutionStartDate] = useState('');
   const [executionEndDate, setExecutionEndDate] = useState('');
+  const [executionStage, setExecutionStage] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -156,6 +158,15 @@ export default function ExecutivePending() {
       return;
     }
 
+    if (!executionStage) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'لطفاً مرحله اجرا را انتخاب کنید'
+      });
+      return;
+    }
+
     if (new Date(executionEndDate) <= new Date(executionStartDate)) {
       toast({
         variant: 'destructive',
@@ -205,6 +216,8 @@ export default function ExecutivePending() {
           execution_start_date: executionStartDate,
           execution_end_date: executionEndDate,
           executed_by: user.id,
+          execution_stage: executionStage as 'awaiting_payment' | 'order_executed' | 'awaiting_collection' | 'in_collection',
+          execution_stage_updated_at: new Date().toISOString(),
           ...(allApproved && { 
             status: 'approved',
             approved_by: user.id,
@@ -251,6 +264,7 @@ export default function ExecutivePending() {
       setSelectedOrder(null);
       setExecutionStartDate('');
       setExecutionEndDate('');
+      setExecutionStage('');
       fetchOrders();
     } catch (error) {
       console.error('Error approving order:', error);
@@ -420,6 +434,21 @@ export default function ExecutivePending() {
                   placeholder="انتخاب تاریخ پایان"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label>مرحله اجرا</Label>
+                <Select value={executionStage} onValueChange={setExecutionStage}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="انتخاب مرحله اجرا" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="awaiting_payment">در انتظار پرداخت</SelectItem>
+                    <SelectItem value="order_executed">سفارش اجرا شده</SelectItem>
+                    <SelectItem value="awaiting_collection">سفارش در انتظار جمع‌آوری</SelectItem>
+                    <SelectItem value="in_collection">سفارش در حال جمع‌آوری</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
 
@@ -431,6 +460,7 @@ export default function ExecutivePending() {
                 setSelectedOrder(null);
                 setExecutionStartDate('');
                 setExecutionEndDate('');
+                setExecutionStage('');
               }}
             >
               انصراف
