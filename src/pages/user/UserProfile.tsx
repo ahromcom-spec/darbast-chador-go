@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { TicketForm } from '@/components/profile/TicketForm';
 import { ContractorForm } from '@/components/profile/ContractorForm';
 import { NewContractorForm } from '@/components/profile/NewContractorForm';
+import { Suspense } from 'react';
 import { useContractorRole } from '@/hooks/useContractorRole';
 import { useCEORole } from '@/hooks/useCEORole';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -361,24 +362,30 @@ const fetchOrders = async () => {
 
           {/* Quick Actions Tab */}
           <TabsContent value="actions" className="space-y-6 mt-4">
-            {/* Support Ticket Section */}
-            <div className="space-y-4">
-              <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                <span>ثبت تیکت پشتیبانی</span>
-              </h3>
-              <TicketForm userId={user.id} />
-            </div>
-
-            {/* Contractor Registration Section */}
-            {!isContractor && (
-              <div className="space-y-4 pt-6 border-t">
-                <NewContractorForm 
-                  userId={user.id} 
-                  userEmail={user.email || ''} 
-                />
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-12">
+                <LoadingSpinner size="md" text="در حال بارگذاری..." />
               </div>
-            )}
+            }>
+              {/* Support Ticket Section */}
+              <div className="space-y-4">
+                <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                  <span>ثبت تیکت پشتیبانی</span>
+                </h3>
+                <TicketForm userId={user.id} />
+              </div>
+
+              {/* Contractor Registration Section */}
+              {!isContractor && (
+                <div className="space-y-4 pt-6 border-t">
+                  <NewContractorForm 
+                    userId={user.id} 
+                    userEmail={user.email || ''} 
+                  />
+                </div>
+              )}
+            </Suspense>
           </TabsContent>
         </Tabs>
 
