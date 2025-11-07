@@ -34,21 +34,33 @@ export default function ExecutiveCustomers() {
   const { data: customers, isLoading } = useQuery({
     queryKey: ['executive-customers'],
     queryFn: async () => {
+      // 1) Fetch raw customers data
       const { data, error } = await supabase
         .from('customers')
-        .select(`
-          id,
-          user_id,
-          customer_code,
-          created_at,
-          profiles(full_name, phone_number)
-        `)
-        .order('created_at', { ascending: false});
+        .select('id, user_id, customer_code, created_at')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
+      // 2) Enrich each customer with profile and orders safely
       const customersWithOrders = await Promise.all(
         (data || []).map(async (customer: any) => {
+          let fullName = 'نامشخص';
+          let phoneNumber = '';
+
+          // Fetch profile separately
+          if (customer.user_id) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('full_name, phone_number')
+              .eq('user_id', customer.user_id)
+              .maybeSingle();
+
+            fullName = profileData?.full_name || 'نامشخص';
+            phoneNumber = profileData?.phone_number || '';
+          }
+
+          // Fetch orders for this customer
           const { data: orders } = await supabase
             .from('projects_v3')
             .select('status')
@@ -58,8 +70,8 @@ export default function ExecutiveCustomers() {
             id: customer.id,
             user_id: customer.user_id,
             customer_code: customer.customer_code,
-            full_name: customer.profiles?.full_name || 'نامشخص',
-            phone_number: customer.profiles?.phone_number || '',
+            full_name: fullName,
+            phone_number: phoneNumber,
             created_at: customer.created_at,
             total_orders: orders?.length || 0,
             pending_orders: orders?.filter(o => o.status === 'approved').length || 0,
