@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award, TrendingUp, ShoppingCart, FolderKanban, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ahromLogo from "@/assets/ahrom-logo.png";
 import contactButton from "@/assets/contact-button.png";
