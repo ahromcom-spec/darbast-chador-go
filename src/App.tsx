@@ -62,6 +62,9 @@ const ExecutivePending = lazy(() => import("./pages/executive/ExecutivePending")
 const ExecutiveReady = lazy(() => import("./pages/executive/ExecutiveReady"));
 const ExecutiveInProgress = lazy(() => import("./pages/executive/ExecutiveInProgress"));
 const ExecutiveCompleted = lazy(() => import("./pages/executive/ExecutiveCompleted"));
+const ExecutiveStageAwaitingPayment = lazy(() => import("./pages/executive/ExecutiveStageAwaitingPayment"));
+const ExecutiveStageOrderExecuted = lazy(() => import("./pages/executive/ExecutiveStageOrderExecuted"));
+const ExecutiveStageAwaitingCollection = lazy(() => import("./pages/executive/ExecutiveStageAwaitingCollection"));
 const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
 const SalesPendingOrders = lazy(() => import("./pages/sales/SalesPendingOrders"));
 const SalesCompletedOrders = lazy(() => import("./pages/sales/SalesCompletedOrders"));
@@ -244,6 +247,9 @@ const App = () => {
                 <Route path="pending" element={<ExecutivePending />} />
                 <Route path="ready" element={<ExecutiveReady />} />
                 <Route path="in-progress" element={<ExecutiveInProgress />} />
+                <Route path="stage-awaiting-payment" element={<ExecutiveStageAwaitingPayment />} />
+                <Route path="stage-order-executed" element={<ExecutiveStageOrderExecuted />} />
+                <Route path="stage-awaiting-collection" element={<ExecutiveStageAwaitingCollection />} />
                 <Route path="completed" element={<ExecutiveCompleted />} />
                 <Route path="all-orders" element={<ExecutiveOrders />} />
                 <Route path="orders" element={<ExecutiveOrders />} />

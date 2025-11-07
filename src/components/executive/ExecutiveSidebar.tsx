@@ -8,7 +8,10 @@ import {
   DollarSign,
   Package,
   Users,
-  FileText
+  FileText,
+  Banknote,
+  CheckSquare,
+  PackageOpen
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
@@ -74,6 +77,45 @@ export function ExecutiveSidebar() {
     refetchInterval: 30000
   });
 
+  // تعداد سفارشات در انتظار پرداخت
+  const { data: awaitingPaymentCount = 0 } = useQuery({
+    queryKey: ['executive-awaiting-payment-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('projects_v3')
+        .select('*', { count: 'exact', head: true })
+        .eq('execution_stage', 'awaiting_payment');
+      return count || 0;
+    },
+    refetchInterval: 30000
+  });
+
+  // تعداد سفارشات اجرا شده
+  const { data: orderExecutedCount = 0 } = useQuery({
+    queryKey: ['executive-order-executed-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('projects_v3')
+        .select('*', { count: 'exact', head: true })
+        .eq('execution_stage', 'order_executed');
+      return count || 0;
+    },
+    refetchInterval: 30000
+  });
+
+  // تعداد سفارشات در انتظار جمع‌آوری
+  const { data: awaitingCollectionCount = 0 } = useQuery({
+    queryKey: ['executive-awaiting-collection-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('projects_v3')
+        .select('*', { count: 'exact', head: true })
+        .eq('execution_stage', 'awaiting_collection');
+      return count || 0;
+    },
+    refetchInterval: 30000
+  });
+
   // کارتابل: تعداد کل سفارشات نیازمند توجه (pending + approved + in_progress)
   const { data: workbenchCount = 0 } = useQuery({
     queryKey: ['executive-workbench-count'],
@@ -133,6 +175,24 @@ export function ExecutiveSidebar() {
     },
     {
       title: 'در انتظار پرداخت',
+      href: '/executive/stage-awaiting-payment',
+      icon: Banknote,
+      badge: awaitingPaymentCount
+    },
+    {
+      title: 'سفارش اجرا شده',
+      href: '/executive/stage-order-executed',
+      icon: CheckSquare,
+      badge: orderExecutedCount
+    },
+    {
+      title: 'در انتظار جمع‌آوری',
+      href: '/executive/stage-awaiting-collection',
+      icon: PackageOpen,
+      badge: awaitingCollectionCount
+    },
+    {
+      title: 'تسویه شده',
       href: '/executive/completed',
       icon: DollarSign,
       badge: completedCount
