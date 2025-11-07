@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { usePhoneWhitelist } from '@/hooks/usePhoneWhitelist';
+import { useOrganizationalPositions } from '@/hooks/useOrganizationalPositions';
+import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,51 +16,73 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Trash2, Edit } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-
-const AVAILABLE_ROLES = [
-  { value: 'contractor', label: 'پیمانکار' },
-  { value: 'operations_manager', label: 'مدیر عملیات' },
-  { value: 'scaffold_supervisor', label: 'سرپرست داربست' },
-  { value: 'warehouse_manager', label: 'مدیر انبار' },
-  { value: 'finance_manager', label: 'مدیر مالی' },
-  { value: 'general_manager', label: 'مدیر کل' },
-];
+import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export const PhoneWhitelistManagement = () => {
   usePageTitle('مدیریت دسترسی شماره‌ها');
 
   const { whitelist, loading, addToWhitelist, removeFromWhitelist, updateWhitelist } =
     usePhoneWhitelist();
+  const { positions, loading: positionsLoading } = useOrganizationalPositions();
+  const { serviceTypes, loading: servicesLoading } = useServiceTypesWithSubcategories();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any>(null);
 
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [selectedPosition, setSelectedPosition] = useState('');
+  const [selectedService, setSelectedService] = useState('');
   const [notes, setNotes] = useState('');
 
   const handleAdd = async () => {
-    if (!phoneNumber || selectedRoles.length === 0) return;
+    if (!phoneNumber || !selectedPosition) return;
 
-    const result = await addToWhitelist(phoneNumber, selectedRoles, notes);
+    // ترکیب سمت و خدمت برای ایجاد نقش
+    const positionName = positions.find(p => p.id === selectedPosition)?.name || '';
+    const serviceName = selectedService === 'all' 
+      ? 'کل خدمات' 
+      : serviceTypes
+          .flatMap(st => st.subcategories)
+          .find(sub => sub.id === selectedService)?.name || '';
+    
+    const combinedRole = serviceName ? `${positionName} - ${serviceName}` : positionName;
+    
+    const result = await addToWhitelist(phoneNumber, [combinedRole], notes);
     if (result.success) {
       setIsAddDialogOpen(false);
       setPhoneNumber('');
-      setSelectedRoles([]);
+      setSelectedPosition('');
+      setSelectedService('');
       setNotes('');
     }
   };
 
   const handleEdit = async () => {
-    if (!editingEntry || selectedRoles.length === 0) return;
+    if (!editingEntry || !selectedPosition) return;
 
-    const result = await updateWhitelist(editingEntry.id, selectedRoles, notes);
+    const positionName = positions.find(p => p.id === selectedPosition)?.name || '';
+    const serviceName = selectedService === 'all' 
+      ? 'کل خدمات' 
+      : serviceTypes
+          .flatMap(st => st.subcategories)
+          .find(sub => sub.id === selectedService)?.name || '';
+    
+    const combinedRole = serviceName ? `${positionName} - ${serviceName}` : positionName;
+
+    const result = await updateWhitelist(editingEntry.id, [combinedRole], notes);
     if (result.success) {
       setIsEditDialogOpen(false);
       setEditingEntry(null);
-      setSelectedRoles([]);
+      setSelectedPosition('');
+      setSelectedService('');
       setNotes('');
     }
   };
@@ -71,8 +95,22 @@ export const PhoneWhitelistManagement = () => {
 
   const openEditDialog = (entry: any) => {
     setEditingEntry(entry);
-    setSelectedRoles(entry.allowed_roles || []);
     setNotes(entry.notes || '');
+    // پارس کردن نقش ترکیبی
+    const role = entry.allowed_roles?.[0] || '';
+    if (role.includes(' - ')) {
+      const [pos, service] = role.split(' - ');
+      const position = positions.find(p => p.name === pos);
+      if (position) setSelectedPosition(position.id);
+      if (service === 'کل خدمات') {
+        setSelectedService('all');
+      } else {
+        const subcategory = serviceTypes
+          .flatMap(st => st.subcategories)
+          .find(sub => sub.name === service);
+        if (subcategory) setSelectedService(subcategory.id);
+      }
+    }
     setIsEditDialogOpen(true);
   };
 
@@ -107,36 +145,60 @@ export const PhoneWhitelistManagement = () => {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="09XXXXXXXXX"
-                  validatePhone
                 />
               </div>
 
               <div>
-                <Label>نقش‌های مجاز</Label>
-                <div className="space-y-2 mt-2">
-                  {AVAILABLE_ROLES.map((role) => (
-                    <div key={role.value} className="flex items-center space-x-2 space-x-reverse">
-                      <Checkbox
-                        id={role.value}
-                        checked={selectedRoles.includes(role.value)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedRoles([...selectedRoles, role.value]);
-                          } else {
-                            setSelectedRoles(
-                              selectedRoles.filter((r) => r !== role.value)
-                            );
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={role.value}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {role.label}
-                      </label>
-                    </div>
-                  ))}
+                <Label>سمت مدیریتی پرسنل</Label>
+                <Select value={selectedPosition} onValueChange={setSelectedPosition}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="انتخاب سمت..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    {positionsLoading ? (
+                      <SelectItem value="loading" disabled>
+                        در حال بارگذاری...
+                      </SelectItem>
+                    ) : (
+                      positions.map((position) => (
+                        <SelectItem key={position.id} value={position.id}>
+                          {position.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>نوع خدمات</Label>
+                <div className="space-y-2">
+                  <Select value={selectedService} onValueChange={setSelectedService}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="انتخاب نوع خدمات..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50 max-h-[300px]">
+                      <SelectItem value="all">کل خدمات</SelectItem>
+                      {servicesLoading ? (
+                        <SelectItem value="loading" disabled>
+                          در حال بارگذاری...
+                        </SelectItem>
+                      ) : (
+                        serviceTypes.map((serviceType) => (
+                          <div key={serviceType.id}>
+                            <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                              {serviceType.name}
+                            </div>
+                            {serviceType.subcategories.map((sub) => (
+                              <SelectItem key={sub.id} value={sub.id} className="pr-6">
+                                {sub.name}
+                              </SelectItem>
+                            ))}
+                          </div>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -150,7 +212,11 @@ export const PhoneWhitelistManagement = () => {
                 />
               </div>
 
-              <Button onClick={handleAdd} className="w-full">
+              <Button 
+                onClick={handleAdd} 
+                className="w-full"
+                disabled={!phoneNumber || !selectedPosition}
+              >
                 افزودن
               </Button>
             </div>
@@ -199,15 +265,14 @@ export const PhoneWhitelistManagement = () => {
               <CardContent>
                 <div className="space-y-2">
                   <div>
-                    <span className="text-sm font-medium">نقش‌های مجاز:</span>
+                    <span className="text-sm font-medium">سمت و نقش:</span>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {entry.allowed_roles.map((role) => (
                         <span
                           key={role}
-                          className="px-2 py-1 bg-primary/10 text-primary text-xs rounded"
+                          className="px-3 py-1.5 bg-primary/10 text-primary text-sm rounded-md font-medium"
                         >
-                          {AVAILABLE_ROLES.find((r) => r.value === role)?.label ||
-                            role}
+                          {role}
                         </span>
                       ))}
                     </div>
@@ -239,32 +304,55 @@ export const PhoneWhitelistManagement = () => {
             </div>
 
             <div>
-              <Label>نقش‌های مجاز</Label>
-              <div className="space-y-2 mt-2">
-                {AVAILABLE_ROLES.map((role) => (
-                  <div key={role.value} className="flex items-center space-x-2 space-x-reverse">
-                    <Checkbox
-                      id={`edit-${role.value}`}
-                      checked={selectedRoles.includes(role.value)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedRoles([...selectedRoles, role.value]);
-                        } else {
-                          setSelectedRoles(
-                            selectedRoles.filter((r) => r !== role.value)
-                          );
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor={`edit-${role.value}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {role.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
+              <Label>سمت مدیریتی پرسنل</Label>
+              <Select value={selectedPosition} onValueChange={setSelectedPosition}>
+                <SelectTrigger>
+                  <SelectValue placeholder="انتخاب سمت..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  {positionsLoading ? (
+                    <SelectItem value="loading" disabled>
+                      در حال بارگذاری...
+                    </SelectItem>
+                  ) : (
+                    positions.map((position) => (
+                      <SelectItem key={position.id} value={position.id}>
+                        {position.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>نوع خدمات</Label>
+              <Select value={selectedService} onValueChange={setSelectedService}>
+                <SelectTrigger>
+                  <SelectValue placeholder="انتخاب نوع خدمات..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50 max-h-[300px]">
+                  <SelectItem value="all">کل خدمات</SelectItem>
+                  {servicesLoading ? (
+                    <SelectItem value="loading" disabled>
+                      در حال بارگذاری...
+                    </SelectItem>
+                  ) : (
+                    serviceTypes.map((serviceType) => (
+                      <div key={serviceType.id}>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                          {serviceType.name}
+                        </div>
+                        {serviceType.subcategories.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.id} className="pr-6">
+                            {sub.name}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -277,7 +365,11 @@ export const PhoneWhitelistManagement = () => {
               />
             </div>
 
-            <Button onClick={handleEdit} className="w-full">
+            <Button 
+              onClick={handleEdit} 
+              className="w-full"
+              disabled={!selectedPosition}
+            >
               ذخیره تغییرات
             </Button>
           </div>
