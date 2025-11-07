@@ -58,15 +58,11 @@ export function ProfileHeader({ user, fullName, roles = [] }: ProfileHeaderProps
               </p>
             )}
           </div>
-          {roles.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {roles.map((role) => (
-                <Badge key={role} variant="secondary">
-                  {role}
-                </Badge>
-              ))}
-            </div>
-          )}
+          <div className="flex gap-2 flex-wrap">
+            <Badge variant="secondary">
+              اهرم من
+            </Badge>
+          </div>
         </div>
       </CardHeader>
     </Card>
