@@ -1,0 +1,57 @@
+-- Secure all SECURITY DEFINER functions by setting a fixed search_path
+-- This prevents search_path hijacking and reduces RLS bypass risk
+
+-- Apply to all existing SECURITY DEFINER functions systematically
+ALTER FUNCTION public.has_role(uuid, app_role) SET search_path = public;
+ALTER FUNCTION public.verify_otp_code(text, text) SET search_path = public;
+ALTER FUNCTION public.get_contractor_contact_info(uuid) SET search_path = public;
+ALTER FUNCTION public.assign_role_to_user(uuid, app_role) SET search_path = public;
+ALTER FUNCTION public.remove_role_from_user(uuid, app_role) SET search_path = public;
+ALTER FUNCTION public.send_notification(uuid, text, text, text, text) SET search_path = public;
+ALTER FUNCTION public.log_audit(uuid, text, text, uuid, jsonb) SET search_path = public;
+ALTER FUNCTION public.check_staff_whitelist(text) SET search_path = public;
+ALTER FUNCTION public.check_phone_whitelist(text) SET search_path = public;
+ALTER FUNCTION public.notify_staff_request_decision() SET search_path = public;
+ALTER FUNCTION public.assign_service_request_to_project() SET search_path = public;
+ALTER FUNCTION public.create_default_project_stages() SET search_path = public;
+ALTER FUNCTION public.notify_new_assignment() SET search_path = public;
+ALTER FUNCTION public.check_rate_limit(uuid, text, integer, interval) SET search_path = public;
+ALTER FUNCTION public.generate_customer_code() SET search_path = public;
+ALTER FUNCTION public.assign_customer_code() SET search_path = public;
+ALTER FUNCTION public.log_contractor_approval() SET search_path = public;
+ALTER FUNCTION public.get_public_contractors() SET search_path = public;
+ALTER FUNCTION public.get_or_create_project(uuid, uuid, uuid, uuid) SET search_path = public;
+ALTER FUNCTION public.auto_approve_contractor_if_whitelisted() SET search_path = public;
+ALTER FUNCTION public.cleanup_expired_otps() SET search_path = public;
+ALTER FUNCTION public.check_max_staff_roles() SET search_path = public;
+ALTER FUNCTION public.update_timestamp() SET search_path = public;
+ALTER FUNCTION public.handle_contractor_verification() SET search_path = public;
+ALTER FUNCTION public.auto_approve_staff_if_whitelisted() SET search_path = public;
+ALTER FUNCTION public.handle_staff_verification() SET search_path = public;
+ALTER FUNCTION public.trigger_cleanup_expired_otps() SET search_path = public;
+ALTER FUNCTION public.handle_new_service_request() SET search_path = public;
+ALTER FUNCTION public.handle_service_scheduled() SET search_path = public;
+ALTER FUNCTION public.handle_service_done() SET search_path = public;
+ALTER FUNCTION public.handle_payment_received() SET search_path = public;
+ALTER FUNCTION public.handle_service_closure() SET search_path = public;
+ALTER FUNCTION public.notify_staff_request_decision_v2() SET search_path = public;
+ALTER FUNCTION public.check_service_request_rate_limit(uuid) SET search_path = public;
+ALTER FUNCTION public.get_sales_pending_orders() SET search_path = public;
+ALTER FUNCTION public.set_unique_order_code() SET search_path = public;
+ALTER FUNCTION public.approve_order_as_sales_manager(uuid) SET search_path = public;
+ALTER FUNCTION public.get_orders_with_customer_info() SET search_path = public;
+ALTER FUNCTION public.generate_service_code(uuid) SET search_path = public;
+ALTER FUNCTION public.generate_project_code(uuid, uuid, uuid) SET search_path = public;
+ALTER FUNCTION public.generate_unique_order_code() SET search_path = public;
+ALTER FUNCTION public.trigger_order_automation() SET search_path = public;
+ALTER FUNCTION public.notify_role(app_role, text, text, text, text) SET search_path = public;
+ALTER FUNCTION public.get_user_id_by_phone(text) SET search_path = public;
+ALTER FUNCTION public.notify_new_order() SET search_path = public;
+ALTER FUNCTION public.calculate_reputation_score(uuid) SET search_path = public;
+ALTER FUNCTION public.update_reputation_on_rating() SET search_path = public;
+ALTER FUNCTION public.update_rating_helpful_count() SET search_path = public;
+ALTER FUNCTION public.ensure_customer_exists() SET search_path = public;
+ALTER FUNCTION public.create_approval_records() SET search_path = public;
+ALTER FUNCTION public.check_otp_rate_limit(text) SET search_path = public;
+ALTER FUNCTION public.check_directory_rate_limit(uuid) SET search_path = public;
+ALTER FUNCTION public.handle_order_approval_workflow() SET search_path = public;
