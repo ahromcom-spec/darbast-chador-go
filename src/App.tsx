@@ -94,10 +94,24 @@ const queryClient = new QueryClient({
   },
 });
 
-// Loading component
+// Loading component with hero background
 const PageLoader = () => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
-    <LoadingSpinner size="lg" text="در حال بارگذاری..." />
+  <div className="relative min-h-screen w-full overflow-hidden">
+    {/* Hero Background Image */}
+    <div 
+      className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+      style={{ 
+        backgroundImage: 'url(/hero-background.webp)',
+      }}
+    >
+      {/* Overlay gradient for better text readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+    </div>
+
+    {/* Loading Content */}
+    <div className="relative z-10 flex min-h-screen items-center justify-center">
+      <LoadingSpinner size="lg" text="در حال بارگذاری..." />
+    </div>
   </div>
 );
 
