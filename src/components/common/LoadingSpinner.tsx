@@ -19,7 +19,7 @@ export function LoadingSpinner({ size = 'md', text, className }: LoadingSpinnerP
       <div className="relative">
         <img 
           src={ahromLogo} 
-          alt="آهرام" 
+          alt="اهرم" 
           className={cn(
             "animate-pulse drop-shadow-[0_0_15px_rgba(var(--primary),0.5)]",
             sizeClasses[size]
