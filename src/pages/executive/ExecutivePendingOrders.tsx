@@ -276,6 +276,51 @@ export default function ExecutivePendingOrders() {
 
       if (updateError) throw updateError;
 
+      // بررسی اینکه آیا همه تاییدهای لازم انجام شده است
+      const { data: allApprovals } = await supabase
+        .from('order_approvals')
+        .select('approved_at')
+        .eq('order_id', selectedOrder.id);
+
+      // اگر همه تاییدها انجام شده باشد، وضعیت سفارش را به approved تغییر می‌دهیم
+      if (allApprovals && allApprovals.every(approval => approval.approved_at !== null)) {
+        const { error: statusError } = await supabase
+          .from('projects_v3')
+          .update({
+            status: 'approved',
+            approved_by: user.id,
+            approved_at: new Date().toISOString()
+          })
+          .eq('id', selectedOrder.id);
+
+        if (statusError) console.error('Error updating order status:', statusError);
+
+        // ارسال اعلان به مشتری
+        const { data: orderData } = await supabase
+          .from('projects_v3')
+          .select('customer_id')
+          .eq('id', selectedOrder.id)
+          .single();
+
+        if (orderData) {
+          const { data: customerData } = await supabase
+            .from('customers')
+            .select('user_id')
+            .eq('id', orderData.customer_id)
+            .single();
+
+          if (customerData?.user_id) {
+            await supabase.rpc('send_notification', {
+              _user_id: customerData.user_id,
+              _title: '✅ سفارش شما تایید شد',
+              _body: `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`,
+              _link: '/user/my-orders',
+              _type: 'success'
+            });
+          }
+        }
+      }
+
       toast({
         title: '✓ تایید شما ثبت شد',
         description: `تایید شما برای سفارش ${selectedOrder.code} با زمان‌بندی اجرا ثبت شد.`
