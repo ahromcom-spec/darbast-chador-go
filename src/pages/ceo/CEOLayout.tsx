@@ -61,11 +61,9 @@ export const CEOLayout = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <div className="flex">
         <CEOSidebar />
         <main className="flex-1 p-6">
-          
           <Outlet />
         </main>
       </div>
