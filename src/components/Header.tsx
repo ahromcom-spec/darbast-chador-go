@@ -142,7 +142,7 @@ const Header = () => {
                   className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
                 >
                   <User className="h-4 w-4" />
-                  <span className="text-xs sm:text-sm">{displayName}</span>
+                  <span className="text-xs sm:text-sm">اهرم من</span>
                 </Button>
               </>
             ) : (
@@ -269,7 +269,7 @@ const Header = () => {
                   className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
                 >
                   <User className="h-4 w-4" />
-                  <span>{displayName}</span>
+                  <span>اهرم من</span>
                 </Button>
               </>
             ) : (
