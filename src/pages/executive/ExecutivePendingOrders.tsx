@@ -88,24 +88,34 @@ export default function ExecutivePendingOrders() {
           district_id,
           customer_id
         `)
-        .in('status', ['pending', 'approved', 'in_progress'])
+        .in('status', ['pending', 'approved'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Filter only orders that have pending approval for executive manager
+      // Filter orders based on approval status
       const filteredOrders = await Promise.all(
         (data || []).map(async (order: any) => {
-          // Check if this order has a pending approval for executive manager
+          // Check approval status for this order
           const { data: approvalData } = await supabase
             .from('order_approvals')
             .select('approver_role, approved_at')
             .eq('order_id', order.id)
-            .in('approver_role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
-            .is('approved_at', null)
-            .maybeSingle();
+            .in('approver_role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials']);
 
-          if (!approvalData) return null;
+          if (!approvalData || approvalData.length === 0) return null;
+
+          const myApproval = approvalData[0];
+          
+          // Show if:
+          // 1. Status is pending AND my approval is pending
+          // 2. Status is pending AND I have approved (waiting for others)
+          const shouldShow = (
+            (order.status === 'pending' && !myApproval.approved_at) ||
+            (order.status === 'pending' && myApproval.approved_at)
+          );
+
+          if (!shouldShow) return null;
 
           // Fetch customer details
           const { data: customerData } = await supabase
