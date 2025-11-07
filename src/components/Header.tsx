@@ -155,7 +155,7 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpen(false);
-                        setTimeout(() => navigate("/profile"), 100);
+                        setTimeout(() => navigate("/profile"), 50);
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -165,7 +165,7 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpen(false);
-                        setTimeout(() => navigate("/user/my-orders"), 100);
+                        setTimeout(() => navigate("/user/my-orders"), 50);
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -175,7 +175,7 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpen(false);
-                        setTimeout(() => navigate("/user/projects"), 100);
+                        setTimeout(() => navigate("/user/projects"), 50);
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -185,7 +185,7 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpen(false);
-                        setTimeout(() => navigate("/tickets"), 100);
+                        setTimeout(() => navigate("/tickets"), 50);
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -338,7 +338,7 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpen(false);
-                        setTimeout(() => navigate("/profile"), 100);
+                        setTimeout(() => navigate("/profile"), 50);
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
@@ -348,7 +348,7 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpen(false);
-                        setTimeout(() => navigate("/user/my-orders"), 100);
+                        setTimeout(() => navigate("/user/my-orders"), 50);
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
@@ -358,7 +358,7 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpen(false);
-                        setTimeout(() => navigate("/user/projects"), 100);
+                        setTimeout(() => navigate("/user/projects"), 50);
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
@@ -368,7 +368,7 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpen(false);
-                        setTimeout(() => navigate("/tickets"), 100);
+                        setTimeout(() => navigate("/tickets"), 50);
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >

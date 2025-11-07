@@ -35,7 +35,7 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
     }
     if (notification.link) {
       onClose?.();
-      setTimeout(() => navigate(notification.link), 100);
+      setTimeout(() => navigate(notification.link), 50);
     }
   };
 
