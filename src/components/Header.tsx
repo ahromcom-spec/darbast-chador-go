@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award, TrendingUp, ShoppingCart, FolderKanban, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -18,6 +19,9 @@ const Header = () => {
   const { toast } = useToast();
   const { profile } = useUserProfile();
   const displayName = profile?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
+  
+  const [contactDropdownOpen, setContactDropdownOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -64,7 +68,7 @@ const Header = () => {
             
             {/* Contact Button - Left side (RTL) */}
             <div className="flex items-center gap-1.5">
-              <DropdownMenu>
+              <DropdownMenu open={contactDropdownOpen} onOpenChange={setContactDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity" aria-label="تماس">
                     <img 
@@ -134,7 +138,7 @@ const Header = () => {
                   <TrendingUp className="h-3 w-3" />
                   <span className="text-xs sm:text-sm">برترین‌ها</span>
                 </Button>
-                <DropdownMenu>
+                <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       data-tour="profile"
@@ -149,35 +153,50 @@ const Header = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[180px]">
                     <DropdownMenuItem 
-                      onClick={() => navigate("/profile")}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        setTimeout(() => navigate("/profile"), 100);
+                      }}
                       className="cursor-pointer gap-2"
                     >
                       <User className="h-4 w-4 text-primary" />
                       <span>پروفایل من</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      onClick={() => navigate("/user/my-orders")}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        setTimeout(() => navigate("/user/my-orders"), 100);
+                      }}
                       className="cursor-pointer gap-2"
                     >
                       <ShoppingCart className="h-4 w-4 text-blue-600" />
                       <span>سفارشات من</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      onClick={() => navigate("/user/projects")}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        setTimeout(() => navigate("/user/projects"), 100);
+                      }}
                       className="cursor-pointer gap-2"
                     >
                       <FolderKanban className="h-4 w-4 text-green-600" />
                       <span>پروژه‌های من</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      onClick={() => navigate("/tickets")}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        setTimeout(() => navigate("/tickets"), 100);
+                      }}
                       className="cursor-pointer gap-2"
                     >
                       <MessageCircle className="h-4 w-4 text-orange-600" />
                       <span>تیکت‌ها</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      onClick={handleSignOut}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        handleSignOut();
+                      }}
                       className="cursor-pointer gap-2 text-red-600 focus:text-red-600"
                     >
                       <LogOut className="h-4 w-4" />
@@ -235,7 +254,7 @@ const Header = () => {
             
             {/* Contact Dropdown & Notification - Left side (RTL) */}
             <div className="flex items-center gap-4 justify-start">
-              <DropdownMenu>
+              <DropdownMenu open={contactDropdownOpen} onOpenChange={setContactDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity md:-translate-x-6 lg:translate-x-0" aria-label="تماس">
                     <img 
@@ -303,7 +322,7 @@ const Header = () => {
                   <TrendingUp className="h-4 w-4" />
                   <span>برترین کاربران</span>
                 </Button>
-                <DropdownMenu>
+                <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       data-tour="profile"
@@ -317,35 +336,50 @@ const Header = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[200px]">
                     <DropdownMenuItem 
-                      onClick={() => navigate("/profile")}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        setTimeout(() => navigate("/profile"), 100);
+                      }}
                       className="cursor-pointer gap-3 p-3"
                     >
                       <User className="h-4 w-4 text-primary" />
                       <span>پروفایل من</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      onClick={() => navigate("/user/my-orders")}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        setTimeout(() => navigate("/user/my-orders"), 100);
+                      }}
                       className="cursor-pointer gap-3 p-3"
                     >
                       <ShoppingCart className="h-4 w-4 text-blue-600" />
                       <span>سفارشات من</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      onClick={() => navigate("/user/projects")}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        setTimeout(() => navigate("/user/projects"), 100);
+                      }}
                       className="cursor-pointer gap-3 p-3"
                     >
                       <FolderKanban className="h-4 w-4 text-green-600" />
                       <span>پروژه‌های من</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      onClick={() => navigate("/tickets")}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        setTimeout(() => navigate("/tickets"), 100);
+                      }}
                       className="cursor-pointer gap-3 p-3"
                     >
                       <MessageCircle className="h-4 w-4 text-orange-600" />
                       <span>تیکت‌ها</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      onClick={handleSignOut}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        handleSignOut();
+                      }}
                       className="cursor-pointer gap-3 p-3 text-red-600 focus:text-red-600"
                     >
                       <LogOut className="h-4 w-4" />

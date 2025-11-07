@@ -21,7 +21,11 @@ const getNotificationIcon = (type: string) => {
   }
 };
 
-export const NotificationList = () => {
+interface NotificationListProps {
+  onClose?: () => void;
+}
+
+export const NotificationList = ({ onClose }: NotificationListProps) => {
   const { notifications, loading, markAsRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
 
@@ -30,7 +34,8 @@ export const NotificationList = () => {
       markAsRead(notification.id);
     }
     if (notification.link) {
-      navigate(notification.link);
+      onClose?.();
+      setTimeout(() => navigate(notification.link), 100);
     }
   };
 
