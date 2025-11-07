@@ -94,10 +94,6 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
     { title: 'مدیریت مالی', url: '/finance/orders', icon: FileText },
   ] : [];
 
-  const serviceItems = user ? [
-    { title: 'ثبت درخواست داربست', url: '/scaffolding/form', icon: Hammer },
-  ] : [];
-
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
     isActive
       ? 'bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-sm'
@@ -156,27 +152,6 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                         onClick={handleClick}
                         data-tour={item.dataTour}
                       >
-                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
-                        {open && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* خدمات */}
-        {serviceItems.length > 0 && (
-          <SidebarGroup>
-            {open && <SidebarGroupLabel className="font-bold text-foreground">خدمات</SidebarGroupLabel>}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {serviceItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
-                      <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
                         <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
                         {open && <span>{item.title}</span>}
                       </NavLink>
