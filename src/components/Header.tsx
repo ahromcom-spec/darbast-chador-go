@@ -21,7 +21,8 @@ const Header = () => {
   const displayName = profile?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
   
   const [contactDropdownOpen, setContactDropdownOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+const [profileDropdownOpenMobile, setProfileDropdownOpenMobile] = useState(false);
+const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -138,7 +139,7 @@ const Header = () => {
                   <TrendingUp className="h-3 w-3" />
                   <span className="text-xs sm:text-sm">برترین‌ها</span>
                 </Button>
-                <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
+                <DropdownMenu open={profileDropdownOpenMobile} onOpenChange={setProfileDropdownOpenMobile}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       data-tour="profile"
@@ -154,7 +155,7 @@ const Header = () => {
                   <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[180px]">
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/profile"), 50);
                       }}
                       className="cursor-pointer gap-2"
@@ -164,7 +165,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/user/my-orders"), 50);
                       }}
                       className="cursor-pointer gap-2"
@@ -174,7 +175,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/user/projects"), 50);
                       }}
                       className="cursor-pointer gap-2"
@@ -184,7 +185,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/tickets"), 50);
                       }}
                       className="cursor-pointer gap-2"
@@ -194,7 +195,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileDropdownOpenMobile(false);
                         handleSignOut();
                       }}
                       className="cursor-pointer gap-2 text-red-600 focus:text-red-600"
@@ -322,7 +323,7 @@ const Header = () => {
                   <TrendingUp className="h-4 w-4" />
                   <span>برترین کاربران</span>
                 </Button>
-                <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
+                <DropdownMenu open={profileDropdownOpenDesktop} onOpenChange={setProfileDropdownOpenDesktop}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       data-tour="profile"
@@ -337,7 +338,7 @@ const Header = () => {
                   <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[200px]">
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileDropdownOpenDesktop(false);
                         setTimeout(() => navigate("/profile"), 50);
                       }}
                       className="cursor-pointer gap-3 p-3"
@@ -347,7 +348,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileDropdownOpenDesktop(false);
                         setTimeout(() => navigate("/user/my-orders"), 50);
                       }}
                       className="cursor-pointer gap-3 p-3"
@@ -357,7 +358,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileDropdownOpenDesktop(false);
                         setTimeout(() => navigate("/user/projects"), 50);
                       }}
                       className="cursor-pointer gap-3 p-3"
@@ -367,7 +368,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileDropdownOpenDesktop(false);
                         setTimeout(() => navigate("/tickets"), 50);
                       }}
                       className="cursor-pointer gap-3 p-3"
@@ -377,7 +378,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileDropdownOpenDesktop(false);
                         handleSignOut();
                       }}
                       className="cursor-pointer gap-3 p-3 text-red-600 focus:text-red-600"
