@@ -86,14 +86,20 @@ export function MediaUploader({
   // Upload to storage with progress tracking
   const uploadToStorage = async (media: MediaFile) => {
     try {
-      const { data: auth } = await supabase.auth.getUser();
-      const user = auth?.user;
-      if (!user) {
-        toast({ title: 'خطا', description: 'برای آپلود باید وارد شوید.', variant: 'destructive' });
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !auth?.user) {
+        console.error('خطای احراز هویت:', authError);
+        toast({ 
+          title: 'خطا در احراز هویت', 
+          description: 'لطفاً دوباره وارد سیستم شوید.', 
+          variant: 'destructive' 
+        });
         setFilePartial(media.id, { status: 'error' });
         return;
       }
 
+      const user = auth.user;
       setFilePartial(media.id, { status: 'uploading', uploadProgress: 0 });
 
       const extFromName = media.file.name.split('.').pop() || '';
@@ -102,6 +108,8 @@ export function MediaUploader({
       const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}${ext ? '' : ''}`;
       const storagePath = `${user.id}/${fileName}`;
 
+      console.log('در حال آپلود فایل:', { fileName, storagePath, fileSize: media.file.size, fileType: media.file.type });
+
       // Simulate progress for better UX (Supabase client doesn't expose upload progress)
       const progressInterval = setInterval(() => {
         setFilePartial(media.id, (prev) => ({
@@ -109,25 +117,54 @@ export function MediaUploader({
         }));
       }, 200);
 
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('order-media')
-        .upload(storagePath, media.file, { contentType: media.file.type, upsert: false });
+        .upload(storagePath, media.file, { 
+          contentType: media.file.type, 
+          upsert: false 
+        });
 
       clearInterval(progressInterval);
 
       if (uploadError) {
+        console.error('خطای آپلود:', uploadError);
         setFilePartial(media.id, { status: 'error', uploadProgress: 0 });
-        toast({ title: 'خطا در آپلود', description: uploadError.message, variant: 'destructive' });
+        
+        let errorMessage = uploadError.message;
+        
+        // پیام‌های خطا را بهبود می‌دهیم
+        if (uploadError.message?.includes('duplicate') || uploadError.message?.includes('already exists')) {
+          errorMessage = 'این فایل قبلاً آپلود شده است. لطفاً نام فایل را تغییر دهید.';
+        } else if (uploadError.message?.includes('size') || uploadError.message?.includes('large')) {
+          errorMessage = 'حجم فایل بیش از حد مجاز است. حداکثر 50 مگابایت.';
+        } else if (uploadError.message?.includes('type') || uploadError.message?.includes('format')) {
+          errorMessage = 'فرمت فایل پشتیبانی نمی‌شود.';
+        } else if (uploadError.message?.includes('permission') || uploadError.message?.includes('policy')) {
+          errorMessage = 'شما اجازه آپلود فایل را ندارید. لطفاً دوباره وارد شوید.';
+        }
+        
+        toast({ 
+          title: 'خطا در آپلود', 
+          description: errorMessage, 
+          variant: 'destructive' 
+        });
         return;
       }
+
+      console.log('آپلود موفق:', uploadData);
 
       const { data: publicData } = supabase.storage.from('order-media').getPublicUrl(storagePath);
       setFilePartial(media.id, { status: 'done', storagePath, remoteUrl: publicData.publicUrl, uploadProgress: 100 });
       
       toast({ title: 'موفق', description: 'فایل با موفقیت آپلود شد', variant: 'default' });
     } catch (e: any) {
+      console.error('خطای غیرمنتظره در آپلود:', e);
       setFilePartial(media.id, { status: 'error', uploadProgress: 0 });
-      toast({ title: 'خطا در آپلود', description: e?.message || 'مشکلی پیش آمد.', variant: 'destructive' });
+      toast({ 
+        title: 'خطای غیرمنتظره', 
+        description: e?.message || 'مشکلی در آپلود فایل پیش آمد. لطفاً دوباره تلاش کنید.', 
+        variant: 'destructive' 
+      });
     }
   };
 
