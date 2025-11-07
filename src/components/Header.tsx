@@ -1,4 +1,4 @@
-import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award, TrendingUp } from "lucide-react";
+import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award, TrendingUp, ShoppingCart, FolderKanban, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
@@ -134,16 +134,57 @@ const Header = () => {
                   <TrendingUp className="h-3 w-3" />
                   <span className="text-xs sm:text-sm">برترین‌ها</span>
                 </Button>
-                <Button
-                  data-tour="profile"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/profile")}
-                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
-                >
-                  <User className="h-4 w-4" />
-                  <span className="text-xs sm:text-sm">اهرم من</span>
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      data-tour="profile"
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
+                    >
+                      <User className="h-4 w-4" />
+                      <span className="text-xs sm:text-sm">اهرم من</span>
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[180px]">
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/profile")}
+                      className="cursor-pointer gap-2"
+                    >
+                      <User className="h-4 w-4 text-primary" />
+                      <span>پروفایل من</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/user/my-orders")}
+                      className="cursor-pointer gap-2"
+                    >
+                      <ShoppingCart className="h-4 w-4 text-blue-600" />
+                      <span>سفارشات من</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/user/projects")}
+                      className="cursor-pointer gap-2"
+                    >
+                      <FolderKanban className="h-4 w-4 text-green-600" />
+                      <span>پروژه‌های من</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/tickets")}
+                      className="cursor-pointer gap-2"
+                    >
+                      <MessageCircle className="h-4 w-4 text-orange-600" />
+                      <span>تیکت‌ها</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={handleSignOut}
+                      className="cursor-pointer gap-2 text-red-600 focus:text-red-600"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>خروج</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <>
@@ -262,15 +303,56 @@ const Header = () => {
                   <TrendingUp className="h-4 w-4" />
                   <span>برترین کاربران</span>
                 </Button>
-                <Button
-                  data-tour="profile"
-                  variant="outline"
-                  onClick={() => navigate("/profile")}
-                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
-                >
-                  <User className="h-4 w-4" />
-                  <span>اهرم من</span>
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      data-tour="profile"
+                      variant="outline"
+                      className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
+                    >
+                      <User className="h-4 w-4" />
+                      <span>اهرم من</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[200px]">
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/profile")}
+                      className="cursor-pointer gap-3 p-3"
+                    >
+                      <User className="h-4 w-4 text-primary" />
+                      <span>پروفایل من</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/user/my-orders")}
+                      className="cursor-pointer gap-3 p-3"
+                    >
+                      <ShoppingCart className="h-4 w-4 text-blue-600" />
+                      <span>سفارشات من</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/user/projects")}
+                      className="cursor-pointer gap-3 p-3"
+                    >
+                      <FolderKanban className="h-4 w-4 text-green-600" />
+                      <span>پروژه‌های من</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/tickets")}
+                      className="cursor-pointer gap-3 p-3"
+                    >
+                      <MessageCircle className="h-4 w-4 text-orange-600" />
+                      <span>تیکت‌ها</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={handleSignOut}
+                      className="cursor-pointer gap-3 p-3 text-red-600 focus:text-red-600"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>خروج</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <>
