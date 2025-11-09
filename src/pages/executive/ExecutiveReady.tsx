@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ProgressMediaUploader } from '@/components/executive/ProgressMediaUploader';
+import { ExecutiveStageTimeline } from '@/components/executive/ExecutiveStageTimeline';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/common/StatusBadge';
@@ -393,6 +394,23 @@ export default function ExecutiveReady() {
                   <p className="font-medium">{selectedOrder.detailed_address}</p>
                 </div>
               )}
+
+
+              <Separator className="my-4" />
+              
+              <div>
+                <Label className="text-sm font-medium mb-2 block">مراحل اجرایی</Label>
+                <ExecutiveStageTimeline
+                  projectId={selectedOrder.id}
+                  currentStage={selectedOrder.execution_stage}
+                  onStageChange={() => {
+                    fetchOrders();
+                    setDetailsOpen(false);
+                  }}
+                />
+              </div>
+
+              <Separator className="my-4" />
 
               {/* آپلود تصاویر - مرحله آماده اجرا */}
               <ProgressMediaUploader
