@@ -98,9 +98,12 @@ export default function Login() {
       }
     }
 
+    // به‌صورت خوش‌بینانه کاربر را به مرحله کد منتقل می‌کنیم تا UI سریع باز شود
+    setCountdown(90);
+    setStep('otp');
     setLoading(true);
 
-// ارسال کد تایید بدون بررسی اولیه پروفایل — بک‌اند خودش وضعیت ثبت‌نام را تعیین می‌کند
+    // ارسال کد تایید (بک‌اند وضعیت ثبت‌نام را مشخص می‌کند)
     const { error, userExists } = await sendOTP(phoneNumber, false);
     
     setLoading(false);
@@ -119,6 +122,8 @@ export default function Login() {
         });
         return;
       }
+      // برگشت به مرحله شماره در صورت خطا
+      setStep('phone');
       toast({ variant: 'destructive', title: 'خطا', description: msg });
       return;
     }
@@ -133,8 +138,6 @@ export default function Login() {
     }
 
     toast({ title: 'موفق', description: 'کد تایید به شماره شما ارسال شد.' });
-    setCountdown(90);
-    setStep('otp');
   };
 
 const handleResendOTP = async () => {
