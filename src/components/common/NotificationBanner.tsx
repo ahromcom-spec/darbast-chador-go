@@ -2,10 +2,12 @@ import { Bell, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export function NotificationBanner() {
   const [dismissed, setDismissed] = useState(false);
+  const location = useLocation();
   const { permission, isSupported, requestPermission } = usePushNotifications();
 
   useEffect(() => {
@@ -27,7 +29,8 @@ export function NotificationBanner() {
     }
   };
 
-  if (!isSupported || permission === 'granted' || dismissed) {
+  // فقط در صفحه اصلی نمایش بده
+  if (!isSupported || permission === 'granted' || dismissed || location.pathname !== '/') {
     return null;
   }
 

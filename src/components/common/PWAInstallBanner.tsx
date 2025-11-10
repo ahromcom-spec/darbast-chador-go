@@ -1,12 +1,14 @@
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useLocation } from 'react-router-dom';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useState, useEffect } from 'react';
 
 export function PWAInstallBanner() {
   const { canInstall, isStandalone, promptInstall } = usePWAInstall();
   const [show, setShow] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     // اگر برنامه نصب شده است، منطق متفاوت دارد
@@ -65,9 +67,8 @@ export function PWAInstallBanner() {
     }
   };
 
-  // فقط اگر نصب شده باشد و شرایط نمایش مجدد فراهم نباشد، نشان نده
-  // در غیر این صورت، به همه نشان بده (حتی iOS)
-  if (!show) {
+  // فقط در صفحه اصلی نمایش بده
+  if (!show || location.pathname !== '/') {
     return null;
   }
 
