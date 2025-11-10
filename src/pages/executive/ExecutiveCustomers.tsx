@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ interface Customer {
 export default function ExecutiveCustomers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
 
   const { data: customers, isLoading } = useQuery({
     queryKey: ['executive-customers'],
@@ -244,18 +245,23 @@ export default function ExecutiveCustomers() {
                                   </div>
                                 </CardHeader>
                                 <CardContent>
-                                  <div className="space-y-3">
-                                    <h5 className="text-sm font-semibold">مراحل اجرایی:</h5>
-                                    <ExecutiveStageTimeline
-                                      projectId={order.id}
-                                      currentStage={order.execution_stage}
-                                      onStageChange={() => {
-                                        // Refresh data after stage change
-                                        window.location.reload();
-                                      }}
-                                      readOnly={false}
-                                    />
-                                  </div>
+                                  {order.status === 'in_progress' ? (
+                                    <div className="space-y-3">
+                                      <h5 className="text-sm font-semibold">مراحل اجرایی:</h5>
+                                      <ExecutiveStageTimeline
+                                        projectId={order.id}
+                                        currentStage={order.execution_stage || 'awaiting_payment'}
+                                        onStageChange={() => {
+                                          queryClient.invalidateQueries({ queryKey: ['executive-customers'] });
+                                        }}
+                                        readOnly={false}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                      مراحل اجرایی فقط برای سفارشات در حال اجرا قابل مشاهده است.
+                                    </p>
+                                  )}
                                 </CardContent>
                               </Card>
                             ))}
