@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award, TrendingUp, ShoppingCart, FolderKanban, MessageCircle } from "lucide-react";
+import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award, TrendingUp, FolderKanban, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -178,16 +178,6 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenMobile(false);
-                        setTimeout(() => navigate("/user/my-orders"), 150);
-                      }}
-                      className="cursor-pointer gap-2"
-                    >
-                      <ShoppingCart className="h-4 w-4 text-blue-600" />
-                      <span>سفارشات من</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/user/projects"), 150);
                       }}
                       className="cursor-pointer gap-2"
@@ -361,16 +351,6 @@ const Header = () => {
                     >
                       <User className="h-4 w-4 text-primary" />
                       <span>پروفایل من</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        setProfileDropdownOpenDesktop(false);
-                        setTimeout(() => navigate("/user/my-orders"), 150);
-                      }}
-                      className="cursor-pointer gap-3 p-3"
-                    >
-                      <ShoppingCart className="h-4 w-4 text-blue-600" />
-                      <span>سفارشات من</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
