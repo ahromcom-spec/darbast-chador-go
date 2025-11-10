@@ -43,7 +43,7 @@ export function ServiceTypeSelector({
     ? selectedServiceType.name
     : '';
 
-  const handleSelect = (serviceTypeId: string, subcategoryCode: string) => {
+  const handleSelect = (serviceTypeId: string, subcategoryCode?: string) => {
     // Close popover immediately before any navigation happens
     setOpen(false);
     setExpandedServiceType(null);
@@ -51,12 +51,15 @@ export function ServiceTypeSelector({
     // Delay onChange slightly so the popover fully unmounts before route change
     // This prevents the dropdown from lingering on the next page
     window.requestAnimationFrame(() => {
-      setTimeout(() => onChange(`${serviceTypeId}:${subcategoryCode}`), 120);
+      const value = subcategoryCode ? `${serviceTypeId}:${subcategoryCode}` : serviceTypeId;
+      setTimeout(() => onChange(value), 120);
     });
   };
 
   const handleServiceTypeClick = (serviceTypeId: string) => {
-    setExpandedServiceType(expandedServiceType === serviceTypeId ? null : serviceTypeId);
+    // اگر زیرشاخه داشت، فقط نوع خدمت را انتخاب کن (بدون زیرشاخه)
+    // دیالوگ در Home.tsx باز خواهد شد
+    handleSelect(serviceTypeId);
   };
 
   // Filter service types and subcategories based on search
@@ -137,9 +140,7 @@ export function ServiceTypeSelector({
           <CommandList className="max-h=[300px] max-h-[300px] overflow-y-auto group-data-[side=top]:order-first group-data-[side=bottom]:order-last">
             <CommandEmpty>خدمتی یافت نشد.</CommandEmpty>
             <CommandGroup>
-              {filteredServiceTypes.map((serviceType) => {
-                const shouldExpand = expandedServiceType === serviceType.id || ('autoExpand' in serviceType && serviceType.autoExpand);
-                
+              {filteredServiceTypes.map((serviceType) => {                
                 return (
                   <div key={serviceType.id}>
                     <CommandItem
@@ -149,33 +150,9 @@ export function ServiceTypeSelector({
                     >
                       <div className="flex w-full items-center justify-between">
                         <span>{serviceType.name}</span>
-                        <ChevronLeft className={cn(
-                          "h-4 w-4 transition-transform",
-                          shouldExpand && "rotate-180"
-                        )} />
+                        <ChevronLeft className="h-4 w-4" />
                       </div>
                     </CommandItem>
-
-                    {shouldExpand && (
-                      <div className="pr-4 pb-1 animate-in fade-in-0 slide-in-from-top-1">
-                        {serviceType.subcategories.length > 0 ? (
-                          serviceType.subcategories.map((subcategory) => (
-                            <CommandItem
-                              key={subcategory.id}
-                              value={`${serviceType.name} ${subcategory.name}`}
-                              onSelect={() => handleSelect(serviceType.id, subcategory.code)}
-                              className="text-sm sm:text-base cursor-pointer"
-                            >
-                              <span>{subcategory.name}</span>
-                            </CommandItem>
-                          ))
-                        ) : (
-                          <div className="px-4 py-2 text-xs text-muted-foreground">
-                            زیرشاخه‌ای موجود نیست
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}

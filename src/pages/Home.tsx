@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin } from 'lucide-react';
 import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
+import { SubcategoryDialog } from '@/components/common/SubcategoryDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -19,6 +20,8 @@ const Home = () => {
   const [selectedServiceType, setSelectedServiceType] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<string>('');
+  const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
+  const [pendingServiceTypeId, setPendingServiceTypeId] = useState<string>('');
   
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
@@ -41,11 +44,27 @@ const Home = () => {
   }, []);
 
   const handleServiceTypeChange = (value: string) => {
-    // Value format: "serviceTypeId:subcategoryCode"
+    // Value format: "serviceTypeId" or "serviceTypeId:subcategoryCode"
     const [serviceTypeId, subcategoryCode] = value.split(':');
+    
+    // اگر فقط نوع خدمات انتخاب شده و زیرشاخه نیست، دیالوگ را باز کن
+    if (serviceTypeId && !subcategoryCode) {
+      setPendingServiceTypeId(serviceTypeId);
+      setShowSubcategoryDialog(true);
+      return;
+    }
+    
+    // اگر هر دو انتخاب شده‌اند، مستقیم تنظیم کن
     setSelectedServiceType(serviceTypeId || '');
     setSelectedSubcategory(subcategoryCode || '');
     setSelectedProject('');
+  };
+
+  const handleSubcategorySelect = (subcategory: any) => {
+    setSelectedServiceType(pendingServiceTypeId);
+    setSelectedSubcategory(subcategory.code);
+    setSelectedProject('');
+    setPendingServiceTypeId('');
   };
 
   // Ensure popovers/menus are closed before navigating to avoid lingering UI
@@ -116,6 +135,7 @@ const Home = () => {
   };
 
   const selectedServiceTypeObj = serviceTypes.find(st => st.id === selectedServiceType);
+  const pendingServiceTypeObj = serviceTypes.find(st => st.id === pendingServiceTypeId);
 
 
   const handleInstallApp = async () => {
@@ -140,18 +160,28 @@ const Home = () => {
     if (isIOS) {
       toast({
         title: 'نصب روی iOS',
-          description: 'در Safari روی دکمه اشتراک‌گذاری بزنید و گزینه "Add to Home Screen" را انتخاب کنید.'
-        });
-      } else {
-        toast({
-          title: 'راهنمای نصب',
-          description: 'از منوی مرورگر گزینه "Install" یا "Add to Home Screen" را انتخاب کنید.'
-        });
-      }
-    };
+        description: 'در Safari روی دکمه اشتراک‌گذاری بزنید و گزینه "Add to Home Screen" را انتخاب کنید.'
+      });
+    } else {
+      toast({
+        title: 'راهنمای نصب',
+        description: 'از منوی مرورگر گزینه "Install" یا "Add to Home Screen" را انتخاب کنید.'
+      });
+    }
+  };
 
   return (
-    <div data-tour="create-project">
+    <>
+      {/* Subcategory Selection Dialog */}
+      <SubcategoryDialog
+        open={showSubcategoryDialog}
+        onOpenChange={setShowSubcategoryDialog}
+        serviceName={pendingServiceTypeObj?.name || ''}
+        subcategories={pendingServiceTypeObj?.subcategories || []}
+        onSelect={handleSubcategorySelect}
+      />
+
+      <div data-tour="create-project">
       {/* SEO Hidden Content */}
       <div className="sr-only">
         <h1>خدمات داربست فلزی اهرم - داربست فلزی در قم و سراسر ایران</h1>
@@ -398,7 +428,8 @@ const Home = () => {
           </div>
         </footer>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
