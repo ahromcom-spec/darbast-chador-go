@@ -74,7 +74,7 @@ export default function MyProjectsHierarchy() {
     fetchHierarchyData();
   }, []);
 
-  // باز کردن خودکار آدرس و پروژه مورد نظر
+  // باز کردن خودکار آدرس و پروژه مورد نظر و نمایش جزئیات سفارش
   useEffect(() => {
     const state = location.state as any;
     if (state?.expandLocationId) {
@@ -85,10 +85,12 @@ export default function MyProjectsHierarchy() {
     }
     if (state?.highlightOrderId) {
       setHighlightedOrderId(state.highlightOrderId);
-      // حذف هایلایت بعد از 3 ثانیه
-      setTimeout(() => setHighlightedOrderId(null), 3000);
+      // بعد از اسکرول، به صفحه جزئیات سفارش هدایت کن
+      setTimeout(() => {
+        navigate(`/orders/${state.highlightOrderId}`, { replace: true });
+      }, 800);
     }
-  }, [location.state]);
+  }, [location.state, navigate]);
 
   // Scroll to the highlighted order when available
   useEffect(() => {
