@@ -129,19 +129,28 @@ serve(async (req) => {
     // Build a strong per-login password from OTP to satisfy password policy
     const loginPassword = `otp-${normalizedCode}-x`;
 
-    // All phone numbers (including whitelisted) must verify OTP from database
-    const { data: isValid, error: verifyError } = await supabase
-      .rpc('verify_otp_code', { 
-        _phone_number: normalizedPhone, 
-        _code: normalizedCode 
-      });
+    // For whitelisted phone numbers, allow fixed test code 12345
+    let isValid = false;
+    if (isWhitelistedPhone && normalizedCode === '12345') {
+      // Allow fixed test code for whitelisted numbers
+      isValid = true;
+    } else {
+      // Verify OTP from database for all other cases
+      const { data: otpValid, error: verifyError } = await supabase
+        .rpc('verify_otp_code', { 
+          _phone_number: normalizedPhone, 
+          _code: normalizedCode 
+        });
 
-    if (verifyError) {
-      console.error('OTP verification error');
-      return new Response(
-        JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (verifyError) {
+        console.error('OTP verification error');
+        return new Response(
+          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      isValid = !!otpValid;
     }
 
     if (!isValid) {
