@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -98,9 +99,12 @@ export default function Login() {
       }
     }
 
-    // به‌صورت خوش‌بینانه کاربر را به مرحله کد منتقل می‌کنیم تا UI سریع باز شود
-    setCountdown(90);
-    setStep('otp');
+    // بستن کیبورد و اطمینان از رندر فوری مرحله OTP
+    (document.activeElement as HTMLElement | null)?.blur();
+    flushSync(() => {
+      setCountdown(90);
+      setStep('otp');
+    });
     setLoading(true);
 
     // ارسال کد تایید (بک‌اند وضعیت ثبت‌نام را مشخص می‌کند)
