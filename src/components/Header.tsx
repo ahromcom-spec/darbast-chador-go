@@ -156,7 +156,7 @@ const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(fal
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenMobile(false);
-                        setTimeout(() => navigate("/profile"), 50);
+                        setTimeout(() => navigate("/profile"), 150);
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -166,7 +166,7 @@ const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(fal
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenMobile(false);
-                        setTimeout(() => navigate("/user/my-orders"), 50);
+                        setTimeout(() => navigate("/user/my-orders"), 150);
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -176,7 +176,7 @@ const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(fal
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenMobile(false);
-                        setTimeout(() => navigate("/user/projects"), 50);
+                        setTimeout(() => navigate("/user/projects"), 150);
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -186,7 +186,7 @@ const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(fal
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenMobile(false);
-                        setTimeout(() => navigate("/tickets"), 50);
+                        setTimeout(() => navigate("/tickets"), 150);
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -339,7 +339,7 @@ const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(fal
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenDesktop(false);
-                        setTimeout(() => navigate("/profile"), 50);
+                        setTimeout(() => navigate("/profile"), 150);
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
@@ -349,7 +349,7 @@ const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(fal
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenDesktop(false);
-                        setTimeout(() => navigate("/user/my-orders"), 50);
+                        setTimeout(() => navigate("/user/my-orders"), 150);
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
@@ -359,7 +359,7 @@ const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(fal
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenDesktop(false);
-                        setTimeout(() => navigate("/user/projects"), 50);
+                        setTimeout(() => navigate("/user/projects"), 150);
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
@@ -369,7 +369,7 @@ const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(fal
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenDesktop(false);
-                        setTimeout(() => navigate("/tickets"), 50);
+                        setTimeout(() => navigate("/tickets"), 150);
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
