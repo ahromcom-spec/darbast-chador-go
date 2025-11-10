@@ -12,9 +12,8 @@ const roleNames: Record<string, string> = {
   'ceo': 'مدیرعامل',
   'scaffold_executive_manager': 'مدیر اجرایی',
   'sales_manager': 'مدیر فروش',
-  'general_manager_scaffold_execution_with_materials': 'مدیرعامل',
+  'general_manager': 'مدیرعامل',
   'executive_manager_scaffold_execution_with_materials': 'مدیر اجرایی',
-  
 };
 
 export const ApprovalProgress = ({ approvals, loading }: ApprovalProgressProps) => {
