@@ -21,8 +21,16 @@ const Header = () => {
   const displayName = profile?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
   
   const [contactDropdownOpen, setContactDropdownOpen] = useState(false);
-const [profileDropdownOpenMobile, setProfileDropdownOpenMobile] = useState(false);
-const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(false);
+  const [profileDropdownOpenMobile, setProfileDropdownOpenMobile] = useState(false);
+  const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(false);
+  
+  // بستن تمام منوهای کشویی هنگام تغییر مسیر برای جلوگیری از باقی‌ماندن روی صفحه بعد
+  const location = useLocation();
+  useEffect(() => {
+    setContactDropdownOpen(false);
+    setProfileDropdownOpenMobile(false);
+    setProfileDropdownOpenDesktop(false);
+  }, [location.pathname]);
 
   const handleSignOut = async () => {
     try {
