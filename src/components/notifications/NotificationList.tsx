@@ -7,6 +7,7 @@ import { faIR } from 'date-fns/locale';
 import { Check, Info, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -29,12 +30,52 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
   const { notifications, loading, markAsRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = async (notification: any) => {
     if (!notification.read_at) {
       markAsRead(notification.id);
     }
     
-    // اگر notification لینک دارد، به آن لینک هدایت کن
+    // اگر لینک به سفارش است، اطلاعات پروژه را بگیر و به پروژه‌های من هدایت کن
+    if (notification.link && notification.link.startsWith('/orders/')) {
+      const orderId = notification.link.split('/orders/')[1];
+      
+      try {
+        // دریافت اطلاعات سفارش
+        const { data: order, error } = await supabase
+          .from('projects_v3')
+          .select('id, hierarchy_project_id')
+          .eq('id', orderId)
+          .single();
+        
+        if (error) throw error;
+        
+        if (order?.hierarchy_project_id) {
+          // دریافت اطلاعات پروژه برای location_id
+          const { data: project, error: projError } = await supabase
+            .from('projects_hierarchy')
+            .select('id, location_id')
+            .eq('id', order.hierarchy_project_id)
+            .single();
+          
+          if (projError) throw projError;
+          
+          onClose?.();
+          // هدایت به پروژه‌های من با باز کردن خودکار آدرس، پروژه و هایلایت سفارش
+          setTimeout(() => navigate('/user/projects', {
+            state: {
+              expandLocationId: project.location_id,
+              expandProjectId: project.id,
+              highlightOrderId: orderId
+            }
+          }), 50);
+          return;
+        }
+      } catch (error) {
+        console.error('خطا در دریافت اطلاعات سفارش:', error);
+      }
+    }
+    
+    // اگر notification لینک دیگری دارد، به آن لینک هدایت کن
     if (notification.link) {
       onClose?.();
       setTimeout(() => navigate(notification.link), 50);
