@@ -26,7 +26,7 @@ interface ProgressMedia {
 
 interface ProgressMediaUploaderProps {
   projectId: string;
-  stage: 'ready' | 'in_progress' | 'completed' | 'awaiting_payment' | 'order_executed' | 'awaiting_collection';
+  stage: 'ready' | 'in_progress' | 'completed' | 'awaiting_payment' | 'order_executed' | 'awaiting_collection' | 'in_collection';
   stageName: string;
 }
 

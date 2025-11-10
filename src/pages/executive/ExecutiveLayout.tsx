@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, CheckSquare, PackageOpen, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -27,6 +27,26 @@ const navItems = [
     title: 'در حال اجرا',
     href: '/executive/in-progress',
     icon: Loader
+  },
+  {
+    title: 'در انتظار پرداخت',
+    href: '/executive/stage-awaiting-payment',
+    icon: Banknote
+  },
+  {
+    title: 'سفارش اجرا شده',
+    href: '/executive/stage-order-executed',
+    icon: CheckSquare
+  },
+  {
+    title: 'در انتظار جمع‌آوری',
+    href: '/executive/stage-awaiting-collection',
+    icon: PackageOpen
+  },
+  {
+    title: 'در حال جمع‌آوری',
+    href: '/executive/stage-in-collection',
+    icon: Truck
   },
   {
     title: 'تکمیل شده',
