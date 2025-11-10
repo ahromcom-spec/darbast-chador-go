@@ -74,6 +74,44 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
         console.error('خطا در دریافت اطلاعات سفارش:', error);
       }
     }
+
+    // تلاش برای استخراج کد سفارش از عنوان/متن اعلان و هدایت به پروژه‌ها (پوشه آدرس/نوع خدمت)
+    try {
+      const mergedText = `${notification.title ?? ''} ${notification.body ?? ''}`;
+      const match = mergedText.match(/\b(\d{6,8})\b/);
+      if (match) {
+        const orderCode = match[1];
+        const { data: orderByCode, error: orderByCodeErr } = await supabase
+          .from('projects_v3')
+          .select('id, hierarchy_project_id')
+          .eq('code', orderCode)
+          .single();
+
+        if (!orderByCodeErr && orderByCode) {
+          if (orderByCode.hierarchy_project_id) {
+            const { data: project2, error: projErr2 } = await supabase
+              .from('projects_hierarchy')
+              .select('id, location_id')
+              .eq('id', orderByCode.hierarchy_project_id)
+              .single();
+
+            if (!projErr2 && project2) {
+              onClose?.();
+              setTimeout(() => navigate('/user/projects', {
+                state: {
+                  expandLocationId: project2.location_id,
+                  expandProjectId: project2.id,
+                  highlightOrderId: orderByCode.id
+                }
+              }), 50);
+              return;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('خطا در مسیریابی بر اساس کد سفارش:', e);
+    }
     
     // اگر notification لینک دیگری دارد، به آن لینک هدایت کن
     if (notification.link) {
