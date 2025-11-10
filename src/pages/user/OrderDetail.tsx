@@ -455,21 +455,6 @@ export default function OrderDetail() {
             </CardHeader>
             
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <Hash className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">کد سفارش:</span>
-                  <span className="font-mono text-lg font-bold">{order.code}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm">
-                  <Building className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">نوع خدمات:</span>
-                  <span>{order.subcategory?.service_type?.name || '-'}</span>
-                </div>
-              </div>
-
-              <Separator />
               
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
