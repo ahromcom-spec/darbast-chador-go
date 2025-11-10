@@ -37,7 +37,7 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
     
     // اگر لینک به سفارش است، اطلاعات پروژه را بگیر و به پروژه‌های من هدایت کن
     if (notification.link && notification.link.startsWith('/orders/')) {
-      const orderId = notification.link.split('/orders/')[1];
+      const orderId = notification.link.split('/orders/')[1]?.split(/[?#]/)[0];
       
       try {
         // دریافت اطلاعات سفارش
@@ -45,7 +45,7 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
           .from('projects_v3')
           .select('id, hierarchy_project_id')
           .eq('id', orderId)
-          .single();
+          .maybeSingle();
         
         if (error) throw error;
         
@@ -55,20 +55,22 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
             .from('projects_hierarchy')
             .select('id, location_id')
             .eq('id', order.hierarchy_project_id)
-            .single();
+            .maybeSingle();
           
           if (projError) throw projError;
           
-          onClose?.();
-          // هدایت به پروژه‌های من با باز کردن خودکار آدرس، پروژه و هایلایت سفارش
-          setTimeout(() => navigate('/user/projects', {
-            state: {
-              expandLocationId: project.location_id,
-              expandProjectId: project.id,
-              highlightOrderId: orderId
-            }
-          }), 50);
-          return;
+          if (project) {
+            onClose?.();
+            // هدایت به پروژه‌های من با باز کردن خودکار آدرس، پروژه و هایلایت سفارش
+            setTimeout(() => navigate('/user/projects', {
+              state: {
+                expandLocationId: project.location_id,
+                expandProjectId: project.id,
+                highlightOrderId: orderId
+              }
+            }), 50);
+            return;
+          }
         }
       } catch (error) {
         console.error('خطا در دریافت اطلاعات سفارش:', error);
@@ -85,7 +87,7 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
           .from('projects_v3')
           .select('id, hierarchy_project_id')
           .eq('code', orderCode)
-          .single();
+          .maybeSingle();
 
         if (!orderByCodeErr && orderByCode) {
           if (orderByCode.hierarchy_project_id) {
@@ -93,7 +95,7 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
               .from('projects_hierarchy')
               .select('id, location_id')
               .eq('id', orderByCode.hierarchy_project_id)
-              .single();
+              .maybeSingle();
 
             if (!projErr2 && project2) {
               onClose?.();
@@ -113,10 +115,11 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
       console.error('خطا در مسیریابی بر اساس کد سفارش:', e);
     }
     
-    // اگر notification لینک دیگری دارد، به آن لینک هدایت کن
+    // اگر notification لینک دیگری دارد، آن را نرمال‌سازی کن (لینک‌های لیست سفارش‌ها -> پروژه‌های من)
     if (notification.link) {
+      const ordersList = /^\/user\/(orders|my-orders)/.test(notification.link) || notification.link === '/projects';
       onClose?.();
-      setTimeout(() => navigate(notification.link), 50);
+      setTimeout(() => navigate(ordersList ? '/user/projects' : notification.link), 50);
       return;
     }
     
