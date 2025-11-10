@@ -19,7 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { toastError } from '@/lib/errorHandler';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { AlertCircle, Check, X, Eye, Edit2 } from 'lucide-react';
+import { AlertCircle, Check, X, Eye, Edit2, Image, Film } from 'lucide-react';
 import { z } from 'zod';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
@@ -76,6 +76,7 @@ export const CEOOrders = () => {
   const [provinces, setProvinces] = useState<any[]>([]);
   const [districts, setDistricts] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
+  const [orderMedia, setOrderMedia] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     fetchOrders();
@@ -194,7 +195,27 @@ export const CEOOrders = () => {
         })
       );
 
-      setOrders(filtered.filter(o => o !== null) as Order[]);
+      const validOrders = filtered.filter(o => o !== null) as Order[];
+      setOrders(validOrders);
+
+      // دریافت فایل‌های مدیا برای هر سفارش
+      const mediaPromises = validOrders.map(async (order) => {
+        const { data: media } = await supabase
+          .from('project_media')
+          .select('*')
+          .eq('project_id', order.id)
+          .order('created_at', { ascending: false });
+        
+        return { orderId: order.id, media: media || [] };
+      });
+
+      const mediaResults = await Promise.all(mediaPromises);
+      const mediaMap = mediaResults.reduce((acc, { orderId, media }) => {
+        acc[orderId] = media;
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      setOrderMedia(mediaMap);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
       toast(toastError(error, 'خطا در بارگذاری سفارشات'));
@@ -427,6 +448,14 @@ export const CEOOrders = () => {
     return <LoadingSpinner />;
   }
 
+  // Helper function to get public URL for media
+  const getMediaUrl = (filePath: string) => {
+    const { data } = supabase.storage
+      .from('order-media')
+      .getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
   // Component for order card with approvals
   const OrderCardWithApprovals = ({ 
     order, 
@@ -438,6 +467,7 @@ export const CEOOrders = () => {
     getServiceTypeName 
   }: any) => {
     const { approvals, loading: approvalsLoading } = useOrderApprovals(order.id);
+    const media = orderMedia[order.id] || [];
 
     return (
       <Card className="hover:shadow-lg transition-shadow">
@@ -465,6 +495,11 @@ export const CEOOrders = () => {
             <p className="text-sm">
               <strong>آدرس:</strong> {order.address}
             </p>
+            {order.detailed_address && (
+              <p className="text-sm">
+                <strong>آدرس تکمیلی:</strong> {order.detailed_address}
+              </p>
+            )}
             {details && (
               <>
                 <p className="text-sm">
@@ -478,6 +513,35 @@ export const CEOOrders = () => {
               </>
             )}
           </div>
+
+          {/* عکس‌ها و ویدیوها */}
+          {media.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">فایل‌های ضمیمه ({media.length}):</p>
+              <div className="grid grid-cols-3 gap-2">
+                {media.slice(0, 6).map((file: any) => (
+                  <div key={file.id} className="relative aspect-square rounded-md overflow-hidden bg-muted">
+                    {file.file_type === 'image' ? (
+                      <img 
+                        src={getMediaUrl(file.file_path)} 
+                        alt="تصویر سفارش"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <Film className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {media.length > 6 && (
+                <p className="text-xs text-muted-foreground">
+                  و {media.length - 6} فایل دیگر...
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Approval Progress */}
           <ApprovalProgress approvals={approvals} loading={approvalsLoading} />
@@ -649,34 +713,68 @@ export const CEOOrders = () => {
 
       {/* Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
+            <DialogTitle>جزئیات کامل سفارش {selectedOrder?.code}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>مشتری</Label>
-                  <p className="text-sm">{selectedOrder.customer_name || 'نامشخص'}</p>
+                  <p className="text-sm font-medium">{selectedOrder.customer_name || 'نامشخص'}</p>
                 </div>
                 <div>
                   <Label>تلفن</Label>
-                  <p className="text-sm">{selectedOrder.customer_phone || 'ندارد'}</p>
+                  <p className="text-sm font-medium">{selectedOrder.customer_phone || 'ندارد'}</p>
                 </div>
               </div>
+              
               <div>
                 <Label>آدرس</Label>
-                <p className="text-sm">{selectedOrder.address}</p>
+                <p className="text-sm bg-secondary/30 p-3 rounded-lg">{selectedOrder.address}</p>
               </div>
+
               {selectedOrder.detailed_address && (
                 <div>
-                  <Label>جزئیات موقعیت</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedOrder.detailed_address}
-                  </p>
+                  <Label>آدرس تکمیلی</Label>
+                  <p className="text-sm bg-secondary/30 p-3 rounded-lg">{selectedOrder.detailed_address}</p>
                 </div>
               )}
+
+              {/* عکس‌ها و ویدیوها */}
+              {orderMedia[selectedOrder.id]?.length > 0 && (
+                <div>
+                  <Label className="mb-3 block">فایل‌های ضمیمه ({orderMedia[selectedOrder.id].length})</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {orderMedia[selectedOrder.id].map((file: any) => (
+                      <div key={file.id} className="relative aspect-square rounded-lg overflow-hidden bg-muted border">
+                        {file.file_type === 'image' ? (
+                          <img 
+                            src={getMediaUrl(file.file_path)} 
+                            alt="تصویر سفارش"
+                            className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => window.open(getMediaUrl(file.file_path), '_blank')}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-muted">
+                            <Film className="h-10 w-10 text-muted-foreground mb-2" />
+                            <a 
+                              href={getMediaUrl(file.file_path)} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline"
+                            >
+                              مشاهده ویدیو
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {getOrderDetails(selectedOrder.notes) && (
                 <div className="bg-secondary/30 p-4 rounded-lg space-y-3">
                   <h3 className="font-semibold">جزئیات فنی</h3>
@@ -706,6 +804,18 @@ export const CEOOrders = () => {
                                 </li>
                               ))}
                             </ul>
+                          </div>
+                        )}
+                        {details.conditions && Object.keys(details.conditions).length > 0 && (
+                          <div>
+                            <strong className="text-sm">شرایط خدمات:</strong>
+                            <div className="mt-2 space-y-1">
+                              {Object.entries(details.conditions).map(([key, value]: [string, any]) => (
+                                <p key={key} className="text-sm text-muted-foreground">
+                                  • <strong>{key}:</strong> {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                </p>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </>
