@@ -33,9 +33,39 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
     if (!notification.read_at) {
       markAsRead(notification.id);
     }
+    
+    // اگر notification لینک دارد، به آن لینک هدایت کن
     if (notification.link) {
       onClose?.();
       setTimeout(() => navigate(notification.link), 50);
+      return;
+    }
+    
+    // اگر notification مربوط به سفارش است، کد سفارش را استخراج کرده و به صفحه سفارش هدایت کن
+    // الگوهای احتمالی در عنوان یا متن: "سفارش 1000067" یا "کد 1000067"
+    const orderCodeMatch = (notification.title + ' ' + notification.body).match(/(?:سفارش|کد)\s*(\d{7})/);
+    
+    if (orderCodeMatch && orderCodeMatch[1]) {
+      const orderCode = orderCodeMatch[1];
+      
+      // دریافت order_id از کد سفارش
+      (async () => {
+        try {
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { data: order } = await supabase
+            .from('projects_v3')
+            .select('id')
+            .eq('code', orderCode)
+            .single();
+          
+          if (order) {
+            onClose?.();
+            setTimeout(() => navigate(`/orders/${order.id}`), 50);
+          }
+        } catch (error) {
+          console.error('Error finding order:', error);
+        }
+      })();
     }
   };
 
