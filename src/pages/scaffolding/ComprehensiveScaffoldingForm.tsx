@@ -580,13 +580,13 @@ export default function ComprehensiveScaffoldingForm({
           }
         }
 
-        // پیش‌فرض امن: اگر هنوز زیرشاخه مشخص نشده، زیرشاخه "با مصالح" (کد 01) را انتخاب کن
+        // پیش‌فرض امن: اگر هنوز زیرشاخه مشخص نشده، زیرشاخه "با مصالح" (کد 10) را انتخاب کن
         if (finalServiceTypeId && !finalSubcategoryId) {
           const { data: scDefault } = await supabase
             .from('subcategories')
             .select('id')
             .eq('service_type_id', finalServiceTypeId)
-            .eq('code', '01')
+            .eq('code', '10')
             .maybeSingle();
           if (scDefault) finalSubcategoryId = scDefault.id;
         }

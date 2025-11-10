@@ -119,13 +119,13 @@ export default function ScaffoldingFacadeForm() {
       
       if (scaffolding) setScaffoldingServiceId(scaffolding.id);
 
-      // تحميل زيرشاخه "با مصالح"
+      // تحميل زيرشاخه "با مصالح" (کد 10)
       if (scaffolding) {
         const { data: withMaterials } = await supabase
           .from('subcategories')
           .select('id')
           .eq('service_type_id', scaffolding.id)
-          .eq('code', '01')
+          .eq('code', '10')
           .single();
         
         if (withMaterials) setWithMaterialsSubcategoryId(withMaterials.id);
