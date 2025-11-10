@@ -777,11 +777,6 @@ export default function ComprehensiveScaffoldingForm({
 
       {/* Content */}
       <div className="relative z-10 space-y-6 pb-8">
-        <div className="flex items-center justify-center gap-3 mb-6 bg-white rounded-lg p-6 shadow-lg">
-          <ClipboardList className="w-6 h-6 text-blue-800" />
-          <h1 className="text-xl font-bold text-blue-800">فرم ثبت سفارش داربست فلزی</h1>
-          <p className="text-sm text-blue-600 mt-1">خدمات اجرای داربست به همراه اجناس داربست و حمل و نقل</p>
-        </div>
 
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
