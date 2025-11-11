@@ -171,41 +171,6 @@ export default function ScaffoldingForm() {
               </CardDescription>
             </CardHeader>
 
-            {/* نمایش اطلاعات آدرس و سرویس */}
-            {finalLocationAddress && (
-              <CardContent className="pt-6 pb-4 border-b bg-muted/30">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Alert className="border-primary/30">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <AlertDescription>
-                      <div className="space-y-1">
-                        <p className="font-semibold text-sm">آدرس پروژه:</p>
-                        {locationTitle && (
-                          <p className="text-xs text-muted-foreground">{locationTitle}</p>
-                        )}
-                        <p className="text-sm">{finalLocationAddress}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {finalProvinceName && `${finalProvinceName}`}
-                          {finalDistrictName && ` • ${finalDistrictName}`}
-                        </p>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-
-                  <Alert className="border-primary/30">
-                    <Package className="h-4 w-4 text-primary" />
-                    <AlertDescription>
-                      <div className="space-y-1">
-                        <p className="font-semibold text-sm">نوع خدمات:</p>
-                        <p className="text-sm">{finalServiceName}</p>
-                        <p className="text-xs text-muted-foreground">{finalSubcategoryName}</p>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                </div>
-              </CardContent>
-            )}
-
             <CardContent className="p-6">
               <ComprehensiveScaffoldingForm 
                 editOrderId={editOrderId || undefined}
