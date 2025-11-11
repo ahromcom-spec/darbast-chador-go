@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin } from 'lucide-react';
 import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
+import { SubcategoryDialog } from '@/components/common/SubcategoryDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -19,6 +20,8 @@ const Home = () => {
   const [selectedServiceType, setSelectedServiceType] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<string>('');
+  const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
+  const [pendingServiceTypeId, setPendingServiceTypeId] = useState<string>('');
   
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
@@ -44,16 +47,10 @@ const Home = () => {
     // Value format: "serviceTypeId" or "serviceTypeId:subcategoryCode"
     const [serviceTypeId, subcategoryCode] = value.split(':');
     
-    // اگر فقط نوع خدمات انتخاب شده و زیرشاخه نیست، اولین زیر دسته را انتخاب کن
+    // اگر فقط نوع خدمات انتخاب شده و زیرشاخه نیست، دیالوگ را باز کن
     if (serviceTypeId && !subcategoryCode) {
-      const serviceType = serviceTypes.find(st => st.id === serviceTypeId);
-      if (serviceType && serviceType.subcategories.length > 0) {
-        // اولین زیر دسته را به صورت خودکار انتخاب کن
-        const firstSubcategory = serviceType.subcategories[0];
-        setSelectedServiceType(serviceTypeId);
-        setSelectedSubcategory(firstSubcategory.code);
-        setSelectedProject('');
-      }
+      setPendingServiceTypeId(serviceTypeId);
+      setShowSubcategoryDialog(true);
       return;
     }
     
@@ -61,6 +58,13 @@ const Home = () => {
     setSelectedServiceType(serviceTypeId || '');
     setSelectedSubcategory(subcategoryCode || '');
     setSelectedProject('');
+  };
+
+  const handleSubcategorySelect = (subcategory: any) => {
+    setSelectedServiceType(pendingServiceTypeId);
+    setSelectedSubcategory(subcategory.code);
+    setSelectedProject('');
+    setPendingServiceTypeId('');
   };
 
   // Ensure popovers/menus are closed before navigating to avoid lingering UI
@@ -131,6 +135,7 @@ const Home = () => {
   };
 
   const selectedServiceTypeObj = serviceTypes.find(st => st.id === selectedServiceType);
+  const pendingServiceTypeObj = serviceTypes.find(st => st.id === pendingServiceTypeId);
 
 
   const handleInstallApp = async () => {
@@ -167,6 +172,15 @@ const Home = () => {
 
   return (
     <>
+      {/* Subcategory Selection Dialog */}
+      <SubcategoryDialog
+        open={showSubcategoryDialog}
+        onOpenChange={setShowSubcategoryDialog}
+        serviceName={pendingServiceTypeObj?.name || ''}
+        subcategories={pendingServiceTypeObj?.subcategories || []}
+        onSelect={handleSubcategorySelect}
+      />
+
       <div data-tour="create-project">
       {/* SEO Hidden Content */}
       <div className="sr-only">
