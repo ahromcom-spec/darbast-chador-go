@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -35,6 +36,7 @@ interface ServiceConditions {
   platformHeight: number | null;
   scaffoldHeightFromPlatform: number | null;
   vehicleDistance: number | null;
+  workLocationDescription?: string;
 }
 
 interface ComprehensiveScaffoldingFormProps {
@@ -881,6 +883,20 @@ export default function ComprehensiveScaffoldingForm({
           <CardTitle className="text-blue-800 dark:text-blue-300">شرایط سرویس</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* توضیحات محل کار */}
+          <div className="space-y-2">
+            <Label className="text-foreground font-semibold">توضیحات محل کار</Label>
+            <Textarea
+              placeholder="مثلاً: نمای جلوی ساختمان، نمای پشتی، پارکینگ طبقه اول و ..."
+              value={conditions.workLocationDescription || ''}
+              onChange={(e) => setConditions({ ...conditions, workLocationDescription: e.target.value })}
+              className="min-h-[80px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              محل دقیق کار را مشخص کنید (مثلا نمای جلو، نمای پشت، طبقه خاص و ...)
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-foreground font-semibold">تعداد کل ماه‌ها</Label>
