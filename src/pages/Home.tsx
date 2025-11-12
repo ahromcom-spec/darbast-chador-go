@@ -273,9 +273,6 @@ const Home = () => {
           <article className="w-full max-w-2xl mt-2 sm:mt-4 md:mt-0">
             {/* Service Selection Card */}
             <Card className="shadow-xl md:shadow-2xl bg-card/20 backdrop-blur-xl border-2" data-tour="create-project">
-              <CardHeader className="text-center pb-2 sm:pb-3 md:pb-4 px-4 sm:px-6 bg-card/20 backdrop-blur-lg rounded-t-lg">
-              </CardHeader>
-              
               <CardContent className="space-y-3 sm:space-y-4 md:space-y-5 px-4 sm:px-6 pb-4 sm:pb-6">
                 {servicesLoading ? (
                   <div className="flex justify-center py-8">
