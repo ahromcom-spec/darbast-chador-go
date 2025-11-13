@@ -37,7 +37,7 @@ export function SubcategoryDialog({
         
         <div className="space-y-3 pt-4">
           <p className="text-sm text-muted-foreground text-center mb-4">
-            لطفاً نوع خدمات مورد نظر خود را انتخاب کنید
+            لطفاً زیرخدمت مورد نظر خود را برای «{serviceName}» انتخاب کنید
           </p>
           
           {subcategories.map((subcategory) => (
