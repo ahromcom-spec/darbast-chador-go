@@ -786,13 +786,9 @@ export default function ComprehensiveScaffoldingForm({
 
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
-        <CardHeader>
-          <CardTitle className="text-blue-800 dark:text-blue-300">نوع خدمات داربست</CardTitle>
-          <CardDescription className="text-foreground font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <div className="space-y-2">
-            <Label htmlFor="scaffold-type-select" className="text-foreground">انتخاب نوع داربست:</Label>
+            <Label htmlFor="scaffold-type-select" className="text-foreground font-semibold">نوع داربست مورد نظر خود را انتخاب کنید</Label>
             <Select
               value={scaffoldType}
               onValueChange={(value: 'formwork' | 'ceiling' | 'facade') => {
