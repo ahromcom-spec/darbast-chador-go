@@ -166,9 +166,6 @@ export default function ScaffoldingForm() {
                 <Building2 className="h-6 w-6 text-foreground" />
                 {editOrderId ? 'ویرایش سفارش' : `فرم ثبت سفارش ${finalServiceName || 'خدمات ساختمان'}`}
               </CardTitle>
-              <CardDescription className="text-primary-light font-semibold">
-                {finalSubcategoryName || 'لطفاً اطلاعات پروژه را وارد کنید'}
-              </CardDescription>
             </CardHeader>
 
             {/* نمایش اطلاعات آدرس و سرویس */}
