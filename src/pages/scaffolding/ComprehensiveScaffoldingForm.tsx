@@ -883,26 +883,14 @@ export default function ComprehensiveScaffoldingForm({
 
       {/* Location Purpose - محل و هدف انجام خدمات */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
-        <CardHeader>
-          <CardTitle className="text-blue-800 dark:text-blue-300 flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
-            محل و هدف انجام خدمات
-          </CardTitle>
-          <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">
-            لطفاً توضیح دهید خدمات در کدام قسمت پروژه و برای چه هدفی انجام می‌شود
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Label className="text-foreground font-semibold">توضیحات محل و هدف</Label>
+        <CardContent className="pt-6 space-y-2">
+          <Label className="text-foreground font-semibold">شرح خدمات مورد نظر را وارد کنید</Label>
           <Textarea
             value={locationPurpose}
             onChange={(e) => setLocationPurpose(e.target.value)}
-            placeholder="مثال: اجرای داربست فلزی برای نمای جلوی ساختمان جهت نماکاری، یا اجرای داربست برای داخل سوله بدنه سمت چپ برای آجرچینی دیوار"
-            className="min-h-[100px] resize-y"
+            placeholder="مثال: اجرای داربست برای نمای ساختمان برای نماکاری"
+            className="min-h-[60px] resize-y"
           />
-          <p className="text-sm text-muted-foreground">
-            این اطلاعات به ما کمک می‌کند تا خدمات بهتری به شما ارائه دهیم
-          </p>
         </CardContent>
       </Card>
 
