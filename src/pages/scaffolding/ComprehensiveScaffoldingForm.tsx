@@ -9,11 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useCustomer } from '@/hooks/useCustomer';
 import { useProvinces } from '@/hooks/useProvinces';
 import { useDistricts } from '@/hooks/useDistricts';
@@ -838,8 +839,58 @@ export default function ComprehensiveScaffoldingForm({
       {/* Dimensions */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
         <CardHeader>
-          <CardTitle className="text-blue-800 dark:text-blue-300">ابعاد</CardTitle>
-          <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">ابعاد به متر وارد شود</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-blue-800 dark:text-blue-300">ابعاد</CardTitle>
+              <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">ابعاد به متر وارد شود</CardDescription>
+            </div>
+            {isFacadeScaffolding && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <HelpCircle className="h-4 w-4" />
+                    راهنمای وارد کردن ابعاد
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl text-right">راهنمای وارد کردن ابعاد داربست سطحی</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 text-right" dir="rtl">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2 flex items-start gap-2">
+                        <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm">۱</span>
+                        <span>حداقل فاصله بین دو پایه</span>
+                      </h3>
+                      <p className="text-slate-700 dark:text-slate-300 pr-8">
+                        حداقل بین دو پایه سه متر می‌باشد و اگر بین دو پایه کمتر از 3 متر باشد همان سه متر در طول داربست حساب می‌شود.
+                      </p>
+                    </div>
+                    
+                    <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <h3 className="font-bold text-green-900 dark:text-green-300 mb-2 flex items-start gap-2">
+                        <span className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm">۲</span>
+                        <span>استفاده از قالب دو متری</span>
+                      </h3>
+                      <p className="text-slate-700 dark:text-slate-300 pr-8">
+                        اگر در داربست سطحی یک یا چند تا از پایه‌ها از قالب دو متری استفاده شده باشد، یک متر به ازای هر پایه با قالب دو متری به طول داربست اضافه می‌شود.
+                      </p>
+                    </div>
+                    
+                    <div className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                      <h3 className="font-bold text-orange-900 dark:text-orange-300 mb-2 flex items-start gap-2">
+                        <span className="flex-shrink-0 w-6 h-6 bg-orange-600 text-white rounded-full flex items-center justify-center text-sm">۳</span>
+                        <span>عرض بیشتر از یک متر</span>
+                      </h3>
+                      <p className="text-slate-700 dark:text-slate-300 pr-8">
+                        اگر عرض داربست سطحی بیشتر از 1 متر باشد کاربر باید تیک گزینه "داربست سطحی با قالب 2 متری (عرض 2 متر)" را زده باشد.
+                      </p>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {dimensions.map((dim) => (
