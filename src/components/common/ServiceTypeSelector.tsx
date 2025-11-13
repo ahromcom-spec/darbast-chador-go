@@ -57,14 +57,15 @@ export function ServiceTypeSelector({
   };
 
   const handleServiceTypeClick = (serviceTypeId: string) => {
-    // به جای باز کردن دیالوگ جدا، زیرشاخه‌ها را داخل همین پاپ‌آور باز می‌کنیم
-    setExpandedServiceType(prev => (prev === serviceTypeId ? null : serviceTypeId));
+    // اگر زیرشاخه داشت، فقط نوع خدمت را انتخاب کن (بدون زیرشاخه)
+    // دیالوگ در Home.tsx باز خواهد شد
+    handleSelect(serviceTypeId);
   };
 
   // Filter service types and subcategories based on search
   const filteredServiceTypes = useMemo(() => {
     if (!searchQuery.trim()) {
-      return serviceTypes as (ServiceTypeWithSubcategories & { autoExpand?: boolean })[];
+      return serviceTypes;
     }
 
     const query = searchQuery.toLowerCase();
@@ -81,7 +82,7 @@ export function ServiceTypeSelector({
           subcategories: typeMatches ? serviceType.subcategories : matchingSubcategories,
           // Auto-expand if subcategories match
           autoExpand: !typeMatches && matchingSubcategories.length > 0
-        } as ServiceTypeWithSubcategories & { autoExpand?: boolean };
+        };
       }
       return null;
     }).filter(Boolean) as (ServiceTypeWithSubcategories & { autoExpand?: boolean })[];
@@ -140,7 +141,6 @@ export function ServiceTypeSelector({
             <CommandEmpty>خدمتی یافت نشد.</CommandEmpty>
             <CommandGroup>
               {filteredServiceTypes.map((serviceType) => {                
-                const isExpanded = expandedServiceType === serviceType.id || (serviceType as any).autoExpand;
                 return (
                   <div key={serviceType.id}>
                     <CommandItem
@@ -153,21 +153,6 @@ export function ServiceTypeSelector({
                         <ChevronLeft className="h-4 w-4" />
                       </div>
                     </CommandItem>
-
-                    {isExpanded && (
-                      <div className="px-3 pb-2">
-                        {serviceType.subcategories.map((sub) => (
-                          <CommandItem
-                            key={sub.id}
-                            value={`${serviceType.name}-${sub.name}`}
-                            onSelect={() => handleSelect(serviceType.id, sub.code)}
-                            className="pl-6 text-sm"
-                          >
-                            {sub.name}
-                          </CommandItem>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 );
               })}

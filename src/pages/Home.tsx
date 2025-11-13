@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin } from 'lucide-react';
 import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
+import { SubcategoryDialog } from '@/components/common/SubcategoryDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 import { usePageTitle } from '@/hooks/usePageTitle';
