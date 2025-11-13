@@ -275,6 +275,30 @@
     box-shadow: var(--shadow-md);
   }
 
+  /* Enhanced button click feedback - بازخورد بصری کلیک دکمه */
+  button:not(:disabled):active,
+  .btn:active,
+  [role="button"]:active {
+    transform: scale(0.97);
+    filter: brightness(0.9);
+    transition: transform 0.1s ease, filter 0.1s ease;
+  }
+
+  /* Active state for all clickable elements */
+  button:not(:disabled),
+  .btn,
+  [role="button"],
+  a[href] {
+    transition: var(--transition-fast);
+  }
+
+  /* Specific active states for different button variants */
+  button:not(:disabled):active:not([variant="ghost"]):not([variant="link"]),
+  .btn:active {
+    background: hsl(var(--primary) / 0.9);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
   /* Hide number input spinners */
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
