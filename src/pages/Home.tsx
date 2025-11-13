@@ -310,111 +310,22 @@ const Home = () => {
                         loading={servicesLoading}
                       />
                     </div>
-
-                    {/* Show Projects and Actions when service is selected */}
-                    {selectedServiceType && selectedSubcategory && (
-                      <section className="space-y-3 sm:space-y-4 p-4 sm:p-5 md:p-6 bg-secondary/50 rounded-lg border-2 border-construction/20">
-                        <div className="flex items-center gap-2 sm:gap-2.5">
-                          <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                          <h3 className="font-semibold text-primary text-sm sm:text-base">
-                            {selectedServiceTypeObj?.name} - {selectedServiceTypeObj?.subcategories.find(s => s.code === selectedSubcategory)?.name}
-                          </h3>
-                        </div>
-
-                        {/* Existing Projects */}
-                        {projectsLoading ? (
-                          <div className="flex justify-center py-4">
-                            <LoadingSpinner />
-                          </div>
-                        ) : projects.length > 0 ? (
-                          <div className="space-y-3">
-                            {(() => {
-                              // فقط پروژه‌های مرتبط با نوع خدمات انتخاب شده - حذف فیلتر service_code
-                              const matchingProjects = projects;
-
-                              return (
-                                <>
-                                  {matchingProjects.length > 0 && (
-                                    <div className="space-y-2">
-                                      <label className="text-xs sm:text-sm font-medium text-primary block">
-                                        پروژه‌های مرتبط با خدمات انتخاب شده - یکی را انتخاب کنید:
-                                      </label>
-                                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                                        {matchingProjects.map((project) => (
-                                          <button
-                                            key={project.id}
-                                           onClick={() => handleProjectSelect(project.id)}
-                                            className="w-full text-right p-3 rounded-lg border-2 border-primary/40 hover:border-primary hover:bg-primary/10 transition-all"
-                                          >
-                                            <div className="flex items-start gap-2">
-                                              <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                                              <div className="flex-1 min-w-0">
-                                                <div className="font-semibold text-sm">{project.title}</div>
-                                                <div className="text-xs text-muted-foreground truncate">
-                                                  {project.addresses?.line1}, {project.addresses?.city}
-                                                </div>
-                                                <div className="text-xs text-primary mt-1">
-                                                  کلیک کنید تا خدمات جدید اضافه کنید
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  
-                                  {matchingProjects.length === 0 && (
-                                    <p className="text-xs sm:text-sm text-muted-foreground text-center py-2">
-                                      هنوز پروژه‌ای برای این نوع خدمات ثبت نکرده‌اید
-                                    </p>
-                                  )}
-                                </>
-                              );
-                            })()}
-
-                            {/* دکمه ایجاد پروژه جدید */}
-                            <div className="pt-2">
-                              <Button 
-                                onClick={handleCreateNewProject}
-                                className="w-full h-auto p-3 sm:p-4 construction-gradient text-sm sm:text-base"
-                              >
-                                <div className="space-y-0.5 sm:space-y-1">
-                                  <div className="font-semibold">+ ایجاد پروژه جدید برای آدرس دیگر</div>
-                                  <div className="text-xs sm:text-sm opacity-90">
-                                    ثبت پروژه جدید با آدرس و مشخصات جدید
-                                  </div>
-                                </div>
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <p className="text-xs sm:text-sm text-muted-foreground text-center py-2">
-                              هنوز پروژه‌ای برای این نوع خدمات ثبت نکرده‌اید
-                            </p>
-                            {/* دکمه ایجاد پروژه جدید فقط برای حالت صفر پروژه */}
-                            <div className="grid grid-cols-1 gap-3 pt-2">
-                              <Button 
-                                onClick={handleCreateNewProject}
-                                className="w-full h-auto p-3 sm:p-4 construction-gradient text-sm sm:text-base"
-                              >
-                                <div className="space-y-0.5 sm:space-y-1">
-                                  <div className="font-semibold">ایجاد پروژه جدید</div>
-                                  <div className="text-xs sm:text-sm opacity-90">
-                                    تعریف پروژه جدید با آدرس و مشخصات کامل
-                                  </div>
-                                </div>
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </section>
-                    )}
                   </>
                 )}
               </CardContent>
             </Card>
+
+            {/* Show loading message after service selection */}
+            {selectedServiceType && selectedSubcategory && (
+              <Card className="mt-4 shadow-xl bg-card/20 backdrop-blur-xl border-2">
+                <CardContent className="p-6 text-center">
+                  <LoadingSpinner size="lg" />
+                  <p className="text-sm text-muted-foreground mt-4">
+                    در حال انتقال به صفحه انتخاب آدرس...
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </article>
         </main>
         
