@@ -784,11 +784,11 @@ export default function ComprehensiveScaffoldingForm({
       {/* Content */}
       <div className="relative z-10 space-y-6 pb-8">
 
-      {/* نوع داربست */}
+      {/* نوع داربست و شرح خدمات */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
-        <CardContent className="pt-6">
-          <div className="space-y-2">
-            <Label htmlFor="scaffold-type-select" className="text-foreground font-semibold">نوع داربست مورد نظر خود را انتخاب کنید</Label>
+        <CardContent className="pt-4 pb-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <Label htmlFor="scaffold-type-select" className="text-foreground font-semibold whitespace-nowrap">نوع داربست:</Label>
             <Select
               value={scaffoldType}
               onValueChange={(value: 'formwork' | 'ceiling' | 'facade') => {
@@ -802,8 +802,8 @@ export default function ComprehensiveScaffoldingForm({
                 }
               }}
             >
-              <SelectTrigger id="scaffold-type-select" className="w-full bg-background">
-                <SelectValue placeholder="نوع داربست را انتخاب کنید" />
+              <SelectTrigger id="scaffold-type-select" className="flex-1 bg-background">
+                <SelectValue placeholder="انتخاب کنید" />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
                 <SelectItem value="facade">داربست سطحی نما</SelectItem>
@@ -812,119 +812,105 @@ export default function ComprehensiveScaffoldingForm({
               </SelectContent>
             </Select>
           </div>
+          
+          <div className="space-y-1">
+            <Label className="text-foreground font-semibold text-sm">شرح خدمات:</Label>
+            <Textarea
+              value={locationPurpose}
+              onChange={(e) => setLocationPurpose(e.target.value)}
+              placeholder="مثال: اجرای داربست برای نمای ساختمان برای نماکاری"
+              className="min-h-[50px] resize-y text-sm"
+            />
+          </div>
         </CardContent>
       </Card>
 
-      {/* Dimensions */}
+      {/* ابعاد */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
-        <CardHeader>
-          <CardTitle className="text-blue-800 dark:text-blue-300">ابعاد</CardTitle>
-          <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">ابعاد به متر وارد شود</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pt-4 pb-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-foreground font-semibold">ابعاد (متر):</Label>
+            <span className="text-sm text-muted-foreground">مجموع: {Math.round(calculateTotalArea())} m³</span>
+          </div>
           {dimensions.map((dim) => (
-            <div key={dim.id} className="flex gap-2 items-end">
-              <div className="flex-1 space-y-1">
-                <Label className="text-foreground font-semibold">طول (متر)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={dim.length}
-                  onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
-                  placeholder="0"
-                />
-              </div>
-              <div className="flex-1 space-y-1">
-                <Label className="text-foreground font-semibold">عرض (متر)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={dim.width}
-                  onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
-                  placeholder="0"
-                />
-              </div>
-              <div className="flex-1 space-y-1">
-                <Label className="text-foreground font-semibold">ارتفاع (متر)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={dim.height}
-                  onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
-                  placeholder="0"
-                />
-              </div>
+            <div key={dim.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
+              <Input
+                type="number"
+                step="0.01"
+                value={dim.length}
+                onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
+                placeholder="طول"
+                className="text-sm"
+              />
+              <Input
+                type="number"
+                step="0.01"
+                value={dim.width}
+                onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
+                placeholder="عرض"
+                className="text-sm"
+              />
+              <Input
+                type="number"
+                step="0.01"
+                value={dim.height}
+                onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
+                placeholder="ارتفاع"
+                className="text-sm"
+              />
               {dimensions.length > 1 && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   onClick={() => removeDimension(dim.id)}
-                  className="flex-shrink-0"
+                  className="h-9 w-9"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
             </div>
           ))}
-          <Button type="button" variant="outline" onClick={addDimension} className="w-full">
+          <Button type="button" variant="outline" onClick={addDimension} className="w-full h-9 text-sm">
             <Plus className="h-4 w-4 ml-2" />
-            افزودن ابعاد اضافی
+            افزودن ابعاد
           </Button>
-          <div className="text-sm text-slate-700 dark:text-slate-300 pt-2">
-            مجموع مساحت: <span className="font-semibold">{Math.round(calculateTotalArea())}</span> متر مکعب
-          </div>
         </CardContent>
       </Card>
 
-      {/* Location Purpose - محل و هدف انجام خدمات */}
+      {/* شرایط سرویس */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
-        <CardContent className="pt-6 space-y-2">
-          <Label className="text-foreground font-semibold">شرح خدمات مورد نظر را وارد کنید</Label>
-          <Textarea
-            value={locationPurpose}
-            onChange={(e) => setLocationPurpose(e.target.value)}
-            placeholder="مثال: اجرای داربست برای نمای ساختمان برای نماکاری"
-            className="min-h-[60px] resize-y"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Service Conditions */}
-      <Card className="shadow-2xl bg-white dark:bg-card border-2">
-        <CardHeader>
-          <CardTitle className="text-blue-800 dark:text-blue-300">شرایط سرویس</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-foreground font-semibold">تعداد کل ماه‌ها</Label>
-              <Input
-                type="number"
-                min="1"
-                value={conditions.totalMonths}
-                onChange={(e) => setConditions({ ...conditions, totalMonths: parseInt(e.target.value) || 1 })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-foreground font-semibold">ماه جاری</Label>
-              <Input
-                type="number"
-                min="1"
-                max={conditions.totalMonths}
-                value={conditions.currentMonth}
-                onChange={(e) => setConditions({ ...conditions, currentMonth: parseInt(e.target.value) || 1 })}
-              />
-            </div>
+        <CardContent className="pt-4 pb-4 space-y-3">
+          <Label className="text-foreground font-semibold">شرایط سرویس:</Label>
+          
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <Label className="text-sm text-muted-foreground">ماه‌ها:</Label>
+            <Input
+              type="number"
+              min="1"
+              value={conditions.totalMonths}
+              onChange={(e) => setConditions({ ...conditions, totalMonths: parseInt(e.target.value) || 1 })}
+              placeholder="کل"
+              className="text-sm h-9"
+            />
+            <Input
+              type="number"
+              min="1"
+              max={conditions.totalMonths}
+              value={conditions.currentMonth}
+              onChange={(e) => setConditions({ ...conditions, currentMonth: parseInt(e.target.value) || 1 })}
+              placeholder="جاری"
+              className="text-sm h-9"
+            />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-foreground font-semibold">فاصله از مرکز استان</Label>
+          <div className="grid grid-cols-[auto_1fr] gap-2 items-center">
+            <Label className="text-sm text-muted-foreground whitespace-nowrap">فاصله:</Label>
             <Select
               value={conditions.distanceRange}
               onValueChange={(v: any) => setConditions({ ...conditions, distanceRange: v })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -936,69 +922,67 @@ export default function ComprehensiveScaffoldingForm({
             </Select>
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-foreground font-semibold">محل نصب داربست</Label>
-            <RadioGroup value={onGround ? 'ground' : 'platform'} onValueChange={(v) => setOnGround(v === 'ground')}>
+          <div className="space-y-2">
+            <Label className="text-sm text-muted-foreground">محل نصب:</Label>
+            <RadioGroup value={onGround ? 'ground' : 'platform'} onValueChange={(v) => setOnGround(v === 'ground')} className="flex gap-4">
               <div className="flex items-center space-x-2 space-x-reverse">
                 <RadioGroupItem value="ground" id="ground" />
-                <Label htmlFor="ground" className="cursor-pointer text-foreground">روی زمین</Label>
+                <Label htmlFor="ground" className="cursor-pointer text-sm">روی زمین</Label>
               </div>
               <div className="flex items-center space-x-2 space-x-reverse">
                 <RadioGroupItem value="platform" id="platform" />
-                <Label htmlFor="platform" className="cursor-pointer text-foreground">روی سکو/پشت‌بام</Label>
+                <Label htmlFor="platform" className="cursor-pointer text-sm">روی سکو</Label>
               </div>
             </RadioGroup>
 
             {!onGround && (
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="space-y-2">
-                  <Label className="text-foreground font-semibold">ارتفاع پای کار (متر)</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={conditions.platformHeight ?? ''}
-                    onChange={(e) => setConditions({ ...conditions, platformHeight: parseFloat(e.target.value) || null })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-foreground font-semibold">ارتفاع داربست از پای کار (متر)</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={conditions.scaffoldHeightFromPlatform ?? ''}
-                    onChange={(e) => setConditions({ ...conditions, scaffoldHeightFromPlatform: parseFloat(e.target.value) || null })}
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={conditions.platformHeight ?? ''}
+                  onChange={(e) => setConditions({ ...conditions, platformHeight: parseFloat(e.target.value) || null })}
+                  placeholder="ارتفاع پای کار"
+                  className="text-sm h-9"
+                />
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={conditions.scaffoldHeightFromPlatform ?? ''}
+                  onChange={(e) => setConditions({ ...conditions, scaffoldHeightFromPlatform: parseFloat(e.target.value) || null })}
+                  placeholder="ارتفاع داربست"
+                  className="text-sm h-9"
+                />
               </div>
             )}
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-foreground font-semibold">دسترسی خودرو</Label>
+          <div className="space-y-2">
+            <Label className="text-sm text-muted-foreground">دسترسی خودرو:</Label>
             <RadioGroup
               value={vehicleReachesSite ? 'reaches' : 'not-reaches'}
               onValueChange={(v) => setVehicleReachesSite(v === 'reaches')}
+              className="flex gap-4"
             >
               <div className="flex items-center space-x-2 space-x-reverse">
                 <RadioGroupItem value="reaches" id="reaches" />
-                <Label htmlFor="reaches" className="cursor-pointer text-foreground">خودرو به محل می‌رسد</Label>
+                <Label htmlFor="reaches" className="cursor-pointer text-sm">می‌رسد</Label>
               </div>
               <div className="flex items-center space-x-2 space-x-reverse">
                 <RadioGroupItem value="not-reaches" id="not-reaches" />
-                <Label htmlFor="not-reaches" className="cursor-pointer text-foreground">خودرو به محل نمی‌رسد</Label>
+                <Label htmlFor="not-reaches" className="cursor-pointer text-sm">نمی‌رسد</Label>
               </div>
             </RadioGroup>
 
             {!vehicleReachesSite && (
-              <div className="space-y-2 pt-2">
-                <Label className="text-foreground font-semibold">فاصله خودرو تا محل (متر)</Label>
-                <Input
-                  type="number"
-                  step="1"
-                  value={conditions.vehicleDistance ?? ''}
-                  onChange={(e) => setConditions({ ...conditions, vehicleDistance: parseFloat(e.target.value) || null })}
-                />
-              </div>
+              <Input
+                type="number"
+                step="1"
+                value={conditions.vehicleDistance ?? ''}
+                onChange={(e) => setConditions({ ...conditions, vehicleDistance: parseFloat(e.target.value) || null })}
+                placeholder="فاصله خودرو (متر)"
+                className="text-sm h-9"
+              />
             )}
           </div>
         </CardContent>
