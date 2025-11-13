@@ -20,6 +20,8 @@ const Home = () => {
   const [selectedServiceType, setSelectedServiceType] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<string>('');
+  const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
+  const [pendingServiceTypeId, setPendingServiceTypeId] = useState<string>('');
   
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
@@ -45,22 +47,25 @@ const Home = () => {
     // Value format: "serviceTypeId" or "serviceTypeId:subcategoryCode"
     const [serviceTypeId, subcategoryCode] = value.split(':');
     
-    // اگر فقط نوع خدمات انتخاب شده و زیرشاخه نیست، اولین زیرشاخه را انتخاب کن
+    // اگر فقط نوع خدمات انتخاب شده و زیرشاخه نیست، دیالوگ را باز کن
     if (serviceTypeId && !subcategoryCode) {
-      const serviceType = serviceTypes.find(st => st.id === serviceTypeId);
-      if (serviceType && serviceType.subcategories.length > 0) {
-        const firstSubcategory = serviceType.subcategories[0];
-        setSelectedServiceType(serviceTypeId);
-        setSelectedSubcategory(firstSubcategory.code);
-        setSelectedProject('');
-        return;
-      }
+      setPendingServiceTypeId(serviceTypeId);
+      setShowSubcategoryDialog(true);
+      return;
     }
     
     // اگر هر دو انتخاب شده‌اند، مستقیم تنظیم کن
     setSelectedServiceType(serviceTypeId || '');
     setSelectedSubcategory(subcategoryCode || '');
     setSelectedProject('');
+  };
+
+  const handleSubcategorySelect = (subcategory: any) => {
+    setShowSubcategoryDialog(false);
+    setSelectedServiceType(pendingServiceTypeId);
+    setSelectedSubcategory(subcategory.code);
+    setSelectedProject('');
+    setPendingServiceTypeId('');
   };
 
   // Ensure popovers/menus are closed before navigating to avoid lingering UI
@@ -131,6 +136,7 @@ const Home = () => {
   };
 
   const selectedServiceTypeObj = serviceTypes.find(st => st.id === selectedServiceType);
+  const pendingServiceTypeObj = serviceTypes.find(st => st.id === pendingServiceTypeId);
 
 
   const handleInstallApp = async () => {
@@ -167,6 +173,15 @@ const Home = () => {
 
   return (
     <>
+      {/* Subcategory Selection Dialog */}
+      <SubcategoryDialog
+        open={showSubcategoryDialog}
+        onOpenChange={setShowSubcategoryDialog}
+        serviceName={pendingServiceTypeObj?.name || ''}
+        subcategories={pendingServiceTypeObj?.subcategories || []}
+        onSelect={handleSubcategorySelect}
+      />
+
       <div data-tour="create-project">
       {/* SEO Hidden Content */}
       <div className="sr-only">
