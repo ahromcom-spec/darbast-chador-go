@@ -778,6 +778,41 @@ export default function ComprehensiveScaffoldingForm({
       {/* Content */}
       <div className="relative z-10 space-y-6 pb-8">
 
+      {/* نوع داربست */}
+      <Card className="shadow-2xl bg-white dark:bg-card border-2">
+        <CardHeader>
+          <CardTitle className="text-blue-800 dark:text-blue-300">نوع خدمات داربست</CardTitle>
+          <CardDescription className="text-foreground font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="scaffold-type-select" className="text-foreground">انتخاب نوع داربست:</Label>
+            <Select
+              value={scaffoldType}
+              onValueChange={(value: 'formwork' | 'ceiling' | 'facade') => {
+                setScaffoldType(value);
+                if (value === 'formwork') {
+                  setActiveService('formwork');
+                } else if (value === 'ceiling') {
+                  setActiveService('ceiling-tiered');
+                } else {
+                  setActiveService('facade');
+                }
+              }}
+            >
+              <SelectTrigger id="scaffold-type-select" className="w-full bg-background">
+                <SelectValue placeholder="نوع داربست را انتخاب کنید" />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                <SelectItem value="facade">داربست سطحی نما</SelectItem>
+                <SelectItem value="formwork">داربست کفراژ</SelectItem>
+                <SelectItem value="ceiling">داربست زیر بتن (سقف)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Dimensions */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
         <CardHeader>
