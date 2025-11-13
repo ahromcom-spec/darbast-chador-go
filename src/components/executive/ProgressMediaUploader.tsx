@@ -176,24 +176,18 @@ export function ProgressMediaUploader({ projectId, stage, stageName }: ProgressM
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ImageIcon className="h-5 w-5" />
-          تصاویر پیشرفت - {stageName}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 pt-4">
+        <Label className="text-sm font-medium">تصاویر و ویدیوهای پروژه</Label>
+        
         {/* فرم آپلود */}
-        <div className="space-y-3 p-4 bg-secondary/30 rounded-lg">
-          <div>
-            <Label>انتخاب تصویر</Label>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              disabled={uploading}
-            />
-          </div>
+        <div className="space-y-2">
+          <Input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            disabled={uploading}
+            className="text-sm"
+          />
 
           {previewUrl && (
             <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted">
@@ -205,21 +199,11 @@ export function ProgressMediaUploader({ projectId, stage, stageName }: ProgressM
             </div>
           )}
 
-          <div>
-            <Label>توضیحات (اختیاری)</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="توضیحات مربوط به تصویر..."
-              rows={2}
-              disabled={uploading}
-            />
-          </div>
-
           <div className="flex gap-2">
             <Button
               onClick={handleUpload}
               disabled={!selectedFile || uploading}
+              size="sm"
               className="gap-2"
             >
               {uploading ? (
@@ -230,13 +214,14 @@ export function ProgressMediaUploader({ projectId, stage, stageName }: ProgressM
               ) : (
                 <>
                   <Upload className="h-4 w-4" />
-                  آپلود تصویر
+                  افزودن عکس
                 </>
               )}
             </Button>
             {selectedFile && (
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => {
                   setSelectedFile(null);
                   setDescription('');
