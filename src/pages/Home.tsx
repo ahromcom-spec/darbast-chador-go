@@ -322,7 +322,7 @@ const Home = () => {
                 <CardContent className="p-6 text-center">
                   <LoadingSpinner size="lg" />
                   <p className="text-sm text-muted-foreground mt-4">
-                    در حال انتقال به صفحه انتخاب آدرس...
+                    نوع خدمات انتخاب شد
                   </p>
                 </CardContent>
               </Card>
