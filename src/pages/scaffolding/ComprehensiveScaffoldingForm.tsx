@@ -91,6 +91,7 @@ export default function ComprehensiveScaffoldingForm({
   const address = prefilledAddress || navState?.locationAddress || '';
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '' }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
+  const [useTwoMeterTemplate, setUseTwoMeterTemplate] = useState(false);
   
   // Location fields - دریافت از state (در صورت عدم وجود در props)
   const [detailedAddress, setDetailedAddress] = useState(navState?.detailedAddress || address);
@@ -839,9 +840,12 @@ export default function ComprehensiveScaffoldingForm({
                 <Input
                   type="number"
                   step="0.01"
-                  value={dim.width}
+                  value={useTwoMeterTemplate ? '1.5' : dim.width}
                   onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
                   placeholder="0"
+                  readOnly
+                  disabled
+                  className="bg-muted"
                 />
               </div>
               <div className="flex-1 space-y-1">
@@ -867,6 +871,26 @@ export default function ComprehensiveScaffoldingForm({
               )}
             </div>
           ))}
+          {/* Checkbox for 2-meter template */}
+          <div className="flex items-center space-x-2 space-x-reverse pt-2">
+            <Checkbox
+              id="two-meter-template"
+              checked={useTwoMeterTemplate}
+              onCheckedChange={(checked) => {
+                setUseTwoMeterTemplate(checked as boolean);
+                // Update all dimensions width to 1.5 when checked, 1 when unchecked
+                const newWidth = checked ? '1.5' : '1';
+                setDimensions(dimensions.map(d => ({ ...d, width: newWidth })));
+              }}
+            />
+            <Label
+              htmlFor="two-meter-template"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              داربست سطحی با قالب 2 متری (عرض 2 متر) میباشد
+            </Label>
+          </div>
+          
           <Button type="button" variant="outline" onClick={addDimension} className="w-full">
             <Plus className="h-4 w-4 ml-2" />
             افزودن ابعاد اضافی
