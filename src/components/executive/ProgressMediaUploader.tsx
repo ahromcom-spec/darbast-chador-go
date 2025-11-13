@@ -176,11 +176,11 @@ export function ProgressMediaUploader({ projectId, stage, stageName }: ProgressM
 
   return (
     <Card>
-      <CardContent className="space-y-3 pt-4">
+      <CardContent className="space-y-2 pt-3 pb-3">
         <Label className="text-sm font-medium">تصاویر و ویدیوهای پروژه</Label>
         
         {/* فرم آپلود */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Input
             type="file"
             accept="image/*"
@@ -190,7 +190,7 @@ export function ProgressMediaUploader({ projectId, stage, stageName }: ProgressM
           />
 
           {previewUrl && (
-            <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted">
+            <div className="relative w-full aspect-video rounded-md overflow-hidden bg-muted">
               <img
                 src={previewUrl}
                 alt="پیش‌نمایش"
@@ -236,21 +236,21 @@ export function ProgressMediaUploader({ projectId, stage, stageName }: ProgressM
 
         {/* لیست تصاویر */}
         {loading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-            در حال بارگذاری...
+          <div className="text-center py-4 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-1" />
+            <p className="text-xs">در حال بارگذاری...</p>
           </div>
         ) : media.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-40" />
-            <p>هنوز تصویری آپلود نشده است</p>
+          <div className="text-center py-4 text-muted-foreground">
+            <ImageIcon className="h-8 w-8 mx-auto mb-1 opacity-40" />
+            <p className="text-xs">هنوز تصویری آپلود نشده است</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             {media.map((item) => (
               <div
                 key={item.id}
-                className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer"
+                className="group relative aspect-square rounded-md overflow-hidden bg-muted cursor-pointer"
                 onClick={() => setViewImage(getImageUrl(item.storage_path))}
               >
                 <img
@@ -258,8 +258,8 @@ export function ProgressMediaUploader({ projectId, stage, stageName }: ProgressM
                   alt={item.file_name}
                   className="w-full h-full object-cover transition-transform group-hover:scale-110"
                 />
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
-                  <p className="text-white text-xs text-center line-clamp-2">
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1.5">
+                  <p className="text-white text-[10px] text-center line-clamp-2">
                     {item.description || item.file_name}
                   </p>
                   <Button
@@ -269,7 +269,7 @@ export function ProgressMediaUploader({ projectId, stage, stageName }: ProgressM
                       e.stopPropagation();
                       handleDelete(item.id, item.storage_path);
                     }}
-                    className="gap-1"
+                    className="gap-1 h-6 text-xs px-2"
                   >
                     <X className="h-3 w-3" />
                     حذف
