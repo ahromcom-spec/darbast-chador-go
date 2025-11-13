@@ -25,7 +25,8 @@ import {
   Download,
   Play,
   Film,
-  Star
+  Star,
+  RefreshCw
 } from "lucide-react";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { useRatingCriteria, useProjectRatings, useCreateRating } from "@/hooks/useRatings";
@@ -42,6 +43,7 @@ interface Order {
   created_at: string;
   updated_at: string;
   address: string;
+  detailed_address?: string;
   notes?: string;
   rejection_reason?: string;
   approved_at?: string;
@@ -53,6 +55,9 @@ interface Order {
   customer_completion_date?: string;
   executive_completion_date?: string;
   hierarchy_project_id?: string;
+  subcategory_id?: string;
+  province_id?: string;
+  district_id?: string;
   subcategory?: {
     name: string;
     code: string;
@@ -125,6 +130,7 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [parsedNotes, setParsedNotes] = useState<any>(null);
   const [completionDate, setCompletionDate] = useState('');
+  const [isRenewing, setIsRenewing] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; poster?: string } | null>(null);
   const [expandedVideo, setExpandedVideo] = useState<string | null>(null);
@@ -375,6 +381,65 @@ export default function OrderDetail() {
     }
   };
 
+  const handleRenewOrder = async () => {
+    if (!order) return;
+    
+    setIsRenewing(true);
+    try {
+      // دریافت اطلاعات customer_id از جدول customers
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (customerError) throw customerError;
+
+      // ایجاد سفارش جدید با همان مشخصات
+      const newOrderData: any = {
+        customer_id: customerData.id,
+        subcategory_id: order.subcategory_id,
+        province_id: order.province_id,
+        district_id: order.district_id,
+        address: order.address,
+        notes: order.notes,
+        status: 'pending',
+        is_renewal: true,
+        original_order_id: order.id,
+        hierarchy_project_id: order.hierarchy_project_id
+      };
+
+      if (order.detailed_address) {
+        newOrderData.detailed_address = order.detailed_address;
+      }
+
+      const { data: newOrder, error: createError } = await supabase
+        .from('projects_v3')
+        .insert(newOrderData)
+        .select()
+        .single();
+
+      if (createError) throw createError;
+
+      toast({
+        title: "موفق",
+        description: "سفارش تمدید با موفقیت ایجاد شد",
+      });
+
+      // هدایت به صفحه سفارش جدید
+      navigate(`/order/${newOrder.id}`);
+    } catch (error) {
+      console.error('Error renewing order:', error);
+      toast({
+        title: "خطا",
+        description: "خطا در ایجاد سفارش تمدید",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRenewing(false);
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -443,6 +508,18 @@ export default function OrderDetail() {
                   )}
                 </div>
                 
+                {order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
+                 (order.status === 'completed' || order.status === 'paid') && (
+                  <Button
+                    onClick={handleRenewOrder}
+                    disabled={isRenewing}
+                    variant="default"
+                    className="gap-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRenewing ? 'animate-spin' : ''}`} />
+                    تمدید سفارش
+                  </Button>
+                )}
                 {canEdit && (
                   <Button
                     onClick={() => navigate(`/scaffolding/form?edit=${order.id}`)}
