@@ -20,6 +20,7 @@ import { useDistricts } from '@/hooks/useDistricts';
 import { sanitizeHtml } from '@/lib/security';
 import { scaffoldingFormSchema } from '@/lib/validations';
 import { MediaUploader } from '@/components/orders/MediaUploader';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Dimension {
   id: string;
@@ -110,6 +111,7 @@ export default function ComprehensiveScaffoldingForm({
   const [ceilingSlabOpen, setCeilingSlabOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [locationPurpose, setLocationPurpose] = useState('');
 
   // Load existing order data when editing
   useEffect(() => {
@@ -157,6 +159,9 @@ export default function ComprehensiveScaffoldingForm({
           }
           if (notes.vehicleReachesSite !== undefined) {
             setVehicleReachesSite(notes.vehicleReachesSite);
+          }
+          if (notes.locationPurpose) {
+            setLocationPurpose(notes.locationPurpose);
           }
         }
       } catch (error) {
@@ -725,6 +730,7 @@ export default function ComprehensiveScaffoldingForm({
             conditions,
             onGround,
             vehicleReachesSite,
+            locationPurpose,
             totalArea: calculateTotalArea(),
             estimated_price: priceData.total,
             price_breakdown: priceData.breakdown,
@@ -872,6 +878,31 @@ export default function ComprehensiveScaffoldingForm({
           <div className="text-sm text-slate-700 dark:text-slate-300 pt-2">
             مجموع مساحت: <span className="font-semibold">{Math.round(calculateTotalArea())}</span> متر مکعب
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Location Purpose - محل و هدف انجام خدمات */}
+      <Card className="shadow-2xl bg-white dark:bg-card border-2">
+        <CardHeader>
+          <CardTitle className="text-blue-800 dark:text-blue-300 flex items-center gap-2">
+            <ClipboardList className="h-5 w-5" />
+            محل و هدف انجام خدمات
+          </CardTitle>
+          <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">
+            لطفاً توضیح دهید خدمات در کدام قسمت پروژه و برای چه هدفی انجام می‌شود
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Label className="text-foreground font-semibold">توضیحات محل و هدف</Label>
+          <Textarea
+            value={locationPurpose}
+            onChange={(e) => setLocationPurpose(e.target.value)}
+            placeholder="مثال: اجرای داربست فلزی برای نمای جلوی ساختمان جهت نماکاری، یا اجرای داربست برای داخل سوله بدنه سمت چپ برای آجرچینی دیوار"
+            className="min-h-[100px] resize-y"
+          />
+          <p className="text-sm text-muted-foreground">
+            این اطلاعات به ما کمک می‌کند تا خدمات بهتری به شما ارائه دهیم
+          </p>
         </CardContent>
       </Card>
 
