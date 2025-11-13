@@ -515,6 +515,22 @@ export default function ComprehensiveScaffoldingForm({
       }
     }
 
+    // Validate dimensions - check minimum 3 meters for length and height
+    const invalidDimensions = dimensions.filter(dim => {
+      const length = parseFloat(dim.length);
+      const height = parseFloat(dim.height);
+      return length < 3 || height < 3 || isNaN(length) || isNaN(height);
+    });
+
+    if (invalidDimensions.length > 0) {
+      toast({ 
+        title: 'خطا در ابعاد', 
+        description: 'حداقل طول و ارتفاع داربست باید 3 متر باشد', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
     // Sanitize address - استفاده از آدرس بازخوانی شده از بالای فرم
     const sanitizedAddress = sanitizeHtml(finalAddress.trim());
 
