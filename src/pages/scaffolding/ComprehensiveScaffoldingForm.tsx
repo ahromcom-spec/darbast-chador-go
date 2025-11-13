@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +35,6 @@ interface ServiceConditions {
   platformHeight: number | null;
   scaffoldHeightFromPlatform: number | null;
   vehicleDistance: number | null;
-  workLocationDescription?: string;
 }
 
 interface ComprehensiveScaffoldingFormProps {
@@ -780,41 +778,6 @@ export default function ComprehensiveScaffoldingForm({
       {/* Content */}
       <div className="relative z-10 space-y-6 pb-8">
 
-      {/* نوع داربست */}
-      <Card className="shadow-2xl bg-white dark:bg-card border-2">
-        <CardHeader>
-          <CardTitle className="text-blue-800 dark:text-blue-300">نوع خدمات داربست</CardTitle>
-          <CardDescription className="text-foreground font-semibold">نوع داربست مورد نیاز خود را انتخاب کنید</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="scaffold-type-select" className="text-foreground">انتخاب نوع داربست:</Label>
-            <Select
-              value={scaffoldType}
-              onValueChange={(value: 'formwork' | 'ceiling' | 'facade') => {
-                setScaffoldType(value);
-                if (value === 'formwork') {
-                  setActiveService('formwork');
-                } else if (value === 'ceiling') {
-                  setActiveService('ceiling-tiered');
-                } else {
-                  setActiveService('facade');
-                }
-              }}
-            >
-              <SelectTrigger id="scaffold-type-select" className="w-full bg-background">
-                <SelectValue placeholder="نوع داربست را انتخاب کنید" />
-              </SelectTrigger>
-              <SelectContent className="bg-background z-50">
-                <SelectItem value="facade">داربست سطحی نما</SelectItem>
-                <SelectItem value="formwork">داربست کفراژ</SelectItem>
-                <SelectItem value="ceiling">داربست زیر بتن (سقف)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Dimensions */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
         <CardHeader>
@@ -883,20 +846,6 @@ export default function ComprehensiveScaffoldingForm({
           <CardTitle className="text-blue-800 dark:text-blue-300">شرایط سرویس</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* توضیحات محل کار */}
-          <div className="space-y-2">
-            <Label className="text-foreground font-semibold">توضیحات محل کار</Label>
-            <Textarea
-              placeholder="مثلاً: نمای جلوی ساختمان، نمای پشتی، پارکینگ طبقه اول و ..."
-              value={conditions.workLocationDescription || ''}
-              onChange={(e) => setConditions({ ...conditions, workLocationDescription: e.target.value })}
-              className="min-h-[80px] resize-none"
-            />
-            <p className="text-xs text-muted-foreground">
-              محل دقیق کار را مشخص کنید (مثلا نمای جلو، نمای پشت، طبقه خاص و ...)
-            </p>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-foreground font-semibold">تعداد کل ماه‌ها</Label>

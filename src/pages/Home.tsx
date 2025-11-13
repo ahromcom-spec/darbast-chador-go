@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin } from 'lucide-react';
 import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
+import { SubcategoryDialog } from '@/components/common/SubcategoryDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -19,6 +20,8 @@ const Home = () => {
   const [selectedServiceType, setSelectedServiceType] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<string>('');
+  const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
+  const [pendingServiceTypeId, setPendingServiceTypeId] = useState<string>('');
   
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
@@ -44,15 +47,10 @@ const Home = () => {
     // Value format: "serviceTypeId" or "serviceTypeId:subcategoryCode"
     const [serviceTypeId, subcategoryCode] = value.split(':');
     
-    // اگر فقط نوع خدمات انتخاب شده و زیرشاخه نیست، اولین زیرشاخه را انتخاب کن
+    // اگر فقط نوع خدمات انتخاب شده و زیرشاخه نیست، دیالوگ را باز کن
     if (serviceTypeId && !subcategoryCode) {
-      const serviceType = serviceTypes.find(st => st.id === serviceTypeId);
-      if (serviceType?.subcategories && serviceType.subcategories.length > 0) {
-        // انتخاب خودکار اولین زیرشاخه
-        setSelectedServiceType(serviceTypeId);
-        setSelectedSubcategory(serviceType.subcategories[0].code);
-        setSelectedProject('');
-      }
+      setPendingServiceTypeId(serviceTypeId);
+      setShowSubcategoryDialog(true);
       return;
     }
     
@@ -60,6 +58,13 @@ const Home = () => {
     setSelectedServiceType(serviceTypeId || '');
     setSelectedSubcategory(subcategoryCode || '');
     setSelectedProject('');
+  };
+
+  const handleSubcategorySelect = (subcategory: any) => {
+    setSelectedServiceType(pendingServiceTypeId);
+    setSelectedSubcategory(subcategory.code);
+    setSelectedProject('');
+    setPendingServiceTypeId('');
   };
 
   // Ensure popovers/menus are closed before navigating to avoid lingering UI
@@ -130,6 +135,7 @@ const Home = () => {
   };
 
   const selectedServiceTypeObj = serviceTypes.find(st => st.id === selectedServiceType);
+  const pendingServiceTypeObj = serviceTypes.find(st => st.id === pendingServiceTypeId);
 
 
   const handleInstallApp = async () => {
@@ -166,6 +172,15 @@ const Home = () => {
 
   return (
     <>
+      {/* Subcategory Selection Dialog */}
+      <SubcategoryDialog
+        open={showSubcategoryDialog}
+        onOpenChange={setShowSubcategoryDialog}
+        serviceName={pendingServiceTypeObj?.name || ''}
+        subcategories={pendingServiceTypeObj?.subcategories || []}
+        onSelect={handleSubcategorySelect}
+      />
+
       <div data-tour="create-project">
       {/* SEO Hidden Content */}
       <div className="sr-only">
@@ -273,6 +288,12 @@ const Home = () => {
           <article className="w-full max-w-2xl mt-2 sm:mt-4 md:mt-0">
             {/* Service Selection Card */}
             <Card className="shadow-xl md:shadow-2xl bg-card/20 backdrop-blur-xl border-2" data-tour="create-project">
+              <CardHeader className="text-center pb-2 sm:pb-3 md:pb-4 px-4 sm:px-6 bg-card/20 backdrop-blur-lg rounded-t-lg">
+                <h2 className="text-lg sm:text-2xl md:text-3xl font-bold leading-tight tracking-tight primary-gradient bg-clip-text text-transparent mb-2">
+                  خدمات ساختمانی و منزل خود را انتخاب کنید
+                </h2>
+              </CardHeader>
+              
               <CardContent className="space-y-3 sm:space-y-4 md:space-y-5 px-4 sm:px-6 pb-4 sm:pb-6">
                 {servicesLoading ? (
                   <div className="flex justify-center py-8">
