@@ -834,9 +834,10 @@ export default function ComprehensiveScaffoldingForm({
                   <Input
                     type="number"
                     step="0.01"
+                    min="3"
                     value={dim.length}
                     onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
-                    placeholder="0"
+                    placeholder="حداقل 3 متر"
                   />
                 </div>
                 <div className="flex-1 space-y-1">
@@ -857,9 +858,10 @@ export default function ComprehensiveScaffoldingForm({
                   <Input
                     type="number"
                     step="0.01"
+                    min="3"
                     value={dim.height}
                     onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
-                    placeholder="0"
+                    placeholder="حداقل 3 متر"
                   />
                 </div>
                 {dimensions.length > 1 && (
