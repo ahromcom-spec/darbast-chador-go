@@ -27,6 +27,7 @@ interface Dimension {
   length: string;
   width: string;
   height: string;
+  useTwoMeterTemplate?: boolean; // For facade scaffolding 2m template
 }
 
 interface ServiceConditions {
@@ -89,9 +90,8 @@ export default function ComprehensiveScaffoldingForm({
   const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade'>('facade');
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab'>('facade');
   const address = prefilledAddress || navState?.locationAddress || '';
-  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '' }]);
+  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '', useTwoMeterTemplate: false }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
-  const [useTwoMeterTemplate, setUseTwoMeterTemplate] = useState(false);
   
   // Check if this is facade scaffolding type (داربست سطحی نما)
   const isFacadeScaffolding = activeService === 'facade' || scaffoldType === 'facade';
@@ -827,74 +827,77 @@ export default function ComprehensiveScaffoldingForm({
         </CardHeader>
         <CardContent className="space-y-4">
           {dimensions.map((dim) => (
-            <div key={dim.id} className="flex gap-2 items-end">
-              <div className="flex-1 space-y-1">
-                <Label className="text-foreground font-semibold">طول (متر)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={dim.length}
-                  onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
-                  placeholder="0"
-                />
+            <div key={dim.id} className="space-y-2">
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 space-y-1">
+                  <Label className="text-foreground font-semibold">طول (متر)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={dim.length}
+                    onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <Label className="text-foreground font-semibold">عرض (متر)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={isFacadeScaffolding && dim.useTwoMeterTemplate ? '1.5' : dim.width}
+                    onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
+                    placeholder="0"
+                    readOnly={isFacadeScaffolding}
+                    disabled={isFacadeScaffolding}
+                    className={isFacadeScaffolding ? "bg-muted" : ""}
+                  />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <Label className="text-foreground font-semibold">ارتفاع (متر)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={dim.height}
+                    onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                {dimensions.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeDimension(dim.id)}
+                    className="flex-shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
-              <div className="flex-1 space-y-1">
-                <Label className="text-foreground font-semibold">عرض (متر)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={isFacadeScaffolding && useTwoMeterTemplate ? '1.5' : dim.width}
-                  onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
-                  placeholder="0"
-                  readOnly={isFacadeScaffolding}
-                  disabled={isFacadeScaffolding}
-                  className={isFacadeScaffolding ? "bg-muted" : ""}
-                />
-              </div>
-              <div className="flex-1 space-y-1">
-                <Label className="text-foreground font-semibold">ارتفاع (متر)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={dim.height}
-                  onChange={(e) => updateDimension(dim.id, 'height', e.target.value)}
-                  placeholder="0"
-                />
-              </div>
-              {dimensions.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeDimension(dim.id)}
-                  className="flex-shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              {/* Checkbox for 2-meter template - individual for each dimension in facade scaffolding */}
+              {isFacadeScaffolding && (
+                <div className="flex items-center space-x-2 space-x-reverse pt-1 pr-2">
+                  <Checkbox
+                    id={`two-meter-template-${dim.id}`}
+                    checked={dim.useTwoMeterTemplate || false}
+                    onCheckedChange={(checked) => {
+                      setDimensions(dimensions.map(d => 
+                        d.id === dim.id 
+                          ? { ...d, useTwoMeterTemplate: checked as boolean, width: checked ? '1.5' : '1' }
+                          : d
+                      ));
+                    }}
+                  />
+                  <Label
+                    htmlFor={`two-meter-template-${dim.id}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    داربست سطحی با قالب 2 متری (عرض 2 متر) میباشد
+                  </Label>
+                </div>
               )}
             </div>
           ))}
-          {/* Checkbox for 2-meter template - only for facade scaffolding */}
-          {isFacadeScaffolding && (
-            <div className="flex items-center space-x-2 space-x-reverse pt-2">
-              <Checkbox
-                id="two-meter-template"
-                checked={useTwoMeterTemplate}
-                onCheckedChange={(checked) => {
-                  setUseTwoMeterTemplate(checked as boolean);
-                  // Update all dimensions width to 1.5 when checked, 1 when unchecked
-                  const newWidth = checked ? '1.5' : '1';
-                  setDimensions(dimensions.map(d => ({ ...d, width: newWidth })));
-                }}
-              />
-              <Label
-                htmlFor="two-meter-template"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                داربست سطحی با قالب 2 متری (عرض 2 متر) میباشد
-              </Label>
-            </div>
-          )}
           
           <Button type="button" variant="outline" onClick={addDimension} className="w-full">
             <Plus className="h-4 w-4 ml-2" />
