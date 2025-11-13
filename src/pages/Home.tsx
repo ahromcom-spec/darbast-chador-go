@@ -61,6 +61,7 @@ const Home = () => {
   };
 
   const handleSubcategorySelect = (subcategory: any) => {
+    setShowSubcategoryDialog(false); // بستن دیالوگ
     setSelectedServiceType(pendingServiceTypeId);
     setSelectedSubcategory(subcategory.code);
     setSelectedProject('');
