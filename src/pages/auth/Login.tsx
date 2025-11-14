@@ -115,29 +115,21 @@ export default function Login() {
     // اگر کاربر ثبت‌نام نکرده باشد (چه در پاسخ موفق چه خطا)، پیام راهنمای ثبت‌نام نمایش دهیم
     const needsRegistration = userExists === false;
 
-    if (error) {
-      const msg = error.message || 'خطا در ارسال کد تایید';
-      const isGenericEdgeError = /non-2xx|Edge Function returned/i.test(msg);
-      if (needsRegistration || isGenericEdgeError || msg.includes('ثبت نشده')) {
-        setStep('not-registered');
-        toast({
-          title: 'نیاز به ثبت‌نام',
-          description: 'برای ورود به اهرم، ابتدا ثبت‌نام کنید.',
-        });
-        return;
-      }
-      // برگشت به مرحله شماره در صورت خطا
-      setStep('phone');
-      toast({ variant: 'destructive', title: 'خطا', description: msg });
-      return;
-    }
-
+    // تنها در صورتی که واقعا ثبت‌نام نشده باشد به مرحله ثبت‌نام برو
     if (needsRegistration) {
       setStep('not-registered');
       toast({
         title: 'نیاز به ثبت‌نام',
         description: 'برای ورود به اهرم، ابتدا ثبت‌نام کنید.',
       });
+      return;
+    }
+
+    if (error) {
+      const msg = error.message || 'خطا در ارسال کد تایید';
+      // فقط خطا را نمایش بده؛ کاربر را به ثبت‌نام هدایت نکن
+      setStep('phone');
+      toast({ variant: 'destructive', title: 'خطا', description: msg });
       return;
     }
 
