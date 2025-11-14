@@ -483,38 +483,219 @@ export default function ExecutivePending() {
           }
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
+            <DialogTitle className="text-right">جزئیات سفارش {selectedOrder?.code}</DialogTitle>
+            <DialogDescription className="text-right">
+              اطلاعات کامل سفارش داربست به همراه اجناس
+            </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground">نام مشتری</Label>
-                  <p className="font-medium">{selectedOrder.customer_name}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">شماره تماس</Label>
-                  <p className="font-medium" dir="ltr">{selectedOrder.customer_phone}</p>
+            <div className="space-y-6 text-right py-4">
+              {/* مشخصات مشتری */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  مشخصات مشتری
+                </h3>
+                <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
+                  <div>
+                    <Label className="text-muted-foreground">نام مشتری</Label>
+                    <p className="font-medium mt-1">{selectedOrder.customer_name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">شماره تماس</Label>
+                    <p className="font-medium mt-1 flex items-center gap-2" dir="ltr">
+                      <Phone className="w-4 h-4" />
+                      {selectedOrder.customer_phone}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">آدرس</Label>
-                <p className="font-medium">{selectedOrder.address}</p>
-              </div>
-              {selectedOrder.detailed_address && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">آدرس تفصیلی</Label>
-                  <p className="font-medium">{selectedOrder.detailed_address}</p>
+
+              {/* آدرس */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <MapPin className="w-5 h-5" />
+                  آدرس پروژه
+                </h3>
+                <div className="bg-muted/30 p-4 rounded-lg space-y-2">
+                  <div>
+                    <Label className="text-muted-foreground">آدرس</Label>
+                    <p className="mt-1">{selectedOrder.address}</p>
+                  </div>
+                  {selectedOrder.detailed_address && (
+                    <div>
+                      <Label className="text-muted-foreground">جزئیات آدرس</Label>
+                      <p className="mt-1">{selectedOrder.detailed_address}</p>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* مشخصات سفارش */}
               {selectedOrder.notes && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">جزئیات درخواست</Label>
-                  <pre className="text-sm bg-muted p-3 rounded-lg mt-2 whitespace-pre-wrap">
-                    {JSON.stringify(selectedOrder.notes, null, 2)}
-                  </pre>
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">مشخصات سفارش داربست</h3>
+                  <div className="bg-muted/30 p-4 rounded-lg space-y-4">
+                    {selectedOrder.notes.service_type && (
+                      <div>
+                        <Label className="text-muted-foreground">نوع خدمات</Label>
+                        <p className="mt-1 font-medium">{selectedOrder.notes.service_type}</p>
+                      </div>
+                    )}
+                    
+                    <Separator />
+                    
+                    {/* ابعاد داربست */}
+                    {selectedOrder.notes.dimensions && (
+                      <div>
+                        <Label className="text-muted-foreground mb-2 block">ابعاد داربست</Label>
+                        <div className="space-y-2">
+                          {selectedOrder.notes.dimensions.map((dim: any, idx: number) => (
+                            <div key={idx} className="bg-background/50 p-3 rounded-md">
+                              <div className="grid grid-cols-3 gap-4 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">طول:</span>
+                                  <span className="font-medium mr-2">{dim.length} متر</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">عرض:</span>
+                                  <span className="font-medium mr-2">{dim.width} متر</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">ارتفاع:</span>
+                                  <span className="font-medium mr-2">{dim.height} متر</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* مساحت کل */}
+                    {selectedOrder.notes.totalArea && (
+                      <div className="bg-primary/10 p-3 rounded-md">
+                        <Label className="text-muted-foreground">مساحت کل</Label>
+                        <p className="mt-1 font-bold text-lg">{selectedOrder.notes.totalArea} متر مربع</p>
+                      </div>
+                    )}
+
+                    <Separator />
+
+                    {/* شرایط خدمات */}
+                    {selectedOrder.notes.conditions && (
+                      <div>
+                        <Label className="text-muted-foreground mb-2 block">شرایط خدمات</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {selectedOrder.notes.conditions.totalMonths && (
+                            <div className="bg-background/50 p-3 rounded-md">
+                              <span className="text-sm text-muted-foreground">کل ماه‌ها:</span>
+                              <p className="font-medium">{selectedOrder.notes.conditions.totalMonths} ماه</p>
+                            </div>
+                          )}
+                          {selectedOrder.notes.conditions.currentMonth && (
+                            <div className="bg-background/50 p-3 rounded-md">
+                              <span className="text-sm text-muted-foreground">ماه جاری:</span>
+                              <p className="font-medium">{selectedOrder.notes.conditions.currentMonth}</p>
+                            </div>
+                          )}
+                          {selectedOrder.notes.conditions.distanceRange && (
+                            <div className="bg-background/50 p-3 rounded-md">
+                              <span className="text-sm text-muted-foreground">محدوده فاصله:</span>
+                              <p className="font-medium">{selectedOrder.notes.conditions.distanceRange} کیلومتر</p>
+                            </div>
+                          )}
+                          {selectedOrder.notes.conditions.platformHeight && (
+                            <div className="bg-background/50 p-3 rounded-md">
+                              <span className="text-sm text-muted-foreground">ارتفاع سکو:</span>
+                              <p className="font-medium">{selectedOrder.notes.conditions.platformHeight} متر</p>
+                            </div>
+                          )}
+                          {selectedOrder.notes.conditions.scaffoldHeightFromPlatform && (
+                            <div className="bg-background/50 p-3 rounded-md">
+                              <span className="text-sm text-muted-foreground">ارتفاع داربست از سکو:</span>
+                              <p className="font-medium">{selectedOrder.notes.conditions.scaffoldHeightFromPlatform} متر</p>
+                            </div>
+                          )}
+                          {selectedOrder.notes.conditions.vehicleDistance && (
+                            <div className="bg-background/50 p-3 rounded-md">
+                              <span className="text-sm text-muted-foreground">فاصله خودرو:</span>
+                              <p className="font-medium">{selectedOrder.notes.conditions.vehicleDistance} متر</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <Separator />
+
+                    {/* اقلام اضافی و تجهیزات */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedOrder.notes.additionalItems && Object.keys(selectedOrder.notes.additionalItems).length > 0 && (
+                        <div>
+                          <Label className="text-muted-foreground mb-2 block">اقلام اضافی</Label>
+                          <div className="space-y-1">
+                            {Object.entries(selectedOrder.notes.additionalItems).map(([key, value]: [string, any]) => (
+                              value && (
+                                <div key={key} className="flex items-center gap-2 text-sm">
+                                  <CheckCircle className="w-4 h-4 text-primary" />
+                                  <span>{key}: {value === true ? 'بله' : value}</span>
+                                </div>
+                              )
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedOrder.notes.safetyEquipment && Object.keys(selectedOrder.notes.safetyEquipment).length > 0 && (
+                        <div>
+                          <Label className="text-muted-foreground mb-2 block">تجهیزات ایمنی</Label>
+                          <div className="space-y-1">
+                            {Object.entries(selectedOrder.notes.safetyEquipment).map(([key, value]: [string, any]) => (
+                              value && (
+                                <div key={key} className="flex items-center gap-2 text-sm">
+                                  <CheckCircle className="w-4 h-4 text-primary" />
+                                  <span>{key}</span>
+                                </div>
+                              )
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* نردبان و نرده */}
+                    {(selectedOrder.notes.needsStairs || selectedOrder.notes.needsHandrails) && (
+                      <div className="flex gap-4">
+                        {selectedOrder.notes.needsStairs && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle className="w-4 h-4 text-primary" />
+                            <span>نیاز به نردبان</span>
+                          </div>
+                        )}
+                        {selectedOrder.notes.needsHandrails && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle className="w-4 h-4 text-primary" />
+                            <span>نیاز به نرده</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <Separator />
+
+                    {/* قیمت تخمینی */}
+                    {selectedOrder.notes.estimated_price && (
+                      <div className="bg-primary/10 p-4 rounded-md">
+                        <Label className="text-muted-foreground">قیمت تخمینی</Label>
+                        <p className="mt-1 font-bold text-xl">
+                          {selectedOrder.notes.estimated_price.toLocaleString('fa-IR')} ریال
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
