@@ -335,13 +335,14 @@ export default function ExecutivePendingOrders() {
     
     const getServiceInfo = () => {
       try {
-        const notes = order.notes;
-        if (notes?.total_area) {
-          return `مساحت کل: ${notes.total_area} متر مربع`;
-        }
-        if (notes?.dimensions?.length > 0) {
-          return `تعداد ابعاد: ${notes.dimensions.length}`;
-        }
+        const n = order.notes || {};
+        const totalArea = n.total_area ?? n.totalArea;
+        if (totalArea) return `مساحت کل: ${totalArea} متر مربع`;
+        if (n.dimensions?.length > 0) return `تعداد ابعاد: ${n.dimensions.length}`;
+        const type = n.scaffold_type || n.service_type || n.scaffoldType || '';
+        if (type === 'facade') return 'داربست نما';
+        if (type === 'formwork') return 'قالب فلزی';
+        if (type?.includes('ceiling')) return 'داربست سقف';
         return 'داربست با اجناس';
       } catch {
         return 'داربست با اجناس';
@@ -634,22 +635,33 @@ export default function ExecutivePendingOrders() {
                     <Label className="text-xs text-muted-foreground">جزئیات فنی سفارش</Label>
                     <div className="bg-muted p-4 rounded-lg space-y-3">
                       {/* نوع داربست */}
-                      {selectedOrder.notes.scaffold_type && (
-                        <div>
-                          <span className="font-semibold">نوع داربست:</span>{' '}
-                          <span className="text-sm">
-                            {selectedOrder.notes.scaffold_type === 'facade' ? 'داربست نما' :
-                             selectedOrder.notes.scaffold_type === 'formwork' ? 'قالب فلزی' : 'داربست سقف'}
-                          </span>
-                        </div>
-                      )}
+                      {(() => {
+                        const n = selectedOrder.notes || {};
+                        const type = n.scaffold_type || n.service_type || n.scaffoldType || '';
+                        if (!type) return null;
+                        return (
+                          <div>
+                            <span className="font-semibold">نوع داربست:</span>{' '}
+                            <span className="text-sm">
+                              {type === 'facade' ? 'داربست نما' :
+                               type === 'formwork' ? 'قالب فلزی' :
+                               type?.includes('ceiling') ? 'داربست سقف' : String(type)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                       
                       {/* مساحت کل */}
-                      {selectedOrder.notes.total_area && (
-                        <div>
-                          <span className="font-semibold">مساحت کل:</span> {selectedOrder.notes.total_area} متر مربع
-                        </div>
-                      )}
+                      {(() => {
+                        const n = selectedOrder.notes || {};
+                        const total = n.total_area ?? n.totalArea;
+                        if (!total) return null;
+                        return (
+                          <div>
+                            <span className="font-semibold">مساحت کل:</span> {total} متر مربع
+                          </div>
+                        );
+                      })()}
                       
                       {/* ابعاد */}
                       {selectedOrder.notes.dimensions && selectedOrder.notes.dimensions.length > 0 && (
