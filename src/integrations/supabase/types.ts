@@ -1367,7 +1367,9 @@ export type Database = {
           financial_confirmed_by: string | null
           hierarchy_project_id: string | null
           id: string
+          is_renewal: boolean | null
           notes: string | null
+          original_order_id: string | null
           payment_amount: number | null
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
@@ -1404,7 +1406,9 @@ export type Database = {
           financial_confirmed_by?: string | null
           hierarchy_project_id?: string | null
           id?: string
+          is_renewal?: boolean | null
           notes?: string | null
+          original_order_id?: string | null
           payment_amount?: number | null
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
@@ -1441,7 +1445,9 @@ export type Database = {
           financial_confirmed_by?: string | null
           hierarchy_project_id?: string | null
           id?: string
+          is_renewal?: boolean | null
           notes?: string | null
+          original_order_id?: string | null
           payment_amount?: number | null
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
@@ -1480,6 +1486,13 @@ export type Database = {
             columns: ["hierarchy_project_id"]
             isOneToOne: false
             referencedRelation: "projects_hierarchy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_v3_original_order_id_fkey"
+            columns: ["original_order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
             referencedColumns: ["id"]
           },
           {
@@ -2760,7 +2773,9 @@ export type Database = {
           financial_confirmed_by: string | null
           hierarchy_project_id: string | null
           id: string
+          is_renewal: boolean | null
           notes: string | null
+          original_order_id: string | null
           payment_amount: number | null
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
