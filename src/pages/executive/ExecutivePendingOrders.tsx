@@ -632,22 +632,111 @@ export default function ExecutivePendingOrders() {
                   <Separator />
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">جزئیات فنی سفارش</Label>
-                    <div className="bg-muted p-4 rounded-lg">
+                    <div className="bg-muted p-4 rounded-lg space-y-3">
+                      {/* نوع داربست */}
+                      {selectedOrder.notes.scaffold_type && (
+                        <div>
+                          <span className="font-semibold">نوع داربست:</span>{' '}
+                          <span className="text-sm">
+                            {selectedOrder.notes.scaffold_type === 'facade' ? 'داربست نما' :
+                             selectedOrder.notes.scaffold_type === 'formwork' ? 'قالب فلزی' : 'داربست سقف'}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* مساحت کل */}
                       {selectedOrder.notes.total_area && (
-                        <div className="mb-2">
+                        <div>
                           <span className="font-semibold">مساحت کل:</span> {selectedOrder.notes.total_area} متر مربع
                         </div>
                       )}
+                      
+                      {/* ابعاد */}
                       {selectedOrder.notes.dimensions && selectedOrder.notes.dimensions.length > 0 && (
                         <div>
                           <span className="font-semibold">ابعاد:</span>
                           <ul className="mt-2 space-y-1 mr-4">
                             {selectedOrder.notes.dimensions.map((dim: any, idx: number) => (
                               <li key={idx} className="text-sm">
-                                طول: {dim.length}م × ارتفاع: {dim.height}م = {dim.area} متر مربع
+                                {dim.length && dim.height ? (
+                                  <>طول: {dim.length}م × ارتفاع: {dim.height}م{dim.area && ` = ${dim.area} متر مربع`}</>
+                                ) : (
+                                  <>طول: {dim.length}م × عرض: {dim.width}م × ارتفاع: {dim.height}م</>
+                                )}
                               </li>
                             ))}
                           </ul>
+                        </div>
+                      )}
+                      
+                      {/* شرایط خدمات */}
+                      {selectedOrder.notes.service_conditions && (
+                        <div className="space-y-2">
+                          <span className="font-semibold">شرایط خدمات:</span>
+                          <div className="mr-4 space-y-1 text-sm">
+                            {selectedOrder.notes.service_conditions.total_months && (
+                              <div>مدت خدمات: {selectedOrder.notes.service_conditions.total_months} ماه</div>
+                            )}
+                            {selectedOrder.notes.service_conditions.current_month && (
+                              <div>ماه جاری: {selectedOrder.notes.service_conditions.current_month}</div>
+                            )}
+                            {selectedOrder.notes.service_conditions.distance_range && (
+                              <div>
+                                محدوده فاصله: {selectedOrder.notes.service_conditions.distance_range === '0-15' ? '0 تا 15 کیلومتر' :
+                                               selectedOrder.notes.service_conditions.distance_range === '15-25' ? '15 تا 25 کیلومتر' :
+                                               selectedOrder.notes.service_conditions.distance_range === '25-50' ? '25 تا 50 کیلومتر' :
+                                               '50 تا 85 کیلومتر'}
+                              </div>
+                            )}
+                            {selectedOrder.notes.service_conditions.platform_height && (
+                              <div>ارتفاع کف بلوکی: {selectedOrder.notes.service_conditions.platform_height} متر</div>
+                            )}
+                            {selectedOrder.notes.service_conditions.scaffold_height_from_platform && (
+                              <div>ارتفاع داربست از کف بلوکی: {selectedOrder.notes.service_conditions.scaffold_height_from_platform} متر</div>
+                            )}
+                            {selectedOrder.notes.service_conditions.vehicle_distance && (
+                              <div>فاصله تا محل توقف خودرو: {selectedOrder.notes.service_conditions.vehicle_distance} متر</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* ضمیمه‌های اضافی */}
+                      {selectedOrder.notes.additional_items && selectedOrder.notes.additional_items.length > 0 && (
+                        <div>
+                          <span className="font-semibold">ضمیمه‌های اضافی:</span>
+                          <ul className="mt-2 space-y-1 mr-4 text-sm">
+                            {selectedOrder.notes.additional_items.map((item: any, idx: number) => (
+                              <li key={idx}>
+                                {item.item_name || item.item_type} - تعداد: {item.quantity}
+                                {item.price && ` - قیمت: ${item.price}`}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {/* موارد امنیتی */}
+                      {selectedOrder.notes.safety_equipment && selectedOrder.notes.safety_equipment.length > 0 && (
+                        <div>
+                          <span className="font-semibold">تجهیزات ایمنی:</span>
+                          <ul className="mt-2 space-y-1 mr-4 text-sm">
+                            {selectedOrder.notes.safety_equipment.map((item: string, idx: number) => (
+                              <li key={idx}>• {item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {/* دیگر موارد */}
+                      {selectedOrder.notes.has_stairs !== undefined && (
+                        <div>
+                          <span className="font-semibold">نیاز به پله:</span> {selectedOrder.notes.has_stairs ? 'بله' : 'خیر'}
+                        </div>
+                      )}
+                      {selectedOrder.notes.has_handrail !== undefined && (
+                        <div>
+                          <span className="font-semibold">نیاز به نرده:</span> {selectedOrder.notes.has_handrail ? 'بله' : 'خیر'}
                         </div>
                       )}
                     </div>
