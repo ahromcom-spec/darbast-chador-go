@@ -681,37 +681,60 @@ export default function ExecutivePendingOrders() {
                         </div>
                       )}
                       
-                      {/* شرایط خدمات */}
-                      {selectedOrder.notes.service_conditions && (
-                        <div className="space-y-2">
-                          <span className="font-semibold">شرایط خدمات:</span>
-                          <div className="mr-4 space-y-1 text-sm">
-                            {selectedOrder.notes.service_conditions.total_months && (
-                              <div>مدت خدمات: {selectedOrder.notes.service_conditions.total_months} ماه</div>
-                            )}
-                            {selectedOrder.notes.service_conditions.current_month && (
-                              <div>ماه جاری: {selectedOrder.notes.service_conditions.current_month}</div>
-                            )}
-                            {selectedOrder.notes.service_conditions.distance_range && (
-                              <div>
-                                محدوده فاصله: {selectedOrder.notes.service_conditions.distance_range === '0-15' ? '0 تا 15 کیلومتر' :
-                                               selectedOrder.notes.service_conditions.distance_range === '15-25' ? '15 تا 25 کیلومتر' :
-                                               selectedOrder.notes.service_conditions.distance_range === '25-50' ? '25 تا 50 کیلومتر' :
-                                               '50 تا 85 کیلومتر'}
-                              </div>
-                            )}
-                            {selectedOrder.notes.service_conditions.platform_height && (
-                              <div>ارتفاع کف بلوکی: {selectedOrder.notes.service_conditions.platform_height} متر</div>
-                            )}
-                            {selectedOrder.notes.service_conditions.scaffold_height_from_platform && (
-                              <div>ارتفاع داربست از کف بلوکی: {selectedOrder.notes.service_conditions.scaffold_height_from_platform} متر</div>
-                            )}
-                            {selectedOrder.notes.service_conditions.vehicle_distance && (
-                              <div>فاصله تا محل توقف خودرو: {selectedOrder.notes.service_conditions.vehicle_distance} متر</div>
-                            )}
+                      {/* شرایط خدمات/محیط */}
+                      {(() => {
+                        const n = selectedOrder.notes || {};
+                        const sc = n.service_conditions || n.conditions || {};
+                        const distance = sc.distance_range || sc.distanceRange;
+                        const platformH = sc.platform_height ?? sc.platformHeight;
+                        const scaffoldFromPlatform = sc.scaffold_height_from_platform ?? sc.scaffoldHeightFromPlatform;
+                        const vehicleDist = sc.vehicle_distance ?? sc.vehicleDistance;
+                        const totalMonths = sc.total_months ?? sc.totalMonths;
+                        const currentMonth = sc.current_month ?? sc.currentMonth;
+                        
+                        const hasConditions = Object.keys(sc).length > 0;
+                        const hasEnvData = n.onGround !== undefined || n.vehicleReachesSite !== undefined || 
+                                          n.isFacadeWidth2m !== undefined || n.locationPurpose || 
+                                          n.estimated_price || n.price_breakdown;
+                        
+                        if (!hasConditions && !hasEnvData) return null;
+                        
+                        return (
+                          <div className="space-y-3">
+                            <span className="font-semibold">شرایط خدمات و محیط:</span>
+                            <div className="mr-4 space-y-1 text-sm">
+                              {totalMonths && (<div>مدت خدمات: {totalMonths} ماه</div>)}
+                              {currentMonth && (<div>ماه جاری: {currentMonth}</div>)}
+                              {distance && (
+                                <div>
+                                  محدوده فاصله: {distance === '0-15' ? '0 تا 15 کیلومتر' : 
+                                                distance === '15-25' ? '15 تا 25 کیلومتر' : 
+                                                distance === '25-50' ? '25 تا 50 کیلومتر' : 
+                                                distance === '50-85' ? '50 تا 85 کیلومتر' : String(distance)}
+                                </div>
+                              )}
+                              {platformH != null && (<div>ارتفاع کف بلوکی: {platformH} متر</div>)}
+                              {scaffoldFromPlatform != null && (<div>ارتفاع داربست از کف بلوکی: {scaffoldFromPlatform} متر</div>)}
+                              {vehicleDist != null && (<div>فاصله تا محل توقف خودرو: {vehicleDist} متر</div>)}
+                              {n.onGround != null && (<div>محل نصب: {n.onGround ? 'روی زمین' : 'غیرزمینی/سایر'}</div>)}
+                              {n.vehicleReachesSite != null && (<div>دسترسی خودرو: {n.vehicleReachesSite ? 'امکان تردد دارد' : 'امکان تردد ندارد'}</div>)}
+                              {n.isFacadeWidth2m != null && (<div>عرض داربست نما: {n.isFacadeWidth2m ? '۲ متر' : '۱٫۲ متر'}</div>)}
+                              {n.locationPurpose && (<div>کاربری محل: {n.locationPurpose}</div>)}
+                              {n.estimated_price != null && (<div>برآورد قیمت: {n.estimated_price.toLocaleString()} تومان</div>)}
+                              {Array.isArray(n.price_breakdown) && n.price_breakdown.length > 0 && (
+                                <div className="space-y-1">
+                                  <div className="font-medium">ریز هزینه‌ها:</div>
+                                  <ul className="mr-4 list-disc">
+                                    {n.price_breakdown.map((p: any, i: number) => (
+                                      <li key={i}>{typeof p === 'string' ? p : JSON.stringify(p)}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                       
                       {/* ضمیمه‌های اضافی */}
                       {selectedOrder.notes.additional_items && selectedOrder.notes.additional_items.length > 0 && (

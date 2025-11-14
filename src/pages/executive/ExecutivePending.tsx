@@ -551,16 +551,21 @@ export default function ExecutivePending() {
                       </div>
                     )}
                     
-                    {selectedOrder.notes.scaffold_type && (
-                      <div>
-                        <Label className="text-muted-foreground">نوع داربست</Label>
-                        <p className="mt-1 font-medium">
-                          {selectedOrder.notes.scaffold_type === 'facade' && 'داربست نما'}
-                          {selectedOrder.notes.scaffold_type === 'formwork' && 'قالب بتن'}
-                          {selectedOrder.notes.scaffold_type === 'ceiling' && 'سقف کاذب'}
-                        </p>
-                      </div>
-                    )}
+                    {(() => {
+                      const n = selectedOrder.notes || {};
+                      const type = n.scaffold_type || n.service_type || n.scaffoldType || '';
+                      if (!type) return null;
+                      return (
+                        <div>
+                          <Label className="text-muted-foreground">نوع داربست</Label>
+                          <p className="mt-1 font-medium">
+                            {type === 'facade' ? 'داربست نما' :
+                             type === 'formwork' ? 'قالب بتن' :
+                             type?.includes('ceiling') ? 'سقف کاذب' : String(type)}
+                          </p>
+                        </div>
+                      );
+                    })()}
                     
                     <Separator />
                     
@@ -603,59 +608,77 @@ export default function ExecutivePending() {
                     )}
 
                     {/* مساحت کل */}
-                    {selectedOrder.notes.totalArea && (
-                      <div className="bg-primary/10 p-3 rounded-md">
-                        <Label className="text-muted-foreground">مساحت کل</Label>
-                        <p className="mt-1 font-bold text-lg">{selectedOrder.notes.totalArea} متر مربع</p>
-                      </div>
-                    )}
+                    {(() => {
+                      const n = selectedOrder.notes || {};
+                      const total = n.total_area ?? n.totalArea;
+                      if (!total) return null;
+                      return (
+                        <div className="bg-primary/10 p-3 rounded-md">
+                          <Label className="text-muted-foreground">مساحت کل</Label>
+                          <p className="mt-1 font-bold text-lg">{total} متر مربع</p>
+                        </div>
+                      );
+                    })()}
 
                     <Separator />
 
                     {/* شرایط خدمات */}
-                    {(selectedOrder.notes.serviceConditions || selectedOrder.notes.conditions) && (
-                      <div className="space-y-3">
-                        <Label className="text-muted-foreground font-semibold">شرایط خدمات</Label>
-                        <div className="grid grid-cols-2 gap-3">
-                          {(selectedOrder.notes.serviceConditions?.totalMonths || selectedOrder.notes.conditions?.totalMonths) && (
-                            <div className="bg-background p-3 rounded border">
-                              <Label className="text-xs text-muted-foreground">مجموع ماه‌های خدمات</Label>
-                              <p className="font-medium">{selectedOrder.notes.serviceConditions?.totalMonths || selectedOrder.notes.conditions?.totalMonths} ماه</p>
-                            </div>
-                          )}
-                          {(selectedOrder.notes.serviceConditions?.currentMonth || selectedOrder.notes.conditions?.currentMonth) && (
-                            <div className="bg-background p-3 rounded border">
-                              <Label className="text-xs text-muted-foreground">ماه جاری</Label>
-                              <p className="font-medium">ماه {selectedOrder.notes.serviceConditions?.currentMonth || selectedOrder.notes.conditions?.currentMonth}</p>
-                            </div>
-                          )}
-                          {(selectedOrder.notes.serviceConditions?.distanceRange || selectedOrder.notes.conditions?.distanceRange) && (
-                            <div className="bg-background p-3 rounded border">
-                              <Label className="text-xs text-muted-foreground">فاصله از انبار</Label>
-                              <p className="font-medium">{selectedOrder.notes.serviceConditions?.distanceRange || selectedOrder.notes.conditions?.distanceRange} کیلومتر</p>
-                            </div>
-                          )}
-                          {(selectedOrder.notes.serviceConditions?.platformHeight || selectedOrder.notes.conditions?.platformHeight) && (
-                            <div className="bg-background p-3 rounded border">
-                              <Label className="text-xs text-muted-foreground">ارتفاع سکو</Label>
-                              <p className="font-medium">{selectedOrder.notes.serviceConditions?.platformHeight || selectedOrder.notes.conditions?.platformHeight} متر</p>
-                            </div>
-                          )}
-                          {(selectedOrder.notes.serviceConditions?.scaffoldHeightFromPlatform || selectedOrder.notes.conditions?.scaffoldHeightFromPlatform) && (
-                            <div className="bg-background p-3 rounded border">
-                              <Label className="text-xs text-muted-foreground">ارتفاع داربست از سکو</Label>
-                              <p className="font-medium">{selectedOrder.notes.serviceConditions?.scaffoldHeightFromPlatform || selectedOrder.notes.conditions?.scaffoldHeightFromPlatform} متر</p>
-                            </div>
-                          )}
-                          {(selectedOrder.notes.serviceConditions?.vehicleDistance || selectedOrder.notes.conditions?.vehicleDistance) && (
-                            <div className="bg-background p-3 rounded border">
-                              <Label className="text-xs text-muted-foreground">فاصله وسیله نقلیه</Label>
-                              <p className="font-medium">{selectedOrder.notes.serviceConditions?.vehicleDistance || selectedOrder.notes.conditions?.vehicleDistance} متر</p>
-                            </div>
-                          )}
+                    {(() => {
+                      const n = selectedOrder.notes || {};
+                      const sc = n.service_conditions || n.serviceConditions || n.conditions || {};
+                      const distance = sc.distance_range || sc.distanceRange;
+                      const platformH = sc.platform_height ?? sc.platformHeight;
+                      const scaffoldFromPlatform = sc.scaffold_height_from_platform ?? sc.scaffoldHeightFromPlatform;
+                      const vehicleDist = sc.vehicle_distance ?? sc.vehicleDistance;
+                      const totalMonths = sc.total_months ?? sc.totalMonths;
+                      const currentMonth = sc.current_month ?? sc.currentMonth;
+                      
+                      if (!Object.keys(sc).length) return null;
+                      
+                      return (
+                        <div className="space-y-3">
+                          <Label className="text-muted-foreground font-semibold">شرایط خدمات</Label>
+                          <div className="grid grid-cols-2 gap-3">
+                            {totalMonths && (
+                              <div className="bg-background p-3 rounded border">
+                                <Label className="text-xs text-muted-foreground">مجموع ماه‌های خدمات</Label>
+                                <p className="font-medium">{totalMonths} ماه</p>
+                              </div>
+                            )}
+                            {currentMonth && (
+                              <div className="bg-background p-3 rounded border">
+                                <Label className="text-xs text-muted-foreground">ماه جاری</Label>
+                                <p className="font-medium">ماه {currentMonth}</p>
+                              </div>
+                            )}
+                            {distance && (
+                              <div className="bg-background p-3 rounded border">
+                                <Label className="text-xs text-muted-foreground">فاصله از انبار</Label>
+                                <p className="font-medium">{distance} کیلومتر</p>
+                              </div>
+                            )}
+                            {platformH != null && (
+                              <div className="bg-background p-3 rounded border">
+                                <Label className="text-xs text-muted-foreground">ارتفاع سکو</Label>
+                                <p className="font-medium">{platformH} متر</p>
+                              </div>
+                            )}
+                            {scaffoldFromPlatform != null && (
+                              <div className="bg-background p-3 rounded border">
+                                <Label className="text-xs text-muted-foreground">ارتفاع داربست از سکو</Label>
+                                <p className="font-medium">{scaffoldFromPlatform} متر</p>
+                              </div>
+                            )}
+                            {vehicleDist != null && (
+                              <div className="bg-background p-3 rounded border">
+                                <Label className="text-xs text-muted-foreground">فاصله وسیله نقلیه</Label>
+                                <p className="font-medium">{vehicleDist} متر</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     <Separator />
 
