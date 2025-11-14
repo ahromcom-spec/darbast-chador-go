@@ -24,10 +24,20 @@ serve(async (req) => {
     // Normalize to Iranian mobile format: 09XXXXXXXXX (for Parsgreen)
     const normalizeIranPhone = (input: string) => {
       // Security: Limit input length to prevent memory exhaustion
-      if (input.length > 20) return '';
-      
-      // Keep only digits
-      let raw = input.slice(0, 20).replace(/[^0-9]/g, '');
+      if (!input) return '';
+      if (input.length > 32) return '';
+      const limited = input.slice(0, 32);
+
+      // Map Persian/Arabic numerals to ASCII first
+      const persian = '۰۱۲۳۴۵۶۷۸۹';
+      const arabic = '٠١٢٣٤٥٦٧٨٩';
+      const toAscii = (s: string) =>
+        s
+          .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
+          .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)));
+
+      // Keep only digits and optional leading + for country code
+      let raw = toAscii(limited).replace(/[^0-9+]/g, '');
       // Remove common country prefixes
       if (raw.startsWith('0098')) raw = '0' + raw.slice(4);
       else if (raw.startsWith('098')) raw = '0' + raw.slice(3);
@@ -167,6 +177,24 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً 5 دقیقه صبر کنید' }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If whitelisted, bypass SMS and use fixed code 12345 (no SMS)
+    if (isWhitelistedPhone) {
+      const fixed = '12345';
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+      await supabase
+        .from('otp_codes')
+        .insert({
+          phone_number: normalizedPhone,
+          code: fixed,
+          expires_at: expiresAt,
+          verified: false,
+        });
+      return new Response(
+        JSON.stringify({ success: true, user_exists: userExists, whitelisted: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
