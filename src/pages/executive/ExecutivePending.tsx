@@ -276,6 +276,16 @@ export default function ExecutivePending() {
     }
   };
 
+  const ApprovalProgressSection = ({ orderId }: { orderId: string }) => {
+    const { approvals, loading } = useOrderApprovals(orderId);
+    return (
+      <div className="space-y-4">
+        <h3 className="font-semibold text-lg">روند تاییدات</h3>
+        <ApprovalProgress approvals={approvals} loading={loading} />
+      </div>
+    );
+  };
+
   const OrderCardWithApprovals = ({ order }: { order: Order }) => {
     const { approvals, loading: approvalsLoading } = useOrderApprovals(order.id);
     
@@ -298,54 +308,50 @@ export default function ExecutivePending() {
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Phone className="h-4 w-4" />
-                  <span dir="ltr" className="text-left">{order.customer_phone}</span>
+                  <span dir="ltr">{order.customer_phone}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <MapPin className="h-4 w-4" />
                   <span className="line-clamp-1">{order.address}</span>
                 </div>
               </div>
+
+              {/* نمایش روند تاییدات */}
+              <div className="pt-3 border-t">
+                {approvalsLoading ? (
+                  <div className="text-xs text-muted-foreground">در حال بارگذاری تاییدات...</div>
+                ) : (
+                  <ApprovalProgress approvals={approvals} loading={approvalsLoading} />
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setActionType('details');
+                }}
+                variant="outline"
+              >
+                <Eye className="h-4 w-4 ml-2" />
+                مشاهده جزئیات
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setActionType('approve');
+                }}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4 ml-2" />
+                تایید سفارش
+              </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Separator />
-
-          {order.detailed_address && (
-            <div className="text-xs text-muted-foreground">
-              <span className="font-medium">آدرس تفصیلی:</span> {order.detailed_address}
-            </div>
-          )}
-
-          <ApprovalProgress approvals={approvals} loading={approvalsLoading} />
-
-          <div className="flex gap-2 flex-wrap pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedOrder(order);
-                setActionType('details');
-              }}
-              className="gap-2"
-            >
-              <Eye className="h-4 w-4" />
-              جزئیات کامل
-            </Button>
-            
-            <Button
-              size="sm"
-              onClick={() => {
-                setSelectedOrder(order);
-                setActionType('approve');
-              }}
-              className="gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle className="h-4 w-4" />
-              تایید و تعیین زمان‌بندی
-            </Button>
-          </div>
-        </CardContent>
       </Card>
     );
   };
@@ -485,9 +491,9 @@ export default function ExecutivePending() {
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-right">جزئیات سفارش {selectedOrder?.code}</DialogTitle>
+            <DialogTitle className="text-right">جزئیات کامل سفارش {selectedOrder?.code}</DialogTitle>
             <DialogDescription className="text-right">
-              اطلاعات کامل سفارش داربست به همراه اجناس
+              تمام اطلاعات فرم سفارش مشتری برای بررسی و تصمیم‌گیری
             </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
@@ -536,7 +542,7 @@ export default function ExecutivePending() {
               {/* مشخصات سفارش */}
               {selectedOrder.notes && (
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">مشخصات سفارش داربست</h3>
+                  <h3 className="font-semibold text-lg">مشخصات کامل سفارش داربست</h3>
                   <div className="bg-muted/30 p-4 rounded-lg space-y-4">
                     {selectedOrder.notes.service_type && (
                       <div>
@@ -545,32 +551,54 @@ export default function ExecutivePending() {
                       </div>
                     )}
                     
+                    {selectedOrder.notes.scaffold_type && (
+                      <div>
+                        <Label className="text-muted-foreground">نوع داربست</Label>
+                        <p className="mt-1 font-medium">
+                          {selectedOrder.notes.scaffold_type === 'facade' && 'داربست نما'}
+                          {selectedOrder.notes.scaffold_type === 'formwork' && 'قالب بتن'}
+                          {selectedOrder.notes.scaffold_type === 'ceiling' && 'سقف کاذب'}
+                        </p>
+                      </div>
+                    )}
+                    
                     <Separator />
                     
                     {/* ابعاد داربست */}
-                    {selectedOrder.notes.dimensions && (
-                      <div>
-                        <Label className="text-muted-foreground mb-2 block">ابعاد داربست</Label>
-                        <div className="space-y-2">
-                          {selectedOrder.notes.dimensions.map((dim: any, idx: number) => (
-                            <div key={idx} className="bg-background/50 p-3 rounded-md">
-                              <div className="grid grid-cols-3 gap-4 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">طول:</span>
-                                  <span className="font-medium mr-2">{dim.length} متر</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">عرض:</span>
-                                  <span className="font-medium mr-2">{dim.width} متر</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">ارتفاع:</span>
-                                  <span className="font-medium mr-2">{dim.height} متر</span>
-                                </div>
-                              </div>
+                    {selectedOrder.notes.dimensions && selectedOrder.notes.dimensions.length > 0 && (
+                      <div className="space-y-3">
+                        <Label className="text-muted-foreground font-semibold">ابعاد داربست</Label>
+                        {selectedOrder.notes.dimensions.map((dim: any, idx: number) => (
+                          <div key={idx} className="grid grid-cols-4 gap-3 bg-background p-3 rounded border">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">طول</Label>
+                              <p className="font-medium">{dim.length || '-'} متر</p>
                             </div>
-                          ))}
-                        </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">عرض</Label>
+                              <p className="font-medium">{dim.width || '-'} متر</p>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">ارتفاع</Label>
+                              <p className="font-medium">{dim.height || '-'} متر</p>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">مساحت</Label>
+                              <p className="font-medium">
+                                {dim.length && dim.height 
+                                  ? (parseFloat(dim.length) * parseFloat(dim.height)).toFixed(2)
+                                  : '-'} م²
+                              </p>
+                            </div>
+                            {dim.useTwoMeterTemplate && (
+                              <div className="col-span-4">
+                                <Badge variant="secondary" className="text-xs">
+                                  استفاده از قالب 2 متری
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
 
@@ -585,44 +613,44 @@ export default function ExecutivePending() {
                     <Separator />
 
                     {/* شرایط خدمات */}
-                    {selectedOrder.notes.conditions && (
-                      <div>
-                        <Label className="text-muted-foreground mb-2 block">شرایط خدمات</Label>
+                    {(selectedOrder.notes.serviceConditions || selectedOrder.notes.conditions) && (
+                      <div className="space-y-3">
+                        <Label className="text-muted-foreground font-semibold">شرایط خدمات</Label>
                         <div className="grid grid-cols-2 gap-3">
-                          {selectedOrder.notes.conditions.totalMonths && (
-                            <div className="bg-background/50 p-3 rounded-md">
-                              <span className="text-sm text-muted-foreground">کل ماه‌ها:</span>
-                              <p className="font-medium">{selectedOrder.notes.conditions.totalMonths} ماه</p>
+                          {(selectedOrder.notes.serviceConditions?.totalMonths || selectedOrder.notes.conditions?.totalMonths) && (
+                            <div className="bg-background p-3 rounded border">
+                              <Label className="text-xs text-muted-foreground">مجموع ماه‌های خدمات</Label>
+                              <p className="font-medium">{selectedOrder.notes.serviceConditions?.totalMonths || selectedOrder.notes.conditions?.totalMonths} ماه</p>
                             </div>
                           )}
-                          {selectedOrder.notes.conditions.currentMonth && (
-                            <div className="bg-background/50 p-3 rounded-md">
-                              <span className="text-sm text-muted-foreground">ماه جاری:</span>
-                              <p className="font-medium">{selectedOrder.notes.conditions.currentMonth}</p>
+                          {(selectedOrder.notes.serviceConditions?.currentMonth || selectedOrder.notes.conditions?.currentMonth) && (
+                            <div className="bg-background p-3 rounded border">
+                              <Label className="text-xs text-muted-foreground">ماه جاری</Label>
+                              <p className="font-medium">ماه {selectedOrder.notes.serviceConditions?.currentMonth || selectedOrder.notes.conditions?.currentMonth}</p>
                             </div>
                           )}
-                          {selectedOrder.notes.conditions.distanceRange && (
-                            <div className="bg-background/50 p-3 rounded-md">
-                              <span className="text-sm text-muted-foreground">محدوده فاصله:</span>
-                              <p className="font-medium">{selectedOrder.notes.conditions.distanceRange} کیلومتر</p>
+                          {(selectedOrder.notes.serviceConditions?.distanceRange || selectedOrder.notes.conditions?.distanceRange) && (
+                            <div className="bg-background p-3 rounded border">
+                              <Label className="text-xs text-muted-foreground">فاصله از انبار</Label>
+                              <p className="font-medium">{selectedOrder.notes.serviceConditions?.distanceRange || selectedOrder.notes.conditions?.distanceRange} کیلومتر</p>
                             </div>
                           )}
-                          {selectedOrder.notes.conditions.platformHeight && (
-                            <div className="bg-background/50 p-3 rounded-md">
-                              <span className="text-sm text-muted-foreground">ارتفاع سکو:</span>
-                              <p className="font-medium">{selectedOrder.notes.conditions.platformHeight} متر</p>
+                          {(selectedOrder.notes.serviceConditions?.platformHeight || selectedOrder.notes.conditions?.platformHeight) && (
+                            <div className="bg-background p-3 rounded border">
+                              <Label className="text-xs text-muted-foreground">ارتفاع سکو</Label>
+                              <p className="font-medium">{selectedOrder.notes.serviceConditions?.platformHeight || selectedOrder.notes.conditions?.platformHeight} متر</p>
                             </div>
                           )}
-                          {selectedOrder.notes.conditions.scaffoldHeightFromPlatform && (
-                            <div className="bg-background/50 p-3 rounded-md">
-                              <span className="text-sm text-muted-foreground">ارتفاع داربست از سکو:</span>
-                              <p className="font-medium">{selectedOrder.notes.conditions.scaffoldHeightFromPlatform} متر</p>
+                          {(selectedOrder.notes.serviceConditions?.scaffoldHeightFromPlatform || selectedOrder.notes.conditions?.scaffoldHeightFromPlatform) && (
+                            <div className="bg-background p-3 rounded border">
+                              <Label className="text-xs text-muted-foreground">ارتفاع داربست از سکو</Label>
+                              <p className="font-medium">{selectedOrder.notes.serviceConditions?.scaffoldHeightFromPlatform || selectedOrder.notes.conditions?.scaffoldHeightFromPlatform} متر</p>
                             </div>
                           )}
-                          {selectedOrder.notes.conditions.vehicleDistance && (
-                            <div className="bg-background/50 p-3 rounded-md">
-                              <span className="text-sm text-muted-foreground">فاصله خودرو:</span>
-                              <p className="font-medium">{selectedOrder.notes.conditions.vehicleDistance} متر</p>
+                          {(selectedOrder.notes.serviceConditions?.vehicleDistance || selectedOrder.notes.conditions?.vehicleDistance) && (
+                            <div className="bg-background p-3 rounded border">
+                              <Label className="text-xs text-muted-foreground">فاصله وسیله نقلیه</Label>
+                              <p className="font-medium">{selectedOrder.notes.serviceConditions?.vehicleDistance || selectedOrder.notes.conditions?.vehicleDistance} متر</p>
                             </div>
                           )}
                         </div>
@@ -631,73 +659,138 @@ export default function ExecutivePending() {
 
                     <Separator />
 
-                    {/* اقلام اضافی و تجهیزات */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {selectedOrder.notes.additionalItems && Object.keys(selectedOrder.notes.additionalItems).length > 0 && (
-                        <div>
-                          <Label className="text-muted-foreground mb-2 block">اقلام اضافی</Label>
-                          <div className="space-y-1">
-                            {Object.entries(selectedOrder.notes.additionalItems).map(([key, value]: [string, any]) => (
-                              value && (
-                                <div key={key} className="flex items-center gap-2 text-sm">
-                                  <CheckCircle className="w-4 h-4 text-primary" />
-                                  <span>{key}: {value === true ? 'بله' : value}</span>
-                                </div>
-                              )
-                            ))}
-                          </div>
+                    {/* اقلام اضافی */}
+                    {selectedOrder.notes.additionalItems && selectedOrder.notes.additionalItems.length > 0 && (
+                      <div className="space-y-3">
+                        <Label className="text-muted-foreground font-semibold">اقلام اضافی درخواستی</Label>
+                        <div className="space-y-2">
+                          {selectedOrder.notes.additionalItems.map((item: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between bg-background p-3 rounded border">
+                              <div className="flex-1">
+                                <p className="font-medium">{item.name}</p>
+                                {item.description && (
+                                  <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                                )}
+                              </div>
+                              <div className="text-left mr-4">
+                                <p className="font-medium">{item.quantity} عدد</p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      )}
-
-                      {selectedOrder.notes.safetyEquipment && Object.keys(selectedOrder.notes.safetyEquipment).length > 0 && (
-                        <div>
-                          <Label className="text-muted-foreground mb-2 block">تجهیزات ایمنی</Label>
-                          <div className="space-y-1">
-                            {Object.entries(selectedOrder.notes.safetyEquipment).map(([key, value]: [string, any]) => (
-                              value && (
-                                <div key={key} className="flex items-center gap-2 text-sm">
-                                  <CheckCircle className="w-4 h-4 text-primary" />
-                                  <span>{key}</span>
-                                </div>
-                              )
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* نردبان و نرده */}
-                    {(selectedOrder.notes.needsStairs || selectedOrder.notes.needsHandrails) && (
-                      <div className="flex gap-4">
-                        {selectedOrder.notes.needsStairs && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle className="w-4 h-4 text-primary" />
-                            <span>نیاز به نردبان</span>
-                          </div>
-                        )}
-                        {selectedOrder.notes.needsHandrails && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle className="w-4 h-4 text-primary" />
-                            <span>نیاز به نرده</span>
-                          </div>
-                        )}
                       </div>
                     )}
 
                     <Separator />
 
-                    {/* قیمت تخمینی */}
-                    {selectedOrder.notes.estimated_price && (
-                      <div className="bg-primary/10 p-4 rounded-md">
-                        <Label className="text-muted-foreground">قیمت تخمینی</Label>
-                        <p className="mt-1 font-bold text-xl">
-                          {selectedOrder.notes.estimated_price.toLocaleString('fa-IR')} ریال
-                        </p>
+                    {/* تجهیزات ایمنی */}
+                    {(selectedOrder.notes.safetyEquipment || 
+                      selectedOrder.notes.needsStairs !== undefined || 
+                      selectedOrder.notes.needsHandrails !== undefined) && (
+                      <div className="space-y-3">
+                        <Label className="text-muted-foreground font-semibold">تجهیزات ایمنی و جانبی</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {selectedOrder.notes.needsStairs !== undefined && (
+                            <div className="bg-background p-3 rounded border">
+                              <Label className="text-xs text-muted-foreground">نیاز به پله</Label>
+                              <p className="font-medium">
+                                {selectedOrder.notes.needsStairs ? '✓ بله' : '✗ خیر'}
+                              </p>
+                            </div>
+                          )}
+                          {selectedOrder.notes.needsHandrails !== undefined && (
+                            <div className="bg-background p-3 rounded border">
+                              <Label className="text-xs text-muted-foreground">نیاز به نرده</Label>
+                              <p className="font-medium">
+                                {selectedOrder.notes.needsHandrails ? '✓ بله' : '✗ خیر'}
+                              </p>
+                            </div>
+                          )}
+                          {selectedOrder.notes.safetyEquipment && selectedOrder.notes.safetyEquipment.length > 0 && (
+                            <div className="col-span-2 bg-background p-3 rounded border">
+                              <Label className="text-xs text-muted-foreground">تجهیزات ایمنی</Label>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {selectedOrder.notes.safetyEquipment.map((equipment: string, idx: number) => (
+                                  <Badge key={idx} variant="outline">
+                                    {equipment}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
+                    )}
+
+                    <Separator />
+
+                    {/* سایر تجهیزات */}
+                    {selectedOrder.notes.otherEquipment && selectedOrder.notes.otherEquipment.length > 0 && (
+                      <div className="space-y-3">
+                        <Label className="text-muted-foreground font-semibold">سایر تجهیزات</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedOrder.notes.otherEquipment.map((equipment: string, idx: number) => (
+                            <Badge key={idx} variant="secondary">
+                              {equipment}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* توضیحات اضافی */}
+                    {selectedOrder.notes.additional_notes && (
+                      <>
+                        <Separator />
+                        <div className="space-y-2">
+                          <Label className="text-muted-foreground font-semibold">توضیحات اضافی مشتری</Label>
+                          <div className="bg-background p-3 rounded border">
+                            <p className="whitespace-pre-wrap">{selectedOrder.notes.additional_notes}</p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* تصاویر و فایل‌ها */}
+                    {selectedOrder.notes.mediaFiles && selectedOrder.notes.mediaFiles.length > 0 && (
+                      <>
+                        <Separator />
+                        <div className="space-y-3">
+                          <Label className="text-muted-foreground font-semibold">تصاویر و فایل‌های پیوست</Label>
+                          <div className="grid grid-cols-3 gap-3">
+                            {selectedOrder.notes.mediaFiles.map((file: any, idx: number) => (
+                              <div key={idx} className="relative group">
+                                {file.type?.startsWith('image/') ? (
+                                  <img 
+                                    src={file.url} 
+                                    alt={`تصویر ${idx + 1}`}
+                                    className="w-full h-32 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => window.open(file.url, '_blank')}
+                                  />
+                                ) : (
+                                  <div className="w-full h-32 flex items-center justify-center bg-background rounded border">
+                                    <a 
+                                      href={file.url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-primary hover:underline text-center p-2"
+                                    >
+                                      مشاهده فایل
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
               )}
+
+              {/* روند تاییدات */}
+              <ApprovalProgressSection orderId={selectedOrder.id} />
             </div>
           )}
         </DialogContent>
