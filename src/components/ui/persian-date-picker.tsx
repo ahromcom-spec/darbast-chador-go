@@ -142,6 +142,13 @@ export function PersianDatePicker({
                 variant={ampm === 'AM' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleAmPmChange('AM')}
+                disabled={(() => {
+                  if (!selectedDate) return false;
+                  const today = new Date();
+                  const isToday = selectedDate.toDateString() === today.toDateString();
+                  const isPastNoon = today.getHours() >= 12;
+                  return isToday && isPastNoon;
+                })()}
                 className="flex-1"
               >
                 قبل از ظهر
