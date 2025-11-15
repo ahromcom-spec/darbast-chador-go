@@ -1,10 +1,6 @@
-import { Outlet, NavLink, Link } from 'react-router-dom';
+import { Outlet, NavLink } from 'react-router-dom';
 import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, CheckSquare, PackageOpen, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useAdminRole } from '@/hooks/useAdminRole';
-import { useCEORole } from '@/hooks/useCEORole';
-import { useExecutiveManagerRole } from '@/hooks/useExecutiveManagerRole';
 
 
 const navItems = [
@@ -66,12 +62,6 @@ const navItems = [
 ];
 
 export function ExecutiveLayout() {
-  const { isAdmin } = useAdminRole();
-  const { isCEO } = useCEORole();
-  const { isExecutiveManager } = useExecutiveManagerRole();
-  const canTest = isAdmin || isCEO || isExecutiveManager;
-  const testPath = isAdmin ? '/admin/test-order' : '/ceo/test-order';
-
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b bg-card">
@@ -100,16 +90,6 @@ export function ExecutiveLayout() {
         </div>
       </div>
 
-      {canTest && (
-        <div className="border-b bg-muted/30">
-          <div className="container mx-auto flex items-center justify-between px-2 py-2">
-            <span className="text-xs text-muted-foreground">ابزار تست محیط اجرا</span>
-            <Button asChild size="sm" variant="outline" className="h-8">
-              <Link to={testPath}>ایجاد سفارش تست</Link>
-            </Button>
-          </div>
-        </div>
-      )}
 
       <div className="container mx-auto p-6">
         <Outlet />
