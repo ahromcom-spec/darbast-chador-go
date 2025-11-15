@@ -36,10 +36,6 @@ export function SubcategoryDialog({
         </DialogHeader>
         
         <div className="space-y-3 pt-4">
-          <p className="text-sm text-muted-foreground text-center mb-4">
-            لطفاً نوع خدمات مورد نظر خود را انتخاب کنید
-          </p>
-          
           {subcategories.map((subcategory) => (
             <Button
               key={subcategory.id}
