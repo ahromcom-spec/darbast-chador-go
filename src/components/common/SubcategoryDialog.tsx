@@ -36,14 +36,9 @@ export function SubcategoryDialog({
         </DialogHeader>
         
         <div className="space-y-3 pt-4">
-          <div className="text-sm text-center mb-4 px-4 py-3 bg-primary/10 rounded-lg space-y-1">
-            <p>
-              نوع خدمات <span className="font-bold text-primary">{serviceName}</span> شما انتخاب شده است
-            </p>
-            <p className="text-xs text-muted-foreground">
-              لطفاً نوع دقیق خدمات مورد نظر خود را انتخاب کنید
-            </p>
-          </div>
+          <p className="text-sm text-center mb-4 px-4 py-2 bg-primary/10 rounded-lg">
+            نوع خدمات <span className="font-bold text-primary">{serviceName}</span> شما انتخاب شده است
+          </p>
           
           {subcategories.map((subcategory) => (
             <Button
