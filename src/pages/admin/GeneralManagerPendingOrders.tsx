@@ -280,10 +280,7 @@ export default function GeneralManagerPendingOrders() {
               </div>
               <div>
                 <Label className="font-semibold">آدرس</Label>
-                <p className="text-sm">{selectedOrder.address}</p>
-                {selectedOrder.detailed_address && (
-                  <p className="text-sm text-muted-foreground">{selectedOrder.detailed_address}</p>
-                )}
+                <p className="text-sm">{selectedOrder.detailed_address || selectedOrder.address}</p>
               </div>
               <div>
                 <Label className="font-semibold">تاریخ ثبت</Label>
