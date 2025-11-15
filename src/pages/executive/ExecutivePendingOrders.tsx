@@ -621,11 +621,8 @@ export default function ExecutivePendingOrders() {
                 <Label className="text-xs text-muted-foreground">آدرس</Label>
                 <p className="text-sm flex items-start gap-2">
                   <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <span>{selectedOrder.address}</span>
+                  <span>{selectedOrder.detailed_address || selectedOrder.address}</span>
                 </p>
-                {selectedOrder.detailed_address && (
-                  <p className="text-sm text-muted-foreground mr-6">{selectedOrder.detailed_address}</p>
-                )}
               </div>
 
               <Separator />
