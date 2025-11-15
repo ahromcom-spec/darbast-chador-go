@@ -80,6 +80,16 @@ export default function SalesPendingOrders() {
       // دریافت اطلاعات مشتری برای هر سفارش
       const ordersWithCustomerInfo = await Promise.all(
         baseOrders.map(async (order: any) => {
+          // Parse notes (stored as text) into an object for proper display
+          const notesObj = (() => {
+            try {
+              if (!order.notes) return {};
+              return typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+            } catch {
+              return {};
+            }
+          })();
+
           // دریافت customer_id از جدول projects_v3
           const { data: projectData } = await supabase
             .from('projects_v3')
@@ -105,6 +115,7 @@ export default function SalesPendingOrders() {
 
               return {
                 ...order,
+                notes: notesObj,
                 customer_name: profileData?.full_name || 'نامشخص',
                 customer_phone: profileData?.phone_number || ''
               };
@@ -113,6 +124,7 @@ export default function SalesPendingOrders() {
 
           return {
             ...order,
+            notes: notesObj,
             customer_name: 'نامشخص',
             customer_phone: ''
           };
@@ -386,10 +398,65 @@ export default function SalesPendingOrders() {
                 <p className="text-sm">{formatPersianDate(selectedOrder.created_at, { showDayOfWeek: true })}</p>
               </div>
               {selectedOrder.notes && (
-                <div>
+                <div className="space-y-2">
                   <Label className="font-semibold">جزئیات سفارش</Label>
-                  <pre className="text-xs bg-secondary p-3 rounded mt-1 overflow-auto max-h-60">
-                    {JSON.stringify(selectedOrder.notes, null, 2)}
+                  {/* ساختاردهی اطلاعات کلیدی فرم */}
+                  <div className="text-sm space-y-1">
+                    {(() => {
+                      const n: any = selectedOrder.notes || {};
+                      const type = n.scaffold_type || n.service_type || n.scaffoldType;
+                      if (!type) return null;
+                      return (
+                        <div>
+                          <span className="font-semibold">نوع خدمت/داربست: </span>
+                          <span>{type}</span>
+                        </div>
+                      );
+                    })()}
+
+                    {Array.isArray((selectedOrder as any).notes?.dimensions) && selectedOrder.notes.dimensions.length > 0 && (
+                      <div>
+                        <span className="font-semibold">ابعاد:</span>
+                        <ul className="mt-2 space-y-1 mr-4 list-disc">
+                          {selectedOrder.notes.dimensions.map((dim: any, idx: number) => (
+                            <li key={idx}>
+                              {(dim.length ?? dim.l ?? '?')} × {(dim.width ?? dim.w ?? '-')} × {(dim.height ?? dim.h ?? '?')}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {(() => {
+                      const n: any = selectedOrder.notes || {};
+                      const total = n.total_area ?? n.totalArea;
+                      if (!total) return null;
+                      return (
+                        <div>
+                          <span className="font-semibold">مساحت کل: </span>
+                          <span>{total} متر مربع</span>
+                        </div>
+                      );
+                    })()}
+
+                    {(() => {
+                      const n: any = selectedOrder.notes || {};
+                      const desc = n.additional_notes || n.description;
+                      if (!desc) return null;
+                      return (
+                        <div>
+                          <span className="font-semibold">توضیحات: </span>
+                          <span>{desc}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* نسخه کامل برای دقت بیشتر */}
+                  <pre className="text-xs bg-secondary p-3 rounded mt-2 overflow-auto max-h-60">
+                    {typeof selectedOrder.notes === 'string' 
+                      ? selectedOrder.notes 
+                      : JSON.stringify(selectedOrder.notes, null, 2)}
                   </pre>
                 </div>
               )}
