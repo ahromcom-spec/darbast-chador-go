@@ -22,6 +22,7 @@ import { sanitizeHtml } from '@/lib/security';
 import { scaffoldingFormSchema } from '@/lib/validations';
 import { MediaUploader } from '@/components/orders/MediaUploader';
 import { Textarea } from '@/components/ui/textarea';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 
 interface Dimension {
   id: string;
@@ -117,6 +118,7 @@ export default function ComprehensiveScaffoldingForm({
   const [loading, setLoading] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [locationPurpose, setLocationPurpose] = useState('');
+  const [installationDateTime, setInstallationDateTime] = useState<string>('');
 
   // Load existing order data when editing
   useEffect(() => {
@@ -167,6 +169,9 @@ export default function ComprehensiveScaffoldingForm({
           }
           if (notes.locationPurpose) {
             setLocationPurpose(notes.locationPurpose);
+          }
+          if (notes.installationDateTime) {
+            setInstallationDateTime(notes.installationDateTime);
           }
         }
       } catch (error) {
@@ -707,6 +712,7 @@ export default function ComprehensiveScaffoldingForm({
               totalArea: calculateTotalArea(),
               estimated_price: priceData.total,
               price_breakdown: priceData.breakdown,
+              installationDateTime,
             } as any
           })
           .eq('id', editOrderId);
@@ -755,6 +761,7 @@ export default function ComprehensiveScaffoldingForm({
             totalArea: calculateTotalArea(),
             estimated_price: priceData.total,
             price_breakdown: priceData.breakdown,
+            installationDateTime,
           } as any
         });
 
@@ -1114,6 +1121,31 @@ export default function ComprehensiveScaffoldingForm({
         maxVideoSize={50}
         maxVideoDuration={180}
       />
+
+      {/* Installation Date & Time */}
+      <Card className="shadow-2xl bg-white dark:bg-card border-2">
+        <CardHeader>
+          <CardTitle className="text-blue-800 dark:text-blue-300">زمان نصب داربست</CardTitle>
+          <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">
+            تاریخ و ساعت مورد نظر برای نصب داربست را انتخاب کنید
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label className="text-foreground font-semibold">تاریخ و زمان نصب</Label>
+            <PersianDatePicker
+              value={installationDateTime}
+              onChange={setInstallationDateTime}
+              placeholder="انتخاب تاریخ و ساعت نصب"
+              timeMode="full"
+              disabled={loading}
+            />
+            <p className="text-xs text-muted-foreground">
+              امکان انتخاب تاریخ‌های گذشته وجود ندارد
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Price Summary */}
       {calculateTotalArea() > 0 && (
