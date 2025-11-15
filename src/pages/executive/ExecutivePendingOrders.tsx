@@ -117,6 +117,16 @@ export default function ExecutivePendingOrders() {
             customerPhone = profileData?.phone_number || '';
           }
 
+          // Parse notes (stored as text) into object
+          const notesObj = (() => {
+            try {
+              if (!order.notes) return {};
+              return typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+            } catch {
+              return {};
+            }
+          })();
+
           return {
             id: order.id,
             code: order.code,
@@ -124,7 +134,7 @@ export default function ExecutivePendingOrders() {
             address: order.address,
             detailed_address: order.detailed_address,
             created_at: order.created_at,
-            notes: order.notes,
+            notes: notesObj,
             subcategory_id: order.subcategory_id,
             province_id: order.province_id,
             district_id: order.district_id,
