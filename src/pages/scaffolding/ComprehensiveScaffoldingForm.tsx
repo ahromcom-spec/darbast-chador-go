@@ -1136,8 +1136,8 @@ export default function ComprehensiveScaffoldingForm({
             <PersianDatePicker
               value={installationDateTime}
               onChange={setInstallationDateTime}
-              placeholder="انتخاب تاریخ و ساعت نصب"
-              timeMode="full"
+              placeholder="انتخاب تاریخ نصب"
+              timeMode="ampm"
               disabled={loading}
             />
             <p className="text-xs text-muted-foreground">
