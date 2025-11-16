@@ -64,7 +64,7 @@ export function InteractiveLocationMap({
     const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
     
     if (!mapboxToken) {
-      console.error('Mapbox token not found');
+      console.warn('Mapbox token not configured. Map will not be displayed.');
       setIsLoading(false);
       return;
     }
@@ -169,6 +169,27 @@ export function InteractiveLocationMap({
       });
     }
   }, [provinceCode]);
+
+  // Check if Mapbox token is available
+  const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+
+  if (!mapboxToken) {
+    return (
+      <div className="relative w-full h-96 rounded-lg overflow-hidden border-2 border-border bg-muted/20">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-center p-6">
+            <MapPin className="h-12 w-12 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground font-medium">
+              نقشه در حال حاضر در دسترس نیست
+            </p>
+            <p className="text-xs text-muted-foreground">
+              لطفاً آدرس را به صورت دستی وارد کنید
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-96 rounded-lg overflow-hidden border-2 border-primary/20">
