@@ -1,8 +1,22 @@
-import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { MapPin, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { useState, useEffect } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix default marker icon issue in React-Leaflet
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 interface LocationMapModalProps {
   isOpen: boolean;
@@ -12,86 +26,72 @@ interface LocationMapModalProps {
   initialLng?: number;
 }
 
+function LocationMarker({ position, setPosition }: { position: [number, number], setPosition: (pos: [number, number]) => void }) {
+  useMapEvents({
+    click(e) {
+      setPosition([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+
+  return position ? <Marker position={position} /> : null;
+}
+
 export const LocationMapModal = ({
   isOpen,
   onClose,
   onLocationSelect,
-  initialLat = 34.6416,
-  initialLng = 50.8746,
+  initialLat = 35.6892,
+  initialLng = 51.3890,
 }: LocationMapModalProps) => {
-  const [lat, setLat] = useState<string>('');
-  const [lng, setLng] = useState<string>('');
+  const [position, setPosition] = useState<[number, number]>([initialLat, initialLng]);
 
   useEffect(() => {
     if (isOpen) {
-      setLat(String(initialLat));
-      setLng(String(initialLng));
+      setPosition([initialLat, initialLng]);
     }
   }, [isOpen, initialLat, initialLng]);
 
   const handleConfirm = () => {
-    const latNum = parseFloat(lat);
-    const lngNum = parseFloat(lng);
-    if (!isNaN(latNum) && !isNaN(lngNum)) {
-      onLocationSelect(latNum, lngNum);
-      onClose();
-    }
-  };
-
-  const handleClose = () => {
+    onLocationSelect(position[0], position[1]);
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-xl p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="flex items-center gap-2">
-            <MapPin className="w-5 h-5" />
-            انتخاب موقعیت (نقشه موقتا غیرفعال است)
-          </DialogTitle>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle>انتخاب موقعیت مکانی (کلیک کنید)</DialogTitle>
         </DialogHeader>
-
-        <div className="flex flex-col gap-4 p-6">
-          <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
-            به دلیل مشکلات بارگذاری، نقشه موقتا غیرفعال شده است. لطفا مختصات را به صورت دستی وارد کنید.
+        
+        <div className="space-y-4">
+          <div className="h-[500px] w-full rounded-lg overflow-hidden border">
+            <MapContainer
+              center={position}
+              zoom={13}
+              style={{ height: '100%', width: '100%' }}
+              className="z-0"
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <LocationMarker position={position} setPosition={setPosition} />
+            </MapContainer>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm mb-2">عرض جغرافیایی (Lat)</label>
-              <Input
-                inputMode="decimal"
-                value={lat}
-                onChange={(e) => setLat(e.target.value)}
-                placeholder="مثلا 34.6416"
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-2">طول جغرافیایی (Lng)</label>
-              <Input
-                inputMode="decimal"
-                value={lng}
-                onChange={(e) => setLng(e.target.value)}
-                placeholder="مثلا 50.8746"
-              />
-            </div>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              موقعیت انتخاب شده: {position[0].toFixed(6)}, {position[1].toFixed(6)}
+            </p>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              مقداردهی اولیه: {initialLat.toFixed(4)}, {initialLng.toFixed(4)}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleClose}>
-                <X className="w-4 h-4 ml-2" />
-                انصراف
-              </Button>
-              <Button onClick={handleConfirm}>
-                <MapPin className="w-4 h-4 ml-2" />
-                تایید موقعیت
-              </Button>
-            </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onClose}>
+              انصراف
+            </Button>
+            <Button onClick={handleConfirm}>
+              تأیید موقعیت
+            </Button>
           </div>
         </div>
       </DialogContent>

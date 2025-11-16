@@ -1,9 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { MapPin, List } from 'lucide-react';
-import { toast } from 'sonner';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix default marker icon issue in React-Leaflet
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 interface ProjectLocationMapProps {
   onLocationSelect?: (location: {
@@ -25,29 +39,7 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({
   existingProjects = [],
   onProjectSelect,
 }) => {
-  const [address, setAddress] = useState<string>('');
-  const [lat, setLat] = useState<string>('34.6416');
-  const [lng, setLng] = useState<string>('50.8746');
-
-  useEffect(() => {
-    // نقشه غیرفعال است — منطق خاصی نیاز نیست
-  }, []);
-
-  const handleConfirm = () => {
-    if (!onLocationSelect) return;
-    const latNum = parseFloat(lat);
-    const lngNum = parseFloat(lng);
-    if (isNaN(latNum) || isNaN(lngNum)) {
-      toast.error('لطفا مختصات معتبر وارد کنید');
-      return;
-    }
-    onLocationSelect({
-      address: address || `${latNum.toFixed(4)}, ${lngNum.toFixed(4)}`,
-      coordinates: [lngNum, latNum],
-      distance: 0,
-    });
-    toast.success('موقعیت ثبت شد');
-  };
+  const defaultPosition: [number, number] = [35.6892, 51.3890]; // تهران
 
   return (
     <Card>
@@ -57,7 +49,7 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({
           موقعیت پروژه
         </CardTitle>
         <CardDescription>
-          نقشه موقتا غیرفعال است. می‌توانید از لیست پروژه‌های موجود انتخاب کنید یا مختصات را دستی وارد نمایید.
+          روی نقشه کلیک کنید یا از لیست پروژه‌های موجود انتخاب نمایید
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -85,30 +77,22 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({
           </div>
         )}
 
-        <div className="space-y-3">
-          <label className="block text-sm">آدرس (اختیاری)</label>
-          <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="مثلا: قم، ..." />
+        <div className="h-[400px] w-full rounded-lg overflow-hidden border">
+          <MapContainer
+            center={defaultPosition}
+            zoom={12}
+            style={{ height: '100%', width: '100%' }}
+            className="z-0"
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <Marker position={defaultPosition}>
+              <Popup>تهران، ایران</Popup>
+            </Marker>
+          </MapContainer>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm mb-2">عرض جغرافیایی (Lat)</label>
-            <Input inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-sm mb-2">طول جغرافیایی (Lng)</label>
-            <Input inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} />
-          </div>
-        </div>
-
-        {onLocationSelect && (
-          <div className="flex justify-end">
-            <Button onClick={handleConfirm}>
-              <MapPin className="w-4 h-4 ml-2" />
-              تایید موقعیت
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
