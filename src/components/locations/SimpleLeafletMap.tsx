@@ -32,6 +32,7 @@ export default function SimpleLeafletMap({
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const qomCenterMarkerRef = useRef<L.Marker | null>(null);
   const [selectedPos, setSelectedPos] = useState<{ lat: number; lng: number; distance: number } | null>(null);
 
   useEffect(() => {
@@ -69,6 +70,21 @@ export default function SimpleLeafletMap({
       popupAnchor: [1, -34],
       shadowSize: [41, 41],
     });
+
+    // اضافه کردن مارکر دائمی برای مرکز شهر قم
+    const qomCenterIcon = L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [30, 49],
+      iconAnchor: [15, 49],
+      popupAnchor: [1, -34],
+      shadowSize: [49, 49],
+    });
+
+    const qomCenterMarker = L.marker([QOM_CENTER.lat, QOM_CENTER.lng], { icon: qomCenterIcon }).addTo(map);
+    qomCenterMarker.bindPopup('<div style="text-align: center; font-family: Vazir, sans-serif;"><strong>مرکز شهر قم</strong></div>');
+    qomCenterMarkerRef.current = qomCenterMarker;
 
     // رویداد کلیک روی نقشه
     map.on('click', (e: L.LeafletMouseEvent) => {
@@ -115,6 +131,9 @@ export default function SimpleLeafletMap({
       resizeObserver.disconnect();
       if (markerRef.current) {
         markerRef.current.remove();
+      }
+      if (qomCenterMarkerRef.current) {
+        qomCenterMarkerRef.current.remove();
       }
       if (mapRef.current) {
         mapRef.current.remove();
