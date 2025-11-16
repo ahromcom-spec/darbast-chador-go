@@ -33,6 +33,7 @@ export default function SimpleLeafletMap({
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const qomCenterMarkerRef = useRef<L.Marker | null>(null);
+  const routeLineRef = useRef<L.Polyline | null>(null);
   const [selectedPos, setSelectedPos] = useState<{ lat: number; lng: number; distance: number; roadDistance?: number } | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
 
@@ -107,17 +108,35 @@ export default function SimpleLeafletMap({
       setSelectedPos({ lat, lng, distance });
       onLocationSelect(lat, lng);
 
-      // محاسبه فاصله جاده‌ای
+      // محاسبه فاصله جاده‌ای و دریافت مسیر
       setLoadingRoute(true);
       try {
         const response = await fetch(
-          `https://router.project-osrm.org/route/v1/driving/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=false`
+          `https://router.project-osrm.org/route/v1/driving/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson`
         );
         const data = await response.json();
         
         if (data.routes && data.routes.length > 0) {
-          const roadDistanceKm = data.routes[0].distance / 1000; // تبدیل متر به کیلومتر
+          const roadDistanceKm = data.routes[0].distance / 1000;
           setSelectedPos({ lat, lng, distance, roadDistance: roadDistanceKm });
+          
+          // حذف مسیر قبلی
+          if (routeLineRef.current) {
+            routeLineRef.current.remove();
+          }
+          
+          // رسم مسیر جاده‌ای روی نقشه
+          const coordinates = data.routes[0].geometry.coordinates.map(
+            (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
+          );
+          
+          const routeLine = L.polyline(coordinates, {
+            color: '#2563eb',
+            weight: 4,
+            opacity: 0.7,
+          }).addTo(map);
+          
+          routeLineRef.current = routeLine;
         }
       } catch (error) {
         console.error('خطا در محاسبه مسیر جاده‌ای:', error);
@@ -153,6 +172,9 @@ export default function SimpleLeafletMap({
       }
       if (qomCenterMarkerRef.current) {
         qomCenterMarkerRef.current.remove();
+      }
+      if (routeLineRef.current) {
+        routeLineRef.current.remove();
       }
       if (mapRef.current) {
         mapRef.current.remove();
