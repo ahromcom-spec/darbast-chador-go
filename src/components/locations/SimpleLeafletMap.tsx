@@ -142,24 +142,37 @@ export default function SimpleLeafletMap({
 
       setLoadingRoute(true);
       try {
-        const endpoints = [
-          'https://router.project-osrm.org/route/v1/driving',
-          'https://routing.openstreetmap.de/routed-car/route/v1/driving'
-        ];
-
+        // ابتدا تلاش با Mapbox Directions در صورت وجود توکن
         let routeData: any | null = null;
-        for (const endpoint of endpoints) {
+        if (mapboxTokenRef.current) {
           try {
-            const url = `${endpoint}/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson&alternatives=false`;
-            const res = await fetch(url, { mode: 'cors' });
-            if (!res.ok) continue;
-            const json = await res.json();
-            if (json?.routes?.length) {
-              routeData = json;
-              break;
+            const mUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson&access_token=${mapboxTokenRef.current}`;
+            const mRes = await fetch(mUrl, { mode: 'cors' });
+            const mJson = await mRes.json();
+            if (mJson?.routes?.length) routeData = mJson;
+          } catch (_) {}
+        }
+
+        // اگر Mapbox جواب نداد از OSRM استفاده کن (چند سرور)
+        if (!routeData) {
+          const endpoints = [
+            'https://router.project-osrm.org/route/v1/driving',
+            'https://routing.openstreetmap.de/routed-car/route/v1/driving'
+          ];
+
+          for (const endpoint of endpoints) {
+            try {
+              const url = `${endpoint}/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson&alternatives=false`;
+              const res = await fetch(url, { mode: 'cors' });
+              if (!res.ok) continue;
+              const json = await res.json();
+              if (json?.routes?.length) {
+                routeData = json;
+                break;
+              }
+            } catch (_) {
+              // try next endpoint
             }
-          } catch (_) {
-            // try next endpoint
           }
         }
 
