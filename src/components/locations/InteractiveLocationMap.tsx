@@ -56,6 +56,19 @@ export function InteractiveLocationMap({
           })
           .addTo(mapRef.current);
 
+        // Ensure proper rendering when inside dialogs or after layout changes
+        setTimeout(() => {
+          try { mapRef.current?.invalidateSize(); } catch {}
+        }, 100);
+        if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+          const ro = new ResizeObserver(() => {
+            try { mapRef.current?.invalidateSize(); } catch {}
+          });
+          ro.observe(mapContainerRef.current);
+          // @ts-ignore - store on ref for cleanup
+          mapRef.current.__ro = ro;
+        }
+
         markerRef.current = leaflet.marker(startPos, { icon: DefaultIcon }).addTo(mapRef.current);
 
         clickHandler = (e: any) => {
@@ -79,6 +92,10 @@ export function InteractiveLocationMap({
       try {
         if (mapRef.current) {
           if (clickHandler) mapRef.current.off('click', clickHandler);
+          // @ts-ignore cleanup resize observer if present
+          if (mapRef.current.__ro) {
+            try { mapRef.current.__ro.disconnect(); } catch {}
+          }
           mapRef.current.remove();
         }
       } catch {}
