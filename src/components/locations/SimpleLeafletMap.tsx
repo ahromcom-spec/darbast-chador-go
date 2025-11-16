@@ -72,29 +72,37 @@ export default function SimpleLeafletMap({
       onLocationSelect(lat, lng);
     });
 
-    // Resize handler برای modal
+    // Resize handler برای modal - فقط یک بار اجرا می‌شود
     const resizeObserver = new ResizeObserver(() => {
-      map.invalidateSize();
+      if (mapRef.current) {
+        mapRef.current.invalidateSize({ animate: false });
+      }
     });
 
     if (mapContainer.current) {
       resizeObserver.observe(mapContainer.current);
     }
 
-    // اطمینان از resize صحیح
-    setTimeout(() => map.invalidateSize(), 100);
-    setTimeout(() => map.invalidateSize(), 500);
+    // فقط یک بار resize می‌کنیم بعد از 200ms
+    const resizeTimeout = setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.invalidateSize({ animate: false });
+      }
+    }, 200);
 
     // Cleanup
     return () => {
+      clearTimeout(resizeTimeout);
       resizeObserver.disconnect();
       if (markerRef.current) {
         markerRef.current.remove();
       }
-      map.remove();
-      mapRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
-  }, [initialLat, initialLng, onLocationSelect]);
+  }, []);
 
   return (
     <div className="h-full w-full relative">
