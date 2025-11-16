@@ -304,7 +304,7 @@ export default function ComprehensiveScaffoldingForm({
     }
 
     // محاسبه تخفیف اجاره چند ماهه برای داربست سطحی نما
-    if (isFacadeScaffolding && conditions.rentalMonthsPlan && propSubcategoryCode?.includes('with-materials')) {
+    if (isFacadeScaffolding && conditions.rentalMonthsPlan) {
       const monthsPlan = parseInt(conditions.rentalMonthsPlan.replace('+', ''));
       let discount = 0;
       
@@ -1028,8 +1028,8 @@ export default function ComprehensiveScaffoldingForm({
           <CardTitle className="text-blue-800 dark:text-blue-300">شرایط سرویس</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* نمایش فیلد اجاره چند ماهه فقط برای داربست سطحی نما با اجناس */}
-          {isFacadeScaffolding && propSubcategoryCode?.includes('with-materials') ? (
+          {/* نمایش فیلد اجاره چند ماهه برای داربست سطحی نما */}
+          {isFacadeScaffolding ? (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-foreground font-semibold">کرایه داربست به شرط چند ماه است</Label>
