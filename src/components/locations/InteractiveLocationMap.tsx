@@ -62,7 +62,7 @@ export function InteractiveLocationMap({
 }: InteractiveLocationMapProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
-  const [useFallback, setUseFallback] = useState(false);
+  const [useFallback, setUseFallback] = useState(true);
   const [selectedPosition, setSelectedPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('streets');
   const [mapboxToken, setMapboxToken] = useState<string>('');
@@ -71,8 +71,10 @@ export function InteractiveLocationMap({
   const marker = useRef<mapboxgl.Marker | null>(null);
   const { toast } = useToast();
 
-  // دریافت توکن Mapbox
+  // دریافت توکن Mapbox (در صورت عدم استفاده از fallback نیازی نیست)
   useEffect(() => {
+    if (useFallback) return;
+
     const cached = sessionStorage.getItem('mapbox_token');
     if (cached) {
       setMapboxToken(cached);
@@ -80,7 +82,6 @@ export function InteractiveLocationMap({
     }
 
     const tryEdgeThenEnv = async () => {
-      // 1) سعی کن از بک‌اند بگیریم
       try {
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
         if (error) throw error as any;
@@ -90,7 +91,6 @@ export function InteractiveLocationMap({
           return;
         }
       } catch (_) {}
-      // 2)fallback به env
       const envToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
       if (envToken) {
         setMapboxToken(envToken);
@@ -101,7 +101,7 @@ export function InteractiveLocationMap({
     };
 
     tryEdgeThenEnv();
-  }, [toast]);
+  }, [toast, useFallback]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -109,7 +109,7 @@ export function InteractiveLocationMap({
 
   // راه‌اندازی نقشه
   useEffect(() => {
-    if (!isMounted || !mapContainer.current || !mapboxToken) return;
+    if (useFallback || !isMounted || !mapContainer.current || !mapboxToken) return;
 
     try {
       mapboxgl.accessToken = mapboxToken;
@@ -235,9 +235,9 @@ export function InteractiveLocationMap({
     }
   }, [isMounted, mapboxToken, provinceCode, initialLat, initialLng, onLocationSelect, toast]);
 
-  // تغییر استایل نقشه
+  // تغییر استایل نقشه (غیرفعال در حالت fallback)
   useEffect(() => {
-    if (!map.current) return;
+    if (useFallback || !map.current) return;
 
     const styleUrl = mapStyle === 'satellite' 
       ? 'mapbox://styles/mapbox/satellite-streets-v12'
@@ -250,7 +250,7 @@ export function InteractiveLocationMap({
     map.current.once('idle', onIdle);
 
     return () => { map.current?.off('idle', onIdle); }
-  }, [mapStyle]);
+  }, [mapStyle, useFallback]);
 
   // تغییر موقعیت با تغییر استان
   useEffect(() => {
