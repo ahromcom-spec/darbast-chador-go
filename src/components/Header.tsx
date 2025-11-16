@@ -18,6 +18,8 @@ const Header = () => {
   const { isGeneralManager } = useGeneralManagerRole();
   const { toast } = useToast();
   const { profile } = useUserProfile();
+  
+  // Safe display name with fallback
   const displayName = profile?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
   
   const [contactDropdownOpen, setContactDropdownOpen] = useState(false);

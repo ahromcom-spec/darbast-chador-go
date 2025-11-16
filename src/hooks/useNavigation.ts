@@ -4,7 +4,8 @@ import { useToast } from '@/hooks/use-toast';
 
 export function useNavigation() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const auth = useAuth();
+  const user = auth?.user || null;
   const { toast } = useToast();
 
   const navigateWithAuth = (path: string, requireAuth: boolean = true) => {
