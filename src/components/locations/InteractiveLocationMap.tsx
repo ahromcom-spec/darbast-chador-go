@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
-import LeafletFallbackMap from './LeafletFallbackMap';
+import SimpleLeafletMap from './SimpleLeafletMap';
 
 interface InteractiveLocationMapProps {
   onLocationSelect: (lat: number, lng: number) => void;
@@ -352,7 +352,7 @@ export function InteractiveLocationMap({
       {/* نقشه */}
       <div className="relative h-[500px] w-full rounded-xl overflow-hidden border-2 shadow-lg">
         {useFallback ? (
-          <LeafletFallbackMap
+          <SimpleLeafletMap
             onLocationSelect={(lat, lng) => {
               setSelectedPosition({ lat, lng });
               onLocationSelect(lat, lng);

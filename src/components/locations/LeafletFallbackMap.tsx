@@ -9,34 +9,35 @@ interface LeafletFallbackMapProps {
   initialLng?: number;
 }
 
-// ایران: غرب-شرق, جنوب-شمال
-const IRAN_BOUNDS: [[number, number], [number, number]] = [[44.0, 24.0], [64.0, 40.0]];
-
-// Fix default marker icons paths in Vite
-const defaultIcon = new L.Icon({
+// Custom marker icon
+const customIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
   shadowSize: [41, 41],
 });
 
-function AutoResize() {
+function MapInitializer() {
   const map = useMap();
+  
   useEffect(() => {
-    const invalidate = () => map.invalidateSize();
-    const t = setTimeout(invalidate, 200);
-    window.addEventListener('resize', invalidate);
-    document.addEventListener('visibilitychange', invalidate);
+    // Fix for map rendering in modals/dialogs
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    const handleResize = () => map.invalidateSize();
+    window.addEventListener('resize', handleResize);
+
     return () => {
-      clearTimeout(t);
-      window.removeEventListener('resize', invalidate);
-      document.removeEventListener('visibilitychange', invalidate);
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
     };
   }, [map]);
+
   return null;
 }
 
@@ -54,47 +55,33 @@ export default function LeafletFallbackMap({
   initialLat = 34.6416,
   initialLng = 50.8746,
 }: LeafletFallbackMapProps) {
-  const [pos, setPos] = useState<[number, number] | null>(null);
+  const [position, setPosition] = useState<[number, number] | null>(null);
 
-  useEffect(() => {
-    (L.Marker.prototype as any).options.icon = defaultIcon;
-  }, []);
+  const center: [number, number] = useMemo(() => [initialLat, initialLng], [initialLat, initialLng]);
 
-  const center = useMemo(() => [initialLat, initialLng] as [number, number], [initialLat, initialLng]);
-  const bounds = useMemo(() => L.latLngBounds(
-    L.latLng(IRAN_BOUNDS[0][1], IRAN_BOUNDS[0][0]),
-    L.latLng(IRAN_BOUNDS[1][1], IRAN_BOUNDS[1][0])
-  ), []);
+  const handleLocationPick = (lat: number, lng: number) => {
+    setPosition([lat, lng]);
+    onLocationSelect(lat, lng);
+  };
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full relative">
       <MapContainer
         center={center}
         zoom={12}
         minZoom={5}
         maxZoom={18}
-        maxBounds={bounds}
-        maxBoundsViscosity={0.8}
-        scrollWheelZoom
-        preferCanvas
+        scrollWheelZoom={true}
         className="h-full w-full"
-        attributionControl={false}
+        style={{ height: '100%', width: '100%' }}
       >
-        <AutoResize />
+        <MapInitializer />
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          updateWhenIdle
-          keepBuffer={0}
-          detectRetina
         />
-        <ClickHandler
-          onPick={(lat, lng) => {
-            setPos([lat, lng]);
-            onLocationSelect(lat, lng);
-          }}
-        />
-        {pos && <Marker position={pos} />} 
+        <ClickHandler onPick={handleLocationPick} />
+        {position && <Marker position={position} icon={customIcon} />}
       </MapContainer>
     </div>
   );
