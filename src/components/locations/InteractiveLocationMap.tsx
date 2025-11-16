@@ -272,10 +272,12 @@ export function InteractiveLocationMap({
             const roadDistanceKm = routeData.routes[0].distance / 1000;
             setRoadDistance(roadDistanceKm);
             
-            // حذف مسیر قبلی اگر وجود دارد
+            // حذف مسیر قبلی اگر وجود دارد (ایمن)
+            if (map.current!.getLayer(ROUTE_LAYER_ID)) {
+              try { map.current!.removeLayer(ROUTE_LAYER_ID); } catch (_) {}
+            }
             if (map.current!.getSource(ROUTE_SOURCE_ID)) {
-              map.current!.removeLayer(ROUTE_LAYER_ID);
-              map.current!.removeSource(ROUTE_SOURCE_ID);
+              try { map.current!.removeSource(ROUTE_SOURCE_ID); } catch (_) {}
             }
             
             // اضافه کردن مسیر به نقشه
