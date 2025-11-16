@@ -72,19 +72,13 @@ export function InteractiveLocationMap({
   // دریافت توکن Mapbox
   useEffect(() => {
     const cached = sessionStorage.getItem('mapbox_token');
-    const envToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
-
     if (cached) {
       setMapboxToken(cached);
       return;
     }
-    if (envToken) {
-      setMapboxToken(envToken);
-      sessionStorage.setItem('mapbox_token', envToken);
-      return;
-    }
 
-    const fetchToken = async () => {
+    const tryEdgeThenEnv = async () => {
+      // 1) سعی کن از بک‌اند بگیریم
       try {
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
         if (error) throw error as any;
@@ -93,13 +87,18 @@ export function InteractiveLocationMap({
           sessionStorage.setItem('mapbox_token', data.token);
           return;
         }
-        throw new Error('No token returned');
-      } catch (e) {
-        console.error('Failed to get Mapbox token', e);
-        toast({ title: 'خطا', description: 'تنظیمات نقشه در دسترس نیست', variant: 'destructive' });
+      } catch (_) {}
+      // 2)fallback به env
+      const envToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+      if (envToken) {
+        setMapboxToken(envToken);
+        sessionStorage.setItem('mapbox_token', envToken);
+        return;
       }
+      toast({ title: 'خطا', description: 'کلید عمومی نقشه یافت نشد', variant: 'destructive' });
     };
-    fetchToken();
+
+    tryEdgeThenEnv();
   }, [toast]);
 
   useEffect(() => {
@@ -135,10 +134,9 @@ export function InteractiveLocationMap({
         startZoom = coords.zoom;
       }
 
-      // ساخت نقشه
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11',
+        style: 'mapbox://styles/mapbox/streets-v12',
         center: [startLng, startLat],
         zoom: startZoom,
         projection: 'mercator',
@@ -151,6 +149,12 @@ export function InteractiveLocationMap({
 
       // نقشه را بلافاصله قابل نمایش کن
       setIsMapReady(true);
+
+      // لاگ خطای سبک/توکن
+      map.current.on('error', (e) => {
+        console.error('Mapbox error', e);
+        toast({ title: 'خطای نقشه', description: 'مشکل در بارگذاری سبک یا کلید.', variant: 'destructive' });
+      });
 
       // محدود کردن نقشه به مرزهای ایران برای سبک‌تر شدن
       map.current.setMaxBounds(IRAN_BOUNDS as any);
@@ -234,19 +238,15 @@ export function InteractiveLocationMap({
 
     const styleUrl = mapStyle === 'satellite' 
       ? 'mapbox://styles/mapbox/satellite-streets-v12'
-      : 'mapbox://styles/mapbox/light-v11';
+      : 'mapbox://styles/mapbox/streets-v12';
 
     map.current.setStyle(styleUrl);
-    setIsMapReady(true); // به‌صورت خوش‌بینانه UI را آماده کن
+    setIsMapReady(true);
 
-    const onIdle = () => {
-      setTimeout(() => map.current?.resize(), 100);
-    };
+    const onIdle = () => setTimeout(() => map.current?.resize(), 100);
     map.current.once('idle', onIdle);
 
-    return () => {
-      map.current?.off('idle', onIdle);
-    };
+    return () => { map.current?.off('idle', onIdle); }
   }, [mapStyle]);
 
   // تغییر موقعیت با تغییر استان
