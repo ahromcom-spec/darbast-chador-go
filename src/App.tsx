@@ -81,6 +81,7 @@ const MyOrders = lazy(() => import("./pages/user/MyOrders"));
 const MyProjectsHierarchy = lazy(() => import("./pages/user/MyProjectsHierarchy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
+const MapTest = lazy(() => import("@/pages/test/MapTest"));
 
 
 const queryClient = new QueryClient({
@@ -313,6 +314,10 @@ const App = () => {
                   <TopRatedUsers />
                 </ProtectedRoute>
               } />
+              
+              {/* Test route for map */}
+              <Route path="/test/map" element={<MapTest />} />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
                 </Routes>
