@@ -86,86 +86,125 @@ export function InteractiveLocationMap({
   useEffect(() => {
     if (!isMounted || !mapContainer.current || !mapboxToken) return;
 
-    mapboxgl.accessToken = mapboxToken;
-
-    // تعیین موقعیت اولیه بر اساس استان
-    let startLat = initialLat;
-    let startLng = initialLng;
-    let startZoom = 6;
-
-    if (provinceCode && provinceCoordinates[provinceCode]) {
-      const coords = provinceCoordinates[provinceCode];
-      startLat = coords.lat;
-      startLng = coords.lng;
-      startZoom = coords.zoom;
-    }
-
-    // ساخت نقشه
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [startLng, startLat],
-      zoom: startZoom,
-      language: 'fa',
-    });
-
-    // اضافه کردن کنترل‌های ناوبری
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-left');
-
-    // رویداد بارگذاری نقشه
-    map.current.on('load', () => {
-      setIsMapReady(true);
-      
-      // تنظیم زبان فارسی برای لیبل‌ها
-      if (map.current) {
-        map.current.setLayoutProperty('country-label', 'text-field', ['get', 'name_fa']);
-        map.current.setLayoutProperty('state-label', 'text-field', ['get', 'name_fa']);
-      }
-    });
-
-    // کلیک روی نقشه
-    map.current.on('click', (e) => {
-      const { lng, lat } = e.lngLat;
-
-      // حذف مارکر قبلی
-      if (marker.current) {
-        marker.current.remove();
+    try {
+      mapboxgl.accessToken = mapboxToken;
+      // فعال‌سازی پشتیبانی متن‌های RTL مثل فارسی/عربی
+      // بارگذاری از CDN رسمی (only once)
+      // @ts-ignore - setRTLTextPlugin وجود دارد ولی در تایپ‌ها ممکن است تعریف نشده باشد
+      if (typeof (mapboxgl as any).setRTLTextPlugin === 'function') {
+        try {
+          (mapboxgl as any).setRTLTextPlugin(
+            'https://cdn.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.3.0/mapbox-gl-rtl-text.js',
+            undefined,
+            true
+          );
+        } catch (_) {}
       }
 
-      // ساخت مارکر جدید
-      const el = document.createElement('div');
-      el.className = 'custom-mapbox-marker';
-      el.innerHTML = `
-        <div class="marker-animation">
-          <svg width="40" height="50" viewBox="0 0 40 50">
-            <path d="M20 0C8.954 0 0 8.954 0 20c0 15 20 30 20 30s20-15 20-30c0-11.046-8.954-20-20-20z" 
-              fill="hsl(var(--primary))" stroke="white" stroke-width="3"/>
-            <circle cx="20" cy="20" r="8" fill="white"/>
-            <circle cx="20" cy="20" r="4" fill="hsl(var(--primary))"/>
-          </svg>
-        </div>
-      `;
+      // تعیین موقعیت اولیه بر اساس استان
+      let startLat = initialLat;
+      let startLng = initialLng;
+      let startZoom = 6;
 
-      marker.current = new mapboxgl.Marker({ element: el })
-        .setLngLat([lng, lat])
-        .addTo(map.current!);
+      if (provinceCode && provinceCoordinates[provinceCode]) {
+        const coords = provinceCoordinates[provinceCode];
+        startLat = coords.lat;
+        startLng = coords.lng;
+        startZoom = coords.zoom;
+      }
 
-      setSelectedPosition({ lat, lng });
-      onLocationSelect(lat, lng);
-
-      toast({
-        title: '✓ موقعیت انتخاب شد',
-        description: `عرض: ${lat.toFixed(6)} - طول: ${lng.toFixed(6)}`,
+      // ساخت نقشه
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [startLng, startLat],
+        zoom: startZoom,
+        minZoom: 4,
+        maxZoom: 20,
+        pitchWithRotate: false,
+        attributionControl: false,
       });
-    });
 
-    return () => {
-      if (marker.current) marker.current.remove();
-      if (map.current) map.current.remove();
-    };
+      // اضافه کردن کنترل‌های ناوبری
+      map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-left');
+
+      // Overlay لودینگ را زمانی که استایل کاملاً لود شد حذف کن
+      const handleStyleLoad = () => {
+        setIsMapReady(true);
+        // اطمینان از رندر داخل دیالوگ/مودال
+        setTimeout(() => map.current?.resize(), 0);
+      };
+
+      map.current.on('style.load', handleStyleLoad);
+      map.current.on('load', () => {
+        // حفاظت بیشتر اگر بعضی محیط‌ها فقط load را فایر کنند
+        handleStyleLoad();
+      });
+
+      // کلیک روی نقشه
+      map.current.on('click', (e) => {
+        const { lng, lat } = e.lngLat;
+
+        if (marker.current) {
+          marker.current.remove();
+        }
+
+        const el = document.createElement('div');
+        el.className = 'custom-mapbox-marker';
+        el.innerHTML = `
+          <div class="marker-animation">
+            <svg width="40" height="50" viewBox="0 0 40 50">
+              <path d="M20 0C8.954 0 0 8.954 0 20c0 15 20 30 20 30s20-15 20-30c0-11.046-8.954-20-20-20z" 
+                fill="hsl(var(--primary))" stroke="white" stroke-width="3"/>
+              <circle cx="20" cy="20" r="8" fill="white"/>
+              <circle cx="20" cy="20" r="4" fill="hsl(var(--primary))"/>
+            </svg>
+          </div>
+        `;
+
+        marker.current = new mapboxgl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .addTo(map.current!);
+
+        setSelectedPosition({ lat, lng });
+        onLocationSelect(lat, lng);
+
+        toast({
+          title: '✓ موقعیت انتخاب شد',
+          description: `عرض: ${lat.toFixed(6)} - طول: ${lng.toFixed(6)}`,
+        });
+      });
+
+      // اگر به هر دلیل لود طولانی شد، بعد از چند ثانیه تلاش کن overlay برداشته شود و نقشه resize شود
+      const fallback = setTimeout(() => {
+        if (!isMapReady) {
+          setIsMapReady(true);
+          map.current?.resize();
+        }
+      }, 3000);
+
+      // واکنش به تغییر اندازه پنجره/دیالوگ
+      const onResize = () => map.current?.resize();
+      window.addEventListener('resize', onResize);
+
+      return () => {
+        clearTimeout(fallback);
+        window.removeEventListener('resize', onResize);
+        if (marker.current) marker.current.remove();
+        if (map.current) map.current.remove();
+      };
+    } catch (err) {
+      console.error('Map init error:', err);
+      setIsMapReady(true);
+      toast({
+        title: 'خطا در بارگذاری نقشه',
+        description: 'لطفاً صفحه را رفرش کنید یا مجدداً تلاش نمایید.',
+        variant: 'destructive',
+      });
+    }
   }, [isMounted, mapboxToken, provinceCode, initialLat, initialLng, onLocationSelect, toast]);
 
-  // تغییر استایل نقشه
+  // تغییر استایل نقشه (خیابان/ماهواره‌ای)
   useEffect(() => {
     if (!map.current || !isMapReady) return;
 
@@ -173,7 +212,16 @@ export function InteractiveLocationMap({
       ? 'mapbox://styles/mapbox/satellite-streets-v12'
       : 'mapbox://styles/mapbox/streets-v12';
 
+    // نمایش overlay حین سوئیچ استایل
+    setIsMapReady(false);
     map.current.setStyle(styleUrl);
+
+    const onLoaded = () => {
+      setIsMapReady(true);
+      map.current?.resize();
+      map.current?.off('style.load', onLoaded);
+    };
+    map.current.on('style.load', onLoaded);
   }, [mapStyle, isMapReady]);
 
   // تغییر موقعیت با تغییر استان
