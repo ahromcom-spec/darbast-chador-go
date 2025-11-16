@@ -261,7 +261,7 @@ export default function SimpleLeafletMap({
   }, []);
 
   return (
-    <div className="w-full">
+    <div className="relative w-full">
       <div
         ref={mapContainer}
         className="w-full rounded-lg border border-border"
@@ -269,16 +269,18 @@ export default function SimpleLeafletMap({
       />
 
       {selectedPos && (
-        <div className="mt-3 w-full text-center">
-          {loadingRoute ? (
-            <span className="text-sm text-muted-foreground">در حال محاسبه مسیر جاده‌ای...</span>
-          ) : selectedPos.roadDistance ? (
-            <span className="text-sm font-medium text-foreground">
-              فاصله جاده‌ای تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.roadDistance.toFixed(1)}</span> کیلومتر
-            </span>
-          ) : (
-            <span className="text-sm text-muted-foreground">مسیر جاده‌ای در دسترس نبود، خط مستقیم نمایش داده شد.</span>
-          )}
+        <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur border rounded-lg p-3 shadow-lg z-[1000]">
+          <div className="flex items-center justify-center gap-2">
+            {loadingRoute ? (
+              <span className="text-sm text-muted-foreground">در حال محاسبه مسیر جاده‌ای...</span>
+            ) : selectedPos.roadDistance ? (
+              <span className="text-sm font-medium text-foreground">
+                فاصله جاده‌ای تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.roadDistance.toFixed(1)}</span> کیلومتر
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground">مسیر جاده‌ای در دسترس نبود</span>
+            )}
+          </div>
         </div>
       )}
     </div>
