@@ -21,9 +21,13 @@ export default function SimpleLeafletMap({
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
+    // محاسبه نقطه شروع: اگر مختصات نامعتبر یا 0 باشند، روی قم قرار بده
+    const startLat = (initialLat >= 24 && initialLat <= 40) ? initialLat : 34.6416;
+    const startLng = (initialLng >= 44 && initialLng <= 64) ? initialLng : 50.8746;
+
     // ایجاد نقشه
     const map = L.map(mapContainer.current, {
-      center: [initialLat, initialLng],
+      center: [startLat, startLng],
       zoom: 12,
       minZoom: 5,
       maxZoom: 18,
