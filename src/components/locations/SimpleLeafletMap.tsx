@@ -132,31 +132,14 @@ export default function SimpleLeafletMap({
       />
       {selectedPos && (
         <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur border rounded-lg p-3 shadow-lg z-[1000]">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
-                </svg>
-                <span className="font-medium text-sm">موقعیت انتخاب شده:</span>
-              </div>
-              <div className="flex items-center gap-4 text-sm font-mono">
-                <span className="text-muted-foreground">
-                  عرض: <span className="text-foreground font-semibold">{selectedPos.lat.toFixed(6)}</span>
-                </span>
-                <span className="text-muted-foreground">
-                  طول: <span className="text-foreground font-semibold">{selectedPos.lng.toFixed(6)}</span>
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-sm bg-primary/10 rounded-md px-3 py-2">
-              <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-              <span className="font-medium text-primary">
-                فاصله تا مرکز استان قم: <span className="font-bold">{selectedPos.distance.toFixed(1)}</span> کیلومتر
-              </span>
-            </div>
+          <div className="flex items-center justify-center gap-2 text-sm">
+            <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="font-medium text-foreground">
+              فاصله موقعیت انتخابی تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.distance.toFixed(1)}</span> کیلومتر
+            </span>
           </div>
         </div>
       )}
