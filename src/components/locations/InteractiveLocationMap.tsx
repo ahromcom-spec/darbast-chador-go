@@ -72,10 +72,18 @@ export function InteractiveLocationMap({
   // دریافت توکن Mapbox
   useEffect(() => {
     const cached = sessionStorage.getItem('mapbox_token');
+    const envToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+
     if (cached) {
       setMapboxToken(cached);
       return;
     }
+    if (envToken) {
+      setMapboxToken(envToken);
+      sessionStorage.setItem('mapbox_token', envToken);
+      return;
+    }
+
     const fetchToken = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
@@ -83,10 +91,12 @@ export function InteractiveLocationMap({
         if (data?.token) {
           setMapboxToken(data.token);
           sessionStorage.setItem('mapbox_token', data.token);
+          return;
         }
+        throw new Error('No token returned');
       } catch (e) {
         console.error('Failed to get Mapbox token', e);
-        toast({ title: 'خطا', description: 'دریافت تنظیمات نقشه ناموفق بود', variant: 'destructive' });
+        toast({ title: 'خطا', description: 'تنظیمات نقشه در دسترس نیست', variant: 'destructive' });
       }
     };
     fetchToken();
@@ -128,7 +138,7 @@ export function InteractiveLocationMap({
       // ساخت نقشه
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
+        style: 'mapbox://styles/mapbox/light-v11',
         center: [startLng, startLat],
         zoom: startZoom,
         projection: 'mercator',
@@ -138,6 +148,9 @@ export function InteractiveLocationMap({
         pitchWithRotate: false,
         attributionControl: false,
       });
+
+      // نقشه را بلافاصله قابل نمایش کن
+      setIsMapReady(true);
 
       // محدود کردن نقشه به مرزهای ایران برای سبک‌تر شدن
       map.current.setMaxBounds(IRAN_BOUNDS as any);
@@ -220,24 +233,23 @@ export function InteractiveLocationMap({
 
   // تغییر استایل نقشه
   useEffect(() => {
-    if (!map.current || !isMapReady) return;
+    if (!map.current) return;
 
     const styleUrl = mapStyle === 'satellite' 
       ? 'mapbox://styles/mapbox/satellite-streets-v12'
-      : 'mapbox://styles/mapbox/streets-v12';
+      : 'mapbox://styles/mapbox/light-v11';
 
-    setIsMapReady(false);
     map.current.setStyle(styleUrl);
+    setIsMapReady(true); // به‌صورت خوش‌بینانه UI را آماده کن
 
-    const onLoaded = () => {
-      setIsMapReady(true);
+    const onIdle = () => {
       setTimeout(() => map.current?.resize(), 100);
     };
-    
-    map.current.once('idle', onLoaded);
-    
-    const timeout = setTimeout(() => setIsMapReady(true), 2000);
-    return () => clearTimeout(timeout);
+    map.current.once('idle', onIdle);
+
+    return () => {
+      map.current?.off('idle', onIdle);
+    };
   }, [mapStyle]);
 
   // تغییر موقعیت با تغییر استان
