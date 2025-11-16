@@ -111,28 +111,6 @@ export default function SimpleLeafletMap({
     qomCenterMarkerRef.current = qomCenterMarker;
 
     // رویداد کلیک روی نقشه
-    // کمک‌تابع: رسم خط مستقیم در صورت عدم دسترسی به سرویس مسیریابی
-    const drawStraightLine = (lat: number, lng: number) => {
-      // حذف مسیر قبلی
-      if (routeLineRef.current) {
-        routeLineRef.current.remove();
-      }
-      const straight = L.polyline(
-        [
-          [QOM_CENTER.lat, QOM_CENTER.lng],
-          [lat, lng],
-        ],
-        { color: '#2563eb', weight: 4, opacity: 0.7 }
-      ).addTo(map);
-      routeLineRef.current = straight;
-      // نمایش کل خط در قاب
-      const bounds = L.latLngBounds([
-        [QOM_CENTER.lat, QOM_CENTER.lng],
-        [lat, lng],
-      ]);
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
-    };
-
     // کمک‌تابع: محاسبه و رسم مسیر جاده‌ای
     const computeRoute = async (lat: number, lng: number) => {
       const distance = calculateDistance(QOM_CENTER.lat, QOM_CENTER.lng, lat, lng);
@@ -203,12 +181,19 @@ export default function SimpleLeafletMap({
 
           routeLineRef.current = routeLine;
         } else {
-          // اگر هیچ سرویس مسیری پاسخ نداد، خط مستقیم رسم شود
-          drawStraightLine(lat, lng);
+          // اگر هیچ سرویس مسیری پاسخ نداد، مسیر نمایش داده نمی‌شود
+          if (routeLineRef.current) {
+            routeLineRef.current.remove();
+            routeLineRef.current = null;
+          }
+          setSelectedPos({ lat, lng, distance, roadDistance: undefined });
         }
       } catch (error) {
         console.error('خطا در محاسبه مسیر جاده‌ای:', error);
-        drawStraightLine(lat, lng);
+        if (routeLineRef.current) {
+          routeLineRef.current.remove();
+          routeLineRef.current = null;
+        }
       } finally {
         setLoadingRoute(false);
       }
