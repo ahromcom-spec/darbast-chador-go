@@ -14,31 +14,8 @@ export function NotificationBanner() {
     const wasDismissed = localStorage.getItem('notification-banner-dismissed');
     if (wasDismissed) {
       setDismissed(true);
-      return;
     }
-
-    const pageLoadTime = Date.now();
-    const [show, setShow] = useState(true);
-
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - pageLoadTime;
-      
-      // در 2 دقیقه اول همیشه نمایش بده
-      if (elapsed < 120000) {
-        // همیشه نمایش داده شود
-      } else {
-        // بعد از 2 دقیقه: هر 30 ثانیه نمایش بده و پنهان کن
-        const cyclePosition = (elapsed - 120000) % 30000;
-        if (cyclePosition >= 15000 && !dismissed) {
-          // در نیمه دوم چرخه، مخفی کن
-        }
-      }
-    }, 1000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [dismissed]);
+  }, []);
 
   const handleDismiss = () => {
     setDismissed(true);
