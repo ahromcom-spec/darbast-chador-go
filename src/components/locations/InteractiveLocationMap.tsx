@@ -14,8 +14,8 @@ interface InteractiveLocationMapProps {
 
 export function InteractiveLocationMap({
   onLocationSelect,
-  initialLat = 34.6416,
-  initialLng = 50.8746, // مختصات قم
+  initialLat = 32.4279, // مرکز ایران
+  initialLng = 53.6880,
 }: InteractiveLocationMapProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -76,11 +76,13 @@ export function InteractiveLocationMap({
           iconAnchor: [10, 10],
         });
 
-        // راه‌اندازی نقشه
+        // راه‌اندازی نقشه با نمای کلی ایران
         const startPos: [number, number] = [initialLat, initialLng];
         mapRef.current = leaflet.map(mapContainerRef.current, {
           center: startPos,
-          zoom: 13,
+          zoom: 6, // زوم کمتر برای دیدن کل ایران
+          minZoom: 5,
+          maxZoom: 18,
           zoomControl: false,
           scrollWheelZoom: true,
           doubleClickZoom: true,
@@ -88,10 +90,14 @@ export function InteractiveLocationMap({
           attributionControl: false,
         });
 
-        // لایه نقشه
+        // لایه نقشه با تنظیمات بهینه برای ایران
         leaflet
           .tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
+            minZoom: 5,
+            crossOrigin: true,
+            // تنظیمات برای نمایش بهتر نام شهرها به فارسی
+            detectRetina: true,
           })
           .addTo(mapRef.current);
 
@@ -121,12 +127,16 @@ export function InteractiveLocationMap({
           resizeObserver.observe(mapContainerRef.current);
         }
 
-        // مارکر اولیه
-        markerRef.current = leaflet
-          .marker(startPos, { icon: SelectedIcon })
-          .addTo(mapRef.current);
-
-        setSelectedPosition({ lat: initialLat, lng: initialLng });
+        // مارکر اولیه - فقط اگر کاربر موقعیت را انتخاب کرده باشد
+        if (initialLat !== 32.4279 || initialLng !== 53.6880) {
+          markerRef.current = leaflet
+            .marker(startPos, { icon: SelectedIcon })
+            .addTo(mapRef.current);
+          setSelectedPosition({ lat: initialLat, lng: initialLng });
+        } else {
+          // برای نمای اولیه، مارکر نمی‌گذاریم تا کل نقشه ایران دیده شود
+          setSelectedPosition(null);
+        }
 
         // کلیک روی نقشه
         clickHandler = (e: any) => {
@@ -275,8 +285,8 @@ export function InteractiveLocationMap({
       <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-start gap-2 animate-fade-in">
         <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
         <div className="text-sm space-y-1">
-          <p className="font-medium text-foreground">روی نقشه کلیک کنید تا موقعیت دقیق پروژه را مشخص کنید</p>
-          <p className="text-muted-foreground text-xs">می‌توانید از دکمه موقعیت من برای یافتن خودکار موقعیت استفاده کنید</p>
+          <p className="font-medium text-foreground">نقشه کامل ایران را می‌بینید - روی نقشه کلیک کنید یا زوم کنید تا موقعیت دقیق را انتخاب کنید</p>
+          <p className="text-muted-foreground text-xs">با استفاده از دکمه‌های زوم یا اسکرول موس می‌توانید نقشه را بزرگ‌نمایی کنید و جزئیات شهرها را ببینید</p>
         </div>
       </div>
 
