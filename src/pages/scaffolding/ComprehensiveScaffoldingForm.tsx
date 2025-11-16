@@ -39,6 +39,7 @@ interface ServiceConditions {
   platformHeight: number | null;
   scaffoldHeightFromPlatform: number | null;
   vehicleDistance: number | null;
+  rentalMonthsPlan?: '1' | '2' | '3+'; // برای اجاره چند ماهه
 }
 
 interface ComprehensiveScaffoldingFormProps {
@@ -109,6 +110,7 @@ export default function ComprehensiveScaffoldingForm({
     platformHeight: null,
     scaffoldHeightFromPlatform: null,
     vehicleDistance: null,
+    rentalMonthsPlan: '1',
   });
 
   const [onGround, setOnGround] = useState(true);
@@ -301,7 +303,29 @@ export default function ComprehensiveScaffoldingForm({
       basePrice *= monthMultiplier;
     }
 
-    if (conditions.totalMonths > 1) {
+    // محاسبه تخفیف اجاره چند ماهه برای داربست سطحی نما
+    if (isFacadeScaffolding && conditions.rentalMonthsPlan && propSubcategoryCode?.includes('with-materials')) {
+      const monthsPlan = parseInt(conditions.rentalMonthsPlan.replace('+', ''));
+      let discount = 0;
+      
+      if (conditions.rentalMonthsPlan === '2') {
+        discount = 0.10; // 10% تخفیف برای 2 ماه
+        breakdown.push(`تخفیف اجاره 2 ماهه: -10% در هر ماه`);
+      } else if (conditions.rentalMonthsPlan === '3+') {
+        discount = 0.15; // 15% تخفیف برای 3 ماه و بیشتر
+        breakdown.push(`تخفیف اجاره 3 ماهه: -15% در هر ماه`);
+      }
+      
+      if (discount > 0) {
+        const discountedMonthlyPrice = basePrice * (1 - discount);
+        const totalWithDiscount = discountedMonthlyPrice * monthsPlan;
+        breakdown.push(`قیمت هر ماه با تخفیف: ${Math.round(discountedMonthlyPrice).toLocaleString('fa-IR')} تومان`);
+        breakdown.push(`مجموع ${monthsPlan} ماه: ${Math.round(totalWithDiscount).toLocaleString('fa-IR')} تومان`);
+        basePrice = totalWithDiscount;
+      } else {
+        breakdown.push(`مجموع 1 ماه: ${Math.round(basePrice).toLocaleString('fa-IR')} تومان`);
+      }
+    } else if (conditions.totalMonths > 1) {
       const additionalMonths = conditions.totalMonths - 1;
       const additionalCost = basePrice * 0.7 * additionalMonths;
       breakdown.push(`ماه‌های اضافی (${additionalMonths} ماه): ${additionalCost.toLocaleString('fa-IR')} تومان`);
@@ -1004,27 +1028,71 @@ export default function ComprehensiveScaffoldingForm({
           <CardTitle className="text-blue-800 dark:text-blue-300">شرایط سرویس</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-foreground font-semibold">تعداد کل ماه‌ها</Label>
-              <Input
-                type="number"
-                min="1"
-                value={conditions.totalMonths}
-                onChange={(e) => setConditions({ ...conditions, totalMonths: parseInt(e.target.value) || 1 })}
-              />
+          {/* نمایش فیلد اجاره چند ماهه فقط برای داربست سطحی نما با اجناس */}
+          {isFacadeScaffolding && propSubcategoryCode?.includes('with-materials') ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-foreground font-semibold">کرایه داربست به شرط چند ماه است</Label>
+                <Select
+                  value={conditions.rentalMonthsPlan || '1'}
+                  onValueChange={(v: '1' | '2' | '3+') => {
+                    const monthsNum = parseInt(v.replace('+', ''));
+                    setConditions({ 
+                      ...conditions, 
+                      rentalMonthsPlan: v,
+                      totalMonths: monthsNum,
+                      currentMonth: 1
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="1">به شرط یک ماه</SelectItem>
+                    <SelectItem value="2">به شرط دو ماه</SelectItem>
+                    <SelectItem value="3+">به شرط سه ماه و بیشتر</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground font-semibold">کرایه ماه جاری داربست</Label>
+                <Input
+                  type="text"
+                  disabled
+                  value={
+                    conditions.rentalMonthsPlan === '1' ? 'ماه اول' :
+                    conditions.rentalMonthsPlan === '2' ? 'ماه اول و دوم' :
+                    conditions.rentalMonthsPlan === '3+' ? 'ماه اول و دوم و سوم' :
+                    'ماه اول'
+                  }
+                  className="bg-muted"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-foreground font-semibold">ماه جاری</Label>
-              <Input
-                type="number"
-                min="1"
-                max={conditions.totalMonths}
-                value={conditions.currentMonth}
-                onChange={(e) => setConditions({ ...conditions, currentMonth: parseInt(e.target.value) || 1 })}
-              />
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-foreground font-semibold">تعداد کل ماه‌ها</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={conditions.totalMonths}
+                  onChange={(e) => setConditions({ ...conditions, totalMonths: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground font-semibold">ماه جاری</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max={conditions.totalMonths}
+                  value={conditions.currentMonth}
+                  onChange={(e) => setConditions({ ...conditions, currentMonth: parseInt(e.target.value) || 1 })}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label className="text-foreground font-semibold">فاصله از مرکز استان</Label>
