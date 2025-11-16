@@ -28,6 +28,8 @@ export function PersianDatePicker({
   // Determine actual time mode
   const actualTimeMode = timeMode || (showTime ? 'full' : 'none');
   
+  const [open, setOpen] = useState(false);
+  
   const [ampm, setAmpm] = useState<'AM' | 'PM'>(() => {
     if (value && actualTimeMode === 'ampm') {
       const date = new Date(value);
@@ -106,7 +108,7 @@ export function PersianDatePicker({
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -195,6 +197,16 @@ export function PersianDatePicker({
             </div>
           </div>
         )}
+        <div className="border-t p-3">
+          <Button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="w-full"
+            disabled={!selectedDate}
+          >
+            تایید
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );
