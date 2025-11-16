@@ -1032,7 +1032,7 @@ export default function ComprehensiveScaffoldingForm({
           {isFacadeScaffolding ? (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-foreground font-semibold">تعداد کل ماه‌ها</Label>
+                <Label className="text-foreground font-semibold">کرایه داربست به شرط چند ماه است</Label>
                 <Select
                   value={conditions.rentalMonthsPlan || '1'}
                   onValueChange={(v: '1' | '2' | '3+') => {
