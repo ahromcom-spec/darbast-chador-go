@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Locate, Layers, Map as MapIcon, Satellite } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import mapboxgl from 'mapbox-gl';
-import MapboxLanguage from '@mapbox/mapbox-gl-language';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -68,7 +67,6 @@ export function InteractiveLocationMap({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
-  const languageControlRef = useRef<any>(null);
   const { toast } = useToast();
 
   // دریافت توکن Mapbox
@@ -154,23 +152,11 @@ export function InteractiveLocationMap({
       map.current.dragRotate.disable();
       (map.current as any).touchZoomRotate?.disableRotation?.();
 
-      const handleStyleLoad = () => {
+      // بارگذاری کامل نقشه
+      map.current.once('load', () => {
         setIsMapReady(true);
-        // زبان فارسی برای لایه‌های متنی
-        if (map.current) {
-          if (!languageControlRef.current) {
-            languageControlRef.current = new (MapboxLanguage as any)({ defaultLanguage: 'fa' });
-            try { map.current.addControl(languageControlRef.current); } catch {}
-          } else {
-            try { languageControlRef.current.setLanguage?.('fa'); } catch {}
-          }
-        }
-        // اطمینان از رندر داخل دیالوگ/مودال
-        setTimeout(() => map.current?.resize(), 0);
-      };
-
-      map.current.on('style.load', handleStyleLoad);
-      map.current.on('load', () => handleStyleLoad());
+        setTimeout(() => map.current?.resize(), 100);
+      });
 
       // کلیک روی نقشه
       map.current.on('click', (e) => {
@@ -206,35 +192,33 @@ export function InteractiveLocationMap({
         });
       });
 
-      // fallback در صورت تأخیر
-      const fallback = setTimeout(() => {
-        if (!isMapReady) {
-          setIsMapReady(true);
-          map.current?.resize();
-        }
-      }, 3000);
+      // timeout اطمینان
+      const timeout = setTimeout(() => {
+        setIsMapReady(true);
+        map.current?.resize();
+      }, 2000);
 
       const onResize = () => map.current?.resize();
       window.addEventListener('resize', onResize);
 
       return () => {
-        clearTimeout(fallback);
+        clearTimeout(timeout);
         window.removeEventListener('resize', onResize);
         if (marker.current) marker.current.remove();
         if (map.current) map.current.remove();
       };
     } catch (err) {
-      console.error('Map init error:', err);
+      console.error('Map error:', err);
       setIsMapReady(true);
       toast({
         title: 'خطا در بارگذاری نقشه',
-        description: 'لطفاً صفحه را رفرش کنید یا مجدداً تلاش نمایید.',
+        description: 'لطفاً دوباره تلاش کنید',
         variant: 'destructive',
       });
     }
   }, [isMounted, mapboxToken, provinceCode, initialLat, initialLng, onLocationSelect, toast]);
 
-  // تغییر استایل نقشه (خیابان/ماهواره‌ای)
+  // تغییر استایل نقشه
   useEffect(() => {
     if (!map.current || !isMapReady) return;
 
@@ -242,17 +226,19 @@ export function InteractiveLocationMap({
       ? 'mapbox://styles/mapbox/satellite-streets-v12'
       : 'mapbox://styles/mapbox/streets-v12';
 
-    // نمایش overlay حین سوئیچ استایل
     setIsMapReady(false);
     map.current.setStyle(styleUrl);
 
     const onLoaded = () => {
       setIsMapReady(true);
-      map.current?.resize();
-      map.current?.off('style.load', onLoaded);
+      setTimeout(() => map.current?.resize(), 100);
     };
-    map.current.on('style.load', onLoaded);
-  }, [mapStyle, isMapReady]);
+    
+    map.current.once('idle', onLoaded);
+    
+    const timeout = setTimeout(() => setIsMapReady(true), 2000);
+    return () => clearTimeout(timeout);
+  }, [mapStyle]);
 
   // تغییر موقعیت با تغییر استان
   useEffect(() => {
