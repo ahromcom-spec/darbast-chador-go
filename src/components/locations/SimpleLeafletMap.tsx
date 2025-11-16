@@ -89,6 +89,80 @@ export default function SimpleLeafletMap({
     qomCenterMarkerRef.current = qomCenterMarker;
 
     // رویداد کلیک روی نقشه
+    // کمک‌تابع: رسم خط مستقیم در صورت عدم دسترسی به سرویس مسیریابی
+    const drawStraightLine = (lat: number, lng: number) => {
+      // حذف مسیر قبلی
+      if (routeLineRef.current) {
+        routeLineRef.current.remove();
+      }
+      const straight = L.polyline(
+        [
+          [QOM_CENTER.lat, QOM_CENTER.lng],
+          [lat, lng],
+        ],
+        { color: '#2563eb', weight: 4, opacity: 0.7 }
+      ).addTo(map);
+      routeLineRef.current = straight;
+      // نمایش کل خط در قاب
+      const bounds = L.latLngBounds([
+        [QOM_CENTER.lat, QOM_CENTER.lng],
+        [lat, lng],
+      ]);
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+    };
+
+    // کمک‌تابع: محاسبه و رسم مسیر جاده‌ای
+    const computeRoute = async (lat: number, lng: number) => {
+      const distance = calculateDistance(QOM_CENTER.lat, QOM_CENTER.lng, lat, lng);
+      // ذخیره موقعیت و فاصله هوایی
+      setSelectedPos({ lat, lng, distance });
+      onLocationSelect(lat, lng);
+
+      setLoadingRoute(true);
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson&alternatives=false`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.routes && data.routes.length > 0) {
+          const roadDistanceKm = data.routes[0].distance / 1000;
+          setSelectedPos({ lat, lng, distance, roadDistance: roadDistanceKm });
+
+          // حذف مسیر قبلی
+          if (routeLineRef.current) {
+            routeLineRef.current.remove();
+          }
+
+          // رسم مسیر جاده‌ای روی نقشه
+          const coordinates = data.routes[0].geometry.coordinates.map(
+            (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
+          );
+          const routeLine = L.polyline(coordinates, {
+            color: '#2563eb',
+            weight: 4,
+            opacity: 0.8,
+          }).addTo(map);
+
+          // نمایش مسیر کامل در قاب
+          const bounds = L.latLngBounds(coordinates as [number, number][]);
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+
+          routeLineRef.current = routeLine;
+          return;
+        }
+
+        // اگر مسیری برنگشت، خط مستقیم رسم شود
+        drawStraightLine(lat, lng);
+      } catch (error) {
+        console.error('خطا در محاسبه مسیر جاده‌ای:', error);
+        // در صورت خطا نیز خط مستقیم رسم شود
+        drawStraightLine(lat, lng);
+      } finally {
+        setLoadingRoute(false);
+      }
+    };
+
+    // رویداد کلیک روی نقشه
     map.on('click', async (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
 
@@ -97,56 +171,18 @@ export default function SimpleLeafletMap({
         markerRef.current.remove();
       }
 
-      // اضافه کردن marker جدید
-      const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+      // اضافه کردن marker جدید (قابل‌جابجایی)
+      const marker = L.marker([lat, lng], { icon: customIcon, draggable: true }).addTo(map);
       markerRef.current = marker;
 
-      // محاسبه فاصله هوایی تا مرکز قم
-      const distance = calculateDistance(lat, lng, QOM_CENTER.lat, QOM_CENTER.lng);
+      // محاسبه و رسم مسیر برای این نقطه
+      await computeRoute(lat, lng);
 
-      // ذخیره موقعیت و فاصله هوایی
-      setSelectedPos({ lat, lng, distance });
-      onLocationSelect(lat, lng);
-
-      // محاسبه فاصله جاده‌ای و دریافت مسیر
-      setLoadingRoute(true);
-      try {
-        const response = await fetch(
-          `https://router.project-osrm.org/route/v1/driving/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson`
-        );
-        const data = await response.json();
-        
-        if (data.routes && data.routes.length > 0) {
-          const roadDistanceKm = data.routes[0].distance / 1000;
-          setSelectedPos({ lat, lng, distance, roadDistance: roadDistanceKm });
-          
-          // حذف مسیر قبلی
-          if (routeLineRef.current) {
-            routeLineRef.current.remove();
-          }
-          
-          // رسم مسیر جاده‌ای روی نقشه
-          const coordinates = data.routes[0].geometry.coordinates.map(
-            (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
-          );
-          
-          const routeLine = L.polyline(coordinates, {
-            color: '#2563eb',
-            weight: 4,
-            opacity: 0.7,
-          }).addTo(map);
-          
-          // نمایش مسیر کامل در قاب
-          const bounds = L.latLngBounds(coordinates as [number, number][]);
-          map.fitBounds(bounds, { padding: [40, 40] });
-          
-          routeLineRef.current = routeLine;
-        }
-      } catch (error) {
-        console.error('خطا در محاسبه مسیر جاده‌ای:', error);
-      } finally {
-        setLoadingRoute(false);
-      }
+      // در صورت drag شدن مارکر، مسیر مجدد محاسبه شود
+      marker.on('dragend', async () => {
+        const pos = marker.getLatLng();
+        await computeRoute(pos.lat, pos.lng);
+      });
     });
 
     // Resize handler برای modal - فقط یک بار اجرا می‌شود
