@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
+import LeafletFallbackMap from './LeafletFallbackMap';
 
 interface InteractiveLocationMapProps {
   onLocationSelect: (lat: number, lng: number) => void;
@@ -61,6 +62,7 @@ export function InteractiveLocationMap({
 }: InteractiveLocationMapProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('streets');
   const [mapboxToken, setMapboxToken] = useState<string>('');
@@ -150,10 +152,11 @@ export function InteractiveLocationMap({
       // نقشه را بلافاصله قابل نمایش کن
       setIsMapReady(true);
 
-      // لاگ خطای سبک/توکن
+      // لاگ خطای سبک/توکن و سوییچ به نقشه ساده
       map.current.on('error', (e) => {
         console.error('Mapbox error', e);
-        toast({ title: 'خطای نقشه', description: 'مشکل در بارگذاری سبک یا کلید.', variant: 'destructive' });
+        setUseFallback(true);
+        toast({ title: 'نقشه ساده فعال شد', description: 'نمای نقشه به حالت جایگزین تغییر کرد.', variant: 'default' });
       });
 
       // محدود کردن نقشه به مرزهای ایران برای سبک‌تر شدن
@@ -323,32 +326,45 @@ export function InteractiveLocationMap({
   return (
     <div className="space-y-3">
       {/* تغییر حالت نمایش */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant={mapStyle === 'streets' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setMapStyle('streets')}
-          className="flex items-center gap-2"
-        >
-          <MapIcon className="w-4 h-4" />
-          نقشه ساده
-        </Button>
-        <Button
-          variant={mapStyle === 'satellite' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setMapStyle('satellite')}
-          className="flex items-center gap-2"
-        >
-          <Satellite className="w-4 h-4" />
-          نمای ماهواره‌ای
-        </Button>
-      </div>
+      {!useFallback && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant={mapStyle === 'streets' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setMapStyle('streets')}
+            className="flex items-center gap-2"
+          >
+            <MapIcon className="w-4 h-4" />
+            نقشه ساده
+          </Button>
+          <Button
+            variant={mapStyle === 'satellite' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setMapStyle('satellite')}
+            className="flex items-center gap-2"
+          >
+            <Satellite className="w-4 h-4" />
+            نمای ماهواره‌ای
+          </Button>
+        </div>
+      )}
 
       {/* نقشه */}
       <div className="relative h-[500px] w-full rounded-xl overflow-hidden border-2 shadow-lg">
-        <div ref={mapContainer} className="h-full w-full" />
+        {useFallback ? (
+          <LeafletFallbackMap
+            onLocationSelect={(lat, lng) => {
+              setSelectedPosition({ lat, lng });
+              onLocationSelect(lat, lng);
+            }}
+            initialLat={initialLat}
+            initialLng={initialLng}
+          />
+        ) : (
+          <div ref={mapContainer} className="h-full w-full" />
+        )}
 
-        {!isMapReady && (
+        {!isMapReady && !useFallback && (
           <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-[1000]">
             <div className="flex flex-col items-center gap-3">
               <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
