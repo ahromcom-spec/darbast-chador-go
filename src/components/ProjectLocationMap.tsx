@@ -3,24 +3,13 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, List } from 'lucide-react';
-import * as L from 'leaflet';
+
 import 'leaflet/dist/leaflet.css';
 
 // Fix default marker icon issue in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Initialize Leaflet icon only on client side
-if (typeof window !== 'undefined') {
-  const DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-  });
-
-  L.Marker.prototype.options.icon = DefaultIcon;
-}
 
 interface ProjectLocationMapProps {
   onLocationSelect?: (location: {
@@ -47,6 +36,19 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({
 
   useEffect(() => {
     setIsMounted(true);
+    // Set default Leaflet marker icon dynamically (client-only)
+    import('leaflet').then((L) => {
+      const DefaultIcon = L.icon({
+        iconUrl: icon,
+        shadowUrl: iconShadow,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+      });
+      // @ts-ignore - prototype options exists at runtime
+      L.Marker.prototype.options.icon = DefaultIcon;
+    }).catch(() => {
+      // ignore icon setup errors
+    });
   }, []);
 
   return (
