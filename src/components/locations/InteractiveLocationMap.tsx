@@ -81,37 +81,38 @@ export function InteractiveLocationMap({
   const qomCenterMarker = useRef<mapboxgl.Marker | null>(null);
   const { toast } = useToast();
 
-  // دریافت توکن Mapbox (در صورت عدم استفاده از fallback نیازی نیست)
+  // دریافت توکن Mapbox و فعال‌سازی نقشه پیشرفته در صورت موجود بودن
   useEffect(() => {
-    if (useFallback) return;
-
     const cached = sessionStorage.getItem('mapbox_token');
     if (cached) {
       setMapboxToken(cached);
+      setUseFallback(false);
       return;
     }
 
     const tryEdgeThenEnv = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-        if (error) throw error as any;
-        if (data?.token) {
+        if (!error && data?.token) {
           setMapboxToken(data.token);
           sessionStorage.setItem('mapbox_token', data.token);
+          setUseFallback(false);
           return;
         }
       } catch (_) {}
+
       const envToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
       if (envToken) {
         setMapboxToken(envToken);
         sessionStorage.setItem('mapbox_token', envToken);
+        setUseFallback(false);
         return;
       }
-      toast({ title: 'خطا', description: 'کلید عمومی نقشه یافت نشد', variant: 'destructive' });
+      // اگر توکن موجود نبود، در حالت fallback باقی بماند
     };
 
     tryEdgeThenEnv();
-  }, [toast, useFallback]);
+  }, [toast]);
 
   useEffect(() => {
     setIsMounted(true);
