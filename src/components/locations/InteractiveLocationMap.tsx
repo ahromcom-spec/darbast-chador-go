@@ -60,8 +60,8 @@ export function InteractiveLocationMap({
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Get Mapbox token from environment variable
-    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+    // Get Mapbox token from secret
+    const mapboxToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
     
     if (!mapboxToken) {
       console.warn('Mapbox token not configured. Map will not be displayed.');
@@ -171,7 +171,7 @@ export function InteractiveLocationMap({
   }, [provinceCode]);
 
   // Check if Mapbox token is available
-  const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+  const mapboxToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
 
   if (!mapboxToken) {
     return (
