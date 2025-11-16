@@ -120,42 +120,16 @@ export default function SimpleLeafletMap({
 
       setLoadingRoute(true);
       try {
-        // ابتدا تلاش با Mapbox Directions در صورت وجود توکن
-        let routeData: any | null = null;
-        if (mapboxTokenRef.current) {
-          try {
-            const mUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson&access_token=${mapboxTokenRef.current}`;
-            const mRes = await fetch(mUrl, { mode: 'cors' });
-            const mJson = await mRes.json();
-            if (mJson?.routes?.length) routeData = mJson;
-          } catch (_) {}
-        }
+        // فراخوانی فانکشن بک‌اند جهت محاسبه مسیر (حل مشکلات CORS/Rate-limit)
+        const { data, error } = await supabase.functions.invoke('get-road-route', {
+          body: {
+            origin: { lat: QOM_CENTER.lat, lng: QOM_CENTER.lng },
+            dest: { lat, lng },
+          },
+        });
 
-        // اگر Mapbox جواب نداد از OSRM استفاده کن (چند سرور)
-        if (!routeData) {
-          const endpoints = [
-            'https://router.project-osrm.org/route/v1/driving',
-            'https://routing.openstreetmap.de/routed-car/route/v1/driving'
-          ];
-
-          for (const endpoint of endpoints) {
-            try {
-              const url = `${endpoint}/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson&alternatives=false`;
-              const res = await fetch(url, { mode: 'cors' });
-              if (!res.ok) continue;
-              const json = await res.json();
-              if (json?.routes?.length) {
-                routeData = json;
-                break;
-              }
-            } catch (_) {
-              // try next endpoint
-            }
-          }
-        }
-
-        if (routeData?.routes?.length) {
-          const roadDistanceKm = routeData.routes[0].distance / 1000;
+        if (!error && data?.geometry?.coordinates?.length) {
+          const roadDistanceKm = data.distanceKm as number;
           setSelectedPos({ lat, lng, distance, roadDistance: roadDistanceKm });
 
           // حذف مسیر قبلی
@@ -163,10 +137,8 @@ export default function SimpleLeafletMap({
             routeLineRef.current.remove();
           }
 
-          // رسم مسیر جاده‌ای روی نقشه
-          const coordinates = routeData.routes[0].geometry.coordinates.map(
-            (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
-          );
+          // رسم مسیر جاده‌ای روی نقشه (GeoJSON -> [lat, lng])
+          const coordinates = (data.geometry.coordinates as [number, number][]) .map((coord) => [coord[1], coord[0]] as [number, number]);
           const routeLine = L.polyline(coordinates, {
             color: '#2563eb',
             weight: 5,
@@ -181,7 +153,7 @@ export default function SimpleLeafletMap({
 
           routeLineRef.current = routeLine;
         } else {
-          // اگر هیچ سرویس مسیری پاسخ نداد، مسیر نمایش داده نمی‌شود
+          // اگر هیچ مسیری برنگشت
           if (routeLineRef.current) {
             routeLineRef.current.remove();
             routeLineRef.current = null;
