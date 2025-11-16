@@ -241,26 +241,24 @@ export default function SimpleLeafletMap({
   }, []);
 
   return (
-    <div className="h-full w-full relative">
-      <div 
-        ref={mapContainer} 
-        className="h-full w-full"
-        style={{ minHeight: '400px' }}
+    <div className="w-full">
+      <div
+        ref={mapContainer}
+        className="w-full rounded-lg border border-border"
+        style={{ minHeight: '420px' }}
       />
+
       {selectedPos && (
-        <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg z-[1000]">
-          <div className="flex items-center justify-center gap-3">
-            <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-            </svg>
-            <span className="font-medium text-foreground text-base">
-              {loadingRoute ? (
-                <span>در حال محاسبه مسیر جاده‌ای...</span>
-              ) : selectedPos.roadDistance ? (
-                <span>فاصله جاده‌ای تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.roadDistance.toFixed(1)}</span> کیلومتر</span>
-              ) : null}
+        <div className="mt-3 w-full text-center">
+          {loadingRoute ? (
+            <span className="text-sm text-muted-foreground">در حال محاسبه مسیر جاده‌ای...</span>
+          ) : selectedPos.roadDistance ? (
+            <span className="text-sm font-medium text-foreground">
+              فاصله جاده‌ای تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.roadDistance.toFixed(1)}</span> کیلومتر
             </span>
-          </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">مسیر جاده‌ای در دسترس نبود، خط مستقیم نمایش داده شد.</span>
+          )}
         </div>
       )}
     </div>
