@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, X, Eye, Search, MapPin, Phone, User } from 'lucide-react';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -23,6 +23,8 @@ import {
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { Separator } from '@/components/ui/separator';
+import { ProjectLocationMap } from '@/components/locations/ProjectLocationMap';
+
 
 interface Order {
   id: string;
@@ -37,6 +39,8 @@ interface Order {
   subcategory_id?: string;
   province_id?: string;
   district_id?: string;
+  project_lat?: number | null;
+  project_lng?: number | null;
 }
 
 export default function ExecutivePendingOrders() {
@@ -86,14 +90,15 @@ export default function ExecutivePendingOrders() {
           subcategory_id,
           province_id,
           district_id,
-          customer_id
+          customer_id,
+          hierarchy_project_id
         `)
         .in('status', ['pending', 'approved', 'in_progress'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Map orders and enrich with customer details (show pending, approved, and in_progress)
+      // Map orders and enrich with customer details and location
       const rows = await Promise.all(
         (data || []).map(async (order: any) => {
           // Fetch customer details
@@ -115,6 +120,31 @@ export default function ExecutivePendingOrders() {
 
             customerName = profileData?.full_name || 'نامشخص';
             customerPhone = profileData?.phone_number || '';
+          }
+
+          // Fetch location lat/lng via hierarchy_project_id
+          let projectLat: number | null = null;
+          let projectLng: number | null = null;
+
+          if (order.hierarchy_project_id) {
+            const { data: hierarchyData } = await supabase
+              .from('projects_hierarchy')
+              .select('location_id')
+              .eq('id', order.hierarchy_project_id)
+              .maybeSingle();
+
+            if (hierarchyData?.location_id) {
+              const { data: locationData } = await supabase
+                .from('locations')
+                .select('lat, lng')
+                .eq('id', hierarchyData.location_id)
+                .maybeSingle();
+
+              if (locationData) {
+                projectLat = locationData.lat;
+                projectLng = locationData.lng;
+              }
+            }
           }
 
           // Parse notes (stored as text) into object
@@ -139,7 +169,9 @@ export default function ExecutivePendingOrders() {
             province_id: order.province_id,
             district_id: order.district_id,
             customer_name: customerName,
-            customer_phone: customerPhone
+            customer_phone: customerPhone,
+            project_lat: projectLat,
+            project_lng: projectLng,
           };
         })
       );
@@ -624,6 +656,24 @@ export default function ExecutivePendingOrders() {
                   <span>{selectedOrder.detailed_address || selectedOrder.address}</span>
                 </p>
               </div>
+
+              {/* نقشه موقعیت پروژه */}
+              {selectedOrder.project_lat && selectedOrder.project_lng && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Map className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold">موقعیت پروژه روی نقشه</Label>
+                    </div>
+                    <ProjectLocationMap
+                      projectLat={selectedOrder.project_lat}
+                      projectLng={selectedOrder.project_lng}
+                      projectAddress={selectedOrder.detailed_address || selectedOrder.address}
+                    />
+                  </div>
+                </>
+              )}
 
               <Separator />
 
