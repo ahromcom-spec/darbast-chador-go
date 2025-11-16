@@ -54,8 +54,8 @@ const IRAN_BOUNDS: [[number, number], [number, number]] = [[44.0, 24.0], [64.0, 
 
 export function InteractiveLocationMap({
   onLocationSelect,
-  initialLat = 32.4279,
-  initialLng = 53.6880,
+  initialLat = 34.6416, // Qom
+  initialLng = 50.8746, // Qom
   provinceCode,
   districtId,
 }: InteractiveLocationMapProps) {
@@ -126,7 +126,7 @@ export function InteractiveLocationMap({
       // تعیین موقعیت اولیه بر اساس استان
       let startLat = initialLat;
       let startLng = initialLng;
-      let startZoom = 6;
+      let startZoom = 12; // Qom city-level zoom
 
       if (provinceCode && provinceCoordinates[provinceCode]) {
         const coords = provinceCoordinates[provinceCode];
@@ -155,10 +155,7 @@ export function InteractiveLocationMap({
       // محدود کردن نقشه به مرزهای ایران برای سبک‌تر شدن
       map.current.setMaxBounds(IRAN_BOUNDS as any);
 
-      // نشان دادن نمای کلی ایران در بدو ورود (بدون انیمیشن)
-      if (!provinceCode) {
-        map.current.fitBounds(IRAN_BOUNDS as any, { padding: 24, duration: 0 });
-      }
+      // بدون fitBounds ایران تا سریع‌تر روی قم بماند
 
       // کنترل‌های ناوبری
       map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-left');
