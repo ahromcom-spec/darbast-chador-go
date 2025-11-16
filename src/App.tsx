@@ -127,7 +127,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <AuthProvider>
+            
               {/* <PageLoadProgress /> */}
               <OfflineIndicator />
               <NotificationBanner />
@@ -318,7 +318,7 @@ const App = () => {
                 </Routes>
               </div>
             </Suspense>
-          </AuthProvider>
+          
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
