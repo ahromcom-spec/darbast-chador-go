@@ -238,6 +238,7 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
           initialLat={formData.lat}
           initialLng={formData.lng}
           provinceCode={provinces.find(p => p.id === formData.province_id)?.code}
+          districtId={formData.district_id}
         />
       </div>
 
