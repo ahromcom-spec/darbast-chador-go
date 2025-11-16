@@ -179,9 +179,7 @@ export default function SimpleLeafletMap({
                 <span>در حال محاسبه مسیر جاده‌ای...</span>
               ) : selectedPos.roadDistance ? (
                 <span>فاصله جاده‌ای تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.roadDistance.toFixed(1)}</span> کیلومتر</span>
-              ) : (
-                <span>فاصله هوایی تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.distance.toFixed(1)}</span> کیلومتر</span>
-              )}
+              ) : null}
             </span>
           </div>
         </div>
