@@ -53,6 +53,13 @@ const provinceCoordinates: { [key: string]: { lat: number; lng: number; zoom: nu
 
 const IRAN_BOUNDS: [[number, number], [number, number]] = [[44.0, 24.0], [64.0, 40.0]];
 
+// مرکز استان قم
+const QOM_CENTER = { lat: 34.6416, lng: 50.8746 };
+
+// شناسه‌های لایه و منبع مسیر در Mapbox
+const ROUTE_SOURCE_ID = 'qom-route-source';
+const ROUTE_LAYER_ID = 'qom-route-layer';
+
 export function InteractiveLocationMap({
   onLocationSelect,
   initialLat = 34.6416, // Qom
