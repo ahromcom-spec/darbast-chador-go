@@ -55,6 +55,7 @@ export function InteractiveLocationMap({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -88,14 +89,24 @@ export function InteractiveLocationMap({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
       center: center,
-      zoom: zoom,
-      language: 'fa'
+      zoom: zoom
     });
 
-    // Add RTL support for Persian text
+    // Handle load and ensure proper sizing
     map.current.on('load', () => {
       setIsLoading(false);
+      map.current?.resize();
+      setTimeout(() => map.current?.resize(), 300);
     });
+
+    // Resize on container changes
+    let ro: ResizeObserver | undefined;
+    if (mapContainer.current) {
+      ro = new ResizeObserver(() => {
+        map.current?.resize();
+      });
+      ro.observe(mapContainer.current);
+    }
 
     // Add navigation controls
     map.current.addControl(
@@ -154,6 +165,8 @@ export function InteractiveLocationMap({
       if (marker.current) {
         marker.current.remove();
       }
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       if (map.current) {
         map.current.remove();
       }
