@@ -39,9 +39,18 @@ export class ErrorBoundary extends Component<Props, State> {
                 متأسفانه خطایی رخ داده است. لطفاً صفحه را مجدداً بارگذاری کنید.
               </p>
               {this.state.error && (
-                <p className="text-xs mb-4 opacity-75">
-                  {getSafeErrorMessage(this.state.error)}
-                </p>
+                <div className="text-xs mb-4 opacity-75 space-y-2">
+                  <p>{getSafeErrorMessage(this.state.error)}</p>
+                  {this.state.error.message && (
+                    <details className="mt-2">
+                      <summary>جزئیات خطا</summary>
+                      <pre className="mt-2 whitespace-pre-wrap break-words">
+                        {this.state.error.message}
+                        {this.state.error.stack ? `\n\n${this.state.error.stack.split('\n').slice(0,5).join('\n')}` : ''}
+                      </pre>
+                    </details>
+                  )}
+                </div>
               )}
               <Button
                 onClick={() => window.location.reload()}
