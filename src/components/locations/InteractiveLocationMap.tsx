@@ -315,7 +315,7 @@ export function InteractiveLocationMap({
     );
   }
 
-  if (!mapboxToken) {
+  if (!useFallback && !mapboxToken) {
     return (
       <div className="h-[500px] w-full rounded-xl overflow-hidden border bg-muted flex items-center justify-center">
         <p className="text-muted-foreground">در حال دریافت تنظیمات نقشه...</p>
