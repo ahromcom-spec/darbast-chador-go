@@ -33,7 +33,8 @@ export default function SimpleLeafletMap({
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const qomCenterMarkerRef = useRef<L.Marker | null>(null);
-  const [selectedPos, setSelectedPos] = useState<{ lat: number; lng: number; distance: number } | null>(null);
+  const [selectedPos, setSelectedPos] = useState<{ lat: number; lng: number; distance: number; roadDistance?: number } | null>(null);
+  const [loadingRoute, setLoadingRoute] = useState(false);
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
@@ -87,7 +88,7 @@ export default function SimpleLeafletMap({
     qomCenterMarkerRef.current = qomCenterMarker;
 
     // رویداد کلیک روی نقشه
-    map.on('click', (e: L.LeafletMouseEvent) => {
+    map.on('click', async (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
 
       // حذف marker قبلی
@@ -99,12 +100,30 @@ export default function SimpleLeafletMap({
       const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
       markerRef.current = marker;
 
-      // محاسبه فاصله تا مرکز قم
+      // محاسبه فاصله هوایی تا مرکز قم
       const distance = calculateDistance(lat, lng, QOM_CENTER.lat, QOM_CENTER.lng);
 
-      // ذخیره موقعیت و فاصله
+      // ذخیره موقعیت و فاصله هوایی
       setSelectedPos({ lat, lng, distance });
       onLocationSelect(lat, lng);
+
+      // محاسبه فاصله جاده‌ای
+      setLoadingRoute(true);
+      try {
+        const response = await fetch(
+          `https://router.project-osrm.org/route/v1/driving/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=false`
+        );
+        const data = await response.json();
+        
+        if (data.routes && data.routes.length > 0) {
+          const roadDistanceKm = data.routes[0].distance / 1000; // تبدیل متر به کیلومتر
+          setSelectedPos({ lat, lng, distance, roadDistance: roadDistanceKm });
+        }
+      } catch (error) {
+        console.error('خطا در محاسبه مسیر جاده‌ای:', error);
+      } finally {
+        setLoadingRoute(false);
+      }
     });
 
     // Resize handler برای modal - فقط یک بار اجرا می‌شود
@@ -151,14 +170,21 @@ export default function SimpleLeafletMap({
       />
       {selectedPos && (
         <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur border rounded-lg p-3 shadow-lg z-[1000]">
-          <div className="flex items-center justify-center gap-2 text-sm">
-            <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span className="font-medium text-foreground">
-              فاصله موقعیت انتخابی تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.distance.toFixed(1)}</span> کیلومتر
-            </span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-center gap-2 text-sm">
+              <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              <span className="font-medium text-foreground">
+                {loadingRoute ? (
+                  <span>در حال محاسبه مسیر...</span>
+                ) : selectedPos.roadDistance ? (
+                  <span>فاصله جاده‌ای تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.roadDistance.toFixed(1)}</span> کیلومتر</span>
+                ) : (
+                  <span>فاصله هوایی تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.distance.toFixed(1)}</span> کیلومتر</span>
+                )}
+              </span>
+            </div>
           </div>
         </div>
       )}
