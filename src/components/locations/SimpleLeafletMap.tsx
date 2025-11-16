@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
+import { supabase } from '@/integrations/supabase/client';
 interface SimpleLeafletMapProps {
   onLocationSelect: (lat: number, lng: number) => void;
   initialLat?: number;
@@ -36,7 +36,7 @@ export default function SimpleLeafletMap({
   const routeLineRef = useRef<L.Polyline | null>(null);
   const [selectedPos, setSelectedPos] = useState<{ lat: number; lng: number; distance: number; roadDistance?: number } | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
-
+  const mapboxTokenRef = useRef<string | null>(null);
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
@@ -55,6 +55,28 @@ export default function SimpleLeafletMap({
     });
 
     mapRef.current = map;
+
+    // دریافت توکن Mapbox برای fallback مسیریابی
+    (async () => {
+      try {
+        const cached = sessionStorage.getItem('mapbox_token');
+        if (cached) {
+          mapboxTokenRef.current = cached;
+        } else {
+          const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+          if (!error && data?.token) {
+            mapboxTokenRef.current = data.token as string;
+            sessionStorage.setItem('mapbox_token', data.token);
+          } else {
+            const envToken = (import.meta as any).env?.VITE_MAPBOX_TOKEN as string | undefined;
+            if (envToken) {
+              mapboxTokenRef.current = envToken;
+              sessionStorage.setItem('mapbox_token', envToken);
+            }
+          }
+        }
+      } catch { /* ignore */ }
+    })();
 
     // اضافه کردن لایه تایل OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
