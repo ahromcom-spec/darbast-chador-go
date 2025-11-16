@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -23,6 +23,22 @@ const defaultIcon = new L.Icon({
   tooltipAnchor: [16, -28],
   shadowSize: [41, 41],
 });
+
+function AutoResize() {
+  const map = useMap();
+  useEffect(() => {
+    const invalidate = () => map.invalidateSize();
+    const t = setTimeout(invalidate, 200);
+    window.addEventListener('resize', invalidate);
+    document.addEventListener('visibilitychange', invalidate);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', invalidate);
+      document.removeEventListener('visibilitychange', invalidate);
+    };
+  }, [map]);
+  return null;
+}
 
 function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
   useMapEvents({
@@ -60,12 +76,17 @@ export default function LeafletFallbackMap({
         maxBounds={bounds}
         maxBoundsViscosity={0.8}
         scrollWheelZoom
+        preferCanvas
         className="h-full w-full"
         attributionControl={false}
       >
+        <AutoResize />
         <TileLayer
           attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          updateWhenIdle
+          keepBuffer={0}
+          detectRetina
         />
         <ClickHandler
           onPick={(lat, lng) => {
