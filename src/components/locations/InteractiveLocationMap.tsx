@@ -57,6 +57,7 @@ export function InteractiveLocationMap({
   const marker = useRef<mapboxgl.Marker | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current) return;
