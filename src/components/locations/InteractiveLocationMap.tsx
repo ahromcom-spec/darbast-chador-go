@@ -234,13 +234,41 @@ export function InteractiveLocationMap({
         setRoadDistance(null);
         
         try {
-          const response = await fetch(
-            `https://router.project-osrm.org/route/v1/driving/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson`
-          );
-          const data = await response.json();
+          let routeData: any | null = null;
+
+          // 1) تلاش با Mapbox Directions اگر توکن موجود است
+          if (mapboxToken) {
+            try {
+              const mUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson&access_token=${mapboxToken}`;
+              const mRes = await fetch(mUrl, { mode: 'cors' });
+              const mJson = await mRes.json();
+              if (mJson?.routes?.length) routeData = mJson;
+            } catch (_) {}
+          }
+
+          // 2) در صورت عدم موفقیت، OSRM عمومی (با fallback دوم)
+          if (!routeData) {
+            const endpoints = [
+              'https://router.project-osrm.org/route/v1/driving',
+              'https://routing.openstreetmap.de/routed-car/route/v1/driving'
+            ];
+
+            for (const endpoint of endpoints) {
+              try {
+                const url = `${endpoint}/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson`;
+                const res = await fetch(url, { mode: 'cors' });
+                if (!res.ok) continue;
+                const json = await res.json();
+                if (json?.routes?.length) {
+                  routeData = json;
+                  break;
+                }
+              } catch (_) {}
+            }
+          }
           
-          if (data.routes && data.routes.length > 0) {
-            const roadDistanceKm = data.routes[0].distance / 1000;
+          if (routeData?.routes?.length) {
+            const roadDistanceKm = routeData.routes[0].distance / 1000;
             setRoadDistance(roadDistanceKm);
             
             // حذف مسیر قبلی اگر وجود دارد
@@ -255,7 +283,7 @@ export function InteractiveLocationMap({
               data: {
                 type: 'Feature',
                 properties: {},
-                geometry: data.routes[0].geometry
+                geometry: routeData.routes[0].geometry
               }
             });
             
@@ -269,13 +297,13 @@ export function InteractiveLocationMap({
               },
               paint: {
                 'line-color': '#2563eb',
-                'line-width': 4,
-                'line-opacity': 0.7
+                'line-width': 5,
+                'line-opacity': 0.9
               }
             });
 
             // تنظیم دید نقشه روی مسیر
-            const coords: [number, number][] = data.routes[0].geometry.coordinates;
+            const coords: [number, number][] = routeData.routes[0].geometry.coordinates;
             let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
             for (const [lngc, latc] of coords) {
               if (lngc < minLng) minLng = lngc;
@@ -284,9 +312,12 @@ export function InteractiveLocationMap({
               if (latc > maxLat) maxLat = latc;
             }
             map.current!.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 40 });
+          } else {
+            // اگر هیچ سرویس مسیری پاسخی نداد، مسیر نمایش داده نمی‌شود
+            setRoadDistance(null);
           }
-        } catch (error) {
-          console.error('خطا در محاسبه مسیر جاده‌ای:', error);
+        } catch (err) {
+          setRoadDistance(null);
         } finally {
           setLoadingRoute(false);
         }
