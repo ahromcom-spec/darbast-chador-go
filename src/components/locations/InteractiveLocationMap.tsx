@@ -384,25 +384,6 @@ export function InteractiveLocationMap({
           <Locate className="w-4 h-4" />
         </Button>
 
-        {/* نمایش مختصات */}
-        {selectedPosition && (
-          <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur border rounded-lg p-3 shadow-lg z-[1000]">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary" />
-                <span className="font-medium text-sm">موقعیت انتخاب شده:</span>
-              </div>
-              <div className="flex items-center gap-4 text-sm font-mono">
-                <span className="text-muted-foreground">
-                  عرض: <span className="text-foreground font-semibold">{selectedPosition.lat.toFixed(6)}</span>
-                </span>
-                <span className="text-muted-foreground">
-                  طول: <span className="text-foreground font-semibold">{selectedPosition.lng.toFixed(6)}</span>
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
 
         <style>{`
           .custom-mapbox-marker {
