@@ -2,21 +2,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { useState, useEffect } from 'react';
-import L from 'leaflet';
+import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Fix default marker icon issue in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
+// Initialize Leaflet icon only on client side
+if (typeof window !== 'undefined') {
+  const DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+  });
 
-L.Marker.prototype.options.icon = DefaultIcon;
+  L.Marker.prototype.options.icon = DefaultIcon;
+}
 
 interface LocationMapModalProps {
   isOpen: boolean;
@@ -44,6 +47,11 @@ export const LocationMapModal = ({
   initialLng = 51.3890,
 }: LocationMapModalProps) => {
   const [position, setPosition] = useState<[number, number]>([initialLat, initialLng]);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -65,18 +73,24 @@ export const LocationMapModal = ({
         
         <div className="space-y-4">
           <div className="h-[500px] w-full rounded-lg overflow-hidden border">
-            <MapContainer
-              center={position}
-              zoom={13}
-              style={{ height: '100%', width: '100%' }}
-              className="z-0"
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <LocationMarker position={position} setPosition={setPosition} />
-            </MapContainer>
+            {isMounted && isOpen ? (
+              <MapContainer
+                center={position}
+                zoom={13}
+                style={{ height: '100%', width: '100%' }}
+                className="z-0"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <LocationMarker position={position} setPosition={setPosition} />
+              </MapContainer>
+            ) : (
+              <div className="h-full w-full bg-muted flex items-center justify-center">
+                <p className="text-muted-foreground">در حال بارگذاری نقشه...</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

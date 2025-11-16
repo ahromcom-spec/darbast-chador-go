@@ -1,19 +1,23 @@
+import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
+import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Fix default marker icon issue in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
+// Initialize Leaflet icon only on client side
+if (typeof window !== 'undefined') {
+  const DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+  });
 
-L.Marker.prototype.options.icon = DefaultIcon;
+  L.Marker.prototype.options.icon = DefaultIcon;
+}
 
 interface InteractiveLocationMapProps {
   onLocationSelect: (lat: number, lng: number) => void;
@@ -36,7 +40,20 @@ export function InteractiveLocationMap({
   initialLat = 35.6892,
   initialLng = 51.3890,
 }: InteractiveLocationMapProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const position: [number, number] = [initialLat, initialLng];
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="h-[400px] w-full rounded-lg overflow-hidden border bg-muted flex items-center justify-center">
+        <p className="text-muted-foreground">در حال بارگذاری نقشه...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[400px] w-full rounded-lg overflow-hidden border">

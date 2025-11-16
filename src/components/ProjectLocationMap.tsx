@@ -1,23 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, List } from 'lucide-react';
-import L from 'leaflet';
+import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Fix default marker icon issue in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
+// Initialize Leaflet icon only on client side
+if (typeof window !== 'undefined') {
+  const DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+  });
 
-L.Marker.prototype.options.icon = DefaultIcon;
+  L.Marker.prototype.options.icon = DefaultIcon;
+}
 
 interface ProjectLocationMapProps {
   onLocationSelect?: (location: {
@@ -39,7 +42,12 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({
   existingProjects = [],
   onProjectSelect,
 }) => {
+  const [isMounted, setIsMounted] = useState(false);
   const defaultPosition: [number, number] = [35.6892, 51.3890]; // تهران
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <Card>
@@ -78,20 +86,26 @@ const ProjectLocationMap: React.FC<ProjectLocationMapProps> = ({
         )}
 
         <div className="h-[400px] w-full rounded-lg overflow-hidden border">
-          <MapContainer
-            center={defaultPosition}
-            zoom={12}
-            style={{ height: '100%', width: '100%' }}
-            className="z-0"
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <Marker position={defaultPosition}>
-              <Popup>تهران، ایران</Popup>
-            </Marker>
-          </MapContainer>
+          {isMounted ? (
+            <MapContainer
+              center={defaultPosition}
+              zoom={12}
+              style={{ height: '100%', width: '100%' }}
+              className="z-0"
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <Marker position={defaultPosition}>
+                <Popup>تهران، ایران</Popup>
+              </Marker>
+            </MapContainer>
+          ) : (
+            <div className="h-full w-full bg-muted flex items-center justify-center">
+              <p className="text-muted-foreground">در حال بارگذاری نقشه...</p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
