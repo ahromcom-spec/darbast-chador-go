@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Locate, Layers, Map as MapIcon, Satellite } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import mapboxgl from 'mapbox-gl';
+import MapboxLanguage from '@mapbox/mapbox-gl-language';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -50,6 +51,8 @@ const provinceCoordinates: { [key: string]: { lat: number; lng: number; zoom: nu
   '32': { lat: 31.8934, lng: 54.3608, zoom: 10 }, // یزد
 };
 
+const IRAN_BOUNDS: [[number, number], [number, number]] = [[44.0, 24.0], [64.0, 40.0]];
+
 export function InteractiveLocationMap({
   onLocationSelect,
   initialLat = 32.4279,
@@ -65,18 +68,31 @@ export function InteractiveLocationMap({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
+  const languageControlRef = useRef<any>(null);
   const { toast } = useToast();
 
   // دریافت توکن Mapbox
   useEffect(() => {
+    const cached = sessionStorage.getItem('mapbox_token');
+    if (cached) {
+      setMapboxToken(cached);
+      return;
+    }
     const fetchToken = async () => {
-      const { data } = await supabase.functions.invoke('get-mapbox-token');
-      if (data?.token) {
-        setMapboxToken(data.token);
+      try {
+        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+        if (error) throw error as any;
+        if (data?.token) {
+          setMapboxToken(data.token);
+          sessionStorage.setItem('mapbox_token', data.token);
+        }
+      } catch (e) {
+        console.error('Failed to get Mapbox token', e);
+        toast({ title: 'خطا', description: 'دریافت تنظیمات نقشه ناموفق بود', variant: 'destructive' });
       }
     };
     fetchToken();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -88,9 +104,7 @@ export function InteractiveLocationMap({
 
     try {
       mapboxgl.accessToken = mapboxToken;
-      // فعال‌سازی پشتیبانی متن‌های RTL مثل فارسی/عربی
-      // بارگذاری از CDN رسمی (only once)
-      // @ts-ignore - setRTLTextPlugin وجود دارد ولی در تایپ‌ها ممکن است تعریف نشده باشد
+      // فعال‌سازی پشتیبانی متن RTL
       if (typeof (mapboxgl as any).setRTLTextPlugin === 'function') {
         try {
           (mapboxgl as any).setRTLTextPlugin(
@@ -119,27 +133,44 @@ export function InteractiveLocationMap({
         style: 'mapbox://styles/mapbox/streets-v12',
         center: [startLng, startLat],
         zoom: startZoom,
+        projection: 'mercator',
+        renderWorldCopies: false,
         minZoom: 4,
         maxZoom: 20,
         pitchWithRotate: false,
         attributionControl: false,
       });
 
-      // اضافه کردن کنترل‌های ناوبری
-      map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-left');
+      // محدود کردن نقشه به مرزهای ایران برای سبک‌تر شدن
+      map.current.setMaxBounds(IRAN_BOUNDS as any);
 
-      // Overlay لودینگ را زمانی که استایل کاملاً لود شد حذف کن
+      // نشان دادن نمای کلی ایران در بدو ورود (بدون انیمیشن)
+      if (!provinceCode) {
+        map.current.fitBounds(IRAN_BOUNDS as any, { padding: 24, duration: 0 });
+      }
+
+      // کنترل‌های ناوبری
+      map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-left');
+      map.current.dragRotate.disable();
+      (map.current as any).touchZoomRotate?.disableRotation?.();
+
       const handleStyleLoad = () => {
         setIsMapReady(true);
+        // زبان فارسی برای لایه‌های متنی
+        if (map.current) {
+          if (!languageControlRef.current) {
+            languageControlRef.current = new (MapboxLanguage as any)({ defaultLanguage: 'fa' });
+            try { map.current.addControl(languageControlRef.current); } catch {}
+          } else {
+            try { languageControlRef.current.setLanguage?.('fa'); } catch {}
+          }
+        }
         // اطمینان از رندر داخل دیالوگ/مودال
         setTimeout(() => map.current?.resize(), 0);
       };
 
       map.current.on('style.load', handleStyleLoad);
-      map.current.on('load', () => {
-        // حفاظت بیشتر اگر بعضی محیط‌ها فقط load را فایر کنند
-        handleStyleLoad();
-      });
+      map.current.on('load', () => handleStyleLoad());
 
       // کلیک روی نقشه
       map.current.on('click', (e) => {
@@ -175,7 +206,7 @@ export function InteractiveLocationMap({
         });
       });
 
-      // اگر به هر دلیل لود طولانی شد، بعد از چند ثانیه تلاش کن overlay برداشته شود و نقشه resize شود
+      // fallback در صورت تأخیر
       const fallback = setTimeout(() => {
         if (!isMapReady) {
           setIsMapReady(true);
@@ -183,7 +214,6 @@ export function InteractiveLocationMap({
         }
       }, 3000);
 
-      // واکنش به تغییر اندازه پنجره/دیالوگ
       const onResize = () => map.current?.resize();
       window.addEventListener('resize', onResize);
 
