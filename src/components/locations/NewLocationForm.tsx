@@ -75,7 +75,7 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
   };
 
   const handleLocationSelect = (lat: number, lng: number) => {
-    setFormData({ ...formData, lat, lng });
+    setFormData(prev => ({ ...prev, lat, lng }));
     setHasMapPin(true);
     toast({
       title: 'نقطه روی نقشه انتخاب شد',
