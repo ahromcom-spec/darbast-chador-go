@@ -30,6 +30,14 @@ if ('serviceWorker' in navigator) {
           });
         }
       });
+
+      // Reload automatically when controller changes to the new SW
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
     })
     .catch((error) => {
       console.error('❌ Service Worker registration failed:', error);

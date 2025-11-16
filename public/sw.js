@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ahrom-v15-smaller-icon';
+const CACHE_VERSION = 'ahrom-v16-mapbox-fix';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
