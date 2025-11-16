@@ -169,22 +169,20 @@ export default function SimpleLeafletMap({
         style={{ minHeight: '400px' }}
       />
       {selectedPos && (
-        <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur border rounded-lg p-3 shadow-lg z-[1000]">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              <span className="font-medium text-foreground">
-                {loadingRoute ? (
-                  <span>در حال محاسبه مسیر...</span>
-                ) : selectedPos.roadDistance ? (
-                  <span>فاصله جاده‌ای تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.roadDistance.toFixed(1)}</span> کیلومتر</span>
-                ) : (
-                  <span>فاصله هوایی تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.distance.toFixed(1)}</span> کیلومتر</span>
-                )}
-              </span>
-            </div>
+        <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg z-[1000]">
+          <div className="flex items-center justify-center gap-3">
+            <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            <span className="font-medium text-foreground text-base">
+              {loadingRoute ? (
+                <span>در حال محاسبه مسیر جاده‌ای...</span>
+              ) : selectedPos.roadDistance ? (
+                <span>فاصله جاده‌ای تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.roadDistance.toFixed(1)}</span> کیلومتر</span>
+              ) : (
+                <span>فاصله هوایی تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.distance.toFixed(1)}</span> کیلومتر</span>
+              )}
+            </span>
           </div>
         </div>
       )}
