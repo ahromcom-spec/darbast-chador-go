@@ -60,8 +60,10 @@ export function InteractiveLocationMap({
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Get Mapbox token from secret
-    const mapboxToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
+    // Resolve Mapbox token (public)
+    const mapboxToken =
+      (import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN as string | undefined) ||
+      (document.querySelector('meta[name="mapbox-token"]')?.getAttribute('content') || '');
     
     if (!mapboxToken) {
       console.warn('Mapbox token not configured. Map will not be displayed.');
@@ -171,7 +173,7 @@ export function InteractiveLocationMap({
   }, [provinceCode]);
 
   // Check if Mapbox token is available
-  const mapboxToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
+  const mapboxToken = (import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN as string | undefined) || (document.querySelector('meta[name="mapbox-token"]')?.getAttribute('content') || '');
 
   if (!mapboxToken) {
     return (
