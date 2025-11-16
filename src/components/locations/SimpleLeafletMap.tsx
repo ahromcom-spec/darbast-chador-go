@@ -136,6 +136,10 @@ export default function SimpleLeafletMap({
             opacity: 0.7,
           }).addTo(map);
           
+          // نمایش مسیر کامل در قاب
+          const bounds = L.latLngBounds(coordinates as [number, number][]);
+          map.fitBounds(bounds, { padding: [40, 40] });
+          
           routeLineRef.current = routeLine;
         }
       } catch (error) {

@@ -273,6 +273,17 @@ export function InteractiveLocationMap({
                 'line-opacity': 0.7
               }
             });
+
+            // تنظیم دید نقشه روی مسیر
+            const coords: [number, number][] = data.routes[0].geometry.coordinates;
+            let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+            for (const [lngc, latc] of coords) {
+              if (lngc < minLng) minLng = lngc;
+              if (lngc > maxLng) maxLng = lngc;
+              if (latc < minLat) minLat = latc;
+              if (latc > maxLat) maxLat = latc;
+            }
+            map.current!.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 40 });
           }
         } catch (error) {
           console.error('خطا در محاسبه مسیر جاده‌ای:', error);
