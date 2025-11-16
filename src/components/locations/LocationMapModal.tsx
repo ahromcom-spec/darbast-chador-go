@@ -2,24 +2,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { useState, useEffect } from 'react';
-import * as L from 'leaflet';
+
 import 'leaflet/dist/leaflet.css';
 
 // Fix default marker icon issue in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Initialize Leaflet icon only on client side
-if (typeof window !== 'undefined') {
-  const DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-  });
-
-  L.Marker.prototype.options.icon = DefaultIcon;
-}
 
 interface LocationMapModalProps {
   isOpen: boolean;
@@ -51,6 +40,19 @@ export const LocationMapModal = ({
 
   useEffect(() => {
     setIsMounted(true);
+    // Set default Leaflet marker icon dynamically (client-only)
+    import('leaflet').then((L) => {
+      const DefaultIcon = L.icon({
+        iconUrl: icon,
+        shadowUrl: iconShadow,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+      });
+      // @ts-ignore - prototype options exists at runtime
+      L.Marker.prototype.options.icon = DefaultIcon;
+    }).catch(() => {
+      // ignore icon setup errors
+    });
   }, []);
 
   useEffect(() => {
