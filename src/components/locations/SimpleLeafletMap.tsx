@@ -120,12 +120,29 @@ export default function SimpleLeafletMap({
 
       setLoadingRoute(true);
       try {
-        const url = `https://router.project-osrm.org/route/v1/driving/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson&alternatives=false`;
-        const response = await fetch(url);
-        const data = await response.json();
+        const endpoints = [
+          'https://router.project-osrm.org/route/v1/driving',
+          'https://routing.openstreetmap.de/routed-car/route/v1/driving'
+        ];
 
-        if (data.routes && data.routes.length > 0) {
-          const roadDistanceKm = data.routes[0].distance / 1000;
+        let routeData: any | null = null;
+        for (const endpoint of endpoints) {
+          try {
+            const url = `${endpoint}/${QOM_CENTER.lng},${QOM_CENTER.lat};${lng},${lat}?overview=full&geometries=geojson&alternatives=false`;
+            const res = await fetch(url, { mode: 'cors' });
+            if (!res.ok) continue;
+            const json = await res.json();
+            if (json?.routes?.length) {
+              routeData = json;
+              break;
+            }
+          } catch (_) {
+            // try next endpoint
+          }
+        }
+
+        if (routeData?.routes?.length) {
+          const roadDistanceKm = routeData.routes[0].distance / 1000;
           setSelectedPos({ lat, lng, distance, roadDistance: roadDistanceKm });
 
           // حذف مسیر قبلی
@@ -134,13 +151,15 @@ export default function SimpleLeafletMap({
           }
 
           // رسم مسیر جاده‌ای روی نقشه
-          const coordinates = data.routes[0].geometry.coordinates.map(
+          const coordinates = routeData.routes[0].geometry.coordinates.map(
             (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
           );
           const routeLine = L.polyline(coordinates, {
             color: '#2563eb',
-            weight: 4,
-            opacity: 0.8,
+            weight: 5,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round',
           }).addTo(map);
 
           // نمایش مسیر کامل در قاب
@@ -148,14 +167,12 @@ export default function SimpleLeafletMap({
           map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
 
           routeLineRef.current = routeLine;
-          return;
+        } else {
+          // اگر هیچ سرویس مسیری پاسخ نداد، خط مستقیم رسم شود
+          drawStraightLine(lat, lng);
         }
-
-        // اگر مسیری برنگشت، خط مستقیم رسم شود
-        drawStraightLine(lat, lng);
       } catch (error) {
         console.error('خطا در محاسبه مسیر جاده‌ای:', error);
-        // در صورت خطا نیز خط مستقیم رسم شود
         drawStraightLine(lat, lng);
       } finally {
         setLoadingRoute(false);
