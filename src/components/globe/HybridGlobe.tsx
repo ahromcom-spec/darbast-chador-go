@@ -174,18 +174,20 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const mediaHTML = project.media && project.media.length > 0 
         ? `
           <div style="margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap;">
-            ${project.media.map(m => {
-              const { data: { publicUrl } } = supabase.storage
-                .from('project-media')
-                .getPublicUrl(m.file_path);
-              
-              return `<img 
-                src="${publicUrl}" 
-                alt="تصویر پروژه" 
-                style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;"
-                onerror="this.style.display='none'"
-              />`;
-            }).join('')}
+            ${project.media
+              ?.filter(m => m.file_type === 'image')
+              .map(m => {
+                const { data: { publicUrl } } = supabase.storage
+                  .from('order-media')
+                  .getPublicUrl(m.file_path);
+                
+                return `<img 
+                  src="${publicUrl}" 
+                  alt="تصویر پروژه" 
+                  style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;"
+                  onerror="this.style.display='none'"
+                />`;
+              }).join('')}
           </div>
         `
         : '';
