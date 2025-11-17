@@ -154,8 +154,8 @@ function Earth({ projects, selectedLocationId }: { projects: ProjectMarker[], se
   const earthRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   
-  // Load earth texture
-  const earthTexture = useLoader(THREE.TextureLoader, '/earth-texture.jpg');
+  // Load golden globe texture from logo
+  const goldenTexture = useLoader(THREE.TextureLoader, '/golden-globe.png');
 
   useFrame(() => {
     if (earthRef.current && !hovered) {
@@ -165,7 +165,7 @@ function Earth({ projects, selectedLocationId }: { projects: ProjectMarker[], se
 
   return (
     <group>
-      {/* Main Earth sphere with real map texture */}
+      {/* Main Earth sphere with golden globe texture */}
       <Sphere
         ref={earthRef}
         args={[2.5, 128, 128]}
@@ -173,21 +173,23 @@ function Earth({ projects, selectedLocationId }: { projects: ProjectMarker[], se
         onPointerOut={() => setHovered(false)}
       >
         <meshStandardMaterial
-          map={earthTexture}
-          roughness={0.7}
-          metalness={0.1}
+          map={goldenTexture}
+          roughness={0.4}
+          metalness={0.6}
+          emissive="#d4a574"
+          emissiveIntensity={0.2}
         />
       </Sphere>
       
-      {/* Golden glow overlay */}
+      {/* Subtle golden glow */}
       <Sphere args={[2.52, 128, 128]}>
         <meshStandardMaterial
           color="#ffd700"
           emissive="#d4a574"
-          emissiveIntensity={0.2}
+          emissiveIntensity={0.15}
           transparent
-          opacity={0.1}
-          roughness={0.3}
+          opacity={0.08}
+          roughness={0.2}
         />
       </Sphere>
       

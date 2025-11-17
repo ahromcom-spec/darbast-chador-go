@@ -14,7 +14,7 @@ import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSub
 import { useUserProjects } from '@/hooks/useUserProjects';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
-import MapboxGlobe from '@/components/globe/MapboxGlobe';
+import HybridGlobe from '@/components/globe/HybridGlobe';
 import globeIcon from '@/assets/globe-icon.png';
 
 const Home = () => {
@@ -175,7 +175,7 @@ const Home = () => {
   };
 
   if (showGlobe) {
-    return <MapboxGlobe onClose={() => setShowGlobe(false)} />;
+    return <HybridGlobe onClose={() => setShowGlobe(false)} />;
   }
 
   return (
