@@ -50,9 +50,22 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
     },
   ];
 
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
   const openInMaps = (url: string) => {
     window.open(url, '_blank');
     setShowNavigationSheet(false);
+  };
+
+  const handleNavigationClick = () => {
+    if (isMobile()) {
+      setShowNavigationSheet(true);
+    } else {
+      // در دسکتاپ مستقیماً Google Maps باز شود
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${projectLat},${projectLng}`, '_blank');
+    }
   };
 
   useEffect(() => {
@@ -198,7 +211,7 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
                 </div>
               ) : null}
               <Button 
-                onClick={() => setShowNavigationSheet(true)} 
+                onClick={handleNavigationClick}
                 variant="outline" 
                 size="sm" 
                 className="gap-2"
