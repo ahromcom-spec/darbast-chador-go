@@ -430,11 +430,13 @@ export default function ExecutivePendingOrders() {
               <div className="space-y-1 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <User className="h-4 w-4" />
-                  <span>{order.customer_name}</span>
+                  <span>{order.customer_name || 'نام ثبت نشده'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Phone className="h-4 w-4" />
-                  <span dir="ltr" className="text-left">{order.customer_phone}</span>
+                  <span dir="ltr" className="text-left">
+                    {order.customer_phone || 'شماره ثبت نشده'}
+                  </span>
                 </div>
                 <div className="flex items-start gap-2 text-muted-foreground">
                   <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -448,13 +450,20 @@ export default function ExecutivePendingOrders() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* نقشه موقعیت پروژه */}
-          {order.project_lat && order.project_lng && (
+          {order.project_lat && order.project_lng ? (
             <div className="space-y-2">
               <ProjectLocationMap
                 projectLat={order.project_lat}
                 projectLng={order.project_lng}
                 projectAddress={order.detailed_address || order.address}
               />
+            </div>
+          ) : (
+            <div className="bg-muted/30 border border-dashed border-muted-foreground/20 rounded-lg p-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm">
+                <MapPin className="h-4 w-4" />
+                <span>موقعیت جغرافیایی برای این پروژه ثبت نشده است</span>
+              </div>
             </div>
           )}
 
