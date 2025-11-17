@@ -28,7 +28,15 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
   };
 
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
+    if (!mapContainer.current) return;
+
+    // Recreate map on prop changes to ensure correct rendering inside cards/dialogs
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+
+    setLoadingRoute(true);
 
     // ایجاد نقشه
     const map = L.map(mapContainer.current, {
