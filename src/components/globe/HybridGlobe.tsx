@@ -35,22 +35,66 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     const fetchProjectMedia = async () => {
       if (projects.length === 0) return;
 
-      const projectIds = projects.map(p => p.id);
-      
-      // دریافت عکس‌های پروژه از project_media
-      const { data: mediaData } = await supabase
-        .from('project_media')
-        .select('project_id, file_path, file_type')
-        .in('project_id', projectIds)
-        .order('created_at', { ascending: false });
+      try {
+        const projectIds = projects.map(p => p.id);
+        
+        // دریافت پروژه‌های v3 مرتبط با projects_hierarchy
+        const { data: projectsV3Data } = await supabase
+          .from('projects_v3')
+          .select('id, hierarchy_project_id')
+          .in('hierarchy_project_id', projectIds);
 
-      // ترکیب عکس‌ها با پروژه‌ها
-      const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => ({
-        ...project,
-        media: mediaData?.filter(m => m.project_id === project.id).slice(0, 3) || []
-      }));
+        if (!projectsV3Data || projectsV3Data.length === 0) {
+          setProjectsWithMedia(projects.map(p => ({ ...p, media: [] })));
+          return;
+        }
 
-      setProjectsWithMedia(projectsWithMediaData);
+        const projectV3Ids = projectsV3Data.map(p => p.id);
+
+        // دریافت عکس‌های پروژه
+        const { data: mediaData } = await supabase
+          .from('project_media')
+          .select('file_path, file_type, project_id')
+          .in('project_id', projectV3Ids)
+          .order('created_at', { ascending: false });
+
+        // ایجاد نقشه از hierarchy_project_id به project_v3 ids
+        const hierarchyToV3Map = new Map<string, string[]>();
+        projectsV3Data.forEach(pv3 => {
+          if (pv3.hierarchy_project_id) {
+            if (!hierarchyToV3Map.has(pv3.hierarchy_project_id)) {
+              hierarchyToV3Map.set(pv3.hierarchy_project_id, []);
+            }
+            hierarchyToV3Map.get(pv3.hierarchy_project_id)?.push(pv3.id);
+          }
+        });
+
+        // گروه‌بندی عکس‌ها بر اساس hierarchy_project_id
+        const mediaByHierarchyProject = new Map<string, typeof mediaData>();
+        mediaData?.forEach(media => {
+          // پیدا کردن hierarchy_project_id برای این media
+          for (const [hierarchyId, v3Ids] of hierarchyToV3Map.entries()) {
+            if (v3Ids.includes(media.project_id)) {
+              if (!mediaByHierarchyProject.has(hierarchyId)) {
+                mediaByHierarchyProject.set(hierarchyId, []);
+              }
+              mediaByHierarchyProject.get(hierarchyId)?.push(media);
+              break;
+            }
+          }
+        });
+
+        // ترکیب عکس‌ها با پروژه‌ها (حداکثر 3 عکس برای هر پروژه)
+        const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => ({
+          ...project,
+          media: (mediaByHierarchyProject.get(project.id) || []).slice(0, 3)
+        }));
+
+        setProjectsWithMedia(projectsWithMediaData);
+      } catch (error) {
+        console.error('خطا در دریافت عکس‌های پروژه:', error);
+        setProjectsWithMedia(projects.map(p => ({ ...p, media: [] })));
+      }
     };
 
     fetchProjectMedia();
