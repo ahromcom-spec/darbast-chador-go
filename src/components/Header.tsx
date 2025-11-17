@@ -63,9 +63,9 @@ const Header = () => {
               <img 
                 src={ahromLogo} 
                 alt="لوگوی اهرم" 
-                width="140"
-                height="80"
-                className="h-11 sm:h-12 w-auto object-contain"
+                width="126"
+                height="72"
+                className="h-10 sm:h-11 w-auto object-contain"
                 loading="eager"
               />
             </div>
@@ -242,9 +242,9 @@ const Header = () => {
                 <img 
                   src={ahromLogo} 
                   alt="لوگوی اهرم" 
-                  width="140"
-                  height="80"
-                  className="h-20 w-auto object-contain"
+                  width="126"
+                  height="72"
+                  className="h-18 w-auto object-contain"
                   loading="eager"
                 />
               </div>
