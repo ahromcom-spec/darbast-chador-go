@@ -65,14 +65,14 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
     console.log('Initializing Mapbox map...');
     mapboxgl.accessToken = mapboxToken;
 
-    // Create map instance
+    // Create map instance with globe view
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12', // Detailed street map
+      style: 'mapbox://styles/mapbox/satellite-streets-v12', // Satellite + streets for Google Earth feel
       projection: 'globe',
-      zoom: 3,
-      center: [53.688, 32.4279], // Iran center
-      pitch: 45,
+      zoom: 0.8, // Start from full globe view
+      center: [0, 20], // Global center
+      pitch: 0,
       bearing: 0,
     });
 
@@ -102,10 +102,16 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
       );
     }
 
-    // Track zoom level
+    // Track zoom level and switch projection
     map.current.on('zoom', () => {
       if (map.current) {
-        setCurrentZoom(map.current.getZoom());
+        const zoom = map.current.getZoom();
+        setCurrentZoom(zoom);
+        
+        // Switch to mercator projection at higher zoom levels for better street view
+        if (zoom > 6 && map.current.getProjection().name === 'globe') {
+          map.current.setProjection('mercator');
+        }
       }
     });
 
@@ -122,35 +128,29 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
       });
     });
 
-    // Animation sequence
+    // Smooth animation sequence - Google Earth style
     setTimeout(() => {
       if (!map.current) return;
-      // Fly to Iran
+      // Step 1: Rotate to show Iran
+      map.current.flyTo({
+        center: [53.688, 32.4279],
+        zoom: 2.5,
+        pitch: 30,
+        bearing: 0,
+        duration: 3000,
+        essential: true
+      });
+    }, 800);
+
+    setTimeout(() => {
+      if (!map.current) return;
+      // Step 2: Zoom to Iran
       map.current.flyTo({
         center: [53.688, 32.4279],
         zoom: 5.5,
-        pitch: 50,
+        pitch: 45,
         bearing: 0,
         duration: 2500,
-        essential: true
-      });
-    }, 1000);
-
-    setTimeout(() => {
-      if (!map.current || projects.length === 0) return;
-      
-      // Get Qom coordinates or first project location
-      const firstProject = projects[0];
-      const qomLat = 34.6401;
-      const qomLng = 50.8764;
-      
-      // Fly to Qom province
-      map.current.flyTo({
-        center: [qomLng, qomLat],
-        zoom: 10,
-        pitch: 55,
-        bearing: 30,
-        duration: 2000,
         essential: true
       });
     }, 4000);
@@ -158,19 +158,37 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
     setTimeout(() => {
       if (!map.current || projects.length === 0) return;
       
+      const qomLat = 34.6401;
+      const qomLng = 50.8764;
+      
+      // Step 3: Zoom to Qom province with mercator
+      map.current.setProjection('mercator');
+      map.current.flyTo({
+        center: [qomLng, qomLat],
+        zoom: 11,
+        pitch: 50,
+        bearing: 20,
+        duration: 2500,
+        essential: true
+      });
+    }, 6800);
+
+    setTimeout(() => {
+      if (!map.current || projects.length === 0) return;
+      
       const firstProject = projects[0];
       if (firstProject.locations?.lat && firstProject.locations?.lng) {
-        // Fly to exact project location with street-level zoom
+        // Step 4: Zoom to exact building/street location
         map.current.flyTo({
           center: [firstProject.locations.lng, firstProject.locations.lat],
-          zoom: 17, // Street level zoom
-          pitch: 60,
-          bearing: 45,
-          duration: 2000,
+          zoom: 18.5, // Very close street-level zoom to see buildings
+          pitch: 65,
+          bearing: 30,
+          duration: 3000,
           essential: true
         });
       }
-    }, 6500);
+    }, 9500);
 
     // Cleanup
     return () => {
@@ -182,35 +200,47 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
   useEffect(() => {
     if (!map.current || projects.length === 0) return;
 
-    // Wait for map to load
-    map.current.on('load', () => {
+    const addMarkers = () => {
       projects.forEach((project, index) => {
         if (!project.locations?.lat || !project.locations?.lng) return;
         if (!map.current) return;
 
         const isFirst = index === 0;
         
-        // Create custom marker element
+        // Create custom 3D-style marker element
         const el = document.createElement('div');
         el.className = 'custom-marker';
-        el.style.width = isFirst ? '40px' : '30px';
-        el.style.height = isFirst ? '40px' : '30px';
+        el.style.width = isFirst ? '50px' : '36px';
+        el.style.height = isFirst ? '50px' : '36px';
         el.style.borderRadius = '50%';
-        el.style.backgroundColor = isFirst ? '#ef4444' : '#fbbf24';
-        el.style.border = '3px solid white';
-        el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        el.style.backgroundColor = isFirst ? '#ef4444' : '#f59e0b';
+        el.style.border = '4px solid white';
+        el.style.boxShadow = '0 8px 16px rgba(0,0,0,0.4), 0 0 0 2px rgba(239,68,68,0.3)';
         el.style.cursor = 'pointer';
         el.style.display = 'flex';
         el.style.alignItems = 'center';
         el.style.justifyContent = 'center';
-        el.style.fontSize = isFirst ? '20px' : '16px';
-        el.innerHTML = isFirst ? '⭐' : '📍';
+        el.style.fontSize = isFirst ? '24px' : '18px';
+        el.style.transition = 'transform 0.2s';
+        el.innerHTML = isFirst ? '📍' : '📌';
+        
+        // Hover effect
+        el.onmouseenter = () => {
+          el.style.transform = 'scale(1.2)';
+        };
+        el.onmouseleave = () => {
+          el.style.transform = 'scale(1)';
+        };
 
-        // Create popup
-        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
-          `<div style="padding: 8px; font-family: 'IRANSans', sans-serif; direction: rtl;">
-            <h3 style="font-weight: bold; margin-bottom: 4px;">${project.title || 'پروژه'}</h3>
-            <p style="font-size: 12px; color: #666;">${project.locations?.address_line || ''}</p>
+        // Create popup with better styling
+        const popup = new mapboxgl.Popup({ 
+          offset: 30,
+          closeButton: false,
+          className: 'custom-popup'
+        }).setHTML(
+          `<div style="padding: 12px; font-family: 'IRANSans', sans-serif; direction: rtl; min-width: 200px;">
+            <h3 style="font-weight: bold; margin-bottom: 8px; font-size: 16px; color: #1f2937;">${project.title || 'پروژه'}</h3>
+            <p style="font-size: 13px; color: #6b7280; line-height: 1.5; margin: 0;">${project.locations?.address_line || ''}</p>
           </div>`
         );
 
@@ -220,7 +250,14 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
           .setPopup(popup)
           .addTo(map.current);
       });
-    });
+    };
+
+    // Wait for map to load before adding markers
+    if (map.current.loaded()) {
+      addMarkers();
+    } else {
+      map.current.on('load', addMarkers);
+    }
   }, [projects]);
 
 
@@ -266,27 +303,31 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
       {!loading && !error && (
         <>
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
-            <Card className="p-6 bg-gradient-to-br from-background/95 to-background/90 backdrop-blur-md border-2 border-primary/30 shadow-2xl">
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            <Card className="p-6 bg-gradient-to-br from-background/98 to-background/95 backdrop-blur-lg border-2 border-primary/40 shadow-2xl">
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50" />
                   <p className="text-center text-xl font-bold text-foreground">
-                    پروژه‌های شما در قم
+                    {currentZoom < 6 ? 'در حال پرواز به ایران...' : 
+                     currentZoom < 11 ? 'استان قم' : 
+                     currentZoom < 16 ? 'نزدیک می‌شویم...' : 
+                     'موقعیت دقیق پروژه شما'}
                   </p>
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50" />
                 </div>
                 <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full border border-primary/20">
                     <MapPin className="w-4 h-4 text-primary" />
                     <span className="text-muted-foreground">استان قم</span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full border border-amber-500/20">
                     <Building2 className="w-4 h-4 text-amber-500" />
                     <span className="text-muted-foreground">{projects.length} پروژه فعال</span>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  زوم فعلی: {currentZoom.toFixed(1)} • برای دیدن جزئیات بیشتر زوم کنید
+                <p className="text-xs text-muted-foreground text-center">
+                  زوم: {currentZoom.toFixed(1)}x • 
+                  {currentZoom < 16 ? ' در حال نزدیک شدن به موقعیت دقیق...' : ' می‌توانید خیابان و ساختمان را ببینید'}
                 </p>
               </div>
             </Card>
