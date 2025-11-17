@@ -1354,6 +1354,8 @@ export type Database = {
           created_at: string | null
           customer_completion_date: string | null
           customer_id: string
+          customer_name: string | null
+          customer_phone: string | null
           detailed_address: string | null
           district_id: string | null
           executed_by: string | null
@@ -1368,6 +1370,8 @@ export type Database = {
           hierarchy_project_id: string | null
           id: string
           is_renewal: boolean | null
+          location_lat: number | null
+          location_lng: number | null
           notes: string | null
           original_order_id: string | null
           payment_amount: number | null
@@ -1391,6 +1395,8 @@ export type Database = {
           created_at?: string | null
           customer_completion_date?: string | null
           customer_id: string
+          customer_name?: string | null
+          customer_phone?: string | null
           detailed_address?: string | null
           district_id?: string | null
           executed_by?: string | null
@@ -1407,6 +1413,8 @@ export type Database = {
           hierarchy_project_id?: string | null
           id?: string
           is_renewal?: boolean | null
+          location_lat?: number | null
+          location_lng?: number | null
           notes?: string | null
           original_order_id?: string | null
           payment_amount?: number | null
@@ -1430,6 +1438,8 @@ export type Database = {
           created_at?: string | null
           customer_completion_date?: string | null
           customer_id?: string
+          customer_name?: string | null
+          customer_phone?: string | null
           detailed_address?: string | null
           district_id?: string | null
           executed_by?: string | null
@@ -1446,6 +1456,8 @@ export type Database = {
           hierarchy_project_id?: string | null
           id?: string
           is_renewal?: boolean | null
+          location_lat?: number | null
+          location_lng?: number | null
           notes?: string | null
           original_order_id?: string | null
           payment_amount?: number | null
@@ -2760,6 +2772,8 @@ export type Database = {
           created_at: string | null
           customer_completion_date: string | null
           customer_id: string
+          customer_name: string | null
+          customer_phone: string | null
           detailed_address: string | null
           district_id: string | null
           executed_by: string | null
@@ -2774,6 +2788,8 @@ export type Database = {
           hierarchy_project_id: string | null
           id: string
           is_renewal: boolean | null
+          location_lat: number | null
+          location_lng: number | null
           notes: string | null
           original_order_id: string | null
           payment_amount: number | null
