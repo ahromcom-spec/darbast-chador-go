@@ -29,15 +29,24 @@ function latLngToVector3(lat: number, lng: number, radius: number) {
 function ProjectMarkers({ projects }: { projects: ProjectMarker[] }) {
   return (
     <>
-      {projects.map((project) => {
-        const position = latLngToVector3(project.lat, project.lng, 2.01);
+      {projects.map((project, index) => {
+        const position = latLngToVector3(project.lat, project.lng, 2.51);
+        // Highlight the latest project (first in array)
+        const isLatest = index === 0;
+        
         return (
           <mesh key={project.id} position={position}>
-            <sphereGeometry args={[0.05, 16, 16]} />
-            <meshStandardMaterial color="#ffd700" emissive="#ffa500" emissiveIntensity={0.5} />
+            <sphereGeometry args={[isLatest ? 0.08 : 0.05, 16, 16]} />
+            <meshStandardMaterial 
+              color={isLatest ? "#ff0000" : "#ffd700"} 
+              emissive={isLatest ? "#ff4444" : "#ffa500"} 
+              emissiveIntensity={isLatest ? 0.8 : 0.5} 
+            />
             <Html distanceFactor={10}>
-              <div className="bg-background/90 backdrop-blur-sm px-2 py-1 rounded text-xs whitespace-nowrap border border-border">
-                {project.title || project.address}
+              <div className={`bg-background/90 backdrop-blur-sm px-2 py-1 rounded text-xs whitespace-nowrap border ${
+                isLatest ? 'border-red-500 font-bold' : 'border-border'
+              }`}>
+                {isLatest && '⭐ '}{project.title || project.address}
               </div>
             </Html>
           </mesh>
@@ -56,28 +65,28 @@ function CameraController({ projects }: { projects: ProjectMarker[] }) {
   useEffect(() => {
     if (projects.length === 0) return;
 
+    // Find the latest project (first in array since they're sorted by created_at desc)
+    const latestProject = projects[0];
+
     // Phase 0: Start from far away
     camera.position.set(0, 0, 15);
     
-    // Phase 1: Zoom to Iran after 1 second
+    // Phase 1: Zoom to Iran region after 1 second
     const timer1 = setTimeout(() => {
       setAnimationPhase(1);
       const iranLat = 32.4279;
       const iranLng = 53.688;
-      const iranPos = latLngToVector3(iranLat, iranLng, 5);
+      const iranPos = latLngToVector3(iranLat, iranLng, 6);
       
-      animateCamera(camera, iranPos, 2000);
-    }, 1000);
+      animateCamera(camera, iranPos, 1500);
+    }, 800);
 
-    // Phase 2: Zoom to projects after 3 seconds
+    // Phase 2: Zoom directly to the latest project after 2.5 seconds
     const timer2 = setTimeout(() => {
       setAnimationPhase(2);
-      if (projects.length > 0) {
-        const firstProject = projects[0];
-        const projectPos = latLngToVector3(firstProject.lat, firstProject.lng, 3.5);
-        animateCamera(camera, projectPos, 2000);
-      }
-    }, 3500);
+      const projectPos = latLngToVector3(latestProject.lat, latestProject.lng, 3.2);
+      animateCamera(camera, projectPos, 1800);
+    }, 2500);
 
     return () => {
       clearTimeout(timer1);
