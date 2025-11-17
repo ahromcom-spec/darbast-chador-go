@@ -244,7 +244,7 @@ const Header = () => {
                   alt="لوگوی اهرم" 
                   width="126"
                   height="72"
-                  className="h-18 w-auto object-contain"
+                  className="h-12 lg:h-14 xl:h-16 w-auto object-contain"
                   loading="eager"
                 />
               </div>
