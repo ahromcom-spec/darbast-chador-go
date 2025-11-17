@@ -123,23 +123,14 @@ serve(async (req) => {
     
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
     
-    // Robust check: see if user already exists (by derived email) and also via profiles table
+    // بهینه‌سازی: ابتدا از profiles چک کنیم (سریع‌تر است)
     let userExists = false;
-    try {
-      const { data: page1 } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      userExists = !!page1?.users?.some((u: any) => (u.email || '').toLowerCase() === derivedEmail.toLowerCase());
-    } catch (_) {
-      // ignore admin errors and fall back to profiles lookup
-    }
-
-    if (!userExists) {
-      const { data: profileMatch } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('phone_number', normalizedPhone)
-        .maybeSingle();
-      userExists = !!profileMatch;
-    }
+    const { data: profileMatch } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('phone_number', normalizedPhone)
+      .maybeSingle();
+    userExists = !!profileMatch;
     
     // If this is a login attempt and user doesn't exist, return a friendly message (200 to allow frontend handling)
     if (!is_registration && !userExists) {
