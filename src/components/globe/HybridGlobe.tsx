@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import InteractiveGlobe from './InteractiveGlobe';
+import React from 'react';
 import MapboxGlobe from './MapboxGlobe';
 
 interface HybridGlobeProps {
@@ -7,21 +6,6 @@ interface HybridGlobeProps {
 }
 
 export default function HybridGlobe({ onClose }: HybridGlobeProps) {
-  const [showMap, setShowMap] = useState(false);
-
-  useEffect(() => {
-    // After 7.5 seconds (after all zoom animations), switch to real Mapbox map
-    const timer = setTimeout(() => {
-      console.log('Switching to Mapbox map...');
-      setShowMap(true);
-    }, 7500);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!showMap) {
-    return <InteractiveGlobe onClose={onClose} />;
-  }
-
+  // Use only Mapbox for smooth Google Earth-style experience
   return <MapboxGlobe onClose={onClose} />;
 }
