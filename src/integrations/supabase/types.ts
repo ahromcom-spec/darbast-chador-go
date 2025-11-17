@@ -2755,10 +2755,10 @@ export type Database = {
         Args: {
           _address: string
           _customer_id: string
-          _detailed_address: string
+          _detailed_address?: string
           _district_id: string
           _hierarchy_project_id: string
-          _notes: Json
+          _notes?: Json
           _province_id: string
           _subcategory_id: string
         }
