@@ -389,26 +389,6 @@ export default function ExecutivePendingOrders() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* نقشه موقعیت پروژه */}
-          {order.location_lat && order.location_lng ? (
-            <div className="space-y-2">
-              <ProjectLocationMap
-                key={`map-${order.id}`}
-                projectLat={order.location_lat}
-                projectLng={order.location_lng}
-                projectAddress={order.detailed_address || order.address}
-              />
-            </div>
-          ) : (
-            <div className="bg-muted/30 border border-dashed border-muted-foreground/20 rounded-lg p-4 text-center">
-              <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm">
-                <MapPin className="h-4 w-4" />
-                <span>موقعیت جغرافیایی ثبت نشده</span>
-              </div>
-            </div>
-          )}
-
-          <Separator />
           
           <div className="bg-muted/50 p-3 rounded-lg">
             <div className="text-xs text-muted-foreground mb-1">نوع خدمات</div>
