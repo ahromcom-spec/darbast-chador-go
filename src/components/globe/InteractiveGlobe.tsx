@@ -66,11 +66,24 @@ function Earth({ projects }: { projects: ProjectMarker[] }) {
         onPointerOut={() => setHovered(false)}
       >
         <meshStandardMaterial
-          color="#1e40af"
-          roughness={0.7}
-          metalness={0.1}
+          color="#d4a574"
+          emissive="#8B7355"
+          emissiveIntensity={0.2}
+          roughness={0.6}
+          metalness={0.4}
         />
       </Sphere>
+      
+      {/* Continents overlay using golden tones */}
+      <Sphere args={[2.01, 64, 64]}>
+        <meshStandardMaterial
+          color="#8B6914"
+          transparent
+          opacity={0.4}
+          roughness={0.8}
+        />
+      </Sphere>
+      
       <ProjectMarkers projects={projects} />
     </group>
   );
@@ -117,9 +130,10 @@ export default function InteractiveGlobe({ onClose }: { onClose: () => void }) {
 
       <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
         <Suspense fallback={null}>
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[10, 10, 5]} intensity={1} />
-          <pointLight position={[-10, -10, -5]} intensity={0.5} />
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[10, 10, 5]} intensity={1.2} color="#fff5e1" />
+          <pointLight position={[-10, -10, -5]} intensity={0.6} color="#ffd700" />
+          <pointLight position={[5, 0, 5]} intensity={0.4} color="#ffed4e" />
           <Earth projects={projectMarkers} />
           <OrbitControls
             enableZoom={true}
