@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin } from 'lucide-react';
+import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin, Globe } from 'lucide-react';
 import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
 import { SubcategoryDialog } from '@/components/common/SubcategoryDialog';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,8 @@ import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSub
 import { useUserProjects } from '@/hooks/useUserProjects';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import InteractiveGlobe from '@/components/globe/InteractiveGlobe';
+import globeIcon from '@/assets/globe-icon.png';
 
 const Home = () => {
   usePageTitle('صفحه اصلی');
@@ -22,6 +24,7 @@ const Home = () => {
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
   const [pendingServiceTypeId, setPendingServiceTypeId] = useState<string>('');
+  const [showGlobe, setShowGlobe] = useState(false);
   
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
@@ -171,6 +174,10 @@ const Home = () => {
     }
   };
 
+  if (showGlobe) {
+    return <InteractiveGlobe onClose={() => setShowGlobe(false)} />;
+  }
+
   return (
     <>
       {/* Subcategory Selection Dialog */}
@@ -311,6 +318,25 @@ const Home = () => {
                         loading={servicesLoading}
                       />
                     </div>
+
+                    {/* Globe Button */}
+                    {user && (
+                      <div className="flex justify-center pt-2">
+                        <button
+                          onClick={() => setShowGlobe(true)}
+                          className="group relative inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                        >
+                          <img 
+                            src={globeIcon} 
+                            alt="نمایش پروژه‌ها روی نقشه" 
+                            className="w-6 h-6 transition-transform duration-300 group-hover:rotate-12"
+                          />
+                          <span className="text-sm font-semibold">
+                            نمایش پروژه‌ها روی کره زمین
+                          </span>
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </CardContent>
