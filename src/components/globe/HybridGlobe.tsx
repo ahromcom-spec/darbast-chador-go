@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { supabase } from '@/integrations/supabase/client';
-
+import { useToast } from '@/components/ui/use-toast';
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
 interface ProjectWithMedia extends ProjectHierarchy {
@@ -27,8 +27,90 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
   const [projectsWithMedia, setProjectsWithMedia] = useState<ProjectWithMedia[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   
   const { projects, loading } = useProjectsHierarchy();
+  const { toast } = useToast();
+
+  // رویداد انتخاب فایل
+  const handleAddImage = () => {
+    if (!selectedProject) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !selectedProject) return;
+    try {
+      setUploading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: 'خطا', description: 'برای آپلود باید وارد شوید', variant: 'destructive' });
+        return;
+      }
+
+      const { data: pv3 } = await supabase
+        .from('projects_v3')
+        .select('id, created_at')
+        .eq('hierarchy_project_id', selectedProject.id)
+        .order('created_at', { ascending: false })
+        .maybeSingle();
+
+      if (!pv3) {
+        toast({ title: 'سفارش پیدا نشد', description: 'برای این پروژه سفارشی ثبت نشده است.', variant: 'destructive' });
+        return;
+      }
+
+      const projectV3Id = pv3.id as string;
+      const newMedia: { file_path: string; file_type: string }[] = [];
+
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith('image/')) continue;
+        const filePath = `${user.id}/${projectV3Id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+
+        const { error: uploadErr } = await supabase.storage
+          .from('order-media')
+          .upload(filePath, file, { contentType: file.type, upsert: false, cacheControl: '3600' });
+        if (uploadErr) {
+          console.error('upload error', uploadErr);
+          continue;
+        }
+
+        const { error: insertErr } = await supabase.from('project_media').insert({
+          project_id: projectV3Id,
+          file_path: filePath,
+          file_type: 'image',
+          mime_type: file.type,
+          file_size: file.size,
+          user_id: user.id,
+        });
+        if (insertErr) {
+          console.error('insert error', insertErr);
+          continue;
+        }
+
+        newMedia.push({ file_path: filePath, file_type: 'image' });
+      }
+
+      if (newMedia.length > 0) {
+        setProjectsWithMedia(prev => prev.map(p => p.id === selectedProject.id
+          ? { ...p, media: [...newMedia, ...(p.media || [])].slice(0, 3) }
+          : p
+        ));
+        setSelectedProject(prev => prev ? { ...prev, media: [...newMedia, ...(prev.media || [])].slice(0, 3) } : prev);
+        toast({ title: 'موفق', description: `${newMedia.length} تصویر اضافه شد.` });
+      } else {
+        toast({ title: 'هیچ تصویری اضافه نشد', description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      console.error('upload fatal', err);
+      toast({ title: 'خطا در آپلود', description: err?.message || 'مشکل در بارگذاری تصویر', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
 
   // دریافت عکس‌های پروژه‌ها
   useEffect(() => {
@@ -259,6 +341,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   {selectedProject.media && selectedProject.media.length > 0 && (
                     <p className="text-xs text-muted-foreground mt-1">{selectedProject.media.length} تصویر</p>
                   )}
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <Button size="sm" onClick={handleAddImage} disabled={uploading}>
+                      {uploading ? 'در حال آپلود…' : 'افزودن تصویر'}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </div>
                 </div>
               )}
             </>
