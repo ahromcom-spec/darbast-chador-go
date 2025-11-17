@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
 import { OrbitControls, Sphere, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
-import { X } from 'lucide-react';
+import { X, MapPin, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -71,7 +71,7 @@ function CameraController({ projects, selectedLocationId }: { projects: ProjectM
     if (projects.length === 0) return;
 
     // Find the selected location or use the latest project
-    let targetProject = projects[0]; // Default to latest
+    let targetProject = projects[0];
     
     if (selectedLocationId) {
       const selected = projects.find(p => p.id === selectedLocationId);
@@ -80,29 +80,41 @@ function CameraController({ projects, selectedLocationId }: { projects: ProjectM
       }
     }
 
-    // Phase 0: Start from far away
-    camera.position.set(0, 0, 15);
+    // Qom coordinates
+    const qomLat = 34.6401;
+    const qomLng = 50.8764;
+
+    // Phase 0: Start from space view
+    camera.position.set(0, 0, 18);
     
-    // Phase 1: Zoom to Iran region after 0.8 second
+    // Phase 1: Zoom to Iran after 1.2 seconds
     const timer1 = setTimeout(() => {
       setAnimationPhase(1);
       const iranLat = 32.4279;
       const iranLng = 53.688;
-      const iranPos = latLngToVector3(iranLat, iranLng, 6);
+      const iranPos = latLngToVector3(iranLat, iranLng, 7);
       
-      animateCamera(camera, iranPos, 1500);
-    }, 800);
+      animateCamera(camera, iranPos, 2000);
+    }, 1200);
 
-    // Phase 2: Zoom directly to the target project after 2.5 seconds
+    // Phase 2: Zoom to Qom province after 3.5 seconds
     const timer2 = setTimeout(() => {
       setAnimationPhase(2);
-      const projectPos = latLngToVector3(targetProject.lat, targetProject.lng, 3.2);
-      animateCamera(camera, projectPos, 1800);
-    }, 2500);
+      const qomProvincePos = latLngToVector3(qomLat, qomLng, 4.5);
+      animateCamera(camera, qomProvincePos, 1800);
+    }, 3500);
+
+    // Phase 3: Zoom to exact project location after 5.5 seconds
+    const timer3 = setTimeout(() => {
+      setAnimationPhase(3);
+      const projectPos = latLngToVector3(targetProject.lat, targetProject.lng, 3);
+      animateCamera(camera, projectPos, 1500);
+    }, 5500);
 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
+      clearTimeout(timer3);
     };
   }, [projects, selectedLocationId, camera]);
 
@@ -129,9 +141,9 @@ function CameraController({ projects, selectedLocationId }: { projects: ProjectM
     <OrbitControls
       ref={controlsRef}
       enableZoom={true}
-      enablePan={false}
-      minDistance={3}
-      maxDistance={15}
+      enablePan={true}
+      minDistance={2.8}
+      maxDistance={18}
       autoRotate={animationPhase === 0}
       autoRotateSpeed={0.5}
     />
@@ -215,17 +227,30 @@ export default function InteractiveGlobe({ onClose, selectedLocationId }: Intera
       </div>
       
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
-        <Card className="p-4 bg-background/90 backdrop-blur-sm border-2 border-primary/20">
-          <p className="text-center text-lg font-bold text-foreground">
-            پروژه‌های شما روی نقشه
-          </p>
-          <p className="text-center text-sm text-muted-foreground mt-1">
-            {projectMarkers.length} پروژه فعال
-          </p>
+        <Card className="p-6 bg-gradient-to-br from-background/95 to-background/90 backdrop-blur-md border-2 border-primary/30 shadow-2xl">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              <p className="text-center text-xl font-bold text-foreground">
+                پروژه‌های شما در قم
+              </p>
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground">استان قم</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full">
+                <Building2 className="w-4 h-4 text-amber-500" />
+                <span className="text-muted-foreground">{projectMarkers.length} پروژه فعال</span>
+              </div>
+            </div>
+          </div>
         </Card>
       </div>
 
-      <Canvas camera={{ position: [0, 0, 15], fov: 60 }}>
+      <Canvas camera={{ position: [0, 0, 18], fov: 60 }}>
         <Suspense fallback={null}>
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 10, 5]} intensity={1.8} color="#ffffff" />
