@@ -218,6 +218,24 @@ export default function NewServiceRequestForm() {
       return;
     }
 
+    // ✅ بررسی پروفایل کامل کاربر
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('full_name, phone_number')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (profileError || !profileData?.full_name || !profileData?.phone_number) {
+      toast.error('لطفاً ابتدا نام و شماره تماس خود را در پروفایل کاربری تکمیل کنید', {
+        description: 'برای تکمیل پروفایل به بخش "پروفایل من" بروید',
+        action: {
+          label: 'رفتن به پروفایل',
+          onClick: () => navigate('/user/profile')
+        }
+      });
+      return;
+    }
+
     if (!selectedProvince || !selectedSubcategory || !address.trim()) {
       toast.error('لطفاً تمام فیلدهای الزامی را پر کنید');
       return;
@@ -277,10 +295,10 @@ export default function NewServiceRequestForm() {
 
       if (!serviceTypeData) throw new Error('نوع خدمات یافت نشد');
 
-      // Create or get location
+      // ✅ بررسی وجود location با lat/lng معتبر
       const { data: existingLocation } = await supabase
         .from('locations')
-        .select('id')
+        .select('id, lat, lng')
         .eq('user_id', user.id)
         .eq('province_id', selectedProvince)
         .eq('address_line', sanitizedAddress)
@@ -288,23 +306,17 @@ export default function NewServiceRequestForm() {
 
       let locationId = existingLocation?.id;
 
-      if (!locationId) {
-        const { data: newLocation, error: locError } = await supabase
-          .from('locations')
-          .insert([{
-            user_id: user.id,
-            province_id: selectedProvince,
-            district_id: selectedDistrict || null,
-            address_line: sanitizedAddress,
-            lat: 0,
-            lng: 0,
-            is_active: true
-          }])
-          .select('id')
-          .single();
-
-        if (locError) throw locError;
-        locationId = newLocation.id;
+      // ✅ اگر location موجود نیست یا lat/lng ندارد، باید از طریق SelectLocation ثبت شود
+      if (!locationId || !existingLocation.lat || !existingLocation.lng) {
+        toast.error('لطفاً ابتدا آدرس را با انتخاب موقعیت روی نقشه ثبت کنید', {
+          description: 'از بخش "پروژه‌های من" می‌توانید آدرس جدید با نقشه ثبت کنید',
+          action: {
+            label: 'ثبت آدرس با نقشه',
+            onClick: () => navigate('/user/projects')
+          }
+        });
+        setLoading(false);
+        return;
       }
 
       // Get or create project in hierarchy
