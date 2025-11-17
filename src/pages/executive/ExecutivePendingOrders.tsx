@@ -123,10 +123,10 @@ export default function ExecutivePendingOrders() {
           subcategory_id: order.subcategory_id,
           province_id: order.province_id,
           district_id: order.district_id,
-          customer_name: order.customer_name || 'نام ثبت نشده',
-          customer_phone: order.customer_phone || 'شماره ثبت نشده',
-          project_lat: order.location_lat,
-          project_lng: order.location_lng,
+          customer_name: order.customer_name || 'نامشخص',
+          customer_phone: order.customer_phone || '',
+          location_lat: order.location_lat,
+          location_lng: order.location_lng,
         };
       });
 
@@ -393,6 +393,7 @@ export default function ExecutivePendingOrders() {
           {order.location_lat && order.location_lng ? (
             <div className="space-y-2">
               <ProjectLocationMap
+                key={`map-${order.id}`}
                 projectLat={order.location_lat}
                 projectLng={order.location_lng}
                 projectAddress={order.detailed_address || order.address}
@@ -648,6 +649,7 @@ export default function ExecutivePendingOrders() {
                       <Label className="text-sm font-semibold">موقعیت پروژه روی نقشه</Label>
                     </div>
                     <ProjectLocationMap
+                      key={`map-selected-${selectedOrder.id}`}
                       projectLat={selectedOrder.location_lat}
                       projectLng={selectedOrder.location_lng}
                       projectAddress={selectedOrder.detailed_address || selectedOrder.address}
