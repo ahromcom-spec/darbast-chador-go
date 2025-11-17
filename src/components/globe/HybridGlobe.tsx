@@ -24,6 +24,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
   const [projectsWithMedia, setProjectsWithMedia] = useState<ProjectWithMedia[]>([]);
   
@@ -76,14 +77,23 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       maxZoom: 18,
     }).addTo(map);
 
+    // منتظر بمانیم تا نقشه کاملاً آماده شود
+    map.whenReady(() => {
+      setMapReady(true);
+    });
+
     return () => {
-      map.remove();
+      setMapReady(false);
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
   }, []);
 
   // اضافه کردن مارکرهای پروژه‌ها
   useEffect(() => {
-    if (!mapRef.current || loading || projectsWithMedia.length === 0) return;
+    if (!mapRef.current || !mapReady || loading || projectsWithMedia.length === 0) return;
 
     // پاک کردن مارکرهای قبلی
     markersRef.current.forEach(marker => marker.remove());
@@ -163,7 +173,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       );
       mapRef.current.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [projectsWithMedia, loading]);
+  }, [projectsWithMedia, loading, mapReady]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
