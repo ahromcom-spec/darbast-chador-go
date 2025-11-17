@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { X, MapPin } from 'lucide-react';
+import { ArrowRight, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
@@ -329,61 +329,59 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
-      {/* دکمه بستن */}
+      {/* دکمه بازگشت */}
       <Button
         variant="outline"
         size="icon"
         onClick={onClose}
-        className="absolute top-4 right-4 z-10 bg-background/80 backdrop-blur-sm"
+        className="absolute top-4 right-4 z-10 bg-background/90 backdrop-blur-sm shadow-lg"
       >
-        <X className="h-4 w-4" />
+        <ArrowRight className="h-5 w-5" />
       </Button>
+
+      {/* کارت تعداد پروژه‌ها */}
+      <Card className="absolute top-4 left-4 z-10 bg-background/90 backdrop-blur-sm p-3 shadow-lg">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-primary" />
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold">{projectsWithMedia.length} پروژه</span>
+            <span className="text-xs text-muted-foreground">روی نقشه</span>
+          </div>
+        </div>
+      </Card>
 
       {/* نقشه */}
       <div ref={mapContainer} className="w-full h-full" />
 
-      {/* کارت اطلاعات در پایین */}
-      <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-background/90 backdrop-blur-sm p-4">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">پروژه‌های شما</h3>
+      {/* کارت اطلاعات پروژه انتخاب شده */}
+      {selectedProject && (
+        <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-background/95 backdrop-blur-sm p-4 shadow-lg">
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <h3 className="text-base font-semibold">{selectedProject.title || 'پروژه'}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{selectedProject.locations?.address_line}</p>
+                {selectedProject.media && selectedProject.media.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">{selectedProject.media.length} تصویر</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <Button size="sm" onClick={handleAddImage} disabled={uploading} className="flex-1">
+                {uploading ? 'در حال آپلود…' : 'افزودن تصویر'}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
           </div>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">در حال بارگذاری پروژه‌ها...</p>
-          ) : projectsWithMedia.length === 0 ? (
-            <p className="text-sm text-muted-foreground">هیچ پروژه‌ای یافت نشد</p>
-          ) : (
-            <>
-              <p className="text-sm text-muted-foreground">
-                {projectsWithMedia.length} پروژه فعال روی نقشه نمایش داده شده است
-              </p>
-              {selectedProject && (
-                <div className="mt-2 p-2 bg-primary/10 rounded-md">
-                  <p className="text-sm font-medium">{selectedProject.title || 'پروژه'}</p>
-                  <p className="text-xs text-muted-foreground">{selectedProject.locations?.address_line}</p>
-                  {selectedProject.media && selectedProject.media.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">{selectedProject.media.length} تصویر</p>
-                  )}
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <Button size="sm" onClick={handleAddImage} disabled={uploading}>
-                      {uploading ? 'در حال آپلود…' : 'افزودن تصویر'}
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
