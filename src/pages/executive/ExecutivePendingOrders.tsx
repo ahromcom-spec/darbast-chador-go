@@ -90,105 +90,45 @@ export default function ExecutivePendingOrders() {
           subcategory_id,
           province_id,
           district_id,
-          customer_id,
-          hierarchy_project_id
+          customer_name,
+          customer_phone,
+          location_lat,
+          location_lng
         `)
         .in('status', ['pending', 'approved', 'in_progress'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Map orders and enrich with customer details and location
-      const rows = await Promise.all(
-        (data || []).map(async (order: any) => {
-          // Fetch customer details
-          const { data: customerData } = await supabase
-            .from('customers')
-            .select('user_id')
-            .eq('id', order.customer_id)
-            .maybeSingle();
-
-          let customerName = 'نامشخص';
-          let customerPhone = '';
-
-          if (customerData?.user_id) {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('full_name, phone_number')
-              .eq('user_id', customerData.user_id)
-              .maybeSingle();
-
-            customerName = profileData?.full_name || 'نامشخص';
-            customerPhone = profileData?.phone_number || '';
+      // Map orders with denormalized data
+      const rows = (data || []).map((order: any) => {
+        // Parse notes (stored as text) into object
+        const notesObj = (() => {
+          try {
+            if (!order.notes) return {};
+            return typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+          } catch {
+            return {};
           }
+        })();
 
-          // Fetch location lat/lng - try hierarchy first, then direct location
-          let projectLat: number | null = null;
-          let projectLng: number | null = null;
-
-          // Try hierarchy_project_id first
-          if (order.hierarchy_project_id) {
-            const { data: hierarchyData } = await supabase
-              .from('projects_hierarchy')
-              .select(`
-                location_id,
-                locations (
-                  lat,
-                  lng
-                )
-              `)
-              .eq('id', order.hierarchy_project_id)
-              .maybeSingle();
-
-            if (hierarchyData?.locations) {
-              projectLat = hierarchyData.locations.lat;
-              projectLng = hierarchyData.locations.lng;
-            }
-          }
-
-          // If still no location, try to find from user's locations by matching address
-          if (!projectLat && !projectLng && customerData?.user_id) {
-            const { data: locationData } = await supabase
-              .from('locations')
-              .select('lat, lng')
-              .eq('user_id', customerData.user_id)
-              .eq('address_line', order.address)
-              .maybeSingle();
-
-            if (locationData) {
-              projectLat = locationData.lat;
-              projectLng = locationData.lng;
-            }
-          }
-
-          // Parse notes (stored as text) into object
-          const notesObj = (() => {
-            try {
-              if (!order.notes) return {};
-              return typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
-            } catch {
-              return {};
-            }
-          })();
-
-          return {
-            id: order.id,
-            code: order.code,
-            status: order.status,
-            address: order.address,
-            detailed_address: order.detailed_address,
-            created_at: order.created_at,
-            notes: notesObj,
-            subcategory_id: order.subcategory_id,
-            province_id: order.province_id,
-            district_id: order.district_id,
-            customer_name: customerName,
-            customer_phone: customerPhone,
-            project_lat: projectLat,
-            project_lng: projectLng,
-          };
-        })
-      );
+        return {
+          id: order.id,
+          code: order.code,
+          status: order.status,
+          address: order.address,
+          detailed_address: order.detailed_address,
+          created_at: order.created_at,
+          notes: notesObj,
+          subcategory_id: order.subcategory_id,
+          province_id: order.province_id,
+          district_id: order.district_id,
+          customer_name: order.customer_name || 'نام ثبت نشده',
+          customer_phone: order.customer_phone || 'شماره ثبت نشده',
+          project_lat: order.location_lat,
+          project_lng: order.location_lng,
+        };
+      });
 
       setOrders(rows as Order[]);
     } catch (error) {
