@@ -36,17 +36,17 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
     {
       name: 'Waze',
       icon: Navigation,
-      url: `https://waze.com/ul?ll=${projectLat},${projectLng}&navigate=yes`,
+      url: `waze://?ll=${projectLat},${projectLng}&navigate=yes`,
     },
     {
       name: 'Balad',
       icon: MapPin,
-      url: `https://balad.ir/place?latitude=${projectLat}&longitude=${projectLng}`,
+      url: `balad://showMap?latitude=${projectLat}&longitude=${projectLng}`,
     },
     {
       name: 'Neshan',
       icon: Car,
-      url: `https://neshan.org/maps/@${projectLat},${projectLng},15z`,
+      url: `neshan://location?latitude=${projectLat}&longitude=${projectLng}`,
     },
   ];
 
