@@ -15,7 +15,7 @@ import { useUserProjects } from '@/hooks/useUserProjects';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import HybridGlobe from '@/components/globe/HybridGlobe';
-import globeIcon from '@/assets/globe-icon.png';
+import globeIcon from '@/assets/golden-globe.png';
 
 const Home = () => {
   usePageTitle('صفحه اصلی');

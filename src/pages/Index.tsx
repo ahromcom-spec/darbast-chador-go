@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Globe } from 'lucide-react';
 import InteractiveGlobe from '@/components/globe/InteractiveGlobe';
-import globeIcon from '@/assets/globe-icon.png';
+import globeIcon from '@/assets/golden-globe.png';
 
 const Index = () => {
   const [showGlobe, setShowGlobe] = useState(false);
