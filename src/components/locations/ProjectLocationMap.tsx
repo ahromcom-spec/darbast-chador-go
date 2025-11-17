@@ -2,8 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Navigation } from 'lucide-react';
+import { MapPin, Navigation, Map, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 interface ProjectLocationMapProps {
   projectLat: number;
@@ -18,13 +25,34 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
   const mapRef = useRef<L.Map | null>(null);
   const [roadDistance, setRoadDistance] = useState<number | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(true);
+  const [showNavigationSheet, setShowNavigationSheet] = useState(false);
 
-  const openInMaps = () => {
-    // Universal geo URL که در اکثر موبایل‌ها کار می‌کند
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${projectLat},${projectLng}`;
-    
-    // باز کردن در تب جدید
-    window.open(googleMapsUrl, '_blank');
+  const navigationApps = [
+    {
+      name: 'Google Maps',
+      icon: Map,
+      url: `https://www.google.com/maps/dir/?api=1&destination=${projectLat},${projectLng}`,
+    },
+    {
+      name: 'Waze',
+      icon: Navigation,
+      url: `https://waze.com/ul?ll=${projectLat},${projectLng}&navigate=yes`,
+    },
+    {
+      name: 'Balad',
+      icon: MapPin,
+      url: `https://balad.ir/place?latitude=${projectLat}&longitude=${projectLng}`,
+    },
+    {
+      name: 'Neshan',
+      icon: Car,
+      url: `https://neshan.org/maps/@${projectLat},${projectLng},15z`,
+    },
+  ];
+
+  const openInMaps = (url: string) => {
+    window.open(url, '_blank');
+    setShowNavigationSheet(false);
   };
 
   useEffect(() => {
@@ -106,38 +134,29 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
         });
 
         if (!error && data?.geometry?.coordinates?.length) {
-          const roadDistanceKm = data.distanceKm as number;
-          setRoadDistance(roadDistanceKm);
-
-          // رسم مسیر جاده‌ای
-          const coordinates = (data.geometry.coordinates as [number, number][]).map(
-            (coord) => [coord[1], coord[0]] as [number, number]
+          // تبدیل coordinates از [lng, lat] به [lat, lng]
+          const routeCoordinates: [number, number][] = data.geometry.coordinates.map(
+            (coord: [number, number]) => [coord[1], coord[0]]
           );
-          L.polyline(coordinates, {
-            color: '#2563eb',
-            weight: 5,
-            opacity: 0.9,
-            lineCap: 'round',
-            lineJoin: 'round',
+
+          // رسم مسیر روی نقشه
+          const routeLine = L.polyline(routeCoordinates, {
+            color: '#3b82f6',
+            weight: 4,
+            opacity: 0.8,
+            smoothFactor: 1,
           }).addTo(map);
 
-          // نمایش مسیر کامل در قاب
-          const bounds = L.latLngBounds([
-            ...coordinates,
-            [QOM_CENTER.lat, QOM_CENTER.lng],
-            [projectLat, projectLng],
-          ] as [number, number][]);
-          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
-        } else {
-          // اگر مسیر برنگشت، فقط دو نقطه را نشان بده
-          const bounds = L.latLngBounds([
-            [QOM_CENTER.lat, QOM_CENTER.lng],
-            [projectLat, projectLng],
-          ] as [number, number][]);
-          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+          // تنظیم view برای نمایش کل مسیر
+          map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+
+          // تنظیم فاصله
+          if (data.distanceKm) {
+            setRoadDistance(data.distanceKm);
+          }
         }
-      } catch (error) {
-        console.error('خطا در بارگذاری مسیر:', error);
+      } catch (err) {
+        console.error('خطا در دریافت مسیر:', err);
       } finally {
         setLoadingRoute(false);
       }
@@ -153,36 +172,82 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
   }, [projectLat, projectLng, projectAddress]);
 
   return (
-    <div className="relative w-full">
-      <div
-        ref={mapContainer}
-        className="w-full rounded-lg border border-border overflow-hidden"
-        style={{ minHeight: '360px' }}
-      />
+    <>
+      <div className="w-full space-y-3">
+        {/* نقشه */}
+        <div 
+          ref={mapContainer} 
+          className="w-full h-[400px] rounded-lg border shadow-sm overflow-hidden"
+          style={{ direction: 'ltr' }}
+        />
 
-      {/* اطلاعات مسیر */}
-      <div className="mt-3 bg-muted/50 rounded-lg p-3 border border-border">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="w-4 h-4 text-primary" />
-            <span className="font-medium">{projectAddress}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {loadingRoute ? (
-              <span className="text-xs text-muted-foreground">در حال محاسبه...</span>
-            ) : roadDistance ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">فاصله از مرکز قم:</span>
-                <span className="font-bold text-sm text-primary">{roadDistance.toFixed(1)} کیلومتر</span>
-              </div>
-            ) : null}
-            <Button onClick={openInMaps} variant="outline" size="sm" className="gap-2">
-              <Navigation className="w-4 h-4" />
-              مسیریابی
-            </Button>
+        {/* اطلاعات مسیر */}
+        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="w-4 h-4 text-primary" />
+              <span className="font-medium">{projectAddress}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              {loadingRoute ? (
+                <span className="text-xs text-muted-foreground">در حال محاسبه...</span>
+              ) : roadDistance ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">فاصله از مرکز قم:</span>
+                  <span className="font-bold text-sm text-primary">{roadDistance.toFixed(1)} کیلومتر</span>
+                </div>
+              ) : null}
+              <Button 
+                onClick={() => setShowNavigationSheet(true)} 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+              >
+                <Navigation className="w-4 h-4" />
+                مسیریابی
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Sheet انتخاب برنامه مسیریابی */}
+      <Sheet open={showNavigationSheet} onOpenChange={setShowNavigationSheet}>
+        <SheetContent side="bottom" className="max-h-[80vh]">
+          <SheetHeader className="text-right">
+            <SheetTitle className="flex items-center gap-2">
+              <Navigation className="h-5 w-5" />
+              انتخاب برنامه مسیریابی
+            </SheetTitle>
+            <SheetDescription>
+              یکی از برنامه‌های مسیریابی زیر را برای نمایش مسیر انتخاب کنید
+            </SheetDescription>
+          </SheetHeader>
+          
+          <div className="grid gap-3 mt-6">
+            {navigationApps.map((app) => {
+              const Icon = app.icon;
+              return (
+                <Button
+                  key={app.name}
+                  onClick={() => openInMaps(app.url)}
+                  variant="outline"
+                  className="h-auto py-4 justify-start gap-4 text-right"
+                >
+                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 text-right">
+                    <div className="font-medium">{app.name}</div>
+                    <div className="text-xs text-muted-foreground">باز کردن در {app.name}</div>
+                  </div>
+                  <Navigation className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              );
+            })}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
