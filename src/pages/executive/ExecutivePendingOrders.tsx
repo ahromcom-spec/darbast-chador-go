@@ -423,11 +423,6 @@ export default function ExecutivePendingOrders() {
                   <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div className="space-y-0.5">
                     <div className="line-clamp-1">{order.address}</div>
-                    {order.project_lat && order.project_lng && (
-                      <div className="text-xs opacity-70">
-                        موقعیت: {order.project_lat.toFixed(6)}, {order.project_lng.toFixed(6)}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -435,6 +430,17 @@ export default function ExecutivePendingOrders() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* نقشه موقعیت پروژه */}
+          {order.project_lat && order.project_lng && (
+            <div className="space-y-2">
+              <ProjectLocationMap
+                projectLat={order.project_lat}
+                projectLng={order.project_lng}
+                projectAddress={order.detailed_address || order.address}
+              />
+            </div>
+          )}
+
           <Separator />
           
           <div className="bg-muted/50 p-3 rounded-lg">
