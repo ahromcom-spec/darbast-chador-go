@@ -9,9 +9,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface MapboxGlobeProps {
   onClose: () => void;
+  onReady?: () => void;
+  onError?: (message: string) => void;
 }
 
-export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
+export default function MapboxGlobe({ onClose, onReady, onError }: MapboxGlobeProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapboxToken, setMapboxToken] = useState<string>('');
@@ -110,6 +112,15 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
       }
     });
 
+    // Handle load and errors
+    const handleMapError = (e?: any) => {
+      console.error('Map load error', e);
+      setError('خطا در بارگذاری نقشه. لطفاً بعداً دوباره تلاش کنید.');
+      onError?.('map-load');
+    };
+
+    map.current.on('error', handleMapError);
+
     // Add atmosphere for globe view
     map.current.on('style.load', () => {
       if (!map.current) return;
@@ -121,6 +132,11 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
         'space-color': 'rgb(11, 11, 25)',
         'star-intensity': 0.15
       });
+    });
+
+    map.current.on('load', () => {
+      console.log('Map fully loaded');
+      onReady?.();
     });
 
     // Animation sequence
