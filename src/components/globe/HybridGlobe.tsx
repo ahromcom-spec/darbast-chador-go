@@ -120,31 +120,55 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       try {
         const projectIds = projects.map(p => p.id);
         
-        const { data: mediaData } = await supabase
+        // تصاویر متصل مستقیم به پروژه‌های hierarchy
+        const { data: phMedia } = await supabase
           .from('project_hierarchy_media')
           .select('id, hierarchy_project_id, file_path, file_type, created_at')
           .in('hierarchy_project_id', projectIds)
           .eq('file_type', 'image')
           .order('created_at', { ascending: false });
 
+        // پشتیبانی سازگاری قدیمی: تصاویر موجود در project_media از طریق projects_v3
+        const { data: v3 } = await supabase
+          .from('projects_v3')
+          .select('id, hierarchy_project_id')
+          .in('hierarchy_project_id', projectIds);
+
+        let pmMedia: { project_id: string; file_path: string; file_type: string; created_at: string }[] = [];
+        if (v3 && v3.length > 0) {
+          const v3Ids = v3.map(x => x.id);
+          const { data } = await supabase
+            .from('project_media')
+            .select('project_id, file_path, file_type, created_at')
+            .in('project_id', v3Ids)
+            .eq('file_type', 'image')
+            .order('created_at', { ascending: false });
+          pmMedia = data || [];
+        }
+
+        // نگاشت id پروژه سلسله‌مراتبی به لیست تصاویر (ترکیب هر دو منبع)
         const mediaByProject = new Map<string, HierarchyMedia[]>();
-        mediaData?.forEach(media => {
-          const pid = media.hierarchy_project_id;
-          if (!mediaByProject.has(pid)) {
-            mediaByProject.set(pid, []);
-          }
-          mediaByProject.get(pid)?.push({
-            id: media.id,
-            file_path: media.file_path,
-            file_type: media.file_type,
-            created_at: media.created_at
-          });
+
+        // از جدول جدید
+        phMedia?.forEach(m => {
+          const pid = m.hierarchy_project_id;
+          if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
+          mediaByProject.get(pid)!.push({ id: m.id, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at });
         });
 
-        const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => ({
-          ...project,
-          media: (mediaByProject.get(project.id) || []).slice(0, 3)
-        }));
+        // از جدول قدیمی
+        pmMedia.forEach(m => {
+          const pid = v3?.find(v => v.id === m.project_id)?.hierarchy_project_id;
+          if (!pid) return;
+          if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
+          mediaByProject.get(pid)!.push({ id: `${m.project_id}-${m.created_at}`, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at });
+        });
+
+        // ترکیب نهایی و محدود کردن به ۳ تصویر جدید
+        const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => {
+          const list = (mediaByProject.get(project.id) || []).sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
+          return { ...project, media: list.slice(0, 3) };
+        });
 
         setProjectsWithMedia(projectsWithMediaData);
       } catch (error) {
