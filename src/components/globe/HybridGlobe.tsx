@@ -115,8 +115,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   // دریافت عکس‌های پروژه‌ها
   useEffect(() => {
     const fetchProjectMedia = async () => {
-      if (projects.length === 0) return;
+      if (projects.length === 0) {
+        console.debug('[HybridGlobe] No projects to fetch media for');
+        return;
+      }
 
+      console.debug('[HybridGlobe] Fetching media for', projects.length, 'projects');
+      
       try {
         const projectIds = projects.map(p => p.id);
         
@@ -127,6 +132,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           .in('hierarchy_project_id', projectIds)
           .eq('file_type', 'image')
           .order('created_at', { ascending: false });
+
+        console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
 
         // پشتیبانی سازگاری قدیمی: تصاویر موجود در project_media از طریق projects_v3
         const { data: v3 } = await supabase
@@ -145,6 +152,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             .order('created_at', { ascending: false });
           pmMedia = data || [];
         }
+
+        console.debug('[HybridGlobe] Project media fetched:', pmMedia.length);
 
         // نگاشت id پروژه سلسله‌مراتبی به لیست تصاویر (ترکیب هر دو منبع)
         const mediaByProject = new Map<string, HierarchyMedia[]>();
@@ -170,6 +179,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           return { ...project, media: list.slice(0, 3) };
         });
 
+        console.debug('[HybridGlobe] Projects with media prepared:', projectsWithMediaData.length, 
+          'sample:', projectsWithMediaData.slice(0, 2).map(p => ({ 
+            id: p.id, 
+            title: p.title, 
+            lat: p.locations?.lat, 
+            lng: p.locations?.lng,
+            mediaCount: p.media?.length 
+          }))
+        );
+        
         setProjectsWithMedia(projectsWithMediaData);
       } catch (error) {
         console.error('خطا در دریافت عکس‌های پروژه:', error);
@@ -217,7 +236,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
   // اضافه کردن مارکرهای پروژه‌ها
   useEffect(() => {
-    if (!mapRef.current || !mapReady || loading || projectsWithMedia.length === 0) return;
+    console.debug('[HybridGlobe] Marker effect triggered:', {
+      mapReady,
+      loading,
+      projectsCount: projectsWithMedia.length
+    });
+    
+    if (!mapRef.current || !mapReady || loading || projectsWithMedia.length === 0) {
+      console.debug('[HybridGlobe] Skipping marker creation - conditions not met');
+      return;
+    }
 
     // پاک کردن مارکرهای قبلی
     markersRef.current.forEach(marker => marker.remove());
@@ -228,9 +256,17 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       p => Number.isFinite(p.locations?.lat as number) && Number.isFinite(p.locations?.lng as number)
     );
 
-    console.debug('[HybridGlobe] projects total:', projectsWithMedia.length, 'withLocation:', projectsWithLocation.length,
-      projectsWithLocation.slice(0,5).map(p => ({ id: p.id, lat: p.locations?.lat, lng: p.locations?.lng }))
-    );
+    console.debug('[HybridGlobe] Creating markers:', {
+      totalProjects: projectsWithMedia.length,
+      withValidLocation: projectsWithLocation.length,
+      samples: projectsWithLocation.slice(0, 3).map(p => ({ 
+        id: p.id, 
+        title: p.title,
+        lat: p.locations?.lat, 
+        lng: p.locations?.lng,
+        hasMedia: (p.media?.length || 0) > 0
+      }))
+    });
 
     if (projectsWithLocation.length === 0) return;
 
@@ -316,17 +352,28 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       });
 
       markersRef.current.push(marker);
+      console.debug('[HybridGlobe] Marker added:', { 
+        projectId: project.id, 
+        lat: project.locations?.lat, 
+        lng: project.locations?.lng,
+        hasCustomIcon: !!firstImg 
+      });
     });
 
     // تنظیم bounds نقشه برای نمایش همه پروژه‌ها بر اساس مارکرهای ساخته‌شده
     const allMarkers = markersRef.current;
+    console.debug('[HybridGlobe] Total markers created:', allMarkers.length);
+    
     if (allMarkers.length > 0) {
       const bounds = L.latLngBounds(allMarkers.map(m => m.getLatLng()));
+      console.debug('[HybridGlobe] Fitting bounds:', bounds);
       try {
         mapRef.current.fitBounds(bounds, { padding: [50, 50] });
       } catch (e) {
         console.warn('[HybridGlobe] fitBounds failed', e, bounds);
       }
+    } else {
+      console.warn('[HybridGlobe] No markers to display on map');
     }
   }, [projectsWithMedia, loading, mapReady]);
 
