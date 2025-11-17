@@ -65,10 +65,10 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
     console.log('Initializing Mapbox map...');
     mapboxgl.accessToken = mapboxToken;
 
-    // Create map instance with globe view
+    // Create map instance with globe view using real satellite imagery
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-streets-v12', // Satellite + streets for Google Earth feel
+      style: 'mapbox://styles/mapbox/satellite-v9', // Real Earth satellite imagery
       projection: 'globe',
       zoom: 0.8, // Start from full globe view
       center: [0, 20], // Global center
