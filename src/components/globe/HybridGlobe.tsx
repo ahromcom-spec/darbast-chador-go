@@ -318,14 +318,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       markersRef.current.push(marker);
     });
 
-    // تنظیم bounds نقشه برای نمایش همه پروژه‌ها
-    if (projectsWithLocation.length > 0) {
-      const bounds = L.latLngBounds(
-        projectsWithLocation
-          .filter(p => p.locations?.lat && p.locations?.lng)
-          .map(p => [p.locations!.lat, p.locations!.lng] as [number, number])
-      );
-      mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+    // تنظیم bounds نقشه برای نمایش همه پروژه‌ها بر اساس مارکرهای ساخته‌شده
+    const allMarkers = markersRef.current;
+    if (allMarkers.length > 0) {
+      const bounds = L.latLngBounds(allMarkers.map(m => m.getLatLng()));
+      try {
+        mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+      } catch (e) {
+        console.warn('[HybridGlobe] fitBounds failed', e, bounds);
+      }
     }
   }, [projectsWithMedia, loading, mapReady]);
 
