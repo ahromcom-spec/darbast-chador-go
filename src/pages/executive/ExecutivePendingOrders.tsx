@@ -33,14 +33,14 @@ interface Order {
   address: string;
   detailed_address: string | null;
   created_at: string;
-  customer_name: string;
-  customer_phone: string;
+  customer_name: string | null;
+  customer_phone: string | null;
   notes: any;
   subcategory_id?: string;
   province_id?: string;
   district_id?: string;
-  project_lat?: number | null;
-  project_lng?: number | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
 }
 
 export default function ExecutivePendingOrders() {
@@ -390,11 +390,11 @@ export default function ExecutivePendingOrders() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* نقشه موقعیت پروژه */}
-          {order.project_lat && order.project_lng ? (
+          {order.location_lat && order.location_lng ? (
             <div className="space-y-2">
               <ProjectLocationMap
-                projectLat={order.project_lat}
-                projectLng={order.project_lng}
+                projectLat={order.location_lat}
+                projectLng={order.location_lng}
                 projectAddress={order.detailed_address || order.address}
               />
             </div>
@@ -402,7 +402,7 @@ export default function ExecutivePendingOrders() {
             <div className="bg-muted/30 border border-dashed border-muted-foreground/20 rounded-lg p-4 text-center">
               <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm">
                 <MapPin className="h-4 w-4" />
-                <span>موقعیت جغرافیایی برای این پروژه ثبت نشده است</span>
+                <span>موقعیت جغرافیایی ثبت نشده</span>
               </div>
             </div>
           )}
@@ -631,15 +631,15 @@ export default function ExecutivePendingOrders() {
                   <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                   <span>{selectedOrder.detailed_address || selectedOrder.address}</span>
                 </p>
-                {selectedOrder.project_lat && selectedOrder.project_lng && (
+                {selectedOrder.location_lat && selectedOrder.location_lng && (
                   <p className="text-xs text-muted-foreground pr-6">
-                    موقعیت جغرافیایی: {selectedOrder.project_lat.toFixed(6)}, {selectedOrder.project_lng.toFixed(6)}
+                    موقعیت جغرافیایی: {selectedOrder.location_lat.toFixed(6)}, {selectedOrder.location_lng.toFixed(6)}
                   </p>
                 )}
               </div>
 
               {/* نقشه موقعیت پروژه */}
-              {selectedOrder.project_lat && selectedOrder.project_lng && (
+              {selectedOrder.location_lat && selectedOrder.location_lng && (
                 <>
                   <Separator />
                   <div className="space-y-3">
@@ -648,8 +648,8 @@ export default function ExecutivePendingOrders() {
                       <Label className="text-sm font-semibold">موقعیت پروژه روی نقشه</Label>
                     </div>
                     <ProjectLocationMap
-                      projectLat={selectedOrder.project_lat}
-                      projectLng={selectedOrder.project_lng}
+                      projectLat={selectedOrder.location_lat}
+                      projectLng={selectedOrder.location_lng}
                       projectAddress={selectedOrder.detailed_address || selectedOrder.address}
                     />
                   </div>
