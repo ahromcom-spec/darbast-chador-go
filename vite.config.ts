@@ -91,15 +91,18 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: false,
+    target: 'esnext',
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-select', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
+          'react-core': ['react', 'react-dom'],
+          'react-router': ['react-router-dom'],
+          'ui-radix': ['@radix-ui/react-select', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs', '@radix-ui/react-popover'],
+          'ui-form': ['react-hook-form', 'zod', '@hookform/resolvers'],
           'supabase': ['@supabase/supabase-js'],
-          'form': ['react-hook-form', 'zod'],
+          'query': ['@tanstack/react-query'],
+          'maps': ['mapbox-gl', 'leaflet', 'react-leaflet'],
         },
-        // حذف اطلاعات فریمورک از نام فایل‌ها
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]'
@@ -112,19 +115,22 @@ export default defineConfig(({ mode }) => ({
         drop_console: true,
         drop_debugger: true,
         pure_funcs: ['console.log', 'console.info', 'console.warn'],
-        passes: 2
+        passes: 3,
+        unsafe: true,
+        unsafe_comps: true,
+        unsafe_math: true,
       },
       mangle: {
-        // مخفی کردن نام متغیرها و توابع
         toplevel: true,
-        properties: false
+        properties: false,
+        safari10: true,
       },
       format: {
-        // حذف کامنت‌ها
-        comments: false
+        comments: false,
+        ecma: 2020,
       }
     },
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 600,
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
