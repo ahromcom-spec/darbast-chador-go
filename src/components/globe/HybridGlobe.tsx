@@ -8,19 +8,34 @@ interface HybridGlobeProps {
 
 export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [phase, setPhase] = useState<'golden' | 'map'>('golden');
+  const [mapReady, setMapReady] = useState(false);
+  const [mapFailed, setMapFailed] = useState(false);
 
   useEffect(() => {
-    // After 7 seconds (after all zoom animations), switch to real map
-    const timer = setTimeout(() => {
-      setPhase('map');
-    }, 7000);
+    // Safety timeout: if map didn't get ready in time, stay on golden
+    const safety = setTimeout(() => {
+      if (!mapReady) setMapFailed(true);
+    }, 10000);
+    return () => clearTimeout(safety);
+  }, [mapReady]);
 
-    return () => clearTimeout(timer);
-  }, []);
+  // While map is not ready, show golden globe
+  if (!mapReady && !mapFailed) {
+    return (
+      <>
+        <InteractiveGlobe onClose={onClose} />
+        {/* Pre-mount hidden Mapbox to start loading and call onReady when done */}
+        <div style={{ display: 'none' }}>
+          <MapboxGlobe onClose={onClose} onReady={() => setMapReady(true)} onError={() => setMapFailed(true)} />
+        </div>
+      </>
+    );
+  }
 
-  if (phase === 'golden') {
+  if (mapFailed) {
     return <InteractiveGlobe onClose={onClose} />;
   }
 
+  // Map is ready
   return <MapboxGlobe onClose={onClose} />;
 }
