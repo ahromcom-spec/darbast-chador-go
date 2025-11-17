@@ -122,14 +122,16 @@ export default function ExecutivePendingOrders() {
             customerPhone = profileData?.phone_number || '';
           }
 
-          // Fetch location lat/lng via hierarchy_project_id
+          // Fetch location lat/lng - try hierarchy first, then direct location
           let projectLat: number | null = null;
           let projectLng: number | null = null;
 
+          // Try hierarchy_project_id first
           if (order.hierarchy_project_id) {
             const { data: hierarchyData } = await supabase
               .from('projects_hierarchy')
               .select(`
+                location_id,
                 locations (
                   lat,
                   lng
@@ -141,6 +143,21 @@ export default function ExecutivePendingOrders() {
             if (hierarchyData?.locations) {
               projectLat = hierarchyData.locations.lat;
               projectLng = hierarchyData.locations.lng;
+            }
+          }
+
+          // If still no location, try to find from user's locations by matching address
+          if (!projectLat && !projectLng && customerData?.user_id) {
+            const { data: locationData } = await supabase
+              .from('locations')
+              .select('lat, lng')
+              .eq('user_id', customerData.user_id)
+              .eq('address_line', order.address)
+              .maybeSingle();
+
+            if (locationData) {
+              projectLat = locationData.lat;
+              projectLng = locationData.lng;
             }
           }
 
