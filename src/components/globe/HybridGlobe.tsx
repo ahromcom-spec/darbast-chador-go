@@ -5,6 +5,16 @@ import { X, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
+import { supabase } from '@/integrations/supabase/client';
+
+type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
+
+interface ProjectWithMedia extends ProjectHierarchy {
+  media?: Array<{
+    file_path: string;
+    file_type: string;
+  }>;
+}
 
 interface HybridGlobeProps {
   onClose: () => void;
@@ -14,9 +24,36 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
-  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
+  const [projectsWithMedia, setProjectsWithMedia] = useState<ProjectWithMedia[]>([]);
   
   const { projects, loading } = useProjectsHierarchy();
+
+  // دریافت عکس‌های پروژه‌ها
+  useEffect(() => {
+    const fetchProjectMedia = async () => {
+      if (projects.length === 0) return;
+
+      const projectIds = projects.map(p => p.id);
+      
+      // دریافت عکس‌های پروژه از project_media
+      const { data: mediaData } = await supabase
+        .from('project_media')
+        .select('project_id, file_path, file_type')
+        .in('project_id', projectIds)
+        .order('created_at', { ascending: false });
+
+      // ترکیب عکس‌ها با پروژه‌ها
+      const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => ({
+        ...project,
+        media: mediaData?.filter(m => m.project_id === project.id).slice(0, 3) || []
+      }));
+
+      setProjectsWithMedia(projectsWithMediaData);
+    };
+
+    fetchProjectMedia();
+  }, [projects]);
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
@@ -46,14 +83,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
   // اضافه کردن مارکرهای پروژه‌ها
   useEffect(() => {
-    if (!mapRef.current || loading) return;
+    if (!mapRef.current || loading || projectsWithMedia.length === 0) return;
 
     // پاک کردن مارکرهای قبلی
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
     // فیلتر پروژه‌هایی که موقعیت جغرافیایی دارند
-    const projectsWithLocation = projects.filter(
+    const projectsWithLocation = projectsWithMedia.filter(
       p => p.locations?.lat && p.locations?.lng && 
            p.locations.lat >= 24 && p.locations.lat <= 40 && 
            p.locations.lng >= 44 && p.locations.lng <= 64
@@ -79,11 +116,32 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const marker = L.marker([project.locations.lat, project.locations.lng], { icon: projectIcon })
         .addTo(mapRef.current!);
       
+      // تولید HTML برای عکس‌ها
+      const mediaHTML = project.media && project.media.length > 0 
+        ? `
+          <div style="margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap;">
+            ${project.media.map(m => {
+              const { data: { publicUrl } } = supabase.storage
+                .from('project-media')
+                .getPublicUrl(m.file_path);
+              
+              return `<img 
+                src="${publicUrl}" 
+                alt="تصویر پروژه" 
+                style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;"
+                onerror="this.style.display='none'"
+              />`;
+            }).join('')}
+          </div>
+        `
+        : '';
+
       // اضافه کردن popup
       const popupContent = `
-        <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right;">
+        <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 200px;">
           <strong style="font-size: 14px;">${project.title || 'پروژه'}</strong><br/>
           <span style="font-size: 12px; color: #666;">${project.locations?.address_line || ''}</span>
+          ${mediaHTML}
         </div>
       `;
       marker.bindPopup(popupContent);
@@ -105,7 +163,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       );
       mapRef.current.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [projects, loading]);
+  }, [projectsWithMedia, loading]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
@@ -131,17 +189,20 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           </div>
           {loading ? (
             <p className="text-sm text-muted-foreground">در حال بارگذاری پروژه‌ها...</p>
-          ) : projects.length === 0 ? (
+          ) : projectsWithMedia.length === 0 ? (
             <p className="text-sm text-muted-foreground">هیچ پروژه‌ای یافت نشد</p>
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                {projects.length} پروژه فعال روی نقشه نمایش داده شده است
+                {projectsWithMedia.length} پروژه فعال روی نقشه نمایش داده شده است
               </p>
               {selectedProject && (
                 <div className="mt-2 p-2 bg-primary/10 rounded-md">
                   <p className="text-sm font-medium">{selectedProject.title || 'پروژه'}</p>
                   <p className="text-xs text-muted-foreground">{selectedProject.locations?.address_line}</p>
+                  {selectedProject.media && selectedProject.media.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">{selectedProject.media.length} تصویر</p>
+                  )}
                 </div>
               )}
             </>
