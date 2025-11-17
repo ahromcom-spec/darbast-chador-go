@@ -102,15 +102,17 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
       );
     }
 
-    // Track zoom level and switch projection
+    // Track zoom level and switch style/projection
     map.current.on('zoom', () => {
       if (map.current) {
         const zoom = map.current.getZoom();
         setCurrentZoom(zoom);
         
-        // Switch to mercator projection at higher zoom levels for better street view
+        // Switch to mercator projection and streets style at higher zoom levels
         if (zoom > 6 && map.current.getProjection().name === 'globe') {
           map.current.setProjection('mercator');
+          // Switch to detailed streets map for better clarity
+          map.current.setStyle('mapbox://styles/mapbox/streets-v12');
         }
       }
     });
