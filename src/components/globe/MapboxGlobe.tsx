@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { supabase } from '@/integrations/supabase/client';
+import LeafletFallbackMap from '@/components/locations/LeafletFallbackMap';
 
 interface MapboxGlobeProps {
   onClose: () => void;
@@ -20,6 +21,7 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
   const { projects } = useProjectsHierarchy();
   const [currentZoom, setCurrentZoom] = useState(0);
   const [animationStatus, setAnimationStatus] = useState('در حال آماده‌سازی...');
+  const [useFallback, setUseFallback] = useState(false);
 
   // Get Mapbox token
   useEffect(() => {
@@ -29,6 +31,7 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
         
         if (error) {
           setError('خطا در دریافت توکن نقشه');
+          setUseFallback(true);
           setLoading(false);
           return;
         }
@@ -37,10 +40,12 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
           setMapboxToken(data.token);
         } else {
           setError('توکن نقشه دریافت نشد');
+          setUseFallback(true);
         }
         setLoading(false);
       } catch (error) {
         setError('خطا در اتصال به سرور');
+        setUseFallback(true);
         setLoading(false);
       }
     };
@@ -61,6 +66,24 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
       center: [30, 20],
       pitch: 0,
       bearing: 0,
+    });
+
+    // Basic render watchdog: if nothing renders, fallback to OSM
+    let hadRender = false;
+    map.current.on('render', () => { hadRender = true; });
+    setTimeout(() => {
+      if (!hadRender) {
+        console.warn('Mapbox did not render in time, switching to Leaflet fallback');
+        setError('عدم نمایش داده‌های Mapbox');
+        setUseFallback(true);
+      }
+    }, 6000);
+
+    // Any map error -> fallback
+    map.current.on('error', (e) => {
+      console.error('Mapbox error', e);
+      setError('مشکل در بارگذاری نقشه (Mapbox). در حال نمایش نقشه جایگزین.');
+      setUseFallback(true);
     });
 
     // Add controls
@@ -210,7 +233,7 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
         </div>
       )}
 
-      {error && (
+      {error && !useFallback && (
         <div className="absolute inset-0 flex items-center justify-center bg-background">
           <Card className="p-8 max-w-md">
             <div className="flex flex-col items-center gap-4 text-center">
@@ -223,14 +246,16 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
         </div>
       )}
 
-      {!loading && !error && (
+      {!loading && (
         <>
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
             <Card className="p-6 bg-gradient-to-br from-background/98 to-background/95 backdrop-blur-lg border-2 border-primary/40 shadow-2xl">
               <div className="flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50" />
-                  <p className="text-center text-xl font-bold text-foreground">{animationStatus}</p>
+                  <p className="text-center text-xl font-bold text-foreground">
+                    {useFallback ? 'نمای جایگزین OpenStreetMap فعال شد' : animationStatus}
+                  </p>
                   <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50" />
                 </div>
                 <div className="flex items-center gap-4 text-sm flex-wrap justify-center">
@@ -244,12 +269,21 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground text-center">
-                  {currentZoom < 8 ? 'نمای ماهواره‌ای' : 'نمای نقشه با تمام جزئیات'}
+                  {useFallback
+                    ? 'Tiles Mapbox در دسترس نیست. از نقشه متن‌باز OSM استفاده می‌کنیم.'
+                    : currentZoom < 8 ? 'نمای ماهواره‌ای' : 'نمای نقشه با تمام جزئیات'}
                 </p>
               </div>
             </Card>
           </div>
-          <div ref={mapContainer} className="absolute inset-0" />
+
+          {useFallback ? (
+            <div className="absolute inset-0">
+              <LeafletFallbackMap onLocationSelect={() => {}} />
+            </div>
+          ) : (
+            <div ref={mapContainer} className="absolute inset-0" />
+          )}
         </>
       )}
     </div>
