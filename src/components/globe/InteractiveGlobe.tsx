@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, Suspense } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
 import { OrbitControls, Sphere, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
@@ -120,6 +120,9 @@ function CameraController({ projects }: { projects: ProjectMarker[] }) {
 function Earth({ projects }: { projects: ProjectMarker[] }) {
   const earthRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
+  
+  // Load earth texture
+  const earthTexture = useLoader(THREE.TextureLoader, '/earth-texture.jpg');
 
   useFrame(() => {
     if (earthRef.current && !hovered) {
@@ -129,7 +132,7 @@ function Earth({ projects }: { projects: ProjectMarker[] }) {
 
   return (
     <group>
-      {/* Main Earth sphere - Black base */}
+      {/* Main Earth sphere with real map texture */}
       <Sphere
         ref={earthRef}
         args={[2.5, 128, 128]}
@@ -137,33 +140,20 @@ function Earth({ projects }: { projects: ProjectMarker[] }) {
         onPointerOut={() => setHovered(false)}
       >
         <meshStandardMaterial
-          color="#1a1a1a"
-          emissive="#0a0a0a"
-          emissiveIntensity={0.1}
-          roughness={0.8}
-          metalness={0.2}
+          map={earthTexture}
+          roughness={0.7}
+          metalness={0.1}
         />
       </Sphere>
       
-      {/* Continents overlay - Golden */}
-      <Sphere args={[2.51, 128, 128]}>
-        <meshStandardMaterial
-          color="#d4a574"
-          emissive="#ffd700"
-          emissiveIntensity={0.3}
-          transparent
-          opacity={0.6}
-          roughness={0.5}
-          metalness={0.4}
-        />
-      </Sphere>
-      
-      {/* Golden highlight overlay */}
+      {/* Golden glow overlay */}
       <Sphere args={[2.52, 128, 128]}>
         <meshStandardMaterial
           color="#ffd700"
+          emissive="#d4a574"
+          emissiveIntensity={0.2}
           transparent
-          opacity={0.15}
+          opacity={0.1}
           roughness={0.3}
         />
       </Sphere>
@@ -216,11 +206,10 @@ export default function InteractiveGlobe({ onClose }: { onClose: () => void }) {
 
       <Canvas camera={{ position: [0, 0, 15], fov: 60 }}>
         <Suspense fallback={null}>
-          <ambientLight intensity={0.4} />
-          <directionalLight position={[10, 10, 5]} intensity={1.5} color="#ffffff" />
-          <directionalLight position={[-10, -10, -5]} intensity={0.8} color="#ffd700" />
-          <pointLight position={[0, 5, 5]} intensity={1} color="#ffd700" />
-          <pointLight position={[5, 0, 5]} intensity={0.6} color="#d4a574" />
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[10, 10, 5]} intensity={1.8} color="#ffffff" />
+          <directionalLight position={[-5, -5, -5]} intensity={0.4} color="#ffffff" />
+          <pointLight position={[0, 5, 5]} intensity={0.5} color="#ffd700" />
           <Earth projects={projectMarkers} />
           <CameraController projects={projectMarkers} />
         </Suspense>
