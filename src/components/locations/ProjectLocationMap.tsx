@@ -61,9 +61,8 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
 
   const handleNavigationClick = () => {
     if (isMobile()) {
-      // در موبایل مستقیماً Waze باز شود
-      const wazeUrl = `https://waze.com/ul?ll=${projectLat},${projectLng}&navigate=yes`;
-      window.location.href = wazeUrl;
+      // در موبایل لیست برنامه‌ها را نمایش بده
+      setShowNavigationSheet(true);
     } else {
       // در دسکتاپ مستقیماً Google Maps باز شود
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${projectLat},${projectLng}`, '_blank');
