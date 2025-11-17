@@ -250,12 +250,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       let iconToUse: any = projectIcon;
       const firstImg = project.media?.find(m => m.file_type === 'image');
       if (firstImg) {
-        const { data: { publicUrl } } = supabase.storage
+        const url1 = supabase.storage
           .from('order-media')
-          .getPublicUrl(firstImg.file_path);
+          .getPublicUrl(firstImg.file_path).data.publicUrl;
+        const url2 = supabase.storage
+          .from('project-media')
+          .getPublicUrl(firstImg.file_path).data.publicUrl;
         const html = `
           <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.85);background:#eee">
-            <img src="${publicUrl}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
+            <img src="${url1}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover"
+              onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"/>
           </div>`;
         iconToUse = L.divIcon({
           html,
@@ -276,16 +280,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             ${project.media
               ?.filter(m => m.file_type === 'image')
               .map(m => {
-                const { data: { publicUrl } } = supabase.storage
-                  .from('order-media')
-                  .getPublicUrl(m.file_path);
-                
-                return `<img 
-                  src="${publicUrl}" 
-                  alt="تصویر پروژه" 
-                  style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;"
-                  onerror="this.style.display='none'"
-                />`;
+                 const url1 = supabase.storage
+                   .from('order-media')
+                   .getPublicUrl(m.file_path).data.publicUrl;
+                 const url2 = supabase.storage
+                   .from('project-media')
+                   .getPublicUrl(m.file_path).data.publicUrl;
+                 
+                 return `<img 
+                   src="${url1}" 
+                   alt="تصویر پروژه" 
+                   style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;"
+                   onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"
+                 />`;
               }).join('')}
           </div>
         `
