@@ -15,6 +15,8 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
   const { projects } = useProjectsHierarchy();
   const [currentZoom, setCurrentZoom] = useState(0);
 
@@ -22,22 +24,46 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
   useEffect(() => {
     const getToken = async () => {
       try {
+        console.log('Fetching Mapbox token...');
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-        if (error) throw error;
+        console.log('Token response:', { data, error });
+        
+        if (error) {
+          console.error('Error from edge function:', error);
+          setError('خطا در دریافت توکن نقشه');
+          setLoading(false);
+          return;
+        }
+        
         if (data?.token) {
+          console.log('Token received successfully');
           setMapboxToken(data.token);
+          setLoading(false);
+        } else {
+          console.error('No token in response');
+          setError('توکن نقشه دریافت نشد');
+          setLoading(false);
         }
       } catch (error) {
-        console.error('Error getting Mapbox token:', error);
+        console.error('Exception getting Mapbox token:', error);
+        setError('خطا در اتصال به سرور');
+        setLoading(false);
       }
     };
     getToken();
   }, []);
 
   useEffect(() => {
-    if (!mapContainer.current || !mapboxToken) return;
+    if (!mapContainer.current || !mapboxToken) {
+      console.log('Waiting for container or token...', { 
+        hasContainer: !!mapContainer.current, 
+        hasToken: !!mapboxToken 
+      });
+      return;
+    }
     if (map.current) return; // Initialize map only once
 
+    console.log('Initializing Mapbox map...');
     mapboxgl.accessToken = mapboxToken;
 
     // Create map instance
@@ -198,6 +224,7 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
     });
   }, [projects]);
 
+
   return (
     <div className="fixed inset-0 z-50 bg-background">
       <div className="absolute top-4 right-4 z-10">
@@ -211,34 +238,64 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
         </Button>
       </div>
 
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
-        <Card className="p-6 bg-gradient-to-br from-background/95 to-background/90 backdrop-blur-md border-2 border-primary/30 shadow-2xl">
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-              <p className="text-center text-xl font-bold text-foreground">
-                پروژه‌های شما در قم
-              </p>
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+      {/* Loading State */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background">
+          <Card className="p-8">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p className="text-lg font-semibold">در حال بارگذاری نقشه...</p>
             </div>
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full">
-                <MapPin className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">استان قم</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full">
-                <Building2 className="w-4 h-4 text-amber-500" />
-                <span className="text-muted-foreground">{projects.length} پروژه فعال</span>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              زوم فعلی: {currentZoom.toFixed(1)} • برای دیدن جزئیات بیشتر زوم کنید
-            </p>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
 
-      <div ref={mapContainer} className="absolute inset-0" />
+      {/* Error State */}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background">
+          <Card className="p-8 max-w-md">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="text-6xl">⚠️</div>
+              <h2 className="text-xl font-bold text-destructive">خطا در بارگذاری نقشه</h2>
+              <p className="text-muted-foreground">{error}</p>
+              <Button onClick={onClose} variant="outline">بستن</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <>
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
+            <Card className="p-6 bg-gradient-to-br from-background/95 to-background/90 backdrop-blur-md border-2 border-primary/30 shadow-2xl">
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                  <p className="text-center text-xl font-bold text-foreground">
+                    پروژه‌های شما در قم
+                  </p>
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <span className="text-muted-foreground">استان قم</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full">
+                    <Building2 className="w-4 h-4 text-amber-500" />
+                    <span className="text-muted-foreground">{projects.length} پروژه فعال</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  زوم فعلی: {currentZoom.toFixed(1)} • برای دیدن جزئیات بیشتر زوم کنید
+                </p>
+              </div>
+            </Card>
+          </div>
+
+          <div ref={mapContainer} className="absolute inset-0" />
+        </>
+      )}
     </div>
   );
 }
