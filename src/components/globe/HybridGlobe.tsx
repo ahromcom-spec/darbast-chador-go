@@ -249,7 +249,26 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     projectsWithLocation.forEach(project => {
       if (!project.locations?.lat || !project.locations?.lng) return;
       
-      const marker = L.marker([project.locations.lat, project.locations.lng], { icon: projectIcon })
+      let iconToUse: any = projectIcon;
+      const firstImg = project.media?.find(m => m.file_type === 'image');
+      if (firstImg) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('order-media')
+          .getPublicUrl(firstImg.file_path);
+        const html = `
+          <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.85);background:#eee">
+            <img src="${publicUrl}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
+          </div>`;
+        iconToUse = L.divIcon({
+          html,
+          className: 'project-thumb-icon',
+          iconSize: [44, 44],
+          iconAnchor: [22, 44],
+          popupAnchor: [0, -44],
+        });
+      }
+
+      const marker = L.marker([project.locations.lat, project.locations.lng], { icon: iconToUse })
         .addTo(mapRef.current!);
       
       // تولید HTML برای عکس‌ها
