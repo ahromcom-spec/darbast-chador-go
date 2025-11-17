@@ -52,10 +52,17 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
     mapRef.current = map;
 
     // اضافه کردن لایه تایل
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 18,
     }).addTo(map);
+
+    // اطمینان از محاسبه ابعاد پس از نمایش در دیالوگ/کارت
+    tileLayer.on('load', () => {
+      setTimeout(() => map.invalidateSize(), 50);
+    });
+    setTimeout(() => map.invalidateSize(), 200);
+    window.setTimeout(() => map.invalidateSize(), 600);
 
     // آیکون‌های سفارشی
     const qomCenterIcon = L.icon({
@@ -149,7 +156,7 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
     <div className="relative w-full">
       <div
         ref={mapContainer}
-        className="w-full rounded-lg border border-border"
+        className="w-full rounded-lg border border-border overflow-hidden"
         style={{ minHeight: '360px' }}
       />
 
