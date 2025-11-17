@@ -9,11 +9,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
+interface HierarchyMedia {
+  id: string;
+  file_path: string;
+  file_type: string;
+  created_at: string;
+}
+
 interface ProjectWithMedia extends ProjectHierarchy {
-  media?: Array<{
-    file_path: string;
-    file_type: string;
-  }>;
+  media?: HierarchyMedia[];
 }
 
 interface HybridGlobeProps {
@@ -42,6 +46,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !selectedProject) return;
+    
     try {
       setUploading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -50,47 +55,42 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         return;
       }
 
-      const { data: pv3 } = await supabase
-        .from('projects_v3')
-        .select('id, created_at')
-        .eq('hierarchy_project_id', selectedProject.id)
-        .order('created_at', { ascending: false })
-        .maybeSingle();
-
-      if (!pv3) {
-        toast({ title: 'سفارش پیدا نشد', description: 'برای این پروژه سفارشی ثبت نشده است.', variant: 'destructive' });
-        return;
-      }
-
-      const projectV3Id = pv3.id as string;
-      const newMedia: { file_path: string; file_type: string }[] = [];
+      const newMedia: HierarchyMedia[] = [];
 
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
-        const filePath = `${user.id}/${projectV3Id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+        const filePath = `${user.id}/hierarchy/${selectedProject.id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
 
         const { error: uploadErr } = await supabase.storage
           .from('order-media')
           .upload(filePath, file, { contentType: file.type, upsert: false, cacheControl: '3600' });
+        
         if (uploadErr) {
           console.error('upload error', uploadErr);
           continue;
         }
 
-        const { error: insertErr } = await supabase.from('project_media').insert({
-          project_id: projectV3Id,
-          file_path: filePath,
-          file_type: 'image',
-          mime_type: file.type,
-          file_size: file.size,
-          user_id: user.id,
-        });
+        const { data: insertData, error: insertErr } = await supabase
+          .from('project_hierarchy_media')
+          .insert({
+            hierarchy_project_id: selectedProject.id,
+            file_path: filePath,
+            file_type: 'image',
+            mime_type: file.type,
+            file_size: file.size,
+            user_id: user.id,
+          })
+          .select('id, file_path, file_type, created_at')
+          .single();
+
         if (insertErr) {
           console.error('insert error', insertErr);
           continue;
         }
 
-        newMedia.push({ file_path: filePath, file_type: 'image' });
+        if (insertData) {
+          newMedia.push(insertData);
+        }
       }
 
       if (newMedia.length > 0) {
@@ -120,56 +120,30 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       try {
         const projectIds = projects.map(p => p.id);
         
-        // دریافت پروژه‌های v3 مرتبط با projects_hierarchy
-        const { data: projectsV3Data } = await supabase
-          .from('projects_v3')
-          .select('id, hierarchy_project_id')
-          .in('hierarchy_project_id', projectIds);
-
-        if (!projectsV3Data || projectsV3Data.length === 0) {
-          setProjectsWithMedia(projects.map(p => ({ ...p, media: [] })));
-          return;
-        }
-
-        const projectV3Ids = projectsV3Data.map(p => p.id);
-
-        // دریافت عکس‌های پروژه
         const { data: mediaData } = await supabase
-          .from('project_media')
-          .select('file_path, file_type, project_id')
-          .in('project_id', projectV3Ids)
+          .from('project_hierarchy_media')
+          .select('id, hierarchy_project_id, file_path, file_type, created_at')
+          .in('hierarchy_project_id', projectIds)
+          .eq('file_type', 'image')
           .order('created_at', { ascending: false });
 
-        // ایجاد نقشه از hierarchy_project_id به project_v3 ids
-        const hierarchyToV3Map = new Map<string, string[]>();
-        projectsV3Data.forEach(pv3 => {
-          if (pv3.hierarchy_project_id) {
-            if (!hierarchyToV3Map.has(pv3.hierarchy_project_id)) {
-              hierarchyToV3Map.set(pv3.hierarchy_project_id, []);
-            }
-            hierarchyToV3Map.get(pv3.hierarchy_project_id)?.push(pv3.id);
-          }
-        });
-
-        // گروه‌بندی عکس‌ها بر اساس hierarchy_project_id
-        const mediaByHierarchyProject = new Map<string, typeof mediaData>();
+        const mediaByProject = new Map<string, HierarchyMedia[]>();
         mediaData?.forEach(media => {
-          // پیدا کردن hierarchy_project_id برای این media
-          for (const [hierarchyId, v3Ids] of hierarchyToV3Map.entries()) {
-            if (v3Ids.includes(media.project_id)) {
-              if (!mediaByHierarchyProject.has(hierarchyId)) {
-                mediaByHierarchyProject.set(hierarchyId, []);
-              }
-              mediaByHierarchyProject.get(hierarchyId)?.push(media);
-              break;
-            }
+          const pid = media.hierarchy_project_id;
+          if (!mediaByProject.has(pid)) {
+            mediaByProject.set(pid, []);
           }
+          mediaByProject.get(pid)?.push({
+            id: media.id,
+            file_path: media.file_path,
+            file_type: media.file_type,
+            created_at: media.created_at
+          });
         });
 
-        // ترکیب عکس‌ها با پروژه‌ها (حداکثر 3 عکس برای هر پروژه)
         const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => ({
           ...project,
-          media: (mediaByHierarchyProject.get(project.id) || []).slice(0, 3)
+          media: (mediaByProject.get(project.id) || []).slice(0, 3)
         }));
 
         setProjectsWithMedia(projectsWithMediaData);
