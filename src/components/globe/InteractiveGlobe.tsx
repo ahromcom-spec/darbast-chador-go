@@ -15,6 +15,11 @@ interface ProjectMarker {
   id: string;
 }
 
+interface InteractiveGlobeProps {
+  onClose: () => void;
+  selectedLocationId?: string;
+}
+
 function latLngToVector3(lat: number, lng: number, radius: number) {
   const phi = (90 - lat) * (Math.PI / 180);
   const theta = (lng + 180) * (Math.PI / 180);
@@ -26,27 +31,27 @@ function latLngToVector3(lat: number, lng: number, radius: number) {
   return new THREE.Vector3(x, y, z);
 }
 
-function ProjectMarkers({ projects }: { projects: ProjectMarker[] }) {
+function ProjectMarkers({ projects, selectedLocationId }: { projects: ProjectMarker[], selectedLocationId?: string }) {
   return (
     <>
-      {projects.map((project, index) => {
+      {projects.map((project) => {
         const position = latLngToVector3(project.lat, project.lng, 2.51);
-        // Highlight the latest project (first in array)
-        const isLatest = index === 0;
+        // Highlight the selected location or the latest project
+        const isHighlighted = selectedLocationId ? project.id === selectedLocationId : projects.indexOf(project) === 0;
         
         return (
           <mesh key={project.id} position={position}>
-            <sphereGeometry args={[isLatest ? 0.08 : 0.05, 16, 16]} />
+            <sphereGeometry args={[isHighlighted ? 0.08 : 0.05, 16, 16]} />
             <meshStandardMaterial 
-              color={isLatest ? "#ff0000" : "#ffd700"} 
-              emissive={isLatest ? "#ff4444" : "#ffa500"} 
-              emissiveIntensity={isLatest ? 0.8 : 0.5} 
+              color={isHighlighted ? "#ff0000" : "#ffd700"} 
+              emissive={isHighlighted ? "#ff4444" : "#ffa500"} 
+              emissiveIntensity={isHighlighted ? 0.8 : 0.5} 
             />
             <Html distanceFactor={10}>
               <div className={`bg-background/90 backdrop-blur-sm px-2 py-1 rounded text-xs whitespace-nowrap border ${
-                isLatest ? 'border-red-500 font-bold' : 'border-border'
+                isHighlighted ? 'border-red-500 font-bold' : 'border-border'
               }`}>
-                {isLatest && '⭐ '}{project.title || project.address}
+                {isHighlighted && '⭐ '}{project.title || project.address}
               </div>
             </Html>
           </mesh>
@@ -57,7 +62,7 @@ function ProjectMarkers({ projects }: { projects: ProjectMarker[] }) {
 }
 
 // Camera animation component
-function CameraController({ projects }: { projects: ProjectMarker[] }) {
+function CameraController({ projects, selectedLocationId }: { projects: ProjectMarker[], selectedLocationId?: string }) {
   const { camera } = useThree();
   const controlsRef = useRef<any>(null);
   const [animationPhase, setAnimationPhase] = useState(0);
@@ -65,13 +70,20 @@ function CameraController({ projects }: { projects: ProjectMarker[] }) {
   useEffect(() => {
     if (projects.length === 0) return;
 
-    // Find the latest project (first in array since they're sorted by created_at desc)
-    const latestProject = projects[0];
+    // Find the selected location or use the latest project
+    let targetProject = projects[0]; // Default to latest
+    
+    if (selectedLocationId) {
+      const selected = projects.find(p => p.id === selectedLocationId);
+      if (selected) {
+        targetProject = selected;
+      }
+    }
 
     // Phase 0: Start from far away
     camera.position.set(0, 0, 15);
     
-    // Phase 1: Zoom to Iran region after 1 second
+    // Phase 1: Zoom to Iran region after 0.8 second
     const timer1 = setTimeout(() => {
       setAnimationPhase(1);
       const iranLat = 32.4279;
@@ -81,10 +93,10 @@ function CameraController({ projects }: { projects: ProjectMarker[] }) {
       animateCamera(camera, iranPos, 1500);
     }, 800);
 
-    // Phase 2: Zoom directly to the latest project after 2.5 seconds
+    // Phase 2: Zoom directly to the target project after 2.5 seconds
     const timer2 = setTimeout(() => {
       setAnimationPhase(2);
-      const projectPos = latLngToVector3(latestProject.lat, latestProject.lng, 3.2);
+      const projectPos = latLngToVector3(targetProject.lat, targetProject.lng, 3.2);
       animateCamera(camera, projectPos, 1800);
     }, 2500);
 
@@ -92,7 +104,7 @@ function CameraController({ projects }: { projects: ProjectMarker[] }) {
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
-  }, [projects, camera]);
+  }, [projects, selectedLocationId, camera]);
 
   const animateCamera = (cam: THREE.Camera, targetPos: THREE.Vector3, duration: number) => {
     const startPos = cam.position.clone();
@@ -126,7 +138,7 @@ function CameraController({ projects }: { projects: ProjectMarker[] }) {
   );
 }
 
-function Earth({ projects }: { projects: ProjectMarker[] }) {
+function Earth({ projects, selectedLocationId }: { projects: ProjectMarker[], selectedLocationId?: string }) {
   const earthRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   
@@ -167,12 +179,12 @@ function Earth({ projects }: { projects: ProjectMarker[] }) {
         />
       </Sphere>
       
-      <ProjectMarkers projects={projects} />
+      <ProjectMarkers projects={projects} selectedLocationId={selectedLocationId} />
     </group>
   );
 }
 
-export default function InteractiveGlobe({ onClose }: { onClose: () => void }) {
+export default function InteractiveGlobe({ onClose, selectedLocationId }: InteractiveGlobeProps) {
   const { projects } = useProjectsHierarchy();
   const [projectMarkers, setProjectMarkers] = useState<ProjectMarker[]>([]);
 
@@ -219,8 +231,8 @@ export default function InteractiveGlobe({ onClose }: { onClose: () => void }) {
           <directionalLight position={[10, 10, 5]} intensity={1.8} color="#ffffff" />
           <directionalLight position={[-5, -5, -5]} intensity={0.4} color="#ffffff" />
           <pointLight position={[0, 5, 5]} intensity={0.5} color="#ffd700" />
-          <Earth projects={projectMarkers} />
-          <CameraController projects={projectMarkers} />
+          <Earth projects={projectMarkers} selectedLocationId={selectedLocationId} />
+          <CameraController projects={projectMarkers} selectedLocationId={selectedLocationId} />
         </Suspense>
       </Canvas>
     </div>
