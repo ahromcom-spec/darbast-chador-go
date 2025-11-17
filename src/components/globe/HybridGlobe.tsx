@@ -223,11 +223,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
-    // فیلتر پروژه‌هایی که موقعیت جغرافیایی دارند
+    // فیلتر پروژه‌هایی که مختصات معتبر دارند (بدون محدودیت باکس ایران)
     const projectsWithLocation = projectsWithMedia.filter(
-      p => p.locations?.lat && p.locations?.lng && 
-           p.locations.lat >= 24 && p.locations.lat <= 40 && 
-           p.locations.lng >= 44 && p.locations.lng <= 64
+      p => Number.isFinite(p.locations?.lat as number) && Number.isFinite(p.locations?.lng as number)
+    );
+
+    console.debug('[HybridGlobe] projects total:', projectsWithMedia.length, 'withLocation:', projectsWithLocation.length,
+      projectsWithLocation.slice(0,5).map(p => ({ id: p.id, lat: p.locations?.lat, lng: p.locations?.lng }))
     );
 
     if (projectsWithLocation.length === 0) return;
