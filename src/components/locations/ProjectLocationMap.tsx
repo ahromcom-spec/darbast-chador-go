@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin } from 'lucide-react';
+import { MapPin, Navigation } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ProjectLocationMapProps {
   projectLat: number;
@@ -17,6 +18,14 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
   const mapRef = useRef<L.Map | null>(null);
   const [roadDistance, setRoadDistance] = useState<number | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(true);
+
+  const openInMaps = () => {
+    // Universal geo URL که در اکثر موبایل‌ها کار می‌کند
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${projectLat},${projectLng}`;
+    
+    // باز کردن در تب جدید
+    window.open(googleMapsUrl, '_blank');
+  };
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
@@ -143,14 +152,20 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
             <MapPin className="w-4 h-4 text-primary" />
             <span className="font-medium">{projectAddress}</span>
           </div>
-          {loadingRoute ? (
-            <span className="text-xs text-muted-foreground">در حال محاسبه...</span>
-          ) : roadDistance ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">فاصله از مرکز قم:</span>
-              <span className="font-bold text-sm text-primary">{roadDistance.toFixed(1)} کیلومتر</span>
-            </div>
-          ) : null}
+          <div className="flex items-center gap-3">
+            {loadingRoute ? (
+              <span className="text-xs text-muted-foreground">در حال محاسبه...</span>
+            ) : roadDistance ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">فاصله از مرکز قم:</span>
+                <span className="font-bold text-sm text-primary">{roadDistance.toFixed(1)} کیلومتر</span>
+              </div>
+            ) : null}
+            <Button onClick={openInMaps} variant="outline" size="sm" className="gap-2">
+              <Navigation className="w-4 h-4" />
+              مسیریابی
+            </Button>
+          </div>
         </div>
       </div>
     </div>
