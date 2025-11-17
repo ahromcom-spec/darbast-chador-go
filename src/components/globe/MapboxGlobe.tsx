@@ -27,9 +27,12 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
   useEffect(() => {
     const getToken = async () => {
       try {
+        console.log('[MapboxGlobe] Fetching token...');
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+        console.log('[MapboxGlobe] Token response:', { hasData: !!data, hasError: !!error });
         
         if (error) {
+          console.error('[MapboxGlobe] Token error:', error);
           setError('خطا در دریافت توکن نقشه');
           setUseFallback(true);
           setLoading(false);
@@ -37,13 +40,16 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
         }
         
         if (data?.token) {
+          console.log('[MapboxGlobe] Token received, length:', data.token.length);
           setMapboxToken(data.token);
         } else {
+          console.error('[MapboxGlobe] No token in response');
           setError('توکن نقشه دریافت نشد');
           setUseFallback(true);
         }
         setLoading(false);
       } catch (error) {
+        console.error('[MapboxGlobe] Exception:', error);
         setError('خطا در اتصال به سرور');
         setUseFallback(true);
         setLoading(false);
@@ -53,6 +59,19 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
   }, []);
 
   useEffect(() => {
+    console.log('[MapboxGlobe] Init check:', { 
+      hasContainer: !!mapContainer.current, 
+      hasToken: !!mapboxToken,
+      projectCount: projects.length,
+      projects: projects.map(p => ({
+        id: p.id,
+        title: p.title,
+        hasLocation: !!p.locations,
+        lat: p.locations?.lat,
+        lng: p.locations?.lng
+      }))
+    });
+    
     if (!mapContainer.current || !mapboxToken || map.current) return;
 
     mapboxgl.accessToken = mapboxToken;
@@ -126,8 +145,12 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
 
     // Animation sequence - Google Earth style
     map.current.on('load', () => {
+      console.log('[MapboxGlobe] Map loaded, starting animation');
+      console.log('[MapboxGlobe] Projects to show:', projects.length);
+      
       setTimeout(() => {
         if (!map.current) return;
+        console.log('[MapboxGlobe] Flying to Iran...');
         setAnimationStatus('در حال پرواز به ایران...');
         map.current.flyTo({
           center: [53.688, 32.4279],
@@ -139,7 +162,11 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
       }, 1000);
 
       setTimeout(() => {
-        if (!map.current || projects.length === 0) return;
+        if (!map.current || projects.length === 0) {
+          console.log('[MapboxGlobe] No projects to show');
+          return;
+        }
+        console.log('[MapboxGlobe] Flying to Qom...');
         setAnimationStatus('در حال نزدیک شدن به قم...');
         map.current.flyTo({
           center: [50.8764, 34.6401],
@@ -155,7 +182,10 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
         if (!map.current || projects.length === 0) return;
         
         const firstProject = projects[0];
+        console.log('[MapboxGlobe] Flying to first project:', firstProject);
+        
         if (firstProject.locations?.lat && firstProject.locations?.lng) {
+          console.log('[MapboxGlobe] Project location:', firstProject.locations.lat, firstProject.locations.lng);
           setAnimationStatus('موقعیت دقیق پروژه شما');
           map.current.setStyle('mapbox://styles/mapbox/streets-v12');
           map.current.setProjection('mercator');
@@ -167,14 +197,27 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
             duration: 3500,
             essential: true
           });
+        } else {
+          console.warn('[MapboxGlobe] First project has no location!');
         }
       }, 8500);
 
       // Add markers after animation
       if (projects.length > 0) {
+        console.log('[MapboxGlobe] Will add markers for', projects.length, 'projects');
         setTimeout(() => {
+          console.log('[MapboxGlobe] Adding markers now...');
+          let markersAdded = 0;
+          
           projects.forEach((project, index) => {
-            if (!project.locations?.lat || !project.locations?.lng || !map.current) return;
+            if (!project.locations?.lat || !project.locations?.lng) {
+              console.warn('[MapboxGlobe] Project missing location:', project.id, project.title);
+              return;
+            }
+            if (!map.current) {
+              console.warn('[MapboxGlobe] Map not available when adding markers');
+              return;
+            }
 
             const isFirst = index === 0;
             const el = document.createElement('div');
@@ -206,8 +249,20 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
               .setLngLat([project.locations.lng, project.locations.lat])
               .setPopup(popup)
               .addTo(map.current!);
+            
+            markersAdded++;
+            console.log('[MapboxGlobe] Marker added:', {
+              project: project.title,
+              lat: project.locations.lat,
+              lng: project.locations.lng,
+              isFirst
+            });
           });
+          
+          console.log('[MapboxGlobe] Total markers added:', markersAdded);
         }, 12000);
+      } else {
+        console.warn('[MapboxGlobe] No projects available to show on map');
       }
     });
 
