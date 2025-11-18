@@ -41,7 +41,79 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [videoDownloadProgress, setVideoDownloadProgress] = useState(0);
   const [downloadedBlob, setDownloadedBlob] = useState<Blob | null>(null);
   const [videoTranscoding, setVideoTranscoding] = useState(false);
-  const [videoTranscodeProgress, setVideoTranscodeProgress] = useState(0);
+const [videoTranscodeProgress, setVideoTranscodeProgress] = useState(0);
+  
+  // FFmpeg setup (lazy loaded)
+  const ffmpegRef = useRef<any>(null);
+  const ensureFFmpeg = async () => {
+    if (!ffmpegRef.current) {
+      const mod = await import('@ffmpeg/ffmpeg');
+      const createFFmpeg = (mod as any).createFFmpeg;
+      const ffmpeg = createFFmpeg({
+        log: false,
+        progress: ({ ratio }: any) => setVideoTranscodeProgress(Math.round((ratio || 0) * 100)),
+      });
+      await ffmpeg.load();
+      ffmpegRef.current = ffmpeg;
+    }
+    return ffmpegRef.current;
+  };
+
+  const canBrowserPlay = (mime?: string) => {
+    try {
+      const v = document.createElement('video');
+      return !!(mime && v.canPlayType(mime));
+    } catch {
+      return false;
+    }
+  };
+
+// Transcode helper and auto-run when needed
+  const transcodeDownloaded = async (force: boolean = false) => {
+    if (!downloadedBlob) return;
+    const mime = downloadedBlob.type || selectedVideo?.mimeType || '';
+    if (!force && mime && canBrowserPlay(mime)) {
+      setSelectedVideo(prev => (prev ? { ...prev, mimeType: mime || 'video/mp4' } : prev));
+      return;
+    }
+    try {
+      setVideoTranscoding(true);
+      setVideoTranscodeProgress(0);
+      const mod = await import('@ffmpeg/ffmpeg');
+      const fetchFile: any = (mod as any).fetchFile;
+      const ffmpeg = await ensureFFmpeg();
+      const inputName = `input.${(mime.split('/')[1] || 'bin').split(';')[0]}`;
+      ffmpeg.FS('writeFile', inputName, await fetchFile(downloadedBlob));
+      const outputName = 'output.mp4';
+      await ffmpeg.run(
+        '-i', inputName,
+        '-c:v', 'libx264',
+        '-preset', 'veryfast',
+        '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+        '-movflags', 'faststart',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-f', 'mp4', outputName
+      );
+      const data = ffmpeg.FS('readFile', outputName);
+      try { ffmpeg.FS('unlink', inputName); } catch {}
+      try { ffmpeg.FS('unlink', outputName); } catch {}
+      const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
+      if (mp4Blob.size > 50 * 1024 * 1024) {
+        toast({ title: 'خطا', description: 'حجم نسخه تبدیل‌شده بیش از 50 مگابایت است', variant: 'destructive' });
+        return;
+      }
+      const url = URL.createObjectURL(mp4Blob);
+      setSelectedVideo({ url, mimeType: 'video/mp4' });
+    } catch (e) {
+      console.error('[Video] Transcode failed', e);
+      toast({ title: 'خطا', description: 'تبدیل ویدیو به MP4 با مشکل مواجه شد', variant: 'destructive' });
+    } finally {
+      setVideoTranscoding(false);
+    }
+  };
+
+  useEffect(() => { if (downloadedBlob) { transcodeDownloaded(false); } }, [downloadedBlob]);
   
   
   const { projects, loading } = useProjectsHierarchy();
@@ -296,7 +368,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             
             console.log('[Video] Download complete, blob created');
             setDownloadedBlob(blob);
-            setSelectedVideo({ url: objectUrl, mimeType: mimeType || '' });
+            setSelectedVideo({ url: objectUrl, mimeType: (blob.type || mimeType || 'video/mp4') });
             setVideoDownloading(false);
             
             toast({
@@ -607,11 +679,17 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       )}
 
       {/* دیالوگ دانلود و پخش ویدیو */}
-      <Dialog open={videoDownloading || !!selectedVideo} onOpenChange={(open) => {
+      <Dialog open={videoDownloading || videoTranscoding || !!selectedVideo} onOpenChange={(open) => {
         if (!open) {
+          if (selectedVideo?.url?.startsWith('blob:')) {
+            try { URL.revokeObjectURL(selectedVideo.url); } catch {}
+          }
           setSelectedVideo(null);
+          setDownloadedBlob(null);
           setVideoDownloading(false);
+          setVideoTranscoding(false);
           setVideoDownloadProgress(0);
+          setVideoTranscodeProgress(0);
         }
       }}>
         <DialogContent className="max-w-4xl w-[95vw] p-0">
