@@ -327,7 +327,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         const isVideo = firstMedia.file_type === 'video';
         const mediaElement = isVideo 
-          ? `<video src="${url1}" style="width:100%;height:100%;object-fit:cover" muted loop autoplay playsinline
+          ? `<video src="${url1}" style="width:100%;height:100%;object-fit:cover;background:#000;" controls preload="metadata"
               onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"></video>`
           : `<img src="${url1}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover"
               onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"/>`;
@@ -369,8 +369,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                  return isVideo 
                    ? `<video 
                        src="${url1}" 
-                       style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb;"
-                       muted loop autoplay playsinline
+                       controls
+                       preload="metadata"
+                       style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; background: #000;"
                        onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"
                      ></video>`
                    : `<img 
