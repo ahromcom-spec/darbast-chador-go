@@ -381,21 +381,24 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     <div className="fixed inset-0 z-50 bg-background">
       {/* دکمه بازگشت */}
       <Button
-        variant="outline"
-        size="icon"
+        variant="default"
+        size="lg"
         onClick={onClose}
-        className="absolute top-4 right-4 z-10 bg-background/90 backdrop-blur-sm shadow-lg"
+        className="absolute top-6 right-6 z-[100] shadow-2xl border-2 border-primary/20"
       >
-        <ArrowRight className="h-5 w-5" />
+        <ArrowRight className="h-5 w-5 ml-2" />
+        <span className="font-semibold">بازگشت</span>
       </Button>
 
       {/* کارت تعداد پروژه‌ها */}
-      <Card className="absolute top-4 left-4 z-10 bg-background/90 backdrop-blur-sm p-3 shadow-lg">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-primary" />
+      <Card className="absolute top-6 left-6 z-[100] bg-card shadow-2xl border-2 border-primary/20 p-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <MapPin className="h-6 w-6 text-primary" />
+          </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold">{projectsWithMedia.length} پروژه</span>
-            <span className="text-xs text-muted-foreground">روی نقشه</span>
+            <span className="text-2xl font-bold text-primary">{projectsWithMedia.length}</span>
+            <span className="text-sm text-muted-foreground">پروژه فعال</span>
           </div>
         </div>
       </Card>
