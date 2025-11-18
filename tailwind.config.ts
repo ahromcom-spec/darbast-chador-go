@@ -113,6 +113,11 @@ export default {
           from: { transform: "scale(0.95)", opacity: "0" },
           to: { transform: "scale(1)", opacity: "1" },
         },
+        "globe-swing": {
+          "0%, 100%": { transform: "rotate(0deg)" },
+          "25%": { transform: "rotate(15deg)" },
+          "75%": { transform: "rotate(-15deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -121,6 +126,7 @@ export default {
         "slide-up": "slide-up 0.5s ease-out",
         "slide-down": "slide-down 0.5s ease-out",
         "scale-in": "scale-in 0.3s ease-out",
+        "globe-swing": "globe-swing 4s ease-in-out infinite",
       },
       spacing: {
         'xs': 'var(--spacing-xs)',

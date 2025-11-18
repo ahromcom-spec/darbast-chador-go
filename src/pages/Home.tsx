@@ -328,29 +328,15 @@ const Home = () => {
               <div className="flex justify-center mt-6">
                 <button
                   onClick={() => setShowGlobe(true)}
-                  className="group relative w-24 h-24 rounded-full transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-amber-500/50"
+                  className="group relative w-[115px] h-[115px] transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-0"
                   aria-label="نمایش پروژه‌ها روی کره زمین"
                 >
-                  {/* Outer glow */}
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 opacity-90 group-hover:opacity-100 transition-opacity shadow-2xl group-hover:shadow-amber-500/50" />
-                  
-                  {/* Inner sphere with continents */}
-                  <div className="absolute inset-2 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-800 overflow-hidden shadow-inner">
-                    {/* Continents overlay */}
-                    <div className="absolute inset-0 opacity-40">
-                      <img 
-                        src={globeIcon} 
-                        alt="" 
-                        className="w-full h-full object-cover mix-blend-multiply"
-                      />
-                    </div>
-                    
-                    {/* Shine effect */}
-                    <div className="absolute top-2 left-2 w-8 h-8 rounded-full bg-gradient-to-br from-white/60 to-transparent blur-sm" />
-                  </div>
-                  
-                  {/* Hover effect ring */}
-                  <div className="absolute inset-0 rounded-full border-2 border-amber-400/0 group-hover:border-amber-400/50 transition-all duration-300" />
+                  {/* Globe image with swing animation */}
+                  <img 
+                    src="/golden-globe-new.png" 
+                    alt="کره زمین" 
+                    className="w-full h-full object-contain animate-globe-swing"
+                  />
                 </button>
               </div>
             )}
