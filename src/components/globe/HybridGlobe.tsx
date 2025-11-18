@@ -295,26 +295,29 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           .from('project-media')
           .getPublicUrl(firstImg.file_path).data.publicUrl;
         const html = `
-          <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.85);background:#eee">
+          <div style="width:70px;height:70px;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3);border:3px solid #fff;background:#f0f0f0;position:relative;">
             <img src="${url1}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover"
               onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"/>
+            <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));height:24px;display:flex;align-items:center;justify-content:center;">
+              <span style="color:#fff;font-size:10px;font-weight:bold;">${project.media?.length || 0} عکس</span>
+            </div>
           </div>`;
         iconToUse = L.divIcon({
           html,
           className: 'project-thumb-icon',
-          iconSize: [44, 44],
-          iconAnchor: [22, 44],
-          popupAnchor: [0, -44],
+          iconSize: [70, 70],
+          iconAnchor: [35, 70],
+          popupAnchor: [0, -70],
         });
       }
 
       const marker = L.marker([project.locations.lat, project.locations.lng], { icon: iconToUse })
         .addTo(mapRef.current!);
       
-      // تولید HTML برای عکس‌ها
+      // تولید HTML برای عکس‌ها در popup
       const mediaHTML = project.media && project.media.length > 0 
         ? `
-          <div style="margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap;">
+          <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
             ${project.media
               ?.filter(m => m.file_type === 'image')
               .map(m => {
@@ -328,23 +331,26 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                  return `<img 
                    src="${url1}" 
                    alt="تصویر پروژه" 
-                   style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;"
+                   style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb;"
                    onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"
                  />`;
               }).join('')}
           </div>
         `
-        : '';
+        : '<p style="font-size: 12px; color: #999; margin-top: 8px;">هنوز تصویری ثبت نشده</p>';
 
       // اضافه کردن popup
       const popupContent = `
-        <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 200px;">
-          <strong style="font-size: 14px;">${project.title || 'پروژه'}</strong><br/>
-          <span style="font-size: 12px; color: #666;">${project.locations?.address_line || ''}</span>
+        <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 320px;">
+          <strong style="font-size: 15px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
+          <span style="font-size: 12px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
           ${mediaHTML}
         </div>
       `;
-      marker.bindPopup(popupContent);
+      marker.bindPopup(popupContent, {
+        maxWidth: 340,
+        className: 'custom-popup'
+      });
 
       // کلیک روی مارکر
       marker.on('click', () => {
