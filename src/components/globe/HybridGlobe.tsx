@@ -140,12 +140,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       try {
         const projectIds = projects.map(p => p.id);
         
-        // تصاویر متصل مستقیم به پروژه‌های hierarchy
+        // تصاویر و ویدیوهای متصل مستقیم به پروژه‌های hierarchy
         const { data: phMedia } = await supabase
           .from('project_hierarchy_media')
           .select('id, hierarchy_project_id, file_path, file_type, created_at')
           .in('hierarchy_project_id', projectIds)
-          .eq('file_type', 'image')
+          .in('file_type', ['image', 'video'])
           .order('created_at', { ascending: false });
 
         console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
@@ -301,20 +301,27 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       if (!project.locations?.lat || !project.locations?.lng) return;
       
       let iconToUse: any = projectIcon;
-      const firstImg = project.media?.find(m => m.file_type === 'image');
-      if (firstImg) {
+      const firstMedia = project.media?.[0];
+      if (firstMedia) {
         const url1 = supabase.storage
           .from('order-media')
-          .getPublicUrl(firstImg.file_path).data.publicUrl;
+          .getPublicUrl(firstMedia.file_path).data.publicUrl;
         const url2 = supabase.storage
           .from('project-media')
-          .getPublicUrl(firstImg.file_path).data.publicUrl;
+          .getPublicUrl(firstMedia.file_path).data.publicUrl;
+        
+        const isVideo = firstMedia.file_type === 'video';
+        const mediaElement = isVideo 
+          ? `<video src="${url1}" style="width:100%;height:100%;object-fit:cover" muted loop autoplay playsinline
+              onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"></video>`
+          : `<img src="${url1}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover"
+              onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"/>`;
+        
         const html = `
           <div style="width:70px;height:70px;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3);border:3px solid #fff;background:#f0f0f0;position:relative;">
-            <img src="${url1}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover"
-              onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"/>
+            ${mediaElement}
             <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));height:24px;display:flex;align-items:center;justify-content:center;">
-              <span style="color:#fff;font-size:10px;font-weight:bold;">${project.media?.length || 0} عکس</span>
+              <span style="color:#fff;font-size:10px;font-weight:bold;">${project.media?.length || 0} فایل</span>
             </div>
           </div>`;
         iconToUse = L.divIcon({
@@ -329,12 +336,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const marker = L.marker([project.locations.lat, project.locations.lng], { icon: iconToUse })
         .addTo(mapRef.current!);
       
-      // تولید HTML برای عکس‌ها در popup
+      // تولید HTML برای عکس‌ها و ویدیوها در popup
       const mediaHTML = project.media && project.media.length > 0 
         ? `
           <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
             ${project.media
-              ?.filter(m => m.file_type === 'image')
               .map(m => {
                  const url1 = supabase.storage
                    .from('order-media')
@@ -343,12 +349,21 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                    .from('project-media')
                    .getPublicUrl(m.file_path).data.publicUrl;
                  
-                 return `<img 
-                   src="${url1}" 
-                   alt="تصویر پروژه" 
-                   style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb;"
-                   onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"
-                 />`;
+                 const isVideo = m.file_type === 'video';
+                 
+                 return isVideo 
+                   ? `<video 
+                       src="${url1}" 
+                       style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb;"
+                       muted loop autoplay playsinline
+                       onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"
+                     ></video>`
+                   : `<img 
+                       src="${url1}" 
+                       alt="تصویر پروژه" 
+                       style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb;"
+                       onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"
+                     />`;
               }).join('')}
           </div>
         `
@@ -377,7 +392,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         projectId: project.id, 
         lat: project.locations?.lat, 
         lng: project.locations?.lng,
-        hasCustomIcon: !!firstImg 
+        hasCustomIcon: !!firstMedia
       });
     });
 
@@ -439,7 +454,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 <h3 className="text-base font-semibold">{selectedProject.title || 'پروژه'}</h3>
                 <p className="text-xs text-muted-foreground mt-1">{selectedProject.locations?.address_line}</p>
                 {selectedProject.media && selectedProject.media.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">{selectedProject.media.length} تصویر</p>
+                  <p className="text-xs text-muted-foreground mt-1">{selectedProject.media.length} فایل</p>
                 )}
               </div>
             </div>
