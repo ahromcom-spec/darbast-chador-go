@@ -64,12 +64,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         if (!isImage && !isVideo) continue;
         
-        // بررسی حجم فایل (حداکثر 20MB برای ویدیو، 5MB برای تصویر)
-        const maxSize = isVideo ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
+        // بررسی حجم فایل (حداکثر 50MB برای ویدیو، 10MB برای تصویر)
+        const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
         if (file.size > maxSize) {
           toast({ 
             title: 'خطا', 
-            description: isVideo ? 'حجم ویدیو نباید بیشتر از 20 مگابایت باشد' : 'حجم تصویر نباید بیشتر از 5 مگابایت باشد', 
+            description: isVideo ? 'حجم ویدیو نباید بیشتر از 50 مگابایت باشد' : 'حجم تصویر نباید بیشتر از 10 مگابایت باشد', 
             variant: 'destructive' 
           });
           continue;
