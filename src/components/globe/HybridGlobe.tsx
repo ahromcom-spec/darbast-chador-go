@@ -35,6 +35,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
@@ -221,6 +222,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         );
         
         setProjectsWithMedia(projectsWithMediaData);
+        
+        // تعریف تابع global برای باز کردن ویدیو
+        (window as any).openProjectVideo = (url: string) => {
+          setSelectedVideo(url);
+        };
       } catch (error) {
         console.error('خطا در دریافت عکس‌های پروژه:', error);
         setProjectsWithMedia(projects.map(p => ({ ...p, media: [] })));
@@ -328,8 +334,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         const isVideo = firstMedia.file_type === 'video';
         const mediaElement = isVideo 
-          ? `<video src="${url1}" style="width:100%;height:100%;object-fit:cover;background:#000;" controls preload="metadata"
-              onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"></video>`
+          ? `<div style="width:100%;height:100%;position:relative;background:#000;display:flex;align-items:center;justify-content:center;">
+              <svg style="width:32px;height:32px;color:#fff;opacity:0.9;" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>
+            </div>`
           : `<img src="${url1}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover"
               onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"/>`;
         
@@ -368,13 +378,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                  const isVideo = m.file_type === 'video';
                  
                  return isVideo 
-                   ? `<video 
-                       src="${url1}" 
-                       controls
-                       preload="metadata"
-                       style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; background: #000;"
-                       onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"
-                     ></video>`
+                   ? `<div 
+                       onclick="window.openProjectVideo('${url1}')"
+                       style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; background: #000; display: flex; align-items: center; justify-content: center; position: relative;"
+                     >
+                       <svg style="width:24px;height:24px;color:#fff;opacity:0.9;" fill="currentColor" viewBox="0 0 24 24">
+                         <path d="M8 5v14l11-7z"/>
+                       </svg>
+                       <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;">ویدیو</span>
+                     </div>`
                    : `<img 
                        src="${url1}" 
                        alt="تصویر پروژه" 
@@ -506,6 +518,26 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           </div>
         </Card>
       )}
+
+      {/* دیالوگ نمایش ویدیو */}
+      <Dialog open={!!selectedVideo} onOpenChange={(open) => !open && setSelectedVideo(null)}>
+        <DialogContent className="max-w-4xl w-[95vw] p-0">
+          <DialogHeader className="p-4 pb-0">
+            <DialogTitle className="text-right">پخش ویدیو</DialogTitle>
+          </DialogHeader>
+          <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+            {selectedVideo && (
+              <video
+                src={selectedVideo}
+                controls
+                autoPlay
+                className="absolute inset-0 w-full h-full"
+                style={{ objectFit: 'contain' }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
