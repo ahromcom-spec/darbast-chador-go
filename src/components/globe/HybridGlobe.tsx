@@ -414,7 +414,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       {/* کارت اطلاعات پروژه انتخاب شده */}
       {selectedProject && (
-        <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-background/95 backdrop-blur-sm p-4 shadow-lg">
+        <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-card shadow-2xl p-4 z-[100] border-2 border-primary/20">
           <div className="space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
