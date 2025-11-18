@@ -37,6 +37,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; mimeType: string } | null>(null);
+  const [videoDownloading, setVideoDownloading] = useState(false);
+  const [videoDownloadProgress, setVideoDownloadProgress] = useState(0);
+  
   
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
@@ -224,52 +227,87 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         setProjectsWithMedia(projectsWithMediaData);
         
-        // تابع global برای باز کردن ویدیو با URL امضاشده و MIME type صحیح (با استراتژی Blob برای سازگاری کامل)
+        // تابع global برای باز کردن ویدیو با دانلود پیشرونده
         (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
-          console.log('[Video] Opening video (blob strategy):', filePath, 'MIME hint:', mimeType);
-
-          const getSigned = async (): Promise<string | undefined> => {
-            const { data, error } = await supabase.storage
-              .from('order-media')
-              .createSignedUrl(filePath, 3600); // 1 ساعت
-            if (error) {
-              console.warn('[Video] Signed URL error:', error);
-              return undefined;
-            }
-            return data?.signedUrl;
-          };
-
-          const getPublic = (): string =>
-            supabase.storage.from('order-media').getPublicUrl(filePath).data.publicUrl;
+          console.log('[Video] Starting progressive download:', filePath);
+          setVideoDownloading(true);
+          setVideoDownloadProgress(0);
+          setSelectedVideo(null);
 
           try {
-            let url = await getSigned();
-            if (!url) url = getPublic();
+            // دریافت signed URL
+            const { data: signedData, error: signedError } = await supabase.storage
+              .from('order-media')
+              .createSignedUrl(filePath, 3600);
 
-            // دانلود فایل و ساخت Blob URL برای جلوگیری از مشکلات MIME/CORS/Codec
-            let blob: Blob | null = null;
-            try {
-              const res = await fetch(url);
-              if (!res.ok) throw new Error('HTTP ' + res.status);
-              blob = await res.blob();
-            } catch (e) {
-              console.warn('[Video] Direct fetch failed, trying public URL', e);
-              const pub = getPublic();
-              const res2 = await fetch(pub);
-              if (!res2.ok) throw new Error('HTTP ' + res2.status);
-              blob = await res2.blob();
+            const downloadUrl = signedError 
+              ? supabase.storage.from('order-media').getPublicUrl(filePath).data.publicUrl
+              : signedData.signedUrl;
+
+            console.log('[Video] Download URL obtained');
+
+            // دانلود با نمایش پیشرفت
+            const response = await fetch(downloadUrl);
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
             }
 
-            const finalType = (blob && blob.type && blob.type !== '')
-              ? blob.type
-              : (mimeType && mimeType !== '' ? mimeType : 'video/mp4');
+            const contentLength = response.headers.get('content-length');
+            const total = contentLength ? parseInt(contentLength, 10) : 0;
+            
+            // بررسی حجم فایل (حداکثر 50MB)
+            if (total > 50 * 1024 * 1024) {
+              toast({
+                title: 'خطا',
+                description: 'حجم ویدیو بیش از 50 مگابایت است',
+                variant: 'destructive'
+              });
+              setVideoDownloading(false);
+              return;
+            }
 
-            const objectUrl = URL.createObjectURL(new Blob([blob!], { type: finalType }));
-            setSelectedVideo({ url: objectUrl, mimeType: finalType });
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error('Cannot read response body');
+
+            const chunks: BlobPart[] = [];
+            let receivedLength = 0;
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              chunks.push(value);
+              receivedLength += value.length;
+              
+              if (total > 0) {
+                const progress = Math.round((receivedLength / total) * 100);
+                setVideoDownloadProgress(progress);
+                console.log(`[Video] Download progress: ${progress}%`);
+              }
+            }
+
+            // ترکیب chunks و ساخت Blob
+            const blob = new Blob(chunks, { type: mimeType || 'video/mp4' });
+            const objectUrl = URL.createObjectURL(blob);
+            
+            console.log('[Video] Download complete, blob created');
+            setSelectedVideo({ url: objectUrl, mimeType: mimeType || 'video/mp4' });
+            setVideoDownloading(false);
+            
+            toast({
+              title: 'موفق',
+              description: 'ویدیو با موفقیت دانلود شد'
+            });
+
           } catch (err) {
-            console.error('[Video] Error loading video blob:', err);
-            const publicUrl = getPublic();
-            setSelectedVideo({ url: publicUrl, mimeType: mimeType || 'video/mp4' });
+            console.error('[Video] Download failed:', err);
+            setVideoDownloading(false);
+            toast({
+              title: 'خطا',
+              description: 'دانلود ویدیو با مشکل مواجه شد',
+              variant: 'destructive'
+            });
           }
         };
       } catch (error) {
@@ -564,53 +602,77 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         </Card>
       )}
 
-      {/* دیالوگ نمایش ویدیو با source tag و MIME type صحیح */}
-      <Dialog open={!!selectedVideo} onOpenChange={(open) => !open && setSelectedVideo(null)}>
+      {/* دیالوگ دانلود و پخش ویدیو */}
+      <Dialog open={videoDownloading || !!selectedVideo} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedVideo(null);
+          setVideoDownloading(false);
+          setVideoDownloadProgress(0);
+        }
+      }}>
         <DialogContent className="max-w-4xl w-[95vw] p-0">
           <DialogHeader className="p-4 pb-0">
-            <DialogTitle className="text-right">پخش ویدیو</DialogTitle>
+            <DialogTitle className="text-right">
+              {videoDownloading ? 'در حال دانلود ویدیو...' : 'پخش ویدیو'}
+            </DialogTitle>
           </DialogHeader>
-          <div className="relative w-full bg-black" style={{ paddingTop: '56.25%' }}>
-            {selectedVideo && (
-              <video
-                key={selectedVideo.url}
-                controls
-                autoPlay
-                playsInline
-                className="absolute inset-0 w-full h-full"
-                style={{ objectFit: 'contain' }}
-                onError={(e) => {
-                  console.error('[Video] Playback error:', e);
-                  const videoEl = e.currentTarget;
-                  console.error('[Video] Error details:', {
-                    networkState: videoEl.networkState,
-                    readyState: videoEl.readyState,
-                    error: videoEl.error
-                  });
-                }}
-                onLoadedMetadata={(e) => {
-                  console.log('[Video] Metadata loaded successfully');
-                }}
-              >
-                <source 
-                  src={selectedVideo.url} 
-                  type={selectedVideo.mimeType}
-                />
-                {/* Fallback برای مرورگرهایی که از فرمت پشتیبانی نمی‌کنند */}
-                <p className="text-white p-4">
-                  مرورگر شما از پخش این ویدیو پشتیبانی نمی‌کند.
-                  <br />
-                  <a 
-                    href={selectedVideo.url} 
-                    download 
-                    className="text-blue-400 underline"
-                  >
-                    دانلود ویدیو
-                  </a>
+          
+          {videoDownloading ? (
+            <div className="p-8 flex flex-col items-center gap-4">
+              <div className="w-full max-w-md">
+                <div className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="absolute right-0 top-0 h-full bg-primary transition-all duration-300 rounded-full"
+                    style={{ width: `${videoDownloadProgress}%` }}
+                  />
+                </div>
+                <p className="text-center mt-3 text-sm text-muted-foreground">
+                  {videoDownloadProgress}% دانلود شد
                 </p>
-              </video>
-            )}
-          </div>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                لطفاً صبر کنید، ویدیو در حال دانلود است...
+              </p>
+            </div>
+          ) : (
+            selectedVideo && (
+              <div className="relative w-full bg-black" style={{ paddingTop: '56.25%' }}>
+                <video
+                  key={selectedVideo.url}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="absolute inset-0 w-full h-full"
+                  style={{ objectFit: 'contain' }}
+                  onError={(e) => {
+                    console.error('[Video] Playback error:', e);
+                    toast({
+                      title: 'خطا',
+                      description: 'پخش ویدیو با مشکل مواجه شد',
+                      variant: 'destructive'
+                    });
+                  }}
+                >
+                  <source 
+                    src={selectedVideo.url} 
+                    type={selectedVideo.mimeType}
+                  />
+                  <div className="text-white p-4 text-center">
+                    <p className="mb-3">مرورگر شما از پخش این ویدیو پشتیبانی نمی‌کند.</p>
+                    <Button asChild variant="secondary">
+                      <a 
+                        href={selectedVideo.url} 
+                        download="video.mp4"
+                        className="inline-block"
+                      >
+                        دانلود ویدیو
+                      </a>
+                    </Button>
+                  </div>
+                </video>
+              </div>
+            )
+          )}
         </DialogContent>
       </Dialog>
     </div>
