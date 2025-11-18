@@ -33,6 +33,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [projectsWithMedia, setProjectsWithMedia] = useState<ProjectWithMedia[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
@@ -49,6 +50,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     
     try {
       setUploading(true);
+      setUploadProgress(0);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({ title: 'خطا', description: 'برای آپلود باید وارد شوید', variant: 'destructive' });
@@ -56,8 +58,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       }
 
       const newMedia: HierarchyMedia[] = [];
-
-      for (const file of Array.from(files)) {
+      const fileArray = Array.from(files);
+      
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
         // قبول تصویر و ویدیو
         const isImage = file.type.startsWith('image/');
         const isVideo = file.type.startsWith('video/');
@@ -76,9 +80,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         }
         const filePath = `${user.id}/hierarchy/${selectedProject.id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
 
+        // آپلود با نمایش درصد پیشرفت
         const { error: uploadErr } = await supabase.storage
           .from('order-media')
-          .upload(filePath, file, { contentType: file.type, upsert: false, cacheControl: '3600' });
+          .upload(filePath, file, { 
+            contentType: file.type, 
+            upsert: false, 
+            cacheControl: '3600'
+          });
+        
+        // محاسبه درصد کلی بر اساس تعداد فایل‌ها
+        const baseProgress = (i / fileArray.length) * 100;
+        const fileProgress = ((i + 1) / fileArray.length) * 100;
+        setUploadProgress(Math.round(fileProgress));
         
         if (uploadErr) {
           console.error('upload error', uploadErr);
@@ -123,6 +137,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       toast({ title: 'خطا در آپلود', description: err?.message || 'مشکل در بارگذاری تصویر', variant: 'destructive' });
     } finally {
       setUploading(false);
+      setUploadProgress(0);
       if (e.target) e.target.value = '';
     }
   };
@@ -459,9 +474,24 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               </div>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <Button size="sm" onClick={handleAddImage} disabled={uploading} className="flex-1">
-                {uploading ? 'در حال آپلود…' : 'افزودن تصویر / فیلم'}
-              </Button>
+              <div className="flex-1 relative">
+                <Button 
+                  size="sm" 
+                  onClick={handleAddImage} 
+                  disabled={uploading} 
+                  className="w-full relative overflow-hidden"
+                >
+                  {uploading && (
+                    <div 
+                      className="absolute right-0 top-0 bottom-0 bg-primary/20 transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  )}
+                  <span className="relative z-10">
+                    {uploading ? `در حال آپلود... ${uploadProgress}%` : 'افزودن تصویر / فیلم'}
+                  </span>
+                </Button>
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
