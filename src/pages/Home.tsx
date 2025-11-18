@@ -328,7 +328,7 @@ const Home = () => {
               <div className="flex justify-center mt-6">
                 <button
                   onClick={() => setShowGlobe(true)}
-                  className="group relative w-[160px] h-[160px] transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-0"
+                  className="group relative w-[112px] h-[112px] transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-0"
                   aria-label="نمایش پروژه‌ها روی کره زمین"
                 >
                   {/* Globe image with gentle swing animation */}
