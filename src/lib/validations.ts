@@ -192,7 +192,7 @@ export const locationSchema = z.object({
 export const orderEditSchema = z.object({
   address: z.string()
     .trim()
-    .min(10, { message: 'آدرس باید حداقل 10 کاراکتر باشد' })
+    .min(5, { message: 'آدرس باید حداقل 5 کاراکتر باشد' })
     .max(500, { message: 'آدرس نباید بیش از 500 کاراکتر باشد' })
     .transform(sanitizeHtml),
   detailed_address: z.string()
@@ -218,7 +218,7 @@ export const orderEditSchema = z.object({
 export const scaffoldingFormSchema = z.object({
   detailedAddress: z.string()
     .trim()
-    .min(10, { message: 'آدرس باید حداقل 10 کاراکتر باشد' })
+    .min(5, { message: 'آدرس باید حداقل 5 کاراکتر باشد' })
     .max(500, { message: 'آدرس نباید بیش از 500 کاراکتر باشد' })
     .transform(sanitizeHtml),
   dimensions: z.array(orderDimensionSchema)
