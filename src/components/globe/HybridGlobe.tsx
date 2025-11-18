@@ -385,36 +385,39 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
-      {/* دکمه بازگشت */}
-      <Button
-        variant="default"
-        size="lg"
-        onClick={onClose}
-        className="absolute top-6 right-6 z-[100] shadow-2xl border-2 border-primary/20"
-      >
-        <ArrowRight className="h-5 w-5 ml-2" />
-        <span className="font-semibold">بازگشت</span>
-      </Button>
+      {/* لایه‌ی روی نقشه برای کنترل‌ها */}
+      <div className="absolute inset-0 z-[2000] pointer-events-none">
+        {/* دکمه بازگشت */}
+        <Button
+          variant="default"
+          size="lg"
+          onClick={onClose}
+          className="pointer-events-auto absolute top-6 right-6 shadow-2xl border-2 border-primary/20"
+        >
+          <ArrowRight className="h-5 w-5 ml-2" />
+          <span className="font-semibold">بازگشت</span>
+        </Button>
 
-      {/* کارت تعداد پروژه‌ها */}
-      <Card className="absolute top-6 left-6 z-[100] bg-card shadow-2xl border-2 border-primary/20 p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <MapPin className="h-6 w-6 text-primary" />
+        {/* کارت تعداد پروژه‌ها */}
+        <Card className="pointer-events-auto absolute top-6 left-6 bg-card shadow-2xl border-2 border-primary/20 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <MapPin className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-2xl font-bold text-primary">{projectsWithMedia.length}</span>
+              <span className="text-sm text-muted-foreground">پروژه فعال</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-bold text-primary">{projectsWithMedia.length}</span>
-            <span className="text-sm text-muted-foreground">پروژه فعال</span>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
       {/* نقشه */}
       <div ref={mapContainer} className="w-full h-full" />
 
       {/* کارت اطلاعات پروژه انتخاب شده */}
       {selectedProject && (
-        <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-card shadow-2xl p-4 z-[100] border-2 border-primary/20">
+        <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-card shadow-2xl p-4 z-[2000] border-2 border-primary/20 pointer-events-auto">
           <div className="space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
