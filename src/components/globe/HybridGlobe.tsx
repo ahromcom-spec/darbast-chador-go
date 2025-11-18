@@ -36,7 +36,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string; mimeType: string } | null>(null);
   
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
@@ -161,7 +161,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         // تصاویر و ویدیوهای متصل مستقیم به پروژه‌های hierarchy
         const { data: phMedia } = await supabase
           .from('project_hierarchy_media')
-          .select('id, hierarchy_project_id, file_path, file_type, created_at')
+          .select('id, hierarchy_project_id, file_path, file_type, created_at, mime_type')
           .in('hierarchy_project_id', projectIds)
           .in('file_type', ['image', 'video'])
           .order('created_at', { ascending: false });
@@ -174,12 +174,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           .select('id, hierarchy_project_id')
           .in('hierarchy_project_id', projectIds);
 
-        let pmMedia: { project_id: string; file_path: string; file_type: string; created_at: string }[] = [];
+        let pmMedia: { project_id: string; file_path: string; file_type: string; created_at: string; mime_type?: string }[] = [];
         if (v3 && v3.length > 0) {
           const v3Ids = v3.map(x => x.id);
           const { data } = await supabase
             .from('project_media')
-            .select('project_id, file_path, file_type, created_at')
+            .select('project_id, file_path, file_type, created_at, mime_type')
             .in('project_id', v3Ids)
             .eq('file_type', 'image')
             .order('created_at', { ascending: false });
@@ -195,7 +195,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         phMedia?.forEach(m => {
           const pid = m.hierarchy_project_id;
           if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
-          mediaByProject.get(pid)!.push({ id: m.id, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at });
+          mediaByProject.get(pid)!.push({ id: m.id, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
         });
 
         // از جدول قدیمی
@@ -203,7 +203,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           const pid = v3?.find(v => v.id === m.project_id)?.hierarchy_project_id;
           if (!pid) return;
           if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
-          mediaByProject.get(pid)!.push({ id: `${m.project_id}-${m.created_at}`, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at });
+          mediaByProject.get(pid)!.push({ id: `${m.project_id}-${m.created_at}`, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
         });
 
         // ترکیب نهایی و محدود کردن به ۳ تصویر جدید
@@ -224,22 +224,50 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         setProjectsWithMedia(projectsWithMediaData);
         
-        // تابع‌های global برای باز کردن ویدیو با URL امضا شده
-        (window as any).openProjectVideoPath = async (filePath) => {
+        // تابع global برای باز کردن ویدیو با URL امضاشده و MIME type صحیح
+        (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
+          console.log('[Video] Opening video:', filePath, 'MIME:', mimeType);
+          
           try {
+            // همیشه از signed URL استفاده کنیم برای امنیت و سازگاری بهتر
             const { data, error } = await supabase.storage
               .from('order-media')
-              .createSignedUrl(filePath, 60 * 60); // 1h
-            if (!error && data?.signedUrl) {
-              setSelectedVideo(data.signedUrl);
-            } else {
-              // fallback به URL عمومی
-              const pub = supabase.storage.from('order-media').getPublicUrl(filePath).data.publicUrl;
-              setSelectedVideo(pub);
+              .createSignedUrl(filePath, 3600); // 1 ساعت اعتبار
+            
+            if (error) {
+              console.error('[Video] Signed URL error:', error);
+              throw error;
             }
-          } catch (e) {
-            const pub = supabase.storage.from('order-media').getPublicUrl(filePath).data.publicUrl;
-            setSelectedVideo(pub);
+            
+            if (data?.signedUrl) {
+              console.log('[Video] Signed URL created successfully');
+              setSelectedVideo({ 
+                url: data.signedUrl, 
+                mimeType: mimeType || 'video/mp4' 
+              });
+            } else {
+              console.error('[Video] No signed URL returned');
+              // fallback: تلاش با URL عمومی
+              const publicUrl = supabase.storage
+                .from('order-media')
+                .getPublicUrl(filePath).data.publicUrl;
+              console.log('[Video] Fallback to public URL:', publicUrl);
+              setSelectedVideo({ 
+                url: publicUrl, 
+                mimeType: mimeType || 'video/mp4' 
+              });
+            }
+          } catch (err) {
+            console.error('[Video] Error loading video:', err);
+            // آخرین fallback
+            const publicUrl = supabase.storage
+              .from('order-media')
+              .getPublicUrl(filePath).data.publicUrl;
+            console.log('[Video] Final fallback to public URL:', publicUrl);
+            setSelectedVideo({ 
+              url: publicUrl, 
+              mimeType: mimeType || 'video/mp4' 
+            });
           }
         };
       } catch (error) {
@@ -394,13 +422,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                  
                   return isVideo 
                     ? `<div 
-                        onclick=\"window.openProjectVideoPath('${m.file_path.replace(/'/g, "\\'")}')\"
+                        onclick=\"window.openProjectVideoPath('${m.file_path.replace(/'/g, "\\'")}', '${m.mime_type || 'video/mp4'}')\"
                         style=\"width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; background: #000; display: flex; align-items: center; justify-content: center; position: relative;\"
-                      \u003e
-                        \u003csvg style=\"width:24px;height:24px;color:#fff;opacity:0.9;\" fill=\"currentColor\" viewBox=\"0 0 24 24\"\u003e
-                          \u003cpath d=\"M8 5v14l11-7z\"/\u003e
-                        \u003c/svg\u003e
-                        \u003cspan style=\"position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;\"\u003eویدیو\u003c/span\u003e
+                      >
+                        <svg style=\"width:24px;height:24px;color:#fff;opacity:0.9;\" fill=\"currentColor\" viewBox=\"0 0 24 24\">
+                          <path d=\"M8 5v14l11-7z\"/>
+                        </svg>
+                        <span style=\"position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;\">ویدیو</span>
                      </div>`
                    : `<img 
                        src="${url1}" 
@@ -534,21 +562,51 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         </Card>
       )}
 
-      {/* دیالوگ نمایش ویدیو */}
+      {/* دیالوگ نمایش ویدیو با source tag و MIME type صحیح */}
       <Dialog open={!!selectedVideo} onOpenChange={(open) => !open && setSelectedVideo(null)}>
         <DialogContent className="max-w-4xl w-[95vw] p-0">
           <DialogHeader className="p-4 pb-0">
             <DialogTitle className="text-right">پخش ویدیو</DialogTitle>
           </DialogHeader>
-          <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+          <div className="relative w-full bg-black" style={{ paddingTop: '56.25%' }}>
             {selectedVideo && (
               <video
-                src={selectedVideo}
+                key={selectedVideo.url}
                 controls
                 autoPlay
+                playsInline
                 className="absolute inset-0 w-full h-full"
                 style={{ objectFit: 'contain' }}
-              />
+                onError={(e) => {
+                  console.error('[Video] Playback error:', e);
+                  const videoEl = e.currentTarget;
+                  console.error('[Video] Error details:', {
+                    networkState: videoEl.networkState,
+                    readyState: videoEl.readyState,
+                    error: videoEl.error
+                  });
+                }}
+                onLoadedMetadata={(e) => {
+                  console.log('[Video] Metadata loaded successfully');
+                }}
+              >
+                <source 
+                  src={selectedVideo.url} 
+                  type={selectedVideo.mimeType}
+                />
+                {/* Fallback برای مرورگرهایی که از فرمت پشتیبانی نمی‌کنند */}
+                <p className="text-white p-4">
+                  مرورگر شما از پخش این ویدیو پشتیبانی نمی‌کند.
+                  <br />
+                  <a 
+                    href={selectedVideo.url} 
+                    download 
+                    className="text-blue-400 underline"
+                  >
+                    دانلود ویدیو
+                  </a>
+                </p>
+              </video>
             )}
           </div>
         </DialogContent>
