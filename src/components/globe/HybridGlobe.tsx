@@ -224,50 +224,52 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         setProjectsWithMedia(projectsWithMediaData);
         
-        // تابع global برای باز کردن ویدیو با URL امضاشده و MIME type صحیح
+        // تابع global برای باز کردن ویدیو با URL امضاشده و MIME type صحیح (با استراتژی Blob برای سازگاری کامل)
         (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
-          console.log('[Video] Opening video:', filePath, 'MIME:', mimeType);
-          
-          try {
-            // همیشه از signed URL استفاده کنیم برای امنیت و سازگاری بهتر
+          console.log('[Video] Opening video (blob strategy):', filePath, 'MIME hint:', mimeType);
+
+          const getSigned = async (): Promise<string | undefined> => {
             const { data, error } = await supabase.storage
               .from('order-media')
-              .createSignedUrl(filePath, 3600); // 1 ساعت اعتبار
-            
+              .createSignedUrl(filePath, 3600); // 1 ساعت
             if (error) {
-              console.error('[Video] Signed URL error:', error);
-              throw error;
+              console.warn('[Video] Signed URL error:', error);
+              return undefined;
             }
-            
-            if (data?.signedUrl) {
-              console.log('[Video] Signed URL created successfully');
-              setSelectedVideo({ 
-                url: data.signedUrl, 
-                mimeType: mimeType || 'video/mp4' 
-              });
-            } else {
-              console.error('[Video] No signed URL returned');
-              // fallback: تلاش با URL عمومی
-              const publicUrl = supabase.storage
-                .from('order-media')
-                .getPublicUrl(filePath).data.publicUrl;
-              console.log('[Video] Fallback to public URL:', publicUrl);
-              setSelectedVideo({ 
-                url: publicUrl, 
-                mimeType: mimeType || 'video/mp4' 
-              });
+            return data?.signedUrl;
+          };
+
+          const getPublic = (): string =>
+            supabase.storage.from('order-media').getPublicUrl(filePath).data.publicUrl;
+
+          try {
+            let url = await getSigned();
+            if (!url) url = getPublic();
+
+            // دانلود فایل و ساخت Blob URL برای جلوگیری از مشکلات MIME/CORS/Codec
+            let blob: Blob | null = null;
+            try {
+              const res = await fetch(url);
+              if (!res.ok) throw new Error('HTTP ' + res.status);
+              blob = await res.blob();
+            } catch (e) {
+              console.warn('[Video] Direct fetch failed, trying public URL', e);
+              const pub = getPublic();
+              const res2 = await fetch(pub);
+              if (!res2.ok) throw new Error('HTTP ' + res2.status);
+              blob = await res2.blob();
             }
+
+            const finalType = (blob && blob.type && blob.type !== '')
+              ? blob.type
+              : (mimeType && mimeType !== '' ? mimeType : 'video/mp4');
+
+            const objectUrl = URL.createObjectURL(new Blob([blob!], { type: finalType }));
+            setSelectedVideo({ url: objectUrl, mimeType: finalType });
           } catch (err) {
-            console.error('[Video] Error loading video:', err);
-            // آخرین fallback
-            const publicUrl = supabase.storage
-              .from('order-media')
-              .getPublicUrl(filePath).data.publicUrl;
-            console.log('[Video] Final fallback to public URL:', publicUrl);
-            setSelectedVideo({ 
-              url: publicUrl, 
-              mimeType: mimeType || 'video/mp4' 
-            });
+            console.error('[Video] Error loading video blob:', err);
+            const publicUrl = getPublic();
+            setSelectedVideo({ url: publicUrl, mimeType: mimeType || 'video/mp4' });
           }
         };
       } catch (error) {
