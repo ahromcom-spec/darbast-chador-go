@@ -39,6 +39,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; mimeType: string } | null>(null);
   const [videoDownloading, setVideoDownloading] = useState(false);
   const [videoDownloadProgress, setVideoDownloadProgress] = useState(0);
+  const [downloadedBlob, setDownloadedBlob] = useState<Blob | null>(null);
+  const [videoTranscoding, setVideoTranscoding] = useState(false);
+  const [videoTranscodeProgress, setVideoTranscodeProgress] = useState(0);
   
   
   const { projects, loading } = useProjectsHierarchy();
@@ -292,7 +295,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             const objectUrl = URL.createObjectURL(blob);
             
             console.log('[Video] Download complete, blob created');
-            setSelectedVideo({ url: objectUrl, mimeType: mimeType || 'video/mp4' });
+            setDownloadedBlob(blob);
+            setSelectedVideo({ url: objectUrl, mimeType: mimeType || '' });
             setVideoDownloading(false);
             
             toast({

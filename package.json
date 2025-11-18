@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
     "@hookform/resolvers": "^3.10.0",
     "@mapbox/mapbox-gl-language": "^1.0.1",
     "@mapbox/mapbox-gl-rtl-text": "^0.3.0",
