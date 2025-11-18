@@ -14,6 +14,7 @@ interface HierarchyMedia {
   id: string;
   file_path: string;
   file_type: string;
+  mime_type?: string;
   created_at: string;
 }
 
@@ -111,7 +112,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             file_size: file.size,
             user_id: user.id,
           })
-          .select('id, file_path, file_type, created_at')
+          .select('id, file_path, file_type, created_at, mime_type')
           .single();
 
         if (insertErr) {
