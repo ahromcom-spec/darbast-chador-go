@@ -58,7 +58,22 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const newMedia: HierarchyMedia[] = [];
 
       for (const file of Array.from(files)) {
-        if (!file.type.startsWith('image/')) continue;
+        // قبول تصویر و ویدیو
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        
+        if (!isImage && !isVideo) continue;
+        
+        // بررسی حجم فایل (حداکثر 20MB برای ویدیو، 5MB برای تصویر)
+        const maxSize = isVideo ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+          toast({ 
+            title: 'خطا', 
+            description: isVideo ? 'حجم ویدیو نباید بیشتر از 20 مگابایت باشد' : 'حجم تصویر نباید بیشتر از 5 مگابایت باشد', 
+            variant: 'destructive' 
+          });
+          continue;
+        }
         const filePath = `${user.id}/hierarchy/${selectedProject.id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
 
         const { error: uploadErr } = await supabase.storage
@@ -75,7 +90,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           .insert({
             hierarchy_project_id: selectedProject.id,
             file_path: filePath,
-            file_type: 'image',
+            file_type: isVideo ? 'video' : 'image',
             mime_type: file.type,
             file_size: file.size,
             user_id: user.id,
@@ -99,9 +114,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           : p
         ));
         setSelectedProject(prev => prev ? { ...prev, media: [...newMedia, ...(prev.media || [])].slice(0, 3) } : prev);
-        toast({ title: 'موفق', description: `${newMedia.length} تصویر اضافه شد.` });
+        toast({ title: 'موفق', description: `${newMedia.length} فایل اضافه شد.` });
       } else {
-        toast({ title: 'هیچ تصویری اضافه نشد', description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', variant: 'destructive' });
+        toast({ title: 'هیچ فایلی اضافه نشد', description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', variant: 'destructive' });
       }
     } catch (err: any) {
       console.error('upload fatal', err);
@@ -430,12 +445,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             </div>
             <div className="flex items-center justify-between gap-2">
               <Button size="sm" onClick={handleAddImage} disabled={uploading} className="flex-1">
-                {uploading ? 'در حال آپلود…' : 'افزودن تصویر'}
+                {uploading ? 'در حال آپلود…' : 'افزودن تصویر / فیلم'}
               </Button>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
                 multiple
                 onChange={handleFileChange}
                 className="hidden"
