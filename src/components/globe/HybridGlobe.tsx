@@ -267,9 +267,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         setProjectsWithMedia(projectsWithMediaData);
         
-        // تابع global برای باز کردن ویدیو (بدون دانلود دستی، با استریم مستقیم)
+        // تابع global برای باز کردن ویدیو - ابتدا لینک را می‌گیریم، سپس همیشه به blob تبدیل می‌کنیم
         (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
-          console.log('[Video] Opening direct video URL:', filePath, mimeType);
+          console.log('[Video] Opening direct video URL (with blob fetch):', filePath, mimeType);
           setVideoLoading(true);
           setSelectedVideo(null);
 
@@ -278,19 +278,55 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               .from('order-media')
               .createSignedUrl(filePath, 3600);
 
-            const videoUrl = signedError 
+            const directUrl = signedError
               ? supabase.storage.from('order-media').getPublicUrl(filePath).data.publicUrl
               : signedData.signedUrl;
 
-            console.log('[Video] Video URL ready for playback');
-            setSelectedVideo({ url: videoUrl, mimeType: mimeType || 'video/mp4' });
+            console.log('[Video] Direct URL obtained, fetching as blob...');
+            const res = await fetch(directUrl);
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}`);
+            }
+
+            const blob = await res.blob();
+            const objectUrl = URL.createObjectURL(blob);
+
+            // ذخیره آدرس blob برای آزادسازی بعدی
+            setBlobUrl(prev => {
+              if (prev) URL.revokeObjectURL(prev);
+              return objectUrl;
+            });
+            setVideoSrc(objectUrl);
+            setSelectedVideo({ url: objectUrl, mimeType: mimeType || 'video/mp4' });
+
+            console.log('[Video] Blob URL ready for playback');
           } catch (err) {
-            console.error('[Video] Open failed:', err);
+            console.error('[Video] Open with blob failed, falling back to direct URL:', err);
             toast({
               title: 'خطا',
-              description: 'دریافت ویدیو با مشکل مواجه شد',
-              variant: 'destructive'
+              description: 'در دریافت و آماده‌سازی ویدیو مشکل رخ داد. تلاش برای پخش مستقیم...',
+              variant: 'destructive',
             });
+
+            try {
+              const { data: signedData, error: signedError } = await supabase.storage
+                .from('order-media')
+                .createSignedUrl(filePath, 3600);
+
+              const fallbackUrl = signedError
+                ? supabase.storage.from('order-media').getPublicUrl(filePath).data.publicUrl
+                : signedData.signedUrl;
+
+              setVideoSrc(fallbackUrl);
+              setSelectedVideo({ url: fallbackUrl, mimeType: mimeType || 'video/mp4' });
+            } catch (e2) {
+              console.error('[Video] Fallback direct URL also failed:', e2);
+              toast({
+                title: 'خطای جدی در پخش ویدیو',
+                description: 'امکان دسترسی به فایل ویدیو وجود ندارد.',
+                variant: 'destructive',
+              });
+            }
           } finally {
             setVideoLoading(false);
           }
