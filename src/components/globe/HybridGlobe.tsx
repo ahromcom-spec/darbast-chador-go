@@ -631,20 +631,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   </Button>
                 </div>
               </div>
-                  <div className="text-white p-4 text-center">
-                    <p className="mb-3">مرورگر شما از پخش این ویدیو پشتیبانی نمی‌کند.</p>
-                    <Button asChild variant="secondary">
-                      <a 
-                        href={selectedVideo.url} 
-                        download="video.mp4"
-                        className="inline-block"
-                      >
-                        دانلود ویدیو
-                      </a>
-                    </Button>
-                  </div>
-                </video>
-              </div>
             )
           )}
         </DialogContent>
