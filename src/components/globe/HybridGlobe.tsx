@@ -39,54 +39,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; mimeType: string } | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
 
-// Transcode helper and auto-run when needed
-  const transcodeDownloaded = async (force: boolean = false) => {
-    if (!downloadedBlob) return;
-    const mime = downloadedBlob.type || selectedVideo?.mimeType || '';
-    if (!force && mime && canBrowserPlay(mime)) {
-      setSelectedVideo(prev => (prev ? { ...prev, mimeType: mime || 'video/mp4' } : prev));
-      return;
-    }
-    try {
-      setVideoTranscoding(true);
-      setVideoTranscodeProgress(0);
-      const mod = await import('@ffmpeg/ffmpeg');
-      const fetchFile: any = (mod as any).fetchFile;
-      const ffmpeg = await ensureFFmpeg();
-      const inputName = `input.${(mime.split('/')[1] || 'bin').split(';')[0]}`;
-      ffmpeg.FS('writeFile', inputName, await fetchFile(downloadedBlob));
-      const outputName = 'output.mp4';
-      await ffmpeg.run(
-        '-i', inputName,
-        '-c:v', 'libx264',
-        '-preset', 'veryfast',
-        '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
-        '-movflags', 'faststart',
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-f', 'mp4', outputName
-      );
-      const data = ffmpeg.FS('readFile', outputName);
-      try { ffmpeg.FS('unlink', inputName); } catch {}
-      try { ffmpeg.FS('unlink', outputName); } catch {}
-      const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
-      if (mp4Blob.size > 50 * 1024 * 1024) {
-        toast({ title: 'خطا', description: 'حجم نسخه تبدیل‌شده بیش از 50 مگابایت است', variant: 'destructive' });
-        return;
-      }
-      const url = URL.createObjectURL(mp4Blob);
-      setSelectedVideo({ url, mimeType: 'video/mp4' });
-    } catch (e) {
-      console.error('[Video] Transcode failed', e);
-      toast({ title: 'خطا', description: 'تبدیل ویدیو به MP4 با مشکل مواجه شد', variant: 'destructive' });
-    } finally {
-      setVideoTranscoding(false);
-    }
-  };
-
-  useEffect(() => { if (downloadedBlob) { transcodeDownloaded(false); } }, [downloadedBlob]);
-  
-  
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
 
