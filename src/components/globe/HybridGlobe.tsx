@@ -612,23 +612,25 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             selectedVideo && (
               <div className="relative w-full bg-black" style={{ paddingTop: '56.25%' }}>
                 <video
-                  key={(videoSrc || selectedVideo.url) as string}
-                  src={(videoSrc || selectedVideo.url) as string}
+                  key={selectedVideo.url}
+                  src={selectedVideo.url}
                   controls
                   autoPlay
                   playsInline
                   className="absolute inset-0 w-full h-full"
                   style={{ objectFit: 'contain' }}
                   preload="metadata"
-                  crossOrigin="anonymous"
-                  onError={() => {
-                    void fallbackToBlob();
-                  }}
                 >
-                  <source 
-                    src={(videoSrc || selectedVideo.url) as string} 
-                    type={selectedVideo.mimeType || 'video/mp4'}
-                  />
+                  مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                </video>
+                <div className="absolute bottom-4 left-4 flex gap-2">
+                  <Button asChild size="sm" variant="secondary">
+                    <a href={selectedVideo.url} target="_blank" rel="noreferrer">
+                      باز کردن در تب جدید
+                    </a>
+                  </Button>
+                </div>
+              </div>
                   <div className="text-white p-4 text-center">
                     <p className="mb-3">مرورگر شما از پخش این ویدیو پشتیبانی نمی‌کند.</p>
                     <Button asChild variant="secondary">
