@@ -37,36 +37,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; mimeType: string } | null>(null);
-  const [videoDownloading, setVideoDownloading] = useState(false);
-  const [videoDownloadProgress, setVideoDownloadProgress] = useState(0);
-  const [downloadedBlob, setDownloadedBlob] = useState<Blob | null>(null);
-  const [videoTranscoding, setVideoTranscoding] = useState(false);
-const [videoTranscodeProgress, setVideoTranscodeProgress] = useState(0);
-  
-  // FFmpeg setup (lazy loaded)
-  const ffmpegRef = useRef<any>(null);
-  const ensureFFmpeg = async () => {
-    if (!ffmpegRef.current) {
-      const mod = await import('@ffmpeg/ffmpeg');
-      const createFFmpeg = (mod as any).createFFmpeg;
-      const ffmpeg = createFFmpeg({
-        log: false,
-        progress: ({ ratio }: any) => setVideoTranscodeProgress(Math.round((ratio || 0) * 100)),
-      });
-      await ffmpeg.load();
-      ffmpegRef.current = ffmpeg;
-    }
-    return ffmpegRef.current;
-  };
-
-  const canBrowserPlay = (mime?: string) => {
-    try {
-      const v = document.createElement('video');
-      return !!(mime && v.canPlayType(mime));
-    } catch {
-      return false;
-    }
-  };
+  const [videoLoading, setVideoLoading] = useState(false);
 
 // Transcode helper and auto-run when needed
   const transcodeDownloaded = async (force: boolean = false) => {
@@ -302,88 +273,32 @@ const [videoTranscodeProgress, setVideoTranscodeProgress] = useState(0);
         
         setProjectsWithMedia(projectsWithMediaData);
         
-        // تابع global برای باز کردن ویدیو با دانلود پیشرونده
+        // تابع global برای باز کردن ویدیو (بدون دانلود دستی، با استریم مستقیم)
         (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
-          console.log('[Video] Starting progressive download:', filePath);
-          setVideoDownloading(true);
-          setVideoDownloadProgress(0);
+          console.log('[Video] Opening direct video URL:', filePath, mimeType);
+          setVideoLoading(true);
           setSelectedVideo(null);
 
           try {
-            // دریافت signed URL
             const { data: signedData, error: signedError } = await supabase.storage
               .from('order-media')
               .createSignedUrl(filePath, 3600);
 
-            const downloadUrl = signedError 
+            const videoUrl = signedError 
               ? supabase.storage.from('order-media').getPublicUrl(filePath).data.publicUrl
               : signedData.signedUrl;
 
-            console.log('[Video] Download URL obtained');
-
-            // دانلود با نمایش پیشرفت
-            const response = await fetch(downloadUrl);
-            
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status}`);
-            }
-
-            const contentLength = response.headers.get('content-length');
-            const total = contentLength ? parseInt(contentLength, 10) : 0;
-            
-            // بررسی حجم فایل (حداکثر 50MB)
-            if (total > 50 * 1024 * 1024) {
-              toast({
-                title: 'خطا',
-                description: 'حجم ویدیو بیش از 50 مگابایت است',
-                variant: 'destructive'
-              });
-              setVideoDownloading(false);
-              return;
-            }
-
-            const reader = response.body?.getReader();
-            if (!reader) throw new Error('Cannot read response body');
-
-            const chunks: BlobPart[] = [];
-            let receivedLength = 0;
-
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              chunks.push(value);
-              receivedLength += value.length;
-              
-              if (total > 0) {
-                const progress = Math.round((receivedLength / total) * 100);
-                setVideoDownloadProgress(progress);
-                console.log(`[Video] Download progress: ${progress}%`);
-              }
-            }
-
-            // ترکیب chunks و ساخت Blob
-            const blob = new Blob(chunks, { type: mimeType || 'video/mp4' });
-            const objectUrl = URL.createObjectURL(blob);
-            
-            console.log('[Video] Download complete, blob created');
-            setDownloadedBlob(blob);
-            setSelectedVideo({ url: objectUrl, mimeType: (blob.type || mimeType || 'video/mp4') });
-            setVideoDownloading(false);
-            
-            toast({
-              title: 'موفق',
-              description: 'ویدیو با موفقیت دانلود شد'
-            });
-
+            console.log('[Video] Video URL ready for playback');
+            setSelectedVideo({ url: videoUrl, mimeType: mimeType || 'video/mp4' });
           } catch (err) {
-            console.error('[Video] Download failed:', err);
-            setVideoDownloading(false);
+            console.error('[Video] Open failed:', err);
             toast({
               title: 'خطا',
-              description: 'دانلود ویدیو با مشکل مواجه شد',
+              description: 'دریافت ویدیو با مشکل مواجه شد',
               variant: 'destructive'
             });
+          } finally {
+            setVideoLoading(false);
           }
         };
       } catch (error) {
@@ -678,42 +593,24 @@ const [videoTranscodeProgress, setVideoTranscodeProgress] = useState(0);
         </Card>
       )}
 
-      {/* دیالوگ دانلود و پخش ویدیو */}
-      <Dialog open={videoDownloading || videoTranscoding || !!selectedVideo} onOpenChange={(open) => {
+      {/* دیالوگ پخش ویدیو */}
+      <Dialog open={videoLoading || !!selectedVideo} onOpenChange={(open) => {
         if (!open) {
-          if (selectedVideo?.url?.startsWith('blob:')) {
-            try { URL.revokeObjectURL(selectedVideo.url); } catch {}
-          }
           setSelectedVideo(null);
-          setDownloadedBlob(null);
-          setVideoDownloading(false);
-          setVideoTranscoding(false);
-          setVideoDownloadProgress(0);
-          setVideoTranscodeProgress(0);
+          setVideoLoading(false);
         }
       }}>
         <DialogContent className="max-w-4xl w-[95vw] p-0">
           <DialogHeader className="p-4 pb-0">
             <DialogTitle className="text-right">
-              {videoDownloading ? 'در حال دانلود ویدیو...' : 'پخش ویدیو'}
+              {videoLoading ? 'در حال آماده‌سازی ویدیو...' : 'پخش ویدیو'}
             </DialogTitle>
           </DialogHeader>
           
-          {videoDownloading ? (
+          {videoLoading ? (
             <div className="p-8 flex flex-col items-center gap-4">
-              <div className="w-full max-w-md">
-                <div className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="absolute right-0 top-0 h-full bg-primary transition-all duration-300 rounded-full"
-                    style={{ width: `${videoDownloadProgress}%` }}
-                  />
-                </div>
-                <p className="text-center mt-3 text-sm text-muted-foreground">
-                  {videoDownloadProgress}% دانلود شد
-                </p>
-              </div>
-              <p className="text-xs text-muted-foreground text-center">
-                لطفاً صبر کنید، ویدیو در حال دانلود است...
+              <p className="text-sm text-muted-foreground text-center">
+                لطفاً صبر کنید، ویدیو در حال آماده‌سازی است...
               </p>
             </div>
           ) : (
@@ -737,7 +634,7 @@ const [videoTranscodeProgress, setVideoTranscodeProgress] = useState(0);
                 >
                   <source 
                     src={selectedVideo.url} 
-                    type={selectedVideo.mimeType}
+                    type={selectedVideo.mimeType || 'video/mp4'}
                   />
                   <div className="text-white p-4 text-center">
                     <p className="mb-3">مرورگر شما از پخش این ویدیو پشتیبانی نمی‌کند.</p>
