@@ -38,9 +38,51 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; mimeType: string } | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
+
+  // مدیریت منبع ویدیو و آزادسازی blob ها
+  useEffect(() => {
+    if (selectedVideo) {
+      setVideoSrc(selectedVideo.url);
+      setVideoLoading(false);
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        setBlobUrl(null);
+      }
+    } else {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        setBlobUrl(null);
+      }
+      setVideoSrc(null);
+    }
+  }, [selectedVideo]);
+
+  // در صورت خطا در پخش مستقیم، به blob تبدیل کنیم تا مشکل Content-Disposition/CORS برطرف شود
+  const fallbackToBlob = async () => {
+    if (!selectedVideo || blobUrl) return;
+    try {
+      setVideoLoading(true);
+      const res = await fetch(selectedVideo.url);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setBlobUrl(url);
+      setVideoSrc(url);
+    } catch (err) {
+      console.error('[Video] Blob fallback failed:', err);
+      toast({
+        title: 'خطا در پخش ویدیو',
+        description: 'در تبدیل ویدیو برای پخش مشکلی رخ داد.',
+        variant: 'destructive',
+      });
+    } finally {
+      setVideoLoading(false);
+    }
+  };
 
   // رویداد انتخاب فایل
   const handleAddImage = () => {
@@ -569,23 +611,21 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             selectedVideo && (
               <div className="relative w-full bg-black" style={{ paddingTop: '56.25%' }}>
                 <video
-                  key={selectedVideo.url}
+                  key={(videoSrc || selectedVideo.url) as string}
+                  src={(videoSrc || selectedVideo.url) as string}
                   controls
                   autoPlay
                   playsInline
                   className="absolute inset-0 w-full h-full"
                   style={{ objectFit: 'contain' }}
-                  onError={(e) => {
-                    console.error('[Video] Playback error:', e);
-                    toast({
-                      title: 'خطا',
-                      description: 'پخش ویدیو با مشکل مواجه شد',
-                      variant: 'destructive'
-                    });
+                  preload="metadata"
+                  crossOrigin="anonymous"
+                  onError={() => {
+                    void fallbackToBlob();
                   }}
                 >
                   <source 
-                    src={selectedVideo.url} 
+                    src={(videoSrc || selectedVideo.url) as string} 
                     type={selectedVideo.mimeType || 'video/mp4'}
                   />
                   <div className="text-white p-4 text-center">
