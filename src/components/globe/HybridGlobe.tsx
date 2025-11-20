@@ -305,24 +305,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         setProjectsWithMedia(projectsWithMediaData);
         
-        // تابع global برای باز کردن ویدیو (مثل صفحه جزئیات سفارش)
+        // تابع global برای باز کردن ویدیو در تب جدید
         (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
           console.log('[Video] openProjectVideoPath called:', filePath, mimeType);
-          setVideoLoading(true);
-          setSelectedVideo(null);
-
           try {
-            // دقیقا مثل OrderDetail: ابتدا آدرس عمومی فایل را می‌گیریم
             const { data } = supabase.storage
               .from('order-media')
               .getPublicUrl(filePath);
 
             const publicUrl = data.publicUrl;
-            console.log('[Video] publicUrl for playback:', publicUrl);
-
-            // این URL به عنوان منبع اولیه ویدیو استفاده می‌شود
-            setVideoSrc(publicUrl);
-            setSelectedVideo({ url: publicUrl, mimeType: mimeType || 'video/mp4' });
+            console.log('[Video] Opening video in new tab:', publicUrl);
+            
+            // باز کردن ویدیو در تب جدید
+            window.open(publicUrl, '_blank');
           } catch (err) {
             console.error('[Video] openProjectVideoPath failed:', err);
             toast({
@@ -330,8 +325,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               description: 'دریافت لینک ویدیو با مشکل مواجه شد.',
               variant: 'destructive',
             });
-          } finally {
-            setVideoLoading(false);
           }
         };
       } catch (error) {
@@ -441,12 +434,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         const isVideo = firstMedia.file_type === 'video';
         const mediaElement = isVideo 
-          ? `<div style="width:100%;height:100%;position:relative;background:#000;display:flex;align-items:center;justify-content:center;">
-              <svg style="width:32px;height:32px;color:#fff;opacity:0.9;" fill="currentColor" viewBox="0 0 24 24">
+          ? `<video style="width:100%;height:100%;object-fit:cover;pointer-events:none;" muted>
+              <source src="${url1}" type="${firstMedia.mime_type || 'video/mp4'}">
+              <source src="${url2}" type="${firstMedia.mime_type || 'video/mp4'}">
+            </video>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
+              <svg style="width:32px;height:32px;color:#fff;opacity:0.9;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z"/>
               </svg>
-              <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>
-            </div>`
+            </div>
+            <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>`
           : `<img src="${url1}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover"
               onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"/>`;
         
@@ -482,16 +479,22 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                    .from('project-media')
                    .getPublicUrl(m.file_path).data.publicUrl;
                  
-                 const isVideo = m.file_type === 'video';
-                 
-                  return isVideo 
+                  const isVideo = m.file_type === 'video';
+                  
+                   return isVideo 
                     ? `<div 
                         onclick=\"window.openProjectVideoPath('${m.file_path.replace(/'/g, "\\'")}', '${m.mime_type || 'video/mp4'}')\"
-                        style=\"width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; background: #000; display: flex; align-items: center; justify-content: center; position: relative;\"
+                        style=\"width: 100%; height: 80px; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; overflow: hidden; position: relative;\"
                       >
-                        <svg style=\"width:24px;height:24px;color:#fff;opacity:0.9;\" fill=\"currentColor\" viewBox=\"0 0 24 24\">
-                          <path d=\"M8 5v14l11-7z\"/>
-                        </svg>
+                        <video style=\"width:100%;height:100%;object-fit:cover;pointer-events:none;\" muted>
+                          <source src="${url1}" type="${m.mime_type || 'video/mp4'}">
+                          <source src="${url2}" type="${m.mime_type || 'video/mp4'}">
+                        </video>
+                        <div style=\"position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;\">
+                          <svg style=\"width:24px;height:24px;color:#fff;opacity:0.9;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));\" fill=\"currentColor\" viewBox=\"0 0 24 24\">
+                            <path d=\"M8 5v14l11-7z\"/>
+                          </svg>
+                        </div>
                         <span style=\"position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;\">ویدیو</span>
                      </div>`
                    : `<img 
