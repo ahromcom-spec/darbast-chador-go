@@ -12,6 +12,7 @@ import { UserPlus, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { assignRoleSchema } from '@/lib/rpcValidation';
 
 export default function StaffManagement() {
   const { toast } = useToast();
@@ -128,10 +129,11 @@ export default function StaffManagement() {
       if (insertError) throw insertError;
 
       // اختصاص نقش سیستمی
-      const { error: roleError } = await supabase.rpc('assign_role_to_user', {
+      const validated = assignRoleSchema.parse({
         _user_id: userId,
         _role: defaultRole,
       });
+      const { error: roleError } = await supabase.rpc('assign_role_to_user', validated as { _user_id: string; _role: string });
 
       if (roleError) {
         console.error('Error assigning role:', roleError);
