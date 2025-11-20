@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { sanitizeHtml } from '@/lib/security';
+import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValidation';
 
 interface Province {
   id: string;
@@ -320,28 +321,30 @@ export default function NewServiceRequestForm() {
       }
 
       // Get or create project in hierarchy
+      const getProjectValidated = getOrCreateProjectSchema.parse({
+        _user_id: user.id,
+        _location_id: locationId,
+        _service_type_id: serviceTypeData.id,
+        _subcategory_id: selectedSubcategory
+      });
       const { data: hierarchyProjectId, error: hierarchyError } = await supabase
-        .rpc('get_or_create_project', {
-          _user_id: user.id,
-          _location_id: locationId,
-          _service_type_id: serviceTypeData.id,
-          _subcategory_id: selectedSubcategory
-        });
+        .rpc('get_or_create_project', getProjectValidated as { _user_id: string; _location_id: string; _service_type_id: string; _subcategory_id: string });
 
       if (hierarchyError) throw hierarchyError;
 
       // ایجاد سفارش به صورت اتمیک و لینک به hierarchy
+      const createValidated = createProjectV3Schema.parse({
+        _customer_id: customer.id,
+        _province_id: selectedProvince,
+        _district_id: selectedDistrict || null,
+        _subcategory_id: selectedSubcategory,
+        _hierarchy_project_id: hierarchyProjectId,
+        _address: sanitizedAddress,
+        _detailed_address: sanitizedDetailedAddress || null,
+        _notes: sanitizedNotes ? JSON.stringify({ raw: sanitizedNotes }) : null
+      });
       const { data: createdRows, error: createError } = await supabase
-        .rpc('create_project_v3', {
-          _customer_id: customer.id,
-          _province_id: selectedProvince,
-          _district_id: selectedDistrict || null,
-          _subcategory_id: selectedSubcategory,
-          _hierarchy_project_id: hierarchyProjectId,
-          _address: sanitizedAddress,
-          _detailed_address: sanitizedDetailedAddress || null,
-          _notes: sanitizedNotes ? { raw: sanitizedNotes } as any : null
-        });
+        .rpc('create_project_v3', createValidated as any);
 
       if (createError) throw createError;
       const createdProject = createdRows?.[0];
