@@ -97,9 +97,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     try {
       setUploading(true);
       setUploadProgress(0);
+      console.log('[Upload] Starting upload process...', files.length, 'files');
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({ title: 'خطا', description: 'برای آپلود باید وارد شوید', variant: 'destructive' });
+        setUploading(false);
+        setUploadProgress(0);
         return;
       }
 
@@ -112,19 +116,37 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         const isImage = file.type.startsWith('image/');
         const isVideo = file.type.startsWith('video/');
         
-        if (!isImage && !isVideo) continue;
+        console.log(`[Upload] File ${i + 1}/${fileArray.length}:`, file.name, 'Type:', file.type, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
         
-        // بررسی حجم فایل (حداکثر 50MB برای ویدیو، 10MB برای تصویر)
-        const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
-        if (file.size > maxSize) {
+        if (!isImage && !isVideo) {
+          console.warn('[Upload] Skipping invalid file type:', file.type);
           toast({ 
-            title: 'خطا', 
-            description: isVideo ? 'حجم ویدیو نباید بیشتر از 50 مگابایت باشد' : 'حجم تصویر نباید بیشتر از 10 مگابایت باشد', 
+            title: 'فایل نامعتبر', 
+            description: `فقط تصویر یا ویدیو قابل آپلود است: ${file.name}`, 
             variant: 'destructive' 
           });
           continue;
         }
+        
+        // بررسی حجم فایل (حداکثر 100MB برای ویدیو، 10MB برای تصویر)
+        const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+          const maxMB = isVideo ? 100 : 10;
+          console.warn('[Upload] File too large:', file.size, 'bytes (max:', maxSize, 'bytes)');
+          toast({ 
+            title: 'حجم فایل بیش از حد', 
+            description: `حداکثر ${maxMB} مگابایت مجاز است: ${file.name}`, 
+            variant: 'destructive' 
+          });
+          continue;
+        }
+        
         const filePath = `${user.id}/hierarchy/${selectedProject.id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+        console.log('[Upload] Uploading to storage:', filePath);
+
+        // محاسبه و نمایش پیشرفت قبل از آپلود
+        const startProgress = (i / fileArray.length) * 100;
+        setUploadProgress(Math.round(startProgress));
 
         // آپلود با نمایش درصد پیشرفت
         const { error: uploadErr } = await supabase.storage
@@ -136,14 +158,20 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           });
         
         // محاسبه درصد کلی بر اساس تعداد فایل‌ها
-        const baseProgress = (i / fileArray.length) * 100;
         const fileProgress = ((i + 1) / fileArray.length) * 100;
         setUploadProgress(Math.round(fileProgress));
         
         if (uploadErr) {
-          console.error('upload error', uploadErr);
+          console.error('[Upload] Storage upload error:', uploadErr);
+          toast({ 
+            title: 'خطا در آپلود', 
+            description: uploadErr.message || 'مشکل در بارگذاری فایل', 
+            variant: 'destructive' 
+          });
           continue;
         }
+        
+        console.log('[Upload] File uploaded successfully, saving to database...');
 
         const { data: insertData, error: insertErr } = await supabase
           .from('project_hierarchy_media')
@@ -159,34 +187,44 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           .single();
 
         if (insertErr) {
-          console.error('insert error', insertErr);
+          console.error('[Upload] Database insert error:', insertErr);
+          toast({ 
+            title: 'خطا در ثبت', 
+            description: insertErr.message || 'مشکل در ذخیره اطلاعات فایل', 
+            variant: 'destructive' 
+          });
           continue;
         }
 
         if (insertData) {
+          console.log('[Upload] File saved successfully:', insertData.id);
           newMedia.push(insertData);
         }
       }
 
+      console.log('[Upload] Upload complete. Total successful:', newMedia.length);
+      
       if (newMedia.length > 0) {
         setProjectsWithMedia(prev => prev.map(p => p.id === selectedProject.id
           ? { ...p, media: [...newMedia, ...(p.media || [])].slice(0, 3) }
           : p
         ));
         setSelectedProject(prev => prev ? { ...prev, media: [...newMedia, ...(prev.media || [])].slice(0, 3) } : prev);
-        toast({ title: 'موفق', description: `${newMedia.length} فایل اضافه شد.` });
+        toast({ title: 'موفق', description: `${newMedia.length} فایل با موفقیت آپلود شد.` });
       } else {
-        toast({ title: 'هیچ فایلی اضافه نشد', description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', variant: 'destructive' });
+        toast({ title: 'آپلود ناموفق', description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', variant: 'destructive' });
       }
     } catch (err: any) {
-      console.error('upload fatal', err);
-      toast({ title: 'خطا در آپلود', description: err?.message || 'مشکل در بارگذاری تصویر', variant: 'destructive' });
+      console.error('[Upload] Fatal error:', err);
+      toast({ title: 'خطا در آپلود', description: err?.message || 'مشکل غیرمنتظره در بارگذاری', variant: 'destructive' });
     } finally {
+      console.log('[Upload] Cleaning up...');
       setUploading(false);
       setUploadProgress(0);
       if (e.target) e.target.value = '';
     }
   };
+
 
   // دریافت عکس‌های پروژه‌ها
   useEffect(() => {
