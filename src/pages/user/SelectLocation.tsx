@@ -97,12 +97,13 @@ export default function SelectLocation() {
 
   const getFormPath = (subcategoryCode: string) => {
     // Map subcategory codes to form paths
+    // فقط کد 10 فرم دارد (اجرای داربست به همراه اجناس و حمل و نقل)
     const formPaths: Record<string, string> = {
-      '01': '/scaffolding/form',
-      '02': '/scaffolding/facade-form',
-      // Add more mappings as needed
+      '10': '/scaffolding/form',  // داربست فلزی - اجرای داربست به همراه اجناس و حمل و نقل
     };
-    return formPaths[subcategoryCode] || '/scaffolding/form';
+    
+    // اگر فرم برای این زیرشاخه موجود نیست، به صفحه "فرم موجود نیست" برود
+    return formPaths[subcategoryCode] || '/form-not-available';
   };
 
   if (!serviceSelection) {
