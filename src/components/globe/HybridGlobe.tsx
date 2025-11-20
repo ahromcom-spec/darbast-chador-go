@@ -1,13 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowRight, MapPin } from 'lucide-react';
+import { ArrowRight, MapPin, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+// Declare global function type
+declare global {
+  interface Window {
+    openProjectVideoPath?: (path: string, mimeType?: string) => void;
+  }
+}
+
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
 interface HierarchyMedia {
@@ -587,7 +595,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       {/* کارت اطلاعات پروژه انتخاب شده */}
       {selectedProject && (
         <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-card shadow-2xl p-4 z-[2000] border-2 border-primary/20 pointer-events-auto">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <h3 className="text-base font-semibold">{selectedProject.title || 'پروژه'}</h3>
@@ -597,6 +605,59 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 )}
               </div>
             </div>
+            
+            {/* نمایش رسانه‌های پروژه */}
+            {selectedProject.media && selectedProject.media.length > 0 && (
+              <div className="w-full h-48 bg-muted rounded-lg overflow-hidden relative">
+                {(() => {
+                  const firstMedia = selectedProject.media[0];
+                  const url1 = supabase.storage.from('project-hierarchy-media').getPublicUrl(firstMedia.file_path).data.publicUrl;
+                  const url2 = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/project-hierarchy-media/${firstMedia.file_path}`;
+                  
+                  if (firstMedia.file_type === 'video') {
+                    return (
+                      <div 
+                        className="w-full h-full cursor-pointer relative group"
+                        onClick={() => {
+                          if (window.openProjectVideoPath) {
+                            window.openProjectVideoPath(firstMedia.file_path, firstMedia.mime_type || 'video/mp4');
+                          }
+                        }}
+                      >
+                        <video 
+                          className="w-full h-full object-cover" 
+                          muted 
+                          preload="metadata"
+                        >
+                          <source src={`${url1}#t=5`} type={firstMedia.mime_type || 'video/mp4'} />
+                          <source src={`${url2}#t=5`} type={firstMedia.mime_type || 'video/mp4'} />
+                        </video>
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-all">
+                          <div className="bg-white/90 rounded-full p-4">
+                            <Play className="h-8 w-8 text-primary" fill="currentColor" />
+                          </div>
+                        </div>
+                        <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                          ویدیو
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <img 
+                        src={url1} 
+                        alt="پیشنمایش پروژه"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = url2;
+                        }}
+                      />
+                    );
+                  }
+                })()}
+              </div>
+            )}
+            
             <div className="flex items-center justify-between gap-2">
               <div className="flex-1 relative">
                 <Button 
