@@ -78,7 +78,7 @@ const Header = () => {
             </div>
             
             {/* Contact Button - Left side (RTL) */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 md:hidden">
               <DropdownMenu open={contactDropdownOpen} onOpenChange={setContactDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity" aria-label="تماس">
@@ -238,7 +238,7 @@ const Header = () => {
             </div>
             
             {/* Contact Dropdown & Notification - Left side (RTL) */}
-            <div className="flex items-center gap-4 justify-start">
+            <div className="hidden md:flex items-center gap-4 justify-start">
               <DropdownMenu open={contactDropdownOpen} onOpenChange={setContactDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity md:-translate-x-6 lg:translate-x-0" aria-label="تماس">
