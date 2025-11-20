@@ -61,24 +61,21 @@ export function NotificationBanner() {
               از سفارشات جدید و به‌روزرسانی‌ها مطلع شوید
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleEnable}
-              size="sm"
-              className="gap-2"
-            >
-              <Bell className="h-3 w-3" />
-              فعال‌سازی
-            </Button>
-            <Button
-              onClick={handleDismiss}
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button
+            onClick={handleEnable}
+            size="sm"
+            className="whitespace-nowrap"
+          >
+            فعال‌سازی
+          </Button>
+          <Button
+            onClick={handleDismiss}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 flex-shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       </Card>
     </div>
