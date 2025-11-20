@@ -22,14 +22,16 @@ const Header = () => {
   // Safe display name with fallback
   const displayName = profile?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
   
-  const [contactDropdownOpen, setContactDropdownOpen] = useState(false);
+  const [contactDropdownOpenMobile, setContactDropdownOpenMobile] = useState(false);
+  const [contactDropdownOpenDesktop, setContactDropdownOpenDesktop] = useState(false);
   const [profileDropdownOpenMobile, setProfileDropdownOpenMobile] = useState(false);
   const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(false);
   
   // بستن تمام منوهای کشویی هنگام تغییر مسیر برای جلوگیری از باقی‌ماندن روی صفحه بعد
   const location = useLocation();
   useEffect(() => {
-    setContactDropdownOpen(false);
+    setContactDropdownOpenMobile(false);
+    setContactDropdownOpenDesktop(false);
     setProfileDropdownOpenMobile(false);
     setProfileDropdownOpenDesktop(false);
   }, [location.pathname]);
@@ -79,7 +81,7 @@ const Header = () => {
             
             {/* Contact Button - Left side (RTL) */}
             <div className="flex items-center gap-1.5 md:hidden">
-              <DropdownMenu open={contactDropdownOpen} onOpenChange={setContactDropdownOpen}>
+              <DropdownMenu open={contactDropdownOpenMobile} onOpenChange={setContactDropdownOpenMobile}>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity" aria-label="تماس">
                     <img 
@@ -239,7 +241,7 @@ const Header = () => {
             
             {/* Contact Dropdown & Notification - Left side (RTL) */}
             <div className="hidden md:flex items-center gap-4 justify-start">
-              <DropdownMenu open={contactDropdownOpen} onOpenChange={setContactDropdownOpen}>
+              <DropdownMenu open={contactDropdownOpenDesktop} onOpenChange={setContactDropdownOpenDesktop}>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity md:-translate-x-6 lg:translate-x-0" aria-label="تماس">
                     <img 
