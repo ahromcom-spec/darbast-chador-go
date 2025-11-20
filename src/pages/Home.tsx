@@ -16,6 +16,8 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import HybridGlobe from '@/components/globe/HybridGlobe';
 import globeIcon from '@/assets/golden-globe.png';
+import { PWAInstallBanner } from '@/components/common/PWAInstallBanner';
+import { NotificationBanner } from '@/components/common/NotificationBanner';
 
 const Home = () => {
   usePageTitle('صفحه اصلی');
@@ -366,6 +368,10 @@ const Home = () => {
         </footer>
       </div>
       </div>
+
+      {/* PWA Install and Notification Banners */}
+      <PWAInstallBanner />
+      <NotificationBanner />
     </>
   );
 };
