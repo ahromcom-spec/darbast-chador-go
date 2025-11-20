@@ -10,30 +10,15 @@ export function NotificationBanner() {
   const location = useLocation();
   const { permission, isSupported, requestPermission } = usePushNotifications();
 
+  // بازنشانی بنر هنگام بازگشت به صفحه اصلی
   useEffect(() => {
-    const dismissedTime = localStorage.getItem('notification-banner-dismissed-time');
-    if (dismissedTime) {
-      const timePassed = Date.now() - parseInt(dismissedTime);
-      const oneMinute = 60 * 1000; // 1 دقیقه به میلی‌ثانیه
-      
-      if (timePassed < oneMinute) {
-        setDismissed(true);
-        // تایمر برای نمایش مجدد بعد از یک دقیقه
-        const remainingTime = oneMinute - timePassed;
-        setTimeout(() => {
-          setDismissed(false);
-          localStorage.removeItem('notification-banner-dismissed-time');
-        }, remainingTime);
-      } else {
-        localStorage.removeItem('notification-banner-dismissed-time');
-      }
+    if (location.pathname === '/') {
+      setDismissed(false);
     }
-  }, []);
+  }, [location.pathname]);
 
   const handleDismiss = () => {
     setDismissed(true);
-    const dismissTime = Date.now();
-    localStorage.setItem('notification-banner-dismissed-time', dismissTime.toString());
   };
 
   const handleEnable = async () => {
