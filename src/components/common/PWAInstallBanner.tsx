@@ -11,76 +11,29 @@ export function PWAInstallBanner() {
   const location = useLocation();
 
   useEffect(() => {
-    // بررسی اینکه آیا کاربر اخیراً بنر را بسته است
+    // اگر کاربر اخیراً بنر را بسته باشد، تا یک دقیقه دوباره نمایش داده نمی‌شود
     const dismissedTime = localStorage.getItem('pwa-banner-dismissed-time');
+    const oneMinute = 60 * 1000; // 1 دقیقه به میلی‌ثانیه
+
     if (dismissedTime) {
-      const timePassed = Date.now() - parseInt(dismissedTime);
-      const oneMinute = 60 * 1000; // 1 دقیقه به میلی‌ثانیه
-      
+      const timePassed = Date.now() - parseInt(dismissedTime, 10);
+
       if (timePassed < oneMinute) {
-        // هنوز یک دقیقه نگذشته، نمایش نده
-        const remainingTime = oneMinute - timePassed;
-        setTimeout(() => {
-          localStorage.removeItem('pwa-banner-dismissed-time');
-          setShow(true);
-        }, remainingTime);
+        setShow(false);
         return;
-      } else {
-        localStorage.removeItem('pwa-banner-dismissed-time');
       }
+
+      localStorage.removeItem('pwa-banner-dismissed-time');
     }
 
-    const pageLoadTime = Date.now();
-    
-    // اگر برنامه نصب شده است، منطق متفاوت دارد
-    if (isStandalone) {
-      const lastVisit = localStorage.getItem('pwa-last-visit');
-      const now = Date.now();
-      
-      // فقط اگر 7 روز گذشته باشد
-      if (lastVisit) {
-        const daysSinceLastVisit = (now - parseInt(lastVisit)) / (1000 * 60 * 60 * 24);
-        if (daysSinceLastVisit < 7) {
-          return; // نشان نده
-        }
-        
-        // اگر 7 روز گذشته، فقط برای 3 روز نشان بده
-        const reminderShownDate = localStorage.getItem('pwa-reminder-shown');
-        if (reminderShownDate) {
-          const daysSinceReminder = (now - parseInt(reminderShownDate)) / (1000 * 60 * 60 * 24);
-          if (daysSinceReminder < 3) {
-            // در این 3 روز نشان بده
-          } else {
-            return; // 3 روز تمام شده، نشان نده
-          }
-        } else {
-          localStorage.setItem('pwa-reminder-shown', now.toString());
-        }
-      }
-      
-      localStorage.setItem('pwa-last-visit', now.toString());
+    // اگر برنامه قابل نصب نباشد یا قبلاً به صورت مستقل نصب شده باشد، بنر را نشان نده
+    if (!canInstall || isStandalone) {
+      setShow(false);
+      return;
     }
 
-    // نمایش فوری
     setShow(true);
-
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - pageLoadTime;
-      
-      // در 2 دقیقه اول همیشه نمایش بده
-      if (elapsed < 120000) {
-        setShow(true);
-      } else {
-        // بعد از 2 دقیقه: هر 30 ثانیه نمایش بده و پنهان کن
-        const cyclePosition = (elapsed - 120000) % 30000;
-        setShow(cyclePosition < 15000);
-      }
-    }, 1000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [isStandalone]);
+  }, [canInstall, isStandalone]);
 
   const handleDismiss = () => {
     setShow(false);
