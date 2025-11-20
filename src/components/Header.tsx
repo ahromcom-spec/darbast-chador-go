@@ -129,26 +129,6 @@ const Header = () => {
                 <div data-tour="notifications">
                   <NotificationBell />
                 </div>
-                <Button
-                  data-tour="ratings"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/ratings/test")}
-                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
-                >
-                  <Award className="h-3 w-3" />
-                  <span className="text-xs sm:text-sm">امتیازات</span>
-                </Button>
-                <Button
-                  data-tour="top-users"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/ratings/top-users")}
-                  className="gap-2 border-green-500/30 hover:border-green-500 bg-green-500/5 hover:bg-green-500/10 text-green-600"
-                >
-                  <TrendingUp className="h-3 w-3" />
-                  <span className="text-xs sm:text-sm">برترین‌ها</span>
-                </Button>
                 <DropdownMenu open={profileDropdownOpenMobile} onOpenChange={setProfileDropdownOpenMobile}>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -309,24 +289,6 @@ const Header = () => {
                 <div data-tour="notifications">
                   <NotificationBell />
                 </div>
-                <Button
-                  data-tour="ratings"
-                  variant="outline"
-                  onClick={() => navigate("/ratings/test")}
-                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
-                >
-                  <Award className="h-4 w-4" />
-                  <span>سیستم امتیازدهی</span>
-                </Button>
-                <Button
-                  data-tour="top-users"
-                  variant="outline"
-                  onClick={() => navigate("/ratings/top-users")}
-                  className="gap-2 border-green-500/30 hover:border-green-500 bg-green-500/5 hover:bg-green-500/10 text-green-600 font-medium"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  <span>برترین کاربران</span>
-                </Button>
                 <DropdownMenu open={profileDropdownOpenDesktop} onOpenChange={setProfileDropdownOpenDesktop}>
                   <DropdownMenuTrigger asChild>
                     <Button
