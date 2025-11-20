@@ -1,7 +1,7 @@
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useState, useEffect } from 'react';
 
@@ -9,12 +9,12 @@ export function PWAInstallBanner() {
   const { canInstall, isStandalone, promptInstall } = usePWAInstall();
   const [show, setShow] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // بازنشانی و نمایش بنر در صفحه اصلی
+  // بازنشانی و نمایش بنر در صفحه اصلی (همیشه در صفحه نخست وقتی نصب نشده است)
   useEffect(() => {
     if (location.pathname === '/') {
-      // اگر برنامه قابل نصب باشد و هنوز نصب نشده باشد
-      if (canInstall && !isStandalone) {
+      if (!isStandalone) {
         setShow(true);
       } else {
         setShow(false);
@@ -22,16 +22,21 @@ export function PWAInstallBanner() {
     } else {
       setShow(false);
     }
-  }, [location.pathname, canInstall, isStandalone]);
+  }, [location.pathname, isStandalone]);
 
   const handleDismiss = () => {
     setShow(false);
   };
 
   const handleInstall = async () => {
-    const result = await promptInstall();
-    if (result.outcome === 'accepted') {
-      setShow(false);
+    if (canInstall) {
+      const result = await promptInstall();
+      if (result.outcome === 'accepted') {
+        setShow(false);
+      }
+    } else {
+      // اگر پرامپت مستقیم در دسترس نباشد، کاربر را به صفحه راهنمای نصب ببریم
+      navigate('/settings/install-app');
     }
   };
 
