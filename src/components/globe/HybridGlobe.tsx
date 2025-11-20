@@ -434,9 +434,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         const isVideo = firstMedia.file_type === 'video';
         const mediaElement = isVideo 
-          ? `<video style="width:100%;height:100%;object-fit:cover;pointer-events:none;" muted preload="metadata">
-              <source src="${url1}#t=5" type="${firstMedia.mime_type || 'video/mp4'}">
-              <source src="${url2}#t=5" type="${firstMedia.mime_type || 'video/mp4'}">
+          ? `<video style="width:100%;height:100%;object-fit:cover;pointer-events:none;" muted>
+              <source src="${url1}" type="${firstMedia.mime_type || 'video/mp4'}">
+              <source src="${url2}" type="${firstMedia.mime_type || 'video/mp4'}">
             </video>
             <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
               <svg style="width:32px;height:32px;color:#fff;opacity:0.9;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));" fill="currentColor" viewBox="0 0 24 24">
@@ -486,9 +486,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                         onclick=\"window.openProjectVideoPath('${m.file_path.replace(/'/g, "\\'")}', '${m.mime_type || 'video/mp4'}')\"
                         style=\"width: 100%; height: 80px; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; overflow: hidden; position: relative;\"
                       >
-                        <video style=\"width:100%;height:100%;object-fit:cover;pointer-events:none;\" muted preload="metadata">
-                          <source src="${url1}#t=5" type="${m.mime_type || 'video/mp4'}">
-                          <source src="${url2}#t=5" type="${m.mime_type || 'video/mp4'}">
+                        <video style=\"width:100%;height:100%;object-fit:cover;pointer-events:none;\" muted>
+                          <source src="${url1}" type="${m.mime_type || 'video/mp4'}">
+                          <source src="${url2}" type="${m.mime_type || 'video/mp4'}">
                         </video>
                         <div style=\"position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;\">
                           <svg style=\"width:24px;height:24px;color:#fff;opacity:0.9;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));\" fill=\"currentColor\" viewBox=\"0 0 24 24\">
