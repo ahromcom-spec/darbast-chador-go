@@ -10,35 +10,22 @@ export function PWAInstallBanner() {
   const [show, setShow] = useState(false);
   const location = useLocation();
 
+  // بازنشانی و نمایش بنر در صفحه اصلی
   useEffect(() => {
-    // اگر کاربر اخیراً بنر را بسته باشد، تا یک دقیقه دوباره نمایش داده نمی‌شود
-    const dismissedTime = localStorage.getItem('pwa-banner-dismissed-time');
-    const oneMinute = 60 * 1000; // 1 دقیقه به میلی‌ثانیه
-
-    if (dismissedTime) {
-      const timePassed = Date.now() - parseInt(dismissedTime, 10);
-
-      if (timePassed < oneMinute) {
+    if (location.pathname === '/') {
+      // اگر برنامه قابل نصب باشد و هنوز نصب نشده باشد
+      if (canInstall && !isStandalone) {
+        setShow(true);
+      } else {
         setShow(false);
-        return;
       }
-
-      localStorage.removeItem('pwa-banner-dismissed-time');
-    }
-
-    // اگر برنامه قابل نصب نباشد یا قبلاً به صورت مستقل نصب شده باشد، بنر را نشان نده
-    if (!canInstall || isStandalone) {
+    } else {
       setShow(false);
-      return;
     }
-
-    setShow(true);
-  }, [canInstall, isStandalone]);
+  }, [location.pathname, canInstall, isStandalone]);
 
   const handleDismiss = () => {
     setShow(false);
-    const dismissTime = Date.now();
-    localStorage.setItem('pwa-banner-dismissed-time', dismissTime.toString());
   };
 
   const handleInstall = async () => {
