@@ -45,6 +45,7 @@ const AddServiceToProject = lazy(() => import("@/pages/user/AddServiceToProject"
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const ScaffoldingForm = lazy(() => import("./pages/scaffolding/ScaffoldingForm"));
+const ScaffoldingRentalForm = lazy(() => import("./pages/scaffolding/ScaffoldingRentalForm"));
 const NewServiceRequestForm = lazy(() => import("./pages/scaffolding/NewServiceRequestForm"));
 const ComprehensiveScaffoldingForm = lazy(() => import("./pages/scaffolding/ComprehensiveScaffoldingForm"));
 const TicketList = lazy(() => import("./pages/tickets/TicketList"));
@@ -145,6 +146,11 @@ const App = () => {
               <Route path="/scaffolding/form" element={
                 <ProtectedRoute>
                   <ScaffoldingForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/scaffolding/rental-form" element={
+                <ProtectedRoute>
+                  <ScaffoldingRentalForm />
                 </ProtectedRoute>
               } />
               <Route path="/scaffolding/form/:projectId" element={

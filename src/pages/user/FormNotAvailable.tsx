@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -12,10 +13,18 @@ export default function FormNotAvailable() {
   const {
     serviceName = 'خدمات',
     subcategoryName = '',
+    subcategoryCode = '',
     locationAddress,
     provinceName,
     districtName
   } = state;
+
+  // Redirect to rental form if subcategory code is 11
+  useEffect(() => {
+    if (subcategoryCode === '11') {
+      navigate('/scaffolding/rental-form', { state });
+    }
+  }, [subcategoryCode, navigate, state]);
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
