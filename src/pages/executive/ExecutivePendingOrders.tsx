@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map } from 'lucide-react';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -23,8 +23,6 @@ import {
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { Separator } from '@/components/ui/separator';
-import { ProjectLocationMap } from '@/components/locations/ProjectLocationMap';
-
 
 interface Order {
   id: string;
@@ -33,14 +31,12 @@ interface Order {
   address: string;
   detailed_address: string | null;
   created_at: string;
-  customer_name: string | null;
-  customer_phone: string | null;
+  customer_name: string;
+  customer_phone: string;
   notes: any;
   subcategory_id?: string;
   province_id?: string;
   district_id?: string;
-  location_lat?: number | null;
-  location_lng?: number | null;
 }
 
 export default function ExecutivePendingOrders() {
@@ -90,45 +86,63 @@ export default function ExecutivePendingOrders() {
           subcategory_id,
           province_id,
           district_id,
-          customer_name,
-          customer_phone,
-          location_lat,
-          location_lng
+          customer_id
         `)
         .in('status', ['pending', 'approved', 'in_progress'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Map orders with denormalized data
-      const rows = (data || []).map((order: any) => {
-        // Parse notes (stored as text) into object
-        const notesObj = (() => {
-          try {
-            if (!order.notes) return {};
-            return typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
-          } catch {
-            return {};
-          }
-        })();
+      // Map orders and enrich with customer details (show pending, approved, and in_progress)
+      const rows = await Promise.all(
+        (data || []).map(async (order: any) => {
+          // Fetch customer details
+          const { data: customerData } = await supabase
+            .from('customers')
+            .select('user_id')
+            .eq('id', order.customer_id)
+            .maybeSingle();
 
-        return {
-          id: order.id,
-          code: order.code,
-          status: order.status,
-          address: order.address,
-          detailed_address: order.detailed_address,
-          created_at: order.created_at,
-          notes: notesObj,
-          subcategory_id: order.subcategory_id,
-          province_id: order.province_id,
-          district_id: order.district_id,
-          customer_name: order.customer_name || 'نامشخص',
-          customer_phone: order.customer_phone || '',
-          location_lat: order.location_lat,
-          location_lng: order.location_lng,
-        };
-      });
+          let customerName = 'نامشخص';
+          let customerPhone = '';
+
+          if (customerData?.user_id) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('full_name, phone_number')
+              .eq('user_id', customerData.user_id)
+              .maybeSingle();
+
+            customerName = profileData?.full_name || 'نامشخص';
+            customerPhone = profileData?.phone_number || '';
+          }
+
+          // Parse notes (stored as text) into object
+          const notesObj = (() => {
+            try {
+              if (!order.notes) return {};
+              return typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+            } catch {
+              return {};
+            }
+          })();
+
+          return {
+            id: order.id,
+            code: order.code,
+            status: order.status,
+            address: order.address,
+            detailed_address: order.detailed_address,
+            created_at: order.created_at,
+            notes: notesObj,
+            subcategory_id: order.subcategory_id,
+            province_id: order.province_id,
+            district_id: order.district_id,
+            customer_name: customerName,
+            customer_phone: customerPhone
+          };
+        })
+      );
 
       setOrders(rows as Order[]);
     } catch (error) {
@@ -370,25 +384,22 @@ export default function ExecutivePendingOrders() {
               <div className="space-y-1 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <User className="h-4 w-4" />
-                  <span>{order.customer_name || 'نام ثبت نشده'}</span>
+                  <span>{order.customer_name}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Phone className="h-4 w-4" />
-                  <span dir="ltr" className="text-left">
-                    {order.customer_phone || 'شماره ثبت نشده'}
-                  </span>
+                  <span dir="ltr" className="text-left">{order.customer_phone}</span>
                 </div>
-                <div className="flex items-start gap-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <div className="space-y-0.5">
-                    <div className="line-clamp-1">{order.address}</div>
-                  </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span className="line-clamp-1">{order.address}</span>
                 </div>
               </div>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <Separator />
           
           <div className="bg-muted/50 p-3 rounded-lg">
             <div className="text-xs text-muted-foreground mb-1">نوع خدمات</div>
@@ -612,31 +623,7 @@ export default function ExecutivePendingOrders() {
                   <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                   <span>{selectedOrder.detailed_address || selectedOrder.address}</span>
                 </p>
-                {selectedOrder.location_lat && selectedOrder.location_lng && (
-                  <p className="text-xs text-muted-foreground pr-6">
-                    موقعیت جغرافیایی: {selectedOrder.location_lat.toFixed(6)}, {selectedOrder.location_lng.toFixed(6)}
-                  </p>
-                )}
               </div>
-
-              {/* نقشه موقعیت پروژه */}
-              {selectedOrder.location_lat && selectedOrder.location_lng && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Map className="h-4 w-4 text-primary" />
-                      <Label className="text-sm font-semibold">موقعیت پروژه روی نقشه</Label>
-                    </div>
-                    <ProjectLocationMap
-                      key={`map-selected-${selectedOrder.id}`}
-                      projectLat={selectedOrder.location_lat}
-                      projectLng={selectedOrder.location_lng}
-                      projectAddress={selectedOrder.detailed_address || selectedOrder.address}
-                    />
-                  </div>
-                </>
-              )}
 
               <Separator />
 

@@ -124,7 +124,7 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
               />
               {selectedLocationId === location.id && (
                 <div className="flex justify-center animate-in slide-in-from-top-2">
-                  <Button onClick={handleConfirm} size="lg" className="w-full sm:w-auto active:bg-orange-500 hover:bg-orange-600 transition-colors">
+                  <Button onClick={handleConfirm} size="lg" className="w-full sm:w-auto">
                     تایید و ادامه
                   </Button>
                 </div>

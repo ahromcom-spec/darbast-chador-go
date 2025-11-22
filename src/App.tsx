@@ -1,10 +1,10 @@
-import { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
@@ -81,7 +81,6 @@ const MyOrders = lazy(() => import("./pages/user/MyOrders"));
 const MyProjectsHierarchy = lazy(() => import("./pages/user/MyProjectsHierarchy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
-const MapTest = lazy(() => import("@/pages/test/MapTest"));
 
 
 const queryClient = new QueryClient({
@@ -128,7 +127,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            
+            <AuthProvider>
               {/* <PageLoadProgress /> */}
               <OfflineIndicator />
               <NotificationBanner />
@@ -314,16 +313,12 @@ const App = () => {
                   <TopRatedUsers />
                 </ProtectedRoute>
               } />
-              
-              {/* Test route for map */}
-              <Route path="/test/map" element={<MapTest />} />
-              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
                 </Routes>
               </div>
             </Suspense>
-          
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

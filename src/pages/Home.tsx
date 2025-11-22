@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin, Globe } from 'lucide-react';
+import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin } from 'lucide-react';
 import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
 import { SubcategoryDialog } from '@/components/common/SubcategoryDialog';
 import { useToast } from '@/hooks/use-toast';
@@ -14,8 +14,6 @@ import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSub
 import { useUserProjects } from '@/hooks/useUserProjects';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
-import HybridGlobe from '@/components/globe/HybridGlobe';
-import globeIcon from '@/assets/golden-globe.png';
 
 const Home = () => {
   usePageTitle('صفحه اصلی');
@@ -24,7 +22,6 @@ const Home = () => {
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
   const [pendingServiceTypeId, setPendingServiceTypeId] = useState<string>('');
-  const [showGlobe, setShowGlobe] = useState(false);
   
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
@@ -174,10 +171,6 @@ const Home = () => {
     }
   };
 
-  if (showGlobe) {
-    return <HybridGlobe onClose={() => setShowGlobe(false)} />;
-  }
-
   return (
     <>
       {/* Subcategory Selection Dialog */}
@@ -322,38 +315,6 @@ const Home = () => {
                 )}
               </CardContent>
             </Card>
-
-            {/* Globe Button - Outside Card, Below Dropdown */}
-            {user && !servicesLoading && (
-              <div className="flex justify-center mt-6">
-                <button
-                  onClick={() => setShowGlobe(true)}
-                  className="group relative w-24 h-24 rounded-full transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-amber-500/50"
-                  aria-label="نمایش پروژه‌ها روی کره زمین"
-                >
-                  {/* Outer glow */}
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 opacity-90 group-hover:opacity-100 transition-opacity shadow-2xl group-hover:shadow-amber-500/50" />
-                  
-                  {/* Inner sphere with continents */}
-                  <div className="absolute inset-2 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-800 overflow-hidden shadow-inner">
-                    {/* Continents overlay */}
-                    <div className="absolute inset-0 opacity-40">
-                      <img 
-                        src={globeIcon} 
-                        alt="" 
-                        className="w-full h-full object-cover mix-blend-multiply"
-                      />
-                    </div>
-                    
-                    {/* Shine effect */}
-                    <div className="absolute top-2 left-2 w-8 h-8 rounded-full bg-gradient-to-br from-white/60 to-transparent blur-sm" />
-                  </div>
-                  
-                  {/* Hover effect ring */}
-                  <div className="absolute inset-0 rounded-full border-2 border-amber-400/0 group-hover:border-amber-400/50 transition-all duration-300" />
-                </button>
-              </div>
-            )}
 
             {/* Show loading message after service selection */}
             {selectedServiceType && selectedSubcategory && (

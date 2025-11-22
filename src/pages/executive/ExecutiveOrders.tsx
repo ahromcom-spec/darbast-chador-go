@@ -27,8 +27,6 @@ interface Order {
   created_at: string;
   customer_name: string;
   customer_phone: string;
-  project_lat?: number | null;
-  project_lng?: number | null;
 }
 
 export default function ExecutiveOrders() {
@@ -90,8 +88,7 @@ export default function ExecutiveOrders() {
           customer_completion_date,
           executive_completion_date,
           created_at,
-          customer_id,
-          hierarchy_project_id
+          customer_id
         `)
         .in('status', ['approved', 'in_progress', 'completed', 'paid'])
         .order('created_at', { ascending: false });
@@ -124,28 +121,6 @@ export default function ExecutiveOrders() {
             }
           }
 
-          // Fetch location data
-          let projectLat = null;
-          let projectLng = null;
-
-          if (order.hierarchy_project_id) {
-            const { data: hierarchyData } = await supabase
-              .from('projects_hierarchy')
-              .select(`
-                locations (
-                  lat,
-                  lng
-                )
-              `)
-              .eq('id', order.hierarchy_project_id)
-              .maybeSingle();
-
-            if (hierarchyData?.locations) {
-              projectLat = hierarchyData.locations.lat;
-              projectLng = hierarchyData.locations.lng;
-            }
-          }
-
           return {
             id: order.id,
             code: order.code,
@@ -159,8 +134,6 @@ export default function ExecutiveOrders() {
             created_at: order.created_at,
             customer_name: customerName,
             customer_phone: customerPhone,
-            project_lat: projectLat,
-            project_lng: projectLng,
           } as Order;
         })
       );
@@ -472,16 +445,9 @@ export default function ExecutiveOrders() {
                         <Phone className="h-4 w-4" />
                         <span dir="ltr">{order.customer_phone}</span>
                       </div>
-                      <div className="flex items-start gap-2 text-muted-foreground">
-                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        <div className="space-y-0.5">
-                          <div className="line-clamp-1">{order.address}</div>
-                          {order.project_lat && order.project_lng && (
-                            <div className="text-xs opacity-70">
-                              موقعیت: {order.project_lat.toFixed(6)}, {order.project_lng.toFixed(6)}
-                            </div>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span className="line-clamp-1">{order.address}</span>
                       </div>
                     </div>
                   </div>
@@ -742,11 +708,6 @@ export default function ExecutiveOrders() {
                 </p>
                 {selectedOrder.detailed_address && (
                   <p className="text-sm text-muted-foreground mr-6">{selectedOrder.detailed_address}</p>
-                )}
-                {selectedOrder.project_lat && selectedOrder.project_lng && (
-                  <p className="text-xs text-muted-foreground mr-6 mt-1">
-                    موقعیت جغرافیایی: {selectedOrder.project_lat.toFixed(6)}, {selectedOrder.project_lng.toFixed(6)}
-                  </p>
                 )}
               </div>
 

@@ -28,8 +28,6 @@ export function PersianDatePicker({
   // Determine actual time mode
   const actualTimeMode = timeMode || (showTime ? 'full' : 'none');
   
-  const [open, setOpen] = useState(false);
-  
   const [ampm, setAmpm] = useState<'AM' | 'PM'>(() => {
     if (value && actualTimeMode === 'ampm') {
       const date = new Date(value);
@@ -108,7 +106,7 @@ export function PersianDatePicker({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -127,11 +125,6 @@ export function PersianDatePicker({
           mode="single"
           selected={selectedDate}
           onSelect={handleDateSelect}
-          disabled={(date) => {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            return date < today;
-          }}
           initialFocus
           className="p-3 pointer-events-auto"
         />
@@ -144,13 +137,6 @@ export function PersianDatePicker({
                 variant={ampm === 'AM' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleAmPmChange('AM')}
-                disabled={(() => {
-                  if (!selectedDate) return false;
-                  const today = new Date();
-                  const isToday = selectedDate.toDateString() === today.toDateString();
-                  const isPastNoon = today.getHours() >= 12;
-                  return isToday && isPastNoon;
-                })()}
                 className="flex-1"
               >
                 قبل از ظهر
@@ -197,16 +183,6 @@ export function PersianDatePicker({
             </div>
           </div>
         )}
-        <div className="border-t p-3">
-          <Button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="w-full"
-            disabled={!selectedDate}
-          >
-            تایید
-          </Button>
-        </div>
       </PopoverContent>
     </Popover>
   );

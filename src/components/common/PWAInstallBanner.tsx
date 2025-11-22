@@ -11,8 +11,6 @@ export function PWAInstallBanner() {
   const location = useLocation();
 
   useEffect(() => {
-    const pageLoadTime = Date.now();
-    
     // اگر برنامه نصب شده است، منطق متفاوت دارد
     if (isStandalone) {
       const lastVisit = localStorage.getItem('pwa-last-visit');
@@ -42,24 +40,19 @@ export function PWAInstallBanner() {
       localStorage.setItem('pwa-last-visit', now.toString());
     }
 
-    // نمایش فوری
-    setShow(true);
+    // نمایش بعد از 15 ثانیه
+    const showTimer = setTimeout(() => {
+      setShow(true);
+    }, 15000);
 
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - pageLoadTime;
-      
-      // در 2 دقیقه اول همیشه نمایش بده
-      if (elapsed < 120000) {
-        setShow(true);
-      } else {
-        // بعد از 2 دقیقه: هر 30 ثانیه نمایش بده و پنهان کن
-        const cyclePosition = (elapsed - 120000) % 30000;
-        setShow(cyclePosition < 15000);
-      }
-    }, 1000);
+    // محو شدن خودکار بعد از 15 ثانیه دیگر (کل 30 ثانیه)
+    const hideTimer = setTimeout(() => {
+      setShow(false);
+    }, 30000);
 
     return () => {
-      clearInterval(interval);
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
     };
   }, [isStandalone]);
 

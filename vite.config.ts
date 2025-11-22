@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     react(), 
     mode === "development" && componentTagger(),
     VitePWA({
-      disable: true, // موقتاً کاملاً غیرفعال
+      disable: true,
       injectRegister: false,
       registerType: 'autoUpdate',
       includeAssets: ['ahrom-pwa-icon.png', 'ahrom-app-icon.png', 'ahrom-logo.png'],
@@ -91,18 +91,15 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: false,
-    target: 'esnext',
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-core': ['react', 'react-dom'],
-          'react-router': ['react-router-dom'],
-          'ui-radix': ['@radix-ui/react-select', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs', '@radix-ui/react-popover'],
-          'ui-form': ['react-hook-form', 'zod', '@hookform/resolvers'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['@radix-ui/react-select', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
           'supabase': ['@supabase/supabase-js'],
-          'query': ['@tanstack/react-query'],
-          'maps': ['mapbox-gl', 'leaflet', 'react-leaflet'],
+          'form': ['react-hook-form', 'zod'],
         },
+        // حذف اطلاعات فریمورک از نام فایل‌ها
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]'
@@ -115,22 +112,19 @@ export default defineConfig(({ mode }) => ({
         drop_console: true,
         drop_debugger: true,
         pure_funcs: ['console.log', 'console.info', 'console.warn'],
-        passes: 3,
-        unsafe: true,
-        unsafe_comps: true,
-        unsafe_math: true,
+        passes: 2
       },
       mangle: {
+        // مخفی کردن نام متغیرها و توابع
         toplevel: true,
-        properties: false,
-        safari10: true,
+        properties: false
       },
       format: {
-        comments: false,
-        ecma: 2020,
+        // حذف کامنت‌ها
+        comments: false
       }
     },
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],

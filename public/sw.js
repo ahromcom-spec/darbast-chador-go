@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ahrom-v17-hard-refresh';
+const CACHE_VERSION = 'ahrom-v15-smaller-icon';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -127,19 +127,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // فایل‌های استاتیک (JS, CSS، فونت، تصاویر): Network Only برای جلوگیری از ناسازگاری نسخه‌ها
+  // فایل‌های استاتیک (JS, CSS, تصاویر): Cache First
   if (request.destination === 'script' || 
       request.destination === 'style' || 
+      request.destination === 'image' ||
       request.destination === 'font') {
-    event.respondWith(fetch(request));
-    return;
-  }
-
-  // تصاویر: Stale-While-Revalidate سبک
-  if (request.destination === 'image') {
     event.respondWith(
       caches.match(request).then((cached) => {
-        const fetchPromise = fetch(request).then(async (response) => {
+        if (cached) {
+          return cached;
+        }
+        return fetch(request).then(async (response) => {
           if (response.status === 200) {
             const cache = await caches.open(RUNTIME_CACHE);
             cache.put(request, response.clone());
@@ -147,7 +145,6 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         });
-        return cached || fetchPromise;
       })
     );
     return;

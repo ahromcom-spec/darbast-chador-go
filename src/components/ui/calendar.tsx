@@ -1,53 +1,29 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
-import { format as formatJalali } from "date-fns-jalali";
-import { toGregorian, toJalaali } from "jalaali-js";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
-const persianMonths = [
-  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
-];
-
-const persianWeekDays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
-
 function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
-      dir="rtl"
-      formatters={{
-        formatCaption: (date) => {
-          const jDate = toJalaali(date.getFullYear(), date.getMonth() + 1, date.getDate());
-          return `${persianMonths[jDate.jm - 1]} ${jDate.jy}`;
-        },
-        formatWeekdayName: (date) => {
-          const dayIndex = (date.getDay() + 1) % 7; // Adjust for Persian week starting on Saturday
-          return persianWeekDays[dayIndex];
-        },
-        formatDay: (date) => {
-          const jDate = toJalaali(date.getFullYear(), date.getMonth() + 1, date.getDate());
-          return jDate.jd.toString();
-        },
-      }}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 sm:space-x-reverse",
+        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
-        nav: "space-x-1 flex items-center space-x-reverse",
+        nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
         ),
-        nav_button_previous: "absolute right-1",
-        nav_button_next: "absolute left-1",
+        nav_button_previous: "absolute left-1",
+        nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-y-1",
         head_row: "flex",
         head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
@@ -66,8 +42,8 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
-        IconRight: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
+        IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
+        IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
       }}
       {...props}
     />

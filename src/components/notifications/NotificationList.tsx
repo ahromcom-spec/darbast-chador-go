@@ -2,11 +2,12 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { formatDistanceToNow } from 'date-fns';
+import { faIR } from 'date-fns/locale';
 import { Check, Info, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { formatPersianDateTime } from '@/lib/dateUtils';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -189,7 +190,10 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
                     {notification.body}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {formatPersianDateTime(notification.created_at)}
+                    {formatDistanceToNow(new Date(notification.created_at), {
+                      addSuffix: true,
+                      locale: faIR,
+                    })}
                   </p>
                 </div>
               </div>
