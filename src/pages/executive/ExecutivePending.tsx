@@ -23,7 +23,6 @@ import {
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { Separator } from '@/components/ui/separator';
-import { sendNotificationSchema } from '@/lib/rpcValidation';
 
 interface Order {
   id: string;
@@ -245,14 +244,13 @@ export default function ExecutivePending() {
             .single();
 
           if (customerData?.user_id) {
-            const validated = sendNotificationSchema.parse({
+            await supabase.rpc('send_notification', {
               _user_id: customerData.user_id,
               _title: '✅ سفارش شما تایید شد',
               _body: `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`,
               _link: '/user/my-orders',
               _type: 'success'
             });
-            await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
           }
         }
       }

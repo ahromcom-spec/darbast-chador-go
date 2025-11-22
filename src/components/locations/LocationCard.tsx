@@ -8,11 +8,10 @@ interface LocationCardProps {
   onSelect?: () => void;
   onDelete?: () => void;
   onEdit?: () => void;
-  onConfirm?: () => void;
   selected?: boolean;
 }
 
-export const LocationCard = ({ location, onSelect, onDelete, onEdit, onConfirm, selected }: LocationCardProps) => {
+export const LocationCard = ({ location, onSelect, onDelete, onEdit, selected }: LocationCardProps) => {
   return (
     <Card 
       className={`transition-all ${
@@ -69,19 +68,6 @@ export const LocationCard = ({ location, onSelect, onDelete, onEdit, onConfirm, 
             )}
           </div>
         </div>
-        
-        {/* دکمه تایید داخل کارت - فقط برای مکان انتخاب شده */}
-        {selected && onConfirm && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <Button 
-              onClick={onConfirm} 
-              size="lg" 
-              className="w-full active:bg-orange-500 hover:bg-orange-600 transition-colors"
-            >
-              تایید و ادامه
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

@@ -13,7 +13,6 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
-import { setOrderScheduleSchema } from '@/lib/rpcValidation';
 
 interface Order {
   id: string;
@@ -189,14 +188,12 @@ export default function ExecutiveOrders() {
     }
 
     try {
-      // Validate RPC parameters
-      const validated = setOrderScheduleSchema.parse({
-        _order_id: selectedOrder.id,
-        _execution_start_date: new Date(executionDate).toISOString()
-      });
-
       // Use the new RPC function for scheduling
-      const { error } = await supabase.rpc('set_order_schedule', validated as { _order_id: string; _execution_start_date: string });
+      const { error } = await supabase.rpc('set_order_schedule', {
+        _order_id: selectedOrder.id,
+        _execution_start_date: new Date(executionDate).toISOString(),
+        _execution_end_date: null
+      });
 
       if (error) throw error;
 

@@ -16,9 +16,6 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import HybridGlobe from '@/components/globe/HybridGlobe';
 import globeIcon from '@/assets/golden-globe.png';
-import { PWAInstallBanner } from '@/components/common/PWAInstallBanner';
-import { NotificationBanner } from '@/components/common/NotificationBanner';
-import Header from '@/components/Header';
 
 const Home = () => {
   usePageTitle('صفحه اصلی');
@@ -182,8 +179,7 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <>
       {/* Subcategory Selection Dialog */}
       <SubcategoryDialog
         open={showSubcategoryDialog}
@@ -332,10 +328,10 @@ const Home = () => {
               <div className="flex justify-center mt-6">
                 <button
                   onClick={() => setShowGlobe(true)}
-                  className="group relative w-[112px] h-[112px] transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-0"
+                  className="group relative w-[115px] h-[115px] transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-0"
                   aria-label="نمایش پروژه‌ها روی کره زمین"
                 >
-                  {/* Globe image with gentle swing animation */}
+                  {/* Globe image with swing animation */}
                   <img 
                     src="/golden-globe-new.png" 
                     alt="کره زمین" 
@@ -370,11 +366,7 @@ const Home = () => {
         </footer>
       </div>
       </div>
-
-      {/* PWA Install and Notification Banners */}
-      <PWAInstallBanner />
-      <NotificationBanner />
-    </div>
+    </>
   );
 };
 

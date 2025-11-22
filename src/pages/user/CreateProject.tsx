@@ -27,7 +27,6 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import ProjectLocationMap from "@/components/ProjectLocationMap";
-import { createProjectV3Schema } from '@/lib/rpcValidation';
 
 const projectSchema = z.object({
   province_id: z.string().min(1, "انتخاب استان الزامی است"),
@@ -261,18 +260,17 @@ export default function CreateProject() {
       const plaqueText = data.plaque || "ثبت نشده";
       const postalText = data.postal_code || "ثبت نشده";
 
-      const validated = createProjectV3Schema.parse({
-        _customer_id: customerData.id,
-        _province_id: data.province_id,
-        _district_id: data.district_id || null,
-        _subcategory_id: data.subcategory_id,
-        _hierarchy_project_id: null,
-        _address: data.address,
-        _detailed_address: data.detailed_address || null,
-        _notes: JSON.stringify({ plaque: plaqueText, postal_code: postalText })
-      });
       const { data: createdRows, error: createError } = await supabase
-        .rpc('create_project_v3', validated as any);
+        .rpc('create_project_v3', {
+          _customer_id: customerData.id,
+          _province_id: data.province_id,
+          _district_id: data.district_id || null,
+          _subcategory_id: data.subcategory_id,
+          _hierarchy_project_id: null,
+          _address: data.address,
+          _detailed_address: data.detailed_address || null,
+          _notes: { plaque: plaqueText, postal_code: postalText } as any
+        });
 
       if (createError) throw createError;
       const createdProject = createdRows?.[0];

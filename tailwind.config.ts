@@ -97,10 +97,6 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        wiggle: {
-          "0%, 100%": { transform: "rotate(-3deg)" },
-          "50%": { transform: "rotate(3deg)" },
-        },
         "fade-in": {
           from: { opacity: "0" },
           to: { opacity: "1" },
@@ -119,8 +115,8 @@ export default {
         },
         "globe-swing": {
           "0%, 100%": { transform: "rotate(0deg)" },
-          "25%": { transform: "rotate(8deg)" },
-          "75%": { transform: "rotate(-8deg)" },
+          "25%": { transform: "rotate(15deg)" },
+          "75%": { transform: "rotate(-15deg)" },
         },
       },
       animation: {
@@ -130,7 +126,7 @@ export default {
         "slide-up": "slide-up 0.5s ease-out",
         "slide-down": "slide-down 0.5s ease-out",
         "scale-in": "scale-in 0.3s ease-out",
-        "globe-swing": "globe-swing 6s ease-in-out infinite",
+        "globe-swing": "globe-swing 4s ease-in-out infinite",
       },
       spacing: {
         'xs': 'var(--spacing-xs)',

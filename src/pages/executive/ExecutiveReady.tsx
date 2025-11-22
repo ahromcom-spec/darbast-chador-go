@@ -16,7 +16,6 @@ import { ExecutiveStageTimeline } from '@/components/executive/ExecutiveStageTim
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { sendNotificationSchema } from '@/lib/rpcValidation';
 
 interface Order {
   id: string;
@@ -207,14 +206,13 @@ export default function ExecutiveReady() {
 
       // ارسال اعلان به مشتری
       if (customerData?.user_id) {
-        const validated = sendNotificationSchema.parse({
+        await supabase.rpc('send_notification', {
           _user_id: customerData.user_id,
           _title: '🚀 اجرای سفارش آغاز شد',
           _body: `سفارش شما با کد ${orderCode} در حال اجرا قرار گرفت و تیم اجرایی مشغول انجام کار هستند.`,
           _link: '/user/my-orders',
           _type: 'info'
         });
-        await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
       }
 
       toast({

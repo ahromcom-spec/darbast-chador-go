@@ -13,7 +13,6 @@ import { Building2, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { assignRoleSchema } from '@/lib/rpcValidation';
 
 export default function ContractorManagement() {
   const { toast } = useToast();
@@ -128,11 +127,10 @@ export default function ContractorManagement() {
       if (insertError) throw insertError;
 
       // افزودن نقش contractor
-      const validated = assignRoleSchema.parse({
+      const { error: roleError } = await supabase.rpc('assign_role_to_user', {
         _user_id: userId,
         _role: 'contractor',
       });
-      const { error: roleError } = await supabase.rpc('assign_role_to_user', validated as { _user_id: string; _role: string });
 
       if (roleError) {
         console.error('Role assignment error:', roleError);

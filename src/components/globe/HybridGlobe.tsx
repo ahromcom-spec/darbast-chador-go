@@ -37,52 +37,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; mimeType: string } | null>(null);
-  const [videoLoading, setVideoLoading] = useState(false);
-  const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-
+  
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
-
-  // مدیریت منبع ویدیو و آزادسازی blob ها
-  useEffect(() => {
-    if (selectedVideo) {
-      setVideoSrc(selectedVideo.url);
-      setVideoLoading(false);
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-        setBlobUrl(null);
-      }
-    } else {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-        setBlobUrl(null);
-      }
-      setVideoSrc(null);
-    }
-  }, [selectedVideo]);
-
-  // در صورت خطا در پخش مستقیم، به blob تبدیل کنیم تا مشکل Content-Disposition/CORS برطرف شود
-  const fallbackToBlob = async () => {
-    if (!selectedVideo || blobUrl) return;
-    try {
-      setVideoLoading(true);
-      const res = await fetch(selectedVideo.url);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      setBlobUrl(url);
-      setVideoSrc(url);
-    } catch (err) {
-      console.error('[Video] Blob fallback failed:', err);
-      toast({
-        title: 'خطا در پخش ویدیو',
-        description: 'در تبدیل ویدیو برای پخش مشکلی رخ داد.',
-        variant: 'destructive',
-      });
-    } finally {
-      setVideoLoading(false);
-    }
-  };
 
   // رویداد انتخاب فایل
   const handleAddImage = () => {
@@ -97,13 +54,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     try {
       setUploading(true);
       setUploadProgress(0);
-      console.log('[Upload] Starting upload process...', files.length, 'files');
-      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({ title: 'خطا', description: 'برای آپلود باید وارد شوید', variant: 'destructive' });
-        setUploading(false);
-        setUploadProgress(0);
         return;
       }
 
@@ -116,37 +69,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         const isImage = file.type.startsWith('image/');
         const isVideo = file.type.startsWith('video/');
         
-        console.log(`[Upload] File ${i + 1}/${fileArray.length}:`, file.name, 'Type:', file.type, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+        if (!isImage && !isVideo) continue;
         
-        if (!isImage && !isVideo) {
-          console.warn('[Upload] Skipping invalid file type:', file.type);
-          toast({ 
-            title: 'فایل نامعتبر', 
-            description: `فقط تصویر یا ویدیو قابل آپلود است: ${file.name}`, 
-            variant: 'destructive' 
-          });
-          continue;
-        }
-        
-        // بررسی حجم فایل (حداکثر 100MB برای ویدیو، 10MB برای تصویر)
-        const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+        // بررسی حجم فایل (حداکثر 50MB برای ویدیو، 10MB برای تصویر)
+        const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
         if (file.size > maxSize) {
-          const maxMB = isVideo ? 100 : 10;
-          console.warn('[Upload] File too large:', file.size, 'bytes (max:', maxSize, 'bytes)');
           toast({ 
-            title: 'حجم فایل بیش از حد', 
-            description: `حداکثر ${maxMB} مگابایت مجاز است: ${file.name}`, 
+            title: 'خطا', 
+            description: isVideo ? 'حجم ویدیو نباید بیشتر از 50 مگابایت باشد' : 'حجم تصویر نباید بیشتر از 10 مگابایت باشد', 
             variant: 'destructive' 
           });
           continue;
         }
-        
         const filePath = `${user.id}/hierarchy/${selectedProject.id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
-        console.log('[Upload] Uploading to storage:', filePath);
-
-        // محاسبه و نمایش پیشرفت قبل از آپلود
-        const startProgress = (i / fileArray.length) * 100;
-        setUploadProgress(Math.round(startProgress));
 
         // آپلود با نمایش درصد پیشرفت
         const { error: uploadErr } = await supabase.storage
@@ -158,20 +93,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           });
         
         // محاسبه درصد کلی بر اساس تعداد فایل‌ها
+        const baseProgress = (i / fileArray.length) * 100;
         const fileProgress = ((i + 1) / fileArray.length) * 100;
         setUploadProgress(Math.round(fileProgress));
         
         if (uploadErr) {
-          console.error('[Upload] Storage upload error:', uploadErr);
-          toast({ 
-            title: 'خطا در آپلود', 
-            description: uploadErr.message || 'مشکل در بارگذاری فایل', 
-            variant: 'destructive' 
-          });
+          console.error('upload error', uploadErr);
           continue;
         }
-        
-        console.log('[Upload] File uploaded successfully, saving to database...');
 
         const { data: insertData, error: insertErr } = await supabase
           .from('project_hierarchy_media')
@@ -187,44 +116,34 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           .single();
 
         if (insertErr) {
-          console.error('[Upload] Database insert error:', insertErr);
-          toast({ 
-            title: 'خطا در ثبت', 
-            description: insertErr.message || 'مشکل در ذخیره اطلاعات فایل', 
-            variant: 'destructive' 
-          });
+          console.error('insert error', insertErr);
           continue;
         }
 
         if (insertData) {
-          console.log('[Upload] File saved successfully:', insertData.id);
           newMedia.push(insertData);
         }
       }
 
-      console.log('[Upload] Upload complete. Total successful:', newMedia.length);
-      
       if (newMedia.length > 0) {
         setProjectsWithMedia(prev => prev.map(p => p.id === selectedProject.id
           ? { ...p, media: [...newMedia, ...(p.media || [])].slice(0, 3) }
           : p
         ));
         setSelectedProject(prev => prev ? { ...prev, media: [...newMedia, ...(prev.media || [])].slice(0, 3) } : prev);
-        toast({ title: 'موفق', description: `${newMedia.length} فایل با موفقیت آپلود شد.` });
+        toast({ title: 'موفق', description: `${newMedia.length} فایل اضافه شد.` });
       } else {
-        toast({ title: 'آپلود ناموفق', description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', variant: 'destructive' });
+        toast({ title: 'هیچ فایلی اضافه نشد', description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', variant: 'destructive' });
       }
     } catch (err: any) {
-      console.error('[Upload] Fatal error:', err);
-      toast({ title: 'خطا در آپلود', description: err?.message || 'مشکل غیرمنتظره در بارگذاری', variant: 'destructive' });
+      console.error('upload fatal', err);
+      toast({ title: 'خطا در آپلود', description: err?.message || 'مشکل در بارگذاری تصویر', variant: 'destructive' });
     } finally {
-      console.log('[Upload] Cleaning up...');
       setUploading(false);
       setUploadProgress(0);
       if (e.target) e.target.value = '';
     }
   };
-
 
   // دریافت عکس‌های پروژه‌ها
   useEffect(() => {
@@ -305,26 +224,52 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         setProjectsWithMedia(projectsWithMediaData);
         
-        // تابع global برای باز کردن ویدیو در تب جدید
+        // تابع global برای باز کردن ویدیو با URL امضاشده و MIME type صحیح (با استراتژی Blob برای سازگاری کامل)
         (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
-          console.log('[Video] openProjectVideoPath called:', filePath, mimeType);
-          try {
-            const { data } = supabase.storage
-              .from('order-media')
-              .getPublicUrl(filePath);
+          console.log('[Video] Opening video (blob strategy):', filePath, 'MIME hint:', mimeType);
 
-            const publicUrl = data.publicUrl;
-            console.log('[Video] Opening video in new tab:', publicUrl);
-            
-            // باز کردن ویدیو در تب جدید
-            window.open(publicUrl, '_blank');
+          const getSigned = async (): Promise<string | undefined> => {
+            const { data, error } = await supabase.storage
+              .from('order-media')
+              .createSignedUrl(filePath, 3600); // 1 ساعت
+            if (error) {
+              console.warn('[Video] Signed URL error:', error);
+              return undefined;
+            }
+            return data?.signedUrl;
+          };
+
+          const getPublic = (): string =>
+            supabase.storage.from('order-media').getPublicUrl(filePath).data.publicUrl;
+
+          try {
+            let url = await getSigned();
+            if (!url) url = getPublic();
+
+            // دانلود فایل و ساخت Blob URL برای جلوگیری از مشکلات MIME/CORS/Codec
+            let blob: Blob | null = null;
+            try {
+              const res = await fetch(url);
+              if (!res.ok) throw new Error('HTTP ' + res.status);
+              blob = await res.blob();
+            } catch (e) {
+              console.warn('[Video] Direct fetch failed, trying public URL', e);
+              const pub = getPublic();
+              const res2 = await fetch(pub);
+              if (!res2.ok) throw new Error('HTTP ' + res2.status);
+              blob = await res2.blob();
+            }
+
+            const finalType = (blob && blob.type && blob.type !== '')
+              ? blob.type
+              : (mimeType && mimeType !== '' ? mimeType : 'video/mp4');
+
+            const objectUrl = URL.createObjectURL(new Blob([blob!], { type: finalType }));
+            setSelectedVideo({ url: objectUrl, mimeType: finalType });
           } catch (err) {
-            console.error('[Video] openProjectVideoPath failed:', err);
-            toast({
-              title: 'خطا',
-              description: 'دریافت لینک ویدیو با مشکل مواجه شد.',
-              variant: 'destructive',
-            });
+            console.error('[Video] Error loading video blob:', err);
+            const publicUrl = getPublic();
+            setSelectedVideo({ url: publicUrl, mimeType: mimeType || 'video/mp4' });
           }
         };
       } catch (error) {
@@ -434,16 +379,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         const isVideo = firstMedia.file_type === 'video';
         const mediaElement = isVideo 
-          ? `<video style="width:100%;height:100%;object-fit:cover;pointer-events:none;" muted>
-              <source src="${url1}" type="${firstMedia.mime_type || 'video/mp4'}">
-              <source src="${url2}" type="${firstMedia.mime_type || 'video/mp4'}">
-            </video>
-            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
-              <svg style="width:32px;height:32px;color:#fff;opacity:0.9;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));" fill="currentColor" viewBox="0 0 24 24">
+          ? `<div style="width:100%;height:100%;position:relative;background:#000;display:flex;align-items:center;justify-content:center;">
+              <svg style="width:32px;height:32px;color:#fff;opacity:0.9;" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z"/>
               </svg>
-            </div>
-            <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>`
+              <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>
+            </div>`
           : `<img src="${url1}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover"
               onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"/>`;
         
@@ -479,22 +420,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                    .from('project-media')
                    .getPublicUrl(m.file_path).data.publicUrl;
                  
-                  const isVideo = m.file_type === 'video';
-                  
-                   return isVideo 
+                 const isVideo = m.file_type === 'video';
+                 
+                  return isVideo 
                     ? `<div 
                         onclick=\"window.openProjectVideoPath('${m.file_path.replace(/'/g, "\\'")}', '${m.mime_type || 'video/mp4'}')\"
-                        style=\"width: 100%; height: 80px; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; overflow: hidden; position: relative;\"
+                        style=\"width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; background: #000; display: flex; align-items: center; justify-content: center; position: relative;\"
                       >
-                        <video style=\"width:100%;height:100%;object-fit:cover;pointer-events:none;\" muted>
-                          <source src="${url1}" type="${m.mime_type || 'video/mp4'}">
-                          <source src="${url2}" type="${m.mime_type || 'video/mp4'}">
-                        </video>
-                        <div style=\"position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;\">
-                          <svg style=\"width:24px;height:24px;color:#fff;opacity:0.9;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));\" fill=\"currentColor\" viewBox=\"0 0 24 24\">
-                            <path d=\"M8 5v14l11-7z\"/>
-                          </svg>
-                        </div>
+                        <svg style=\"width:24px;height:24px;color:#fff;opacity:0.9;\" fill=\"currentColor\" viewBox=\"0 0 24 24\">
+                          <path d=\"M8 5v14l11-7z\"/>
+                        </svg>
                         <span style=\"position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;\">ویدیو</span>
                      </div>`
                    : `<img 
@@ -629,51 +564,53 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         </Card>
       )}
 
-      {/* دیالوگ پخش ویدیو */}
-      <Dialog open={videoLoading || !!selectedVideo} onOpenChange={(open) => {
-        if (!open) {
-          setSelectedVideo(null);
-          setVideoLoading(false);
-        }
-      }}>
+      {/* دیالوگ نمایش ویدیو با source tag و MIME type صحیح */}
+      <Dialog open={!!selectedVideo} onOpenChange={(open) => !open && setSelectedVideo(null)}>
         <DialogContent className="max-w-4xl w-[95vw] p-0">
           <DialogHeader className="p-4 pb-0">
-            <DialogTitle className="text-right">
-              {videoLoading ? 'در حال آماده‌سازی ویدیو...' : 'پخش ویدیو'}
-            </DialogTitle>
+            <DialogTitle className="text-right">پخش ویدیو</DialogTitle>
           </DialogHeader>
-          
-          {videoLoading ? (
-            <div className="p-8 flex flex-col items-center gap-4">
-              <p className="text-sm text-muted-foreground text-center">
-                لطفاً صبر کنید، ویدیو در حال آماده‌سازی است...
-              </p>
-            </div>
-          ) : (
-            selectedVideo && (
-              <div className="relative w-full bg-black" style={{ paddingTop: '56.25%' }}>
-                <video
-                  key={selectedVideo.url}
-                  src={selectedVideo.url}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="absolute inset-0 w-full h-full"
-                  style={{ objectFit: 'contain' }}
-                  preload="metadata"
-                >
-                  مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
-                </video>
-                <div className="absolute bottom-4 left-4 flex gap-2">
-                  <Button asChild size="sm" variant="secondary">
-                    <a href={selectedVideo.url} target="_blank" rel="noreferrer">
-                      باز کردن در تب جدید
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            )
-          )}
+          <div className="relative w-full bg-black" style={{ paddingTop: '56.25%' }}>
+            {selectedVideo && (
+              <video
+                key={selectedVideo.url}
+                controls
+                autoPlay
+                playsInline
+                className="absolute inset-0 w-full h-full"
+                style={{ objectFit: 'contain' }}
+                onError={(e) => {
+                  console.error('[Video] Playback error:', e);
+                  const videoEl = e.currentTarget;
+                  console.error('[Video] Error details:', {
+                    networkState: videoEl.networkState,
+                    readyState: videoEl.readyState,
+                    error: videoEl.error
+                  });
+                }}
+                onLoadedMetadata={(e) => {
+                  console.log('[Video] Metadata loaded successfully');
+                }}
+              >
+                <source 
+                  src={selectedVideo.url} 
+                  type={selectedVideo.mimeType}
+                />
+                {/* Fallback برای مرورگرهایی که از فرمت پشتیبانی نمی‌کنند */}
+                <p className="text-white p-4">
+                  مرورگر شما از پخش این ویدیو پشتیبانی نمی‌کند.
+                  <br />
+                  <a 
+                    href={selectedVideo.url} 
+                    download 
+                    className="text-blue-400 underline"
+                  >
+                    دانلود ویدیو
+                  </a>
+                </p>
+              </video>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

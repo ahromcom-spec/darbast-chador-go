@@ -23,7 +23,6 @@ import { scaffoldingFormSchema } from '@/lib/validations';
 import { MediaUploader } from '@/components/orders/MediaUploader';
 import { Textarea } from '@/components/ui/textarea';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
-import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValidation';
 
 interface Dimension {
   id: string;
@@ -699,13 +698,12 @@ export default function ComprehensiveScaffoldingForm({
         // ایجاد پروژه سلسله‌مراتبی برای لینک
         if (locationId && finalServiceTypeId && finalSubcategoryId) {
           try {
-            const validated = getOrCreateProjectSchema.parse({
+            const { data: newProjectId, error: hierarchyError } = await supabase.rpc('get_or_create_project', {
               _user_id: user.id,
               _location_id: locationId,
               _service_type_id: finalServiceTypeId,
               _subcategory_id: finalSubcategoryId
             });
-            const { data: newProjectId, error: hierarchyError } = await supabase.rpc('get_or_create_project', validated as { _user_id: string; _location_id: string; _service_type_id: string; _subcategory_id: string });
             
             if (!hierarchyError && newProjectId) {
               projectId = newProjectId;
@@ -764,15 +762,15 @@ export default function ComprehensiveScaffoldingForm({
         const validProvinceId = provinceId && provinceId.trim() !== '' ? provinceId : null;
         const validDistrictId = districtId && districtId.trim() !== '' ? districtId : null;
         
-        const validated = createProjectV3Schema.parse({
+        const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', {
           _customer_id: customerId,
-          _province_id: validProvinceId!,
+          _province_id: validProvinceId,
           _district_id: validDistrictId,
           _subcategory_id: finalSubcategoryId,
           _hierarchy_project_id: projectId || hierarchyProjectId,
           _address: sanitizedAddress,
           _detailed_address: sanitizedAddress,
-          _notes: JSON.stringify({
+          _notes: {
             service_type: activeService,
             dimensions: dimensions.map(d => ({
               length: parseFloat(d.length),
@@ -788,10 +786,8 @@ export default function ComprehensiveScaffoldingForm({
             estimated_price: priceData.total,
             price_breakdown: priceData.breakdown,
             installationDateTime,
-          })
+          } as any
         });
-        
-        const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', validated as any);
 
         if (createError) throw createError;
         const createdProject = createdRows?.[0];

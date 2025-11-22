@@ -2748,15 +2748,13 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
-      assign_role_to_user:
-        | { Args: { _role: string; _user_id: string }; Returns: undefined }
-        | {
-            Args: {
-              _role: Database["public"]["Enums"]["app_role"]
-              _user_id: string
-            }
-            Returns: undefined
-          }
+      assign_role_to_user: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       calculate_reputation_score: {
         Args: { _user_id: string }
         Returns: undefined
@@ -2941,26 +2939,16 @@ export type Database = {
         }
         Returns: boolean
       }
-      log_audit:
-        | {
-            Args: {
-              _action: string
-              _actor_user_id: string
-              _entity: string
-              _entity_id: string
-              _meta?: Json
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _action: string
-              _entity: string
-              _entity_id?: string
-              _meta?: Json
-            }
-            Returns: string
-          }
+      log_audit: {
+        Args: {
+          _action: string
+          _actor_user_id: string
+          _entity: string
+          _entity_id: string
+          _meta?: Json
+        }
+        Returns: string
+      }
       next_project_code: { Args: never; Returns: string }
       notify_role: {
         Args: {
@@ -2993,28 +2981,15 @@ export type Database = {
         }
         Returns: string
       }
-      set_order_schedule:
-        | {
-            Args: { _execution_start_date: string; _order_id: string }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _execution_end_date?: string
-              _execution_start_date: string
-              _order_id: string
-            }
-            Returns: undefined
-          }
-      validate_contractor_phone: {
-        Args: { _phone_number: string }
-        Returns: boolean
+      set_order_schedule: {
+        Args: {
+          _execution_end_date?: string
+          _execution_start_date: string
+          _order_id: string
+        }
+        Returns: undefined
       }
       validate_phone_number: { Args: { _phone: string }; Returns: boolean }
-      validate_profile_phone: {
-        Args: { _phone_number: string }
-        Returns: boolean
-      }
       verify_otp_code: {
         Args: { _code: string; _phone_number: string }
         Returns: boolean
