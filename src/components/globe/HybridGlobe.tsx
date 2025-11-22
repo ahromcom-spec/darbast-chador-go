@@ -305,27 +305,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       
       setProjectsWithMedia(projectsWithMediaData);
       
-      // تابع global برای باز کردن ویدیو در تب جدید
-      (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
-        console.log('[Video] openProjectVideoPath called:', filePath, mimeType);
-        try {
-          const { data } = supabase.storage
-            .from('order-media')
-            .getPublicUrl(filePath);
-
-          const publicUrl = data.publicUrl;
-          console.log('[Video] Opening video in new tab:', publicUrl);
-          
-          // باز کردن ویدیو در تب جدید
-          window.open(publicUrl, '_blank');
-        } catch (err) {
-          console.error('[Video] openProjectVideoPath failed:', err);
-          toast({
-            title: 'خطا',
-            description: 'دریافت لینک ویدیو با مشکل مواجه شد.',
-            variant: 'destructive',
-          });
-        }
+      // تابع global برای باز کردن ویدیو در دیالوگ
+      (window as any).openProjectVideo = (videoUrl: string, mimeType: string) => {
+        console.log('[Video] openProjectVideo called:', videoUrl, mimeType);
+        setSelectedVideo({ url: videoUrl, mimeType });
       };
     } catch (error) {
       console.error('خطا در دریافت عکس‌های پروژه:', error);
@@ -461,29 +444,43 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const marker = L.marker([project.locations.lat, project.locations.lng], { icon: iconToUse })
         .addTo(mapRef.current!);
       
-      // تولید HTML برای عکس‌ها - فقط تصاویر را نمایش می‌دهیم، نه ویدیو
+      // تولید HTML برای تصاویر و ویدیوها
       const images = (project.media || []).filter(m => m.file_type === 'image').slice(0, 2);
-      const videos = (project.media || []).filter(m => m.file_type === 'video').length;
+      const videos = (project.media || []).filter(m => m.file_type === 'video').slice(0, 2);
       
-      const mediaHTML = images.length > 0 || videos > 0
+      const mediaHTML = images.length > 0 || videos.length > 0
         ? `
           <div style="margin-top: 12px;">
             ${images.length > 0 ? `
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 8px;">
                 ${images.map(m => {
                   const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
                   return `<img 
                     src="${url}" 
                     alt="تصویر" 
                     loading="lazy"
-                    style="width:100%;height:80px;object-fit:cover;border-radius:6px;border:2px solid #e5e7eb;"
+                    style="width:100%;height:80px;object-fit:cover;border-radius:6px;border:2px solid #e5e7eb;cursor:pointer;"
                     onerror="this.style.display='none'"
                   />`;
                 }).join('')}
               </div>
             ` : ''}
-            ${videos > 0 ? `
-              <p style="font-size:11px;color:#666;margin-top:8px;">${videos} ویدیو موجود است</p>
+            ${videos.length > 0 ? `
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+                ${videos.map(m => {
+                  const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                  const mimeType = m.mime_type || 'video/mp4';
+                  return `<div 
+                    onclick="window.openProjectVideo('${url}', '${mimeType}')"
+                    style="width:100%;height:80px;background:#1a1a1a;border-radius:6px;border:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;"
+                  >
+                    <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <span style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 6px;border-radius:3px;">کلیک برای پخش</span>
+                  </div>`;
+                }).join('')}
+              </div>
             ` : ''}
           </div>
         `
