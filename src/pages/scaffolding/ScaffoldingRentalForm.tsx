@@ -51,19 +51,21 @@ export default function ScaffoldingRentalForm() {
   const [loading, setLoading] = useState(false);
   const [selectedItemType, setSelectedItemType] = useState<string>('');
   
-  const state = location.state || {};
+  // Extract service selection data
+  const stateData = location.state || {};
+  const serviceSelection = stateData?.serviceSelection || stateData;
   const {
     hierarchyProjectId,
     provinceId,
     districtId,
-    subcategoryId,
-    serviceName,
-    subcategoryName,
+    subcategoryId = serviceSelection?.subcategoryId,
+    serviceName = serviceSelection?.serviceName,
+    subcategoryName = serviceSelection?.subcategoryName,
     locationAddress,
     locationTitle,
     provinceName,
     districtName
-  } = state;
+  } = stateData;
 
   const form = useForm<RentalFormValues>({
     resolver: zodResolver(rentalFormSchema),
@@ -130,11 +132,11 @@ export default function ScaffoldingRentalForm() {
       const { data: orderData, error: orderError } = await supabase
         .rpc('create_project_v3', {
           _customer_id: customerData.id,
-          _province_id: provinceId,
+          _province_id: provinceId || null,
           _district_id: districtId || null,
           _subcategory_id: subcategoryId,
           _hierarchy_project_id: hierarchyProjectId || null,
-          _address: locationAddress,
+          _address: locationAddress || 'آدرس ثبت نشده - کرایه اجناس',
           _detailed_address: locationTitle || null,
           _notes: orderNotes,
         });
@@ -159,14 +161,14 @@ export default function ScaffoldingRentalForm() {
     }
   };
 
-  if (!locationAddress || !serviceName) {
+  if (!subcategoryId) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle className="text-destructive">خطا</CardTitle>
             <CardDescription>
-              اطلاعات آدرس و مرحله قبل دریافت نشد
+              اطلاعات خدمات دریافت نشد. لطفا مجدداً از صفحه اصلی اقدام کنید.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -211,30 +213,32 @@ export default function ScaffoldingRentalForm() {
 
             <CardContent className="pt-6 pb-4 border-b bg-muted/30">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Alert className="border-primary/30">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  <AlertDescription>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-sm">آدرس پروژه:</p>
-                      {locationTitle && (
-                        <p className="text-xs text-muted-foreground">{locationTitle}</p>
-                      )}
-                      <p className="text-sm">{locationAddress}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {provinceName && `${provinceName}`}
-                        {districtName && ` • ${districtName}`}
-                      </p>
-                    </div>
-                  </AlertDescription>
-                </Alert>
+                {locationAddress && (
+                  <Alert className="border-primary/30">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <AlertDescription>
+                      <div className="space-y-1">
+                        <p className="font-semibold text-sm">آدرس پروژه:</p>
+                        {locationTitle && (
+                          <p className="text-xs text-muted-foreground">{locationTitle}</p>
+                        )}
+                        <p className="text-sm">{locationAddress}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {provinceName && `${provinceName}`}
+                          {districtName && ` • ${districtName}`}
+                        </p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <Alert className="border-primary/30">
                   <Package className="h-4 w-4 text-primary" />
                   <AlertDescription>
                     <div className="space-y-1">
                       <p className="font-semibold text-sm">نوع خدمات:</p>
-                      <p className="text-sm">{serviceName}</p>
-                      <p className="text-xs text-muted-foreground">{subcategoryName}</p>
+                      <p className="text-sm">{serviceName || 'داربست فلزی'}</p>
+                      <p className="text-xs text-muted-foreground">{subcategoryName || 'خدمات کرایه اجناس'}</p>
                     </div>
                   </AlertDescription>
                 </Alert>
