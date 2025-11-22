@@ -1054,50 +1054,6 @@ export type Database = {
           },
         ]
       }
-      project_hierarchy_media: {
-        Row: {
-          created_at: string
-          file_path: string
-          file_size: number | null
-          file_type: string
-          hierarchy_project_id: string
-          id: string
-          mime_type: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          file_path: string
-          file_size?: number | null
-          file_type?: string
-          hierarchy_project_id: string
-          id?: string
-          mime_type?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          file_path?: string
-          file_size?: number | null
-          file_type?: string
-          hierarchy_project_id?: string
-          id?: string
-          mime_type?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_hierarchy_media_hierarchy_project_id_fkey"
-            columns: ["hierarchy_project_id"]
-            isOneToOne: false
-            referencedRelation: "projects_hierarchy"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       project_media: {
         Row: {
           created_at: string

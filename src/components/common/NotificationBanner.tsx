@@ -11,29 +11,15 @@ export function NotificationBanner() {
   const { permission, isSupported, requestPermission } = usePushNotifications();
 
   useEffect(() => {
-    const dismissedTime = localStorage.getItem('notification-banner-dismissed-time');
-    if (dismissedTime) {
-      const timePassed = Date.now() - parseInt(dismissedTime);
-      const oneMinute = 60 * 1000; // 1 دقیقه به میلی‌ثانیه
-      
-      if (timePassed < oneMinute) {
-        setDismissed(true);
-        // تایمر برای نمایش مجدد بعد از یک دقیقه
-        const remainingTime = oneMinute - timePassed;
-        setTimeout(() => {
-          setDismissed(false);
-          localStorage.removeItem('notification-banner-dismissed-time');
-        }, remainingTime);
-      } else {
-        localStorage.removeItem('notification-banner-dismissed-time');
-      }
+    const wasDismissed = localStorage.getItem('notification-banner-dismissed');
+    if (wasDismissed) {
+      setDismissed(true);
     }
   }, []);
 
   const handleDismiss = () => {
     setDismissed(true);
-    const dismissTime = Date.now();
-    localStorage.setItem('notification-banner-dismissed-time', dismissTime.toString());
+    localStorage.setItem('notification-banner-dismissed', 'true');
   };
 
   const handleEnable = async () => {

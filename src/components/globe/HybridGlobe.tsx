@@ -1,25 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowRight, MapPin } from 'lucide-react';
+import { X, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
-interface HierarchyMedia {
-  id: string;
-  file_path: string;
-  file_type: string;
-  mime_type?: string;
-  created_at: string;
-}
-
 interface ProjectWithMedia extends ProjectHierarchy {
-  media?: HierarchyMedia[];
+  media?: Array<{
+    file_path: string;
+    file_type: string;
+  }>;
 }
 
 interface HybridGlobeProps {
@@ -33,245 +27,70 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
   const [projectsWithMedia, setProjectsWithMedia] = useState<ProjectWithMedia[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [selectedVideo, setSelectedVideo] = useState<{ url: string; mimeType: string } | null>(null);
   
   const { projects, loading } = useProjectsHierarchy();
-  const { toast } = useToast();
-
-  // رویداد انتخاب فایل
-  const handleAddImage = () => {
-    if (!selectedProject) return;
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || !selectedProject) return;
-    
-    try {
-      setUploading(true);
-      setUploadProgress(0);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ title: 'خطا', description: 'برای آپلود باید وارد شوید', variant: 'destructive' });
-        return;
-      }
-
-      const newMedia: HierarchyMedia[] = [];
-      const fileArray = Array.from(files);
-      
-      for (let i = 0; i < fileArray.length; i++) {
-        const file = fileArray[i];
-        // قبول تصویر و ویدیو
-        const isImage = file.type.startsWith('image/');
-        const isVideo = file.type.startsWith('video/');
-        
-        if (!isImage && !isVideo) continue;
-        
-        // بررسی حجم فایل (حداکثر 50MB برای ویدیو، 10MB برای تصویر)
-        const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
-        if (file.size > maxSize) {
-          toast({ 
-            title: 'خطا', 
-            description: isVideo ? 'حجم ویدیو نباید بیشتر از 50 مگابایت باشد' : 'حجم تصویر نباید بیشتر از 10 مگابایت باشد', 
-            variant: 'destructive' 
-          });
-          continue;
-        }
-        const filePath = `${user.id}/hierarchy/${selectedProject.id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
-
-        // آپلود با نمایش درصد پیشرفت
-        const { error: uploadErr } = await supabase.storage
-          .from('order-media')
-          .upload(filePath, file, { 
-            contentType: file.type, 
-            upsert: false, 
-            cacheControl: '3600'
-          });
-        
-        // محاسبه درصد کلی بر اساس تعداد فایل‌ها
-        const baseProgress = (i / fileArray.length) * 100;
-        const fileProgress = ((i + 1) / fileArray.length) * 100;
-        setUploadProgress(Math.round(fileProgress));
-        
-        if (uploadErr) {
-          console.error('upload error', uploadErr);
-          continue;
-        }
-
-        const { data: insertData, error: insertErr } = await supabase
-          .from('project_hierarchy_media')
-          .insert({
-            hierarchy_project_id: selectedProject.id,
-            file_path: filePath,
-            file_type: isVideo ? 'video' : 'image',
-            mime_type: file.type,
-            file_size: file.size,
-            user_id: user.id,
-          })
-          .select('id, file_path, file_type, created_at, mime_type')
-          .single();
-
-        if (insertErr) {
-          console.error('insert error', insertErr);
-          continue;
-        }
-
-        if (insertData) {
-          newMedia.push(insertData);
-        }
-      }
-
-      if (newMedia.length > 0) {
-        setProjectsWithMedia(prev => prev.map(p => p.id === selectedProject.id
-          ? { ...p, media: [...newMedia, ...(p.media || [])].slice(0, 3) }
-          : p
-        ));
-        setSelectedProject(prev => prev ? { ...prev, media: [...newMedia, ...(prev.media || [])].slice(0, 3) } : prev);
-        toast({ title: 'موفق', description: `${newMedia.length} فایل اضافه شد.` });
-      } else {
-        toast({ title: 'هیچ فایلی اضافه نشد', description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', variant: 'destructive' });
-      }
-    } catch (err: any) {
-      console.error('upload fatal', err);
-      toast({ title: 'خطا در آپلود', description: err?.message || 'مشکل در بارگذاری تصویر', variant: 'destructive' });
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
-      if (e.target) e.target.value = '';
-    }
-  };
 
   // دریافت عکس‌های پروژه‌ها
   useEffect(() => {
     const fetchProjectMedia = async () => {
-      if (projects.length === 0) {
-        console.debug('[HybridGlobe] No projects to fetch media for');
-        return;
-      }
+      if (projects.length === 0) return;
 
-      console.debug('[HybridGlobe] Fetching media for', projects.length, 'projects');
-      
       try {
         const projectIds = projects.map(p => p.id);
         
-        // تصاویر و ویدیوهای متصل مستقیم به پروژه‌های hierarchy
-        const { data: phMedia } = await supabase
-          .from('project_hierarchy_media')
-          .select('id, hierarchy_project_id, file_path, file_type, created_at, mime_type')
-          .in('hierarchy_project_id', projectIds)
-          .in('file_type', ['image', 'video'])
-          .order('created_at', { ascending: false });
-
-        console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
-
-        // پشتیبانی سازگاری قدیمی: تصاویر موجود در project_media از طریق projects_v3
-        const { data: v3 } = await supabase
+        // دریافت پروژه‌های v3 مرتبط با projects_hierarchy
+        const { data: projectsV3Data } = await supabase
           .from('projects_v3')
           .select('id, hierarchy_project_id')
           .in('hierarchy_project_id', projectIds);
 
-        let pmMedia: { project_id: string; file_path: string; file_type: string; created_at: string; mime_type?: string }[] = [];
-        if (v3 && v3.length > 0) {
-          const v3Ids = v3.map(x => x.id);
-          const { data } = await supabase
-            .from('project_media')
-            .select('project_id, file_path, file_type, created_at, mime_type')
-            .in('project_id', v3Ids)
-            .eq('file_type', 'image')
-            .order('created_at', { ascending: false });
-          pmMedia = data || [];
+        if (!projectsV3Data || projectsV3Data.length === 0) {
+          setProjectsWithMedia(projects.map(p => ({ ...p, media: [] })));
+          return;
         }
 
-        console.debug('[HybridGlobe] Project media fetched:', pmMedia.length);
+        const projectV3Ids = projectsV3Data.map(p => p.id);
 
-        // نگاشت id پروژه سلسله‌مراتبی به لیست تصاویر (ترکیب هر دو منبع)
-        const mediaByProject = new Map<string, HierarchyMedia[]>();
+        // دریافت عکس‌های پروژه
+        const { data: mediaData } = await supabase
+          .from('project_media')
+          .select('file_path, file_type, project_id')
+          .in('project_id', projectV3Ids)
+          .order('created_at', { ascending: false });
 
-        // از جدول جدید
-        phMedia?.forEach(m => {
-          const pid = m.hierarchy_project_id;
-          if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
-          mediaByProject.get(pid)!.push({ id: m.id, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
-        });
-
-        // از جدول قدیمی
-        pmMedia.forEach(m => {
-          const pid = v3?.find(v => v.id === m.project_id)?.hierarchy_project_id;
-          if (!pid) return;
-          if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
-          mediaByProject.get(pid)!.push({ id: `${m.project_id}-${m.created_at}`, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
-        });
-
-        // ترکیب نهایی و محدود کردن به ۳ تصویر جدید
-        const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => {
-          const list = (mediaByProject.get(project.id) || []).sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
-          return { ...project, media: list.slice(0, 3) };
-        });
-
-        console.debug('[HybridGlobe] Projects with media prepared:', projectsWithMediaData.length, 
-          'sample:', projectsWithMediaData.slice(0, 2).map(p => ({ 
-            id: p.id, 
-            title: p.title, 
-            lat: p.locations?.lat, 
-            lng: p.locations?.lng,
-            mediaCount: p.media?.length 
-          }))
-        );
-        
-        setProjectsWithMedia(projectsWithMediaData);
-        
-        // تابع global برای باز کردن ویدیو با URL امضاشده و MIME type صحیح (با استراتژی Blob برای سازگاری کامل)
-        (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
-          console.log('[Video] Opening video (blob strategy):', filePath, 'MIME hint:', mimeType);
-
-          const getSigned = async (): Promise<string | undefined> => {
-            const { data, error } = await supabase.storage
-              .from('order-media')
-              .createSignedUrl(filePath, 3600); // 1 ساعت
-            if (error) {
-              console.warn('[Video] Signed URL error:', error);
-              return undefined;
+        // ایجاد نقشه از hierarchy_project_id به project_v3 ids
+        const hierarchyToV3Map = new Map<string, string[]>();
+        projectsV3Data.forEach(pv3 => {
+          if (pv3.hierarchy_project_id) {
+            if (!hierarchyToV3Map.has(pv3.hierarchy_project_id)) {
+              hierarchyToV3Map.set(pv3.hierarchy_project_id, []);
             }
-            return data?.signedUrl;
-          };
-
-          const getPublic = (): string =>
-            supabase.storage.from('order-media').getPublicUrl(filePath).data.publicUrl;
-
-          try {
-            let url = await getSigned();
-            if (!url) url = getPublic();
-
-            // دانلود فایل و ساخت Blob URL برای جلوگیری از مشکلات MIME/CORS/Codec
-            let blob: Blob | null = null;
-            try {
-              const res = await fetch(url);
-              if (!res.ok) throw new Error('HTTP ' + res.status);
-              blob = await res.blob();
-            } catch (e) {
-              console.warn('[Video] Direct fetch failed, trying public URL', e);
-              const pub = getPublic();
-              const res2 = await fetch(pub);
-              if (!res2.ok) throw new Error('HTTP ' + res2.status);
-              blob = await res2.blob();
-            }
-
-            const finalType = (blob && blob.type && blob.type !== '')
-              ? blob.type
-              : (mimeType && mimeType !== '' ? mimeType : 'video/mp4');
-
-            const objectUrl = URL.createObjectURL(new Blob([blob!], { type: finalType }));
-            setSelectedVideo({ url: objectUrl, mimeType: finalType });
-          } catch (err) {
-            console.error('[Video] Error loading video blob:', err);
-            const publicUrl = getPublic();
-            setSelectedVideo({ url: publicUrl, mimeType: mimeType || 'video/mp4' });
+            hierarchyToV3Map.get(pv3.hierarchy_project_id)?.push(pv3.id);
           }
-        };
+        });
+
+        // گروه‌بندی عکس‌ها بر اساس hierarchy_project_id
+        const mediaByHierarchyProject = new Map<string, typeof mediaData>();
+        mediaData?.forEach(media => {
+          // پیدا کردن hierarchy_project_id برای این media
+          for (const [hierarchyId, v3Ids] of hierarchyToV3Map.entries()) {
+            if (v3Ids.includes(media.project_id)) {
+              if (!mediaByHierarchyProject.has(hierarchyId)) {
+                mediaByHierarchyProject.set(hierarchyId, []);
+              }
+              mediaByHierarchyProject.get(hierarchyId)?.push(media);
+              break;
+            }
+          }
+        });
+
+        // ترکیب عکس‌ها با پروژه‌ها (حداکثر 3 عکس برای هر پروژه)
+        const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => ({
+          ...project,
+          media: (mediaByHierarchyProject.get(project.id) || []).slice(0, 3)
+        }));
+
+        setProjectsWithMedia(projectsWithMediaData);
       } catch (error) {
         console.error('خطا در دریافت عکس‌های پروژه:', error);
         setProjectsWithMedia(projects.map(p => ({ ...p, media: [] })));
@@ -318,37 +137,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
   // اضافه کردن مارکرهای پروژه‌ها
   useEffect(() => {
-    console.debug('[HybridGlobe] Marker effect triggered:', {
-      mapReady,
-      loading,
-      projectsCount: projectsWithMedia.length
-    });
-    
-    if (!mapRef.current || !mapReady || loading || projectsWithMedia.length === 0) {
-      console.debug('[HybridGlobe] Skipping marker creation - conditions not met');
-      return;
-    }
+    if (!mapRef.current || !mapReady || loading || projectsWithMedia.length === 0) return;
 
     // پاک کردن مارکرهای قبلی
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
-    // فیلتر پروژه‌هایی که مختصات معتبر دارند (بدون محدودیت باکس ایران)
+    // فیلتر پروژه‌هایی که موقعیت جغرافیایی دارند
     const projectsWithLocation = projectsWithMedia.filter(
-      p => Number.isFinite(p.locations?.lat as number) && Number.isFinite(p.locations?.lng as number)
+      p => p.locations?.lat && p.locations?.lng && 
+           p.locations.lat >= 24 && p.locations.lat <= 40 && 
+           p.locations.lng >= 44 && p.locations.lng <= 64
     );
-
-    console.debug('[HybridGlobe] Creating markers:', {
-      totalProjects: projectsWithMedia.length,
-      withValidLocation: projectsWithLocation.length,
-      samples: projectsWithLocation.slice(0, 3).map(p => ({ 
-        id: p.id, 
-        title: p.title,
-        lat: p.locations?.lat, 
-        lng: p.locations?.lng,
-        hasMedia: (p.media?.length || 0) > 0
-      }))
-    });
 
     if (projectsWithLocation.length === 0) return;
 
@@ -367,94 +167,38 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     projectsWithLocation.forEach(project => {
       if (!project.locations?.lat || !project.locations?.lng) return;
       
-      let iconToUse: any = projectIcon;
-      const firstMedia = project.media?.[0];
-      if (firstMedia) {
-        const url1 = supabase.storage
-          .from('order-media')
-          .getPublicUrl(firstMedia.file_path).data.publicUrl;
-        const url2 = supabase.storage
-          .from('project-media')
-          .getPublicUrl(firstMedia.file_path).data.publicUrl;
-        
-        const isVideo = firstMedia.file_type === 'video';
-        const mediaElement = isVideo 
-          ? `<div style="width:100%;height:100%;position:relative;background:#000;display:flex;align-items:center;justify-content:center;">
-              <svg style="width:32px;height:32px;color:#fff;opacity:0.9;" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-              <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>
-            </div>`
-          : `<img src="${url1}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover"
-              onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"/>`;
-        
-        const html = `
-          <div style="width:70px;height:70px;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3);border:3px solid #fff;background:#f0f0f0;position:relative;">
-            ${mediaElement}
-            <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));height:24px;display:flex;align-items:center;justify-content:center;">
-              <span style="color:#fff;font-size:10px;font-weight:bold;">${project.media?.length || 0} فایل</span>
-            </div>
-          </div>`;
-        iconToUse = L.divIcon({
-          html,
-          className: 'project-thumb-icon',
-          iconSize: [70, 70],
-          iconAnchor: [35, 70],
-          popupAnchor: [0, -70],
-        });
-      }
-
-      const marker = L.marker([project.locations.lat, project.locations.lng], { icon: iconToUse })
+      const marker = L.marker([project.locations.lat, project.locations.lng], { icon: projectIcon })
         .addTo(mapRef.current!);
       
-      // تولید HTML برای عکس‌ها و ویدیوها در popup
+      // تولید HTML برای عکس‌ها
       const mediaHTML = project.media && project.media.length > 0 
         ? `
-          <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
-            ${project.media
-              .map(m => {
-                 const url1 = supabase.storage
-                   .from('order-media')
-                   .getPublicUrl(m.file_path).data.publicUrl;
-                 const url2 = supabase.storage
-                   .from('project-media')
-                   .getPublicUrl(m.file_path).data.publicUrl;
-                 
-                 const isVideo = m.file_type === 'video';
-                 
-                  return isVideo 
-                    ? `<div 
-                        onclick=\"window.openProjectVideoPath('${m.file_path.replace(/'/g, "\\'")}', '${m.mime_type || 'video/mp4'}')\"
-                        style=\"width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; background: #000; display: flex; align-items: center; justify-content: center; position: relative;\"
-                      >
-                        <svg style=\"width:24px;height:24px;color:#fff;opacity:0.9;\" fill=\"currentColor\" viewBox=\"0 0 24 24\">
-                          <path d=\"M8 5v14l11-7z\"/>
-                        </svg>
-                        <span style=\"position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;\">ویدیو</span>
-                     </div>`
-                   : `<img 
-                       src="${url1}" 
-                       alt="تصویر پروژه" 
-                       style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb;"
-                       onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"
-                     />`;
-              }).join('')}
+          <div style="margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap;">
+            ${project.media.map(m => {
+              const { data: { publicUrl } } = supabase.storage
+                .from('project-media')
+                .getPublicUrl(m.file_path);
+              
+              return `<img 
+                src="${publicUrl}" 
+                alt="تصویر پروژه" 
+                style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; cursor: pointer;"
+                onerror="this.style.display='none'"
+              />`;
+            }).join('')}
           </div>
         `
-        : '<p style="font-size: 12px; color: #999; margin-top: 8px;">هنوز تصویری ثبت نشده</p>';
+        : '';
 
       // اضافه کردن popup
       const popupContent = `
-        <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 320px;">
-          <strong style="font-size: 15px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
-          <span style="font-size: 12px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
+        <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 200px;">
+          <strong style="font-size: 14px;">${project.title || 'پروژه'}</strong><br/>
+          <span style="font-size: 12px; color: #666;">${project.locations?.address_line || ''}</span>
           ${mediaHTML}
         </div>
       `;
-      marker.bindPopup(popupContent, {
-        maxWidth: 340,
-        className: 'custom-popup'
-      });
+      marker.bindPopup(popupContent);
 
       // کلیک روی مارکر
       marker.on('click', () => {
@@ -462,157 +206,63 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       });
 
       markersRef.current.push(marker);
-      console.debug('[HybridGlobe] Marker added:', { 
-        projectId: project.id, 
-        lat: project.locations?.lat, 
-        lng: project.locations?.lng,
-        hasCustomIcon: !!firstMedia
-      });
     });
 
-    // تنظیم bounds نقشه برای نمایش همه پروژه‌ها بر اساس مارکرهای ساخته‌شده
-    const allMarkers = markersRef.current;
-    console.debug('[HybridGlobe] Total markers created:', allMarkers.length);
-    
-    if (allMarkers.length > 0) {
-      const bounds = L.latLngBounds(allMarkers.map(m => m.getLatLng()));
-      console.debug('[HybridGlobe] Fitting bounds:', bounds);
-      try {
-        mapRef.current.fitBounds(bounds, { padding: [50, 50] });
-      } catch (e) {
-        console.warn('[HybridGlobe] fitBounds failed', e, bounds);
-      }
-    } else {
-      console.warn('[HybridGlobe] No markers to display on map');
+    // تنظیم bounds نقشه برای نمایش همه پروژه‌ها
+    if (projectsWithLocation.length > 0) {
+      const bounds = L.latLngBounds(
+        projectsWithLocation
+          .filter(p => p.locations?.lat && p.locations?.lng)
+          .map(p => [p.locations!.lat, p.locations!.lng] as [number, number])
+      );
+      mapRef.current.fitBounds(bounds, { padding: [50, 50] });
     }
   }, [projectsWithMedia, loading, mapReady]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
-      {/* لایه‌ی روی نقشه برای کنترل‌ها */}
-      <div className="absolute inset-0 z-[2000] pointer-events-none">
-        {/* دکمه بازگشت */}
-        <Button
-          variant="default"
-          size="lg"
-          onClick={onClose}
-          className="pointer-events-auto absolute top-6 right-6 shadow-2xl border-2 border-primary/20"
-        >
-          <ArrowRight className="h-5 w-5 ml-2" />
-          <span className="font-semibold">بازگشت</span>
-        </Button>
-
-        {/* کارت تعداد پروژه‌ها */}
-        <Card className="pointer-events-auto absolute top-6 left-6 bg-card shadow-2xl border-2 border-primary/20 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <MapPin className="h-6 w-6 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold text-primary">{projectsWithMedia.length}</span>
-              <span className="text-sm text-muted-foreground">پروژه فعال</span>
-            </div>
-          </div>
-        </Card>
-      </div>
+      {/* دکمه بستن */}
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={onClose}
+        className="absolute top-4 right-4 z-10 bg-background/80 backdrop-blur-sm"
+      >
+        <X className="h-4 w-4" />
+      </Button>
 
       {/* نقشه */}
       <div ref={mapContainer} className="w-full h-full" />
 
-      {/* کارت اطلاعات پروژه انتخاب شده */}
-      {selectedProject && (
-        <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-card shadow-2xl p-4 z-[2000] border-2 border-primary/20 pointer-events-auto">
-          <div className="space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                <h3 className="text-base font-semibold">{selectedProject.title || 'پروژه'}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{selectedProject.locations?.address_line}</p>
-                {selectedProject.media && selectedProject.media.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">{selectedProject.media.length} فایل</p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex-1 relative">
-                <Button 
-                  size="sm" 
-                  onClick={handleAddImage} 
-                  disabled={uploading} 
-                  className="w-full relative overflow-hidden"
-                >
-                  {uploading && (
-                    <div 
-                      className="absolute right-0 top-0 bottom-0 bg-primary/20 transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
+      {/* کارت اطلاعات در پایین */}
+      <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-background/90 backdrop-blur-sm p-4">
+        <div className="text-center space-y-2">
+          <div className="flex items-center justify-center gap-2">
+            <MapPin className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold">پروژه‌های شما</h3>
+          </div>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">در حال بارگذاری پروژه‌ها...</p>
+          ) : projectsWithMedia.length === 0 ? (
+            <p className="text-sm text-muted-foreground">هیچ پروژه‌ای یافت نشد</p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {projectsWithMedia.length} پروژه فعال روی نقشه نمایش داده شده است
+              </p>
+              {selectedProject && (
+                <div className="mt-2 p-2 bg-primary/10 rounded-md">
+                  <p className="text-sm font-medium">{selectedProject.title || 'پروژه'}</p>
+                  <p className="text-xs text-muted-foreground">{selectedProject.locations?.address_line}</p>
+                  {selectedProject.media && selectedProject.media.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">{selectedProject.media.length} تصویر</p>
                   )}
-                  <span className="relative z-10">
-                    {uploading ? `در حال آپلود... ${uploadProgress}%` : 'افزودن تصویر / فیلم'}
-                  </span>
-                </Button>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,video/*"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* دیالوگ نمایش ویدیو با source tag و MIME type صحیح */}
-      <Dialog open={!!selectedVideo} onOpenChange={(open) => !open && setSelectedVideo(null)}>
-        <DialogContent className="max-w-4xl w-[95vw] p-0">
-          <DialogHeader className="p-4 pb-0">
-            <DialogTitle className="text-right">پخش ویدیو</DialogTitle>
-          </DialogHeader>
-          <div className="relative w-full bg-black" style={{ paddingTop: '56.25%' }}>
-            {selectedVideo && (
-              <video
-                key={selectedVideo.url}
-                controls
-                autoPlay
-                playsInline
-                className="absolute inset-0 w-full h-full"
-                style={{ objectFit: 'contain' }}
-                onError={(e) => {
-                  console.error('[Video] Playback error:', e);
-                  const videoEl = e.currentTarget;
-                  console.error('[Video] Error details:', {
-                    networkState: videoEl.networkState,
-                    readyState: videoEl.readyState,
-                    error: videoEl.error
-                  });
-                }}
-                onLoadedMetadata={(e) => {
-                  console.log('[Video] Metadata loaded successfully');
-                }}
-              >
-                <source 
-                  src={selectedVideo.url} 
-                  type={selectedVideo.mimeType}
-                />
-                {/* Fallback برای مرورگرهایی که از فرمت پشتیبانی نمی‌کنند */}
-                <p className="text-white p-4">
-                  مرورگر شما از پخش این ویدیو پشتیبانی نمی‌کند.
-                  <br />
-                  <a 
-                    href={selectedVideo.url} 
-                    download 
-                    className="text-blue-400 underline"
-                  >
-                    دانلود ویدیو
-                  </a>
-                </p>
-              </video>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

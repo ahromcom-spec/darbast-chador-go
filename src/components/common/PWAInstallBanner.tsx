@@ -11,25 +11,6 @@ export function PWAInstallBanner() {
   const location = useLocation();
 
   useEffect(() => {
-    // بررسی اینکه آیا کاربر اخیراً بنر را بسته است
-    const dismissedTime = localStorage.getItem('pwa-banner-dismissed-time');
-    if (dismissedTime) {
-      const timePassed = Date.now() - parseInt(dismissedTime);
-      const oneMinute = 60 * 1000; // 1 دقیقه به میلی‌ثانیه
-      
-      if (timePassed < oneMinute) {
-        // هنوز یک دقیقه نگذشته، نمایش نده
-        const remainingTime = oneMinute - timePassed;
-        setTimeout(() => {
-          localStorage.removeItem('pwa-banner-dismissed-time');
-          setShow(true);
-        }, remainingTime);
-        return;
-      } else {
-        localStorage.removeItem('pwa-banner-dismissed-time');
-      }
-    }
-
     const pageLoadTime = Date.now();
     
     // اگر برنامه نصب شده است، منطق متفاوت دارد
@@ -84,8 +65,6 @@ export function PWAInstallBanner() {
 
   const handleDismiss = () => {
     setShow(false);
-    const dismissTime = Date.now();
-    localStorage.setItem('pwa-banner-dismissed-time', dismissTime.toString());
   };
 
   const handleInstall = async () => {
