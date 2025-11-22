@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowRight, MapPin } from 'lucide-react';
@@ -8,6 +8,7 @@ import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { OptimizedImage } from './OptimizedImage';
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
 interface HierarchyMedia {
@@ -226,115 +227,115 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   };
 
 
-  // دریافت عکس‌های پروژه‌ها
-  useEffect(() => {
-    const fetchProjectMedia = async () => {
-      if (projects.length === 0) {
-        console.debug('[HybridGlobe] No projects to fetch media for');
-        return;
-      }
+  // دریافت عکس‌های پروژه‌ها - با useMemo برای بهینه‌سازی
+  const fetchProjectMedia = useCallback(async () => {
+    if (projects.length === 0) {
+      console.debug('[HybridGlobe] No projects to fetch media for');
+      return;
+    }
 
-      console.debug('[HybridGlobe] Fetching media for', projects.length, 'projects');
+    console.debug('[HybridGlobe] Fetching media for', projects.length, 'projects');
       
-      try {
-        const projectIds = projects.map(p => p.id);
-        
-        // تصاویر و ویدیوهای متصل مستقیم به پروژه‌های hierarchy
-        const { data: phMedia } = await supabase
-          .from('project_hierarchy_media')
-          .select('id, hierarchy_project_id, file_path, file_type, created_at, mime_type')
-          .in('hierarchy_project_id', projectIds)
-          .in('file_type', ['image', 'video'])
+    try {
+      const projectIds = projects.map(p => p.id);
+      
+      // تصاویر و ویدیوهای متصل مستقیم به پروژه‌های hierarchy
+      const { data: phMedia } = await supabase
+        .from('project_hierarchy_media')
+        .select('id, hierarchy_project_id, file_path, file_type, created_at, mime_type')
+        .in('hierarchy_project_id', projectIds)
+        .in('file_type', ['image', 'video'])
+        .order('created_at', { ascending: false });
+
+      console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
+
+      // پشتیبانی سازگاری قدیمی: تصاویر موجود در project_media از طریق projects_v3
+      const { data: v3 } = await supabase
+        .from('projects_v3')
+        .select('id, hierarchy_project_id')
+        .in('hierarchy_project_id', projectIds);
+
+      let pmMedia: { project_id: string; file_path: string; file_type: string; created_at: string; mime_type?: string }[] = [];
+      if (v3 && v3.length > 0) {
+        const v3Ids = v3.map(x => x.id);
+        const { data } = await supabase
+          .from('project_media')
+          .select('project_id, file_path, file_type, created_at, mime_type')
+          .in('project_id', v3Ids)
+          .eq('file_type', 'image')
           .order('created_at', { ascending: false });
-
-        console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
-
-        // پشتیبانی سازگاری قدیمی: تصاویر موجود در project_media از طریق projects_v3
-        const { data: v3 } = await supabase
-          .from('projects_v3')
-          .select('id, hierarchy_project_id')
-          .in('hierarchy_project_id', projectIds);
-
-        let pmMedia: { project_id: string; file_path: string; file_type: string; created_at: string; mime_type?: string }[] = [];
-        if (v3 && v3.length > 0) {
-          const v3Ids = v3.map(x => x.id);
-          const { data } = await supabase
-            .from('project_media')
-            .select('project_id, file_path, file_type, created_at, mime_type')
-            .in('project_id', v3Ids)
-            .eq('file_type', 'image')
-            .order('created_at', { ascending: false });
-          pmMedia = data || [];
-        }
-
-        console.debug('[HybridGlobe] Project media fetched:', pmMedia.length);
-
-        // نگاشت id پروژه سلسله‌مراتبی به لیست تصاویر (ترکیب هر دو منبع)
-        const mediaByProject = new Map<string, HierarchyMedia[]>();
-
-        // از جدول جدید
-        phMedia?.forEach(m => {
-          const pid = m.hierarchy_project_id;
-          if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
-          mediaByProject.get(pid)!.push({ id: m.id, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
-        });
-
-        // از جدول قدیمی
-        pmMedia.forEach(m => {
-          const pid = v3?.find(v => v.id === m.project_id)?.hierarchy_project_id;
-          if (!pid) return;
-          if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
-          mediaByProject.get(pid)!.push({ id: `${m.project_id}-${m.created_at}`, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
-        });
-
-        // ترکیب نهایی و محدود کردن به ۳ تصویر جدید
-        const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => {
-          const list = (mediaByProject.get(project.id) || []).sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
-          return { ...project, media: list.slice(0, 3) };
-        });
-
-        console.debug('[HybridGlobe] Projects with media prepared:', projectsWithMediaData.length, 
-          'sample:', projectsWithMediaData.slice(0, 2).map(p => ({ 
-            id: p.id, 
-            title: p.title, 
-            lat: p.locations?.lat, 
-            lng: p.locations?.lng,
-            mediaCount: p.media?.length 
-          }))
-        );
-        
-        setProjectsWithMedia(projectsWithMediaData);
-        
-        // تابع global برای باز کردن ویدیو در تب جدید
-        (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
-          console.log('[Video] openProjectVideoPath called:', filePath, mimeType);
-          try {
-            const { data } = supabase.storage
-              .from('order-media')
-              .getPublicUrl(filePath);
-
-            const publicUrl = data.publicUrl;
-            console.log('[Video] Opening video in new tab:', publicUrl);
-            
-            // باز کردن ویدیو در تب جدید
-            window.open(publicUrl, '_blank');
-          } catch (err) {
-            console.error('[Video] openProjectVideoPath failed:', err);
-            toast({
-              title: 'خطا',
-              description: 'دریافت لینک ویدیو با مشکل مواجه شد.',
-              variant: 'destructive',
-            });
-          }
-        };
-      } catch (error) {
-        console.error('خطا در دریافت عکس‌های پروژه:', error);
-        setProjectsWithMedia(projects.map(p => ({ ...p, media: [] })));
+        pmMedia = data || [];
       }
-    };
 
+      console.debug('[HybridGlobe] Project media fetched:', pmMedia.length);
+
+      // نگاشت id پروژه سلسله‌مراتبی به لیست تصاویر (ترکیب هر دو منبع)
+      const mediaByProject = new Map<string, HierarchyMedia[]>();
+
+      // از جدول جدید
+      phMedia?.forEach(m => {
+        const pid = m.hierarchy_project_id;
+        if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
+        mediaByProject.get(pid)!.push({ id: m.id, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
+      });
+
+      // از جدول قدیمی
+      pmMedia.forEach(m => {
+        const pid = v3?.find(v => v.id === m.project_id)?.hierarchy_project_id;
+        if (!pid) return;
+        if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
+        mediaByProject.get(pid)!.push({ id: `${m.project_id}-${m.created_at}`, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
+      });
+
+      // ترکیب نهایی و محدود کردن به ۲ تصویر جدید (کاهش از ۳ برای بهینه‌سازی)
+      const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => {
+        const list = (mediaByProject.get(project.id) || []).sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
+        return { ...project, media: list.slice(0, 2) };
+      });
+
+      console.debug('[HybridGlobe] Projects with media prepared:', projectsWithMediaData.length, 
+        'sample:', projectsWithMediaData.slice(0, 2).map(p => ({ 
+          id: p.id, 
+          title: p.title, 
+          lat: p.locations?.lat, 
+          lng: p.locations?.lng,
+          mediaCount: p.media?.length 
+        }))
+      );
+      
+      setProjectsWithMedia(projectsWithMediaData);
+      
+      // تابع global برای باز کردن ویدیو در تب جدید
+      (window as any).openProjectVideoPath = async (filePath: string, mimeType: string) => {
+        console.log('[Video] openProjectVideoPath called:', filePath, mimeType);
+        try {
+          const { data } = supabase.storage
+            .from('order-media')
+            .getPublicUrl(filePath);
+
+          const publicUrl = data.publicUrl;
+          console.log('[Video] Opening video in new tab:', publicUrl);
+          
+          // باز کردن ویدیو در تب جدید
+          window.open(publicUrl, '_blank');
+        } catch (err) {
+          console.error('[Video] openProjectVideoPath failed:', err);
+          toast({
+            title: 'خطا',
+            description: 'دریافت لینک ویدیو با مشکل مواجه شد.',
+            variant: 'destructive',
+          });
+        }
+      };
+    } catch (error) {
+      console.error('خطا در دریافت عکس‌های پروژه:', error);
+      setProjectsWithMedia(projects.map(p => ({ ...p, media: [] })));
+    }
+  }, [projects, toast]);
+
+  useEffect(() => {
     fetchProjectMedia();
-  }, [projects]);
+  }, [fetchProjectMedia]);
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
@@ -418,7 +419,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       shadowSize: [41, 41],
     });
 
-    // اضافه کردن مارکر برای هر پروژه
+    // اضافه کردن مارکر برای هر پروژه - با بهینه‌سازی
     projectsWithLocation.forEach(project => {
       if (!project.locations?.lat || !project.locations?.lng) return;
       
@@ -428,24 +429,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         const url1 = supabase.storage
           .from('order-media')
           .getPublicUrl(firstMedia.file_path).data.publicUrl;
-        const url2 = supabase.storage
-          .from('project-media')
-          .getPublicUrl(firstMedia.file_path).data.publicUrl;
         
         const isVideo = firstMedia.file_type === 'video';
+        // ویدیوها را در thumbnail نمایش نمی‌دهیم برای کاهش بار
         const mediaElement = isVideo 
-          ? `<video style="width:100%;height:100%;object-fit:cover;pointer-events:none;" muted>
-              <source src="${url1}" type="${firstMedia.mime_type || 'video/mp4'}">
-              <source src="${url2}" type="${firstMedia.mime_type || 'video/mp4'}">
-            </video>
-            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
-              <svg style="width:32px;height:32px;color:#fff;opacity:0.9;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));" fill="currentColor" viewBox="0 0 24 24">
+          ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#333;">
+              <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z"/>
               </svg>
-            </div>
-            <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>`
-          : `<img src="${url1}" alt="تصویر پروژه" style="width:100%;height:100%;object-fit:cover"
-              onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"/>`;
+              <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>
+            </div>`
+          : `<img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover"
+              onerror="this.style.display='none'"/>`;
         
         const html = `
           <div style="width:70px;height:70px;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3);border:3px solid #fff;background:#f0f0f0;position:relative;">
@@ -466,47 +461,33 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const marker = L.marker([project.locations.lat, project.locations.lng], { icon: iconToUse })
         .addTo(mapRef.current!);
       
-      // تولید HTML برای عکس‌ها و ویدیوها در popup
-      const mediaHTML = project.media && project.media.length > 0 
+      // تولید HTML برای عکس‌ها - فقط تصاویر را نمایش می‌دهیم، نه ویدیو
+      const images = (project.media || []).filter(m => m.file_type === 'image').slice(0, 2);
+      const videos = (project.media || []).filter(m => m.file_type === 'video').length;
+      
+      const mediaHTML = images.length > 0 || videos > 0
         ? `
-          <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
-            ${project.media
-              .map(m => {
-                 const url1 = supabase.storage
-                   .from('order-media')
-                   .getPublicUrl(m.file_path).data.publicUrl;
-                 const url2 = supabase.storage
-                   .from('project-media')
-                   .getPublicUrl(m.file_path).data.publicUrl;
-                 
-                  const isVideo = m.file_type === 'video';
-                  
-                   return isVideo 
-                    ? `<div 
-                        onclick=\"window.openProjectVideoPath('${m.file_path.replace(/'/g, "\\'")}', '${m.mime_type || 'video/mp4'}')\"
-                        style=\"width: 100%; height: 80px; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb; overflow: hidden; position: relative;\"
-                      >
-                        <video style=\"width:100%;height:100%;object-fit:cover;pointer-events:none;\" muted>
-                          <source src="${url1}" type="${m.mime_type || 'video/mp4'}">
-                          <source src="${url2}" type="${m.mime_type || 'video/mp4'}">
-                        </video>
-                        <div style=\"position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;\">
-                          <svg style=\"width:24px;height:24px;color:#fff;opacity:0.9;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));\" fill=\"currentColor\" viewBox=\"0 0 24 24\">
-                            <path d=\"M8 5v14l11-7z\"/>
-                          </svg>
-                        </div>
-                        <span style=\"position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;\">ویدیو</span>
-                     </div>`
-                   : `<img 
-                       src="${url1}" 
-                       alt="تصویر پروژه" 
-                       style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid #e5e7eb;"
-                       onerror="if(this.src==='${url1}'){this.src='${url2}'}else{this.style.display='none'}"
-                     />`;
-              }).join('')}
+          <div style="margin-top: 12px;">
+            ${images.length > 0 ? `
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+                ${images.map(m => {
+                  const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                  return `<img 
+                    src="${url}" 
+                    alt="تصویر" 
+                    loading="lazy"
+                    style="width:100%;height:80px;object-fit:cover;border-radius:6px;border:2px solid #e5e7eb;"
+                    onerror="this.style.display='none'"
+                  />`;
+                }).join('')}
+              </div>
+            ` : ''}
+            ${videos > 0 ? `
+              <p style="font-size:11px;color:#666;margin-top:8px;">${videos} ویدیو موجود است</p>
+            ` : ''}
           </div>
         `
-        : '<p style="font-size: 12px; color: #999; margin-top: 8px;">هنوز تصویری ثبت نشده</p>';
+        : '<p style="font-size: 12px; color: #999; margin-top: 8px;">هنوز فایلی ثبت نشده</p>';
 
       // اضافه کردن popup
       const popupContent = `
