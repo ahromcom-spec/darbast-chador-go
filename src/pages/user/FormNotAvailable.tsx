@@ -19,9 +19,9 @@ export default function FormNotAvailable() {
     districtName
   } = state;
 
-  // Redirect to rental form if subcategory code is 11
+  // Redirect to rental form if subcategory code is 30
   useEffect(() => {
-    if (subcategoryCode === '11') {
+    if (subcategoryCode === '30') {
       navigate('/scaffolding/rental-form', { state });
     }
   }, [subcategoryCode, navigate, state]);
