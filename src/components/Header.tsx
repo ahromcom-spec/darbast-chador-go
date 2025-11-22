@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award, TrendingUp, FolderKanban, MessageCircle } from "lucide-react";
+import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate, useLocation } from "react-router-dom";
