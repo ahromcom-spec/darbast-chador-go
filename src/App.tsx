@@ -136,6 +136,8 @@ const App = () => {
               <PWAInstallBanner />
               
               <Suspense fallback={<PageLoader />}>
+                <div className="min-h-screen bg-background">
+                  <Header />
                 <Routes>
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
@@ -323,8 +325,9 @@ const App = () => {
               <Route path="/test/map" element={<MapTest />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<NotFound />} />
                 </Routes>
+              </div>
             </Suspense>
           
         </BrowserRouter>

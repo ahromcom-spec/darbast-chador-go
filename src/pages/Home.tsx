@@ -18,7 +18,6 @@ import HybridGlobe from '@/components/globe/HybridGlobe';
 import globeIcon from '@/assets/golden-globe.png';
 import { PWAInstallBanner } from '@/components/common/PWAInstallBanner';
 import { NotificationBanner } from '@/components/common/NotificationBanner';
-import Header from '@/components/Header';
 
 const Home = () => {
   usePageTitle('صفحه اصلی');
@@ -182,8 +181,7 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <>
       {/* Subcategory Selection Dialog */}
       <SubcategoryDialog
         open={showSubcategoryDialog}
@@ -374,7 +372,7 @@ const Home = () => {
       {/* PWA Install and Notification Banners */}
       <PWAInstallBanner />
       <NotificationBanner />
-    </div>
+    </>
   );
 };
 
