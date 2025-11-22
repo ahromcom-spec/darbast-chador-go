@@ -114,22 +114,15 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
       ) : (
         <div className="grid gap-3">
           {locations.map((location) => (
-            <div key={location.id} className="space-y-3">
-              <LocationCard
-                location={location}
-                selected={selectedLocationId === location.id}
-                onSelect={() => handleSelectLocation(location)}
-                onEdit={() => handleEditLocation(location)}
-                onDelete={() => handleDeleteClick(location.id)}
-              />
-              {selectedLocationId === location.id && (
-                <div className="flex justify-center animate-in slide-in-from-top-2">
-                  <Button onClick={handleConfirm} size="lg" className="w-full sm:w-auto">
-                    تایید و ادامه
-                  </Button>
-                </div>
-              )}
-            </div>
+            <LocationCard
+              key={location.id}
+              location={location}
+              selected={selectedLocationId === location.id}
+              onSelect={() => handleSelectLocation(location)}
+              onEdit={() => handleEditLocation(location)}
+              onDelete={() => handleDeleteClick(location.id)}
+              onConfirm={handleConfirm}
+            />
           ))}
         </div>
       )}

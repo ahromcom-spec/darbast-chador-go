@@ -17,6 +17,7 @@ import { useFormPersistence } from '@/hooks/useFormPersistence';
 // Import comprehensive validation schemas
 import { orderDimensionSchema, orderFormSchema } from '@/lib/validations';
 import { sanitizeHtml } from '@/lib/security';
+import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValidation';
 
 interface Dimension {
   id: string;
@@ -301,12 +302,13 @@ export default function ScaffoldingFacadeForm() {
       
       if (locationId && scaffoldingServiceId && withMaterialsSubcategoryId) {
         try {
-          const { data: projectId, error: hierarchyError } = await supabase.rpc('get_or_create_project', {
+          const validated = getOrCreateProjectSchema.parse({
             _user_id: user.id,
             _location_id: locationId,
             _service_type_id: scaffoldingServiceId,
             _subcategory_id: withMaterialsSubcategoryId
           });
+          const { data: projectId, error: hierarchyError } = await supabase.rpc('get_or_create_project', validated as { _user_id: string; _location_id: string; _service_type_id: string; _subcategory_id: string });
           
           if (!hierarchyError && projectId) {
             hierarchyProjectId = projectId;
@@ -317,7 +319,7 @@ export default function ScaffoldingFacadeForm() {
       }
 
       // ایجاد سفارش به صورت اتمیک با لینک به پروژه سلسله‌مراتبی
-      const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', {
+      const validated = createProjectV3Schema.parse({
         _customer_id: customer.id,
         _province_id: qomProvinceId,
         _district_id: qomCityId || null,
@@ -327,14 +329,15 @@ export default function ScaffoldingFacadeForm() {
         _detailed_address: projectLocation
           ? `موقعیت: ${projectLocation.coordinates[1]},${projectLocation.coordinates[0]} - فاصله: ${projectLocation.distance}km`
           : null,
-        _notes: {
+        _notes: JSON.stringify({
           service_type: 'facade_with_materials',
           dimensions: dimensionsData,
           total_area: totalArea,
           duration_months: durationMonths,
           estimated_price: estimatedPrice
-        } as any
+        })
       });
+      const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', validated as any);
 
       if (createError) throw createError;
       const createdProject = createdRows?.[0];

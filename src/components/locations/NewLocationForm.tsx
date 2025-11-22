@@ -11,7 +11,7 @@ import { MapPin, Info } from 'lucide-react';
 import { locationSchema } from '@/lib/validations';
 import { z } from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { LocationMapModal } from './LocationMapModal';
+import { InteractiveLocationMap } from './InteractiveLocationMap';
 
 interface NewLocationFormProps {
   onSuccess: (locationId: string) => void;
@@ -35,7 +35,6 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
   });
 
   const [hasMapPin, setHasMapPin] = useState(!!initialData?.lat && !!initialData?.lng);
-  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // شناسایی استان قم
@@ -75,12 +74,8 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
     }
   };
 
-  const handleMapPinClick = () => {
-    setIsMapModalOpen(true);
-  };
-
   const handleLocationSelect = (lat: number, lng: number) => {
-    setFormData({ ...formData, lat, lng });
+    setFormData(prev => ({ ...prev, lat, lng }));
     setHasMapPin(true);
     toast({
       title: 'نقطه روی نقشه انتخاب شد',
@@ -225,30 +220,31 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
         />
       </div>
 
-      <div>
-        <Label>موقعیت روی نقشه (اختیاری)</Label>
-        <Button
-          type="button"
-          variant={hasMapPin ? 'default' : 'outline'}
-          className="w-full"
-          onClick={handleMapPinClick}
-        >
-          <MapPin className="w-4 h-4 ml-2" />
-          {hasMapPin ? 'موقعیت انتخاب شده' : 'انتخاب موقعیت روی نقشه'}
-        </Button>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>انتخاب موقعیت روی نقشه</Label>
+          {hasMapPin && (
+            <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+              <MapPin className="w-3 h-3" />
+              موقعیت انتخاب شد
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          روی نقشه کلیک کنید یا با نشانگر را بکشید تا موقعیت دقیق را انتخاب کنید
+        </p>
+        <InteractiveLocationMap
+          onLocationSelect={handleLocationSelect}
+          initialLat={formData.lat}
+          initialLng={formData.lng}
+          provinceCode={provinces.find(p => p.id === formData.province_id)?.code}
+          districtId={formData.district_id}
+        />
       </div>
 
       <Button type="submit" className="w-full" disabled={!isQomSelected}>
         {isEditMode ? 'ذخیره تغییرات' : 'ثبت و تایید آدرس'}
       </Button>
-
-      <LocationMapModal
-        isOpen={isMapModalOpen}
-        onClose={() => setIsMapModalOpen(false)}
-        onLocationSelect={handleLocationSelect}
-        initialLat={formData.lat || 34.6416}
-        initialLng={formData.lng || 50.8746}
-      />
     </form>
   );
 };

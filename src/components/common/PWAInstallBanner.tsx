@@ -1,7 +1,7 @@
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useState, useEffect } from 'react';
 
@@ -9,61 +9,34 @@ export function PWAInstallBanner() {
   const { canInstall, isStandalone, promptInstall } = usePWAInstall();
   const [show, setShow] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
+  // بازنشانی و نمایش بنر در صفحه اصلی (همیشه در صفحه نخست وقتی نصب نشده است)
   useEffect(() => {
-    // اگر برنامه نصب شده است، منطق متفاوت دارد
-    if (isStandalone) {
-      const lastVisit = localStorage.getItem('pwa-last-visit');
-      const now = Date.now();
-      
-      // فقط اگر 7 روز گذشته باشد
-      if (lastVisit) {
-        const daysSinceLastVisit = (now - parseInt(lastVisit)) / (1000 * 60 * 60 * 24);
-        if (daysSinceLastVisit < 7) {
-          return; // نشان نده
-        }
-        
-        // اگر 7 روز گذشته، فقط برای 3 روز نشان بده
-        const reminderShownDate = localStorage.getItem('pwa-reminder-shown');
-        if (reminderShownDate) {
-          const daysSinceReminder = (now - parseInt(reminderShownDate)) / (1000 * 60 * 60 * 24);
-          if (daysSinceReminder < 3) {
-            // در این 3 روز نشان بده
-          } else {
-            return; // 3 روز تمام شده، نشان نده
-          }
-        } else {
-          localStorage.setItem('pwa-reminder-shown', now.toString());
-        }
+    if (location.pathname === '/') {
+      if (!isStandalone) {
+        setShow(true);
+      } else {
+        setShow(false);
       }
-      
-      localStorage.setItem('pwa-last-visit', now.toString());
-    }
-
-    // نمایش بعد از 15 ثانیه
-    const showTimer = setTimeout(() => {
-      setShow(true);
-    }, 15000);
-
-    // محو شدن خودکار بعد از 15 ثانیه دیگر (کل 30 ثانیه)
-    const hideTimer = setTimeout(() => {
+    } else {
       setShow(false);
-    }, 30000);
-
-    return () => {
-      clearTimeout(showTimer);
-      clearTimeout(hideTimer);
-    };
-  }, [isStandalone]);
+    }
+  }, [location.pathname, isStandalone]);
 
   const handleDismiss = () => {
     setShow(false);
   };
 
   const handleInstall = async () => {
-    const result = await promptInstall();
-    if (result.outcome === 'accepted') {
-      setShow(false);
+    if (canInstall) {
+      const result = await promptInstall();
+      if (result.outcome === 'accepted') {
+        setShow(false);
+      }
+    } else {
+      // اگر پرامپت مستقیم در دسترس نباشد، کاربر را به صفحه راهنمای نصب ببریم
+      navigate('/settings/install-app');
     }
   };
 
@@ -73,7 +46,7 @@ export function PWAInstallBanner() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-md">
+    <div className="fixed bottom-20 right-4 z-[100] max-w-md">
       <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-xl">
         <div className="p-4 flex items-center gap-3">
           <div className="flex-shrink-0 p-2 rounded-lg bg-primary/10">

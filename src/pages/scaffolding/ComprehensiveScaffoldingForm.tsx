@@ -22,6 +22,8 @@ import { sanitizeHtml } from '@/lib/security';
 import { scaffoldingFormSchema } from '@/lib/validations';
 import { MediaUploader } from '@/components/orders/MediaUploader';
 import { Textarea } from '@/components/ui/textarea';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValidation';
 
 interface Dimension {
   id: string;
@@ -38,6 +40,7 @@ interface ServiceConditions {
   platformHeight: number | null;
   scaffoldHeightFromPlatform: number | null;
   vehicleDistance: number | null;
+  rentalMonthsPlan?: '1' | '2' | '3+'; // برای اجاره چند ماهه
 }
 
 interface ComprehensiveScaffoldingFormProps {
@@ -108,6 +111,7 @@ export default function ComprehensiveScaffoldingForm({
     platformHeight: null,
     scaffoldHeightFromPlatform: null,
     vehicleDistance: null,
+    rentalMonthsPlan: '1',
   });
 
   const [onGround, setOnGround] = useState(true);
@@ -117,6 +121,7 @@ export default function ComprehensiveScaffoldingForm({
   const [loading, setLoading] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [locationPurpose, setLocationPurpose] = useState('');
+  const [installationDateTime, setInstallationDateTime] = useState<string>('');
 
   // Load existing order data when editing
   useEffect(() => {
@@ -167,6 +172,9 @@ export default function ComprehensiveScaffoldingForm({
           }
           if (notes.locationPurpose) {
             setLocationPurpose(notes.locationPurpose);
+          }
+          if (notes.installationDateTime) {
+            setInstallationDateTime(notes.installationDateTime);
           }
         }
       } catch (error) {
@@ -296,7 +304,29 @@ export default function ComprehensiveScaffoldingForm({
       basePrice *= monthMultiplier;
     }
 
-    if (conditions.totalMonths > 1) {
+    // محاسبه تخفیف اجاره چند ماهه برای داربست سطحی نما
+    if (isFacadeScaffolding && conditions.rentalMonthsPlan) {
+      const monthsPlan = parseInt(conditions.rentalMonthsPlan.replace('+', ''));
+      let discount = 0;
+      
+      if (conditions.rentalMonthsPlan === '2') {
+        discount = 0.10; // 10% تخفیف برای 2 ماه
+        breakdown.push(`تخفیف اجاره 2 ماهه: -10% در هر ماه`);
+      } else if (conditions.rentalMonthsPlan === '3+') {
+        discount = 0.15; // 15% تخفیف برای 3 ماه و بیشتر
+        breakdown.push(`تخفیف اجاره 3 ماهه: -15% در هر ماه`);
+      }
+      
+      if (discount > 0) {
+        const discountedMonthlyPrice = basePrice * (1 - discount);
+        const totalWithDiscount = discountedMonthlyPrice * monthsPlan;
+        breakdown.push(`قیمت هر ماه با تخفیف: ${Math.round(discountedMonthlyPrice).toLocaleString('fa-IR')} تومان`);
+        breakdown.push(`مجموع ${monthsPlan} ماه: ${Math.round(totalWithDiscount).toLocaleString('fa-IR')} تومان`);
+        basePrice = totalWithDiscount;
+      } else {
+        breakdown.push(`مجموع 1 ماه: ${Math.round(basePrice).toLocaleString('fa-IR')} تومان`);
+      }
+    } else if (conditions.totalMonths > 1) {
       const additionalMonths = conditions.totalMonths - 1;
       const additionalCost = basePrice * 0.7 * additionalMonths;
       breakdown.push(`ماه‌های اضافی (${additionalMonths} ماه): ${additionalCost.toLocaleString('fa-IR')} تومان`);
@@ -669,12 +699,13 @@ export default function ComprehensiveScaffoldingForm({
         // ایجاد پروژه سلسله‌مراتبی برای لینک
         if (locationId && finalServiceTypeId && finalSubcategoryId) {
           try {
-            const { data: newProjectId, error: hierarchyError } = await supabase.rpc('get_or_create_project', {
+            const validated = getOrCreateProjectSchema.parse({
               _user_id: user.id,
               _location_id: locationId,
               _service_type_id: finalServiceTypeId,
               _subcategory_id: finalSubcategoryId
             });
+            const { data: newProjectId, error: hierarchyError } = await supabase.rpc('get_or_create_project', validated as { _user_id: string; _location_id: string; _service_type_id: string; _subcategory_id: string });
             
             if (!hierarchyError && newProjectId) {
               projectId = newProjectId;
@@ -707,6 +738,7 @@ export default function ComprehensiveScaffoldingForm({
               totalArea: calculateTotalArea(),
               estimated_price: priceData.total,
               price_breakdown: priceData.breakdown,
+              installationDateTime,
             } as any
           })
           .eq('id', editOrderId);
@@ -732,15 +764,15 @@ export default function ComprehensiveScaffoldingForm({
         const validProvinceId = provinceId && provinceId.trim() !== '' ? provinceId : null;
         const validDistrictId = districtId && districtId.trim() !== '' ? districtId : null;
         
-        const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', {
+        const validated = createProjectV3Schema.parse({
           _customer_id: customerId,
-          _province_id: validProvinceId,
+          _province_id: validProvinceId!,
           _district_id: validDistrictId,
           _subcategory_id: finalSubcategoryId,
           _hierarchy_project_id: projectId || hierarchyProjectId,
           _address: sanitizedAddress,
           _detailed_address: sanitizedAddress,
-          _notes: {
+          _notes: JSON.stringify({
             service_type: activeService,
             dimensions: dimensions.map(d => ({
               length: parseFloat(d.length),
@@ -755,8 +787,11 @@ export default function ComprehensiveScaffoldingForm({
             totalArea: calculateTotalArea(),
             estimated_price: priceData.total,
             price_breakdown: priceData.breakdown,
-          } as any
+            installationDateTime,
+          })
         });
+        
+        const { data: createdRows, error: createError } = await supabase.rpc('create_project_v3', validated as any);
 
         if (createError) throw createError;
         const createdProject = createdRows?.[0];
@@ -997,27 +1032,71 @@ export default function ComprehensiveScaffoldingForm({
           <CardTitle className="text-blue-800 dark:text-blue-300">شرایط سرویس</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-foreground font-semibold">تعداد کل ماه‌ها</Label>
-              <Input
-                type="number"
-                min="1"
-                value={conditions.totalMonths}
-                onChange={(e) => setConditions({ ...conditions, totalMonths: parseInt(e.target.value) || 1 })}
-              />
+          {/* نمایش فیلد اجاره چند ماهه برای داربست سطحی نما */}
+          {isFacadeScaffolding ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-foreground font-semibold">کرایه داربست به شرط چند ماه است</Label>
+                <Select
+                  value={conditions.rentalMonthsPlan || '1'}
+                  onValueChange={(v: '1' | '2' | '3+') => {
+                    const monthsNum = parseInt(v.replace('+', ''));
+                    setConditions({ 
+                      ...conditions, 
+                      rentalMonthsPlan: v,
+                      totalMonths: monthsNum,
+                      currentMonth: 1
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="1">به شرط یک ماه</SelectItem>
+                    <SelectItem value="2">به شرط دو ماه</SelectItem>
+                    <SelectItem value="3+">به شرط سه ماه و بیشتر</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground font-semibold">کرایه ماه جاری داربست</Label>
+                <Input
+                  type="text"
+                  disabled
+                  value={
+                    conditions.rentalMonthsPlan === '1' ? 'ماه اول' :
+                    conditions.rentalMonthsPlan === '2' ? 'ماه اول و دوم' :
+                    conditions.rentalMonthsPlan === '3+' ? 'ماه اول و دوم و سوم' :
+                    'ماه اول'
+                  }
+                  className="bg-muted"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-foreground font-semibold">ماه جاری</Label>
-              <Input
-                type="number"
-                min="1"
-                max={conditions.totalMonths}
-                value={conditions.currentMonth}
-                onChange={(e) => setConditions({ ...conditions, currentMonth: parseInt(e.target.value) || 1 })}
-              />
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-foreground font-semibold">تعداد کل ماه‌ها</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={conditions.totalMonths}
+                  onChange={(e) => setConditions({ ...conditions, totalMonths: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground font-semibold">ماه جاری</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max={conditions.totalMonths}
+                  value={conditions.currentMonth}
+                  onChange={(e) => setConditions({ ...conditions, currentMonth: parseInt(e.target.value) || 1 })}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label className="text-foreground font-semibold">فاصله از مرکز استان</Label>
@@ -1114,6 +1193,31 @@ export default function ComprehensiveScaffoldingForm({
         maxVideoSize={50}
         maxVideoDuration={180}
       />
+
+      {/* Installation Date & Time */}
+      <Card className="shadow-2xl bg-white dark:bg-card border-2">
+        <CardHeader>
+          <CardTitle className="text-blue-800 dark:text-blue-300">زمان نصب داربست</CardTitle>
+          <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">
+            تاریخ و ساعت مورد نظر برای نصب داربست را انتخاب کنید
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label className="text-foreground font-semibold">تاریخ و زمان نصب</Label>
+            <PersianDatePicker
+              value={installationDateTime}
+              onChange={setInstallationDateTime}
+              placeholder="انتخاب تاریخ نصب"
+              timeMode="ampm"
+              disabled={loading}
+            />
+            <p className="text-xs text-muted-foreground">
+              امکان انتخاب تاریخ‌های گذشته وجود ندارد
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Price Summary */}
       {calculateTotalArea() > 0 && (

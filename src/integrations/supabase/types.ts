@@ -1054,6 +1054,50 @@ export type Database = {
           },
         ]
       }
+      project_hierarchy_media: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_size: number | null
+          file_type: string
+          hierarchy_project_id: string
+          id: string
+          mime_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string
+          hierarchy_project_id: string
+          id?: string
+          mime_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string
+          hierarchy_project_id?: string
+          id?: string
+          mime_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_hierarchy_media_hierarchy_project_id_fkey"
+            columns: ["hierarchy_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_hierarchy"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_media: {
         Row: {
           created_at: string
@@ -1354,6 +1398,8 @@ export type Database = {
           created_at: string | null
           customer_completion_date: string | null
           customer_id: string
+          customer_name: string | null
+          customer_phone: string | null
           detailed_address: string | null
           district_id: string | null
           executed_by: string | null
@@ -1368,6 +1414,8 @@ export type Database = {
           hierarchy_project_id: string | null
           id: string
           is_renewal: boolean | null
+          location_lat: number | null
+          location_lng: number | null
           notes: string | null
           original_order_id: string | null
           payment_amount: number | null
@@ -1391,6 +1439,8 @@ export type Database = {
           created_at?: string | null
           customer_completion_date?: string | null
           customer_id: string
+          customer_name?: string | null
+          customer_phone?: string | null
           detailed_address?: string | null
           district_id?: string | null
           executed_by?: string | null
@@ -1407,6 +1457,8 @@ export type Database = {
           hierarchy_project_id?: string | null
           id?: string
           is_renewal?: boolean | null
+          location_lat?: number | null
+          location_lng?: number | null
           notes?: string | null
           original_order_id?: string | null
           payment_amount?: number | null
@@ -1430,6 +1482,8 @@ export type Database = {
           created_at?: string | null
           customer_completion_date?: string | null
           customer_id?: string
+          customer_name?: string | null
+          customer_phone?: string | null
           detailed_address?: string | null
           district_id?: string | null
           executed_by?: string | null
@@ -1446,6 +1500,8 @@ export type Database = {
           hierarchy_project_id?: string | null
           id?: string
           is_renewal?: boolean | null
+          location_lat?: number | null
+          location_lng?: number | null
           notes?: string | null
           original_order_id?: string | null
           payment_amount?: number | null
@@ -2692,13 +2748,15 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
-      assign_role_to_user: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: undefined
-      }
+      assign_role_to_user:
+        | { Args: { _role: string; _user_id: string }; Returns: undefined }
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: undefined
+          }
       calculate_reputation_score: {
         Args: { _user_id: string }
         Returns: undefined
@@ -2743,10 +2801,10 @@ export type Database = {
         Args: {
           _address: string
           _customer_id: string
-          _detailed_address: string
+          _detailed_address?: string
           _district_id: string
           _hierarchy_project_id: string
-          _notes: Json
+          _notes?: Json
           _province_id: string
           _subcategory_id: string
         }
@@ -2760,6 +2818,8 @@ export type Database = {
           created_at: string | null
           customer_completion_date: string | null
           customer_id: string
+          customer_name: string | null
+          customer_phone: string | null
           detailed_address: string | null
           district_id: string | null
           executed_by: string | null
@@ -2774,6 +2834,8 @@ export type Database = {
           hierarchy_project_id: string | null
           id: string
           is_renewal: boolean | null
+          location_lat: number | null
+          location_lng: number | null
           notes: string | null
           original_order_id: string | null
           payment_amount: number | null
@@ -2879,16 +2941,26 @@ export type Database = {
         }
         Returns: boolean
       }
-      log_audit: {
-        Args: {
-          _action: string
-          _actor_user_id: string
-          _entity: string
-          _entity_id: string
-          _meta?: Json
-        }
-        Returns: string
-      }
+      log_audit:
+        | {
+            Args: {
+              _action: string
+              _actor_user_id: string
+              _entity: string
+              _entity_id: string
+              _meta?: Json
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _action: string
+              _entity: string
+              _entity_id?: string
+              _meta?: Json
+            }
+            Returns: string
+          }
       next_project_code: { Args: never; Returns: string }
       notify_role: {
         Args: {
@@ -2921,15 +2993,28 @@ export type Database = {
         }
         Returns: string
       }
-      set_order_schedule: {
-        Args: {
-          _execution_end_date?: string
-          _execution_start_date: string
-          _order_id: string
-        }
-        Returns: undefined
+      set_order_schedule:
+        | {
+            Args: { _execution_start_date: string; _order_id: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _execution_end_date?: string
+              _execution_start_date: string
+              _order_id: string
+            }
+            Returns: undefined
+          }
+      validate_contractor_phone: {
+        Args: { _phone_number: string }
+        Returns: boolean
       }
       validate_phone_number: { Args: { _phone: string }; Returns: boolean }
+      validate_profile_phone: {
+        Args: { _phone_number: string }
+        Returns: boolean
+      }
       verify_otp_code: {
         Args: { _code: string; _phone_number: string }
         Returns: boolean

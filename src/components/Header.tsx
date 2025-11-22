@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, Smartphone, Building, ChevronDown, MessageSquare, User, LogOut, Award, TrendingUp, FolderKanban, MessageCircle } from "lucide-react";
+import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -18,16 +18,20 @@ const Header = () => {
   const { isGeneralManager } = useGeneralManagerRole();
   const { toast } = useToast();
   const { profile } = useUserProfile();
+  
+  // Safe display name with fallback
   const displayName = profile?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
   
-  const [contactDropdownOpen, setContactDropdownOpen] = useState(false);
+  const [contactDropdownOpenMobile, setContactDropdownOpenMobile] = useState(false);
+  const [contactDropdownOpenDesktop, setContactDropdownOpenDesktop] = useState(false);
   const [profileDropdownOpenMobile, setProfileDropdownOpenMobile] = useState(false);
   const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(false);
   
   // بستن تمام منوهای کشویی هنگام تغییر مسیر برای جلوگیری از باقی‌ماندن روی صفحه بعد
   const location = useLocation();
   useEffect(() => {
-    setContactDropdownOpen(false);
+    setContactDropdownOpenMobile(false);
+    setContactDropdownOpenDesktop(false);
     setProfileDropdownOpenMobile(false);
     setProfileDropdownOpenDesktop(false);
   }, [location.pathname]);
@@ -61,9 +65,9 @@ const Header = () => {
               <img 
                 src={ahromLogo} 
                 alt="لوگوی اهرم" 
-                width="140"
-                height="80"
-                className="h-11 sm:h-12 w-auto object-contain"
+                width="126"
+                height="72"
+                className="h-10 sm:h-11 w-auto object-contain"
                 loading="eager"
               />
             </div>
@@ -76,8 +80,8 @@ const Header = () => {
             </div>
             
             {/* Contact Button - Left side (RTL) */}
-            <div className="flex items-center gap-1.5">
-              <DropdownMenu open={contactDropdownOpen} onOpenChange={setContactDropdownOpen}>
+            <div className="flex items-center gap-1.5 md:hidden">
+              <DropdownMenu open={contactDropdownOpenMobile} onOpenChange={setContactDropdownOpenMobile}>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity" aria-label="تماس">
                     <img 
@@ -127,26 +131,6 @@ const Header = () => {
                 <div data-tour="notifications">
                   <NotificationBell />
                 </div>
-                <Button
-                  data-tour="ratings"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/ratings/test")}
-                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
-                >
-                  <Award className="h-3 w-3" />
-                  <span className="text-xs sm:text-sm">امتیازات</span>
-                </Button>
-                <Button
-                  data-tour="top-users"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/ratings/top-users")}
-                  className="gap-2 border-green-500/30 hover:border-green-500 bg-green-500/5 hover:bg-green-500/10 text-green-600"
-                >
-                  <TrendingUp className="h-3 w-3" />
-                  <span className="text-xs sm:text-sm">برترین‌ها</span>
-                </Button>
                 <DropdownMenu open={profileDropdownOpenMobile} onOpenChange={setProfileDropdownOpenMobile}>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -240,9 +224,9 @@ const Header = () => {
                 <img 
                   src={ahromLogo} 
                   alt="لوگوی اهرم" 
-                  width="140"
-                  height="80"
-                  className="h-20 w-auto object-contain"
+                  width="126"
+                  height="72"
+                  className="h-12 lg:h-14 xl:h-16 w-auto object-contain"
                   loading="eager"
                 />
               </div>
@@ -256,8 +240,8 @@ const Header = () => {
             </div>
             
             {/* Contact Dropdown & Notification - Left side (RTL) */}
-            <div className="flex items-center gap-4 justify-start">
-              <DropdownMenu open={contactDropdownOpen} onOpenChange={setContactDropdownOpen}>
+            <div className="hidden md:flex items-center gap-4 justify-start">
+              <DropdownMenu open={contactDropdownOpenDesktop} onOpenChange={setContactDropdownOpenDesktop}>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity md:-translate-x-6 lg:translate-x-0" aria-label="تماس">
                     <img 
@@ -307,24 +291,6 @@ const Header = () => {
                 <div data-tour="notifications">
                   <NotificationBell />
                 </div>
-                <Button
-                  data-tour="ratings"
-                  variant="outline"
-                  onClick={() => navigate("/ratings/test")}
-                  className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
-                >
-                  <Award className="h-4 w-4" />
-                  <span>سیستم امتیازدهی</span>
-                </Button>
-                <Button
-                  data-tour="top-users"
-                  variant="outline"
-                  onClick={() => navigate("/ratings/top-users")}
-                  className="gap-2 border-green-500/30 hover:border-green-500 bg-green-500/5 hover:bg-green-500/10 text-green-600 font-medium"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  <span>برترین کاربران</span>
-                </Button>
                 <DropdownMenu open={profileDropdownOpenDesktop} onOpenChange={setProfileDropdownOpenDesktop}>
                   <DropdownMenuTrigger asChild>
                     <Button

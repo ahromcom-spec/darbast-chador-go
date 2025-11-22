@@ -16,7 +16,18 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Return safe default instead of throwing to prevent crashes
+    if (import.meta.env.DEV) {
+      console.warn('useAuth called outside AuthProvider - returning safe defaults');
+    }
+    return {
+      user: null,
+      session: null,
+      sendOTP: async () => ({ error: { message: 'Auth not initialized' }, userExists: false }),
+      verifyOTP: async () => ({ error: { message: 'Auth not initialized' }, session: null }),
+      signOut: async () => {},
+      loading: true,
+    };
   }
   return context;
 };

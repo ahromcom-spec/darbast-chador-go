@@ -1,10 +1,10 @@
-import React, { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
@@ -48,6 +48,7 @@ const ScaffoldingForm = lazy(() => import("./pages/scaffolding/ScaffoldingForm")
 const NewServiceRequestForm = lazy(() => import("./pages/scaffolding/NewServiceRequestForm"));
 const ComprehensiveScaffoldingForm = lazy(() => import("./pages/scaffolding/ComprehensiveScaffoldingForm"));
 const TicketList = lazy(() => import("./pages/tickets/TicketList"));
+const FormNotAvailable = lazy(() => import("./pages/user/FormNotAvailable"));
 const NewTicket = lazy(() => import("./pages/tickets/NewTicket"));
 const TicketDetail = lazy(() => import("./pages/tickets/TicketDetail"));
 const ContractorRegister = lazy(() => import("./pages/contractor/ContractorRegister"));
@@ -81,6 +82,7 @@ const MyOrders = lazy(() => import("./pages/user/MyOrders"));
 const MyProjectsHierarchy = lazy(() => import("./pages/user/MyProjectsHierarchy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
+const MapTest = lazy(() => import("@/pages/test/MapTest"));
 
 
 const queryClient = new QueryClient({
@@ -127,15 +129,13 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <AuthProvider>
+            
               {/* <PageLoadProgress /> */}
               <OfflineIndicator />
               <NotificationBanner />
               <PWAInstallBanner />
               
               <Suspense fallback={<PageLoader />}>
-                <div className="min-h-screen bg-background">
-                  <Header />
                 <Routes>
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
@@ -208,8 +208,13 @@ const App = () => {
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<NewTicket />} />
               <Route path="/tickets/:id" element={<TicketDetail />} />
-          <Route path="/contractor/register" element={<ContractorRegister />} />
-          <Route path="/staff/request-role" element={<StaffRoleRequest />} />
+              <Route path="/form-not-available" element={
+                <ProtectedRoute>
+                  <FormNotAvailable />
+                </ProtectedRoute>
+              } />
+              <Route path="/contractor/register" element={<ContractorRegister />} />
+              <Route path="/staff/request-role" element={<StaffRoleRequest />} />
               <Route path="/contractor/dashboard" element={
                 <ProtectedRoute>
                   <ContractorDashboard />
@@ -313,12 +318,15 @@ const App = () => {
                   <TopRatedUsers />
                 </ProtectedRoute>
               } />
+              
+              {/* Test route for map */}
+              <Route path="/test/map" element={<MapTest />} />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
-              </div>
             </Suspense>
-          </AuthProvider>
+          
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

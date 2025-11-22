@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import {
   Home,
   Building2,
@@ -127,8 +128,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                     <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                      <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
-                      {open && <span>{item.title}</span>}
+                      <item.icon className="ml-2 h-4 w-4" />
+                      <span className={!open ? "md:hidden" : ""}>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -152,8 +153,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                         onClick={handleClick}
                         data-tour={item.dataTour}
                       >
-                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
-                        {open && <span>{item.title}</span>}
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span className={!open ? "md:hidden" : ""}>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -173,8 +174,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
-                        {open && <span>{item.title}</span>}
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span className={!open ? "md:hidden" : ""}>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -194,8 +195,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
-                        {open && <span>{item.title}</span>}
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span className={!open ? "md:hidden" : ""}>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -215,8 +216,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
-                        {open && <span>{item.title}</span>}
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span className={!open ? "md:hidden" : ""}>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -236,8 +237,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
-                        {open && <span>{item.title}</span>}
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span className={!open ? "md:hidden" : ""}>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -257,9 +258,9 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
-                        {open && <span className="flex-1">{item.title}</span>}
-                        {open && item.url === '/sales/pending-orders' && pendingCount > 0 && (
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span className={cn("flex-1", !open && "md:hidden")}>{item.title}</span>
+                        {item.url === '/sales/pending-orders' && pendingCount > 0 && (
                           <Badge variant="destructive" className="mr-auto text-xs">
                             {pendingCount}
                           </Badge>
@@ -283,8 +284,8 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
-                        <item.icon className={open ? "ml-2 h-4 w-4" : "h-5 w-5"} />
-                        {open && <span>{item.title}</span>}
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span className={!open ? "md:hidden" : ""}>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

@@ -10,13 +10,16 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="Referrer-Policy" content="no-referrer" />
     <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://gclbltatkbwbqxqqrcea.supabase.co wss://gclbltatkbwbqxqqrcea.supabase.co https://gclbltatkbwbqxqqrcea.functions.supabase.co wss://gclbltatkbwbqxqqrcea.functions.supabase.co;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://api.mapbox.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://gclbltatkbwbqxqqrcea.supabase.co wss://gclbltatkbwbqxqqrcea.supabase.co https://gclbltatkbwbqxqqrcea.functions.supabase.co wss://gclbltatkbwbqxqqrcea.functions.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com; worker-src 'self' blob:;" />
     
     <!-- DNS Prefetch برای بهبود سرعت -->
     <link rel="dns-prefetch" href="https://gclbltatkbwbqxqqrcea.supabase.co" />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://api.mapbox.com" />
+    <link rel="dns-prefetch" href="https://events.mapbox.com" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
     
     <!-- Primary Meta Tags -->
     <title>خدمات ساختمانی و منزل اهرم | داربست فلزی در قم و سراسر ایران</title>
@@ -30,6 +33,8 @@
     <meta name="geo.placename" content="قم, ایران" />
     <meta name="geo.position" content="34.6416;50.8746" />
     <meta name="ICBM" content="34.6416, 50.8746" />
+    <!-- Public tokens (safe for frontend) -->
+    <meta name="mapbox-token" content="pk.eyJ1Ijoia2hhZGFtYXRlLWFocm9tIiwiYSI6ImNtaTEzNm0yaDBzdTIyam16enU3eGVtc3IifQ.0YazUHOkiwSYLwsjOcgUFA" />
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://ahrom.org/" />
@@ -207,6 +212,8 @@
 
   <body dir="rtl">
     <div id="root"></div>
+    <!-- حذف Service Worker قدیمی -->
+    <script src="/sw-unregister.js"></script>
     <script>
       // Early capture of PWA install events before React mounts
       (function () {

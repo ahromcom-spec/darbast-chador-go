@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { sanitizeHtml } from '@/lib/security';
+import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValidation';
 
 interface Province {
   id: string;
@@ -218,6 +219,24 @@ export default function NewServiceRequestForm() {
       return;
     }
 
+    // ✅ بررسی پروفایل کامل کاربر
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('full_name, phone_number')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (profileError || !profileData?.full_name || !profileData?.phone_number) {
+      toast.error('لطفاً ابتدا نام و شماره تماس خود را در پروفایل کاربری تکمیل کنید', {
+        description: 'برای تکمیل پروفایل به بخش "پروفایل من" بروید',
+        action: {
+          label: 'رفتن به پروفایل',
+          onClick: () => navigate('/user/profile')
+        }
+      });
+      return;
+    }
+
     if (!selectedProvince || !selectedSubcategory || !address.trim()) {
       toast.error('لطفاً تمام فیلدهای الزامی را پر کنید');
       return;
@@ -277,10 +296,10 @@ export default function NewServiceRequestForm() {
 
       if (!serviceTypeData) throw new Error('نوع خدمات یافت نشد');
 
-      // Create or get location
+      // ✅ بررسی وجود location با lat/lng معتبر
       const { data: existingLocation } = await supabase
         .from('locations')
-        .select('id')
+        .select('id, lat, lng')
         .eq('user_id', user.id)
         .eq('province_id', selectedProvince)
         .eq('address_line', sanitizedAddress)
@@ -288,48 +307,44 @@ export default function NewServiceRequestForm() {
 
       let locationId = existingLocation?.id;
 
-      if (!locationId) {
-        const { data: newLocation, error: locError } = await supabase
-          .from('locations')
-          .insert([{
-            user_id: user.id,
-            province_id: selectedProvince,
-            district_id: selectedDistrict || null,
-            address_line: sanitizedAddress,
-            lat: 0,
-            lng: 0,
-            is_active: true
-          }])
-          .select('id')
-          .single();
-
-        if (locError) throw locError;
-        locationId = newLocation.id;
+      // ✅ اگر location موجود نیست یا lat/lng ندارد، باید از طریق SelectLocation ثبت شود
+      if (!locationId || !existingLocation.lat || !existingLocation.lng) {
+        toast.error('لطفاً ابتدا آدرس را با انتخاب موقعیت روی نقشه ثبت کنید', {
+          description: 'از بخش "پروژه‌های من" می‌توانید آدرس جدید با نقشه ثبت کنید',
+          action: {
+            label: 'ثبت آدرس با نقشه',
+            onClick: () => navigate('/user/projects')
+          }
+        });
+        setLoading(false);
+        return;
       }
 
       // Get or create project in hierarchy
+      const getProjectValidated = getOrCreateProjectSchema.parse({
+        _user_id: user.id,
+        _location_id: locationId,
+        _service_type_id: serviceTypeData.id,
+        _subcategory_id: selectedSubcategory
+      });
       const { data: hierarchyProjectId, error: hierarchyError } = await supabase
-        .rpc('get_or_create_project', {
-          _user_id: user.id,
-          _location_id: locationId,
-          _service_type_id: serviceTypeData.id,
-          _subcategory_id: selectedSubcategory
-        });
+        .rpc('get_or_create_project', getProjectValidated as { _user_id: string; _location_id: string; _service_type_id: string; _subcategory_id: string });
 
       if (hierarchyError) throw hierarchyError;
 
       // ایجاد سفارش به صورت اتمیک و لینک به hierarchy
+      const createValidated = createProjectV3Schema.parse({
+        _customer_id: customer.id,
+        _province_id: selectedProvince,
+        _district_id: selectedDistrict || null,
+        _subcategory_id: selectedSubcategory,
+        _hierarchy_project_id: hierarchyProjectId,
+        _address: sanitizedAddress,
+        _detailed_address: sanitizedDetailedAddress || null,
+        _notes: sanitizedNotes ? JSON.stringify({ raw: sanitizedNotes }) : null
+      });
       const { data: createdRows, error: createError } = await supabase
-        .rpc('create_project_v3', {
-          _customer_id: customer.id,
-          _province_id: selectedProvince,
-          _district_id: selectedDistrict || null,
-          _subcategory_id: selectedSubcategory,
-          _hierarchy_project_id: hierarchyProjectId,
-          _address: sanitizedAddress,
-          _detailed_address: sanitizedDetailedAddress || null,
-          _notes: sanitizedNotes ? { raw: sanitizedNotes } as any : null
-        });
+        .rpc('create_project_v3', createValidated as any);
 
       if (createError) throw createError;
       const createdProject = createdRows?.[0];

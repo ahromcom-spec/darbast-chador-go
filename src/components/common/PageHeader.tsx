@@ -24,7 +24,7 @@ export function PageHeader({
     <div className="mb-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{title}</h1>
+          <h1 className="text-3xl font-bold text-white">{title}</h1>
           {description && (
             <p className="text-foreground mt-2 bg-background/95 backdrop-blur-md px-4 py-3 rounded-lg border border-border shadow-sm">{description}</p>
           )}

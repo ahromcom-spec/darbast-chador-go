@@ -10,16 +10,15 @@ export function NotificationBanner() {
   const location = useLocation();
   const { permission, isSupported, requestPermission } = usePushNotifications();
 
+  // بازنشانی بنر هنگام بازگشت به صفحه اصلی
   useEffect(() => {
-    const wasDismissed = localStorage.getItem('notification-banner-dismissed');
-    if (wasDismissed) {
-      setDismissed(true);
+    if (location.pathname === '/') {
+      setDismissed(false);
     }
-  }, []);
+  }, [location.pathname]);
 
   const handleDismiss = () => {
     setDismissed(true);
-    localStorage.setItem('notification-banner-dismissed', 'true');
   };
 
   const handleEnable = async () => {
@@ -35,7 +34,7 @@ export function NotificationBanner() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 max-w-md">
+    <div className="fixed bottom-20 left-4 z-[100] max-w-md">
       <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-xl">
         <div className="p-4 flex items-center gap-3">
           <div className="flex-shrink-0 p-2 rounded-lg bg-primary/10">
@@ -47,24 +46,21 @@ export function NotificationBanner() {
               از سفارشات جدید و به‌روزرسانی‌ها مطلع شوید
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleEnable}
-              size="sm"
-              className="gap-2"
-            >
-              <Bell className="h-3 w-3" />
-              فعال‌سازی
-            </Button>
-            <Button
-              onClick={handleDismiss}
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button
+            onClick={handleEnable}
+            size="sm"
+            className="whitespace-nowrap"
+          >
+            فعال‌سازی
+          </Button>
+          <Button
+            onClick={handleDismiss}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 flex-shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       </Card>
     </div>

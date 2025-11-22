@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin } from 'lucide-react';
+import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin, Globe } from 'lucide-react';
 import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
 import { SubcategoryDialog } from '@/components/common/SubcategoryDialog';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,11 @@ import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSub
 import { useUserProjects } from '@/hooks/useUserProjects';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import HybridGlobe from '@/components/globe/HybridGlobe';
+import globeIcon from '@/assets/golden-globe.png';
+import { PWAInstallBanner } from '@/components/common/PWAInstallBanner';
+import { NotificationBanner } from '@/components/common/NotificationBanner';
+import Header from '@/components/Header';
 
 const Home = () => {
   usePageTitle('صفحه اصلی');
@@ -22,6 +27,7 @@ const Home = () => {
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
   const [pendingServiceTypeId, setPendingServiceTypeId] = useState<string>('');
+  const [showGlobe, setShowGlobe] = useState(false);
   
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
@@ -171,8 +177,13 @@ const Home = () => {
     }
   };
 
+  if (showGlobe) {
+    return <HybridGlobe onClose={() => setShowGlobe(false)} />;
+  }
+
   return (
-    <>
+    <div className="min-h-screen bg-background">
+      <Header />
       {/* Subcategory Selection Dialog */}
       <SubcategoryDialog
         open={showSubcategoryDialog}
@@ -316,6 +327,24 @@ const Home = () => {
               </CardContent>
             </Card>
 
+            {/* Globe Button - Outside Card, Below Dropdown */}
+            {user && !servicesLoading && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={() => setShowGlobe(true)}
+                  className="group relative w-[112px] h-[112px] transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-0"
+                  aria-label="نمایش پروژه‌ها روی کره زمین"
+                >
+                  {/* Globe image with gentle swing animation */}
+                  <img 
+                    src="/golden-globe-new.png" 
+                    alt="کره زمین" 
+                    className="w-full h-full object-contain animate-globe-swing"
+                  />
+                </button>
+              </div>
+            )}
+
             {/* Show loading message after service selection */}
             {selectedServiceType && selectedSubcategory && (
               <Card className="mt-4 shadow-xl bg-card/20 backdrop-blur-xl border-2">
@@ -341,7 +370,11 @@ const Home = () => {
         </footer>
       </div>
       </div>
-    </>
+
+      {/* PWA Install and Notification Banners */}
+      <PWAInstallBanner />
+      <NotificationBanner />
+    </div>
   );
 };
 
