@@ -109,28 +109,8 @@ export default defineConfig(({ mode }) => ({
       },
     },
     cssCodeSplit: true,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.warn'],
-        passes: 3,
-        unsafe: true,
-        unsafe_comps: true,
-        unsafe_math: true,
-      },
-      mangle: {
-        toplevel: true,
-        properties: false,
-        safari10: true,
-      },
-      format: {
-        comments: false,
-        ecma: 2020,
-      }
-    },
-    chunkSizeWarningLimit: 600,
+    // Use default fast minifier to keep builds stable with large map/globe libraries
+    chunkSizeWarningLimit: 900,
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
