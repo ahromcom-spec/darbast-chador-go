@@ -305,10 +305,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       
       setProjectsWithMedia(projectsWithMediaData);
       
-      // تابع global برای باز کردن ویدیو در دیالوگ
+      // تابع global برای باز کردن ویدیو در تب جدید
       (window as any).openProjectVideo = (videoUrl: string, mimeType: string) => {
-        console.log('[Video] openProjectVideo called:', videoUrl, mimeType);
-        setSelectedVideo({ url: videoUrl, mimeType });
+        console.log('[Video] openProjectVideo called - opening in new tab:', videoUrl);
+        window.open(videoUrl, '_blank');
       };
     } catch (error) {
       console.error('خطا در دریافت عکس‌های پروژه:', error);
