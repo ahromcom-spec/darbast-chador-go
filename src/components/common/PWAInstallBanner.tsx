@@ -11,10 +11,12 @@ export function PWAInstallBanner() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // بازنشانی و نمایش بنر در صفحه اصلی (همیشه در صفحه نخست وقتی نصب نشده است)
+  // بررسی و نمایش بنر بر اساس وضعیت نصب و localStorage
   useEffect(() => {
+    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    
     if (location.pathname === '/') {
-      if (!isStandalone) {
+      if (!isStandalone && !dismissed) {
         setShow(true);
       } else {
         setShow(false);
@@ -26,6 +28,7 @@ export function PWAInstallBanner() {
 
   const handleDismiss = () => {
     setShow(false);
+    localStorage.setItem('pwa-install-dismissed', 'true');
   };
 
   const handleInstall = async () => {

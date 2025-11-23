@@ -6,19 +6,15 @@ import { useLocation } from 'react-router-dom';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export function NotificationBanner() {
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    return localStorage.getItem('notification-banner-dismissed') === 'true';
+  });
   const location = useLocation();
   const { permission, isSupported, requestPermission } = usePushNotifications();
 
-  // بازنشانی بنر هنگام بازگشت به صفحه اصلی
-  useEffect(() => {
-    if (location.pathname === '/') {
-      setDismissed(false);
-    }
-  }, [location.pathname]);
-
   const handleDismiss = () => {
     setDismissed(true);
+    localStorage.setItem('notification-banner-dismissed', 'true');
   };
 
   const handleEnable = async () => {
