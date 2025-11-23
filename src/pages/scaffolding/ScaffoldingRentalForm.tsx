@@ -10,11 +10,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, Building2, MapPin, Package, Calendar } from 'lucide-react';
+import { ArrowRight, Building2, MapPin, Package, Upload } from 'lucide-react';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { MediaUploader } from '@/components/orders/MediaUploader';
 
 const rentalFormSchema = z.object({
   itemType: z.string().min(1, 'لطفا نوع جنس را انتخاب کنید'),
@@ -50,6 +51,7 @@ export default function ScaffoldingRentalForm() {
   
   const [loading, setLoading] = useState(false);
   const [selectedItemType, setSelectedItemType] = useState<string>('');
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   
   // Extract service selection data
   const stateData = location.state || {};
@@ -143,12 +145,14 @@ export default function ScaffoldingRentalForm() {
 
       if (orderError) throw orderError;
 
+      // Save order ID for media upload (orderData is the order ID string)
+      const orderId = Array.isArray(orderData) ? orderData[0]?.id : orderData;
+      setCreatedOrderId(orderId);
+
       toast({
         title: '✅ سفارش ثبت شد',
-        description: 'سفارش کرایه اجناس شما با موفقیت ثبت شد و در حال بررسی است',
+        description: 'سفارش کرایه اجناس شما با موفقیت ثبت شد. می‌توانید تصاویر مرتبط را آپلود کنید.',
       });
-
-      navigate('/user/my-orders');
     } catch (error: any) {
       console.error('خطا در ثبت سفارش:', error);
       toast({
@@ -410,24 +414,55 @@ export default function ScaffoldingRentalForm() {
                     )}
                   />
 
+                  {/* Image Upload Section - Show after order creation */}
+                  {createdOrderId && (
+                    <Card className="border-2 border-primary/20">
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Upload className="h-5 w-5" />
+                          آپلود تصاویر (اختیاری)
+                        </CardTitle>
+                        <CardDescription>
+                          تصاویر مرتبط با سفارش خود را آپلود کنید
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <MediaUploader />
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {/* Submit Button */}
                   <div className="flex gap-3">
-                    <Button
-                      type="submit"
-                      size="lg"
-                      className="flex-1"
-                      disabled={loading}
-                    >
-                      {loading ? 'در حال ثبت...' : 'ثبت سفارش'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      onClick={() => navigate(-1)}
-                    >
-                      انصراف
-                    </Button>
+                    {!createdOrderId ? (
+                      <>
+                        <Button
+                          type="submit"
+                          size="lg"
+                          className="flex-1"
+                          disabled={loading}
+                        >
+                          {loading ? 'در حال ثبت...' : 'ثبت سفارش'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="lg"
+                          onClick={() => navigate(-1)}
+                        >
+                          انصراف
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="lg"
+                        className="flex-1"
+                        onClick={() => navigate('/user/my-orders')}
+                      >
+                        مشاهده سفارشات من
+                      </Button>
+                    )}
                   </div>
                 </form>
               </Form>
