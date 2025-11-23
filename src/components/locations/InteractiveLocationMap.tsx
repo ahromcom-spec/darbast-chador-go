@@ -158,6 +158,51 @@ export function InteractiveLocationMap({
         maxZoom: 20,
         pitchWithRotate: false,
         attributionControl: false,
+        performanceMetricsCollection: false,
+        refreshExpiredTiles: false,
+      });
+
+      // Add building layer with detailed 3D extrusion
+      map.current.on('load', () => {
+        // Enable building details for all zoom levels
+        if (map.current) {
+          // Add 3D buildings layer
+          const layers = map.current.getStyle().layers;
+          const labelLayerId = layers?.find(
+            (layer: any) => layer.type === 'symbol' && layer.layout?.['text-field']
+          )?.id;
+
+          map.current.addLayer({
+            id: '3d-buildings',
+            source: 'composite',
+            'source-layer': 'building',
+            filter: ['==', 'extrude', 'true'],
+            type: 'fill-extrusion',
+            minzoom: 13,
+            paint: {
+              'fill-extrusion-color': '#aaa',
+              'fill-extrusion-height': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                13,
+                0,
+                13.5,
+                ['get', 'height']
+              ],
+              'fill-extrusion-base': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                13,
+                0,
+                13.5,
+                ['get', 'min_height']
+              ],
+              'fill-extrusion-opacity': 0.6
+            }
+          }, labelLayerId);
+        }
       });
 
       // نقشه را بلافاصله قابل نمایش کن
@@ -202,9 +247,17 @@ export function InteractiveLocationMap({
           .addTo(map.current!);
       });
 
-      // کلیک روی نقشه
+      // Hide upload popup when clicking elsewhere on map
       map.current.on('click', async (e) => {
         const { lng, lat } = e.lngLat;
+        
+        // Close any open media upload popups
+        const uploadPopups = document.querySelectorAll('[data-upload-popup]');
+        uploadPopups.forEach(popup => {
+          if (popup instanceof HTMLElement) {
+            popup.style.display = 'none';
+          }
+        });
 
         if (marker.current) {
           marker.current.remove();
