@@ -114,13 +114,7 @@ const Home = () => {
         return;
       }
       
-      // اگر کد زیرمجموعه 30 است (کرایه اجناس داربست)، مستقیم به فرم کرایه اجناس هدایت کن
-      if (selectedSubcategory === '30') {
-        safeNavigate('/scaffolding/rental-form', { state: { serviceSelection } });
-        return;
-      }
-      
-      // هدایت به صفحه انتخاب آدرس
+      // هدایت به صفحه انتخاب آدرس (برای همه خدمات شامل کرایه اجناس داربست)
       safeNavigate('/select-location', { state: { serviceSelection } });
     }
   }, [selectedServiceType, selectedSubcategory, serviceTypes, user, toast]);

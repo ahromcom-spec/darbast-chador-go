@@ -19,12 +19,13 @@ export default function FormNotAvailable() {
     districtName
   } = state;
 
-  // Redirect to rental form if subcategory code is 30
+  // این صفحه دیگر نیازی به redirect ندارد چون همه فرم‌ها از SelectLocation هدایت می‌شوند
   useEffect(() => {
-    if (subcategoryCode === '30') {
-      navigate('/scaffolding/rental-form', { state });
+    // اگر به اشتباه کاربر به این صفحه آمد، به صفحه اصلی برود
+    if (!serviceName || !subcategoryName) {
+      navigate('/');
     }
-  }, [subcategoryCode, navigate, state]);
+  }, [serviceName, subcategoryName, navigate]);
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">

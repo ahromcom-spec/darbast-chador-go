@@ -97,9 +97,9 @@ export default function SelectLocation() {
 
   const getFormPath = (subcategoryCode: string) => {
     // Map subcategory codes to form paths
-    // فقط کد 10 فرم دارد (اجرای داربست به همراه اجناس و حمل و نقل)
     const formPaths: Record<string, string> = {
       '10': '/scaffolding/form',  // داربست فلزی - اجرای داربست به همراه اجناس و حمل و نقل
+      '30': '/scaffolding/rental-form',  // داربست فلزی - خدمات کرایه اجناس داربست فلزی
     };
     
     // اگر فرم برای این زیرشاخه موجود نیست، به صفحه "فرم موجود نیست" برود
