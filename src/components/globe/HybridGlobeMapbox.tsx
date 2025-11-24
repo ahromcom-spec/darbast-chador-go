@@ -1,6 +1,9 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import { ArrowRight, MapPin, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -421,8 +424,30 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
     }
   };
 
+  const projectMarkerIcon = useMemo(
+    () =>
+      new L.Icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
+      }),
+    []
+  );
+
+  const projectsWithLocation = projectsWithMedia.filter(
+    p => Number.isFinite(p.locations?.lat) && Number.isFinite(p.locations?.lng)
+  );
+
+  const defaultCenter: [number, number] = projectsWithLocation.length
+    ? [projectsWithLocation[0].locations!.lat, projectsWithLocation[0].locations!.lng]
+    : [35.6892, 51.3890]; // تهران
+
   return (
-    <div className="fixed inset-0 z-50 bg-background">
+     <div className="fixed inset-0 z-50 bg-background">
       <div className="absolute inset-0 z-[2000] pointer-events-none">
         <Button
           variant="default"
@@ -447,7 +472,33 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
         </Card>
       </div>
 
-      <div ref={mapContainer} className="w-full h-full" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+      <div className="w-full h-full absolute inset-0">
+        <MapContainer
+          center={defaultCenter}
+          zoom={13}
+          minZoom={5}
+          maxZoom={22}
+          scrollWheelZoom
+          className="w-full h-full"
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {projectsWithLocation.map(project => (
+            project.locations && (
+              <Marker
+                key={project.id}
+                position={[project.locations.lat, project.locations.lng]}
+                icon={projectMarkerIcon}
+                eventHandlers={{
+                  click: () => setSelectedProject(project),
+                }}
+              />
+            )
+          ))}
+        </MapContainer>
+      </div>
 
       {selectedProject && (
         <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-card shadow-2xl p-4 z-[2000] pointer-events-auto">
