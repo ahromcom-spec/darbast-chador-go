@@ -482,7 +482,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         let lng = centerLng;
         if (count > 1) {
           const angle = (2 * Math.PI * index) / count;
-          const radius = 0.0015; // فاصله بیشتر برای وضوح بهتر
+          const radius = 0.0004; // فاصله کمتر برای قرارگیری نزدیک‌تر به نقطه قرمز
           lat = centerLat + radius * Math.cos(angle);
           lng = centerLng + radius * Math.sin(angle);
 
@@ -518,18 +518,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             : `<img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`;
           
           const html = `
-            <div style="width:70px;height:70px;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3);border:3px solid #fff;background:#f0f0f0;position:relative;">
+            <div style="width:50px;height:50px;border-radius:10px;overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,.3);border:2px solid #fff;background:#f0f0f0;position:relative;">
               ${mediaElement}
-              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));height:24px;display:flex;align-items:center;justify-content:center;">
-                <span style="color:#fff;font-size:10px;font-weight:bold;">${project.media?.length || 0} فایل</span>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));height:18px;display:flex;align-items:center;justify-content:center;">
+                <span style="color:#fff;font-size:8px;font-weight:bold;">${project.media?.length || 0} فایل</span>
               </div>
             </div>`;
           iconToUse = L.divIcon({
             html,
             className: 'project-thumb-icon',
-            iconSize: [70, 70],
-            iconAnchor: [35, 70],
-            popupAnchor: [0, -70],
+            iconSize: [50, 50],
+            iconAnchor: [25, 50],
+            popupAnchor: [0, -50],
           });
         }
 
@@ -551,7 +551,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                       src="${url}" 
                       alt="تصویر" 
                       loading="lazy"
-                      style="width:100%;height:80px;object-fit:cover;border-radius:6px;border:2px solid #e5e7eb;cursor:pointer;"
+                      style="width:100%;height:60px;object-fit:cover;border-radius:6px;border:2px solid #e5e7eb;cursor:pointer;"
                       onclick="window.open('${url}', '_blank')"
                     />`;
                   }).join('')}
@@ -562,9 +562,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   ${videos.map(m => {
                     const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
                     return `
-                      <div style="position:relative;width:100%;height:80px;background:#333;border-radius:6px;border:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;" 
+                      <div style="position:relative;width:100%;height:60px;background:#333;border-radius:6px;border:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;" 
                         onclick="window.openProjectVideo('${url}', '${m.mime_type || 'video/mp4'}')">
-                        <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                        <svg style="width:24px;height:24px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M8 5v14l11-7z"/>
                         </svg>
                         <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 5px;border-radius:3px;">ویدیو</span>
