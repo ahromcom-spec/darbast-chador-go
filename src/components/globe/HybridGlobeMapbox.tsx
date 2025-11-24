@@ -146,12 +146,12 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
     try {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/satellite-v9',
-        projection: 'globe',
-        zoom: 1,
-        center: [30, 20],
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [51.3890, 35.6892], // تهران - مرکز ایران
+        zoom: 5.5,
         pitch: 0,
         bearing: 0,
+        antialias: true
       });
       console.log('[HybridGlobeMapbox] Map instance created');
     } catch (error) {
