@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { lazy, Suspense } from 'react';
 
 // Lazy load heavy globe component for better performance
-const HybridGlobe = lazy(() => import('@/components/globe/HybridGlobe'));
+const HybridGlobe = lazy(() => import('@/components/globe/HybridGlobeMapbox'));
 import globeIcon from '@/assets/golden-globe.png';
 import { PWAInstallBanner } from '@/components/common/PWAInstallBanner';
 import { NotificationBanner } from '@/components/common/NotificationBanner';
