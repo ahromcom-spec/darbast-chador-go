@@ -140,10 +140,10 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v12',
-        center: [50.8764, 34.6416], // قم
-        zoom: 13,
-        pitch: 45,
-        bearing: -17.6,
+        center: [51.3890, 35.6892], // تهران - مرکز ایران
+        zoom: 5.5,
+        pitch: 0,
+        bearing: 0,
         antialias: true
       });
     } catch (error) {
@@ -167,28 +167,28 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
           'source-layer': 'building',
           'filter': ['==', 'extrude', 'true'],
           'type': 'fill-extrusion',
-          'minzoom': 15,
+          'minzoom': 14,
           'paint': {
-            'fill-extrusion-color': '#d4b896',
+            'fill-extrusion-color': '#aaa',
             'fill-extrusion-height': [
               'interpolate',
               ['linear'],
               ['zoom'],
-              15,
+              14,
               0,
-              15.05,
+              14.05,
               ['get', 'height']
             ],
             'fill-extrusion-base': [
               'interpolate',
               ['linear'],
               ['zoom'],
-              15,
+              14,
               0,
-              15.05,
+              14.05,
               ['get', 'min_height']
             ],
-            'fill-extrusion-opacity': 0.8
+            'fill-extrusion-opacity': 0.6
           }
         },
         labelLayerId
@@ -333,7 +333,12 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
 
     // تنظیم نمای نقشه
     if (hasMarkers && !bounds.isEmpty()) {
-      map.current?.fitBounds(bounds, { padding: 80, maxZoom: 16 });
+      map.current?.fitBounds(bounds, { 
+        padding: 80, 
+        maxZoom: 15,
+        pitch: 45,
+        bearing: 0
+      });
     }
   }, [projectsWithMedia, mapReady, loading]);
 
