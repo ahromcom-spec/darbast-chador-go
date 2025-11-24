@@ -14,10 +14,7 @@ import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSub
 import { useUserProjects } from '@/hooks/useUserProjects';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
-import { lazy, Suspense } from 'react';
-
-// Lazy load heavy globe component for better performance
-const HybridGlobe = lazy(() => import('@/components/globe/HybridGlobeMapbox'));
+import HybridGlobe from '@/components/globe/HybridGlobeMapbox';
 import globeIcon from '@/assets/golden-globe.png';
 import { PWAInstallBanner } from '@/components/common/PWAInstallBanner';
 import { NotificationBanner } from '@/components/common/NotificationBanner';
@@ -180,18 +177,7 @@ const Home = () => {
   };
 
   if (showGlobe) {
-    return (
-      <Suspense fallback={
-        <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            <p className="text-lg font-semibold">در حال بارگذاری کره زمین...</p>
-          </div>
-        </div>
-      }>
-        <HybridGlobe onClose={() => setShowGlobe(false)} />
-      </Suspense>
-    );
+    return <HybridGlobe onClose={() => setShowGlobe(false)} />;
   }
 
   return (
