@@ -556,38 +556,50 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         const marker = L.marker([lat, lng], { icon: iconToUse })
           .addTo(mapRef.current!);
         
-        // تولید HTML برای تصاویر و ویدیوها
-        const images = (project.media || []).filter(m => m.file_type === 'image').slice(0, 2);
-        const videos = (project.media || []).filter(m => m.file_type === 'video').slice(0, 2);
+        // تولید HTML برای تصاویر و ویدیوها با قابلیت گالری
+        const images = (project.media || []).filter(m => m.file_type === 'image');
+        const videos = (project.media || []).filter(m => m.file_type === 'video');
         
         const mediaHTML = images.length > 0 || videos.length > 0
           ? `
             <div style="margin-top: 12px;">
               ${images.length > 0 ? `
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 8px;">
-                  ${images.map(m => {
-                    const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
-                    return `<img 
-                      src="${url}" 
-                      alt="تصویر" 
-                      loading="lazy"
-                      style="width:100%;height:60px;object-fit:cover;border-radius:6px;border:2px solid #e5e7eb;cursor:pointer;"
-                      onclick="window.open('${url}', '_blank')"
-                    />`;
-                  }).join('')}
+                <div id="gallery-${project.id}" style="position:relative;">
+                  <div style="overflow:hidden;border-radius:8px;background:#f9fafb;">
+                    ${images.map((m, idx) => {
+                      const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                      return `<img 
+                        id="img-${project.id}-${idx}" 
+                        src="${url}" 
+                        alt="تصویر پروژه" 
+                        loading="lazy"
+                        style="width:100%;height:200px;object-fit:contain;display:${idx === 0 ? 'block' : 'none'};"
+                      />`;
+                    }).join('')}
+                  </div>
+                  ${images.length > 1 ? `
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:0 4px;">
+                      <button onclick="window.navigateGallery('${project.id}', -1)" style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:Vazirmatn;font-size:12px;font-weight:500;">قبلی</button>
+                      <span id="counter-${project.id}" style="font-family:Vazirmatn;font-size:12px;color:#6b7280;">1 از ${images.length}</span>
+                      <button onclick="window.navigateGallery('${project.id}', 1)" style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:Vazirmatn;font-size:12px;font-weight:500;">بعدی</button>
+                    </div>
+                  ` : ''}
                 </div>
               ` : ''}
               ${videos.length > 0 ? `
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+                <div style="margin-top: 12px;">
                   ${videos.map(m => {
                     const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
                     return `
-                      <div style="position:relative;width:100%;height:60px;background:#333;border-radius:6px;border:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;" 
+                      <div style="position:relative;width:100%;height:200px;background:#000;border-radius:8px;overflow:hidden;cursor:pointer;margin-bottom:8px;" 
                         onclick="window.openProjectVideo('${url}', '${m.mime_type || 'video/mp4'}')">
-                        <svg style="width:24px;height:24px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
-                        <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 5px;border-radius:3px;">ویدیو</span>
+                        <video src="${url}" style="width:100%;height:100%;object-fit:contain;" preload="none"></video>
+                        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
+                          <svg style="width:48px;height:48px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                        <span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.8);color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;">ویدیو - کلیک برای مشاهده</span>
                       </div>
                     `;
                   }).join('')}
@@ -603,16 +615,37 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           : '';
 
         const popupContent = `
-          <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 320px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
+          <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 300px; max-width: 400px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
             ${locationHeader}
             <strong style="font-size: 15px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
             <span style="font-size: 12px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
             ${count > 1 ? `<div style="margin-top:8px;padding:6px 10px;background:#f3f4f6;border-radius:6px;text-align:center;font-size:11px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
             ${mediaHTML}
           </div>
+          <script>
+            window.galleryIndexes = window.galleryIndexes || {};
+            window.galleryIndexes['${project.id}'] = 0;
+            
+            window.navigateGallery = function(projectId, direction) {
+              const totalImages = ${images.length};
+              if (!window.galleryIndexes[projectId]) window.galleryIndexes[projectId] = 0;
+              
+              let currentIndex = window.galleryIndexes[projectId];
+              currentIndex = (currentIndex + direction + totalImages) % totalImages;
+              window.galleryIndexes[projectId] = currentIndex;
+              
+              for (let i = 0; i < totalImages; i++) {
+                const img = document.getElementById('img-' + projectId + '-' + i);
+                if (img) img.style.display = i === currentIndex ? 'block' : 'none';
+              }
+              
+              const counter = document.getElementById('counter-' + projectId);
+              if (counter) counter.textContent = (currentIndex + 1) + ' از ' + totalImages;
+            };
+          </script>
         `;
         marker.bindPopup(popupContent, {
-          maxWidth: 340,
+          maxWidth: 420,
           className: 'custom-popup'
         });
 
