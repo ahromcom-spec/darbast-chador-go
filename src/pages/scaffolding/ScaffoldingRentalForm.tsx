@@ -131,13 +131,18 @@ export default function ScaffoldingRentalForm() {
         additional_notes: values.additionalNotes,
       };
 
+      // اطمینان از وجود hierarchyProjectId
+      if (!hierarchyProjectId) {
+        throw new Error('شناسه پروژه یافت نشد. لطفاً مجدداً تلاش کنید.');
+      }
+
       const { data: orderData, error: orderError } = await supabase
         .rpc('create_project_v3', {
           _customer_id: customerData.id,
           _province_id: provinceId || null,
           _district_id: districtId || null,
           _subcategory_id: subcategoryId,
-          _hierarchy_project_id: hierarchyProjectId || null,
+          _hierarchy_project_id: hierarchyProjectId, // ✅ حتماً باید مقدار داشته باشد
           _address: locationAddress || 'آدرس ثبت نشده - کرایه اجناس',
           _detailed_address: locationTitle || null,
           _notes: orderNotes,
