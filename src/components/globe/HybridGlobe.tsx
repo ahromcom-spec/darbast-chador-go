@@ -370,6 +370,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       maxZoom: 22,
     }).addTo(map);
 
+    // بستن پنجره آپلود با کلیک روی نقشه
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      // بررسی اینکه آیا کلیک روی مارکر بوده یا نه
+      const clickedOnMarker = (e.originalEvent.target as HTMLElement)?.closest('.leaflet-marker-icon');
+      if (!clickedOnMarker) {
+        setSelectedProject(null);
+      }
+    });
+
     // منتظر بمانیم تا نقشه کاملاً آماده شود
     map.whenReady(() => {
       setMapReady(true);
