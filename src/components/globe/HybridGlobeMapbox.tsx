@@ -192,46 +192,7 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
       if (!map.current) return;
       console.log('[HybridGlobeMapbox] Map load event fired');
 
-      // اضافه کردن لایه سه‌بعدی ساختمان‌ها
-      const layers = map.current.getStyle().layers;
-      const labelLayerId = layers?.find(
-        (layer) => layer.type === 'symbol' && layer.layout && (layer.layout as any)['text-field']
-      )?.id;
-
-      map.current.addLayer(
-        {
-          'id': '3d-buildings',
-          'source': 'composite',
-          'source-layer': 'building',
-          'filter': ['==', 'extrude', 'true'],
-          'type': 'fill-extrusion',
-          'minzoom': 14,
-          'paint': {
-            'fill-extrusion-color': '#aaa',
-            'fill-extrusion-height': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              14,
-              0,
-              14.05,
-              ['get', 'height']
-            ],
-            'fill-extrusion-base': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              14,
-              0,
-              14.05,
-              ['get', 'min_height']
-            ],
-            'fill-extrusion-opacity': 0.6
-          }
-        },
-        labelLayerId
-      );
-
+      // نقشه در حالت دوبعدی ساده بدون ساختمان‌های سه‌بعدی
       setMapReady(true);
     });
 
@@ -375,7 +336,7 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
       map.current?.fitBounds(bounds, { 
         padding: 80, 
         maxZoom: 15,
-        pitch: 45,
+        pitch: 0,
         bearing: 0
       });
     }
