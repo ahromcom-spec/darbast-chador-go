@@ -252,7 +252,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     console.debug('[HybridGlobe] Fetching media for', projects.length, 'projects');
     
     try {
-      const projectIds = projects.map(p => p.id);
+      const projectIds = projects.map(function(p) { return p.id; });
       
       // تصاویر و ویدیوهای متصل مستقیم به پروژه‌های hierarchy
       const { data: phMedia } = await supabase
@@ -262,7 +262,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         .in('file_type', ['image', 'video'])
         .order('created_at', { ascending: false });
 
-      console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
+      console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia ? phMedia.length : 0);
 
       // پشتیبانی سازگاری قدیمی: تصاویر موجود در project_media از طریق projects_v3
       const { data: v3 } = await supabase
@@ -272,7 +272,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       let pmMedia: { project_id: string; file_path: string; file_type: string; created_at: string; mime_type?: string }[] = [];
       if (v3 && v3.length > 0) {
-        const v3Ids = v3.map(x => x.id);
+        const v3Ids = v3.map(function(x) { return x.id; });
         const { data } = await supabase
           .from('project_media')
           .select('project_id, file_path, file_type, created_at, mime_type')
@@ -288,32 +288,37 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const mediaByProject = new Map<string, HierarchyMedia[]>();
 
       // از جدول جدید
-      phMedia?.forEach(m => {
-        const pid = m.hierarchy_project_id;
-        if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
-        mediaByProject.get(pid)!.push({ id: m.id, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
-      });
+      if (phMedia) {
+        phMedia.forEach(function(m) {
+          const pid = m.hierarchy_project_id;
+          if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
+          const arr = mediaByProject.get(pid);
+          if (arr) arr.push({ id: m.id, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
+        });
+      }
 
       // از جدول قدیمی
-      pmMedia.forEach(m => {
-        const pid = v3?.find(v => v.id === m.project_id)?.hierarchy_project_id;
+      pmMedia.forEach(function(m) {
+        const pid = v3 ? v3.find(function(v) { return v.id === m.project_id; })?.hierarchy_project_id : undefined;
         if (!pid) return;
         if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
-        mediaByProject.get(pid)!.push({ id: `${m.project_id}-${m.created_at}`, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
+        const arr = mediaByProject.get(pid);
+        if (arr) arr.push({ id: m.project_id + '-' + m.created_at, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
       });
 
       // دریافت سفارشات (projects_v3) مرتبط
       const { data: v3Orders } = await supabase
         .from('projects_v3')
-        .select(`id, code, status, address, created_at, hierarchy_project_id, subcategory:subcategories(name)`)
+        .select('id, code, status, address, created_at, hierarchy_project_id, subcategory:subcategories(name)')
         .in('hierarchy_project_id', projectIds);
 
       // نگاشت رسانه‌های سفارش
       const orderMediaMap = new Map<string, HierarchyMedia[]>();
-      pmMedia.forEach(m => {
+      pmMedia.forEach(function(m) {
         if (!orderMediaMap.has(m.project_id)) orderMediaMap.set(m.project_id, []);
-        orderMediaMap.get(m.project_id)!.push({ 
-          id: `${m.project_id}-${m.created_at}`, 
+        const arr = orderMediaMap.get(m.project_id);
+        if (arr) arr.push({ 
+          id: m.project_id + '-' + m.created_at, 
           file_path: m.file_path, 
           file_type: m.file_type, 
           created_at: m.created_at, 
@@ -323,27 +328,30 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       // گروه‌بندی سفارشات به پروژه
       const ordersByProject = new Map<string, ProjectOrder[]>();
-      v3Orders?.forEach(order => {
-        if (!order.hierarchy_project_id) return;
-        if (!ordersByProject.has(order.hierarchy_project_id)) {
-          ordersByProject.set(order.hierarchy_project_id, []);
-        }
-        ordersByProject.get(order.hierarchy_project_id)!.push({
-          id: order.id,
-          code: order.code,
-          status: order.status,
-          address: order.address,
-          created_at: order.created_at,
-          subcategory: order.subcategory || undefined,
-          media: orderMediaMap.get(order.id) || []
+      if (v3Orders) {
+        v3Orders.forEach(function(order) {
+          if (!order.hierarchy_project_id) return;
+          if (!ordersByProject.has(order.hierarchy_project_id)) {
+            ordersByProject.set(order.hierarchy_project_id, []);
+          }
+          const arr = ordersByProject.get(order.hierarchy_project_id);
+          if (arr) arr.push({
+            id: order.id,
+            code: order.code,
+            status: order.status,
+            address: order.address,
+            created_at: order.created_at,
+            subcategory: order.subcategory || undefined,
+            media: orderMediaMap.get(order.id) || []
+          });
         });
-      });
+      }
 
       // ترکیب نهایی
-      const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => {
-        const list = (mediaByProject.get(project.id) || []).sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
-        const orders = (ordersByProject.get(project.id) || []).sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
-        return { ...project, media: list.slice(0, 2), orders };
+      const projectsWithMediaData: ProjectWithMedia[] = projects.map(function(project) {
+        const list = (mediaByProject.get(project.id) || []).sort(function(a, b) { return a.created_at > b.created_at ? -1 : 1; });
+        const orders = (ordersByProject.get(project.id) || []).sort(function(a, b) { return a.created_at > b.created_at ? -1 : 1; });
+        return { ...project, media: list.slice(0, 2), orders: orders };
       });
 
       console.debug('[HybridGlobe] Projects with media and orders prepared:', projectsWithMediaData.length, 
@@ -466,20 +474,22 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     centerMarkersRef.current = [];
 
     // فیلتر پروژه‌هایی که مختصات معتبر دارند
-    const projectsWithLocation = projectsWithMedia.filter(
-      p => Number.isFinite(p.locations?.lat as number) && Number.isFinite(p.locations?.lng as number)
-    );
+    const projectsWithLocation = projectsWithMedia.filter(function(p) {
+      return Number.isFinite(p.locations?.lat as number) && Number.isFinite(p.locations?.lng as number);
+    });
 
     console.debug('[HybridGlobe] Creating markers:', {
       totalProjects: projectsWithMedia.length,
       withValidLocation: projectsWithLocation.length,
-      samples: projectsWithLocation.slice(0, 3).map(p => ({ 
-        id: p.id, 
-        title: p.title,
-        lat: p.locations?.lat, 
-        lng: p.locations?.lng,
-        hasMedia: (p.media?.length || 0) > 0
-      }))
+      samples: projectsWithLocation.slice(0, 3).map(function(p) { 
+        return { 
+          id: p.id, 
+          title: p.title,
+          lat: p.locations?.lat, 
+          lng: p.locations?.lng,
+          hasMedia: (p.media?.length || 0) > 0
+        };
+      })
     });
 
     if (projectsWithLocation.length === 0) return;
@@ -497,9 +507,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     // گروه‌بندی پروژه‌ها بر اساس موقعیت جغرافیایی
     const locationGroups: Record<string, ProjectWithMedia[]> = {};
-    projectsWithLocation.forEach(project => {
+    projectsWithLocation.forEach(function(project) {
       if (!project.locations?.lat || !project.locations?.lng) return;
-      const key = `${project.locations.lat.toFixed(6)}_${project.locations.lng.toFixed(6)}`;
+      const key = project.locations.lat.toFixed(6) + '_' + project.locations.lng.toFixed(6);
       if (!locationGroups[key]) locationGroups[key] = [];
       locationGroups[key].push(project);
     });
