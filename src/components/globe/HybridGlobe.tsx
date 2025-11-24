@@ -466,9 +466,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         const centerMarker = L.circleMarker([centerLat, centerLng], {
           radius: 12,
           fillColor: '#ef4444',
-          fillOpacity: 0.95,
+          fillOpacity: 0, // مخفی در ابتدا
           color: '#ffffff',
           weight: 3,
+          opacity: 0, // مخفی در ابتدا
           className: 'location-center-marker'
         }).addTo(mapRef.current!);
         
@@ -512,7 +513,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             {
               color: '#3b82f6',
               weight: 2,
-              opacity: 0.7,
+              opacity: 0, // مخفی در ابتدا
               dashArray: '8, 12',
               className: 'connection-line'
             }
@@ -553,8 +554,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           });
         }
 
-        const marker = L.marker([lat, lng], { icon: iconToUse })
-          .addTo(mapRef.current!);
+        const marker = L.marker([lat, lng], { 
+          icon: iconToUse,
+          opacity: 0 // مخفی در ابتدا تا انیمیشن تمام شود
+        }).addTo(mapRef.current!);
         
         // تولید HTML برای تصاویر و ویدیوها با قابلیت گالری
         const images = (project.media || []).filter(m => m.file_type === 'image');
@@ -674,19 +677,26 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       console.debug('[HybridGlobe] Animating to project bounds:', bounds);
       
       // ابتدا نقشه را در نمای کل ایران نگه می‌داریم (همان مقدار اولیه)
-      // بعد از 800ms با انیمیشن نرم به پروژه‌ها می‌رویم
+      // بعد از 1000ms با انیمیشن نرم به پروژه‌ها می‌رویم
       setTimeout(() => {
         try {
           mapRef.current?.flyToBounds(bounds, {
             padding: [80, 80],
             maxZoom: 14,
-            duration: 2.5, // مدت زمان انیمیشن به ثانیه
+            duration: 5, // مدت زمان انیمیشن به ثانیه - کندتر برای حس بهتر
             easeLinearity: 0.15, // نرمی انیمیشن (کمتر = نرم‌تر)
           });
+          
+          // نمایش تدریجی مارکرها و خطوط بعد از اتمام انیمیشن
+          setTimeout(() => {
+            markersRef.current.forEach(m => m.setOpacity(1));
+            linesRef.current.forEach(l => l.setStyle({ opacity: 0.7 }));
+            centerMarkersRef.current.forEach(cm => cm.setStyle({ fillOpacity: 0.95, opacity: 1 }));
+          }, 5000); // بعد از 5 ثانیه (مدت زمان انیمیشن)
         } catch (e) {
           console.warn('[HybridGlobe] flyToBounds failed', e, bounds);
         }
-      }, 800);
+      }, 1000);
     } else {
       console.warn('[HybridGlobe] No markers to display on map');
     }
