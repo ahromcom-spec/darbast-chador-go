@@ -383,9 +383,12 @@ const Home = () => {
       </div>
       </div>
 
-      {/* PWA Install and Notification Banners */}
-      <PWAInstallBanner />
-      <NotificationBanner />
+      {!showGlobe && (
+        <>
+          <PWAInstallBanner />
+          <NotificationBanner />
+        </>
+      )}
     </>
   );
 };
