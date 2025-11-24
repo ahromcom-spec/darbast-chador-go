@@ -371,9 +371,13 @@ const Home = () => {
       </div>
       </div>
 
-      {/* PWA Install and Notification Banners */}
-      <PWAInstallBanner />
-      <NotificationBanner />
+      {/* PWA Install and Notification Banners - فقط در صفحه اصلی و نه روی نقشه */}
+      {!showGlobe && (
+        <>
+          <PWAInstallBanner />
+          <NotificationBanner />
+        </>
+      )}
     </>
   );
 };
