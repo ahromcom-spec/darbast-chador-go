@@ -19,8 +19,19 @@ interface HierarchyMedia {
   created_at: string;
 }
 
+interface ProjectOrder {
+  id: string;
+  code: string;
+  status: string;
+  address: string;
+  created_at: string;
+  subcategory?: { name: string };
+  media?: HierarchyMedia[];
+}
+
 interface ProjectWithMedia extends ProjectHierarchy {
   media?: HierarchyMedia[];
+  orders?: ProjectOrder[];
 }
 
 interface HybridGlobeProps {
@@ -291,19 +302,56 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         mediaByProject.get(pid)!.push({ id: `${m.project_id}-${m.created_at}`, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
       });
 
-      // ترکیب نهایی و محدود کردن به ۲ تصویر جدید (کاهش از ۳ برای بهینه‌سازی)
-      const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => {
-        const list = (mediaByProject.get(project.id) || []).sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
-        return { ...project, media: list.slice(0, 2) };
+      // دریافت سفارشات (projects_v3) مرتبط
+      const { data: v3Orders } = await supabase
+        .from('projects_v3')
+        .select(`id, code, status, address, created_at, hierarchy_project_id, subcategory:subcategories(name)`)
+        .in('hierarchy_project_id', projectIds);
+
+      // نگاشت رسانه‌های سفارش
+      const orderMediaMap = new Map<string, HierarchyMedia[]>();
+      pmMedia.forEach(m => {
+        if (!orderMediaMap.has(m.project_id)) orderMediaMap.set(m.project_id, []);
+        orderMediaMap.get(m.project_id)!.push({ 
+          id: `${m.project_id}-${m.created_at}`, 
+          file_path: m.file_path, 
+          file_type: m.file_type, 
+          created_at: m.created_at, 
+          mime_type: m.mime_type 
+        });
       });
 
-      console.debug('[HybridGlobe] Projects with media prepared:', projectsWithMediaData.length, 
-        'sample:', projectsWithMediaData.slice(0, 2).map(p => ({ 
+      // گروه‌بندی سفارشات به پروژه
+      const ordersByProject = new Map<string, ProjectOrder[]>();
+      v3Orders?.forEach(order => {
+        if (!order.hierarchy_project_id) return;
+        if (!ordersByProject.has(order.hierarchy_project_id)) {
+          ordersByProject.set(order.hierarchy_project_id, []);
+        }
+        ordersByProject.get(order.hierarchy_project_id)!.push({
+          id: order.id,
+          code: order.code,
+          status: order.status,
+          address: order.address,
+          created_at: order.created_at,
+          subcategory: order.subcategory || undefined,
+          media: orderMediaMap.get(order.id) || []
+        });
+      });
+
+      // ترکیب نهایی
+      const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => {
+        const list = (mediaByProject.get(project.id) || []).sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
+        const orders = (ordersByProject.get(project.id) || []).sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
+        return { ...project, media: list.slice(0, 2), orders };
+      });
+
+      console.debug('[HybridGlobe] Projects with media and orders prepared:', projectsWithMediaData.length, 
+        'sample:', projectsWithMediaData.slice(0, 1).map(p => ({ 
           id: p.id, 
           title: p.title, 
-          lat: p.locations?.lat, 
-          lng: p.locations?.lng,
-          mediaCount: p.media?.length 
+          mediaCount: p.media?.length,
+          ordersCount: p.orders?.length
         }))
       );
       
@@ -316,7 +364,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       };
     } catch (error) {
       console.error('خطا در دریافت عکس‌های پروژه:', error);
-      setProjectsWithMedia(projects.map(p => ({ ...p, media: [] })));
+      setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     }
   }, [projects, toast]);
 
@@ -617,12 +665,37 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             </div>`
           : '';
 
+        // لیست سفارشات پروژه
+        const ordersHTML = project.orders && project.orders.length > 0
+          ? `
+            <div style="margin-top:12px;padding:10px;background:#f9fafb;border-radius:8px;">
+              <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;">سفارشات این پروژه (${project.orders.length})</div>
+              ${project.orders.map((order, orderIdx) => `
+                <div style="padding:8px;margin-bottom:6px;background:white;border:1px solid #e5e7eb;border-radius:6px;">
+                  <div style="font-size:12px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
+                  <div style="font-size:11px;color:#6b7280;margin-top:2px;">${order.subcategory?.name || 'نامشخص'}</div>
+                  ${order.media && order.media.length > 0 ? `
+                    <div style="margin-top:4px;">
+                      <img 
+                        src="${supabase.storage.from('order-media').getPublicUrl(order.media[0].file_path).data.publicUrl}" 
+                        alt="تصویر سفارش" 
+                        style="width:100%;height:80px;object-fit:cover;border-radius:4px;"
+                      />
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+          `
+          : '';
+
         const popupContent = `
           <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 300px; max-width: 400px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
             ${locationHeader}
             <strong style="font-size: 15px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
             <span style="font-size: 12px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
             ${count > 1 ? `<div style="margin-top:8px;padding:6px 10px;background:#f3f4f6;border-radius:6px;text-align:center;font-size:11px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
+            ${ordersHTML}
             ${mediaHTML}
           </div>
         `;
