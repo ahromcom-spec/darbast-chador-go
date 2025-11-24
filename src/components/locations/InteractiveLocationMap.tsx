@@ -162,7 +162,7 @@ export function InteractiveLocationMap({
         refreshExpiredTiles: false,
       });
 
-      // Add building footprints layer that shows ALL buildings
+      // اضافه کردن لایه‌های ساختمان برای نمایش واضح تمام قواره‌ها در همه سطوح زوم
       map.current.on('load', () => {
         if (map.current) {
           const layers = map.current.getStyle().layers;
@@ -170,57 +170,63 @@ export function InteractiveLocationMap({
             (layer: any) => layer.type === 'symbol' && layer.layout?.['text-field']
           )?.id;
 
-          // لایه ساختمان‌های سه‌بعدی با جزئیات کامل برای همه سطوح زوم
-          map.current.addLayer({
-            id: '3d-buildings',
-            source: 'composite',
-            'source-layer': 'building',
-            filter: ['==', 'extrude', 'true'],
-            type: 'fill-extrusion',
-            minzoom: 14,
-            paint: {
-              'fill-extrusion-color': [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                '#8b8b8b',
-                '#aaa'
-              ],
-              'fill-extrusion-height': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                14,
-                0,
-                14.5,
-                ['get', 'height']
-              ],
-              'fill-extrusion-base': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                14,
-                0,
-                14.5,
-                ['get', 'min_height']
-              ],
-              'fill-extrusion-opacity': 0.7
-            }
-          }, labelLayerId);
+          // لایه ساختمان‌های سه‌بعدی؛ همه ساختمان‌ها را بدون فیلتر extrude نشان می‌دهیم
+          map.current.addLayer(
+            {
+              id: '3d-buildings',
+              source: 'composite',
+              'source-layer': 'building',
+              type: 'fill-extrusion',
+              minzoom: 14,
+              paint: {
+                'fill-extrusion-color': [
+                  'case',
+                  ['boolean', ['feature-state', 'hover'], false],
+                  '#8b8b8b',
+                  '#aaaaaa',
+                ],
+                // اگر height وجود نداشته باشد، یک ارتفاع پیش‌فرض برای دیده شدن قواره در نظر می‌گیریم
+                'fill-extrusion-height': [
+                  'interpolate',
+                  ['linear'],
+                  ['zoom'],
+                  14,
+                  0,
+                  14.5,
+                  ['coalesce', ['get', 'height'], 10],
+                ],
+                'fill-extrusion-base': [
+                  'interpolate',
+                  ['linear'],
+                  ['zoom'],
+                  14,
+                  0,
+                  14.5,
+                  ['coalesce', ['get', 'min_height'], 0],
+                ],
+                'fill-extrusion-opacity': 0.75,
+              },
+            },
+            labelLayerId
+          );
 
-          // لایه کف ساختمان‌ها (2D) برای نمایش قواره‌های ساختمانی در سطح زوم پایین‌تر
-          map.current.addLayer({
-            id: 'building-footprints',
-            source: 'composite',
-            'source-layer': 'building',
-            type: 'fill',
-            minzoom: 13,
-            maxzoom: 14,
-            paint: {
-              'fill-color': '#d6d6d6',
-              'fill-opacity': 0.6,
-              'fill-outline-color': '#999'
-            }
-          }, labelLayerId);
+          // لایه کف ساختمان‌ها (2D) برای نمایش قواره‌ها در زوم‌های پایین‌تر
+          map.current.addLayer(
+            {
+              id: 'building-footprints',
+              source: 'composite',
+              'source-layer': 'building',
+              type: 'fill',
+              minzoom: 12,
+              maxzoom: 15,
+              paint: {
+                'fill-color': '#d6d6d6',
+                'fill-opacity': 0.6,
+                'fill-outline-color': '#999999',
+              },
+            },
+            labelLayerId
+          );
 
           // لایه خطوط مرزی ساختمان‌ها برای تفکیک بهتر قواره‌ها
           map.current.addLayer({
@@ -228,20 +234,20 @@ export function InteractiveLocationMap({
             source: 'composite',
             'source-layer': 'building',
             type: 'line',
-            minzoom: 13,
+            minzoom: 12,
             paint: {
-              'line-color': '#888',
+              'line-color': '#777777',
               'line-width': [
                 'interpolate',
                 ['linear'],
                 ['zoom'],
-                13,
-                0.5,
+                12,
+                0.4,
                 16,
-                1.5
+                1.6,
               ],
-              'line-opacity': 0.8
-            }
+              'line-opacity': 0.9,
+            },
           });
         }
       });
