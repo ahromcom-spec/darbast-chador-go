@@ -102,13 +102,14 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    // مرکز پیش‌فرض: قم
-    const startLat = 34.6416;
-    const startLng = 50.8746;
+    // مرکز پیش‌فرض: ایران (تهران)
+    const startLat = 32.4279; // مرکز ایران
+    const startLng = 53.688;
+    const startZoom = 5; // زوم برای دیدن کل ایران
 
     const map = L.map(mapContainer.current, {
       center: [startLat, startLng],
-      zoom: 12,
+      zoom: startZoom,
       minZoom: 5,
       maxZoom: 19,
       scrollWheelZoom: true,
@@ -171,8 +172,16 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
       hasMarkers = true;
     });
 
+    // فقط اگر پروژه‌ای وجود داشت، به پروژه‌ها برود
     if (hasMarkers) {
-      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 17 });
+      // تاخیر کوچک برای نمایش اولیه ایران، سپس انیمیشن به پروژه‌ها
+      setTimeout(() => {
+        map.flyToBounds(bounds, { 
+          padding: [60, 60], 
+          maxZoom: 15,
+          duration: 1.5 
+        });
+      }, 1000);
     }
   }, [projectsWithMedia, loading]);
 
