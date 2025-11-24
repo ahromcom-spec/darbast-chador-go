@@ -13,6 +13,8 @@ interface ProjectMarker {
   title: string;
   address: string;
   id: string;
+  projects: Array<{ id: string; title: string; subcategory: string }>;
+  count: number;
 }
 
 interface InteractiveGlobeProps {
@@ -36,22 +38,33 @@ function ProjectMarkers({ projects, selectedLocationId }: { projects: ProjectMar
     <>
       {projects.map((project) => {
         const position = latLngToVector3(project.lat, project.lng, 2.51);
-        // Highlight the selected location or the latest project
         const isHighlighted = selectedLocationId ? project.id === selectedLocationId : projects.indexOf(project) === 0;
+        const hasMultiple = project.count > 1;
         
         return (
           <mesh key={project.id} position={position}>
             <sphereGeometry args={[isHighlighted ? 0.08 : 0.05, 16, 16]} />
             <meshStandardMaterial 
-              color={isHighlighted ? "#ff0000" : "#ffd700"} 
-              emissive={isHighlighted ? "#ff4444" : "#ffa500"} 
-              emissiveIntensity={isHighlighted ? 0.8 : 0.5} 
+              color={isHighlighted ? "#ff0000" : hasMultiple ? "#ff9500" : "#ffd700"} 
+              emissive={isHighlighted ? "#ff4444" : hasMultiple ? "#ff7700" : "#ffa500"} 
+              emissiveIntensity={isHighlighted ? 0.8 : hasMultiple ? 0.7 : 0.5} 
             />
             <Html distanceFactor={10}>
-              <div className={`bg-background/90 backdrop-blur-sm px-2 py-1 rounded text-xs whitespace-nowrap border ${
-                isHighlighted ? 'border-red-500 font-bold' : 'border-border'
+              <div className={`bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg text-xs border shadow-lg max-w-[200px] ${
+                isHighlighted ? 'border-red-500 font-bold' : hasMultiple ? 'border-amber-500' : 'border-border'
               }`}>
-                {isHighlighted && '⭐ '}{project.title || project.address}
+                {isHighlighted && '⭐ '}
+                {hasMultiple && <div className="font-bold text-amber-500 mb-1">📍 {project.count} پروژه</div>}
+                <div className="text-foreground">{project.address}</div>
+                {hasMultiple && (
+                  <div className="mt-1 pt-1 border-t border-border/50 space-y-0.5">
+                    {project.projects.map((p, i) => (
+                      <div key={p.id} className="text-[10px] text-muted-foreground">
+                        {i + 1}. {p.subcategory}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </Html>
           </mesh>
@@ -203,15 +216,39 @@ export default function InteractiveGlobe({ onClose, selectedLocationId }: Intera
   const [projectMarkers, setProjectMarkers] = useState<ProjectMarker[]>([]);
 
   useEffect(() => {
-    const markers = projects
-      .filter(p => p.locations?.lat && p.locations?.lng)
-      .map(p => ({
-        lat: p.locations!.lat,
-        lng: p.locations!.lng,
-        title: p.title || '',
-        address: p.locations!.address_line || '',
-        id: p.id
-      }));
+    // گروه‌بندی پروژه‌ها بر اساس موقعیت جغرافیایی
+    const locationGroups: { [key: string]: typeof projects } = {};
+    
+    projects.forEach(p => {
+      if (!p.locations?.lat || !p.locations?.lng) return;
+      
+      // کلید منحصر به فرد برای موقعیت (با تقریب 6 رقم اعشار)
+      const key = `${p.locations.lat.toFixed(6)}_${p.locations.lng.toFixed(6)}`;
+      
+      if (!locationGroups[key]) {
+        locationGroups[key] = [];
+      }
+      locationGroups[key].push(p);
+    });
+
+    // ساخت مارکرها با اطلاعات گروهی
+    const markers = Object.values(locationGroups).map(group => {
+      const first = group[0];
+      return {
+        lat: first.locations!.lat,
+        lng: first.locations!.lng,
+        title: first.title || '',
+        address: first.locations!.address_line || '',
+        id: first.id,
+        count: group.length,
+        projects: group.map(p => ({
+          id: p.id,
+          title: p.title || '',
+          subcategory: p.subcategories?.name || ''
+        }))
+      };
+    });
+    
     setProjectMarkers(markers);
   }, [projects]);
 
