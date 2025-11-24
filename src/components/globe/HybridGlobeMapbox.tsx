@@ -1,7 +1,5 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { ArrowRight, MapPin, Upload, X } from 'lucide-react';
@@ -10,7 +8,6 @@ import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
@@ -30,53 +27,45 @@ interface HybridGlobeMapboxProps {
   onClose: () => void;
 }
 
+// Custom marker icon
+const customIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+function MapInitializer() {
+  const map = useMap();
+  
+  useEffect(() => {
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    const handleResize = () => map.invalidateSize();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [map]);
+
+  return null;
+}
+
 export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
-  const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
   const [projectsWithMedia, setProjectsWithMedia] = useState<ProjectWithMedia[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [selectedVideo, setSelectedVideo] = useState<{ url: string; mimeType: string } | null>(null);
-  const [videoLoading, setVideoLoading] = useState(false);
-  const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
-
-  // دریافت توکن Mapbox
-  useEffect(() => {
-    const tryEdgeThenEnv = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-        if (!error && data?.token) {
-          setMapboxToken(data.token);
-          sessionStorage.setItem('mapbox_token', data.token);
-          return;
-        }
-      } catch (_) {}
-
-      const envToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
-      if (envToken) {
-        setMapboxToken(envToken);
-        sessionStorage.setItem('mapbox_token', envToken);
-      }
-    };
-
-    const cached = sessionStorage.getItem('mapbox_token');
-    if (cached) {
-      // از توکن کش‌شده استفاده کن ولی در پس‌زمینه آن را به‌روزرسانی کن
-      setMapboxToken(cached);
-      tryEdgeThenEnv();
-    } else {
-      tryEdgeThenEnv();
-    }
-  }, []);
 
   // دریافت media پروژه‌ها
   const fetchProjectMedia = useCallback(async () => {
@@ -114,10 +103,6 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
       });
       
       setProjectsWithMedia(projectsWithMediaData);
-      
-      (window as any).openProjectVideo = (videoUrl: string) => {
-        window.open(videoUrl, '_blank');
-      };
     } catch (error) {
       console.error('خطا در دریافت media:', error);
       setProjectsWithMedia(projects.map(p => ({ ...p, media: [] })));
@@ -128,223 +113,16 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
     fetchProjectMedia();
   }, [fetchProjectMedia]);
 
-  // ایجاد نقشه Mapbox
-  useEffect(() => {
-    console.log('[HybridGlobeMapbox] init effect', {
-      hasContainer: !!mapContainer.current,
-      hasMap: !!map.current,
-      hasToken: !!mapboxToken,
-    });
+  const projectsWithLocation = projectsWithMedia.filter(
+    p => Number.isFinite(p.locations?.lat) && Number.isFinite(p.locations?.lng)
+  );
 
-    if (!mapContainer.current || map.current) return;
-
-    if (!mapboxToken) {
-      console.log('[HybridGlobeMapbox] Mapbox token not available yet');
-      return;
+  const defaultCenter: [number, number] = useMemo(() => {
+    if (projectsWithLocation.length > 0) {
+      return [projectsWithLocation[0].locations!.lat, projectsWithLocation[0].locations!.lng];
     }
-
-    console.log('[HybridGlobeMapbox] Initializing Mapbox with token');
-    mapboxgl.accessToken = mapboxToken;
-
-    try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [51.3890, 35.6892], // تهران - مرکز ایران
-        zoom: 5.5,
-        pitch: 0,
-        bearing: 0,
-        antialias: true
-      });
-      console.log('[HybridGlobeMapbox] Map instance created');
-    } catch (error) {
-      console.error('[HybridGlobeMapbox] Error initializing Mapbox:', error);
-      return;
-    }
-
-    if (!map.current) {
-      console.error('[HybridGlobeMapbox] Map instance is null after initialization');
-      return;
-    }
-
-    let hadRender = false;
-    let firstRenderLogged = false;
-
-    map.current.on('render', () => {
-      if (!map.current) return;
-      hadRender = true;
-      if (!firstRenderLogged) {
-        firstRenderLogged = true;
-        console.log('[HybridGlobeMapbox] First render', {
-          zoom: map.current.getZoom(),
-          center: map.current.getCenter(),
-        });
-      }
-    });
-
-    setTimeout(() => {
-      if (!hadRender) {
-        console.warn('[HybridGlobeMapbox] Map did not render within 5 seconds');
-      }
-    }, 5000);
-
-    map.current.on('error', (e) => {
-      console.error('[HybridGlobeMapbox] Mapbox error', e);
-    });
-
-    map.current.on('load', () => {
-      if (!map.current) return;
-      console.log('[HybridGlobeMapbox] Map load event fired');
-
-      // نقشه در حالت دوبعدی ساده بدون ساختمان‌های سه‌بعدی
-      setMapReady(true);
-    });
-
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-    return () => {
-      console.log('[HybridGlobeMapbox] Cleaning up map instance');
-      map.current?.remove();
-      map.current = null;
-    };
-  }, [mapboxToken]);
-
-  // اضافه کردن مارکرها
-  useEffect(() => {
-    if (!map.current || !mapReady || loading || projectsWithMedia.length === 0) return;
-
-    // پاک کردن مارکرهای قبلی
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = [];
-
-    const projectsWithLocation = projectsWithMedia.filter(
-      p => Number.isFinite(p.locations?.lat) && Number.isFinite(p.locations?.lng)
-    );
-
-    if (projectsWithLocation.length === 0) return;
-
-    // گروه‌بندی بر اساس موقعیت
-    const locationGroups: Record<string, ProjectWithMedia[]> = {};
-    projectsWithLocation.forEach(project => {
-      if (!project.locations?.lat || !project.locations?.lng) return;
-      const key = `${project.locations.lat.toFixed(6)}_${project.locations.lng.toFixed(6)}`;
-      if (!locationGroups[key]) locationGroups[key] = [];
-      locationGroups[key].push(project);
-    });
-
-    const bounds = new mapboxgl.LngLatBounds();
-    let hasMarkers = false;
-
-    Object.values(locationGroups).forEach(group => {
-      const count = group.length;
-      const firstProject = group[0];
-      const centerLat = firstProject.locations!.lat;
-      const centerLng = firstProject.locations!.lng;
-
-      // اگر بیش از یک پروژه در این موقعیت است
-      if (count > 1) {
-        // نقطه مرکزی
-        const centerEl = document.createElement('div');
-        centerEl.className = 'center-marker';
-        centerEl.style.backgroundColor = '#ef4444';
-        centerEl.style.width = '20px';
-        centerEl.style.height = '20px';
-        centerEl.style.borderRadius = '50%';
-        centerEl.style.border = '3px solid #fff';
-        centerEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-
-        new mapboxgl.Marker(centerEl)
-          .setLngLat([centerLng, centerLat])
-          .addTo(map.current!);
-
-        bounds.extend([centerLng, centerLat]);
-        hasMarkers = true;
-      }
-
-      group.forEach((project, index) => {
-        if (!project.locations?.lat || !project.locations?.lng) return;
-
-        let lat = centerLat;
-        let lng = centerLng;
-
-        if (count > 1) {
-          const angle = (2 * Math.PI * index) / count;
-          const radius = 0.0015;
-          lat = centerLat + radius * Math.cos(angle);
-          lng = centerLng + radius * Math.sin(angle);
-
-          // خط اتصال
-          if (map.current?.getSource(`line-${project.id}`) === undefined) {
-            map.current?.addSource(`line-${project.id}`, {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                  type: 'LineString',
-                  coordinates: [[lng, lat], [centerLng, centerLat]]
-                }
-              }
-            });
-
-            map.current?.addLayer({
-              id: `line-${project.id}`,
-              type: 'line',
-              source: `line-${project.id}`,
-              layout: {},
-              paint: {
-                'line-color': '#3b82f6',
-                'line-width': 2,
-                'line-opacity': 0.7,
-                'line-dasharray': [2, 3]
-              }
-            });
-          }
-        }
-
-        // مارکر پروژه
-        const el = document.createElement('div');
-        el.className = 'project-marker';
-        el.style.backgroundImage = 'url(https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png)';
-        el.style.width = '25px';
-        el.style.height = '41px';
-        el.style.backgroundSize = 'contain';
-        el.style.cursor = 'pointer';
-
-        const marker = new mapboxgl.Marker(el)
-          .setLngLat([lng, lat])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25 })
-              .setHTML(`
-                <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right;">
-                  <strong>${project.title || 'پروژه'}</strong><br/>
-                  <span style="font-size: 12px; color: #666;">${project.locations?.address_line || ''}</span>
-                  ${count > 1 ? `<div style="margin-top:8px;padding:4px 8px;background:#f3f4f6;border-radius:4px;text-align:center;font-size:11px;">پروژه ${index + 1} از ${count}</div>` : ''}
-                </div>
-              `)
-          )
-          .addTo(map.current!);
-
-        marker.getElement().addEventListener('click', () => {
-          setSelectedProject(project);
-        });
-
-        markersRef.current.push(marker);
-        bounds.extend([lng, lat]);
-        hasMarkers = true;
-      });
-    });
-
-    // تنظیم نمای نقشه
-    if (hasMarkers && !bounds.isEmpty()) {
-      map.current?.fitBounds(bounds, { 
-        padding: 80, 
-        maxZoom: 15,
-        pitch: 0,
-        bearing: 0
-      });
-    }
-  }, [projectsWithMedia, mapReady, loading]);
+    return [35.6892, 51.3890]; // تهران
+  }, [projectsWithLocation]);
 
   // مدیریت آپلود فایل
   const handleAddImage = () => {
@@ -424,30 +202,8 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
     }
   };
 
-  const projectMarkerIcon = useMemo(
-    () =>
-      new L.Icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41],
-      }),
-    []
-  );
-
-  const projectsWithLocation = projectsWithMedia.filter(
-    p => Number.isFinite(p.locations?.lat) && Number.isFinite(p.locations?.lng)
-  );
-
-  const defaultCenter: [number, number] = projectsWithLocation.length
-    ? [projectsWithLocation[0].locations!.lat, projectsWithLocation[0].locations!.lng]
-    : [35.6892, 51.3890]; // تهران
-
   return (
-     <div className="fixed inset-0 z-50 bg-background">
+    <div className="fixed inset-0 z-50 bg-background">
       <div className="absolute inset-0 z-[2000] pointer-events-none">
         <Button
           variant="default"
@@ -472,7 +228,7 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
         </Card>
       </div>
 
-      <div className="w-full h-full absolute inset-0">
+      <div className="w-full h-full">
         <MapContainer
           center={defaultCenter}
           zoom={13}
@@ -480,21 +236,31 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
           maxZoom={22}
           scrollWheelZoom
           className="w-full h-full"
+          style={{ height: '100vh', width: '100vw' }}
         >
+          <MapInitializer />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={22}
           />
           {projectsWithLocation.map(project => (
             project.locations && (
               <Marker
                 key={project.id}
                 position={[project.locations.lat, project.locations.lng]}
-                icon={projectMarkerIcon}
+                icon={customIcon}
                 eventHandlers={{
                   click: () => setSelectedProject(project),
                 }}
-              />
+              >
+                <Popup>
+                  <div style={{ fontFamily: 'Vazirmatn, sans-serif', direction: 'rtl', textAlign: 'right' }}>
+                    <strong>{project.title || 'پروژه'}</strong><br/>
+                    <span style={{ fontSize: '12px', color: '#666' }}>{project.locations?.address_line || ''}</span>
+                  </div>
+                </Popup>
+              </Marker>
             )
           ))}
         </MapContainer>
