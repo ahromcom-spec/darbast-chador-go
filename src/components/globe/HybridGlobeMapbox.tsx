@@ -143,14 +143,30 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
     mapboxgl.accessToken = mapboxToken;
 
     try {
+      // فعال‌سازی پشتیبانی متن RTL برای نقشه
+      if (typeof (mapboxgl as any).setRTLTextPlugin === 'function') {
+        try {
+          (mapboxgl as any).setRTLTextPlugin(
+            'https://cdn.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.3.0/mapbox-gl-rtl-text.js',
+            undefined,
+            true
+          );
+        } catch (_) {}
+      }
+
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v12',
         center: [51.3890, 35.6892], // تهران - مرکز ایران
         zoom: 5.5,
-        pitch: 0,
-        bearing: 0,
-        antialias: true
+        projection: 'mercator',
+        renderWorldCopies: false,
+        minZoom: 4,
+        maxZoom: 20,
+        pitchWithRotate: false,
+        attributionControl: false,
+        performanceMetricsCollection: false,
+        refreshExpiredTiles: false,
       });
       console.log('[HybridGlobeMapbox] Map instance created');
     } catch (error) {
