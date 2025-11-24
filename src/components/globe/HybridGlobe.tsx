@@ -346,6 +346,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   }, []);
 
   useEffect(() => {
+    fetchProjectMedia();
+  }, [fetchProjectMedia]);
+
+  useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
     // ایجاد نقشه با مرکز ایران
@@ -353,28 +357,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       center: [32.4279, 53.6880], // مرکز ایران
       zoom: 6,
       minZoom: 5,
-      maxZoom: 20,
+      maxZoom: 18,
       scrollWheelZoom: true,
       zoomControl: true,
     });
 
     mapRef.current = map;
 
-    // استفاده از Mapbox tiles برای نمایش بهتر قواره‌های ساختمان‌ها
-    if (mapboxToken) {
-      L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`, {
-        attribution: '&copy; <a href="https://www.mapbox.com/">Mapbox</a>',
-        tileSize: 512,
-        zoomOffset: -1,
-        maxZoom: 20,
-      }).addTo(map);
-    } else {
-      // fallback به OpenStreetMap اگر توکن موجود نباشد
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 20,
-      }).addTo(map);
-    }
+    // اضافه کردن لایه تایل OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18,
+    }).addTo(map);
 
     // منتظر بمانیم تا نقشه کاملاً آماده شود
     map.whenReady(() => {
@@ -388,7 +382,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         mapRef.current = null;
       }
     };
-  }, [mapboxToken]);
+  }, []);
 
   // اضافه کردن مارکرهای پروژه‌ها
   useEffect(() => {
