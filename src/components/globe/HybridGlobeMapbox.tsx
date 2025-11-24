@@ -126,19 +126,30 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
 
   // ایجاد نقشه Mapbox
   useEffect(() => {
-    if (!mapContainer.current || map.current || !mapboxToken) return;
+    if (!mapContainer.current || map.current) return;
 
+    if (!mapboxToken) {
+      console.log('Mapbox token not available yet');
+      return;
+    }
+
+    console.log('Initializing Mapbox with token');
     mapboxgl.accessToken = mapboxToken;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [50.8764, 34.6416], // قم
-      zoom: 13,
-      pitch: 45,
-      bearing: -17.6,
-      antialias: true
-    });
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [50.8764, 34.6416], // قم
+        zoom: 13,
+        pitch: 45,
+        bearing: -17.6,
+        antialias: true
+      });
+    } catch (error) {
+      console.error('Error initializing Mapbox:', error);
+      return;
+    }
 
     map.current.on('load', () => {
       if (!map.current) return;
