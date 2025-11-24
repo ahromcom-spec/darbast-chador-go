@@ -535,12 +535,27 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           `
           : '<p style="font-size: 12px; color: #999; margin-top: 8px;">هنوز فایلی ثبت نشده</p>';
 
+        // اگر چند پروژه در یک مکان هستند، هدر گروهی نمایش بده
+        const locationHeader = count > 1
+          ? `<div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:#fff;padding:10px;border-radius:8px 8px 0 0;margin:-8px -8px 12px;text-align:center;font-weight:bold;font-size:13px;">
+              📍 ${count} پروژه در این مکان
+            </div>`
+          : '';
+
+        // خطی که پروژه‌های یک مکان را به هم وصل می‌کند
+        const connectionLine = count > 1 && index < count - 1
+          ? `<div style="width:3px;height:20px;background:linear-gradient(to bottom, #667eea, #764ba2);margin:8px auto;"></div>`
+          : '';
+
         // اضافه کردن popup با عنوان و آدرس و نوع خدمت
         const popupContent = `
-          <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 320px;">
+          <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 320px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
+            ${locationHeader}
             <strong style="font-size: 15px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
             <span style="font-size: 12px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
+            ${count > 1 ? `<div style="margin-top:8px;padding:6px 10px;background:#f3f4f6;border-radius:6px;text-align:center;font-size:11px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
             ${mediaHTML}
+            ${connectionLine}
           </div>
         `;
         marker.bindPopup(popupContent, {
