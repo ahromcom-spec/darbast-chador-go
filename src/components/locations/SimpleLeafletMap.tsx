@@ -49,7 +49,7 @@ export default function SimpleLeafletMap({
       center: [startLat, startLng],
       zoom: 12,
       minZoom: 5,
-      maxZoom: 18,
+      maxZoom: 22,
       scrollWheelZoom: true,
       zoomControl: true,
     });
@@ -81,7 +81,7 @@ export default function SimpleLeafletMap({
     // اضافه کردن لایه تایل OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 18,
+      maxZoom: 22,
     }).addTo(map);
 
     // تنظیم marker icon
