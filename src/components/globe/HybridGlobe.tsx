@@ -464,25 +464,45 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       // اگر بیش از یک پروژه در این موقعیت وجود دارد، مارکر مرکزی قرمز و خطوط اتصال اضافه کنیم
       if (count > 1) {
         const centerMarker = L.circleMarker([centerLat, centerLng], {
-          radius: 10,
+          radius: 12,
           fillColor: '#ef4444',
-          fillOpacity: 0.9,
+          fillOpacity: 0.95,
           color: '#ffffff',
           weight: 3,
           className: 'location-center-marker'
         }).addTo(mapRef.current!);
+        
+        // اضافه کردن popup به مارکر قرمز برای نمایش تعداد پروژه‌ها
+        const centerPopupContent = `
+          <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: center; padding: 8px;">
+            <div style="background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%);color:white;padding:12px;border-radius:8px;margin-bottom:8px;">
+              <span style="font-size:16px;font-weight:bold;">📍 ${count} پروژه</span>
+            </div>
+            <span style="font-size:12px;color:#6b7280;">روی پروژه‌ها کلیک کنید</span>
+          </div>
+        `;
+        centerMarker.bindPopup(centerPopupContent, {
+          maxWidth: 200,
+          className: 'custom-popup center-marker-popup'
+        });
+        
+        // کلیک روی مارکر قرمز همه پاپ‌آپ‌های پروژه‌ها را می‌بندد تا کاربر بتواند پروژه‌ها را ببیند
+        centerMarker.on('click', () => {
+          centerMarker.openPopup();
+        });
+        
         centerMarkersRef.current.push(centerMarker);
       }
 
       group.forEach((project, index) => {
         if (!project.locations?.lat || !project.locations?.lng) return;
         
-        // محاسبه آفست برای مارکرهای چندگانه در یک آدرس
+        // محاسبه آفست برای مارکرهای چندگانه در یک آدرس - فاصله بسیار کم
         let lat = centerLat;
         let lng = centerLng;
         if (count > 1) {
           const angle = (2 * Math.PI * index) / count;
-          const radius = 0.0004; // فاصله کمتر برای قرارگیری نزدیک‌تر به نقطه قرمز
+          const radius = 0.00008; // فاصله خیلی کم برای قرارگیری بسیار نزدیک به نقطه قرمز
           lat = centerLat + radius * Math.cos(angle);
           lng = centerLng + radius * Math.sin(angle);
 
@@ -518,18 +538,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             : `<img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`;
           
           const html = `
-            <div style="width:50px;height:50px;border-radius:10px;overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,.3);border:2px solid #fff;background:#f0f0f0;position:relative;">
+            <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.4);border:2px solid #fff;background:#f0f0f0;position:relative;">
               ${mediaElement}
-              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));height:18px;display:flex;align-items:center;justify-content:center;">
-                <span style="color:#fff;font-size:8px;font-weight:bold;">${project.media?.length || 0} فایل</span>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:14px;display:flex;align-items:center;justify-content:center;">
+                <span style="color:#fff;font-size:7px;font-weight:bold;">${project.media?.length || 0}</span>
               </div>
             </div>`;
           iconToUse = L.divIcon({
             html,
             className: 'project-thumb-icon',
-            iconSize: [50, 50],
-            iconAnchor: [25, 50],
-            popupAnchor: [0, -50],
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40],
           });
         }
 
