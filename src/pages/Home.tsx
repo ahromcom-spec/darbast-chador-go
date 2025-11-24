@@ -356,18 +356,6 @@ const Home = () => {
                 </button>
               </div>
             )}
-
-            {/* Show loading message after service selection */}
-            {selectedServiceType && selectedSubcategory && (
-              <Card className="mt-4 shadow-xl bg-card/20 backdrop-blur-xl border-2">
-                <CardContent className="p-6 text-center">
-                  <LoadingSpinner size="lg" />
-                  <p className="text-sm text-muted-foreground mt-4">
-                    نوع خدمات انتخاب شد
-                  </p>
-                </CardContent>
-              </Card>
-            )}
           </article>
         </main>
         
