@@ -48,12 +48,6 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
 
   // دریافت توکن Mapbox
   useEffect(() => {
-    const cached = sessionStorage.getItem('mapbox_token');
-    if (cached) {
-      setMapboxToken(cached);
-      return;
-    }
-
     const tryEdgeThenEnv = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
@@ -71,7 +65,14 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
       }
     };
 
-    tryEdgeThenEnv();
+    const cached = sessionStorage.getItem('mapbox_token');
+    if (cached) {
+      // از توکن کش‌شده استفاده کن ولی در پس‌زمینه آن را به‌روزرسانی کن
+      setMapboxToken(cached);
+      tryEdgeThenEnv();
+    } else {
+      tryEdgeThenEnv();
+    }
   }, []);
 
   // دریافت media پروژه‌ها
