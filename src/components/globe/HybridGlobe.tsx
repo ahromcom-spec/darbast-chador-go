@@ -357,7 +357,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       center: [32.4279, 53.6880], // مرکز ایران
       zoom: 6,
       minZoom: 5,
-      maxZoom: 18,
+      maxZoom: 22,
       scrollWheelZoom: true,
       zoomControl: true,
     });
@@ -367,7 +367,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     // اضافه کردن لایه تایل OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 18,
+      maxZoom: 22,
     }).addTo(map);
 
     // منتظر بمانیم تا نقشه کاملاً آماده شود
