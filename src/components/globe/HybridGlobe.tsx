@@ -41,6 +41,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [mapboxToken, setMapboxToken] = useState<string>('');
 
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
@@ -316,9 +317,33 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     }
   }, [projects, toast]);
 
+  // دریافت توکن Mapbox برای نمایش قواره‌های ساختمان‌ها
   useEffect(() => {
-    fetchProjectMedia();
-  }, [fetchProjectMedia]);
+    const cached = sessionStorage.getItem('mapbox_token');
+    if (cached) {
+      setMapboxToken(cached);
+      return;
+    }
+
+    const tryEdgeThenEnv = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+        if (!error && data?.token) {
+          setMapboxToken(data.token);
+          sessionStorage.setItem('mapbox_token', data.token);
+          return;
+        }
+      } catch (_) {}
+
+      const envToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+      if (envToken) {
+        setMapboxToken(envToken);
+        sessionStorage.setItem('mapbox_token', envToken);
+      }
+    };
+
+    tryEdgeThenEnv();
+  }, []);
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
@@ -328,18 +353,28 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       center: [32.4279, 53.6880], // مرکز ایران
       zoom: 6,
       minZoom: 5,
-      maxZoom: 18,
+      maxZoom: 20,
       scrollWheelZoom: true,
       zoomControl: true,
     });
 
     mapRef.current = map;
 
-    // اضافه کردن لایه تایل OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 18,
-    }).addTo(map);
+    // استفاده از Mapbox tiles برای نمایش بهتر قواره‌های ساختمان‌ها
+    if (mapboxToken) {
+      L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`, {
+        attribution: '&copy; <a href="https://www.mapbox.com/">Mapbox</a>',
+        tileSize: 512,
+        zoomOffset: -1,
+        maxZoom: 20,
+      }).addTo(map);
+    } else {
+      // fallback به OpenStreetMap اگر توکن موجود نباشد
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 20,
+      }).addTo(map);
+    }
 
     // منتظر بمانیم تا نقشه کاملاً آماده شود
     map.whenReady(() => {
@@ -353,7 +388,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         mapRef.current = null;
       }
     };
-  }, []);
+  }, [mapboxToken]);
 
   // اضافه کردن مارکرهای پروژه‌ها
   useEffect(() => {
