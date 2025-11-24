@@ -680,21 +680,43 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           ? `
             <div style="margin-top:12px;padding:10px;background:#f9fafb;border-radius:8px;">
               <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;">سفارشات این پروژه (${project.orders.length})</div>
-              ${project.orders.map((order, orderIdx) => `
-                <div style="padding:8px;margin-bottom:6px;background:white;border:1px solid #e5e7eb;border-radius:6px;">
-                  <div style="font-size:12px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
-                  <div style="font-size:11px;color:#6b7280;margin-top:2px;">${order.subcategory?.name || 'نامشخص'}</div>
-                  ${order.media && order.media.length > 0 ? `
-                    <div style="margin-top:4px;">
-                      <img 
-                        src="${supabase.storage.from('order-media').getPublicUrl(order.media[0].file_path).data.publicUrl}" 
-                        alt="تصویر سفارش" 
-                        style="width:100%;height:80px;object-fit:cover;border-radius:4px;"
-                      />
-                    </div>
-                  ` : ''}
-                </div>
-              `).join('')}
+              ${project.orders.map((order, orderIdx) => {
+                const orderImages = (order.media || []).filter(m => m.file_type === 'image');
+                return `
+                  <div 
+                    class="order-card-${order.id}" 
+                    style="padding:10px;margin-bottom:8px;background:white;border:2px solid #e5e7eb;border-radius:6px;cursor:pointer;transition:all 0.2s;"
+                    onmouseover="this.style.borderColor='#3b82f6';this.style.boxShadow='0 4px 12px rgba(59,130,246,0.2)'"
+                    onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'"
+                  >
+                    <div style="font-size:12px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
+                    <div style="font-size:11px;color:#6b7280;margin-top:2px;">${order.subcategory?.name || 'نامشخص'}</div>
+                    ${orderImages.length > 0 ? `
+                      <div id="order-gallery-${order.id}" style="position:relative;margin-top:8px;">
+                        <div style="overflow:hidden;border-radius:6px;background:#f9fafb;">
+                          ${orderImages.map((m, idx) => {
+                            const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                            return `<img 
+                              id="order-img-${order.id}-${idx}" 
+                              src="${url}" 
+                              alt="تصویر سفارش" 
+                              loading="lazy"
+                              style="width:100%;height:120px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};"
+                            />`;
+                          }).join('')}
+                        </div>
+                        ${orderImages.length > 1 ? `
+                          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+                            <button class="order-gallery-prev-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">قبلی</button>
+                            <span id="order-counter-${order.id}" style="font-family:Vazirmatn;font-size:11px;color:#6b7280;">1 از ${orderImages.length}</span>
+                            <button class="order-gallery-next-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">بعدی</button>
+                          </div>
+                        ` : ''}
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
             </div>
           `
           : '';
@@ -706,7 +728,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             <span style="font-size: 12px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
             ${count > 1 ? `<div style="margin-top:8px;padding:6px 10px;background:#f3f4f6;border-radius:6px;text-align:center;font-size:11px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
             ${ordersHTML}
-            ${mediaHTML}
           </div>
         `;
         
@@ -723,45 +744,55 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           const popupElement = popup.getElement();
           if (!popupElement) return;
           
-          let currentIndex = 0;
-          
-          // دکمه‌های ناوبری گالری
-          const prevBtn = popupElement.querySelector(`.gallery-prev-${project.id}`);
-          const nextBtn = popupElement.querySelector(`.gallery-next-${project.id}`);
-          
-          if (prevBtn && nextBtn) {
-            prevBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              currentIndex = (currentIndex - 1 + images.length) % images.length;
-              updateGallery();
-            });
-            
-            nextBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              currentIndex = (currentIndex + 1) % images.length;
-              updateGallery();
+          // هندلر برای سفارشات (کلیک + گالری)
+          if (project.orders) {
+            project.orders.forEach((order) => {
+              const orderImages = (order.media || []).filter(m => m.file_type === 'image');
+              
+              // کلیک روی کارت سفارش برای نمایش جزئیات
+              const orderCard = popupElement.querySelector(`.order-card-${order.id}`);
+              if (orderCard) {
+                orderCard.addEventListener('click', (e) => {
+                  // اگر روی دکمه‌های گالری کلیک نشده
+                  if (!(e.target as HTMLElement).closest('button')) {
+                    window.location.href = `/user/orders/${order.id}`;
+                  }
+                });
+              }
+              
+              // گالری تصاویر هر سفارش
+              if (orderImages.length > 1) {
+                let currentOrderIndex = 0;
+                
+                const prevBtn = popupElement.querySelector(`.order-gallery-prev-${order.id}`);
+                const nextBtn = popupElement.querySelector(`.order-gallery-next-${order.id}`);
+                
+                if (prevBtn && nextBtn) {
+                  prevBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    currentOrderIndex = (currentOrderIndex - 1 + orderImages.length) % orderImages.length;
+                    updateOrderGallery(order.id, currentOrderIndex, orderImages.length);
+                  });
+                  
+                  nextBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    currentOrderIndex = (currentOrderIndex + 1) % orderImages.length;
+                    updateOrderGallery(order.id, currentOrderIndex, orderImages.length);
+                  });
+                }
+                
+                function updateOrderGallery(orderId: string, index: number, total: number) {
+                  for (let i = 0; i < total; i++) {
+                    const img = popupElement.querySelector(`#order-img-${orderId}-${i}`) as HTMLElement;
+                    if (img) img.style.display = i === index ? 'block' : 'none';
+                  }
+                  
+                  const counter = popupElement.querySelector(`#order-counter-${orderId}`);
+                  if (counter) counter.textContent = `${index + 1} از ${total}`;
+                }
+              }
             });
           }
-          
-          function updateGallery() {
-            for (let i = 0; i < images.length; i++) {
-              const img = popupElement.querySelector(`#img-${project.id}-${i}`) as HTMLElement;
-              if (img) img.style.display = i === currentIndex ? 'block' : 'none';
-            }
-            
-            const counter = popupElement.querySelector(`#counter-${project.id}`);
-            if (counter) counter.textContent = `${currentIndex + 1} از ${images.length}`;
-          }
-          
-          // کلیک روی ویدیو
-          const videoPlayers = popupElement.querySelectorAll(`.video-player-${project.id}`);
-          videoPlayers.forEach(player => {
-            player.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const url = (player as HTMLElement).getAttribute('data-url');
-              if (url) window.open(url, '_blank');
-            });
-          });
         });
 
         marker.on('click', () => {
