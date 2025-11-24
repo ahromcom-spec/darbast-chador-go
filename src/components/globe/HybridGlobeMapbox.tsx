@@ -126,14 +126,20 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
 
   // ایجاد نقشه Mapbox
   useEffect(() => {
+    console.log('[HybridGlobeMapbox] init effect', {
+      hasContainer: !!mapContainer.current,
+      hasMap: !!map.current,
+      hasToken: !!mapboxToken,
+    });
+
     if (!mapContainer.current || map.current) return;
 
     if (!mapboxToken) {
-      console.log('Mapbox token not available yet');
+      console.log('[HybridGlobeMapbox] Mapbox token not available yet');
       return;
     }
 
-    console.log('Initializing Mapbox with token');
+    console.log('[HybridGlobeMapbox] Initializing Mapbox with token');
     mapboxgl.accessToken = mapboxToken;
 
     try {
@@ -146,13 +152,45 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
         bearing: 0,
         antialias: true
       });
+      console.log('[HybridGlobeMapbox] Map instance created');
     } catch (error) {
-      console.error('Error initializing Mapbox:', error);
+      console.error('[HybridGlobeMapbox] Error initializing Mapbox:', error);
       return;
     }
 
+    if (!map.current) {
+      console.error('[HybridGlobeMapbox] Map instance is null after initialization');
+      return;
+    }
+
+    let hadRender = false;
+    let firstRenderLogged = false;
+
+    map.current.on('render', () => {
+      if (!map.current) return;
+      hadRender = true;
+      if (!firstRenderLogged) {
+        firstRenderLogged = true;
+        console.log('[HybridGlobeMapbox] First render', {
+          zoom: map.current.getZoom(),
+          center: map.current.getCenter(),
+        });
+      }
+    });
+
+    setTimeout(() => {
+      if (!hadRender) {
+        console.warn('[HybridGlobeMapbox] Map did not render within 5 seconds');
+      }
+    }, 5000);
+
+    map.current.on('error', (e) => {
+      console.error('[HybridGlobeMapbox] Mapbox error', e);
+    });
+
     map.current.on('load', () => {
       if (!map.current) return;
+      console.log('[HybridGlobeMapbox] Map load event fired');
 
       // اضافه کردن لایه سه‌بعدی ساختمان‌ها
       const layers = map.current.getStyle().layers;
@@ -200,6 +238,7 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     return () => {
+      console.log('[HybridGlobeMapbox] Cleaning up map instance');
       map.current?.remove();
       map.current = null;
     };
