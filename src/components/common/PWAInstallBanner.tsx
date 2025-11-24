@@ -15,12 +15,8 @@ export function PWAInstallBanner() {
   useEffect(() => {
     const dismissed = localStorage.getItem('pwa-install-dismissed');
     
-    if (location.pathname === '/') {
-      if (!isStandalone && !dismissed) {
-        setShow(true);
-      } else {
-        setShow(false);
-      }
+    if (location.pathname === '/' && !isStandalone && dismissed !== 'true') {
+      setShow(true);
     } else {
       setShow(false);
     }
