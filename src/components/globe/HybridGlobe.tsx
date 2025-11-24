@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowRight, MapPin } from 'lucide-react';
+import { ArrowRight, MapPin, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
@@ -31,6 +31,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const linesRef = useRef<L.Polyline[]>([]);
+  const centerMarkersRef = useRef<L.CircleMarker[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
   const [projectsWithMedia, setProjectsWithMedia] = useState<ProjectWithMedia[]>([]);
@@ -236,7 +238,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     }
 
     console.debug('[HybridGlobe] Fetching media for', projects.length, 'projects');
-      
+    
     try {
       const projectIds = projects.map(p => p.id);
       
@@ -393,7 +395,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     };
   }, []);
 
-  // اضافه کردن مارکرهای پروژه‌ها
+  // اضافه کردن مارکرهای پروژه‌ها با خطوط اتصال
   useEffect(() => {
     console.debug('[HybridGlobe] Marker effect triggered:', {
       mapReady,
@@ -406,11 +408,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       return;
     }
 
-    // پاک کردن مارکرهای قبلی
+    // پاک کردن مارکرها، خطوط و مارکرهای مرکزی قبلی
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
+    linesRef.current.forEach(line => line.remove());
+    linesRef.current = [];
+    centerMarkersRef.current.forEach(cm => cm.remove());
+    centerMarkersRef.current = [];
 
-    // فیلتر پروژه‌هایی که مختصات معتبر دارند (بدون محدودیت باکس ایران)
+    // فیلتر پروژه‌هایی که مختصات معتبر دارند
     const projectsWithLocation = projectsWithMedia.filter(
       p => Number.isFinite(p.locations?.lat as number) && Number.isFinite(p.locations?.lng as number)
     );
@@ -440,7 +446,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       shadowSize: [41, 41],
     });
 
-    // گروه‌بندی پروژه‌ها بر اساس موقعیت جغرافیایی برای جلوگیری از هم‌پوشانی مارکرها
+    // گروه‌بندی پروژه‌ها بر اساس موقعیت جغرافیایی
     const locationGroups: Record<string, ProjectWithMedia[]> = {};
     projectsWithLocation.forEach(project => {
       if (!project.locations?.lat || !project.locations?.lng) return;
@@ -451,18 +457,47 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     Object.values(locationGroups).forEach(group => {
       const count = group.length;
+      const firstProject = group[0];
+      const centerLat = firstProject.locations!.lat;
+      const centerLng = firstProject.locations!.lng;
+
+      // اگر بیش از یک پروژه در این موقعیت وجود دارد، مارکر مرکزی قرمز و خطوط اتصال اضافه کنیم
+      if (count > 1) {
+        const centerMarker = L.circleMarker([centerLat, centerLng], {
+          radius: 10,
+          fillColor: '#ef4444',
+          fillOpacity: 0.9,
+          color: '#ffffff',
+          weight: 3,
+          className: 'location-center-marker'
+        }).addTo(mapRef.current!);
+        centerMarkersRef.current.push(centerMarker);
+      }
 
       group.forEach((project, index) => {
         if (!project.locations?.lat || !project.locations?.lng) return;
         
-        // محاسبه آفست کوچک برای مارکرهای چندگانه در یک آدرس
-        let lat = project.locations.lat;
-        let lng = project.locations.lng;
+        // محاسبه آفست برای مارکرهای چندگانه در یک آدرس
+        let lat = centerLat;
+        let lng = centerLng;
         if (count > 1) {
           const angle = (2 * Math.PI * index) / count;
-          const radius = 0.00018; // حدوداً ۲۰ متر جابجایی در نقشه
-          lat = lat + radius * Math.cos(angle);
-          lng = lng + radius * Math.sin(angle);
+          const radius = 0.0015; // فاصله بیشتر برای وضوح بهتر
+          lat = centerLat + radius * Math.cos(angle);
+          lng = centerLng + radius * Math.sin(angle);
+
+          // اضافه کردن خط اتصال از پروژه به مرکز
+          const line = L.polyline(
+            [[lat, lng], [centerLat, centerLng]],
+            {
+              color: '#3b82f6',
+              weight: 2,
+              opacity: 0.7,
+              dashArray: '8, 12',
+              className: 'connection-line'
+            }
+          ).addTo(mapRef.current!);
+          linesRef.current.push(line);
         }
 
         let iconToUse: any = projectIcon;
@@ -473,7 +508,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             .getPublicUrl(firstMedia.file_path).data.publicUrl;
           
           const isVideo = firstMedia.file_type === 'video';
-          // ویدیوها را در thumbnail نمایش نمی‌دهیم برای کاهش بار
           const mediaElement = isVideo 
             ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#333;">
                 <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
@@ -518,7 +552,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                       alt="تصویر" 
                       loading="lazy"
                       style="width:100%;height:80px;object-fit:cover;border-radius:6px;border:2px solid #e5e7eb;cursor:pointer;"
-                      onerror="this.style.display='none'"
+                      onclick="window.open('${url}', '_blank')"
                     />`;
                   }).join('')}
                 </div>
@@ -527,36 +561,27 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
                   ${videos.map(m => {
                     const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
-                    const mimeType = m.mime_type || 'video/mp4';
-                    return `<div 
-                      onclick="window.openProjectVideo('${url}', '${mimeType}')"
-                      style="width:100%;height:80px;background:#1a1a1a;border-radius:6px;border:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;"
-                    >
-                      <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                      <span style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 6px;border-radius:3px;">کلیک برای پخش</span>
-                    </div>`;
+                    return `
+                      <div style="position:relative;width:100%;height:80px;background:#333;border-radius:6px;border:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;" 
+                        onclick="window.openProjectVideo('${url}', '${m.mime_type || 'video/mp4'}')">
+                        <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 5px;border-radius:3px;">ویدیو</span>
+                      </div>
+                    `;
                   }).join('')}
                 </div>
               ` : ''}
-            </div>
-          `
-          : '<p style="font-size: 12px; color: #999; margin-top: 8px;">هنوز فایلی ثبت نشده</p>';
-
-        // اگر چند پروژه در یک مکان هستند، هدر گروهی نمایش بده
-        const locationHeader = count > 1
-          ? `<div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:#fff;padding:10px;border-radius:8px 8px 0 0;margin:-8px -8px 12px;text-align:center;font-weight:bold;font-size:13px;">
-              📍 ${count} پروژه در این مکان
             </div>`
           : '';
 
-        // خطی که پروژه‌های یک مکان را به هم وصل می‌کند
-        const connectionLine = count > 1 && index < count - 1
-          ? `<div style="width:3px;height:20px;background:linear-gradient(to bottom, #667eea, #764ba2);margin:8px auto;"></div>`
+        const locationHeader = count > 1
+          ? `<div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:8px 12px;border-radius:8px 8px 0 0;margin:-8px -8px 8px -8px;text-align:center;">
+              <span style="font-size:13px;font-weight:bold;">📍 ${count} پروژه در این مکان</span>
+            </div>`
           : '';
 
-        // اضافه کردن popup با عنوان و آدرس و نوع خدمت
         const popupContent = `
           <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 320px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
             ${locationHeader}
@@ -564,7 +589,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             <span style="font-size: 12px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
             ${count > 1 ? `<div style="margin-top:8px;padding:6px 10px;background:#f3f4f6;border-radius:6px;text-align:center;font-size:11px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
             ${mediaHTML}
-            ${connectionLine}
           </div>
         `;
         marker.bindPopup(popupContent, {
@@ -579,8 +603,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         markersRef.current.push(marker);
         console.debug('[HybridGlobe] Marker added:', { 
           projectId: project.id, 
-          lat: project.locations?.lat, 
-          lng: project.locations?.lng,
+          lat, 
+          lng,
           hasCustomIcon: !!firstMedia,
           groupSize: count,
           indexInGroup: index,
@@ -588,7 +612,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       });
     });
 
-    // تنظیم bounds نقشه برای نمایش همه پروژه‌ها بر اساس مارکرهای ساخته‌شده
+    // تنظیم bounds نقشه برای نمایش همه پروژه‌ها
     const allMarkers = markersRef.current;
     console.debug('[HybridGlobe] Total markers created:', allMarkers.length);
     
@@ -596,7 +620,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const bounds = L.latLngBounds(allMarkers.map(m => m.getLatLng()));
       console.debug('[HybridGlobe] Fitting bounds:', bounds);
       try {
-        mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+        mapRef.current.fitBounds(bounds, {
+          padding: [80, 80],
+          maxZoom: 14,
+        });
       } catch (e) {
         console.warn('[HybridGlobe] fitBounds failed', e, bounds);
       }
@@ -649,83 +676,52 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   <p className="text-xs text-muted-foreground mt-1">{selectedProject.media.length} فایل</p>
                 )}
               </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedProject(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex-1 relative">
-                <Button 
-                  size="sm" 
-                  onClick={handleAddImage} 
-                  disabled={uploading} 
-                  className="w-full relative overflow-hidden"
-                >
-                  {uploading && (
-                    <div 
-                      className="absolute right-0 top-0 bottom-0 bg-primary/20 transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  )}
-                  <span className="relative z-10">
-                    {uploading ? `در حال آپلود... ${uploadProgress}%` : 'افزودن تصویر / فیلم'}
-                  </span>
-                </Button>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,video/*"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </div>
+            <Button
+              onClick={handleAddImage}
+              disabled={uploading}
+              className="w-full"
+            >
+              {uploading ? `در حال آپلود... ${uploadProgress}%` : '+ افزودن عکس یا ویدیو'}
+            </Button>
           </div>
         </Card>
       )}
 
-      {/* دیالوگ پخش ویدیو */}
-      <Dialog open={videoLoading || !!selectedVideo} onOpenChange={(open) => {
-        if (!open) {
-          setSelectedVideo(null);
-          setVideoLoading(false);
-        }
-      }}>
-        <DialogContent className="max-w-4xl w-[95vw] p-0">
-          <DialogHeader className="p-4 pb-0">
-            <DialogTitle className="text-right">
-              {videoLoading ? 'در حال آماده‌سازی ویدیو...' : 'پخش ویدیو'}
-            </DialogTitle>
+      {/* Input مخفی برای انتخاب فایل */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {/* دیالوگ نمایش ویدیو */}
+      <Dialog open={!!selectedVideo} onOpenChange={(open) => !open && setSelectedVideo(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>پخش ویدیو</DialogTitle>
           </DialogHeader>
-          
-          {videoLoading ? (
-            <div className="p-8 flex flex-col items-center gap-4">
-              <p className="text-sm text-muted-foreground text-center">
-                لطفاً صبر کنید، ویدیو در حال آماده‌سازی است...
-              </p>
-            </div>
-          ) : (
-            selectedVideo && (
-              <div className="relative w-full bg-black" style={{ paddingTop: '56.25%' }}>
-                <video
-                  key={selectedVideo.url}
-                  src={selectedVideo.url}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="absolute inset-0 w-full h-full"
-                  style={{ objectFit: 'contain' }}
-                  preload="metadata"
-                >
-                  مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
-                </video>
-                <div className="absolute bottom-4 left-4 flex gap-2">
-                  <Button asChild size="sm" variant="secondary">
-                    <a href={selectedVideo.url} target="_blank" rel="noreferrer">
-                      باز کردن در تب جدید
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            )
+          {videoLoading && <p className="text-center p-4">در حال بارگذاری...</p>}
+          {videoSrc && (
+            <video 
+              controls 
+              autoPlay 
+              className="w-full max-h-[70vh] rounded-lg"
+              onError={fallbackToBlob}
+            >
+              <source src={videoSrc} type={selectedVideo?.mimeType || 'video/mp4'} />
+              مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+            </video>
           )}
         </DialogContent>
       </Dialog>
