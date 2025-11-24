@@ -58,6 +58,9 @@ export default function LeafletFallbackMap({
   const [position, setPosition] = useState<[number, number] | null>(null);
 
   const center: [number, number] = useMemo(() => [initialLat, initialLng], [initialLat, initialLng]);
+  
+  // Default zoom level matching InteractiveGlobe
+  const defaultZoom = 13;
 
   const handleLocationPick = (lat: number, lng: number) => {
     setPosition([lat, lng]);
@@ -65,12 +68,12 @@ export default function LeafletFallbackMap({
   };
 
   return (
-    <div className="h-full w-full relative">
+    <div className="h-full w-full relative rounded-lg overflow-hidden border-2 border-primary/20 shadow-lg">
       <MapContainer
         center={center}
-        zoom={12}
+        zoom={defaultZoom}
         minZoom={5}
-        maxZoom={18}
+        maxZoom={22}
         scrollWheelZoom={true}
         className="h-full w-full"
         style={{ height: '100%', width: '100%' }}
@@ -79,6 +82,7 @@ export default function LeafletFallbackMap({
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={22}
         />
         <ClickHandler onPick={handleLocationPick} />
         {position && <Marker position={position} icon={customIcon} />}
