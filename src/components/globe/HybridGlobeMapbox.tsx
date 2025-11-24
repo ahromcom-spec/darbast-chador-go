@@ -441,7 +441,7 @@ export default function HybridGlobeMapbox({ onClose }: HybridGlobeMapboxProps) {
         </Card>
       </div>
 
-      <div ref={mapContainer} className="w-full h-full" />
+      <div ref={mapContainer} className="w-full h-full" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
 
       {selectedProject && (
         <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-card shadow-2xl p-4 z-[2000] pointer-events-auto">
