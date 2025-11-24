@@ -155,7 +155,7 @@ export function InteractiveLocationMap({
         projection: 'mercator',
         renderWorldCopies: false,
         minZoom: 4,
-        maxZoom: 20,
+        maxZoom: 22,
         pitchWithRotate: false,
         attributionControl: false,
         performanceMetricsCollection: false,
