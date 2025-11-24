@@ -612,21 +612,28 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       });
     });
 
-    // تنظیم bounds نقشه برای نمایش همه پروژه‌ها
+    // انیمیشن زوم از نمای کل ایران به پروژه‌ها (مثل Google Earth)
     const allMarkers = markersRef.current;
     console.debug('[HybridGlobe] Total markers created:', allMarkers.length);
     
     if (allMarkers.length > 0) {
       const bounds = L.latLngBounds(allMarkers.map(m => m.getLatLng()));
-      console.debug('[HybridGlobe] Fitting bounds:', bounds);
-      try {
-        mapRef.current.fitBounds(bounds, {
-          padding: [80, 80],
-          maxZoom: 14,
-        });
-      } catch (e) {
-        console.warn('[HybridGlobe] fitBounds failed', e, bounds);
-      }
+      console.debug('[HybridGlobe] Animating to project bounds:', bounds);
+      
+      // ابتدا نقشه را در نمای کل ایران نگه می‌داریم (همان مقدار اولیه)
+      // بعد از 800ms با انیمیشن نرم به پروژه‌ها می‌رویم
+      setTimeout(() => {
+        try {
+          mapRef.current?.flyToBounds(bounds, {
+            padding: [80, 80],
+            maxZoom: 14,
+            duration: 2.5, // مدت زمان انیمیشن به ثانیه
+            easeLinearity: 0.15, // نرمی انیمیشن (کمتر = نرم‌تر)
+          });
+        } catch (e) {
+          console.warn('[HybridGlobe] flyToBounds failed', e, bounds);
+        }
+      }, 800);
     } else {
       console.warn('[HybridGlobe] No markers to display on map');
     }
