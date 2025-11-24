@@ -402,114 +402,136 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       shadowSize: [41, 41],
     });
 
-    // اضافه کردن مارکر برای هر پروژه - با بهینه‌سازی
+    // گروه‌بندی پروژه‌ها بر اساس موقعیت جغرافیایی برای جلوگیری از هم‌پوشانی مارکرها
+    const locationGroups: Record<string, ProjectWithMedia[]> = {};
     projectsWithLocation.forEach(project => {
       if (!project.locations?.lat || !project.locations?.lng) return;
-      
-      let iconToUse: any = projectIcon;
-      const firstMedia = project.media?.[0];
-      if (firstMedia) {
-        const url1 = supabase.storage
-          .from('order-media')
-          .getPublicUrl(firstMedia.file_path).data.publicUrl;
+      const key = `${project.locations.lat.toFixed(6)}_${project.locations.lng.toFixed(6)}`;
+      if (!locationGroups[key]) locationGroups[key] = [];
+      locationGroups[key].push(project);
+    });
+
+    Object.values(locationGroups).forEach(group => {
+      const count = group.length;
+
+      group.forEach((project, index) => {
+        if (!project.locations?.lat || !project.locations?.lng) return;
         
-        const isVideo = firstMedia.file_type === 'video';
-        // ویدیوها را در thumbnail نمایش نمی‌دهیم برای کاهش بار
-        const mediaElement = isVideo 
-          ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#333;">
-              <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-              <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>
-            </div>`
-          : `<img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover"
-              onerror="this.style.display='none'"/>`;
+        // محاسبه آفست کوچک برای مارکرهای چندگانه در یک آدرس
+        let lat = project.locations.lat;
+        let lng = project.locations.lng;
+        if (count > 1) {
+          const angle = (2 * Math.PI * index) / count;
+          const radius = 0.00018; // حدوداً ۲۰ متر جابجایی در نقشه
+          lat = lat + radius * Math.cos(angle);
+          lng = lng + radius * Math.sin(angle);
+        }
+
+        let iconToUse: any = projectIcon;
+        const firstMedia = project.media?.[0];
+        if (firstMedia) {
+          const url1 = supabase.storage
+            .from('order-media')
+            .getPublicUrl(firstMedia.file_path).data.publicUrl;
+          
+          const isVideo = firstMedia.file_type === 'video';
+          // ویدیوها را در thumbnail نمایش نمی‌دهیم برای کاهش بار
+          const mediaElement = isVideo 
+            ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#333;">
+                <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>
+              </div>`
+            : `<img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`;
+          
+          const html = `
+            <div style="width:70px;height:70px;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3);border:3px solid #fff;background:#f0f0f0;position:relative;">
+              ${mediaElement}
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));height:24px;display:flex;align-items:center;justify-content:center;">
+                <span style="color:#fff;font-size:10px;font-weight:bold;">${project.media?.length || 0} فایل</span>
+              </div>
+            </div>`;
+          iconToUse = L.divIcon({
+            html,
+            className: 'project-thumb-icon',
+            iconSize: [70, 70],
+            iconAnchor: [35, 70],
+            popupAnchor: [0, -70],
+          });
+        }
+
+        const marker = L.marker([lat, lng], { icon: iconToUse })
+          .addTo(mapRef.current!);
         
-        const html = `
-          <div style="width:70px;height:70px;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.3);border:3px solid #fff;background:#f0f0f0;position:relative;">
-            ${mediaElement}
-            <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));height:24px;display:flex;align-items:center;justify-content:center;">
-              <span style="color:#fff;font-size:10px;font-weight:bold;">${project.media?.length || 0} فایل</span>
+        // تولید HTML برای تصاویر و ویدیوها
+        const images = (project.media || []).filter(m => m.file_type === 'image').slice(0, 2);
+        const videos = (project.media || []).filter(m => m.file_type === 'video').slice(0, 2);
+        
+        const mediaHTML = images.length > 0 || videos.length > 0
+          ? `
+            <div style="margin-top: 12px;">
+              ${images.length > 0 ? `
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 8px;">
+                  ${images.map(m => {
+                    const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                    return `<img 
+                      src="${url}" 
+                      alt="تصویر" 
+                      loading="lazy"
+                      style="width:100%;height:80px;object-fit:cover;border-radius:6px;border:2px solid #e5e7eb;cursor:pointer;"
+                      onerror="this.style.display='none'"
+                    />`;
+                  }).join('')}
+                </div>
+              ` : ''}
+              ${videos.length > 0 ? `
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+                  ${videos.map(m => {
+                    const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                    const mimeType = m.mime_type || 'video/mp4';
+                    return `<div 
+                      onclick="window.openProjectVideo('${url}', '${mimeType}')"
+                      style="width:100%;height:80px;background:#1a1a1a;border-radius:6px;border:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;"
+                    >
+                      <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                      <span style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 6px;border-radius:3px;">کلیک برای پخش</span>
+                    </div>`;
+                  }).join('')}
+                </div>
+              ` : ''}
             </div>
-          </div>`;
-        iconToUse = L.divIcon({
-          html,
-          className: 'project-thumb-icon',
-          iconSize: [70, 70],
-          iconAnchor: [35, 70],
-          popupAnchor: [0, -70],
-        });
-      }
+          `
+          : '<p style="font-size: 12px; color: #999; margin-top: 8px;">هنوز فایلی ثبت نشده</p>';
 
-      const marker = L.marker([project.locations.lat, project.locations.lng], { icon: iconToUse })
-        .addTo(mapRef.current!);
-      
-      // تولید HTML برای تصاویر و ویدیوها
-      const images = (project.media || []).filter(m => m.file_type === 'image').slice(0, 2);
-      const videos = (project.media || []).filter(m => m.file_type === 'video').slice(0, 2);
-      
-      const mediaHTML = images.length > 0 || videos.length > 0
-        ? `
-          <div style="margin-top: 12px;">
-            ${images.length > 0 ? `
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 8px;">
-                ${images.map(m => {
-                  const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
-                  return `<img 
-                    src="${url}" 
-                    alt="تصویر" 
-                    loading="lazy"
-                    style="width:100%;height:80px;object-fit:cover;border-radius:6px;border:2px solid #e5e7eb;cursor:pointer;"
-                    onerror="this.style.display='none'"
-                  />`;
-                }).join('')}
-              </div>
-            ` : ''}
-            ${videos.length > 0 ? `
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
-                ${videos.map(m => {
-                  const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
-                  const mimeType = m.mime_type || 'video/mp4';
-                  return `<div 
-                    onclick="window.openProjectVideo('${url}', '${mimeType}')"
-                    style="width:100%;height:80px;background:#1a1a1a;border-radius:6px;border:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;"
-                  >
-                    <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                    <span style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 6px;border-radius:3px;">کلیک برای پخش</span>
-                  </div>`;
-                }).join('')}
-              </div>
-            ` : ''}
+        // اضافه کردن popup با عنوان و آدرس و نوع خدمت
+        const popupContent = `
+          <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 320px;">
+            <strong style="font-size: 15px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
+            <span style="font-size: 12px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
+            ${mediaHTML}
           </div>
-        `
-        : '<p style="font-size: 12px; color: #999; margin-top: 8px;">هنوز فایلی ثبت نشده</p>';
+        `;
+        marker.bindPopup(popupContent, {
+          maxWidth: 340,
+          className: 'custom-popup'
+        });
 
-      // اضافه کردن popup
-      const popupContent = `
-        <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 320px;">
-          <strong style="font-size: 15px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
-          <span style="font-size: 12px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
-          ${mediaHTML}
-        </div>
-      `;
-      marker.bindPopup(popupContent, {
-        maxWidth: 340,
-        className: 'custom-popup'
-      });
+        marker.on('click', () => {
+          setSelectedProject(project);
+        });
 
-      // کلیک روی مارکر
-      marker.on('click', () => {
-        setSelectedProject(project);
-      });
-
-      markersRef.current.push(marker);
-      console.debug('[HybridGlobe] Marker added:', { 
-        projectId: project.id, 
-        lat: project.locations?.lat, 
-        lng: project.locations?.lng,
-        hasCustomIcon: !!firstMedia
+        markersRef.current.push(marker);
+        console.debug('[HybridGlobe] Marker added:', { 
+          projectId: project.id, 
+          lat: project.locations?.lat, 
+          lng: project.locations?.lng,
+          hasCustomIcon: !!firstMedia,
+          groupSize: count,
+          indexInGroup: index,
+        });
       });
     });
 
