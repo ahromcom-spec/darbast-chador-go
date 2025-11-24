@@ -33,6 +33,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const markersRef = useRef<L.Marker[]>([]);
   const linesRef = useRef<L.Polyline[]>([]);
   const centerMarkersRef = useRef<L.CircleMarker[]>([]);
+  const galleryIndexesRef = useRef<Map<string, number>>(new Map());
   const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
   const [projectsWithMedia, setProjectsWithMedia] = useState<ProjectWithMedia[]>([]);
@@ -582,9 +583,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   </div>
                   ${images.length > 1 ? `
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:0 4px;">
-                      <button onclick="window.navigateGallery('${project.id}', -1)" style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:Vazirmatn;font-size:12px;font-weight:500;">قبلی</button>
+                      <button class="gallery-prev-${project.id}" style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:Vazirmatn;font-size:12px;font-weight:500;">قبلی</button>
                       <span id="counter-${project.id}" style="font-family:Vazirmatn;font-size:12px;color:#6b7280;">1 از ${images.length}</span>
-                      <button onclick="window.navigateGallery('${project.id}', 1)" style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:Vazirmatn;font-size:12px;font-weight:500;">بعدی</button>
+                      <button class="gallery-next-${project.id}" style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:Vazirmatn;font-size:12px;font-weight:500;">بعدی</button>
                     </div>
                   ` : ''}
                 </div>
@@ -594,8 +595,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   ${videos.map(m => {
                     const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
                     return `
-                      <div style="position:relative;width:100%;height:200px;background:#000;border-radius:8px;overflow:hidden;cursor:pointer;margin-bottom:8px;" 
-                        onclick="window.openProjectVideo('${url}', '${m.mime_type || 'video/mp4'}')">
+                      <div class="video-player-${project.id}" data-url="${url}" style="position:relative;width:100%;height:200px;background:#000;border-radius:8px;overflow:hidden;cursor:pointer;margin-bottom:8px;">
                         <video src="${url}" style="width:100%;height:100%;object-fit:contain;" preload="none"></video>
                         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
                           <svg style="width:48px;height:48px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
@@ -625,31 +625,60 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             ${count > 1 ? `<div style="margin-top:8px;padding:6px 10px;background:#f3f4f6;border-radius:6px;text-align:center;font-size:11px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
             ${mediaHTML}
           </div>
-          <script>
-            window.galleryIndexes = window.galleryIndexes || {};
-            window.galleryIndexes['${project.id}'] = 0;
-            
-            window.navigateGallery = function(projectId, direction) {
-              const totalImages = ${images.length};
-              if (!window.galleryIndexes[projectId]) window.galleryIndexes[projectId] = 0;
-              
-              let currentIndex = window.galleryIndexes[projectId];
-              currentIndex = (currentIndex + direction + totalImages) % totalImages;
-              window.galleryIndexes[projectId] = currentIndex;
-              
-              for (let i = 0; i < totalImages; i++) {
-                const img = document.getElementById('img-' + projectId + '-' + i);
-                if (img) img.style.display = i === currentIndex ? 'block' : 'none';
-              }
-              
-              const counter = document.getElementById('counter-' + projectId);
-              if (counter) counter.textContent = (currentIndex + 1) + ' از ' + totalImages;
-            };
-          </script>
         `;
+        
         marker.bindPopup(popupContent, {
           maxWidth: 420,
           className: 'custom-popup'
+        });
+
+        // اتصال event listeners بعد از باز شدن popup
+        marker.on('popupopen', () => {
+          const popup = marker.getPopup();
+          if (!popup) return;
+          
+          const popupElement = popup.getElement();
+          if (!popupElement) return;
+          
+          let currentIndex = 0;
+          
+          // دکمه‌های ناوبری گالری
+          const prevBtn = popupElement.querySelector(`.gallery-prev-${project.id}`);
+          const nextBtn = popupElement.querySelector(`.gallery-next-${project.id}`);
+          
+          if (prevBtn && nextBtn) {
+            prevBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              currentIndex = (currentIndex - 1 + images.length) % images.length;
+              updateGallery();
+            });
+            
+            nextBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              currentIndex = (currentIndex + 1) % images.length;
+              updateGallery();
+            });
+          }
+          
+          function updateGallery() {
+            for (let i = 0; i < images.length; i++) {
+              const img = popupElement.querySelector(`#img-${project.id}-${i}`) as HTMLElement;
+              if (img) img.style.display = i === currentIndex ? 'block' : 'none';
+            }
+            
+            const counter = popupElement.querySelector(`#counter-${project.id}`);
+            if (counter) counter.textContent = `${currentIndex + 1} از ${images.length}`;
+          }
+          
+          // کلیک روی ویدیو
+          const videoPlayers = popupElement.querySelectorAll(`.video-player-${project.id}`);
+          videoPlayers.forEach(player => {
+            player.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const url = (player as HTMLElement).getAttribute('data-url');
+              if (url) window.open(url, '_blank');
+            });
+          });
         });
 
         marker.on('click', () => {
