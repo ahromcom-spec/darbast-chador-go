@@ -1052,7 +1052,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       </div>
 
       {/* نقشه */}
-      <div ref={mapContainer} className="w-full h-full" />
+      <div ref={mapContainer} className="w-full h-full" style={{ touchAction: 'pan-x pan-y' }} />
 
       {/* کادر آپلود برای سفارش خاص */}
       {selectedOrderForUpload && (
