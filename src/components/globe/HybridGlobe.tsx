@@ -603,15 +603,20 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         }
 
         let iconToUse: any = projectIcon;
-        // استفاده از اولین تصویر از اولین سفارش (قدیمی‌ترین سفارش) برای مارکر
+        // استفاده از قدیمی‌ترین تصویر از قدیمی‌ترین سفارش برای مارکر
         let firstOrderImage: HierarchyMedia | undefined;
         let totalOrderImages = 0;
         
         // سفارشات به ترتیب جدید به قدیم هستند، پس آخرین سفارش قدیمی‌ترین است
         if (project.orders && project.orders.length > 0) {
-          const firstOrder = project.orders[project.orders.length - 1]; // قدیمی‌ترین سفارش
-          const orderImages = (firstOrder.media || []).filter(m => m.file_type === 'image');
-          firstOrderImage = orderImages[0];
+          const oldestOrder = project.orders[project.orders.length - 1]; // قدیمی‌ترین سفارش
+          
+          // مرتب‌سازی media از قدیمی به جدید و انتخاب اولین تصویر
+          const orderImages = (oldestOrder.media || [])
+            .filter(m => m.file_type === 'image')
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()); // قدیمی‌ترین اول
+          
+          firstOrderImage = orderImages[0]; // قدیمی‌ترین عکس
           
           // شمارش کل تصاویر تمام سفارشات
           project.orders.forEach(order => {
