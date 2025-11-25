@@ -264,12 +264,15 @@ export default function OrderDetail() {
             ? JSON.parse(orderData.notes) 
             : orderData.notes;
           
-          const validated = orderNotesSchema.parse(notes);
-          setParsedNotes(validated);
+          const validated = orderNotesSchema.safeParse(notes);
+          setParsedNotes(validated.success ? validated.data : notes);
         } catch (e) {
           console.error('Error parsing notes:', e);
-          setParsedNotes(null);
+          // Set raw notes if parsing fails to prevent blank screen
+          setParsedNotes(typeof orderData.notes === 'string' ? JSON.parse(orderData.notes) : orderData.notes);
         }
+      } else {
+        setParsedNotes(null);
       }
 
       // Fetch media files
