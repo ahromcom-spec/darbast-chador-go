@@ -135,10 +135,6 @@ export default function OrderDetail() {
   const [isRenewing, setIsRenewing] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; poster?: string } | null>(null);
-  const [expandedVideo, setExpandedVideo] = useState<string | null>(null);
-  const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [videoLoading, setVideoLoading] = useState(false);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [ratingType, setRatingType] = useState<'customer_to_staff' | 'customer_to_contractor'>('customer_to_staff');
   const [staffId, setStaffId] = useState<string | null>(null);
@@ -200,44 +196,6 @@ export default function OrderDetail() {
     };
   }, [id]);
 
-  // مدیریت منبع ویدیو و آزادسازی blob ها
-  useEffect(() => {
-    if (selectedVideo) {
-      setVideoSrc(selectedVideo.url);
-      setVideoLoading(false);
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-        setBlobUrl(null);
-      }
-    } else {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-        setBlobUrl(null);
-      }
-      setVideoSrc(null);
-    }
-  }, [selectedVideo]);
-
-  // در صورت خطا در پخش مستقیم، به blob تبدیل کنیم تا مشکل Content-Disposition/CORS برطرف شود
-  const fallbackToBlob = async () => {
-    if (!selectedVideo || blobUrl) return;
-    try {
-      setVideoLoading(true);
-      const res = await fetch(selectedVideo.url);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      setBlobUrl(url);
-      setVideoSrc(url);
-    } catch (err) {
-      toast({
-        title: "خطا در پخش ویدیو",
-        description: "در تبدیل ویدیو برای پخش مشکلی رخ داد.",
-        variant: "destructive"
-      });
-    } finally {
-      setVideoLoading(false);
-    }
-  };
   const fetchOrderDetails = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -1112,114 +1070,66 @@ export default function OrderDetail() {
                     };
                     
                     return (
-                      <div key={media.id} className={`relative group transition-all duration-300 ${
-                        expandedVideo === media.id ? 'col-span-full' : 'col-span-2'
-                      }`}>
-                        {expandedVideo === media.id ? (
-                          /* Expanded Video Player */
-                          <div className="w-full bg-black rounded-lg overflow-hidden">
-                            <div className="aspect-video relative">
-                              <video
-                                src={data.publicUrl}
-                                controls
-                                autoPlay
-                                className="w-full h-full"
-                                poster={thumbnailData?.data.publicUrl}
-                                preload="metadata"
-                                playsInline
-                              >
-                                مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
-                              </video>
-                              {/* Close button */}
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="absolute top-3 right-3 shadow-lg bg-white/95 hover:bg-white"
-                                onClick={() => setExpandedVideo(null)}
-                              >
-                                <XCircle className="w-4 h-4 ml-1" />
-                                بستن
-                              </Button>
-                            </div>
-                            {/* Video controls row */}
-                            <div className="bg-black/90 p-4 flex justify-between items-center">
-                              <div className="text-white text-sm">
+                      <div key={media.id} className="relative group col-span-2">
+                        <div 
+                          className="aspect-video rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                          onClick={() => window.open(data.publicUrl, '_blank')}
+                        >
+                          {thumbnailData?.data.publicUrl ? (
+                            <div className="relative w-full h-full">
+                              <img
+                                src={thumbnailData.data.publicUrl}
+                                alt="پیش‌نمایش ویدیو"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
+                                  <Play className="w-8 h-8 text-primary fill-primary" />
+                                </div>
+                              </div>
+                              {/* Label showing video name */}
+                              <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
                                 {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
                               </div>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={handleDownload}
-                                >
-                                  <Download className="w-4 h-4 ml-1" />
-                                  دانلود
-                                </Button>
+                            </div>
+                          ) : (
+                            <div className="relative w-full h-full bg-black/5 flex items-center justify-center">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                              <Film className="w-16 h-16 text-primary opacity-60" />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
+                                  <Play className="w-8 h-8 text-primary fill-primary" />
+                                </div>
+                              </div>
+                              {/* Label showing video name even without thumbnail */}
+                              <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
+                                {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
                               </div>
                             </div>
+                          )}
+                          
+                          {/* Action buttons */}
+                          <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="shadow-lg bg-white/95 hover:bg-white"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownload();
+                              }}
+                            >
+                              <Download className="w-4 h-4 ml-1" />
+                              دانلود
+                            </Button>
                           </div>
-                        ) : (
-                          /* Thumbnail View */
-                          <div 
-                            className="aspect-video rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                            onClick={() => setExpandedVideo(media.id)}
-                          >
-                            {thumbnailData?.data.publicUrl ? (
-                              <div className="relative w-full h-full">
-                                <img
-                                  src={thumbnailData.data.publicUrl}
-                                  alt="پیش‌نمایش ویدیو"
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                  <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
-                                    <Play className="w-8 h-8 text-primary fill-primary" />
-                                  </div>
-                                </div>
-                                {/* Label showing video name */}
-                                <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
-                                  {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="relative w-full h-full bg-black/5 flex items-center justify-center">
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                                <Film className="w-16 h-16 text-primary opacity-60" />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
-                                    <Play className="w-8 h-8 text-primary fill-primary" />
-                                  </div>
-                                </div>
-                                {/* Label showing video name even without thumbnail */}
-                                <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
-                                  {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
-                                </div>
-                              </div>
-                            )}
-                            
-                            {/* Action buttons - only show when not expanded */}
-                            <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="shadow-lg bg-white/95 hover:bg-white"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDownload();
-                                }}
-                              >
-                                <Download className="w-4 h-4 ml-1" />
-                                دانلود
-                              </Button>
-                            </div>
-                            
-                            {/* File info badge */}
-                            <div className="absolute bottom-3 left-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
-                              <Film className="w-3.5 h-3.5" />
-                              ویدیو
-                            </div>
+                          
+                          {/* File info badge */}
+                          <div className="absolute bottom-3 left-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
+                            <Film className="w-3.5 h-3.5" />
+                            ویدیو
                           </div>
-                        )}
+                        </div>
                       </div>
                     );
                   })}
@@ -1228,52 +1138,6 @@ export default function OrderDetail() {
             </Card>
           )}
 
-          {/* Video Player Dialog */}
-          <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
-            <DialogContent className="max-w-5xl w-full p-0">
-              <DialogHeader className="p-6 pb-4">
-                <DialogTitle>پخش ویدیو</DialogTitle>
-              </DialogHeader>
-              <div className="px-6 pb-6">
-                {selectedVideo && (
-                  <div className="space-y-3">
-                    <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
-                      {videoLoading && (
-                        <div className="absolute inset-0 grid place-items-center text-white text-sm">
-                          در حال آماده‌سازی ویدیو...
-                        </div>
-                      )}
-                      <video
-                        key={(videoSrc || selectedVideo.url) as string}
-                        src={(videoSrc || selectedVideo.url) as string}
-                        controls
-                        className="w-full h-full"
-                        poster={selectedVideo.poster}
-                        preload="metadata"
-                        playsInline
-                        crossOrigin="anonymous"
-                        onError={() => {
-                          // اگر پخش مستقیم شکست خورد، به blob تبدیل کنیم
-                          void fallbackToBlob();
-                        }}
-                      >
-                        <source src={(videoSrc || selectedVideo.url) as string} type="video/mp4" />
-                        مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
-                      </video>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button asChild variant="secondary">
-                        <a href={selectedVideo.url} target="_blank" rel="noreferrer">باز کردن در تب جدید</a>
-                      </Button>
-                      <Button asChild>
-                        <a href={selectedVideo.url} download>دانلود ویدیو</a>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
