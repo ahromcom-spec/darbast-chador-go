@@ -116,19 +116,41 @@ export default function ScaffoldingForm() {
   const finalServiceTypeId = orderData?.subcategory?.service_type?.id || serviceTypeId;
 
   // If no data passed and not editing, show error
-  if (!finalLocationAddress || !finalServiceName) {
+  // IMPORTANT: Don't show error while loading or if we're editing (data will come from orderData)
+  if (!loading && !editOrderId && (!finalLocationAddress || !finalServiceName)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle className="text-destructive">خطا</CardTitle>
             <CardDescription>
-              اطلاعات آدرس و مرحله قبل دریافت نشد
+              اطلاعات آدرس و خدمات دریافت نشد. لطفاً مجدداً تلاش کنید.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => navigate('/')} className="w-full">
               بازگشت به صفحه اصلی
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  // If editing but data hasn't loaded yet and we don't have required data, show error after loading
+  if (!loading && editOrderId && (!finalLocationAddress || !finalServiceName)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-destructive">خطا در بارگذاری</CardTitle>
+            <CardDescription>
+              اطلاعات سفارش یافت نشد یا ناقص است.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => navigate('/user/projects')} className="w-full">
+              بازگشت به پروژه‌ها
             </Button>
           </CardContent>
         </Card>
