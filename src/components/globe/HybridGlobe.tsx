@@ -874,10 +874,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   
                   if (subcategoryCode === '10') {
                     // داربست اجرا با اجناس - به فرم
-                    window.location.href = `/scaffolding/form?orderId=${orderId}`;
+                    window.location.href = `/scaffolding/form?edit=${orderId}`;
                   } else if (subcategoryCode === '30') {
                     // اجاره داربست - به فرم
-                    window.location.href = `/scaffolding/rental?orderId=${orderId}`;
+                    window.location.href = `/scaffolding/rental?edit=${orderId}`;
                   } else {
                     // سایر سفارشات - به صفحه جزئیات سفارش
                     window.location.href = `/user/order-detail/${orderId}`;
