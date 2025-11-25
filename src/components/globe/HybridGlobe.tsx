@@ -282,7 +282,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           .from('project_media')
           .select('project_id, file_path, file_type, created_at, mime_type')
           .in('project_id', v3Ids)
-          .eq('file_type', 'image')
+          .in('file_type', ['image', 'video'])
           .order('created_at', { ascending: false })
           .limit(100);
         pmMedia = data || [];
