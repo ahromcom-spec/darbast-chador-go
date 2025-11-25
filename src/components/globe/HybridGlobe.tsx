@@ -691,8 +691,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             <div style="margin-top:12px;padding:10px;background:#f9fafb;border-radius:8px;">
               <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;">سفارشات این پروژه (${project.orders.length})</div>
               ${project.orders.map((order, orderIdx) => {
-                const orderImages = (order.media || []).filter(m => m.file_type === 'image');
-                const orderVideos = (order.media || []).filter(m => m.file_type === 'video');
+                // ترکیب عکس‌ها و ویدیوها در یک آرایه
+                const allMedia = (order.media || []).sort((a, b) => {
+                  // عکس‌ها اول، بعد ویدیوها
+                  if (a.file_type === 'image' && b.file_type === 'video') return -1;
+                  if (a.file_type === 'video' && b.file_type === 'image') return 1;
+                  return 0;
+                });
+                
                 return `
                   <div 
                     class="order-card-${order.id}" 
@@ -702,45 +708,50 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   >
                     <div style="font-size:12px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
                     <div style="font-size:11px;color:#6b7280;margin-top:2px;">${order.subcategory?.name || 'نامشخص'}</div>
-                    ${orderImages.length > 0 ? `
+                    ${allMedia.length > 0 ? `
                       <div id="order-gallery-${order.id}" style="position:relative;margin-top:8px;">
                         <div style="overflow:hidden;border-radius:6px;background:#f9fafb;">
-                          ${orderImages.map((m, idx) => {
+                          ${allMedia.map((m, idx) => {
                             const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
-                            return `<img 
-                              id="order-img-${order.id}-${idx}" 
-                              src="${url}" 
-                              alt="تصویر سفارش" 
-                              loading="lazy"
-                              style="width:100%;height:120px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};"
-                            />`;
+                            const isVideo = m.file_type === 'video';
+                            
+                            if (isVideo) {
+                              return `
+                                <div 
+                                  id="order-media-${order.id}-${idx}" 
+                                  class="order-video-item-${order.id}" 
+                                  data-url="${url}"
+                                  style="position:relative;width:100%;height:120px;background:#000;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
+                                >
+                                  <video src="${url}" style="width:100%;height:100%;object-fit:cover;" preload="metadata"></video>
+                                  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
+                                    <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                  </div>
+                                  <span style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:3px 6px;border-radius:3px;">ویدیو</span>
+                                </div>
+                              `;
+                            } else {
+                              return `
+                                <img 
+                                  id="order-media-${order.id}-${idx}" 
+                                  src="${url}" 
+                                  alt="تصویر سفارش" 
+                                  loading="lazy"
+                                  style="width:100%;height:120px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};"
+                                />
+                              `;
+                            }
                           }).join('')}
                         </div>
-                        ${orderImages.length > 1 ? `
+                        ${allMedia.length > 1 ? `
                           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
                             <button class="order-gallery-prev-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">قبلی</button>
-                            <span id="order-counter-${order.id}" style="font-family:Vazirmatn;font-size:11px;color:#6b7280;">1 از ${orderImages.length}</span>
+                            <span id="order-counter-${order.id}" style="font-family:Vazirmatn;font-size:11px;color:#6b7280;">1 از ${allMedia.length}</span>
                             <button class="order-gallery-next-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">بعدی</button>
                           </div>
                         ` : ''}
-                      </div>
-                    ` : ''}
-                    ${orderVideos.length > 0 ? `
-                      <div style="margin-top: 8px;">
-                        ${orderVideos.map(m => {
-                          const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
-                          return `
-                            <div class="order-video-player-${order.id}" data-url="${url}" style="position:relative;width:100%;height:120px;background:#000;border-radius:6px;overflow:hidden;cursor:pointer;margin-bottom:6px;">
-                              <video src="${url}" style="width:100%;height:100%;object-fit:cover;" preload="none"></video>
-                              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
-                                <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
-                                  <path d="M8 5v14l11-7z"/>
-                                </svg>
-                              </div>
-                              <span style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:3px 6px;border-radius:3px;">ویدیو</span>
-                            </div>
-                          `;
-                        }).join('')}
                       </div>
                     ` : ''}
                   </div>
@@ -776,36 +787,38 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           // هندلر برای سفارشات (کلیک + گالری)
           if (project.orders) {
             project.orders.forEach((order) => {
-              const orderImages = (order.media || []).filter(m => m.file_type === 'image');
-              const orderVideos = (order.media || []).filter(m => m.file_type === 'video');
+              // ترکیب تمام media (عکس + ویدیو)
+              const allMedia = (order.media || []).sort((a, b) => {
+                if (a.file_type === 'image' && b.file_type === 'video') return -1;
+                if (a.file_type === 'video' && b.file_type === 'image') return 1;
+                return 0;
+              });
               
               // کلیک روی کارت سفارش برای نمایش جزئیات
               const orderCard = popupElement.querySelector(`.order-card-${order.id}`);
               if (orderCard) {
                 orderCard.addEventListener('click', (e) => {
-                  // اگر روی دکمه‌های گالری یا ویدیو کلیک نشده
-                  if (!(e.target as HTMLElement).closest('button') && !(e.target as HTMLElement).closest(`.order-video-player-${order.id}`)) {
+                  // اگر روی دکمه‌های گالری کلیک نشده
+                  if (!(e.target as HTMLElement).closest('button') && !(e.target as HTMLElement).closest(`.order-video-item-${order.id}`)) {
                     window.location.href = `/orders/${order.id}`;
                   }
                 });
               }
               
-              // هندلر برای ویدیوهای سفارش
-              if (orderVideos.length > 0) {
-                const videoElements = popupElement.querySelectorAll(`.order-video-player-${order.id}`);
-                videoElements.forEach(videoEl => {
-                  videoEl.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const url = (videoEl as HTMLElement).dataset.url;
-                    if (url) {
-                      window.open(url, '_blank');
-                    }
-                  });
+              // هندلر برای کلیک روی ویدیوها در گالری
+              const videoItems = popupElement.querySelectorAll(`.order-video-item-${order.id}`);
+              videoItems.forEach(videoEl => {
+                videoEl.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  const url = (videoEl as HTMLElement).dataset.url;
+                  if (url) {
+                    window.open(url, '_blank');
+                  }
                 });
-              }
+              });
               
-              // گالری تصاویر هر سفارش
-              if (orderImages.length > 1) {
+              // گالری یکپارچه (عکس + ویدیو)
+              if (allMedia.length > 1) {
                 let currentOrderIndex = 0;
                 
                 const prevBtn = popupElement.querySelector(`.order-gallery-prev-${order.id}`);
@@ -814,21 +827,21 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 if (prevBtn && nextBtn) {
                   prevBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    currentOrderIndex = (currentOrderIndex - 1 + orderImages.length) % orderImages.length;
-                    updateOrderGallery(order.id, currentOrderIndex, orderImages.length);
+                    currentOrderIndex = (currentOrderIndex - 1 + allMedia.length) % allMedia.length;
+                    updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
                   });
                   
                   nextBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    currentOrderIndex = (currentOrderIndex + 1) % orderImages.length;
-                    updateOrderGallery(order.id, currentOrderIndex, orderImages.length);
+                    currentOrderIndex = (currentOrderIndex + 1) % allMedia.length;
+                    updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
                   });
                 }
                 
                 function updateOrderGallery(orderId: string, index: number, total: number) {
                   for (let i = 0; i < total; i++) {
-                    const img = popupElement.querySelector(`#order-img-${orderId}-${i}`) as HTMLElement;
-                    if (img) img.style.display = i === index ? 'block' : 'none';
+                    const mediaEl = popupElement.querySelector(`#order-media-${orderId}-${i}`) as HTMLElement;
+                    if (mediaEl) mediaEl.style.display = i === index ? 'block' : 'none';
                   }
                   
                   const counter = popupElement.querySelector(`#order-counter-${orderId}`);
