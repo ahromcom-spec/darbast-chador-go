@@ -110,7 +110,6 @@ export default function SimpleLeafletMap({
     qomCenterMarker.bindPopup('<div style="text-align: center; font-family: Vazir, sans-serif;"><strong>مرکز شهر قم</strong></div>');
     qomCenterMarkerRef.current = qomCenterMarker;
 
-    // رویداد کلیک روی نقشه
     // کمک‌تابع: محاسبه و رسم مسیر جاده‌ای
     const computeRoute = async (lat: number, lng: number) => {
       const distance = calculateDistance(QOM_CENTER.lat, QOM_CENTER.lng, lat, lng);
@@ -170,6 +169,21 @@ export default function SimpleLeafletMap({
         setLoadingRoute(false);
       }
     };
+
+    // اگر موقعیت اولیه از نقشه کره زمین آمده، مارکر آن را نمایش بده
+    if (initialLat !== 34.6416 || initialLng !== 50.8746) {
+      const marker = L.marker([initialLat, initialLng], { icon: customIcon, draggable: true }).addTo(map);
+      markerRef.current = marker;
+      
+      // محاسبه مسیر برای موقعیت اولیه
+      computeRoute(initialLat, initialLng);
+      
+      // در صورت drag شدن مارکر، مسیر مجدد محاسبه شود
+      marker.on('dragend', async () => {
+        const pos = marker.getLatLng();
+        await computeRoute(pos.lat, pos.lng);
+      });
+    }
 
     // رویداد کلیک روی نقشه
     map.on('click', async (e: L.LeafletMouseEvent) => {
