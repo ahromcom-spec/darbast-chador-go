@@ -147,6 +147,11 @@ const App = () => {
                   <ScaffoldingForm />
                 </ProtectedRoute>
               } />
+              <Route path="/scaffolding/comprehensive-form" element={
+                <ProtectedRoute>
+                  <ComprehensiveScaffoldingForm />
+                </ProtectedRoute>
+              } />
               <Route path="/scaffolding/rental-form" element={
                 <ProtectedRoute>
                   <ScaffoldingRentalForm />
