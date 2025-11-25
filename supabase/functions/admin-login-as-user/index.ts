@@ -120,29 +120,51 @@ Deno.serve(async (req) => {
         },
       });
 
-    // Create a magic link for the target user
-    console.log('Generating magic link for user:', targetUserData.user.email || target_user_id);
+    // Use admin.updateUserById to set metadata and then create session
+    console.log('Creating impersonation session for:', target_user_id);
+
+    // Get user's email/phone for session creation
+    const userEmail = targetUserData.user.email || `temp-${target_user_id}@ahrom.local`;
     
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    // Generate OTP for the user - this will give us a token
+    const { data: otpData, error: otpError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
-      email: targetUserData.user.email || `user-${target_user_id}@ahrom.example.com`,
+      email: userEmail,
     });
 
-    console.log('Magic link generation result:', { linkData, linkError });
+    console.log('OTP generation result:', { otpData, otpError });
 
-    if (linkError || !linkData) {
-      console.error('Magic link generation error:', linkError);
+    if (otpError || !otpData) {
       return new Response(
-        JSON.stringify({ error: 'خطا در ایجاد لینک دسترسی: ' + (linkError?.message || 'unknown error') }),
+        JSON.stringify({ error: 'خطا در ایجاد توکن ورود: ' + (otpError?.message || 'unknown') }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Extract tokens from the generated link's properties
-    const properties = linkData.properties;
-    if (!properties || !('access_token' in properties) || !('refresh_token' in properties)) {
+    // Extract the token from the magic link
+    const actionLink = otpData.properties.action_link;
+    const urlParams = new URLSearchParams(actionLink.split('?')[1]);
+    const accessToken = urlParams.get('token');
+    const type = urlParams.get('type');
+
+    if (!accessToken) {
       return new Response(
-        JSON.stringify({ error: 'خطا در دریافت توکن‌های دسترسی' }),
+        JSON.stringify({ error: 'خطا در استخراج توکن' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Exchange the token for a session using admin verifyOtp
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.verifyOtp({
+      token_hash: otpData.properties.hashed_token,
+      type: 'magiclink',
+    });
+
+    console.log('Session verification result:', { sessionData, sessionError });
+
+    if (sessionError || !sessionData || !sessionData.session) {
+      return new Response(
+        JSON.stringify({ error: 'خطا در ایجاد session: ' + (sessionError?.message || 'unknown') }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -150,10 +172,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         session: {
-          access_token: properties.access_token,
-          refresh_token: properties.refresh_token,
+          access_token: sessionData.session.access_token,
+          refresh_token: sessionData.session.refresh_token,
         },
-        user: targetUserData.user,
+        user: sessionData.user,
         original_admin_id: user.id,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
