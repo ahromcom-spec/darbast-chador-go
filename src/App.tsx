@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { OfflineIndicator } from "@/components/common/OfflineIndicator";
+import { AdminImpersonationBanner } from "@/components/common/AdminImpersonationBanner";
 // import { PageLoadProgress } from "@/components/common/PageLoadProgress";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 
@@ -129,6 +130,7 @@ const App = () => {
           <BrowserRouter>
             
               {/* <PageLoadProgress /> */}
+              <AdminImpersonationBanner />
               <OfflineIndicator />
               
               <Suspense fallback={<PageLoader />}>
