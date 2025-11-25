@@ -755,7 +755,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 orderCard.addEventListener('click', (e) => {
                   // اگر روی دکمه‌های گالری کلیک نشده
                   if (!(e.target as HTMLElement).closest('button')) {
-                    window.location.href = `/user/orders/${order.id}`;
+                    window.location.href = `/orders/${order.id}`;
                   }
                 });
               }
