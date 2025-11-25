@@ -699,6 +699,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;">سفارشات این پروژه (${project.orders.length})</div>
               ${project.orders.map((order, orderIdx) => {
                 const orderImages = (order.media || []).filter(m => m.file_type === 'image');
+                const orderVideos = (order.media || []).filter(m => m.file_type === 'video');
                 return `
                   <div 
                     class="order-card-${order.id}" 
@@ -729,6 +730,24 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                             <button class="order-gallery-next-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">بعدی</button>
                           </div>
                         ` : ''}
+                      </div>
+                    ` : ''}
+                    ${orderVideos.length > 0 ? `
+                      <div style="margin-top: 8px;">
+                        ${orderVideos.map(m => {
+                          const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                          return `
+                            <div class="order-video-player-${order.id}" data-url="${url}" style="position:relative;width:100%;height:120px;background:#000;border-radius:6px;overflow:hidden;cursor:pointer;margin-bottom:6px;">
+                              <video src="${url}" style="width:100%;height:100%;object-fit:cover;" preload="none"></video>
+                              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
+                                <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M8 5v14l11-7z"/>
+                                </svg>
+                              </div>
+                              <span style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:3px 6px;border-radius:3px;">ویدیو</span>
+                            </div>
+                          `;
+                        }).join('')}
                       </div>
                     ` : ''}
                   </div>
@@ -765,15 +784,30 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           if (project.orders) {
             project.orders.forEach((order) => {
               const orderImages = (order.media || []).filter(m => m.file_type === 'image');
+              const orderVideos = (order.media || []).filter(m => m.file_type === 'video');
               
               // کلیک روی کارت سفارش برای نمایش جزئیات
               const orderCard = popupElement.querySelector(`.order-card-${order.id}`);
               if (orderCard) {
                 orderCard.addEventListener('click', (e) => {
-                  // اگر روی دکمه‌های گالری کلیک نشده
-                  if (!(e.target as HTMLElement).closest('button')) {
+                  // اگر روی دکمه‌های گالری یا ویدیو کلیک نشده
+                  if (!(e.target as HTMLElement).closest('button') && !(e.target as HTMLElement).closest(`.order-video-player-${order.id}`)) {
                     window.location.href = `/orders/${order.id}`;
                   }
+                });
+              }
+              
+              // هندلر برای ویدیوهای سفارش
+              if (orderVideos.length > 0) {
+                const videoElements = popupElement.querySelectorAll(`.order-video-player-${order.id}`);
+                videoElements.forEach(videoEl => {
+                  videoEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const url = (videoEl as HTMLElement).dataset.url;
+                    if (url) {
+                      window.open(url, '_blank');
+                    }
+                  });
                 });
               }
               
