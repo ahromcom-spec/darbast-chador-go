@@ -729,16 +729,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           : '';
 
         const locationHeader = count > 1
-          ? `<div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:8px 12px;border-radius:8px 8px 0 0;margin:-8px -8px 8px -8px;text-align:center;">
-              <span style="font-size:13px;font-weight:bold;">📍 ${count} پروژه در این مکان</span>
+          ? `<div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:6px 10px;border-radius:8px 8px 0 0;margin:-8px -8px 8px -8px;text-align:center;">
+              <span style="font-size:11px;font-weight:bold;">📍 ${count} پروژه در این مکان</span>
             </div>`
           : '';
 
         // لیست سفارشات پروژه
         const ordersHTML = project.orders && project.orders.length > 0
           ? `
-            <div style="margin-top:12px;padding:10px;background:#f9fafb;border-radius:8px;max-height:60vh;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;">
-              <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;">سفارشات این پروژه (${project.orders.length})</div>
+            <div style="margin-top:10px;padding:8px;background:#f9fafb;border-radius:8px;max-height:60vh;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;">
+              <div style="font-size:11px;font-weight:700;color:#1e293b;margin-bottom:6px;">سفارشات این پروژه (${project.orders.length})</div>
               ${project.orders.map((order, orderIdx) => {
                 const allMedia = (order.media || []).sort((a, b) => {
                   if (a.file_type === 'image' && b.file_type === 'video') return -1;
@@ -749,13 +749,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 return `
                   <div 
                     class="order-card-${order.id}" 
-                    style="padding:10px;margin-bottom:8px;background:white;border:2px solid #e5e7eb;border-radius:6px;cursor:pointer;transition:all 0.2s;"
+                    style="padding:8px;margin-bottom:6px;background:white;border:2px solid #e5e7eb;border-radius:6px;cursor:pointer;transition:all 0.2s;"
                     onmouseover="this.style.borderColor='#3b82f6';this.style.boxShadow='0 4px 12px rgba(59,130,246,0.2)'"
                     onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'"
                   >
-                    <div style="font-size:12px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
-                    <div style="font-size:11px;color:#6b7280;margin-top:2px;">${order.subcategory?.name || 'نامشخص'}</div>
-                    <div id="order-gallery-${order.id}" style="position:relative;margin-top:8px;">
+                    <div style="font-size:11px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
+                    <div style="font-size:10px;color:#6b7280;margin-top:2px;">${order.subcategory?.name || 'نامشخص'}</div>
+                    <div id="order-gallery-${order.id}" style="position:relative;margin-top:6px;">
                       <div style="overflow:hidden;border-radius:6px;background:#f9fafb;">
                         ${allMedia.map((m, idx) => {
                           const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
@@ -767,15 +767,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                 id="order-media-${order.id}-${idx}" 
                                 class="order-video-item-${order.id}" 
                                 data-url="${url}"
-                                style="position:relative;width:100%;height:120px;background:#000;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
+                                style="position:relative;width:100%;height:100px;background:#000;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
                               >
                                 <video src="${url}" style="width:100%;height:100%;object-fit:cover;" preload="metadata"></video>
                                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
-                                  <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                                  <svg style="width:28px;height:28px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M8 5v14l11-7z"/>
                                   </svg>
                                 </div>
-                                <span style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:3px 6px;border-radius:3px;">ویدیو</span>
+                                <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 5px;border-radius:3px;">ویدیو</span>
                               </div>
                             `;
                           } else {
@@ -787,7 +787,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                 src="${url}" 
                                 alt="تصویر سفارش" 
                                 loading="lazy"
-                                style="width:100%;height:120px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
+                                style="width:100%;height:100px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
                               />
                             `;
                           }
@@ -797,28 +797,28 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                         <div 
                           id="order-media-${order.id}-add" 
                           class="order-add-media-${order.id}"
-                          style="display:${allMedia.length === 0 ? 'flex' : 'none'};flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px 20px;background:linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));border:2px dashed #667eea;border-radius:6px;cursor:pointer;height:120px;"
+                          style="display:${allMedia.length === 0 ? 'flex' : 'none'};flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 15px;background:linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));border:2px dashed #667eea;border-radius:6px;cursor:pointer;height:100px;"
                         >
-                          <div style="font-size:32px;">📷</div>
+                          <div style="font-size:28px;">📷</div>
                           <div style="text-align:center;">
-                            <div style="font-weight:600;font-size:12px;color:#1f2937;margin-bottom:2px;">افزودن عکس یا فیلم</div>
-                            <div style="font-size:10px;color:#6b7280;">برای این سفارش رسانه جدید اضافه کنید</div>
+                            <div style="font-weight:600;font-size:11px;color:#1f2937;margin-bottom:2px;">افزودن عکس یا فیلم</div>
+                            <div style="font-size:9px;color:#6b7280;">برای این سفارش رسانه جدید اضافه کنید</div>
                           </div>
                         </div>
                       </div>
-                      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
-                        <button class="order-gallery-prev-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">قبلی</button>
-                        <span id="order-counter-${order.id}" style="font-family:Vazirmatn;font-size:11px;color:#6b7280;">
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;">
+                        <button class="order-gallery-prev-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-family:Vazirmatn;font-size:10px;font-weight:500;">قبلی</button>
+                        <span id="order-counter-${order.id}" style="font-family:Vazirmatn;font-size:10px;color:#6b7280;">
                           ${allMedia.length === 0 ? 'افزودن رسانه' : `1 از ${allMedia.length + 1}`}
                         </span>
-                        <button class="order-gallery-next-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">بعدی</button>
+                        <button class="order-gallery-next-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-family:Vazirmatn;font-size:10px;font-weight:500;">بعدی</button>
                       </div>
-                      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
+                      <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb;">
                         <button 
                           class="view-order-detail-${order.id}"
                           data-order-id="${order.id}"
                           data-subcategory-code="${order.subcategory?.code || ''}"
-                          style="width:100%;padding:8px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:11px;font-family:inherit;"
+                          style="width:100%;padding:6px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;"
                         >
                           مشاهده جزئیات سفارش
                         </button>
@@ -832,17 +832,17 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           : '';
 
         const popupContent = `
-          <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 300px; max-width: 400px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
+          <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 340px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
             ${locationHeader}
-            <strong style="font-size: 15px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
-            <span style="font-size: 12px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
-            ${count > 1 ? `<div style="margin-top:8px;padding:6px 10px;background:#f3f4f6;border-radius:6px;text-align:center;font-size:11px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
+            <strong style="font-size: 13px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
+            <span style="font-size: 11px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
+            ${count > 1 ? `<div style="margin-top:8px;padding:5px 8px;background:#f3f4f6;border-radius:6px;text-align:center;font-size:10px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
             ${ordersHTML}
           </div>
         `;
         
         marker.bindPopup(popupContent, {
-          maxWidth: 420,
+          maxWidth: 360,
           className: 'custom-popup'
         });
 
@@ -1029,23 +1029,23 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         {/* دکمه بازگشت */}
         <Button
           variant="default"
-          size="lg"
+          size="sm"
           onClick={onClose}
-          className="pointer-events-auto absolute top-6 right-6 shadow-2xl border-2 border-primary/20"
+          className="pointer-events-auto absolute top-4 right-4 shadow-2xl border-2 border-primary/20 text-xs px-3 py-1.5 h-8"
         >
-          <ArrowRight className="h-5 w-5 ml-2" />
-          <span className="font-semibold">بازگشت</span>
+          <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+          <span className="font-semibold text-xs">بازگشت</span>
         </Button>
 
         {/* کارت تعداد پروژه‌ها */}
-        <Card className="pointer-events-auto absolute top-24 left-6 bg-card shadow-2xl border-2 border-primary/20 p-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-primary/10 rounded-lg">
-              <MapPin className="h-5 w-5 text-primary" />
+        <Card className="pointer-events-auto absolute top-16 left-4 bg-card shadow-2xl border-2 border-primary/20 p-2">
+          <div className="flex items-center gap-1.5">
+            <div className="p-1 bg-primary/10 rounded-lg">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold text-primary">{projectsWithMedia.length}</span>
-              <span className="text-xs text-muted-foreground">پروژه فعال</span>
+              <span className="text-base font-bold text-primary">{projectsWithMedia.length}</span>
+              <span className="text-[10px] text-muted-foreground leading-tight">پروژه فعال</span>
             </div>
           </div>
         </Card>
