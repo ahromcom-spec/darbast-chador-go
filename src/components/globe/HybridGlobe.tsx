@@ -62,6 +62,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [mapboxToken, setMapboxToken] = useState<string>('');
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [tempMarker, setTempMarker] = useState<L.Marker | null>(null);
 
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
@@ -500,6 +501,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     return () => {
       clearTimeout(clickTimeout);
       setMapReady(false);
+      if (tempMarker && mapRef.current) {
+        mapRef.current.removeLayer(tempMarker);
+      }
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -1054,13 +1058,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             <div className="flex flex-col">
               <span className="text-base font-bold text-primary">{projectsWithMedia.length}</span>
               <span className="text-[10px] text-muted-foreground leading-tight">پروژه فعال</span>
-        {/* כפתור "הוסף פרוז'קט" - نمایش زمانی که کاربر روی نقطه خالی کلیک کرد */}
+            </div>
+          </div>
+        </Card>
+
+        {/* دکمه "افزودن پروژه" - نمایش زمانی که کاربر روی نقطه خالی کلیک کرد */}
         {selectedMapLocation && !selectedProject && (
-          <Card className="pointer-events-auto absolute bottom-28 left-1/2 transform -translate-x-1/2 bg-card shadow-2xl p-3 z-[2000] border-2 border-primary/20 w-72">
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground text-center">
+          <Card className="pointer-events-auto absolute top-24 left-4 z-[2000] shadow-2xl border-2 border-primary/20 bg-gradient-to-br from-background to-background/95">
+            <div className="p-6 space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-primary/5 px-3 py-2 rounded-lg">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                 موقعیت انتخاب شد
-              </p>
+              </div>
               <Button
                 onClick={() => {
                   navigate('/user/new-location', {
@@ -1070,18 +1079,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                     }
                   });
                 }}
-                className="w-full gap-2"
-                size="sm"
+                className="w-full gap-2 shadow-lg hover:shadow-xl transition-all"
+                size="lg"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 افزودن پروژه در این موقعیت
               </Button>
             </div>
           </Card>
         )}
-      </div>
-          </div>
-        </Card>
       </div>
 
       {/* نقشه */}
