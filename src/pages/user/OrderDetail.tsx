@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import OrderChat from "@/components/orders/OrderChat";
+import { MediaUploader } from "@/components/orders/MediaUploader";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import {
   ArrowRight,
@@ -26,7 +27,9 @@ import {
   Play,
   Film,
   Star,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  X
 } from "lucide-react";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { useRatingCriteria, useProjectRatings, useCreateRating } from "@/hooks/useRatings";
@@ -142,6 +145,7 @@ export default function OrderDetail() {
   const [staffId, setStaffId] = useState<string | null>(null);
   const [contractorId, setContractorId] = useState<string | null>(null);
   const [ratedUserName, setRatedUserName] = useState<string>('');
+  const [showMediaUpload, setShowMediaUpload] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -440,6 +444,59 @@ export default function OrderDetail() {
     }
   };
 
+  const handleMediaUpload = async (files: File[]) => {
+    if (!order || files.length === 0) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
+        const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from('order-media')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // Save to database
+        const { error: dbError } = await supabase
+          .from('project_media')
+          .insert({
+            project_id: order.id,
+            file_path: filePath,
+            file_type: fileType,
+            file_size: file.size,
+            mime_type: file.type,
+            user_id: user.id
+          });
+
+        if (dbError) throw dbError;
+      }
+
+      toast({
+        title: "موفق",
+        description: "فایل‌ها با موفقیت آپلود شدند",
+      });
+
+      // Refresh media files
+      fetchOrderDetails();
+      setShowMediaUpload(false);
+    } catch (error: any) {
+      console.error('Error uploading media:', error);
+      toast({
+        title: "خطا",
+        description: "خطا در آپلود فایل‌ها",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -730,6 +787,51 @@ export default function OrderDetail() {
             rejectionReason={order.rejection_reason}
             approvals={approvals}
           />
+
+          {/* Media Upload Section */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-lg">افزودن تصاویر و ویدیوها</h3>
+                </div>
+                <Button
+                  variant={showMediaUpload ? "outline" : "default"}
+                  onClick={() => setShowMediaUpload(!showMediaUpload)}
+                  className="gap-2"
+                >
+                  {showMediaUpload ? (
+                    <>
+                      <X className="h-4 w-4" />
+                      بستن
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      افزودن عکس/ویدیو
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {showMediaUpload && (
+                <div className="mt-4">
+                  <MediaUploader
+                    onFilesChange={handleMediaUpload}
+                    maxImages={10}
+                    maxVideos={5}
+                  />
+                </div>
+              )}
+              
+              {!showMediaUpload && (
+                <p className="text-sm text-muted-foreground">
+                  شما می‌توانید در هر مرحله از پروژه، عکس و ویدیو جدید اضافه کنید
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Status Messages */}
           {order.status === 'pending' && (
