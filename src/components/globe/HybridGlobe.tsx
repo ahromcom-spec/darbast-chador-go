@@ -221,25 +221,40 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       console.log('[Upload] Upload complete. Total successful:', newMedia.length);
       
       if (newMedia.length > 0) {
+        // ذخیره اطلاعات پروژه و سفارش برای بازگرداندن popup
+        const currentOrderId = selectedOrderForUpload;
+        const currentProjectId = projectsWithMedia.find(p => 
+          p.orders?.some(o => o.id === currentOrderId)
+        )?.id;
+        
         toast({ 
           title: 'موفق', 
           description: `${newMedia.length} فایل با موفقیت آپلود شد و به گالری اضافه گردید.` 
         });
         
-        // بارگذاری مجدد داده‌ها
-        await fetchProjectMedia();
-        
-        // نگه داشتن popup باز با داده‌های جدید
-        // پیدا کردن پروژه به‌روز شده
-        const updatedProject = projectsWithMedia.find(p => 
-          p.orders?.some(o => o.id === selectedOrderForUpload)
-        );
-        if (updatedProject) {
-          setSelectedProject(updatedProject);
-        }
-        
         // بستن دیالوگ آپلود
         setSelectedOrderForUpload(null);
+        
+        // بارگذاری مجدد داده‌ها و سپس باز کردن popup با داده‌های جدید
+        await fetchProjectMedia();
+        
+        // استفاده از setTimeout برای اطمینان از به‌روزرسانی state
+        setTimeout(() => {
+          if (currentProjectId) {
+            const updatedProject = projectsWithMedia.find(p => p.id === currentProjectId);
+            if (updatedProject) {
+              setSelectedProject(updatedProject);
+              // اسکرول به آخرین عکس اضافه شده
+              const order = updatedProject.orders?.find(o => o.id === currentOrderId);
+              if (order && order.media && order.media.length > 0) {
+                setCurrentOrderMediaIndex(prev => ({
+                  ...prev,
+                  [currentOrderId]: order.media!.length - 1
+                }));
+              }
+            }
+          }
+        }, 100);
       } else {
         toast({ 
           title: 'آپلود ناموفق', 
