@@ -598,27 +598,20 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         }
 
         let iconToUse: any = projectIcon;
-        const firstMedia = project.media?.[0];
-        if (firstMedia) {
+        // استفاده از اولین تصویر برای مارکر (بدون ویدیو)
+        const projectImages = (project.media || []).filter(m => m.file_type === 'image');
+        const firstImage = projectImages[0];
+        
+        if (firstImage) {
           const url1 = supabase.storage
             .from('order-media')
-            .getPublicUrl(firstMedia.file_path).data.publicUrl;
-          
-          const isVideo = firstMedia.file_type === 'video';
-          const mediaElement = isVideo 
-            ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#333;">
-                <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-                <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">ویدیو</span>
-              </div>`
-            : `<img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`;
+            .getPublicUrl(firstImage.file_path).data.publicUrl;
           
           const html = `
             <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.4);border:2px solid #fff;background:#f0f0f0;position:relative;">
-              ${mediaElement}
+              <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
               <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:14px;display:flex;align-items:center;justify-content:center;">
-                <span style="color:#fff;font-size:7px;font-weight:bold;">${project.media?.length || 0}</span>
+                <span style="color:#fff;font-size:7px;font-weight:bold;">${projectImages.length}</span>
               </div>
             </div>`;
           iconToUse = L.divIcon({
@@ -855,7 +848,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           projectId: project.id, 
           lat, 
           lng,
-          hasCustomIcon: !!firstMedia,
+          hasCustomIcon: !!firstImage,
           groupSize: count,
           indexInGroup: index,
         });
