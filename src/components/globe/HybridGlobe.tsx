@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowRight, MapPin, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
@@ -46,7 +45,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const linesRef = useRef<L.Polyline[]>([]);
   const centerMarkersRef = useRef<L.CircleMarker[]>([]);
   const galleryIndexesRef = useRef<Map<string, number>>(new Map());
-  const navigate = useNavigate();
   const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
   const [selectedOrderForUpload, setSelectedOrderForUpload] = useState<string | null>(null);
@@ -880,72 +878,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 });
               }
               
-              // کلیک روی کادر افزودن - فتح file picker مباشرة ورفع الملفات
+              // کلیک روی کادر افزودن
               if (addMediaCard) {
-                addMediaCard.addEventListener('click', async (e) => {
+                addMediaCard.addEventListener('click', (e) => {
                   e.stopPropagation();
-                  
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = 'image/*,video/*';
-                  input.multiple = true;
-                  
-                  input.onchange = async (event) => {
-                    const files = (event.target as HTMLInputElement).files;
-                    if (!files || files.length === 0) return;
-                    
-                    try {
-                      const { data: { user } } = await supabase.auth.getUser();
-                      if (!user) {
-                        console.error('User not authenticated');
-                        return;
-                      }
-
-                      // رفع الملفات مباشرة
-                      const uploadPromises = Array.from(files).map(async (file) => {
-                        const fileExt = file.name.split('.').pop();
-                        const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
-                        const filePath = `${order.id}/${fileName}`;
-
-                        // رفع إلى Storage
-                        const { error: uploadError } = await supabase.storage
-                          .from('project_media')
-                          .upload(filePath, file);
-
-                        if (uploadError) {
-                          console.error('Upload error:', uploadError);
-                          throw uploadError;
-                        }
-
-                        // حفظ في قاعدة البيانات
-                        const { error: dbError } = await supabase
-                          .from('project_media')
-                          .insert({
-                            project_id: order.id,
-                            file_path: filePath,
-                            file_type: file.type.startsWith('image/') ? 'image' : 'video',
-                            mime_type: file.type,
-                            file_size: file.size,
-                            user_id: user.id
-                          });
-
-                        if (dbError) {
-                          console.error('Database error:', dbError);
-                          throw dbError;
-                        }
-                      });
-
-                      await Promise.all(uploadPromises);
-                      
-                      // الانتقال إلى صفحة تفاصيل الطلب بعد الرفع الناجح
-                      navigate(`/orders/${order.id}`);
-                    } catch (error) {
-                      console.error('Error uploading files:', error);
-                      alert('خطا در آپلود فایل‌ها. لطفاً دوباره تلاش کنید.');
-                    }
-                  };
-                  
-                  input.click();
+                  setSelectedOrderForUpload(order.id);
+                  setSelectedProject(project);
                 });
               }
               
