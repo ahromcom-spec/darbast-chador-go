@@ -699,6 +699,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   return 0;
                 });
                 
+                console.log('[Order Media Debug]', {
+                  orderId: order.id,
+                  orderCode: order.code,
+                  totalMedia: allMedia.length,
+                  images: allMedia.filter(m => m.file_type === 'image').length,
+                  videos: allMedia.filter(m => m.file_type === 'video').length,
+                  mediaTypes: allMedia.map(m => m.file_type)
+                });
+                
                 return `
                   <div 
                     class="order-card-${order.id}" 
