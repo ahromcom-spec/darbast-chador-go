@@ -223,13 +223,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       if (newMedia.length > 0) {
         toast({ 
           title: 'موفق', 
-          description: `${newMedia.length} فایل با موفقیت آپلود شد. صفحه به‌روزرسانی می‌شود...` 
+          description: `${newMedia.length} فایل با موفقیت آپلود شد.` 
         });
         
-        // بارگذاری مجدد صفحه برای نمایش رسانه‌های جدید
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        // بارگذاری مجدد داده‌ها بدون بستن popup
+        await fetchProjectMedia();
+        
+        // بستن دیالوگ آپلود
+        setSelectedOrderForUpload(null);
       } else {
         toast({ 
           title: 'آپلود ناموفق', 
