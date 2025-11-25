@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { OptimizedImage } from './OptimizedImage';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
 interface HierarchyMedia {
@@ -58,6 +59,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
@@ -755,10 +757,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                             return `
                               <img 
                                 id="order-media-${order.id}-${idx}" 
+                                class="order-image-clickable"
+                                data-image-url="${url}"
                                 src="${url}" 
                                 alt="تصویر سفارش" 
                                 loading="lazy"
-                                style="width:100%;height:120px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};"
+                                style="width:100%;height:120px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
                               />
                             `;
                           }
@@ -852,6 +856,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   const url = (videoEl as HTMLElement).dataset.url;
                   if (url) {
                     window.open(url, '_blank');
+                  }
+                });
+              });
+              
+              // اضافه کردن قابلیت زوم برای تصاویر
+              const imageElements = popupElement.querySelectorAll('.order-image-clickable');
+              imageElements.forEach(imgEl => {
+                imgEl.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  const imageUrl = (imgEl as HTMLElement).dataset.imageUrl;
+                  if (imageUrl) {
+                    setZoomedImage(imageUrl);
                   }
                 });
               });
@@ -1062,6 +1078,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      <ImageZoomModal
+        isOpen={!!zoomedImage}
+        imageUrl={zoomedImage || ''}
+        onClose={() => setZoomedImage(null)}
+      />
     </div>
   );
 }
