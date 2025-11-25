@@ -310,4 +310,35 @@
     -moz-appearance: textfield;
     appearance: textfield;
   }
+
+  /* استایل سفارشی برای popup افزودن پروژه */
+  .custom-add-project-popup .leaflet-popup-content-wrapper {
+    background: white;
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border: 2px solid hsl(var(--primary) / 0.2);
+  }
+
+  .custom-add-project-popup .leaflet-popup-content {
+    margin: 0;
+    min-width: 220px;
+  }
+
+  .custom-add-project-popup .leaflet-popup-tip {
+    background: white;
+    border: 2px solid hsl(var(--primary) / 0.2);
+    border-top: none;
+    border-right: none;
+  }
+
+  .dark .custom-add-project-popup .leaflet-popup-content-wrapper {
+    background: hsl(var(--card));
+    border-color: hsl(var(--primary) / 0.3);
+  }
+
+  .dark .custom-add-project-popup .leaflet-popup-tip {
+    background: hsl(var(--card));
+    border-color: hsl(var(--primary) / 0.3);
+  }
 }

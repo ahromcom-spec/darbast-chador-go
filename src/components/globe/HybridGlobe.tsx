@@ -536,6 +536,57 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           });
 
           const newTempMarker = L.marker([e.latlng.lat, e.latlng.lng], { icon: tempIcon }).addTo(map);
+          
+          // اضافه کردن popup به مارکر
+          const popupContent = `
+            <div style="text-align: center; padding: 8px;">
+              <button 
+                id="add-project-btn"
+                style="
+                  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+                  color: white;
+                  border: none;
+                  border-radius: 8px;
+                  padding: 12px 20px;
+                  font-family: inherit;
+                  font-size: 14px;
+                  font-weight: 600;
+                  cursor: pointer;
+                  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                  transition: all 0.2s ease;
+                "
+                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)';"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)';"
+              >
+                ➕ افزودن پروژه در این موقعیت
+              </button>
+            </div>
+          `;
+          
+          newTempMarker.bindPopup(popupContent, {
+            closeButton: false,
+            className: 'custom-add-project-popup',
+            offset: [0, -40]
+          }).openPopup();
+          
+          // اضافه کردن event listener به دکمه بعد از باز شدن popup
+          setTimeout(() => {
+            const addBtn = document.getElementById('add-project-btn');
+            if (addBtn) {
+              addBtn.addEventListener('click', () => {
+                navigate('/select-location', {
+                  state: {
+                    fromMap: true,
+                    selectedLocation: {
+                      lat: e.latlng.lat,
+                      lng: e.latlng.lng
+                    }
+                  }
+                });
+              });
+            }
+          }, 100);
+          
           setTempMarker(newTempMarker);
           setSelectedMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
         }
@@ -1110,32 +1161,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           </div>
         </Card>
 
-        {/* دکمه "افزودن پروژه" - نمایش زمانی که کاربر روی نقطه خالی کلیک کرد */}
-        {selectedMapLocation && !selectedProject && (
-          <Card className="pointer-events-auto absolute top-24 left-4 z-[2000] shadow-2xl border-2 border-primary/20 bg-gradient-to-br from-background to-background/95">
-            <div className="p-6 space-y-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-primary/5 px-3 py-2 rounded-lg">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                موقعیت انتخاب شد
-              </div>
-              <Button
-                onClick={() => {
-                  navigate('/user/new-location', {
-                    state: {
-                      lat: selectedMapLocation.lat,
-                      lng: selectedMapLocation.lng
-                    }
-                  });
-                }}
-                className="w-full gap-2 shadow-lg hover:shadow-xl transition-all"
-                size="lg"
-              >
-                <Plus className="w-5 h-5" />
-                افزودن پروژه در این موقعیت
-              </Button>
-            </div>
-          </Card>
-        )}
       </div>
 
       {/* نقشه */}
