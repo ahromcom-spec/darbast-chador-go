@@ -1076,9 +1076,9 @@ export default function OrderDetail() {
                     };
                     
                     return (
-                      <div key={media.id} className="relative group col-span-2">
+                      <div key={media.id} className="relative group">
                         <div 
-                          className="aspect-video rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                          className="aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                           onClick={() => window.open(data.publicUrl, '_blank')}
                         >
                           {thumbnailData?.data.publicUrl ? (
