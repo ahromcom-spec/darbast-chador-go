@@ -50,62 +50,11 @@ export const useAdminLoginAsUser = () => {
         }
 
         toast.success('با موفقیت وارد حساب کاربر شدید');
-        
-        // Show a banner to indicate admin mode
-        const banner = document.createElement('div');
-        banner.id = 'admin-impersonation-banner';
-        banner.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-          color: white;
-          padding: 12px;
-          text-align: center;
-          z-index: 9999;
-          font-weight: bold;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        `;
-        banner.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: center; gap: 16px;">
-            <span>🔒 شما در حال مشاهده حساب کاربر هستید</span>
-            <button id="exit-admin-mode" style="
-              background: white;
-              color: #dc2626;
-              border: none;
-              padding: 6px 16px;
-              border-radius: 6px;
-              cursor: pointer;
-              font-weight: bold;
-              transition: all 0.2s;
-            ">
-              بازگشت به حساب مدیر
-            </button>
-          </div>
-        `;
-        document.body.prepend(banner);
 
-        // Add click handler for exit button
-        document.getElementById('exit-admin-mode')?.addEventListener('click', async () => {
-          const stored = localStorage.getItem('original_admin_session');
-          if (stored) {
-            const originalSession = JSON.parse(stored);
-            await supabase.auth.setSession({
-              access_token: originalSession.access_token,
-              refresh_token: originalSession.refresh_token,
-            });
-            localStorage.removeItem('original_admin_session');
-            banner.remove();
-            toast.success('بازگشت به حساب مدیر');
-            window.location.href = '/admin/users';
-          }
-        });
-
-        // Reload the page to apply new session
+        // Reload the page to apply new session and show persistent banner
         setTimeout(() => {
           window.location.href = '/';
-        }, 1000);
+        }, 500);
       }
     } catch (error) {
       console.error('Error in loginAsUser:', error);
