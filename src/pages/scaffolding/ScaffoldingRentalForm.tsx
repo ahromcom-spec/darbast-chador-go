@@ -1,5 +1,5 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { MediaUploader } from '@/components/orders/MediaUploader';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 const rentalFormSchema = z.object({
   itemType: z.string().min(1, 'لطفا نوع جنس را انتخاب کنید'),
@@ -46,9 +47,13 @@ const ITEM_TYPES = {
 export default function ScaffoldingRentalForm() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
   
+  const editOrderId = searchParams.get('edit');
+  const [loadingOrder, setLoadingOrder] = useState(false);
+  const [orderData, setOrderData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [selectedItemType, setSelectedItemType] = useState<string>('');
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
@@ -57,16 +62,16 @@ export default function ScaffoldingRentalForm() {
   const stateData = location.state || {};
   const serviceSelection = stateData?.serviceSelection || stateData;
   const {
-    hierarchyProjectId,
-    provinceId,
-    districtId,
-    subcategoryId = serviceSelection?.subcategoryId,
-    serviceName = serviceSelection?.serviceName,
-    subcategoryName = serviceSelection?.subcategoryName,
-    locationAddress,
-    locationTitle,
-    provinceName,
-    districtName
+    hierarchyProjectId: stateHierarchyProjectId,
+    provinceId: stateProvinceId,
+    districtId: stateDistrictId,
+    subcategoryId: stateSubcategoryId = serviceSelection?.subcategoryId,
+    serviceName: stateServiceName = serviceSelection?.serviceName,
+    subcategoryName: stateSubcategoryName = serviceSelection?.subcategoryName,
+    locationAddress: stateLocationAddress,
+    locationTitle: stateLocationTitle,
+    provinceName: stateProvinceName,
+    districtName: stateDistrictName
   } = stateData;
 
   const form = useForm<RentalFormValues>({
@@ -84,6 +89,114 @@ export default function ScaffoldingRentalForm() {
   const itemType = form.watch('itemType');
   const itemSubType = form.watch('itemSubType');
   const quantity = form.watch('quantity');
+
+  // Fetch order data if editing
+  useEffect(() => {
+    if (editOrderId) {
+      fetchOrderData();
+    }
+  }, [editOrderId]);
+
+  const fetchOrderData = async () => {
+    if (!editOrderId) return;
+    
+    setLoadingOrder(true);
+    try {
+      const { data, error } = await supabase
+        .from('projects_v3')
+        .select(`
+          *,
+          subcategory:subcategories!projects_v3_subcategory_id_fkey (
+            id,
+            name,
+            code
+          ),
+          province:provinces!projects_v3_province_id_fkey (
+            id,
+            name
+          ),
+          district:districts!projects_v3_district_id_fkey (
+            id,
+            name
+          )
+        `)
+        .eq('id', editOrderId)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data && data.notes) {
+        setOrderData(data);
+        
+        // Parse notes to populate form
+        const notes = typeof data.notes === 'string' ? JSON.parse(data.notes) : data.notes;
+        
+        // Find matching item type
+        let foundItemType = '';
+        let foundSubType = '';
+        
+        if (notes.item_type) {
+          Object.entries(ITEM_TYPES).forEach(([key, value]) => {
+            if (value.label === notes.item_type) {
+              foundItemType = key;
+            }
+          });
+        }
+        
+        if (notes.item_sub_type && foundItemType) {
+          const itemTypeData = ITEM_TYPES[foundItemType as keyof typeof ITEM_TYPES];
+          if (itemTypeData?.subTypes) {
+            Object.entries(itemTypeData.subTypes).forEach(([key, value]) => {
+              if (value.label === notes.item_sub_type) {
+                foundSubType = key;
+              }
+            });
+          }
+        }
+        
+        form.reset({
+          itemType: foundItemType,
+          itemSubType: foundSubType,
+          quantity: notes.quantity || 1,
+          rentalStartDate: notes.rental_start_date || '',
+          rentalEndDate: notes.rental_end_date || '',
+          additionalNotes: notes.additional_notes || '',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'خطا',
+        description: 'خطا در بارگذاری اطلاعات سفارش',
+        variant: 'destructive'
+      });
+      navigate('/');
+    } finally {
+      setLoadingOrder(false);
+    }
+  };
+
+  // Merge order data with state data
+  const hierarchyProjectId = orderData?.hierarchy_project_id || stateHierarchyProjectId;
+  const provinceId = orderData?.province_id || stateProvinceId;
+  const districtId = orderData?.district_id || stateDistrictId;
+  const subcategoryId = orderData?.subcategory_id || stateSubcategoryId;
+  const serviceName = orderData?.subcategory?.service_type?.name || stateServiceName || 'داربست فلزی';
+  const subcategoryName = orderData?.subcategory?.name || stateSubcategoryName;
+  const locationAddress = orderData?.address || stateLocationAddress;
+  const locationTitle = orderData?.detailed_address || stateLocationTitle;
+  const provinceName = orderData?.province?.name || stateProvinceName;
+  const districtName = orderData?.district?.name || stateDistrictName;
+  const customerName = orderData?.customer_name;
+  const customerPhone = orderData?.customer_phone;
+
+  // Show loading spinner while fetching order data
+  if (loadingOrder) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" text="در حال بارگذاری اطلاعات سفارش..." />
+      </div>
+    );
+  }
 
   // Calculate total price
   const calculateTotal = () => {
