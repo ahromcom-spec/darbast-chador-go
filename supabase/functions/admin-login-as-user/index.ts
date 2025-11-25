@@ -46,13 +46,24 @@ Deno.serve(async (req) => {
     }
 
     // Check if the user is admin or CEO using admin client to bypass RLS
+    console.log('Checking roles for user:', user.id);
+    
+    // First check all roles for this user
+    const { data: allRoles, error: allRolesError } = await supabaseAdmin
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', user.id);
+    
+    console.log('All roles for user:', { userId: user.id, allRoles, allRolesError });
+    
+    // Then filter for admin roles
     const { data: roles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .in('role', ['admin', 'ceo', 'general_manager']);
 
-    console.log('User roles check:', { userId: user.id, roles, rolesError });
+    console.log('User roles check:', { userId: user.id, roles, rolesError, allRolesCount: allRoles?.length });
 
     if (rolesError) {
       console.error('Error fetching roles:', rolesError);
