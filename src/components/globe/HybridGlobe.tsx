@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowRight, MapPin, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
@@ -45,6 +46,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const linesRef = useRef<L.Polyline[]>([]);
   const centerMarkersRef = useRef<L.CircleMarker[]>([]);
   const galleryIndexesRef = useRef<Map<string, number>>(new Map());
+  const navigate = useNavigate();
   const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
   const [selectedOrderForUpload, setSelectedOrderForUpload] = useState<string | null>(null);
@@ -878,12 +880,27 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 });
               }
               
-              // کلیک روی کادر افزودن
+              // کلیک روی کادر افزودن - فتح file picker مباشرة
               if (addMediaCard) {
                 addMediaCard.addEventListener('click', (e) => {
                   e.stopPropagation();
-                  setSelectedOrderForUpload(order.id);
-                  setSelectedProject(project);
+                  // فتح file picker مباشرة
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*,video/*';
+                  input.multiple = true;
+                  input.onchange = async (event) => {
+                    const files = (event.target as HTMLInputElement).files;
+                    if (files && files.length > 0) {
+                      // رفع الملفات ثم الانتقال إلى صفحة OrderDetail
+                      const uploadedFiles = Array.from(files);
+                      // التنقل إلى صفحة تفاصيل الطلب بعد اختيار الملفات
+                      navigate(`/order/${order.id}`, { 
+                        state: { uploadFiles: uploadedFiles } 
+                      });
+                    }
+                  };
+                  input.click();
                 });
               }
               
