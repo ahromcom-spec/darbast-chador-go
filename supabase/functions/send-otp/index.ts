@@ -64,7 +64,9 @@ serve(async (req) => {
       .eq('phone_number', normalizedPhone)
       .maybeSingle();
     
-    const isWhitelistedPhone = !!whitelistData;
+    // CEO phone 09125511494 should receive real SMS, not fixed code
+    const ceoPhone = '09125511494';
+    const isWhitelistedPhone = !!whitelistData && normalizedPhone !== ceoPhone;
     
     // Security: Block test phones in production - hardcoded check
     const isProduction = supabaseUrl.includes('gclbltatkbwbqxqqrcea');
