@@ -47,6 +47,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const galleryIndexesRef = useRef<Map<string, number>>(new Map());
   const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
+  const [selectedOrderForUpload, setSelectedOrderForUpload] = useState<string | null>(null);
+  const [currentOrderMediaIndex, setCurrentOrderMediaIndex] = useState<Record<string, number>>({});
   const [projectsWithMedia, setProjectsWithMedia] = useState<ProjectWithMedia[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -100,15 +102,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     }
   };
 
-  // رویداد انتخاب فایل
   const handleAddImage = () => {
-    if (!selectedProject) return;
+    if (!selectedOrderForUpload) return;
     fileInputRef.current?.click();
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || !selectedProject) return;
+    if (!files || !selectedOrderForUpload) return;
     
     try {
       setUploading(true);
@@ -157,14 +158,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           continue;
         }
         
-        const filePath = `${user.id}/hierarchy/${selectedProject.id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+        const filePath = `${user.id}/orders/${selectedOrderForUpload}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
         console.log('[Upload] Uploading to storage:', filePath);
 
-        // محاسبه و نمایش پیشرفت قبل از آپلود
         const startProgress = (i / fileArray.length) * 100;
         setUploadProgress(Math.round(startProgress));
 
-        // آپلود با نمایش درصد پیشرفت
         const { error: uploadErr } = await supabase.storage
           .from('order-media')
           .upload(filePath, file, { 
@@ -173,7 +172,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             cacheControl: '3600'
           });
         
-        // محاسبه درصد کلی بر اساس تعداد فایل‌ها
         const fileProgress = ((i + 1) / fileArray.length) * 100;
         setUploadProgress(Math.round(fileProgress));
         
@@ -190,9 +188,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         console.log('[Upload] File uploaded successfully, saving to database...');
 
         const { data: insertData, error: insertErr } = await supabase
-          .from('project_hierarchy_media')
+          .from('project_media')
           .insert({
-            hierarchy_project_id: selectedProject.id,
+            project_id: selectedOrderForUpload,
             file_path: filePath,
             file_type: isVideo ? 'video' : 'image',
             mime_type: file.type,
@@ -221,14 +219,21 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       console.log('[Upload] Upload complete. Total successful:', newMedia.length);
       
       if (newMedia.length > 0) {
-        setProjectsWithMedia(prev => prev.map(p => p.id === selectedProject.id
-          ? { ...p, media: [...newMedia, ...(p.media || [])].slice(0, 3) }
-          : p
-        ));
-        setSelectedProject(prev => prev ? { ...prev, media: [...newMedia, ...(prev.media || [])].slice(0, 3) } : prev);
-        toast({ title: 'موفق', description: `${newMedia.length} فایل با موفقیت آپلود شد.` });
+        toast({ 
+          title: 'موفق', 
+          description: `${newMedia.length} فایل با موفقیت آپلود شد. صفحه به‌روزرسانی می‌شود...` 
+        });
+        
+        // بارگذاری مجدد صفحه برای نمایش رسانه‌های جدید
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       } else {
-        toast({ title: 'آپلود ناموفق', description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', variant: 'destructive' });
+        toast({ 
+          title: 'آپلود ناموفق', 
+          description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', 
+          variant: 'destructive' 
+        });
       }
     } catch (err: any) {
       console.error('[Upload] Fatal error:', err);
@@ -691,21 +696,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             <div style="margin-top:12px;padding:10px;background:#f9fafb;border-radius:8px;">
               <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;">سفارشات این پروژه (${project.orders.length})</div>
               ${project.orders.map((order, orderIdx) => {
-                // ترکیب عکس‌ها و ویدیوها در یک آرایه
                 const allMedia = (order.media || []).sort((a, b) => {
-                  // عکس‌ها اول، بعد ویدیوها
                   if (a.file_type === 'image' && b.file_type === 'video') return -1;
                   if (a.file_type === 'video' && b.file_type === 'image') return 1;
                   return 0;
-                });
-                
-                console.log('[Order Media Debug]', {
-                  orderId: order.id,
-                  orderCode: order.code,
-                  totalMedia: allMedia.length,
-                  images: allMedia.filter(m => m.file_type === 'image').length,
-                  videos: allMedia.filter(m => m.file_type === 'video').length,
-                  mediaTypes: allMedia.map(m => m.file_type)
                 });
                 
                 return `
@@ -717,52 +711,71 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   >
                     <div style="font-size:12px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
                     <div style="font-size:11px;color:#6b7280;margin-top:2px;">${order.subcategory?.name || 'نامشخص'}</div>
-                    ${allMedia.length > 0 ? `
-                      <div id="order-gallery-${order.id}" style="position:relative;margin-top:8px;">
-                        <div style="overflow:hidden;border-radius:6px;background:#f9fafb;">
-                          ${allMedia.map((m, idx) => {
-                            const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
-                            const isVideo = m.file_type === 'video';
-                            
-                            if (isVideo) {
-                              return `
-                                <div 
-                                  id="order-media-${order.id}-${idx}" 
-                                  class="order-video-item-${order.id}" 
-                                  data-url="${url}"
-                                  style="position:relative;width:100%;height:120px;background:#000;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
-                                >
-                                  <video src="${url}" style="width:100%;height:100%;object-fit:cover;" preload="metadata"></video>
-                                  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
-                                    <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
-                                      <path d="M8 5v14l11-7z"/>
-                                    </svg>
-                                  </div>
-                                  <span style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:3px 6px;border-radius:3px;">ویدیو</span>
+                    <div id="order-gallery-${order.id}" style="position:relative;margin-top:8px;">
+                      <div style="overflow:hidden;border-radius:6px;background:#f9fafb;">
+                        ${allMedia.map((m, idx) => {
+                          const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                          const isVideo = m.file_type === 'video';
+                          
+                          if (isVideo) {
+                            return `
+                              <div 
+                                id="order-media-${order.id}-${idx}" 
+                                class="order-video-item-${order.id}" 
+                                data-url="${url}"
+                                style="position:relative;width:100%;height:120px;background:#000;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
+                              >
+                                <video src="${url}" style="width:100%;height:100%;object-fit:cover;" preload="metadata"></video>
+                                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
+                                  <svg style="width:32px;height:32px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
+                                  </svg>
                                 </div>
-                              `;
-                            } else {
-                              return `
-                                <img 
-                                  id="order-media-${order.id}-${idx}" 
-                                  src="${url}" 
-                                  alt="تصویر سفارش" 
-                                  loading="lazy"
-                                  style="width:100%;height:120px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};"
-                                />
-                              `;
-                            }
-                          }).join('')}
-                        </div>
-                        ${allMedia.length > 1 ? `
-                          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
-                            <button class="order-gallery-prev-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">قبلی</button>
-                            <span id="order-counter-${order.id}" style="font-family:Vazirmatn;font-size:11px;color:#6b7280;">1 از ${allMedia.length}</span>
-                            <button class="order-gallery-next-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">بعدی</button>
+                                <span style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;padding:3px 6px;border-radius:3px;">ویدیو</span>
+                              </div>
+                            `;
+                          } else {
+                            return `
+                              <img 
+                                id="order-media-${order.id}-${idx}" 
+                                src="${url}" 
+                                alt="تصویر سفارش" 
+                                loading="lazy"
+                                style="width:100%;height:120px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};"
+                              />
+                            `;
+                          }
+                        }).join('')}
+                        
+                        <!-- کادر افزودن عکس/فیلم -->
+                        <div 
+                          id="order-media-${order.id}-add" 
+                          class="order-add-media-${order.id}"
+                          style="display:${allMedia.length === 0 ? 'flex' : 'none'};flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px 20px;background:linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));border:2px dashed #667eea;border-radius:6px;cursor:pointer;height:120px;"
+                        >
+                          <div style="font-size:32px;">📷</div>
+                          <div style="text-align:center;">
+                            <div style="font-weight:600;font-size:12px;color:#1f2937;margin-bottom:2px;">افزودن عکس یا فیلم</div>
+                            <div style="font-size:10px;color:#6b7280;">برای این سفارش رسانه جدید اضافه کنید</div>
                           </div>
-                        ` : ''}
+                        </div>
                       </div>
-                    ` : ''}
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+                        <button class="order-gallery-prev-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">قبلی</button>
+                        <span id="order-counter-${order.id}" style="font-family:Vazirmatn;font-size:11px;color:#6b7280;">
+                          ${allMedia.length === 0 ? 'افزودن رسانه' : `1 از ${allMedia.length + 1}`}
+                        </span>
+                        <button class="order-gallery-next-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-family:Vazirmatn;font-size:11px;font-weight:500;">بعدی</button>
+                      </div>
+                      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
+                        <button 
+                          onclick="window.dispatchEvent(new CustomEvent('viewOrderDetail-${order.id}'))"
+                          style="width:100%;padding:8px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:11px;font-family:inherit;"
+                        >
+                          مشاهده جزئیات سفارش
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 `;
               }).join('')}
@@ -826,35 +839,63 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 });
               });
               
-              // گالری یکپارچه (عکس + ویدیو)
-              if (allMedia.length > 1) {
-                let currentOrderIndex = 0;
+              // گالری یکپارچه با کادر افزودن
+              let currentOrderIndex = 0;
+              const totalItems = allMedia.length + 1; // +1 برای کادر افزودن
+              
+              const prevBtn = popupElement.querySelector(`.order-gallery-prev-${order.id}`);
+              const nextBtn = popupElement.querySelector(`.order-gallery-next-${order.id}`);
+              const addMediaCard = popupElement.querySelector(`.order-add-media-${order.id}`) as HTMLElement;
+              
+              if (prevBtn && nextBtn) {
+                prevBtn.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  currentOrderIndex = (currentOrderIndex - 1 + totalItems) % totalItems;
+                  updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
+                });
                 
-                const prevBtn = popupElement.querySelector(`.order-gallery-prev-${order.id}`);
-                const nextBtn = popupElement.querySelector(`.order-gallery-next-${order.id}`);
-                
-                if (prevBtn && nextBtn) {
-                  prevBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    currentOrderIndex = (currentOrderIndex - 1 + allMedia.length) % allMedia.length;
-                    updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
-                  });
-                  
-                  nextBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    currentOrderIndex = (currentOrderIndex + 1) % allMedia.length;
-                    updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
-                  });
+                nextBtn.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  currentOrderIndex = (currentOrderIndex + 1) % totalItems;
+                  updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
+                });
+              }
+              
+              // کلیک روی کادر افزودن
+              if (addMediaCard) {
+                addMediaCard.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  setSelectedOrderForUpload(order.id);
+                  setSelectedProject(project);
+                });
+              }
+              
+              function updateOrderGallery(orderId: string, index: number, mediaCount: number) {
+                // مخفی کردن همه رسانه‌ها
+                for (let i = 0; i < mediaCount; i++) {
+                  const mediaEl = popupElement.querySelector(`#order-media-${orderId}-${i}`) as HTMLElement;
+                  if (mediaEl) mediaEl.style.display = 'none';
                 }
                 
-                function updateOrderGallery(orderId: string, index: number, total: number) {
-                  for (let i = 0; i < total; i++) {
-                    const mediaEl = popupElement.querySelector(`#order-media-${orderId}-${i}`) as HTMLElement;
-                    if (mediaEl) mediaEl.style.display = i === index ? 'block' : 'none';
+                // نمایش/مخفی کردن کادر افزودن
+                const addCard = popupElement.querySelector(`.order-add-media-${orderId}`) as HTMLElement;
+                if (addCard) {
+                  addCard.style.display = index === mediaCount ? 'flex' : 'none';
+                }
+                
+                // نمایش رسانه فعلی
+                if (index < mediaCount) {
+                  const mediaEl = popupElement.querySelector(`#order-media-${orderId}-${index}`) as HTMLElement;
+                  if (mediaEl) mediaEl.style.display = 'block';
+                }
+                
+                const counter = popupElement.querySelector(`#order-counter-${orderId}`);
+                if (counter) {
+                  if (index === mediaCount) {
+                    counter.textContent = 'افزودن رسانه';
+                  } else {
+                    counter.textContent = `${index + 1} از ${mediaCount + 1}`;
                   }
-                  
-                  const counter = popupElement.querySelector(`#order-counter-${orderId}`);
-                  if (counter) counter.textContent = `${index + 1} از ${total}`;
                 }
               }
             });
@@ -943,22 +984,22 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       {/* نقشه */}
       <div ref={mapContainer} className="w-full h-full" />
 
-      {/* کارت اطلاعات پروژه انتخاب شده */}
-      {selectedProject && (
+      {/* کادر آپلود برای سفارش خاص */}
+      {selectedOrderForUpload && (
         <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-card shadow-2xl p-4 z-[2000] border-2 border-primary/20 pointer-events-auto">
           <div className="space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
-                <h3 className="text-base font-semibold">{selectedProject.title || 'پروژه'}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{selectedProject.locations?.address_line}</p>
-                {selectedProject.media && selectedProject.media.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">{selectedProject.media.length} فایل</p>
-                )}
+                <h3 className="text-base font-semibold">افزودن عکس/فیلم به سفارش</h3>
+                <p className="text-xs text-muted-foreground mt-1">فایل‌های انتخابی به سفارش اضافه می‌شود</p>
               </div>
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setSelectedProject(null)}
+                onClick={() => {
+                  setSelectedOrderForUpload(null);
+                  setSelectedProject(null);
+                }}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -968,7 +1009,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               disabled={uploading}
               className="w-full"
             >
-              {uploading ? `در حال آپلود... ${uploadProgress}%` : '+ افزودن عکس یا ویدیو'}
+              {uploading ? `در حال آپلود... ${uploadProgress}%` : '+ انتخاب فایل'}
             </Button>
           </div>
         </Card>
