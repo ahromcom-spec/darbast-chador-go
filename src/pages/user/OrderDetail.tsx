@@ -256,7 +256,7 @@ export default function OrderDetail() {
           description: "اطلاعات مشتری یافت نشد",
           variant: "destructive"
         });
-        navigate("/orders");
+        navigate("/user/my-orders");
         return;
       }
 
@@ -288,7 +288,7 @@ export default function OrderDetail() {
           description: "سفارش یافت نشد",
           variant: "destructive"
         });
-        navigate("/orders");
+        navigate("/user/my-orders");
         return;
       }
 
