@@ -873,14 +873,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   const subcategoryCode = (viewDetailBtn as HTMLElement).dataset.subcategoryCode;
                   
                   if (subcategoryCode === '10') {
-                    // داربست اجرا با اجناس
+                    // داربست اجرا با اجناس - به فرم
                     window.location.href = `/scaffolding/form?orderId=${orderId}`;
                   } else if (subcategoryCode === '30') {
-                    // اجاره داربست
+                    // اجاره داربست - به فرم
                     window.location.href = `/scaffolding/rental?orderId=${orderId}`;
                   } else {
                     // سایر سفارشات - به صفحه جزئیات سفارش
-                    window.location.href = `/user/form-not-available`;
+                    window.location.href = `/user/order-detail/${orderId}`;
                   }
                 });
               }
