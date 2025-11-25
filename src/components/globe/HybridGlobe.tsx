@@ -574,13 +574,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             const addBtn = document.getElementById('add-project-btn');
             if (addBtn) {
               addBtn.addEventListener('click', () => {
-                navigate('/select-location', {
+                navigate('/user/new-location', {
                   state: {
-                    fromMap: true,
-                    selectedLocation: {
-                      lat: e.latlng.lat,
-                      lng: e.latlng.lng
-                    }
+                    lat: e.latlng.lat,
+                    lng: e.latlng.lng
                   }
                 });
               });
