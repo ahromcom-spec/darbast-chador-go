@@ -185,6 +185,11 @@ export default function ScaffoldingForm() {
                           {finalProvinceName && `${finalProvinceName}`}
                           {finalDistrictName && ` • ${finalDistrictName}`}
                         </p>
+                        {orderData?.detailed_address && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            جزئیات: {orderData.detailed_address}
+                          </p>
+                        )}
                       </div>
                     </AlertDescription>
                   </Alert>
@@ -200,6 +205,28 @@ export default function ScaffoldingForm() {
                     </AlertDescription>
                   </Alert>
                 </div>
+                
+                {/* نمایش اطلاعات مشتری در حالت ویرایش */}
+                {editOrderId && orderData && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    {orderData.customer_name && (
+                      <Alert className="border-primary/30">
+                        <AlertDescription>
+                          <p className="font-semibold text-sm">نام مشتری:</p>
+                          <p className="text-sm">{orderData.customer_name}</p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    {orderData.customer_phone && (
+                      <Alert className="border-primary/30">
+                        <AlertDescription>
+                          <p className="font-semibold text-sm">شماره تماس:</p>
+                          <p className="text-sm" dir="ltr">{orderData.customer_phone}</p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                )}
               </CardContent>
             )}
 
