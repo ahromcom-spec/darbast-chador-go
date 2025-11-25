@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowRight, MapPin, X } from 'lucide-react';
+import { ArrowRight, MapPin, X, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { OptimizedImage } from './OptimizedImage';
 import { ImageZoomModal } from '@/components/common/ImageZoomModal';
+import { useNavigate } from 'react-router-dom';
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
 interface HierarchyMedia {
@@ -60,9 +61,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [mapboxToken, setMapboxToken] = useState<string>('');
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // مدیریت منبع ویدیو و آزادسازی blob ها
   useEffect(() => {
@@ -475,7 +478,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       maxNativeZoom: 19,
     }).addTo(map);
 
-    // بستن پنجره با debounce
+    // בستן פנجره با debounce
     let clickTimeout: NodeJS.Timeout;
     map.on('click', (e: L.LeafletMouseEvent) => {
       clearTimeout(clickTimeout);
@@ -483,6 +486,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         const clickedOnMarker = (e.originalEvent.target as HTMLElement)?.closest('.leaflet-marker-icon');
         if (!clickedOnMarker) {
           setSelectedProject(null);
+          setSelectedOrderForUpload(null);
+          // User clicked on empty map area - set location for adding new project
+          setSelectedMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
         }
       }, 100);
     });
@@ -972,8 +978,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           }
         });
 
-        marker.on('click', () => {
+         marker.on('click', () => {
           setSelectedProject(project);
+          setSelectedOrderForUpload(null);
+          setSelectedMapLocation(null); // Clear map location selection when clicking on a marker
         });
 
         markersRef.current.push(marker);
@@ -1046,7 +1054,32 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             <div className="flex flex-col">
               <span className="text-base font-bold text-primary">{projectsWithMedia.length}</span>
               <span className="text-[10px] text-muted-foreground leading-tight">پروژه فعال</span>
+        {/* כפתור "הוסף פרוז'קט" - نمایش زمانی که کاربر روی نقطه خالی کلیک کرد */}
+        {selectedMapLocation && !selectedProject && (
+          <Card className="pointer-events-auto absolute bottom-28 left-1/2 transform -translate-x-1/2 bg-card shadow-2xl p-3 z-[2000] border-2 border-primary/20 w-72">
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground text-center">
+                موقعیت انتخاب شد
+              </p>
+              <Button
+                onClick={() => {
+                  navigate('/user/new-location', {
+                    state: {
+                      lat: selectedMapLocation.lat,
+                      lng: selectedMapLocation.lng
+                    }
+                  });
+                }}
+                className="w-full gap-2"
+                size="sm"
+              >
+                <Plus className="w-4 h-4" />
+                افزودن پروژه در این موقعیت
+              </Button>
             </div>
+          </Card>
+        )}
+      </div>
           </div>
         </Card>
       </div>

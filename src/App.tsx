@@ -77,6 +77,8 @@ const TopRatedUsers = lazy(() => import("./pages/ratings/TopRatedUsers"));
 const NotificationSettings = lazy(() => import("./pages/settings/NotificationSettings"));
 const InstallApp = lazy(() => import("./pages/settings/InstallApp"));
 const SelectLocation = lazy(() => import("./pages/user/SelectLocation"));
+const NewLocation = lazy(() => import("./pages/user/NewLocation"));
+const ServiceSelection = lazy(() => import("./pages/user/ServiceSelection"));
 const MyOrders = lazy(() => import("./pages/user/MyOrders"));
 const MyProjectsHierarchy = lazy(() => import("./pages/user/MyProjectsHierarchy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -203,6 +205,16 @@ const App = () => {
               <Route path="/orders/:id" element={
                 <ProtectedRoute>
                   <OrderDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/user/new-location" element={
+                <ProtectedRoute>
+                  <NewLocation />
+                </ProtectedRoute>
+              } />
+              <Route path="/user/select-service" element={
+                <ProtectedRoute>
+                  <ServiceSelection />
                 </ProtectedRoute>
               } />
               <Route path="/select-location" element={
