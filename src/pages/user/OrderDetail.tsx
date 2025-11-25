@@ -515,30 +515,11 @@ export default function OrderDetail() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Button
           variant="ghost"
-          onClick={async () => {
-            if (order.hierarchy_project_id) {
-              // دریافت location_id از projects_hierarchy
-              const { data: projectData } = await supabase
-                .from('projects_hierarchy')
-                .select('location_id')
-                .eq('id', order.hierarchy_project_id)
-                .single();
-              
-              navigate("/user/projects", {
-                state: {
-                  expandLocationId: projectData?.location_id,
-                  expandProjectId: order.hierarchy_project_id,
-                  highlightOrderId: order.id
-                }
-              });
-            } else {
-              navigate("/user/projects");
-            }
-          }}
+          onClick={() => navigate("/")}
           className="mb-6 gap-2"
         >
           <ArrowRight className="h-4 w-4" />
-          بازگشت به لیست سفارشات
+          بازگشت به صفحه نخست
         </Button>
 
         <div className="space-y-6">
