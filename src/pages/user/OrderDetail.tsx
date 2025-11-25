@@ -134,6 +134,7 @@ export default function OrderDetail() {
   const [completionDate, setCompletionDate] = useState('');
   const [isRenewing, setIsRenewing] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; poster?: string } | null>(null);
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [ratingType, setRatingType] = useState<'customer_to_staff' | 'customer_to_contractor'>('customer_to_staff');
@@ -1032,12 +1033,17 @@ export default function OrderDetail() {
                       .getPublicUrl(media.file_path);
                     
                     return (
-                      <div key={media.id} className="relative aspect-square rounded-lg overflow-hidden border">
+                      <div 
+                        key={media.id} 
+                        className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer hover:ring-2 hover:ring-primary transition-all group"
+                        onClick={() => setSelectedImage(data.publicUrl)}
+                      >
                         <img
                           src={data.publicUrl}
                           alt="تصویر سفارش"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
                         />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                       </div>
                     );
                   })}
@@ -1137,6 +1143,40 @@ export default function OrderDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Image Zoom Dialog */}
+          <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+            <DialogContent className="max-w-7xl w-full p-0">
+              <DialogHeader className="p-6 pb-4">
+                <DialogTitle>عکس پروژه</DialogTitle>
+              </DialogHeader>
+              <div className="px-6 pb-6">
+                {selectedImage && (
+                  <div className="relative w-full">
+                    <img
+                      src={selectedImage}
+                      alt="عکس بزرگ پروژه"
+                      className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                    />
+                    <Button
+                      variant="secondary"
+                      className="mt-4 gap-2"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = selectedImage;
+                        link.download = 'project-image.jpg';
+                        link.click();
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                      دانلود عکس
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
 
 
           {/* بخش چت و تعامل با مدیریت */}
