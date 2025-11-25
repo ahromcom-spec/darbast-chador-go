@@ -479,7 +479,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       maxNativeZoom: 19,
     }).addTo(map);
 
-    // בستן פנجره با debounce
+    // بستن popup با debounce
+    // بستن popup با debounce
     let clickTimeout: NodeJS.Timeout;
     map.on('click', (e: L.LeafletMouseEvent) => {
       clearTimeout(clickTimeout);
@@ -488,7 +489,54 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         if (!clickedOnMarker) {
           setSelectedProject(null);
           setSelectedOrderForUpload(null);
-          // User clicked on empty map area - set location for adding new project
+          
+          // حذف مارکر موقت قبلی اگر وجود دارد
+          if (tempMarker) {
+            map.removeLayer(tempMarker);
+          }
+
+          // ایجاد مارکر موقت جدید با آیکون پین
+          const tempIcon = L.divIcon({
+            className: 'custom-temp-marker',
+            html: `
+              <div style="
+                position: relative;
+                width: 40px;
+                height: 50px;
+                animation: bounce 1s ease-in-out infinite;
+              ">
+                <svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <ellipse cx="20" cy="48" rx="8" ry="2" fill="rgba(0,0,0,0.2)"/>
+                  <path d="M20 2C12 2 6 8 6 16C6 25 20 42 20 42C20 42 34 25 34 16C34 8 28 2 20 2Z" 
+                        fill="url(#pinGradient)" 
+                        stroke="white" 
+                        stroke-width="2"
+                        filter="url(#shadow)"/>
+                  <circle cx="20" cy="16" r="6" fill="white" opacity="0.9"/>
+                  <defs>
+                    <linearGradient id="pinGradient" x1="20" y1="2" x2="20" y2="42" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="#3b82f6"/>
+                      <stop offset="100%" stop-color="#1d4ed8"/>
+                    </linearGradient>
+                    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+                    </filter>
+                  </defs>
+                </svg>
+              </div>
+              <style>
+                @keyframes bounce {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-5px); }
+                }
+              </style>
+            `,
+            iconSize: [40, 50],
+            iconAnchor: [20, 50],
+          });
+
+          const newTempMarker = L.marker([e.latlng.lat, e.latlng.lng], { icon: tempIcon }).addTo(map);
+          setTempMarker(newTempMarker);
           setSelectedMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
         }
       }, 100);
