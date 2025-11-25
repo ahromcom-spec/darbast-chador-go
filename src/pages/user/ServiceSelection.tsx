@@ -17,8 +17,9 @@ export default function ServiceSelection() {
   const [selectedServiceType, setSelectedServiceType] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
 
-  // Get location_id from navigation state
+  // Get location data from navigation state
   const locationId = location.state?.locationId;
+  const locationData = location.state?.locationData;
 
   useEffect(() => {
     if (!locationId) {
@@ -77,6 +78,15 @@ export default function ServiceSelection() {
         subcategoryId: selectedSubcategory,
         serviceTypeName: selectedServiceTypeObj.name,
         subcategoryName: selectedSubcategoryData.name,
+        // Pass location data to forms
+        provinceId: locationData?.province_id,
+        districtId: locationData?.district_id,
+        locationAddress: locationData?.address_line,
+        locationTitle: locationData?.title,
+        provinceName: locationData?.province_name,
+        districtName: locationData?.district_name,
+        lat: locationData?.lat,
+        lng: locationData?.lng,
       }
     });
   };

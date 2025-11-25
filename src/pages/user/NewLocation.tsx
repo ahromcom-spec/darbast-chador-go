@@ -3,6 +3,7 @@ import { NewLocationForm } from '@/components/locations/NewLocationForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, ArrowRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function NewLocation() {
   const navigate = useNavigate();
@@ -14,11 +15,41 @@ export default function NewLocation() {
 
   console.log('🗺️ NewLocation - Initial coordinates:', { initialLat, initialLng, state: location.state });
 
-  const handleSuccess = (locationId: string) => {
-    // Navigate to service selection with location ID
-    navigate('/user/select-service', {
-      state: { locationId }
-    });
+  const handleSuccess = async (locationId: string) => {
+    // Fetch location details to pass to service selection
+    try {
+      const { data: locationData, error } = await supabase
+        .from('locations')
+        .select('*, provinces(name), districts(name)')
+        .eq('id', locationId)
+        .single();
+
+      if (error) throw error;
+
+      // Navigate to service selection with full location data
+      navigate('/user/select-service', {
+        state: { 
+          locationId,
+          locationData: {
+            id: locationData.id,
+            lat: locationData.lat,
+            lng: locationData.lng,
+            address_line: locationData.address_line,
+            title: locationData.title,
+            province_id: locationData.province_id,
+            district_id: locationData.district_id,
+            province_name: locationData.provinces?.name,
+            district_name: locationData.districts?.name
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching location:', error);
+      // Fallback: navigate with just locationId
+      navigate('/user/select-service', {
+        state: { locationId }
+      });
+    }
   };
 
   return (
