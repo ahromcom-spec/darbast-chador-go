@@ -603,20 +603,32 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         }
 
         let iconToUse: any = projectIcon;
-        // استفاده از اولین تصویر برای مارکر (بدون ویدیو)
-        const projectImages = (project.media || []).filter(m => m.file_type === 'image');
-        const firstImage = projectImages[0];
+        // استفاده از اولین تصویر از اولین سفارش (قدیمی‌ترین سفارش) برای مارکر
+        let firstOrderImage: HierarchyMedia | undefined;
+        let totalOrderImages = 0;
         
-        if (firstImage) {
+        // سفارشات به ترتیب جدید به قدیم هستند، پس آخرین سفارش قدیمی‌ترین است
+        if (project.orders && project.orders.length > 0) {
+          const firstOrder = project.orders[project.orders.length - 1]; // قدیمی‌ترین سفارش
+          const orderImages = (firstOrder.media || []).filter(m => m.file_type === 'image');
+          firstOrderImage = orderImages[0];
+          
+          // شمارش کل تصاویر تمام سفارشات
+          project.orders.forEach(order => {
+            totalOrderImages += (order.media || []).filter(m => m.file_type === 'image').length;
+          });
+        }
+        
+        if (firstOrderImage) {
           const url1 = supabase.storage
             .from('order-media')
-            .getPublicUrl(firstImage.file_path).data.publicUrl;
+            .getPublicUrl(firstOrderImage.file_path).data.publicUrl;
           
           const html = `
             <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.4);border:2px solid #fff;background:#f0f0f0;position:relative;">
               <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
               <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:14px;display:flex;align-items:center;justify-content:center;">
-                <span style="color:#fff;font-size:7px;font-weight:bold;">${projectImages.length}</span>
+                <span style="color:#fff;font-size:7px;font-weight:bold;">${totalOrderImages}</span>
               </div>
             </div>`;
           iconToUse = L.divIcon({
@@ -911,7 +923,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           projectId: project.id, 
           lat, 
           lng,
-          hasCustomIcon: !!firstImage,
+          hasCustomIcon: !!firstOrderImage,
           groupSize: count,
           indexInGroup: index,
         });
