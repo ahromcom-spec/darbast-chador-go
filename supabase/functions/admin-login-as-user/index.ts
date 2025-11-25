@@ -46,13 +46,24 @@ Deno.serve(async (req) => {
     }
 
     // Check if the user is admin or CEO
-    const { data: roles } = await supabaseClient
+    const { data: roles, error: rolesError } = await supabaseClient
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .in('role', ['admin', 'ceo', 'general_manager']);
 
+    console.log('User roles check:', { userId: user.id, roles, rolesError });
+
+    if (rolesError) {
+      console.error('Error fetching roles:', rolesError);
+      return new Response(
+        JSON.stringify({ error: 'خطا در بررسی دسترسی' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (!roles || roles.length === 0) {
+      console.log('User does not have required roles');
       return new Response(
         JSON.stringify({ error: 'فقط مدیران می‌توانند به حساب کاربران دیگر دسترسی داشته باشند' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -68,12 +79,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log('Attempting to get target user:', target_user_id);
+
     // Get target user data
     const { data: targetUserData, error: targetUserError } = await supabaseAdmin.auth.admin.getUserById(target_user_id);
     
+    console.log('Target user fetch result:', { targetUserData, targetUserError });
+    
     if (targetUserError || !targetUserData) {
+      console.error('Error fetching target user:', targetUserError);
       return new Response(
-        JSON.stringify({ error: 'کاربر یافت نشد' }),
+        JSON.stringify({ error: 'کاربر یافت نشد: ' + (targetUserError?.message || 'unknown error') }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -94,15 +110,19 @@ Deno.serve(async (req) => {
       });
 
     // Create a magic link for the target user
+    console.log('Generating magic link for user:', targetUserData.user.email || target_user_id);
+    
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: targetUserData.user.email || `user-${target_user_id}@ahrom.example.com`,
     });
 
+    console.log('Magic link generation result:', { linkData, linkError });
+
     if (linkError || !linkData) {
       console.error('Magic link generation error:', linkError);
       return new Response(
-        JSON.stringify({ error: 'خطا در ایجاد لینک دسترسی' }),
+        JSON.stringify({ error: 'خطا در ایجاد لینک دسترسی: ' + (linkError?.message || 'unknown error') }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
