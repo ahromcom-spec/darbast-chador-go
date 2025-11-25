@@ -8,9 +8,11 @@ export default function NewLocation() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Get initial lat/lng if coming from map
-  const initialLat = location.state?.lat;
-  const initialLng = location.state?.lng;
+  // Get initial lat/lng if coming from map - ensure they are numbers
+  const initialLat = location.state?.lat ? Number(location.state.lat) : undefined;
+  const initialLng = location.state?.lng ? Number(location.state.lng) : undefined;
+
+  console.log('🗺️ NewLocation - Initial coordinates:', { initialLat, initialLng, state: location.state });
 
   const handleSuccess = (locationId: string) => {
     // Navigate to service selection with location ID

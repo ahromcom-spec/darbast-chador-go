@@ -169,12 +169,15 @@ export const locationSchema = z.object({
     .trim()
     .max(100, { message: 'عنوان نباید بیش از 100 کاراکتر باشد' })
     .transform(sanitizeHtml)
-    .optional(),
+    .optional()
+    .or(z.literal('')),
   province_id: z.string()
     .uuid({ message: 'استان الزامی است' }),
   district_id: z.string()
     .uuid({ message: 'شناسه شهرستان نامعتبر است' })
-    .optional(),
+    .optional()
+    .or(z.literal(''))
+    .nullable(),
   address_line: z.string()
     .trim()
     .min(5, { message: 'آدرس باید حداقل 5 کاراکتر باشد' })

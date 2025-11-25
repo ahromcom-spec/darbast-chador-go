@@ -75,6 +75,7 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
   };
 
   const handleLocationSelect = (lat: number, lng: number) => {
+    console.log('📍 Location selected from map:', { lat, lng, types: { lat: typeof lat, lng: typeof lng } });
     setFormData(prev => ({ ...prev, lat, lng }));
     setHasMapPin(true);
     toast({
@@ -97,15 +98,20 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
     }
 
     try {
+      // Debug: نمایش داده‌های فرم قبل از validation
+      console.log('📍 Form data before validation:', formData);
+      
       // Validate input data
       const validatedData = locationSchema.parse(formData);
       
+      console.log('✅ Validated data:', validatedData);
+      
       if (isEditMode && initialData) {
-        // Update existing location
+        // Update existing location - convert empty district_id to null
         await updateLocation(initialData.id, {
-          title: validatedData.title,
+          title: validatedData.title || undefined,
           province_id: validatedData.province_id,
-          district_id: validatedData.district_id,
+          district_id: validatedData.district_id && validatedData.district_id.length > 0 ? validatedData.district_id : undefined,
           address_line: validatedData.address_line,
           lat: validatedData.lat,
           lng: validatedData.lng
@@ -117,11 +123,11 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
         });
         onSuccess(initialData.id);
       } else {
-        // Create new location
+        // Create new location - convert empty district_id to null
         const location = await createLocation({
-          title: validatedData.title,
+          title: validatedData.title || undefined,
           province_id: validatedData.province_id,
-          district_id: validatedData.district_id,
+          district_id: validatedData.district_id && validatedData.district_id.length > 0 ? validatedData.district_id : undefined,
           address_line: validatedData.address_line,
           lat: validatedData.lat,
           lng: validatedData.lng
@@ -134,13 +140,17 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
         onSuccess(location.id);
       }
     } catch (error) {
+      console.error('❌ Error submitting location:', error);
+      
       if (error instanceof z.ZodError) {
+        console.error('📋 Validation errors:', error.errors);
         toast({
           title: 'خطای اعتبارسنجی',
           description: error.errors[0]?.message || 'داده‌های وارد شده معتبر نیستند',
           variant: 'destructive'
         });
       } else {
+        console.error('💥 Database error:', error);
         toast({
           title: 'خطا',
           description: isEditMode ? 'خطا در ویرایش آدرس' : 'خطا در ثبت آدرس',
