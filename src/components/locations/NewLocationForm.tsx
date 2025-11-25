@@ -23,7 +23,7 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
   const { provinces } = useProvinces();
   const { districts, fetchDistrictsByProvince } = useDistricts();
   const { toast } = useToast();
-  const isEditMode = !!initialData;
+  const isEditMode = !!initialData?.id;
 
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
