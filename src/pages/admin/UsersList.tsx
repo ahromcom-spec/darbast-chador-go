@@ -8,13 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Eye, Search } from 'lucide-react';
+import { Eye, Search, LogIn } from 'lucide-react';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useAdminLoginAsUser } from '@/hooks/useAdminLoginAsUser';
 
 export default function UsersList() {
   usePageTitle('مدیریت کاربران');
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const { loginAsUser, isLoading: isLoginAsUserLoading } = useAdminLoginAsUser();
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users-list'],
@@ -82,7 +84,7 @@ export default function UsersList() {
                   <TableHead className="text-right">شماره تماس</TableHead>
                   <TableHead className="text-right">نقش‌ها</TableHead>
                   <TableHead className="text-right">تاریخ ثبت‌نام</TableHead>
-                  <TableHead className="text-right">عملیات</TableHead>
+                  <TableHead className="text-center">عملیات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -111,14 +113,26 @@ export default function UsersList() {
                       {new Date(user.created_at).toLocaleDateString('fa-IR')}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/admin/users/${user.user_id}`)}
-                      >
-                        <Eye className="h-4 w-4 ml-2" />
-                        مشاهده پروفایل
-                      </Button>
+                      <div className="flex gap-2 justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/admin/users/${user.user_id}`)}
+                        >
+                          <Eye className="h-4 w-4 ml-2" />
+                          مشاهده
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => loginAsUser(user.user_id)}
+                          disabled={isLoginAsUserLoading}
+                          className="gap-2"
+                        >
+                          <LogIn className="h-4 w-4" />
+                          ورود
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
