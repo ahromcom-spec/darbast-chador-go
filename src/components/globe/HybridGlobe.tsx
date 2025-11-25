@@ -223,11 +223,20 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       if (newMedia.length > 0) {
         toast({ 
           title: 'موفق', 
-          description: `${newMedia.length} فایل با موفقیت آپلود شد.` 
+          description: `${newMedia.length} فایل با موفقیت آپلود شد و به گالری اضافه گردید.` 
         });
         
-        // بارگذاری مجدد داده‌ها بدون بستن popup
+        // بارگذاری مجدد داده‌ها
         await fetchProjectMedia();
+        
+        // نگه داشتن popup باز با داده‌های جدید
+        // پیدا کردن پروژه به‌روز شده
+        const updatedProject = projectsWithMedia.find(p => 
+          p.orders?.some(o => o.id === selectedOrderForUpload)
+        );
+        if (updatedProject) {
+          setSelectedProject(updatedProject);
+        }
         
         // بستن دیالوگ آپلود
         setSelectedOrderForUpload(null);
