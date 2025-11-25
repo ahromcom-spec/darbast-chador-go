@@ -413,10 +413,10 @@ export default function MyProjectsHierarchy() {
                                        notes = rawNotes;
                                      }
 
-                                     const dims = Array.isArray(notes?.dimensions) ? notes.dimensions : [];
-                                     const hasWidth = dims.length > 0 && ("width" in dims[0] || dims.some((d: any) => "width" in d));
+                                      const dims = Array.isArray(notes?.dimensions) ? notes.dimensions : [];
+                                      const hasWidth = dims.length > 0 && dims.some((d: any) => d && typeof d === 'object' && ('width' in d));
 
-                                     const dimensionsText = dims.length > 0
+                                      const dimensionsText = dims.length > 0
                                        ? dims.map((d: any) => {
                                            const l = d.length ?? d.L ?? d.l;
                                            const w = d.width ?? d.W ?? d.w;
@@ -425,28 +425,28 @@ export default function MyProjectsHierarchy() {
                                          }).join(' + ')
                                        : 'نامشخص';
 
-                                     // پشتیبانی از totalArea (حجم) و total_area (مساحت)
-                                     const computedFromDims = () => {
-                                       if (dims.length === 0) return 0;
-                                       return dims.reduce((sum: number, d: any) => {
-                                         const l = parseFloat(d.length ?? d.L ?? d.l ?? 0) || 0;
-                                         const w = parseFloat(d.width ?? d.W ?? d.w ?? 0) || 0;
-                                         const h = parseFloat(d.height ?? d.H ?? d.h ?? 0) || 0;
-                                         return sum + (hasWidth ? (l * w * h) : (l * h));
-                                       }, 0);
-                                     };
+                                      // پشتیبانی از totalArea (حجم) و total_area (مساحت)
+                                      const computedFromDims = () => {
+                                        if (dims.length === 0) return 0;
+                                        return dims.reduce((sum: number, d: any) => {
+                                          const l = parseFloat(d.length ?? d.L ?? d.l ?? 0) || 0;
+                                          const w = parseFloat(d.width ?? d.W ?? d.w ?? 0) || 0;
+                                          const h = parseFloat(d.height ?? d.H ?? d.h ?? 0) || 0;
+                                          return sum + (hasWidth ? (l * w * h) : (l * h));
+                                        }, 0);
+                                      };
 
-                                     const totalValue = typeof notes?.totalArea === 'number'
-                                       ? notes.totalArea
-                                       : (typeof notes?.total_area === 'number' ? notes.total_area : computedFromDims());
+                                      const totalValue = typeof notes?.totalArea === 'number'
+                                        ? notes.totalArea
+                                        : (typeof notes?.total_area === 'number' ? notes.total_area : computedFromDims());
 
-                                     const isArea = (notes && ("total_area" in notes)) || (!hasWidth && dims.length > 0);
-                                     const metricLabel = 'متراژ:';
-                                     const unit = isArea ? 'متر مربع' : 'متر مکعب';
+                                      const isArea = (notes && typeof notes === 'object' && notes !== null && ('total_area' in notes)) || (!hasWidth && dims.length > 0);
+                                      const metricLabel = 'متراژ:';
+                                      const unit = isArea ? 'متر مربع' : 'متر مکعب';
 
-                                     const estimatedPrice = typeof notes?.estimated_price === 'number'
-                                       ? notes.estimated_price
-                                       : (order.payment_amount || 0);
+                                      const estimatedPrice = typeof notes?.estimated_price === 'number'
+                                        ? notes.estimated_price
+                                        : (order.payment_amount || 0);
 
                                      return (
                                        <div

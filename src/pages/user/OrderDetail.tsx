@@ -131,6 +131,7 @@ export default function OrderDetail() {
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [loading, setLoading] = useState(true);
   const [parsedNotes, setParsedNotes] = useState<any>(null);
+  const [notesParseError, setNotesParseError] = useState(false);
   const [completionDate, setCompletionDate] = useState('');
   const [isRenewing, setIsRenewing] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
@@ -258,6 +259,7 @@ export default function OrderDetail() {
       setOrder(orderData);
 
       // Parse notes if exists
+      setNotesParseError(false);
       if (orderData.notes) {
         try {
           const notes = typeof orderData.notes === 'string' 
@@ -268,8 +270,8 @@ export default function OrderDetail() {
           setParsedNotes(validated.success ? validated.data : notes);
         } catch (e) {
           console.error('Error parsing notes:', e);
-          // Set raw notes if parsing fails to prevent blank screen
-          setParsedNotes(typeof orderData.notes === 'string' ? JSON.parse(orderData.notes) : orderData.notes);
+          setParsedNotes(null);
+          setNotesParseError(true);
         }
       } else {
         setParsedNotes(null);
@@ -609,7 +611,7 @@ export default function OrderDetail() {
           </Card>
 
           {/* Order Details from Notes or Payment Amount */}
-          {(parsedNotes || order.payment_amount) && (
+          {(parsedNotes || order.payment_amount || notesParseError) && (
             <Card>
               <CardHeader>
                 <CardTitle>جزئیات سفارش</CardTitle>
@@ -748,6 +750,12 @@ export default function OrderDetail() {
                       ))}
                     </div>
                   </div>
+                )}
+
+                {notesParseError && (
+                  <p className="text-sm text-muted-foreground">
+                    جزئیات فنی این سفارش در دسترس نیست.
+                  </p>
                 )}
               </CardContent>
             </Card>
