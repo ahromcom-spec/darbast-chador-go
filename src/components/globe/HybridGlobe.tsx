@@ -880,9 +880,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 });
               }
               
-              // کلیک روی کادر افزودن - فتح file picker مباشرة
+              // کلیک روی کادر افزودن - فتح file picker مباشرة ورفع الملفات
               if (addMediaCard) {
-                addMediaCard.addEventListener('click', (e) => {
+                addMediaCard.addEventListener('click', async (e) => {
                   e.stopPropagation();
                   // فتح file picker مباشرة
                   const input = document.createElement('input');
@@ -892,12 +892,41 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   input.onchange = async (event) => {
                     const files = (event.target as HTMLInputElement).files;
                     if (files && files.length > 0) {
-                      // رفع الملفات ثم الانتقال إلى صفحة OrderDetail
-                      const uploadedFiles = Array.from(files);
-                      // التنقل إلى صفحة تفاصيل الطلب بعد اختيار الملفات
-                      navigate(`/order/${order.id}`, { 
-                        state: { uploadFiles: uploadedFiles } 
-                      });
+                      try {
+                        // رفع الملفات مباشرة
+                        const uploadPromises = Array.from(files).map(async (file) => {
+                          const fileExt = file.name.split('.').pop();
+                          const fileName = `${Math.random()}.${fileExt}`;
+                          const filePath = `${order.id}/${fileName}`;
+
+                          const { error: uploadError } = await supabase.storage
+                            .from('project_media')
+                            .upload(filePath, file);
+
+                          if (uploadError) throw uploadError;
+
+                          // حفظ في قاعدة البيانات
+                          const { error: dbError } = await supabase
+                            .from('project_media')
+                            .insert({
+                              project_id: order.id,
+                              file_path: filePath,
+                              file_type: file.type.startsWith('image/') ? 'image' : 'video',
+                              mime_type: file.type,
+                              file_size: file.size,
+                              user_id: (await supabase.auth.getUser()).data.user?.id
+                            });
+
+                          if (dbError) throw dbError;
+                        });
+
+                        await Promise.all(uploadPromises);
+                        
+                        // الانتقال إلى صفحة تفاصيل الطلب بعد الرفع الناجح
+                        navigate(`/orders/${order.id}`);
+                      } catch (error) {
+                        console.error('Error uploading files:', error);
+                      }
                     }
                   };
                   input.click();
