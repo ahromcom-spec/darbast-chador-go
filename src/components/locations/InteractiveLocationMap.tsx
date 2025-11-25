@@ -292,6 +292,29 @@ export function InteractiveLocationMap({
         qomCenterMarker.current = new mapboxgl.Marker({ element: qomEl, anchor: 'bottom' })
           .setLngLat([QOM_CENTER.lng, QOM_CENTER.lat])
           .addTo(map.current!);
+
+        // اگر موقعیت اولیه از نقشه کره زمین آمده، مارکر آن را نمایش بده
+        if (initialLat !== 34.6416 || initialLng !== 50.8746) {
+          const el = document.createElement('div');
+          el.className = 'custom-mapbox-marker';
+          el.innerHTML = `
+            <div class="marker-animation">
+              <svg width="40" height="50" viewBox="0 0 40 50">
+                <path d="M20 0C8.954 0 0 8.954 0 20c0 15 20 30 20 30s20-15 20-30c0-11.046-8.954-20-20-20z" 
+                  fill="hsl(var(--primary))" stroke="white" stroke-width="3"/>
+                <circle cx="20" cy="20" r="8" fill="white"/>
+                <circle cx="20" cy="20" r="4" fill="hsl(var(--primary))"/>
+              </svg>
+            </div>
+          `;
+
+          marker.current = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([initialLng, initialLat])
+            .addTo(map.current!);
+
+          setSelectedPosition({ lat: initialLat, lng: initialLng });
+          onLocationSelect(initialLat, initialLng);
+        }
       });
 
       // Hide upload popup when clicking elsewhere on map
