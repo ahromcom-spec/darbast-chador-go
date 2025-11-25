@@ -861,14 +861,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         </Button>
 
         {/* کارت تعداد پروژه‌ها */}
-        <Card className="pointer-events-auto absolute top-6 left-6 bg-card shadow-2xl border-2 border-primary/20 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <MapPin className="h-6 w-6 text-primary" />
+        <Card className="pointer-events-auto absolute top-24 left-6 bg-card shadow-2xl border-2 border-primary/20 p-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-primary/10 rounded-lg">
+              <MapPin className="h-5 w-5 text-primary" />
             </div>
             <div className="flex flex-col">
-              <span className="text-2xl font-bold text-primary">{projectsWithMedia.length}</span>
-              <span className="text-sm text-muted-foreground">پروژه فعال</span>
+              <span className="text-xl font-bold text-primary">{projectsWithMedia.length}</span>
+              <span className="text-xs text-muted-foreground">پروژه فعال</span>
             </div>
           </div>
         </Card>
