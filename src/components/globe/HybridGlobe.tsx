@@ -737,7 +737,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         // لیست سفارشات پروژه
         const ordersHTML = project.orders && project.orders.length > 0
           ? `
-            <div style="margin-top:12px;padding:10px;background:#f9fafb;border-radius:8px;max-height:60vh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;">
+            <div style="margin-top:12px;padding:10px;background:#f9fafb;border-radius:8px;max-height:60vh;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;">
               <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;">سفارشات این پروژه (${project.orders.length})</div>
               ${project.orders.map((order, orderIdx) => {
                 const allMedia = (order.media || []).sort((a, b) => {
