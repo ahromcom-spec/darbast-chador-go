@@ -26,7 +26,7 @@ interface ProjectOrder {
   status: string;
   address: string;
   created_at: string;
-  subcategory?: { name: string };
+  subcategory?: { name: string; code: string };
   media?: HierarchyMedia[];
 }
 
@@ -330,7 +330,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       // دریافت سفارشات
       const { data: v3Orders } = await supabase
         .from('projects_v3')
-        .select('id, code, status, address, created_at, hierarchy_project_id, subcategory:subcategories(name)')
+        .select('id, code, status, address, created_at, hierarchy_project_id, subcategory:subcategories(name, code)')
         .in('hierarchy_project_id', projectIds)
         .limit(200);
 
@@ -790,7 +790,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                       </div>
                       <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
                         <button 
-                          onclick="window.dispatchEvent(new CustomEvent('viewOrderDetail-${order.id}'))"
+                          class="view-order-detail-${order.id}"
+                          data-order-id="${order.id}"
+                          data-subcategory-code="${order.subcategory?.code || ''}"
                           style="width:100%;padding:8px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:11px;font-family:inherit;"
                         >
                           مشاهده جزئیات سفارش
@@ -837,13 +839,23 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 return 0;
               });
               
-              // کلیک روی کارت سفارش برای نمایش جزئیات
-              const orderCard = popupElement.querySelector(`.order-card-${order.id}`);
-              if (orderCard) {
-                orderCard.addEventListener('click', (e) => {
-                  // اگر روی دکمه‌های گالری کلیک نشده
-                  if (!(e.target as HTMLElement).closest('button') && !(e.target as HTMLElement).closest(`.order-video-item-${order.id}`)) {
-                    window.location.href = `/orders/${order.id}`;
+              // کلیک روی دکمه "مشاهده جزئیات سفارش"
+              const viewDetailBtn = popupElement.querySelector(`.view-order-detail-${order.id}`);
+              if (viewDetailBtn) {
+                viewDetailBtn.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  const orderId = (viewDetailBtn as HTMLElement).dataset.orderId;
+                  const subcategoryCode = (viewDetailBtn as HTMLElement).dataset.subcategoryCode;
+                  
+                  if (subcategoryCode === '10') {
+                    // داربست اجرا با اجناس
+                    window.location.href = `/scaffolding/form?orderId=${orderId}`;
+                  } else if (subcategoryCode === '30') {
+                    // اجاره داربست
+                    window.location.href = `/scaffolding/rental?orderId=${orderId}`;
+                  } else {
+                    // سایر سفارشات - به صفحه جزئیات سفارش
+                    window.location.href = `/user/form-not-available`;
                   }
                 });
               }
