@@ -242,7 +242,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   };
 
 
-  // دریافت عکس‌های پروژه‌ها - با useMemo برای بهینه‌سازی
+  // دریافت عکس‌های پروژه‌ها - بهینه‌سازی شده
   const fetchProjectMedia = useCallback(async () => {
     if (projects.length === 0) {
       console.debug('[HybridGlobe] No projects to fetch media for');
@@ -252,72 +252,66 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     console.debug('[HybridGlobe] Fetching media for', projects.length, 'projects');
     
     try {
-      const projectIds = projects.map(function(p) { return p.id; });
+      const projectIds = projects.map(p => p.id);
       
-      // تصاویر و ویدیوهای متصل مستقیم به پروژه‌های hierarchy
-      const { data: phMedia } = await supabase
-        .from('project_hierarchy_media')
-        .select('id, hierarchy_project_id, file_path, file_type, created_at, mime_type')
-        .in('hierarchy_project_id', projectIds)
-        .in('file_type', ['image', 'video'])
-        .order('created_at', { ascending: false });
+      // دریافت موازی داده‌ها برای سرعت بیشتر
+      const [phMediaResult, v3Result] = await Promise.all([
+        supabase
+          .from('project_hierarchy_media')
+          .select('id, hierarchy_project_id, file_path, file_type, created_at, mime_type')
+          .in('hierarchy_project_id', projectIds)
+          .in('file_type', ['image', 'video'])
+          .order('created_at', { ascending: false })
+          .limit(100), // محدودیت برای بهینه‌سازی
+        
+        supabase
+          .from('projects_v3')
+          .select('id, hierarchy_project_id')
+          .in('hierarchy_project_id', projectIds)
+      ]);
 
-      console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia ? phMedia.length : 0);
+      const phMedia = phMediaResult.data;
+      const v3 = v3Result.data;
 
-      // پشتیبانی سازگاری قدیمی: تصاویر موجود در project_media از طریق projects_v3
-      const { data: v3 } = await supabase
-        .from('projects_v3')
-        .select('id, hierarchy_project_id')
-        .in('hierarchy_project_id', projectIds);
+      console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
 
       let pmMedia: { project_id: string; file_path: string; file_type: string; created_at: string; mime_type?: string }[] = [];
       if (v3 && v3.length > 0) {
-        const v3Ids = v3.map(function(x) { return x.id; });
+        const v3Ids = v3.map(x => x.id);
         const { data } = await supabase
           .from('project_media')
           .select('project_id, file_path, file_type, created_at, mime_type')
           .in('project_id', v3Ids)
           .eq('file_type', 'image')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(100);
         pmMedia = data || [];
       }
 
       console.debug('[HybridGlobe] Project media fetched:', pmMedia.length);
 
-      // نگاشت id پروژه سلسله‌مراتبی به لیست تصاویر (ترکیب هر دو منبع)
+      // استفاده از Map برای بهینه‌سازی جستجو
       const mediaByProject = new Map<string, HierarchyMedia[]>();
 
-      // از جدول جدید
       if (phMedia) {
-        phMedia.forEach(function(m) {
+        phMedia.forEach(m => {
           const pid = m.hierarchy_project_id;
           if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
-          const arr = mediaByProject.get(pid);
-          if (arr) arr.push({ id: m.id, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
+          mediaByProject.get(pid)!.push({ 
+            id: m.id, 
+            file_path: m.file_path, 
+            file_type: m.file_type, 
+            created_at: m.created_at, 
+            mime_type: m.mime_type 
+          });
         });
       }
 
-      // از جدول قدیمی
-      pmMedia.forEach(function(m) {
-        const pid = v3 ? v3.find(function(v) { return v.id === m.project_id; })?.hierarchy_project_id : undefined;
+      pmMedia.forEach(m => {
+        const pid = v3?.find(v => v.id === m.project_id)?.hierarchy_project_id;
         if (!pid) return;
         if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
-        const arr = mediaByProject.get(pid);
-        if (arr) arr.push({ id: m.project_id + '-' + m.created_at, file_path: m.file_path, file_type: m.file_type, created_at: m.created_at, mime_type: m.mime_type });
-      });
-
-      // دریافت سفارشات (projects_v3) مرتبط
-      const { data: v3Orders } = await supabase
-        .from('projects_v3')
-        .select('id, code, status, address, created_at, hierarchy_project_id, subcategory:subcategories(name)')
-        .in('hierarchy_project_id', projectIds);
-
-      // نگاشت رسانه‌های سفارش
-      const orderMediaMap = new Map<string, HierarchyMedia[]>();
-      pmMedia.forEach(function(m) {
-        if (!orderMediaMap.has(m.project_id)) orderMediaMap.set(m.project_id, []);
-        const arr = orderMediaMap.get(m.project_id);
-        if (arr) arr.push({ 
+        mediaByProject.get(pid)!.push({ 
           id: m.project_id + '-' + m.created_at, 
           file_path: m.file_path, 
           file_type: m.file_type, 
@@ -326,16 +320,33 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         });
       });
 
-      // گروه‌بندی سفارشات به پروژه
+      // دریافت سفارشات
+      const { data: v3Orders } = await supabase
+        .from('projects_v3')
+        .select('id, code, status, address, created_at, hierarchy_project_id, subcategory:subcategories(name)')
+        .in('hierarchy_project_id', projectIds)
+        .limit(200);
+
+      const orderMediaMap = new Map<string, HierarchyMedia[]>();
+      pmMedia.forEach(m => {
+        if (!orderMediaMap.has(m.project_id)) orderMediaMap.set(m.project_id, []);
+        orderMediaMap.get(m.project_id)!.push({ 
+          id: m.project_id + '-' + m.created_at, 
+          file_path: m.file_path, 
+          file_type: m.file_type, 
+          created_at: m.created_at, 
+          mime_type: m.mime_type 
+        });
+      });
+
       const ordersByProject = new Map<string, ProjectOrder[]>();
       if (v3Orders) {
-        v3Orders.forEach(function(order) {
+        v3Orders.forEach(order => {
           if (!order.hierarchy_project_id) return;
           if (!ordersByProject.has(order.hierarchy_project_id)) {
             ordersByProject.set(order.hierarchy_project_id, []);
           }
-          const arr = ordersByProject.get(order.hierarchy_project_id);
-          if (arr) arr.push({
+          ordersByProject.get(order.hierarchy_project_id)!.push({
             id: order.id,
             code: order.code,
             status: order.status,
@@ -347,34 +358,30 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         });
       }
 
-      // ترکیب نهایی
-      const projectsWithMediaData: ProjectWithMedia[] = projects.map(function(project) {
-        const list = (mediaByProject.get(project.id) || []).sort(function(a, b) { return a.created_at > b.created_at ? -1 : 1; });
-        const orders = (ordersByProject.get(project.id) || []).sort(function(a, b) { return a.created_at > b.created_at ? -1 : 1; });
-        return { ...project, media: list.slice(0, 2), orders: orders };
+      // ترکیب نهایی با بهینه‌سازی
+      const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => {
+        const list = (mediaByProject.get(project.id) || [])
+          .sort((a, b) => a.created_at > b.created_at ? -1 : 1)
+          .slice(0, 2); // فقط 2 تصویر اول
+        const orders = (ordersByProject.get(project.id) || [])
+          .sort((a, b) => a.created_at > b.created_at ? -1 : 1);
+        return { ...project, media: list, orders };
       });
 
-      console.debug('[HybridGlobe] Projects with media and orders prepared:', projectsWithMediaData.length, 
-        'sample:', projectsWithMediaData.slice(0, 1).map(p => ({ 
-          id: p.id, 
-          title: p.title, 
-          mediaCount: p.media?.length,
-          ordersCount: p.orders?.length
-        }))
-      );
+      console.debug('[HybridGlobe] Projects with media prepared:', projectsWithMediaData.length);
       
       setProjectsWithMedia(projectsWithMediaData);
       
-      // تابع global برای باز کردن ویدیو در تب جدید
+      // تابع global برای ویدیو
       (window as any).openProjectVideo = (videoUrl: string, mimeType: string) => {
-        console.log('[Video] openProjectVideo called - opening in new tab:', videoUrl);
+        console.log('[Video] Opening in new tab:', videoUrl);
         window.open(videoUrl, '_blank');
       };
     } catch (error) {
       console.error('خطا در دریافت عکس‌های پروژه:', error);
       setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     }
-  }, [projects, toast]);
+  }, [projects]);
 
   // دریافت توکن Mapbox برای نمایش قواره‌های ساختمان‌ها
   useEffect(() => {
@@ -411,39 +418,49 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    // ایجاد نقشه با مرکز ایران
+    // ایجاد نقشه با مرکز ایران - بهینه‌سازی شده
     const map = L.map(mapContainer.current, {
-      center: [32.4279, 53.6880], // مرکز ایران
+      center: [32.4279, 53.6880],
       zoom: 6,
       minZoom: 5,
       maxZoom: 22,
       scrollWheelZoom: true,
       zoomControl: true,
+      preferCanvas: true, // استفاده از Canvas برای عملکرد بهتر
+      renderer: L.canvas({ tolerance: 5 }), // بهینه‌سازی رندرینگ
+      trackResize: true,
     });
 
     mapRef.current = map;
 
-    // اضافه کردن لایه تایل OpenStreetMap
+    // لایه تایل با کش و بهینه‌سازی
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 22,
+      updateWhenIdle: false,
+      updateWhenZooming: false,
+      keepBuffer: 4, // نگهداری تایل‌ها در حافظه
+      maxNativeZoom: 19,
     }).addTo(map);
 
-    // بستن پنجره آپلود با کلیک روی نقشه
+    // بستن پنجره با debounce
+    let clickTimeout: NodeJS.Timeout;
     map.on('click', (e: L.LeafletMouseEvent) => {
-      // بررسی اینکه آیا کلیک روی مارکر بوده یا نه
-      const clickedOnMarker = (e.originalEvent.target as HTMLElement)?.closest('.leaflet-marker-icon');
-      if (!clickedOnMarker) {
-        setSelectedProject(null);
-      }
+      clearTimeout(clickTimeout);
+      clickTimeout = setTimeout(() => {
+        const clickedOnMarker = (e.originalEvent.target as HTMLElement)?.closest('.leaflet-marker-icon');
+        if (!clickedOnMarker) {
+          setSelectedProject(null);
+        }
+      }, 100);
     });
 
-    // منتظر بمانیم تا نقشه کاملاً آماده شود
     map.whenReady(() => {
       setMapReady(true);
     });
 
     return () => {
+      clearTimeout(clickTimeout);
       setMapReady(false);
       if (mapRef.current) {
         mapRef.current.remove();
