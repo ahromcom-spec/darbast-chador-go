@@ -62,7 +62,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [mapboxToken, setMapboxToken] = useState<string>('');
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [tempMarker, setTempMarker] = useState<L.Marker | null>(null);
+  const tempMarkerRef = useRef<L.Marker | null>(null);
 
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
@@ -491,8 +491,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           setSelectedOrderForUpload(null);
           
           // حذف مارکر موقت قبلی اگر وجود دارد
-          if (tempMarker) {
-            map.removeLayer(tempMarker);
+          if (tempMarkerRef.current) {
+            map.removeLayer(tempMarkerRef.current);
+            tempMarkerRef.current = null;
           }
 
           // ایجاد مارکر موقت جدید با آیکون پین
@@ -584,7 +585,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             }
           }, 100);
           
-          setTempMarker(newTempMarker);
+          tempMarkerRef.current = newTempMarker;
           setSelectedMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
         }
       }, 100);
@@ -597,8 +598,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     return () => {
       clearTimeout(clickTimeout);
       setMapReady(false);
-      if (tempMarker && mapRef.current) {
-        mapRef.current.removeLayer(tempMarker);
+      if (tempMarkerRef.current && mapRef.current) {
+        mapRef.current.removeLayer(tempMarkerRef.current);
+        tempMarkerRef.current = null;
       }
       if (mapRef.current) {
         mapRef.current.remove();
