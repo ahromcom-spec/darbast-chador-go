@@ -40,8 +40,8 @@ export function CEOManagementSection({ userId, userEmail }: CEOManagementSection
       bgColor: 'bg-purple-50',
     },
     {
-      title: 'مشاهده کاربران',
-      description: 'لیست کامل کاربران سیستم',
+      title: 'ورود به حساب کاربران',
+      description: 'ورود به حساب کاربران برای انجام کار',
       icon: Users,
       href: '/admin/users',
       color: 'text-orange-600',
