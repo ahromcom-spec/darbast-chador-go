@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { NewLocationForm } from './NewLocationForm';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LocationSelectorProps {
   onLocationSelected: (locationId: string) => void;
@@ -16,6 +17,7 @@ interface LocationSelectorProps {
 export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) => {
   const { locations, loading, deleteLocation, refetch } = useLocations();
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [locationProjectCounts, setLocationProjectCounts] = useState<Record<string, number>>({});
 
   // Auto-select first location when locations load
   useEffect(() => {
@@ -23,6 +25,29 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
       setSelectedLocationId(locations[0].id);
     }
   }, [locations, selectedLocationId]);
+
+  // بارگذاری تعداد پروژه‌های هر مکان
+  useEffect(() => {
+    const fetchProjectCounts = async () => {
+      if (locations.length === 0) return;
+      
+      const locationIds = locations.map(loc => loc.id);
+      const { data } = await supabase
+        .from('projects_hierarchy')
+        .select('location_id')
+        .in('location_id', locationIds);
+      
+      if (data) {
+        const counts: Record<string, number> = {};
+        data.forEach(project => {
+          counts[project.location_id] = (counts[project.location_id] || 0) + 1;
+        });
+        setLocationProjectCounts(counts);
+      }
+    };
+    
+    fetchProjectCounts();
+  }, [locations]);
   const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
@@ -58,6 +83,13 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
   };
 
   const handleDeleteClick = (locationId: string) => {
+    // بررسی وجود پروژه برای این مکان
+    const projectCount = locationProjectCounts[locationId] || 0;
+    if (projectCount > 0) {
+      toast.error(`این آدرس دارای ${projectCount} پروژه فعال است و قابل حذف نیست`);
+      return;
+    }
+    
     setDeletingLocationId(locationId);
     setShowDeleteDialog(true);
   };
@@ -113,17 +145,23 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
         </div>
       ) : (
         <div className="grid gap-3">
-          {locations.map((location) => (
-            <LocationCard
-              key={location.id}
-              location={location}
-              selected={selectedLocationId === location.id}
-              onSelect={() => handleSelectLocation(location)}
-              onEdit={() => handleEditLocation(location)}
-              onDelete={() => handleDeleteClick(location.id)}
-              onConfirm={handleConfirm}
-            />
-          ))}
+          {locations.map((location) => {
+            const projectCount = locationProjectCounts[location.id] || 0;
+            const canDelete = projectCount === 0;
+            
+            return (
+              <LocationCard
+                key={location.id}
+                location={location}
+                selected={selectedLocationId === location.id}
+                onSelect={() => handleSelectLocation(location)}
+                onEdit={canDelete ? () => handleEditLocation(location) : undefined}
+                onDelete={canDelete ? () => handleDeleteClick(location.id) : undefined}
+                onConfirm={handleConfirm}
+                projectCount={projectCount}
+              />
+            );
+          })}
         </div>
       )}
 

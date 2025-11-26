@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { MapPin, Trash2, Edit } from 'lucide-react';
 import { Location } from '@/hooks/useLocations';
 
@@ -10,9 +11,10 @@ interface LocationCardProps {
   onEdit?: () => void;
   onConfirm?: () => void;
   selected?: boolean;
+  projectCount?: number;
 }
 
-export const LocationCard = ({ location, onSelect, onDelete, onEdit, onConfirm, selected }: LocationCardProps) => {
+export const LocationCard = ({ location, onSelect, onDelete, onEdit, onConfirm, selected, projectCount }: LocationCardProps) => {
   return (
     <Card 
       className={`transition-all ${
@@ -27,9 +29,16 @@ export const LocationCard = ({ location, onSelect, onDelete, onEdit, onConfirm, 
           >
             <MapPin className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
             <div className="flex-1">
-              {location.title && (
-                <h3 className="font-semibold mb-1">{location.title}</h3>
-              )}
+              <div className="flex items-center gap-2 mb-1">
+                {location.title && (
+                  <h3 className="font-semibold">{location.title}</h3>
+                )}
+                {projectCount !== undefined && projectCount > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {projectCount} پروژه
+                  </Badge>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">{location.address_line}</p>
               <div className="flex gap-2 mt-1 text-xs text-muted-foreground">
                 {location.provinces && <span>{location.provinces.name}</span>}
