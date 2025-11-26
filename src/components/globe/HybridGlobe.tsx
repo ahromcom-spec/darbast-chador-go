@@ -1355,7 +1355,23 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               }).join('')}
             </div>
           `
-          : '';
+          : `
+            <div style="margin-top:10px;padding:16px;background:#f9fafb;border:2px dashed #d1d5db;border-radius:12px;text-align:center;">
+              <div style="font-size:24px;margin-bottom:8px;">📦</div>
+              <div style="font-size:12px;color:#6b7280;margin-bottom:12px;font-family:Vazirmatn,sans-serif;">
+                این پروژه هیچ سفارشی ندارد
+              </div>
+              <button 
+                class="delete-project-btn"
+                data-project-id="${project.id}"
+                style="background:#ef4444;color:white;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:11px;font-family:Vazirmatn,sans-serif;font-weight:600;transition:background 0.2s;"
+                onmouseover="this.style.background='#dc2626'"
+                onmouseout="this.style.background='#ef4444'"
+              >
+                🗑️ حذف پروژه
+              </button>
+            </div>
+          `;
 
         const popupContent = `
           <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 340px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
@@ -1557,6 +1573,43 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 }
               }
             });
+          }
+          
+          // هندلر برای حذف پروژه بدون سفارش
+          if (!project.orders || project.orders.length === 0) {
+            const deleteProjectBtn = popupElement.querySelector('.delete-project-btn');
+            if (deleteProjectBtn) {
+              deleteProjectBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                
+                if (confirm('آیا از حذف این پروژه اطمینان دارید؟')) {
+                  try {
+                    const { error } = await supabase
+                      .from('projects_hierarchy')
+                      .delete()
+                      .eq('id', project.id);
+
+                    if (error) throw error;
+
+                    toast({
+                      title: "پروژه حذف شد",
+                      description: "پروژه با موفقیت حذف شد",
+                    });
+
+                    // بستن popup و بارگذاری مجدد
+                    marker.closePopup();
+                    refetch();
+                  } catch (error) {
+                    console.error('Error deleting project:', error);
+                    toast({
+                      title: "خطا در حذف",
+                      description: "امکان حذف پروژه وجود ندارد",
+                      variant: "destructive",
+                    });
+                  }
+                }
+              });
+            }
           }
           
           // هندلر برای گالری اصلی پروژه
