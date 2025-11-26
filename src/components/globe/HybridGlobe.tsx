@@ -71,6 +71,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // آدرس‌های بدون پروژه
+  const [locationsWithoutProjects, setLocationsWithoutProjects] = useState<any[]>([]);
 
   const { projects: allProjects, loading } = useProjectsHierarchy();
   
@@ -635,6 +638,37 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       console.error('خطا در دریافت عکس‌های پروژه:', error);
       setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     }
+  }, [projects]);
+
+  // دریافت آدرس‌های بدون پروژه
+  useEffect(() => {
+    const fetchLocationsWithoutProjects = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // دریافت همه locations فعال کاربر
+        const { data: allLocations, error } = await supabase
+          .from('locations')
+          .select('id, title, address_line, lat, lng, province_id, district_id, provinces(name), districts(name)')
+          .eq('user_id', user.id)
+          .eq('is_active', true);
+
+        if (error) throw error;
+        
+        // location هایی که در projects موجود نیستند
+        const projectLocationIds = projects.map(p => p.location_id);
+        const locationsWithoutProj = (allLocations || []).filter(
+          loc => !projectLocationIds.includes(loc.id)
+        );
+        
+        setLocationsWithoutProjects(locationsWithoutProj);
+      } catch (error) {
+        console.error('خطا در دریافت آدرس‌های بدون پروژه:', error);
+      }
+    };
+
+    fetchLocationsWithoutProjects();
   }, [projects]);
 
   // دریافت توکن Mapbox برای نمایش قواره‌های ساختمان‌ها
@@ -1628,6 +1662,108 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       });
     });
 
+    // اضافه کردن markers برای آدرس‌های بدون پروژه
+    locationsWithoutProjects.forEach(location => {
+      if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) return;
+
+      // آیکون آبی برای location های بدون پروژه
+      const blueIcon = L.divIcon({
+        html: `<div style="width:30px;height:30px;background:#3b82f6;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+          <span style="color:white;font-size:16px;">📍</span>
+        </div>`,
+        className: 'location-without-project-icon',
+        iconSize: [30, 30],
+        iconAnchor: [15, 30],
+        popupAnchor: [0, -30]
+      });
+
+      const marker = L.marker([location.lat, location.lng], {
+        icon: blueIcon,
+        opacity: 0 // مخفی در ابتدا
+      }).addTo(mapRef.current!);
+
+      const popupContent = `
+        <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 220px;">
+          <div style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:white;padding:8px 12px;border-radius:8px 8px 0 0;margin:-8px -8px 8px -8px;text-align:center;">
+            <span style="font-size:12px;font-weight:bold;">📍 آدرس بدون پروژه</span>
+          </div>
+          ${location.title ? `<div style="font-size:12px;font-weight:600;color:#3b82f6;margin-bottom:6px;">${location.title}</div>` : ''}
+          <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">${location.address_line}</div>
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:10px;">
+            ${location.provinces?.name || ''} ${location.districts?.name ? '- ' + location.districts.name : ''}
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button 
+              class="edit-location-${location.id}"
+              style="flex:1;padding:6px;background:#f3f4f6;color:#1f2937;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;transition:all 0.2s;"
+              onmouseover="this.style.background='#e5e7eb'"
+              onmouseout="this.style.background='#f3f4f6'"
+            >
+              ویرایش
+            </button>
+            <button 
+              class="delete-location-${location.id}"
+              style="flex:1;padding:6px;background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;transition:all 0.2s;"
+              onmouseover="this.style.background='#fecaca'"
+              onmouseout="this.style.background='#fee2e2'"
+            >
+              حذف آدرس
+            </button>
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent, {
+        maxWidth: 260,
+        className: 'custom-popup'
+      });
+
+      // Event listeners برای دکمه‌ها
+      marker.on('popupopen', () => {
+        const popup = marker.getPopup();
+        if (!popup) return;
+        const popupElement = popup.getElement();
+        if (!popupElement) return;
+
+        // دکمه ویرایش
+        const editBtn = popupElement.querySelector(`.edit-location-${location.id}`);
+        if (editBtn) {
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigate('/user/new-location', { 
+              state: { 
+                editMode: true, 
+                locationData: {
+                  id: location.id,
+                  title: location.title,
+                  address: location.address_line,
+                  lat: location.lat,
+                  lng: location.lng,
+                  province_id: location.province_id,
+                  district_id: location.district_id
+                }
+              } 
+            });
+          });
+        }
+
+        // دکمه حذف
+        const deleteBtn = popupElement.querySelector(`.delete-location-${location.id}`);
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setDeleteLocationId(location.id);
+          });
+        }
+      });
+
+      marker.on('click', () => {
+        setSelectedMapLocation(null); // Clear map location selection
+      });
+
+      markersRef.current.push(marker);
+    });
+
     // انیمیشن زوم از نمای کل ایران به پروژه‌ها (مثل Google Earth)
     const allMarkers = markersRef.current;
     console.debug('[HybridGlobe] Total markers created:', allMarkers.length);
@@ -1660,7 +1796,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     } else {
       console.warn('[HybridGlobe] No markers to display on map');
     }
-  }, [projectsWithMedia, loading, mapReady]);
+  }, [projectsWithMedia, loading, mapReady, locationsWithoutProjects, navigate]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
