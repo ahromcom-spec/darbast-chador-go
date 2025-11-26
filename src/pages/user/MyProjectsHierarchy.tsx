@@ -84,6 +84,10 @@ export default function MyProjectsHierarchy() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+  const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
+  const [isDeletingLocation, setIsDeletingLocation] = useState(false);
   const orderRefs = useRef<Record<string, HTMLDivElement | null>>({});
   useEffect(() => {
     fetchHierarchyData();
@@ -311,6 +315,52 @@ export default function MyProjectsHierarchy() {
     }
   };
 
+  const handleDeleteProject = async () => {
+    if (!deleteProjectId) return;
+    
+    setIsDeletingProject(true);
+    try {
+      const { error } = await supabase
+        .from('projects_hierarchy')
+        .delete()
+        .eq('id', deleteProjectId);
+
+      if (error) throw error;
+
+      toast.success("پروژه با موفقیت حذف شد");
+      setDeleteProjectId(null);
+      await fetchHierarchyData();
+    } catch (error: any) {
+      console.error('Error deleting project:', error);
+      toast.error("خطا در حذف پروژه");
+    } finally {
+      setIsDeletingProject(false);
+    }
+  };
+
+  const handleDeleteLocation = async () => {
+    if (!deleteLocationId) return;
+    
+    setIsDeletingLocation(true);
+    try {
+      const { error } = await supabase
+        .from('locations')
+        .delete()
+        .eq('id', deleteLocationId);
+
+      if (error) throw error;
+
+      toast.success("آدرس با موفقیت حذف شد");
+      setDeleteLocationId(null);
+      await fetchHierarchyData();
+    } catch (error: any) {
+      console.error('Error deleting location:', error);
+      toast.error("خطا در حذف آدرس");
+    } finally {
+      setIsDeletingLocation(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -395,6 +445,20 @@ export default function MyProjectsHierarchy() {
                     <Badge variant="secondary">
                       {projectCount} پروژه
                     </Badge>
+                    {projectCount === 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteLocationId(address.id);
+                        }}
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                        <span className="text-xs">حذف</span>
+                      </Button>
+                    )}
                     {isExpanded ? (
                       <ChevronDown className="h-5 w-5" />
                     ) : (
@@ -441,6 +505,20 @@ export default function MyProjectsHierarchy() {
                                 <Badge variant="outline" className="text-xs">
                                   {orderCount} سفارش
                                 </Badge>
+                                {orderCount === 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteProjectId(project.id);
+                                    }}
+                                  >
+                                    <XCircle className="h-3.5 w-3.5" />
+                                    <span className="text-xs">حذف</span>
+                                  </Button>
+                                )}
                                 {isProjectExpanded ? (
                                   <ChevronDown className="h-4 w-4" />
                                 ) : (
@@ -667,6 +745,60 @@ export default function MyProjectsHierarchy() {
               }}
             >
               {isDeleting ? 'در حال حذف...' : 'تایید حذف سفارش'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Project Dialog */}
+      <AlertDialog open={!!deleteProjectId} onOpenChange={() => setDeleteProjectId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف پروژه</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا مطمئن هستید می‌خواهید این پروژه را حذف کنید؟ این عملیات قابل بازگشت نیست. توجه: فقط پروژه‌هایی که سفارشی ندارند قابل حذف هستند.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingProject}>
+              انصراف
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeletingProject}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteProject();
+              }}
+            >
+              {isDeletingProject ? 'در حال حذف...' : 'تایید حذف پروژه'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Location Dialog */}
+      <AlertDialog open={!!deleteLocationId} onOpenChange={() => setDeleteLocationId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف آدرس</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا مطمئن هستید می‌خواهید این آدرس را حذف کنید؟ این عملیات قابل بازگشت نیست و آدرس از نقشه نیز حذف خواهد شد. توجه: فقط آدرس‌هایی که پروژه‌ای ندارند قابل حذف هستند.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingLocation}>
+              انصراف
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeletingLocation}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteLocation();
+              }}
+            >
+              {isDeletingLocation ? 'در حال حذف...' : 'تایید حذف آدرس'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
