@@ -65,6 +65,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [zoomedImageIndex, setZoomedImageIndex] = useState(0);
   const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number } | null>(null);
   const tempMarkerRef = useRef<L.Marker | null>(null);
+  
+  // States למחיקה
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
+  const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { projects, loading } = useProjectsHierarchy();
   const { toast } = useToast();
@@ -107,6 +113,97 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       });
     } finally {
       setVideoLoading(false);
+    }
+  };
+
+  // פונקציות מחיקה
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from('projects_v3')
+        .delete()
+        .eq('id', orderId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'موفق',
+        description: 'سفارش با موفقیت حذف شد'
+      });
+      
+      setDeleteOrderId(null);
+      setSelectedProject(null);
+      await fetchProjectMedia();
+    } catch (error) {
+      console.error('خطا در حذف سفارش:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در حذف سفارش',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from('projects_hierarchy')
+        .delete()
+        .eq('id', projectId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'موفق',
+        description: 'پروژه با موفقیت حذف شد'
+      });
+      
+      setDeleteProjectId(null);
+      setSelectedProject(null);
+      await fetchProjectMedia();
+    } catch (error) {
+      console.error('خطا در حذف پروژه:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در حذف پروژه',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteLocation = async (locationId: string) => {
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from('locations')
+        .update({ is_active: false })
+        .eq('id', locationId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'موفق',
+        description: 'آدرس با موفقیت حذف شد'
+      });
+      
+      setDeleteLocationId(null);
+      setSelectedProject(null);
+      await fetchProjectMedia();
+    } catch (error) {
+      console.error('خطا در حذف آدرس:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در حذف آدرس',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1520,6 +1617,72 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           setZoomedImageIndex(0);
         }}
       />
+
+      {/* AlertDialog למחיקת סفארש */}
+      <Dialog open={!!deleteOrderId} onOpenChange={(open) => !open && setDeleteOrderId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>حذف سفارش</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">آیا از حذف این سفارش اطمینان دارید؟ این عملیات قابل بازگشت نیست.</p>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setDeleteOrderId(null)} disabled={isDeleting}>
+              انصراف
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => deleteOrderId && handleDeleteOrder(deleteOrderId)}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'در حال حذف...' : 'حذف'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AlertDialog למחיקת פרויקט */}
+      <Dialog open={!!deleteProjectId} onOpenChange={(open) => !open && setDeleteProjectId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>حذف پروژه</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">آیا از حذف این پروژه اطمینان دارید؟ این عملیات قابل بازگشت نیست.</p>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setDeleteProjectId(null)} disabled={isDeleting}>
+              انصراف
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => deleteProjectId && handleDeleteProject(deleteProjectId)}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'در حال حذف...' : 'حذف'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AlertDialog למחיקת כתובת */}
+      <Dialog open={!!deleteLocationId} onOpenChange={(open) => !open && setDeleteLocationId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>حذف آدرس</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">آיا از حذف این آدرس اطمینان دارید؟ این عملیات قابل بازگشت نیست.</p>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setDeleteLocationId(null)} disabled={isDeleting}>
+              انصراف
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => deleteLocationId && handleDeleteLocation(deleteLocationId)}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'در حال حذف...' : 'حذف'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
