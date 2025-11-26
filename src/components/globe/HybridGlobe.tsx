@@ -76,7 +76,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   // آدرس‌های بدون پروژه
   const [locationsWithoutProjects, setLocationsWithoutProjects] = useState<any[]>([]);
 
-  const { projects: allProjects, loading } = useProjectsHierarchy();
+  const { projects: allProjects, loading, refetch } = useProjectsHierarchy();
   
   // فیلتر کردن پروژه‌هایی که آدرسشان فعال است
   const projects = useMemo(() => {
@@ -87,6 +87,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   }, [allProjects]);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // دریافت مجدد داده‌ها وقتی component مانت می‌شود (برای نمایش تغییرات)
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   // مدیریت منبع ویدیو و آزادسازی blob ها
   useEffect(() => {
@@ -1743,7 +1748,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             e.stopPropagation();
             navigate('/user/new-location', { 
               state: { 
-                editMode: true, 
+                editMode: true,
+                fromGlobeMap: true, // برای بازگشت به نقشه کره زمین
                 locationData: {
                   id: location.id,
                   title: location.title,

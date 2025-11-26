@@ -11,7 +11,7 @@ export default function NewLocation() {
   
   // Check if we're in edit mode
   const isEditMode = location.state?.editMode === true;
-  const editInitialData = location.state?.initialData;
+  const editInitialData = location.state?.initialData || location.state?.locationData;
   
   // Get initial lat/lng if coming from map or edit mode - ensure they are numbers
   const initialLat = editInitialData?.lat 
@@ -22,9 +22,15 @@ export default function NewLocation() {
     : (location.state?.lng ? Number(location.state.lng) : undefined);
 
   console.log('🗺️ NewLocation - Mode:', isEditMode ? 'Edit' : 'Create');
-  console.log('🗺️ NewLocation - Initial coordinates:', { initialLat, initialLng, state: location.state });
+  console.log('🗺️ NewLocation - Initial coordinates:', { initialLat, initialLng, editInitialData, state: location.state });
 
   const handleSuccess = async (locationId: string) => {
+    // If coming from globe map, go back to home (which shows the globe)
+    if (location.state?.fromGlobeMap) {
+      navigate('/', { replace: true });
+      return;
+    }
+
     // If in edit mode, go back to projects hierarchy
     if (isEditMode) {
       navigate('/user/my-projects-hierarchy', {
@@ -100,11 +106,11 @@ export default function NewLocation() {
               initialData={editInitialData || (initialLat && initialLng ? {
                 lat: initialLat,
                 lng: initialLng,
-                title: '',
-                province_id: '',
-                district_id: '',
-                address_line: '',
-                id: '',
+                title: location.state?.locationData?.title || '',
+                province_id: location.state?.locationData?.province_id || '',
+                district_id: location.state?.locationData?.district_id || '',
+                address_line: location.state?.locationData?.address || location.state?.locationData?.address_line || '',
+                id: location.state?.locationData?.id || '',
                 user_id: '',
                 created_at: '',
                 is_active: true
