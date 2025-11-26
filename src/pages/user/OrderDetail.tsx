@@ -41,7 +41,7 @@ import { formatPersianDate, formatPersianDateTimeFull } from "@/lib/dateUtils";
 interface Order {
   id: string;
   code: string;
-  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'scheduled' | 'active' | 'pending_execution' | 'completed' | 'in_progress' | 'paid' | 'closed' | 'cancelled';
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'scheduled' | 'active' | 'pending_execution' | 'completed' | 'in_progress' | 'paid' | 'closed';
   created_at: string;
   updated_at: string;
   address: string;
@@ -116,7 +116,6 @@ const getStatusInfo = (status: string) => {
     pending_execution: { label: 'در انتظار اجرا', icon: Clock, color: 'text-blue-600' },
     approved: { label: 'تایید شده', icon: CheckCircle, color: 'text-green-600' },
     rejected: { label: 'رد شده', icon: XCircle, color: 'text-destructive' },
-    cancelled: { label: 'لغو شده', icon: XCircle, color: 'text-gray-600' },
     in_progress: { label: 'در حال اجرا', icon: Play, color: 'text-blue-600' },
     completed: { label: 'اجرا شده - در انتظار پرداخت', icon: CheckCircle, color: 'text-orange-600' },
     paid: { label: 'پرداخت شده - در انتظار اتمام', icon: CheckCircle, color: 'text-purple-600' },
@@ -419,7 +418,8 @@ export default function OrderDetail() {
       const { error } = await supabase
         .from('projects_v3')
         .update({ 
-          status: 'cancelled',
+          status: 'rejected',
+          rejection_reason: 'لغو شده توسط کاربر',
           updated_at: new Date().toISOString()
         })
         .eq('id', order.id);

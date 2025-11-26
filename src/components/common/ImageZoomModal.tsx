@@ -129,28 +129,35 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-1/2 right-4 -translate-y-1/2 z-50 bg-black/60 hover:bg-black/80 text-white rounded-full w-12 h-12"
+                className="absolute top-1/2 right-4 -translate-y-1/2 z-50 bg-black/70 hover:bg-black/90 text-white rounded-full w-14 h-14 shadow-lg border-2 border-white/20 transition-all hover:scale-110"
                 onClick={handlePrev}
               >
-                <ChevronRight className="h-6 w-6" />
+                <ChevronRight className="h-7 w-7" />
               </Button>
 
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-1/2 left-4 -translate-y-1/2 z-50 bg-black/60 hover:bg-black/80 text-white rounded-full w-12 h-12"
+                className="absolute top-1/2 left-4 -translate-y-1/2 z-50 bg-black/70 hover:bg-black/90 text-white rounded-full w-14 h-14 shadow-lg border-2 border-white/20 transition-all hover:scale-110"
                 onClick={handleNext}
               >
-                <ChevronLeft className="h-6 w-6" />
+                <ChevronLeft className="h-7 w-7" />
               </Button>
 
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium">
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white px-5 py-2.5 rounded-full text-base font-semibold shadow-lg border border-white/20">
                 {currentIndex + 1} از {images.length}
+              </div>
+
+              {/* Swipe indicator */}
+              <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-black/70 text-white px-4 py-2 rounded-full text-sm animate-pulse border border-white/20">
+                <ChevronRight className="h-4 w-4" />
+                <span>برای تغییر عکس، انگشت بکشید</span>
+                <ChevronLeft className="h-4 w-4" />
               </div>
             </>
           )}
 
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-background/80 p-2 rounded-lg">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-background/90 p-2 rounded-lg shadow-lg border border-border">
             <Button variant="ghost" size="icon" onClick={handleZoomOut} disabled={zoom <= 1}>
               <ZoomOut className="h-5 w-5" />
             </Button>
@@ -162,7 +169,8 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 
           <div 
             ref={imageContainerRef}
-            className="overflow-auto max-w-full max-h-full p-4 cursor-grab active:cursor-grabbing"
+            className="overflow-auto max-w-full max-h-full p-4 touch-pan-x"
+            style={{ cursor: hasMultipleImages ? 'grab' : 'default' }}
           >
             <img
               src={currentImageUrl}
