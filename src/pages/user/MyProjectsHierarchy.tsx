@@ -296,6 +296,24 @@ export default function MyProjectsHierarchy() {
   const handleDeleteOrder = async () => {
     if (!deleteOrderId) return;
     
+    // پیدا کردن سفارش
+    const order = Object.values(data.orders)
+      .flat()
+      .find(o => o.id === deleteOrderId);
+    
+    if (!order) {
+      toast.error("سفارش یافت نشد");
+      setDeleteOrderId(null);
+      return;
+    }
+
+    // بررسی وضعیت سفارش
+    if (!isOrderDeletable(order.status)) {
+      toast.error("شما نمی‌توانید سفارش خود را حذف کنید چون سفارش شما تایید شده و در مراحل اجرا است");
+      setDeleteOrderId(null);
+      return;
+    }
+    
     setIsDeleting(true);
     try {
       const { error } = await supabase
@@ -318,6 +336,15 @@ export default function MyProjectsHierarchy() {
 
   const handleDeleteProject = async () => {
     if (!deleteProjectId) return;
+    
+    // بررسی امکان حذف پروژه
+    const { canDelete, reason } = canDeleteProject(deleteProjectId);
+    
+    if (!canDelete) {
+      toast.error(reason || "نمی‌توانید پروژه را حذف کنید");
+      setDeleteProjectId(null);
+      return;
+    }
     
     setIsDeletingProject(true);
     try {
@@ -342,11 +369,20 @@ export default function MyProjectsHierarchy() {
   const handleDeleteLocation = async () => {
     if (!deleteLocationId) return;
     
+    // بررسی امکان حذف آدرس
+    const { canDelete, reason } = canDeleteLocation(deleteLocationId);
+    
+    if (!canDelete) {
+      toast.error(reason || "نمی‌توانید آدرس را حذف کنید");
+      setDeleteLocationId(null);
+      return;
+    }
+    
     setIsDeletingLocation(true);
     try {
       const { error } = await supabase
         .from('locations')
-        .delete()
+        .update({ is_active: false })
         .eq('id', deleteLocationId);
 
       if (error) throw error;
@@ -360,6 +396,53 @@ export default function MyProjectsHierarchy() {
     } finally {
       setIsDeletingLocation(false);
     }
+  };
+
+  // تابع بررسی وضعیت سفارش - قابل حذف یا خیر
+  const isOrderDeletable = (orderStatus: string): boolean => {
+    return orderStatus === 'pending' || orderStatus === 'rejected' || 
+           orderStatus === 'completed' || orderStatus === 'paid' || orderStatus === 'closed';
+  };
+
+  // تابع بررسی پروژه - آیا همه سفارشات قابل حذف هستند؟
+  const canDeleteProject = (projectId: string): { canDelete: boolean; reason?: string } => {
+    const projectOrders = data.orders[projectId] || [];
+    
+    if (projectOrders.length === 0) {
+      return { canDelete: true };
+    }
+
+    const activeOrders = projectOrders.filter(order => !isOrderDeletable(order.status));
+    
+    if (activeOrders.length > 0) {
+      return { 
+        canDelete: false, 
+        reason: `شما ${activeOrders.length} سفارش فعال دارید و نمی‌توانید پروژه را حذف کنید`
+      };
+    }
+
+    return { canDelete: true };
+  };
+
+  // تابع بررسی آدرس - آیا همه پروژه‌ها قابل حذف هستند؟
+  const canDeleteLocation = (locationId: string): { canDelete: boolean; reason?: string } => {
+    const addressProjects = data.projects[locationId] || [];
+    
+    if (addressProjects.length === 0) {
+      return { canDelete: true };
+    }
+
+    for (const project of addressProjects) {
+      const projectCheck = canDeleteProject(project.id);
+      if (!projectCheck.canDelete) {
+        return { 
+          canDelete: false, 
+          reason: 'شما پروژه فعال دارید و برای حذف آدرس باید تکلیف پروژه و سفارش را روشن کنید'
+        };
+      }
+    }
+
+    return { canDelete: true };
   };
 
   const getLocationApprovedOrdersCount = (locationId: string): number => {
@@ -511,20 +594,18 @@ export default function MyProjectsHierarchy() {
                         <span className="text-xs">اصلاح</span>
                       </Button>
                     )}
-                    {projectCount === 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteLocationId(address.id);
-                        }}
-                      >
-                        <XCircle className="h-3.5 w-3.5" />
-                        <span className="text-xs">حذف</span>
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteLocationId(address.id);
+                      }}
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                      <span className="text-xs">حذف</span>
+                    </Button>
                     {isExpanded ? (
                       <ChevronDown className="h-5 w-5" />
                     ) : (
@@ -571,20 +652,18 @@ export default function MyProjectsHierarchy() {
                                 <Badge variant="outline" className="text-xs">
                                   {orderCount} سفارش
                                 </Badge>
-                                {orderCount === 0 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDeleteProjectId(project.id);
-                                    }}
-                                  >
-                                    <XCircle className="h-3.5 w-3.5" />
-                                    <span className="text-xs">حذف</span>
-                                  </Button>
-                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteProjectId(project.id);
+                                  }}
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  <span className="text-xs">حذف</span>
+                                </Button>
                                 {isProjectExpanded ? (
                                   <ChevronDown className="h-4 w-4" />
                                 ) : (
@@ -704,20 +783,18 @@ export default function MyProjectsHierarchy() {
                                                   <span className="text-xs">لغو</span>
                                                 </Button>
                                               )}
-                                              {order.status === 'rejected' && (
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setDeleteOrderId(order.id);
-                                                  }}
-                                                >
-                                                  <XCircle className="h-3.5 w-3.5" />
-                                                  <span className="text-xs">حذف</span>
-                                                </Button>
-                                              )}
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setDeleteOrderId(order.id);
+                                                }}
+                                              >
+                                                <XCircle className="h-3.5 w-3.5" />
+                                                <span className="text-xs">حذف</span>
+                                              </Button>
                                             </div>
                                           </div>
                                           <div 
