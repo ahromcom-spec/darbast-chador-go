@@ -1495,6 +1495,69 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 });
               }
               
+              // کلیک روی دکمه‌های حذف رسانه
+              const deleteMediaBtns = popupElement.querySelectorAll('.delete-media-btn');
+              deleteMediaBtns.forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                  e.stopPropagation();
+                  const mediaId = (btn as HTMLElement).dataset.mediaId;
+                  const mediaPath = (btn as HTMLElement).dataset.mediaPath;
+                  const orderId = (btn as HTMLElement).dataset.orderId;
+                  
+                  if (!mediaId || !mediaPath) return;
+
+                  // نمایش تایید حذف
+                  if (confirm('آیا از حذف این رسانه اطمینان دارید؟\n\nاین عملیات قابل بازگشت نیست.')) {
+                    try {
+                      // حذف از storage
+                      const { error: storageError } = await supabase.storage
+                        .from('order-media')
+                        .remove([mediaPath]);
+
+                      if (storageError) {
+                        console.error('Storage deletion error:', storageError);
+                      }
+
+                      // حذف از database
+                      const { error: dbError } = await supabase
+                        .from('project_media')
+                        .delete()
+                        .eq('id', mediaId);
+
+                      if (dbError) throw dbError;
+
+                      toast({
+                        title: "رسانه حذف شد",
+                        description: "رسانه با موفقیت حذف شد",
+                      });
+
+                      // بارگذاری مجدد داده‌ها
+                      await refetch();
+                      await fetchProjectMedia();
+                      
+                      // بستن و باز کردن مجدد popup برای نمایش تغییرات
+                      mapRef.current?.closePopup();
+                      setTimeout(() => {
+                        const markerIndex = markersRef.current.findIndex(m => {
+                          const content = m.getPopup()?.getContent();
+                          return typeof content === 'string' && content.includes(project.id);
+                        });
+                        if (markerIndex !== -1) {
+                          markersRef.current[markerIndex].openPopup();
+                        }
+                      }, 300);
+                    } catch (error) {
+                      console.error('Error deleting media:', error);
+                      toast({
+                        title: "خطا در حذف رسانه",
+                        description: "لطفاً دوباره تلاش کنید",
+                        variant: "destructive",
+                      });
+                    }
+                  }
+                });
+              });
+
               // کلیک روی دکمه "حذف سفارش"
               const deleteOrderBtn = popupElement.querySelector(`.delete-order-btn-${order.id}`);
               if (deleteOrderBtn) {
