@@ -20,6 +20,9 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 }) => {
   const [zoom, setZoom] = useState(1);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const hasMultipleImages = images.length > 1;
@@ -28,15 +31,26 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
   useEffect(() => {
     setCurrentIndex(initialIndex);
     setZoom(1);
+    setPosition({ x: 0, y: 0 });
+    setIsDragging(false);
   }, [initialIndex, isOpen]);
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.5, 3));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.5, 1));
+  const handleZoomOut = () => {
+    setZoom(prev => {
+      const newZoom = Math.max(prev - 0.5, 1);
+      if (newZoom === 1) {
+        setPosition({ x: 0, y: 0 });
+      }
+      return newZoom;
+    });
+  };
 
   const handleNext = () => {
     if (hasMultipleImages) {
       setCurrentIndex((prev) => (prev + 1) % images.length);
       setZoom(1);
+      setPosition({ x: 0, y: 0 });
     }
   };
 
@@ -44,26 +58,64 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
     if (hasMultipleImages) {
       setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
       setZoom(1);
+      setPosition({ x: 0, y: 0 });
     }
   };
 
-  // Swipe functionality
+  // Pan/Drag functionality for zoomed image
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (zoom <= 1) return;
+    
+    e.preventDefault();
+    setIsDragging(true);
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    setDragStart({
+      x: clientX - position.x,
+      y: clientY - position.y
+    });
+  };
+
+  const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging || zoom <= 1) return;
+    
+    e.preventDefault();
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    setPosition({
+      x: clientX - dragStart.x,
+      y: clientY - dragStart.y
+    });
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
+  // Swipe functionality for changing images (only when zoom = 1)
   useEffect(() => {
     if (!hasMultipleImages || !imageContainerRef.current) return;
 
     const container = imageContainerRef.current;
     let startX = 0;
     let startY = 0;
-    let isDragging = false;
+    let isSwiping = false;
 
     const handleStart = (e: TouchEvent | MouseEvent) => {
-      isDragging = true;
+      // فقط برای تصاویر zoom نشده
+      if (zoom > 1) return;
+      
+      isSwiping = true;
       startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     };
 
     const handleMove = (e: TouchEvent | MouseEvent) => {
-      if (!isDragging) return;
+      if (!isSwiping || zoom > 1) return;
 
       const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -77,8 +129,8 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
     };
 
     const handleEnd = (e: TouchEvent | MouseEvent) => {
-      if (!isDragging) return;
-      isDragging = false;
+      if (!isSwiping || zoom > 1) return;
+      isSwiping = false;
 
       const endX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
       const diffX = startX - endX;
@@ -99,7 +151,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
     container.addEventListener('mousedown', handleStart as any);
     container.addEventListener('mousemove', handleMove as any);
     container.addEventListener('mouseup', handleEnd as any);
-    container.addEventListener('mouseleave', () => { isDragging = false; });
+    container.addEventListener('mouseleave', () => { isSwiping = false; });
 
     return () => {
       container.removeEventListener('touchstart', handleStart as any);
@@ -109,7 +161,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
       container.removeEventListener('mousemove', handleMove as any);
       container.removeEventListener('mouseup', handleEnd as any);
     };
-  }, [hasMultipleImages, images.length]);
+  }, [hasMultipleImages, images.length, zoom]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -169,14 +221,27 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 
           <div 
             ref={imageContainerRef}
-            className="overflow-auto max-w-full max-h-full p-4 touch-pan-x"
-            style={{ cursor: hasMultipleImages ? 'grab' : 'default' }}
+            className="overflow-hidden max-w-full max-h-full p-4"
+            style={{ 
+              cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : (hasMultipleImages ? 'grab' : 'default'),
+              touchAction: zoom > 1 ? 'none' : 'pan-x'
+            }}
+            onMouseDown={handleDragStart}
+            onMouseMove={handleDragMove}
+            onMouseUp={handleDragEnd}
+            onMouseLeave={handleDragEnd}
+            onTouchStart={handleDragStart}
+            onTouchMove={handleDragMove}
+            onTouchEnd={handleDragEnd}
           >
             <img
               src={currentImageUrl}
               alt="Zoomed"
-              className="transition-transform duration-200 select-none"
-              style={{ transform: `scale(${zoom})` }}
+              className="select-none transition-none"
+              style={{ 
+                transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
+                transformOrigin: 'center center'
+              }}
               draggable={false}
             />
           </div>
