@@ -815,23 +815,24 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const newTempMarker = L.marker([e.latlng.lat, e.latlng.lng], { icon: tempIcon }).addTo(map);
       
       // اضافه کردن popup به مارکر
+      const btnId = `add-project-btn-${Date.now()}`;
       const popupContent = `
         <div style="text-align: center; padding: 8px;">
           <button 
-            id="add-project-btn-${Date.now()}"
-            class="add-project-btn-leaflet"
+            id="${btnId}"
             style="
               background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
               color: white;
               border: none;
               border-radius: 8px;
               padding: 12px 20px;
-              font-family: inherit;
+              font-family: Vazirmatn, sans-serif;
               font-size: 14px;
               font-weight: 600;
               cursor: pointer;
               box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
               transition: all 0.2s ease;
+              width: 100%;
             "
             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)';"
             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)';"
@@ -856,13 +857,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       
       // اضافه کردن event listener به دکمه بعد از باز شدن popup
       setTimeout(() => {
-        const addBtn = document.querySelector('.add-project-btn-leaflet') as HTMLButtonElement;
+        const addBtn = document.getElementById(btnId) as HTMLButtonElement;
         if (addBtn) {
-          console.log('دکمه افزودن پروژه پیدا شد');
+          console.log('✅ دکمه افزودن پروژه پیدا شد');
           addBtn.onclick = (ev) => {
             ev.preventDefault();
             ev.stopPropagation();
-            console.log('کلیک روی دکمه افزودن پروژه', { lat: e.latlng.lat, lng: e.latlng.lng });
+            console.log('🚀 کلیک روی دکمه - انتقال به صفحه ثبت آدرس', { lat: e.latlng.lat, lng: e.latlng.lng });
             
             // حذف مارکر موقت و popup
             if (tempMarkerRef.current) {
@@ -871,18 +872,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             }
             popup.remove();
             
-            // انتقال به صفحه افزودن آدرس
+            // انتقال به صفحه افزودن آدرس با مختصات
             navigate('/user/new-location', {
               state: {
                 lat: e.latlng.lat,
-                lng: e.latlng.lng
+                lng: e.latlng.lng,
+                fromMap: true
               }
             });
           };
         } else {
-          console.error('دکمه افزودن پروژه پیدا نشد');
+          console.error('❌ دکمه افزودن پروژه پیدا نشد - btnId:', btnId);
         }
-      }, 150);
+      }, 200);
       
       tempMarkerRef.current = newTempMarker;
       setSelectedMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
