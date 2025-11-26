@@ -41,7 +41,7 @@ import { formatPersianDate, formatPersianDateTimeFull } from "@/lib/dateUtils";
 interface Order {
   id: string;
   code: string;
-  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'scheduled' | 'active' | 'pending_execution' | 'completed' | 'in_progress' | 'paid' | 'closed';
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'scheduled' | 'active' | 'pending_execution' | 'completed' | 'in_progress' | 'paid' | 'closed' | 'cancelled';
   created_at: string;
   updated_at: string;
   address: string;
@@ -116,6 +116,7 @@ const getStatusInfo = (status: string) => {
     pending_execution: { label: 'در انتظار اجرا', icon: Clock, color: 'text-blue-600' },
     approved: { label: 'تایید شده', icon: CheckCircle, color: 'text-green-600' },
     rejected: { label: 'رد شده', icon: XCircle, color: 'text-destructive' },
+    cancelled: { label: 'لغو شده', icon: XCircle, color: 'text-gray-600' },
     in_progress: { label: 'در حال اجرا', icon: Play, color: 'text-blue-600' },
     completed: { label: 'اجرا شده - در انتظار پرداخت', icon: CheckCircle, color: 'text-orange-600' },
     paid: { label: 'پرداخت شده - در انتظار اتمام', icon: CheckCircle, color: 'text-purple-600' },
@@ -144,6 +145,8 @@ export default function OrderDetail() {
   const [ratedUserName, setRatedUserName] = useState<string>('');
   const [showMediaUpload, setShowMediaUpload] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -405,6 +408,40 @@ export default function OrderDetail() {
       });
     } finally {
       setIsRenewing(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!order) return;
+    
+    setIsCancelling(true);
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', order.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "✓ موفق",
+        description: "سفارش شما با موفقیت لغو شد",
+      });
+
+      setShowCancelDialog(false);
+      await fetchOrderDetails();
+    } catch (error: any) {
+      console.error('Error cancelling order:', error);
+      toast({
+        title: "خطا",
+        description: "خطا در لغو سفارش",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -839,9 +876,18 @@ export default function OrderDetail() {
                     <p className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
                       در انتظار تایید مدیریت
                     </p>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                      سفارش شما در حال بررسی است. تا زمان تایید توسط مدیر، می‌توانید سفارش خود را ویرایش کنید.
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
+                      سفارش شما در حال بررسی است. تا زمان تایید توسط مدیر، می‌توانید سفارش خود را ویرایش یا لغو کنید.
                     </p>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowCancelDialog(true)}
+                      className="gap-2"
+                      size="sm"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      لغو سفارش
+                    </Button>
                   </div>
                 </div>
               </CardContent>
