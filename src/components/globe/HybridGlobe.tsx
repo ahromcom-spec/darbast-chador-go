@@ -1204,6 +1204,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 340px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
             ${locationHeader}
             <strong style="font-size: 13px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
+            ${project.locations?.title ? `<div style="font-size: 12px; color: #667eea; font-weight: 600; margin-top: 6px; display: block;">${project.locations.title}</div>` : ''}
             <span style="font-size: 11px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
             ${count > 1 ? `<div style="margin-top:8px;padding:5px 8px;background:#f3f4f6;border-radius:6px;text-align:center;font-size:10px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
             ${ordersHTML}
