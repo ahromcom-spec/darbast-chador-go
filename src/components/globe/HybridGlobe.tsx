@@ -124,8 +124,80 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     }
   };
 
+
+  // Helper functions for deletion validation
+  const isOrderDeletable = (orderStatus: string): boolean => {
+    return orderStatus === 'pending' || orderStatus === 'rejected' || 
+           orderStatus === 'completed' || orderStatus === 'paid' || orderStatus === 'closed';
+  };
+
+  const canDeleteProject = (project: ProjectWithMedia): { canDelete: boolean; reason?: string } => {
+    const projectOrders = project.orders || [];
+    
+    if (projectOrders.length === 0) {
+      return { canDelete: true };
+    }
+
+    const activeOrders = projectOrders.filter(order => !isOrderDeletable(order.status));
+    
+    if (activeOrders.length > 0) {
+      return { 
+        canDelete: false, 
+        reason: `شما ${activeOrders.length} سفارش فعال دارید و نمی‌توانید پروژه را حذف کنید`
+      };
+    }
+
+    return { canDelete: true };
+  };
+
+  const canDeleteLocation = (locationId: string): { canDelete: boolean; reason?: string } => {
+    const locationProjects = projectsWithMedia.filter(p => p.location_id === locationId);
+    
+    if (locationProjects.length === 0) {
+      return { canDelete: true };
+    }
+
+    for (const project of locationProjects) {
+      const projectCheck = canDeleteProject(project);
+      if (!projectCheck.canDelete) {
+        return { 
+          canDelete: false, 
+          reason: 'شما پروژه فعال دارید و برای حذف آدرس باید تکلیف پروژه و سفارش را روشن کنید'
+        };
+      }
+    }
+
+    return { canDelete: true };
+  };
+
   // פונקציות מחיקה
   const handleDeleteOrder = async (orderId: string) => {
+    // Find the order
+    const order = projectsWithMedia
+      .flatMap(p => p.orders || [])
+      .find(o => o.id === orderId);
+    
+    if (!order) {
+      toast({
+        title: 'خطا',
+        description: 'سفارش یافت نشد',
+        variant: 'destructive'
+      });
+      setDeleteOrderId(null);
+      return;
+    }
+
+    // Check if order can be deleted
+    if (!isOrderDeletable(order.status)) {
+      toast({
+        title: 'امکان حذف وجود ندارد',
+        description: 'شما نمی‌توانید سفارش خود را حذف کنید چون سفارش شما تایید شده و در مراحل اجرا است',
+        variant: 'destructive'
+      });
+      setDeleteOrderId(null);
+      return;
+    }
+
     try {
       setIsDeleting(true);
       const { error } = await supabase
@@ -156,6 +228,32 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   };
 
   const handleDeleteProject = async (projectId: string) => {
+    // Find the project
+    const project = projectsWithMedia.find(p => p.id === projectId);
+    
+    if (!project) {
+      toast({
+        title: 'خطا',
+        description: 'پروژه یافت نشد',
+        variant: 'destructive'
+      });
+      setDeleteProjectId(null);
+      return;
+    }
+
+    // Check if project can be deleted
+    const { canDelete, reason } = canDeleteProject(project);
+    
+    if (!canDelete) {
+      toast({
+        title: 'امکان حذف وجود ندارد',
+        description: reason || 'نمی‌توانید پروژه را حذف کنید',
+        variant: 'destructive'
+      });
+      setDeleteProjectId(null);
+      return;
+    }
+
     try {
       setIsDeleting(true);
       const { error } = await supabase
@@ -186,6 +284,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   };
 
   const handleDeleteLocation = async (locationId: string) => {
+    // Check if location can be deleted
+    const { canDelete, reason } = canDeleteLocation(locationId);
+    
+    if (!canDelete) {
+      toast({
+        title: 'امکان حذف وجود ندارد',
+        description: reason || 'نمی‌توانید آدرس را حذف کنید',
+        variant: 'destructive'
+      });
+      setDeleteLocationId(null);
+      return;
+    }
+
     try {
       setIsDeleting(true);
       const { error } = await supabase
