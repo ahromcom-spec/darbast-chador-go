@@ -27,7 +27,7 @@ const Header = () => {
   const [profileDropdownOpenMobile, setProfileDropdownOpenMobile] = useState(false);
   const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(false);
   
-  // بستن تمام منوهای کشویی هنگام تغییر مسیر برای جلوگیری از باقی‌ماندن روی صفحه بعد
+  // بستن تمام منوهای کشویی هنگام تغییر مسیر
   const location = useLocation();
   useEffect(() => {
     setContactDropdownOpenMobile(false);
@@ -81,7 +81,7 @@ const Header = () => {
             
             {/* Contact Button - Left side (RTL) */}
             <div className="flex items-center gap-1.5 md:hidden">
-              <DropdownMenu open={contactDropdownOpenMobile} onOpenChange={setContactDropdownOpenMobile}>
+              <DropdownMenu modal={false} open={contactDropdownOpenMobile} onOpenChange={setContactDropdownOpenMobile}>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity" aria-label="تماس">
                     <img 
@@ -131,7 +131,7 @@ const Header = () => {
                 <div data-tour="notifications">
                   <NotificationBell />
                 </div>
-                <DropdownMenu open={profileDropdownOpenMobile} onOpenChange={setProfileDropdownOpenMobile}>
+                <DropdownMenu modal={false} open={profileDropdownOpenMobile} onOpenChange={setProfileDropdownOpenMobile}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       data-tour="profile"
@@ -151,8 +151,7 @@ const Header = () => {
                     </div>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpenMobile(false);
-                        setTimeout(() => navigate("/profile"), 150);
+                        navigate("/profile");
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -161,8 +160,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpenMobile(false);
-                        setTimeout(() => navigate("/user/projects"), 150);
+                        navigate("/user/projects");
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -171,8 +169,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpenMobile(false);
-                        setTimeout(() => navigate("/tickets"), 150);
+                        navigate("/tickets");
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -181,7 +178,6 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpenMobile(false);
                         handleSignOut();
                       }}
                       className="cursor-pointer gap-2 text-red-600 focus:text-red-600"
@@ -241,7 +237,7 @@ const Header = () => {
             
             {/* Contact Dropdown & Notification - Left side (RTL) */}
             <div className="hidden md:flex items-center gap-4 justify-start">
-              <DropdownMenu open={contactDropdownOpenDesktop} onOpenChange={setContactDropdownOpenDesktop}>
+              <DropdownMenu modal={false} open={contactDropdownOpenDesktop} onOpenChange={setContactDropdownOpenDesktop}>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity md:-translate-x-6 lg:translate-x-0" aria-label="تماس">
                     <img 
@@ -291,7 +287,7 @@ const Header = () => {
                 <div data-tour="notifications">
                   <NotificationBell />
                 </div>
-                <DropdownMenu open={profileDropdownOpenDesktop} onOpenChange={setProfileDropdownOpenDesktop}>
+                <DropdownMenu modal={false} open={profileDropdownOpenDesktop} onOpenChange={setProfileDropdownOpenDesktop}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       data-tour="profile"
@@ -310,8 +306,7 @@ const Header = () => {
                     </div>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpenDesktop(false);
-                        setTimeout(() => navigate("/profile"), 150);
+                        navigate("/profile");
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
@@ -320,8 +315,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpenDesktop(false);
-                        setTimeout(() => navigate("/user/projects"), 150);
+                        navigate("/user/projects");
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
@@ -330,8 +324,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpenDesktop(false);
-                        setTimeout(() => navigate("/tickets"), 150);
+                        navigate("/tickets");
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
@@ -340,7 +333,6 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
-                        setProfileDropdownOpenDesktop(false);
                         handleSignOut();
                       }}
                       className="cursor-pointer gap-3 p-3 text-red-600 focus:text-red-600"
