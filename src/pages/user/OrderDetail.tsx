@@ -156,6 +156,8 @@ export default function OrderDetail() {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -452,6 +454,37 @@ export default function OrderDetail() {
       });
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!order) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .delete()
+        .eq('id', order.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "✓ موفق",
+        description: "سفارش با موفقیت حذف شد",
+      });
+
+      setShowDeleteDialog(false);
+      navigate('/user/projects');
+    } catch (error: any) {
+      console.error('Error deleting order:', error);
+      toast({
+        title: "خطا",
+        description: "خطا در حذف سفارش",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
