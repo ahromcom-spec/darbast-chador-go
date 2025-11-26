@@ -1470,10 +1470,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   if (!orderId) return;
 
                   // بررسی اینکه آیا سفارش تایید شده است یا نه
-                  if (orderStatus !== 'pending') {
+                  // فقط سفارشات تایید‌شده و در حال اجرا قابل حذف نیستند
+                  const nonDeletableStatuses = ['approved', 'in_progress', 'scheduled', 'completed'];
+                  if (nonDeletableStatuses.includes(orderStatus || '')) {
                     toast({
                       title: "امکان حذف وجود ندارد",
-                      description: "شما نمی‌توانید سفارش تأیید‌شده خود را حذف کنید زیرا این سفارش تأیید شده است و در مراحل اجرا قرار دارد",
+                      description: "شما نمی‌توانید سفارش تأیید‌شده یا در حال اجرا را حذف کنید زیرا این سفارش تأیید شده است و در مراحل اجرا قرار دارد",
                       variant: "destructive",
                     });
                     return;
