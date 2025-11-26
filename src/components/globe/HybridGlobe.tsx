@@ -1366,14 +1366,27 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                         ` : ''}
                       </div>
                       <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb;">
-                        <button 
-                          class="view-order-detail-${order.id}"
-                          data-order-id="${order.id}"
-                          data-subcategory-code="${order.subcategory?.code || ''}"
-                          style="width:100%;padding:6px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;"
-                        >
-                          مشاهده جزئیات سفارش
-                        </button>
+                        <div style="display:flex;gap:6px;">
+                          <button 
+                            class="view-order-detail-${order.id}"
+                            data-order-id="${order.id}"
+                            data-subcategory-code="${order.subcategory?.code || ''}"
+                            style="flex:1;padding:6px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;"
+                          >
+                            مشاهده جزئیات
+                          </button>
+                          <button 
+                            class="delete-order-btn-${order.id}"
+                            data-order-id="${order.id}"
+                            data-order-status="${order.status}"
+                            data-order-code="${order.code}"
+                            style="padding:6px 12px;background:#ef4444;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;transition:background 0.2s;"
+                            onmouseover="this.style.background='#dc2626'"
+                            onmouseout="this.style.background='#ef4444'"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1442,6 +1455,60 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   
                   // انتقال به صفحه جزئیات سفارش برای مشاهده فرم ثبت‌شده
                   window.location.href = `/orders/${orderId}`;
+                });
+              }
+              
+              // کلیک روی دکمه "حذف سفارش"
+              const deleteOrderBtn = popupElement.querySelector(`.delete-order-btn-${order.id}`);
+              if (deleteOrderBtn) {
+                deleteOrderBtn.addEventListener('click', async (e) => {
+                  e.stopPropagation();
+                  const orderId = (deleteOrderBtn as HTMLElement).dataset.orderId;
+                  const orderStatus = (deleteOrderBtn as HTMLElement).dataset.orderStatus;
+                  const orderCode = (deleteOrderBtn as HTMLElement).dataset.orderCode;
+                  
+                  if (!orderId) return;
+
+                  // بررسی اینکه آیا سفارش تایید شده است یا نه
+                  if (orderStatus !== 'pending') {
+                    toast({
+                      title: "امکان حذف وجود ندارد",
+                      description: "شما نمی‌توانید سفارش تأیید‌شده خود را حذف کنید زیرا این سفارش تأیید شده است و در مراحل اجرا قرار دارد",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  // نمایش تایید حذف
+                  if (confirm(`آیا از حذف سفارش ${orderCode} اطمینان دارید؟\n\nاین عملیات قابل بازگشت نیست.`)) {
+                    try {
+                      const { error } = await supabase
+                        .from('projects_v3')
+                        .update({
+                          status: 'rejected',
+                          rejection_reason: 'لغو شده توسط کاربر'
+                        })
+                        .eq('id', orderId);
+
+                      if (error) throw error;
+
+                      toast({
+                        title: "سفارش حذف شد",
+                        description: `سفارش ${orderCode} با موفقیت حذف شد`,
+                      });
+
+                      // بستن popup و به‌روزرسانی نقشه
+                      mapRef.current?.closePopup();
+                      refetch();
+                    } catch (error) {
+                      console.error('Error deleting order:', error);
+                      toast({
+                        title: "خطا در حذف سفارش",
+                        description: "لطفاً دوباره تلاش کنید",
+                        variant: "destructive",
+                      });
+                    }
+                  }
                 });
               }
               
