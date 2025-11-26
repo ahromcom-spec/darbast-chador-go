@@ -668,7 +668,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const popupContent = `
         <div style="text-align: center; padding: 8px;">
           <button 
-            id="add-project-btn"
+            id="add-project-btn-${Date.now()}"
+            class="add-project-btn-leaflet"
             style="
               background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
               color: white;
@@ -690,26 +691,48 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         </div>
       `;
       
-      newTempMarker.bindPopup(popupContent, {
+      const popup = L.popup({
         closeButton: false,
         className: 'custom-add-project-popup',
-        offset: [0, -40]
-      }).openPopup();
+        offset: [0, -40],
+        autoClose: false,
+        closeOnClick: false
+      })
+        .setLatLng([e.latlng.lat, e.latlng.lng])
+        .setContent(popupContent)
+        .openOn(map);
+      
+      newTempMarker.bindPopup(popup);
       
       // اضافه کردن event listener به دکمه بعد از باز شدن popup
       setTimeout(() => {
-        const addBtn = document.getElementById('add-project-btn');
+        const addBtn = document.querySelector('.add-project-btn-leaflet') as HTMLButtonElement;
         if (addBtn) {
-          addBtn.addEventListener('click', () => {
+          console.log('دکمه افزودن پروژه پیدا شد');
+          addBtn.onclick = (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            console.log('کلیک روی دکمه افزودن پروژه', { lat: e.latlng.lat, lng: e.latlng.lng });
+            
+            // حذف مارکر موقت و popup
+            if (tempMarkerRef.current) {
+              map.removeLayer(tempMarkerRef.current);
+              tempMarkerRef.current = null;
+            }
+            popup.remove();
+            
+            // انتقال به صفحه افزودن آدرس
             navigate('/user/new-location', {
               state: {
                 lat: e.latlng.lat,
                 lng: e.latlng.lng
               }
             });
-          });
+          };
+        } else {
+          console.error('دکمه افزودن پروژه پیدا نشد');
         }
-      }, 100);
+      }, 150);
       
       tempMarkerRef.current = newTempMarker;
       setSelectedMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
@@ -818,6 +841,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       }
     };
   }, []);
+
+  // حذف مارکر موقت وقتی پروژه انتخاب می‌شود یا selectedMapLocation null می‌شود
+  useEffect(() => {
+    if (!selectedMapLocation && tempMarkerRef.current && mapRef.current) {
+      mapRef.current.removeLayer(tempMarkerRef.current);
+      tempMarkerRef.current = null;
+    }
+  }, [selectedMapLocation]);
 
   // اضافه کردن مارکرهای پروژه‌ها با خطوط اتصال
   useEffect(() => {
