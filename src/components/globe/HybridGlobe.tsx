@@ -656,16 +656,45 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     map.on('mouseup', endLongPress);
     map.on('mousemove', endLongPress);
     map.getContainer().addEventListener('touchstart', (e: TouchEvent) => {
-      const touch = e.touches[0];
-      const point = map.containerPointToLatLng([touch.clientX, touch.clientY]);
-      const leafletEvent = {
-        latlng: point,
-        originalEvent: e
-      } as unknown as L.LeafletMouseEvent;
-      startLongPress(leafletEvent);
+      // Only trigger long press if exactly one finger is touching
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const point = map.containerPointToLatLng([touch.clientX, touch.clientY]);
+        const leafletEvent = {
+          latlng: point,
+          originalEvent: e
+        } as unknown as L.LeafletMouseEvent;
+        startLongPress(leafletEvent);
+      } else {
+        // Cancel long press if multiple fingers detected (pinch zoom or multi-touch pan)
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+          isLongPress = false;
+        }
+      }
     });
-    map.getContainer().addEventListener('touchend', endLongPress);
-    map.getContainer().addEventListener('touchmove', endLongPress);
+    map.getContainer().addEventListener('touchend', (e: TouchEvent) => {
+      // Only process if it was a single touch ending
+      if (e.changedTouches.length === 1 && e.touches.length === 0) {
+        endLongPress();
+      } else {
+        // Cancel if multiple fingers involved
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+          isLongPress = false;
+        }
+      }
+    });
+    map.getContainer().addEventListener('touchmove', (e: TouchEvent) => {
+      // Cancel long press on movement or if multiple fingers detected
+      if (longPressTimer && e.touches.length !== 1) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        isLongPress = false;
+      }
+    });
 
     map.whenReady(() => {
       setMapReady(true);
