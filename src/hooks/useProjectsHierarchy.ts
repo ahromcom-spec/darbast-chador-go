@@ -11,6 +11,7 @@ export interface ProjectHierarchy {
   status: string;
   created_at: string;
   locations?: {
+    title?: string;
     address_line: string;
     lat: number;
     lng: number;
@@ -36,6 +37,7 @@ export const useProjectsHierarchy = () => {
         .select(`
           *,
           locations (
+            title,
             address_line,
             lat,
             lng,
