@@ -91,7 +91,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   // دریافت مجدد داده‌ها وقتی component مانت می‌شود (برای نمایش تغییرات)
   useEffect(() => {
     refetch();
-  }, [refetch]);
+  }, []); // فقط یک بار در mount
 
   // مدیریت منبع ویدیو و آزادسازی blob ها
   useEffect(() => {
