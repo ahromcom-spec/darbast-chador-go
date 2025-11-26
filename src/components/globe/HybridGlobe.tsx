@@ -316,6 +316,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       
       setDeleteLocationId(null);
       setSelectedProject(null);
+      
+      // به‌روزرسانی لیست آدرس‌های بدون پروژه
+      setLocationsWithoutProjects(prev => prev.filter(loc => loc.id !== locationId));
+      
       await fetchProjectMedia();
     } catch (error) {
       console.error('خطا در حذف آدرس:', error);
