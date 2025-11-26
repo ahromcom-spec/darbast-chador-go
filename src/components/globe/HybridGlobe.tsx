@@ -793,8 +793,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           ? `
             <div style="margin-top: 12px;">
               ${images.length > 0 ? `
-                <div id="gallery-${project.id}" style="position:relative;">
-                  <div style="overflow:hidden;border-radius:8px;background:#f9fafb;">
+                <div id="gallery-${project.id}" class="swipeable-gallery" style="position:relative;touch-action:pan-y;">
+                  <div style="overflow:hidden;border-radius:8px;background:#f9fafb;position:relative;">
                     ${images.map((m, idx) => {
                       const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
                       return `<img 
@@ -802,17 +802,26 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                         src="${url}" 
                         alt="تصویر پروژه" 
                         loading="lazy"
-                        style="width:100%;height:200px;object-fit:contain;display:${idx === 0 ? 'block' : 'none'};"
+                        style="width:100%;height:200px;object-fit:contain;display:${idx === 0 ? 'block' : 'none'};user-select:none;"
+                        draggable="false"
                       />`;
                     }).join('')}
+                    ${images.length > 1 ? `
+                      <button class="gallery-prev-${project.id}" style="position:absolute;top:50%;right:8px;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
+                        <svg style="width:18px;height:18px;transform:rotate(180deg);" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                      </button>
+                      <button class="gallery-next-${project.id}" style="position:absolute;top:50%;left:8px;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
+                        <svg style="width:18px;height:18px;" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                      </button>
+                      <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:4px 12px;border-radius:12px;font-family:Vazirmatn;font-size:11px;pointer-events:none;">
+                        <span id="counter-${project.id}">1 از ${images.length}</span>
+                      </div>
+                    ` : ''}
                   </div>
-                  ${images.length > 1 ? `
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:0 4px;">
-                      <button class="gallery-prev-${project.id}" style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:Vazirmatn;font-size:12px;font-weight:500;">قبلی</button>
-                      <span id="counter-${project.id}" style="font-family:Vazirmatn;font-size:12px;color:#6b7280;">1 از ${images.length}</span>
-                      <button class="gallery-next-${project.id}" style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:Vazirmatn;font-size:12px;font-weight:500;">بعدی</button>
-                    </div>
-                  ` : ''}
                 </div>
               ` : ''}
               ${videos.length > 0 ? `
@@ -863,8 +872,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   >
                     <div style="font-size:11px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
                     <div style="font-size:10px;color:#6b7280;margin-top:2px;">${order.subcategory?.name || 'نامشخص'}</div>
-                    <div id="order-gallery-${order.id}" style="position:relative;margin-top:6px;">
-                      <div style="overflow:hidden;border-radius:6px;background:#f9fafb;">
+                    <div id="order-gallery-${order.id}" class="swipeable-gallery" style="position:relative;margin-top:6px;touch-action:pan-y;">
+                      <div style="overflow:hidden;border-radius:6px;background:#f9fafb;position:relative;">
                         ${allMedia.map((m, idx) => {
                           const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
                           const isVideo = m.file_type === 'video';
@@ -877,7 +886,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                 data-url="${url}"
                                 style="position:relative;width:100%;height:100px;background:#000;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
                               >
-                                <video src="${url}" style="width:100%;height:100%;object-fit:cover;" preload="metadata"></video>
+                                <video src="${url}" style="width:100%;height:100%;object-fit:cover;user-select:none;" preload="metadata" draggable="false"></video>
                                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
                                   <svg style="width:28px;height:28px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M8 5v14l11-7z"/>
@@ -895,7 +904,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                 src="${url}" 
                                 alt="تصویر سفارش" 
                                 loading="lazy"
-                                style="width:100%;height:100px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
+                                style="width:100%;height:100px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;user-select:none;"
+                                draggable="false"
                               />
                             `;
                           }
@@ -913,13 +923,22 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                             <div style="font-size:9px;color:#6b7280;">برای این سفارش رسانه جدید اضافه کنید</div>
                           </div>
                         </div>
-                      </div>
-                      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;">
-                        <button class="order-gallery-prev-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-family:Vazirmatn;font-size:10px;font-weight:500;">قبلی</button>
-                        <span id="order-counter-${order.id}" style="font-family:Vazirmatn;font-size:10px;color:#6b7280;">
-                          ${allMedia.length === 0 ? 'افزودن رسانه' : `1 از ${allMedia.length + 1}`}
-                        </span>
-                        <button class="order-gallery-next-${order.id}" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-family:Vazirmatn;font-size:10px;font-weight:500;">بعدی</button>
+                        
+                        ${allMedia.length > 0 ? `
+                          <button class="order-gallery-prev-${order.id}" style="position:absolute;top:50%;right:4px;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
+                            <svg style="width:14px;height:14px;transform:rotate(180deg);" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                          </button>
+                          <button class="order-gallery-next-${order.id}" style="position:absolute;top:50%;left:4px;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
+                            <svg style="width:14px;height:14px;" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                          </button>
+                          <div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:2px 8px;border-radius:10px;font-family:Vazirmatn;font-size:9px;pointer-events:none;">
+                            <span id="order-counter-${order.id}">${allMedia.length === 0 ? 'افزودن رسانه' : `1 از ${allMedia.length + 1}`}</span>
+                          </div>
+                        ` : ''}
                       </div>
                       <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb;">
                         <button 
@@ -1024,6 +1043,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               const prevBtn = popupElement.querySelector(`.order-gallery-prev-${order.id}`);
               const nextBtn = popupElement.querySelector(`.order-gallery-next-${order.id}`);
               const addMediaCard = popupElement.querySelector(`.order-add-media-${order.id}`) as HTMLElement;
+              const orderGalleryEl = popupElement.querySelector(`#order-gallery-${order.id}`) as HTMLElement;
               
               if (prevBtn && nextBtn) {
                 prevBtn.addEventListener('click', (e) => {
@@ -1037,6 +1057,61 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   currentOrderIndex = (currentOrderIndex + 1) % totalItems;
                   updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
                 });
+              }
+              
+              // اضافه کردن swipe/drag برای گالری سفارش
+              if (orderGalleryEl && totalItems > 1) {
+                let startX = 0;
+                let startY = 0;
+                let isDragging = false;
+                
+                const handleStart = (e: TouchEvent | MouseEvent) => {
+                  isDragging = true;
+                  startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+                  startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+                };
+                
+                const handleMove = (e: TouchEvent | MouseEvent) => {
+                  if (!isDragging) return;
+                  
+                  const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+                  const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+                  const diffX = startX - currentX;
+                  const diffY = startY - currentY;
+                  
+                  // فقط اگر حرکت افقی بیشتر از عمودی بود
+                  if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+                    e.preventDefault();
+                  }
+                };
+                
+                const handleEnd = (e: TouchEvent | MouseEvent) => {
+                  if (!isDragging) return;
+                  isDragging = false;
+                  
+                  const endX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
+                  const diffX = startX - endX;
+                  
+                  // حداقل 50 پیکسل حرکت
+                  if (Math.abs(diffX) > 50) {
+                    if (diffX > 0) {
+                      // سوایپ به چپ -> بعدی
+                      currentOrderIndex = (currentOrderIndex + 1) % totalItems;
+                    } else {
+                      // سوایپ به راست -> قبلی
+                      currentOrderIndex = (currentOrderIndex - 1 + totalItems) % totalItems;
+                    }
+                    updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
+                  }
+                };
+                
+                orderGalleryEl.addEventListener('touchstart', handleStart as any, { passive: true });
+                orderGalleryEl.addEventListener('touchmove', handleMove as any, { passive: false });
+                orderGalleryEl.addEventListener('touchend', handleEnd as any, { passive: true });
+                orderGalleryEl.addEventListener('mousedown', handleStart as any);
+                orderGalleryEl.addEventListener('mousemove', handleMove as any);
+                orderGalleryEl.addEventListener('mouseup', handleEnd as any);
+                orderGalleryEl.addEventListener('mouseleave', () => { isDragging = false; });
               }
               
               // کلیک روی کادر افزودن
@@ -1077,6 +1152,102 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 }
               }
             });
+          }
+          
+          // هندلر برای گالری اصلی پروژه
+          const projectImages = images;
+          if (projectImages.length > 1) {
+            let currentProjectIndex = 0;
+            const projectGalleryEl = popupElement.querySelector(`#gallery-${project.id}`) as HTMLElement;
+            const projectPrevBtn = popupElement.querySelector(`.gallery-prev-${project.id}`);
+            const projectNextBtn = popupElement.querySelector(`.gallery-next-${project.id}`);
+            
+            if (projectPrevBtn && projectNextBtn) {
+              projectPrevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentProjectIndex = (currentProjectIndex - 1 + projectImages.length) % projectImages.length;
+                updateProjectGallery(currentProjectIndex);
+              });
+              
+              projectNextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentProjectIndex = (currentProjectIndex + 1) % projectImages.length;
+                updateProjectGallery(currentProjectIndex);
+              });
+            }
+            
+            // اضافه کردن swipe/drag برای گالری پروژه
+            if (projectGalleryEl) {
+              let startX = 0;
+              let startY = 0;
+              let isDragging = false;
+              
+              const handleStart = (e: TouchEvent | MouseEvent) => {
+                isDragging = true;
+                startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+                startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+              };
+              
+              const handleMove = (e: TouchEvent | MouseEvent) => {
+                if (!isDragging) return;
+                
+                const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+                const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+                const diffX = startX - currentX;
+                const diffY = startY - currentY;
+                
+                // فقط اگر حرکت افقی بیشتر از عمودی بود
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+                  e.preventDefault();
+                }
+              };
+              
+              const handleEnd = (e: TouchEvent | MouseEvent) => {
+                if (!isDragging) return;
+                isDragging = false;
+                
+                const endX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
+                const diffX = startX - endX;
+                
+                // حداقل 50 پیکسل حرکت
+                if (Math.abs(diffX) > 50) {
+                  if (diffX > 0) {
+                    // سوایپ به چپ -> بعدی
+                    currentProjectIndex = (currentProjectIndex + 1) % projectImages.length;
+                  } else {
+                    // سوایپ به راست -> قبلی
+                    currentProjectIndex = (currentProjectIndex - 1 + projectImages.length) % projectImages.length;
+                  }
+                  updateProjectGallery(currentProjectIndex);
+                }
+              };
+              
+              projectGalleryEl.addEventListener('touchstart', handleStart as any, { passive: true });
+              projectGalleryEl.addEventListener('touchmove', handleMove as any, { passive: false });
+              projectGalleryEl.addEventListener('touchend', handleEnd as any, { passive: true });
+              projectGalleryEl.addEventListener('mousedown', handleStart as any);
+              projectGalleryEl.addEventListener('mousemove', handleMove as any);
+              projectGalleryEl.addEventListener('mouseup', handleEnd as any);
+              projectGalleryEl.addEventListener('mouseleave', () => { isDragging = false; });
+            }
+            
+            function updateProjectGallery(index: number) {
+              // مخفی کردن همه تصاویر
+              for (let i = 0; i < projectImages.length; i++) {
+                const imgEl = popupElement.querySelector(`#img-${project.id}-${i}`) as HTMLElement;
+                if (imgEl) imgEl.style.display = 'none';
+              }
+              
+              // نمایش تصویر فعلی
+              const currentImg = popupElement.querySelector(`#img-${project.id}-${index}`) as HTMLElement;
+              if (currentImg) currentImg.style.display = 'block';
+              
+              // به‌روزرسانی شمارنده
+              const counter = popupElement.querySelector(`#counter-${project.id}`);
+              if (counter) {
+                counter.textContent = `${index + 1} از ${projectImages.length}`;
+              }
+            }
           }
         });
 
