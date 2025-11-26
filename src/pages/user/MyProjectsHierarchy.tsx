@@ -26,7 +26,8 @@ import {
   Plus,
   Building2,
   ArrowRight,
-  XCircle
+  XCircle,
+  Edit2
 } from 'lucide-react';
 
 interface Address {
@@ -361,6 +362,55 @@ export default function MyProjectsHierarchy() {
     }
   };
 
+  const getLocationApprovedOrdersCount = (locationId: string): number => {
+    const addressProjects = data.projects[locationId] || [];
+    let approvedCount = 0;
+    
+    for (const project of addressProjects) {
+      const projectOrders = data.orders[project.id] || [];
+      approvedCount += projectOrders.filter(order => 
+        order.status !== 'pending' && order.status !== 'rejected'
+      ).length;
+    }
+    
+    return approvedCount;
+  };
+
+  const handleEditLocation = async (address: Address) => {
+    try {
+      // Fetch complete location data
+      const { data: locationData, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('id', address.id)
+        .single();
+
+      if (error) throw error;
+
+      // Navigate to new-location page with initialData in edit mode
+      navigate('/user/new-location', {
+        state: {
+          editMode: true,
+          initialData: {
+            id: locationData.id,
+            user_id: locationData.user_id,
+            title: locationData.title || '',
+            province_id: locationData.province_id || '',
+            district_id: locationData.district_id || '',
+            address_line: locationData.address_line,
+            lat: locationData.lat,
+            lng: locationData.lng,
+            is_active: locationData.is_active,
+            created_at: locationData.created_at
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching location data:', error);
+      toast.error('خطا در دریافت اطلاعات آدرس');
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -412,6 +462,8 @@ export default function MyProjectsHierarchy() {
             const isExpanded = expandedAddresses.has(address.id);
             const addressProjects = data.projects[address.id] || [];
             const projectCount = addressProjects.length;
+            const approvedOrdersCount = getLocationApprovedOrdersCount(address.id);
+            const canEditLocation = approvedOrdersCount === 0;
 
             return (
               <Card key={address.id} className="overflow-hidden">
@@ -445,6 +497,20 @@ export default function MyProjectsHierarchy() {
                     <Badge variant="secondary">
                       {projectCount} پروژه
                     </Badge>
+                    {canEditLocation && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditLocation(address);
+                        }}
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                        <span className="text-xs">اصلاح</span>
+                      </Button>
+                    )}
                     {projectCount === 0 && (
                       <Button
                         variant="ghost"
