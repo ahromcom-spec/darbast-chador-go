@@ -158,6 +158,7 @@ export default function OrderDetail() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -572,6 +573,49 @@ export default function OrderDetail() {
       setUploadingMedia(false);
       // Reset input
       e.target.value = '';
+    }
+  };
+
+  const handleDeleteMedia = async (mediaId: string, mediaPath: string) => {
+    if (!confirm('آیا از حذف این رسانه اطمینان دارید؟')) {
+      return;
+    }
+
+    setDeletingMediaId(mediaId);
+    try {
+      // حذف از storage
+      const { error: storageError } = await supabase.storage
+        .from('order-media')
+        .remove([mediaPath]);
+      
+      if (storageError) {
+        console.error('Storage delete error:', storageError);
+      }
+      
+      // حذف از database
+      const { error: dbError } = await supabase
+        .from('project_media')
+        .delete()
+        .eq('id', mediaId);
+      
+      if (dbError) throw dbError;
+      
+      toast({
+        title: '✓ موفق',
+        description: 'رسانه با موفقیت حذف شد',
+      });
+      
+      // بارگذاری مجدد جزئیات سفارش
+      await fetchOrderDetails();
+    } catch (error: any) {
+      console.error('Error deleting media:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در حذف رسانه',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingMediaId(null);
     }
   };
 
@@ -1125,6 +1169,26 @@ export default function OrderDetail() {
                           className="w-full h-full object-cover transition-transform group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                        
+                        {/* دکمه حذف - فقط برای سفارش‌های تایید نشده */}
+                        {!order.approved_at && (
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteMedia(media.id, media.file_path);
+                            }}
+                            disabled={deletingMediaId === media.id}
+                          >
+                            {deletingMediaId === media.id ? (
+                              <Clock className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <X className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                       </div>
                     );
                   })}
@@ -1157,9 +1221,9 @@ export default function OrderDetail() {
                     };
                     
                     return (
-                      <div key={media.id} className="relative group">
+                      <div key={media.id} className="relative">
                         <div 
-                          className="aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                          className="aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all group"
                           onClick={() => window.open(data.publicUrl, '_blank')}
                         >
                           {thumbnailData?.data.publicUrl ? (
@@ -1194,28 +1258,48 @@ export default function OrderDetail() {
                               </div>
                             </div>
                           )}
-                          
-                          {/* Action buttons */}
-                          <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              className="shadow-lg bg-white/95 hover:bg-white"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownload();
-                              }}
-                            >
-                              <Download className="w-4 h-4 ml-1" />
-                              دانلود
-                            </Button>
-                          </div>
-                          
-                          {/* File info badge */}
-                          <div className="absolute bottom-3 left-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
-                            <Film className="w-3.5 h-3.5" />
-                            ویدیو
-                          </div>
+                        </div>
+                        
+                        {/* دکمه حذف - فقط برای سفارش‌های تایید نشده */}
+                        {!order.approved_at && (
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteMedia(media.id, media.file_path);
+                            }}
+                            disabled={deletingMediaId === media.id}
+                          >
+                            {deletingMediaId === media.id ? (
+                              <Clock className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <X className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                        
+                        {/* Action buttons */}
+                        <div className="absolute bottom-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="shadow-lg bg-white/95 hover:bg-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload();
+                            }}
+                          >
+                            <Download className="w-4 h-4 ml-1" />
+                            دانلود
+                          </Button>
+                        </div>
+                        
+                        {/* File info badge */}
+                        <div className="absolute bottom-3 left-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
+                          <Film className="w-3.5 h-3.5" />
+                          ویدیو
                         </div>
                       </div>
                     );

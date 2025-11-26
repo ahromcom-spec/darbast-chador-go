@@ -27,6 +27,7 @@ interface ProjectOrder {
   status: string;
   address: string;
   created_at: string;
+  approved_at?: string | null;
   subcategory?: { name: string; code: string };
   media?: HierarchyMedia[];
 }
@@ -590,7 +591,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       // دریافت سفارشات
       const { data: v3Orders } = await supabase
         .from('projects_v3')
-        .select('id, code, status, address, created_at, hierarchy_project_id, subcategory:subcategories(name, code)')
+        .select('id, code, status, address, created_at, approved_at, hierarchy_project_id, subcategory:subcategories(name, code)')
         .in('hierarchy_project_id', projectIds)
         .limit(200);
 
@@ -645,6 +646,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             status: order.status,
             address: order.address,
             created_at: order.created_at,
+            approved_at: order.approved_at || null,
             subcategory: order.subcategory || undefined,
             media: orderMediaMap.get(order.id) || []
           });
@@ -1301,6 +1303,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                         ${allMedia.map((m, idx) => {
                           const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
                           const isVideo = m.file_type === 'video';
+                          const showDeleteBtn = !order.approved_at; // فقط برای سفارش‌های تایید نشده
                           
                           if (isVideo) {
                             return `
@@ -1317,20 +1320,54 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                   </svg>
                                 </div>
                                 <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 5px;border-radius:3px;">ویدیو</span>
+                                ${showDeleteBtn ? `
+                                  <button 
+                                    class="delete-media-btn"
+                                    data-media-id="${m.id}"
+                                    data-media-path="${m.file_path}"
+                                    data-order-id="${order.id}"
+                                    style="position:absolute;top:4px;left:4px;background:#ef4444;color:white;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;transition:background 0.2s;pointer-events:auto;"
+                                    onmouseover="this.style.background='#dc2626'"
+                                    onmouseout="this.style.background='#ef4444'"
+                                    onclick="event.stopPropagation();"
+                                  >
+                                    <svg style="width:14px;height:14px;" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                  </button>
+                                ` : ''}
                               </div>
                             `;
                           } else {
                             return `
-                              <img 
-                                id="order-media-${order.id}-${idx}" 
-                                class="order-image-clickable"
-                                data-image-url="${url}"
-                                src="${url}" 
-                                alt="تصویر سفارش" 
-                                loading="lazy"
-                                style="width:100%;height:100px;object-fit:cover;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;user-select:none;"
-                                draggable="false"
-                              />
+                              <div style="position:relative;width:100%;height:100px;display:${idx === 0 ? 'block' : 'none'};">
+                                <img 
+                                  id="order-media-${order.id}-${idx}" 
+                                  class="order-image-clickable"
+                                  data-image-url="${url}"
+                                  src="${url}" 
+                                  alt="تصویر سفارش" 
+                                  loading="lazy"
+                                  style="width:100%;height:100%;object-fit:cover;cursor:pointer;user-select:none;"
+                                  draggable="false"
+                                />
+                                ${showDeleteBtn ? `
+                                  <button 
+                                    class="delete-media-btn"
+                                    data-media-id="${m.id}"
+                                    data-media-path="${m.file_path}"
+                                    data-order-id="${order.id}"
+                                    style="position:absolute;top:4px;left:4px;background:#ef4444;color:white;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;transition:background 0.2s;"
+                                    onmouseover="this.style.background='#dc2626'"
+                                    onmouseout="this.style.background='#ef4444'"
+                                    onclick="event.stopPropagation();"
+                                  >
+                                    <svg style="width:14px;height:14px;" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                  </button>
+                                ` : ''}
+                              </div>
                             `;
                           }
                         }).join('')}
