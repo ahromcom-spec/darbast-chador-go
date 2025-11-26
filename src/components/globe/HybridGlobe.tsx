@@ -1026,6 +1026,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                           <div style="text-align:center;">
                             <div style="font-weight:600;font-size:11px;color:#1f2937;margin-bottom:2px;">افزودن عکس یا فیلم</div>
                             <div style="font-size:9px;color:#6b7280;">برای این سفارش رسانه جدید اضافه کنید</div>
+                            ${allMedia.length > 0 ? `<div style="font-size:9px;color:#667eea;margin-top:4px;font-weight:600;">در حال حاضر ${allMedia.length} رسانه موجود است</div>` : ''}
                           </div>
                         </div>
                         
@@ -1041,7 +1042,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                             </svg>
                           </button>
                           <div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:2px 8px;border-radius:10px;font-family:Vazirmatn;font-size:9px;pointer-events:none;">
-                            <span id="order-counter-${order.id}">${allMedia.length === 0 ? 'افزودن رسانه' : `1 از ${allMedia.length + 1}`}</span>
+                            <span id="order-counter-${order.id}">1 از ${allMedia.length + 1}</span>
                           </div>
                         ` : ''}
                       </div>
@@ -1258,11 +1259,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 
                 const counter = popupElement.querySelector(`#order-counter-${orderId}`);
                 if (counter) {
-                  if (index === mediaCount) {
-                    counter.textContent = 'افزودن رسانه';
-                  } else {
-                    counter.textContent = `${index + 1} از ${mediaCount + 1}`;
-                  }
+                  counter.textContent = `${index + 1} از ${mediaCount + 1}`;
                 }
               }
             });
