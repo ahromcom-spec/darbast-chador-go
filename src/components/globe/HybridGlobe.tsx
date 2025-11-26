@@ -595,6 +595,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         .limit(200);
 
       const orderMediaMap = new Map<string, HierarchyMedia[]>();
+      
+      // اضافه کردن media از project_media
       pmMedia.forEach(m => {
         if (!orderMediaMap.has(m.project_id)) orderMediaMap.set(m.project_id, []);
         orderMediaMap.get(m.project_id)!.push({ 
@@ -605,6 +607,30 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           mime_type: m.mime_type 
         });
       });
+      
+      // اضافه کردن media از project_hierarchy_media برای سفارشات
+      if (phMedia && v3Orders) {
+        v3Orders.forEach(order => {
+          const hierarchyProjectId = order.hierarchy_project_id;
+          if (!hierarchyProjectId) return;
+          
+          // پیدا کردن media مربوط به این hierarchy project
+          const hierarchyMedia = phMedia.filter(m => m.hierarchy_project_id === hierarchyProjectId);
+          
+          if (hierarchyMedia.length > 0) {
+            if (!orderMediaMap.has(order.id)) orderMediaMap.set(order.id, []);
+            hierarchyMedia.forEach(m => {
+              orderMediaMap.get(order.id)!.push({
+                id: m.id,
+                file_path: m.file_path,
+                file_type: m.file_type,
+                created_at: m.created_at,
+                mime_type: m.mime_type
+              });
+            });
+          }
+        });
+      }
 
       const ordersByProject = new Map<string, ProjectOrder[]>();
       if (v3Orders) {
