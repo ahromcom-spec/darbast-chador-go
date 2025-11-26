@@ -5,6 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
 import { 
   ChevronLeft, 
@@ -15,7 +25,8 @@ import {
   FileText,
   Plus,
   Building2,
-  ArrowRight
+  ArrowRight,
+  XCircle
 } from 'lucide-react';
 
 interface Address {
@@ -69,6 +80,8 @@ export default function MyProjectsHierarchy() {
   const [expandedAddresses, setExpandedAddresses] = useState<Set<string>>(new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [highlightedOrderId, setHighlightedOrderId] = useState<string | null>(null);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   const orderRefs = useRef<Record<string, HTMLDivElement | null>>({});
   useEffect(() => {
     fetchHierarchyData();
@@ -244,6 +257,33 @@ export default function MyProjectsHierarchy() {
 
     const config = statusConfig[status] || { label: status, variant: 'default' };
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const handleCancelOrder = async () => {
+    if (!cancelOrderId) return;
+    
+    setIsCancelling(true);
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: 'لغو شده توسط کاربر',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cancelOrderId);
+
+      if (error) throw error;
+
+      toast.success("سفارش شما با موفقیت لغو شد");
+      setCancelOrderId(null);
+      await fetchHierarchyData();
+    } catch (error: any) {
+      console.error('Error cancelling order:', error);
+      toast.error("خطا در لغو سفارش");
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   if (loading) {
@@ -448,57 +488,81 @@ export default function MyProjectsHierarchy() {
                                         ? notes.estimated_price
                                         : (order.payment_amount || 0);
 
-                                     return (
-                                       <div
-                                         key={order.id}
-                                         ref={(el) => { orderRefs.current[order.id] = el; }}
-                                         className={`p-3 bg-background rounded-md hover:bg-accent/50 cursor-pointer transition-all mr-6 ${
-                                           highlightedOrderId === order.id ? 'ring-2 ring-primary shadow-lg' : ''
-                                         }`}
-                                         onClick={(e) => {
-                                           e.stopPropagation();
-                                           navigate(`/orders/${order.id}`);
-                                         }}
-                                       >
-                                         <div className="flex items-start justify-between mb-2">
-                                           <div className="flex items-center gap-2">
-                                             <FileText className="h-4 w-4 text-muted-foreground" />
-                                             <div>
-                                               <p className="text-sm font-medium">سفارش #{order.code}</p>
-                                               <p className="text-xs text-muted-foreground">
-                                                 {new Date(order.created_at).toLocaleDateString('fa-IR', {
-                                                   year: 'numeric',
-                                                   month: 'long',
-                                                   day: 'numeric'
-                                                 })} - {new Date(order.created_at).toLocaleTimeString('fa-IR', {
-                                                   hour: '2-digit',
-                                                   minute: '2-digit'
-                                                 })}
-                                               </p>
-                                             </div>
-                                           </div>
-                                           {getStatusBadge(order.status)}
-                                         </div>
-                                         <div className="grid grid-cols-2 gap-2 text-xs mr-6">
-                                           <div className="flex items-center gap-1">
-                                             <span className="text-muted-foreground">ابعاد:</span>
-                                             <span className="font-medium" dir="ltr">{dimensionsText}{dims.length > 0 ? ' متر' : ''}</span>
-                                           </div>
-                                           {totalValue > 0 && (
-                                             <div className="flex items-center gap-1">
-                                               <span className="text-muted-foreground">{metricLabel}</span>
-                                               <span className="font-medium" dir="ltr">{totalValue.toFixed(2)} {unit}</span>
-                                             </div>
-                                           )}
-                                           {estimatedPrice > 0 && (
-                                             <div className="flex items-center gap-1 col-span-2">
-                                               <span className="text-muted-foreground">قیمت:</span>
-                                               <span className="font-medium">{estimatedPrice.toLocaleString('fa-IR')} تومان</span>
-                                             </div>
-                                           )}
-                                         </div>
-                                       </div>
-                                     );
+                                       return (
+                                        <div
+                                          key={order.id}
+                                          ref={(el) => { orderRefs.current[order.id] = el; }}
+                                          className={`p-3 bg-background rounded-md hover:bg-accent/50 transition-all mr-6 ${
+                                            highlightedOrderId === order.id ? 'ring-2 ring-primary shadow-lg' : ''
+                                          }`}
+                                        >
+                                          <div className="flex items-start justify-between mb-2">
+                                            <div 
+                                              className="flex items-center gap-2 flex-1 cursor-pointer"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(`/orders/${order.id}`);
+                                              }}
+                                            >
+                                              <FileText className="h-4 w-4 text-muted-foreground" />
+                                              <div>
+                                                <p className="text-sm font-medium">سفارش #{order.code}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {new Date(order.created_at).toLocaleDateString('fa-IR', {
+                                                    year: 'numeric',
+                                                    month: 'long',
+                                                    day: 'numeric'
+                                                  })} - {new Date(order.created_at).toLocaleTimeString('fa-IR', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                  })}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              {getStatusBadge(order.status)}
+                                              {order.status === 'pending' && (
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setCancelOrderId(order.id);
+                                                  }}
+                                                >
+                                                  <XCircle className="h-3.5 w-3.5" />
+                                                  <span className="text-xs">لغو</span>
+                                                </Button>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div 
+                                            className="grid grid-cols-2 gap-2 text-xs mr-6 cursor-pointer"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(`/orders/${order.id}`);
+                                            }}
+                                          >
+                                            <div className="flex items-center gap-1">
+                                              <span className="text-muted-foreground">ابعاد:</span>
+                                              <span className="font-medium" dir="ltr">{dimensionsText}{dims.length > 0 ? ' متر' : ''}</span>
+                                            </div>
+                                            {totalValue > 0 && (
+                                              <div className="flex items-center gap-1">
+                                                <span className="text-muted-foreground">{metricLabel}</span>
+                                                <span className="font-medium" dir="ltr">{totalValue.toFixed(2)} {unit}</span>
+                                              </div>
+                                            )}
+                                            {estimatedPrice > 0 && (
+                                              <div className="flex items-center gap-1 col-span-2">
+                                                <span className="text-muted-foreground">قیمت:</span>
+                                                <span className="font-medium">{estimatedPrice.toLocaleString('fa-IR')} تومان</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
                                    })
                                  )}
                               </div>
@@ -514,6 +578,33 @@ export default function MyProjectsHierarchy() {
           })}
         </div>
       )}
+
+      {/* Cancel Order Dialog */}
+      <AlertDialog open={!!cancelOrderId} onOpenChange={() => setCancelOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>لغو سفارش</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا مطمئن هستید می‌خواهید این سفارش را لغو کنید؟ این کار پس از تایید مدیران قابل بازگشت نیست.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>
+              انصراف
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isCancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                handleCancelOrder();
+              }}
+            >
+              {isCancelling ? 'در حال لغو...' : 'تایید لغو سفارش'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
