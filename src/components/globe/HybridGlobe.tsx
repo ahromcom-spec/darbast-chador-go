@@ -1413,18 +1413,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 viewDetailBtn.addEventListener('click', (e) => {
                   e.stopPropagation();
                   const orderId = (viewDetailBtn as HTMLElement).dataset.orderId;
-                  const subcategoryCode = (viewDetailBtn as HTMLElement).dataset.subcategoryCode;
                   
-                  if (subcategoryCode === '10') {
-                    // داربست اجرا با اجناس - به فرم
-                    window.location.href = `/scaffolding/form?edit=${orderId}`;
-                  } else if (subcategoryCode === '30') {
-                    // اجاره داربست - به فرم
-                    window.location.href = `/scaffolding/rental?edit=${orderId}`;
-                  } else {
-                    // سایر سفارشات - به صفحه جزئیات سفارش
-                    window.location.href = `/user/order-detail/${orderId}`;
-                  }
+                  // انتقال به صفحه جزئیات سفارش برای مشاهده فرم ثبت‌شده
+                  window.location.href = `/orders/${orderId}`;
                 });
               }
               
