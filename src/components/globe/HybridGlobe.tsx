@@ -1497,8 +1497,27 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                         description: `سفارش ${orderCode} با موفقیت حذف شد`,
                       });
 
-                      // حفظ موقعیت و فقط به‌روزرسانی داده‌ها
+                      // بارگذاری مجدد داده‌ها
                       await refetch();
+                      await fetchProjectMedia();
+                      
+                      // بستن popup فعلی
+                      mapRef.current?.closePopup();
+                      
+                      // نمایش مجدد پروژه اگر سفارشات دیگر دارد
+                      setTimeout(async () => {
+                        const updatedProject = projectsWithMedia.find(p => p.id === project.id);
+                        if (updatedProject && updatedProject.orders && updatedProject.orders.length > 0) {
+                          // پیدا کردن مارکر همان پروژه و باز کردن popup
+                          const markerIndex = markersRef.current.findIndex(m => {
+                            const content = m.getPopup()?.getContent();
+                            return typeof content === 'string' && content.includes(project.id);
+                          });
+                          if (markerIndex !== -1) {
+                            markersRef.current[markerIndex].openPopup();
+                          }
+                        }
+                      }, 500);
                     } catch (error) {
                       console.error('Error deleting order:', error);
                       toast({
@@ -1511,7 +1530,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 });
               }
               
-              // هندلر برای کلیک روی ویدیوها در گالری
+              // هندلر برای کلیک روی ویدیوها در גالری
               const videoItems = popupElement.querySelectorAll(`.order-video-item-${order.id}`);
               videoItems.forEach(videoEl => {
                 videoEl.addEventListener('click', (e) => {
