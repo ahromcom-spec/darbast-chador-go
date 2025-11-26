@@ -46,6 +46,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const markersRef = useRef<L.Marker[]>([]);
   const linesRef = useRef<L.Polyline[]>([]);
   const centerMarkersRef = useRef<L.CircleMarker[]>([]);
+  const locationsMarkersRef = useRef<L.Marker[]>([]); // مرجع جداگانه برای آدرس‌های بدون پروژه
   const galleryIndexesRef = useRef<Map<string, number>>(new Map());
   const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
@@ -1012,7 +1013,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       return;
     }
 
-    // پاک کردن مارکرها، خطوط و مارکرهای مرکزی قبلی
+    // پاک کردن مارکرها، خطوط و مارکرهای مرکزی قبلی (اما نه آدرس‌های بدون پروژه)
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
     linesRef.current.forEach(line => line.remove());
@@ -1667,6 +1668,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     });
 
     // اضافه کردن markers برای آدرس‌های بدون پروژه
+    // پاک کردن مارکرهای آبی قبلی
+    locationsMarkersRef.current.forEach(marker => marker.remove());
+    locationsMarkersRef.current = [];
+
     locationsWithoutProjects.forEach(location => {
       if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) return;
 
@@ -1683,7 +1688,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       const marker = L.marker([location.lat, location.lng], {
         icon: blueIcon,
-        opacity: 0 // مخفی در ابتدا
+        opacity: 1 // نمایان از ابتدا
       }).addTo(mapRef.current!);
 
       const popupContent = `
@@ -1765,7 +1770,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         setSelectedMapLocation(null); // Clear map location selection
       });
 
-      markersRef.current.push(marker);
+      locationsMarkersRef.current.push(marker); // اضافه به مرجع جداگانه
     });
 
     // انیمیشن زوم از نمای کل ایران به پروژه‌ها (مثل Google Earth)
