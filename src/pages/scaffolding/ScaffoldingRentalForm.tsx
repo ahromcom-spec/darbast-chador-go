@@ -329,8 +329,20 @@ export default function ScaffoldingRentalForm() {
             <CardHeader className="text-center border-b">
               <CardTitle className="text-2xl flex items-center justify-center gap-2">
                 <Building2 className="h-6 w-6" />
-                فرم ثبت سفارش {serviceName || 'کرایه اجناس داربست'}
+                {editOrderId ? `جزئیات سفارش - کد: ${orderData?.code}` : `فرم ثبت سفارش ${serviceName || 'کرایه اجناس داربست'}`}
               </CardTitle>
+              {editOrderId && orderData && (
+                <CardDescription className="text-base font-semibold">
+                  وضعیت: {
+                    orderData.status === 'pending' ? 'در انتظار تایید' :
+                    orderData.status === 'approved' ? 'تایید شده' :
+                    orderData.status === 'in_progress' ? 'در حال اجرا' :
+                    orderData.status === 'completed' ? 'تکمیل شده' :
+                    orderData.status === 'rejected' ? 'رد شده' :
+                    orderData.status
+                  }
+                </CardDescription>
+              )}
             </CardHeader>
 
             <CardContent className="pt-6 pb-4 border-b bg-muted/30">

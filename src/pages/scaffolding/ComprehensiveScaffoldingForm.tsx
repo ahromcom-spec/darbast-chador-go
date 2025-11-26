@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ import { MediaUploader } from '@/components/orders/MediaUploader';
 import { Textarea } from '@/components/ui/textarea';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValidation';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 interface Dimension {
   id: string;
@@ -61,7 +62,7 @@ interface ComprehensiveScaffoldingFormProps {
 }
 
 export default function ComprehensiveScaffoldingForm({
-  editOrderId,
+  editOrderId: propEditOrderId,
   existingOrderData,
   hierarchyProjectId: propHierarchyProjectId,
   projectId: propProjectId,
@@ -77,11 +78,15 @@ export default function ComprehensiveScaffoldingForm({
 }: ComprehensiveScaffoldingFormProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const navState = (location?.state || {}) as any;
   const { toast } = useToast();
   const { user } = useAuth();
   const { customerId } = useCustomer();
   const { provinces } = useProvinces();
+  
+  // دریافت editOrderId از query parameter یا prop
+  const editOrderId = searchParams.get('edit') || propEditOrderId;
   
   // دریافت hierarchyProjectId از props یا state برای لینک کردن سفارش
   const hierarchyProjectId = propHierarchyProjectId || navState?.hierarchyProjectId || null;
@@ -96,6 +101,8 @@ export default function ComprehensiveScaffoldingForm({
   const address = prefilledAddress || navState?.locationAddress || '';
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '', useTwoMeterTemplate: false }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
+  const [loadingOrder, setLoadingOrder] = useState(false);
+  const [orderData, setOrderData] = useState<any>(null);
   
   // Check if this is facade scaffolding type (داربست سطحی نما)
   const isFacadeScaffolding = activeService === 'facade' || scaffoldType === 'facade';
@@ -122,6 +129,123 @@ export default function ComprehensiveScaffoldingForm({
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [locationPurpose, setLocationPurpose] = useState('');
   const [installationDateTime, setInstallationDateTime] = useState<string>('');
+
+  // Fetch order data if editing from query parameter
+  useEffect(() => {
+    if (editOrderId && !existingOrderData) {
+      fetchOrderData();
+    }
+  }, [editOrderId]);
+
+  const fetchOrderData = async () => {
+    if (!editOrderId) return;
+    
+    setLoadingOrder(true);
+    try {
+      const { data, error } = await supabase
+        .from('projects_v3')
+        .select(`
+          *,
+          subcategory:subcategories!projects_v3_subcategory_id_fkey (
+            id,
+            name,
+            code
+          ),
+          province:provinces!projects_v3_province_id_fkey (
+            id,
+            name
+          ),
+          district:districts!projects_v3_district_id_fkey (
+            id,
+            name
+          )
+        `)
+        .eq('id', editOrderId)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data) {
+        setOrderData(data);
+        
+        // Parse notes to populate form
+        if (data.notes) {
+          try {
+            const notes = typeof data.notes === 'string' ? JSON.parse(data.notes) : data.notes;
+            
+            // Set service type
+            if (notes.service_type) {
+              setActiveService(notes.service_type);
+              if (notes.service_type === 'formwork') {
+                setScaffoldType('formwork');
+              } else if (notes.service_type === 'ceiling-tiered' || notes.service_type === 'ceiling-slab') {
+                setScaffoldType('ceiling');
+              } else {
+                setScaffoldType('facade');
+              }
+            }
+
+            // Set dimensions
+            if (notes.dimensions && Array.isArray(notes.dimensions)) {
+              setDimensions(notes.dimensions.map((dim: any, index: number) => ({
+                id: (index + 1).toString(),
+                length: dim.length?.toString() || '',
+                width: dim.width?.toString() || '',
+                height: dim.height?.toString() || '',
+                useTwoMeterTemplate: dim.useTwoMeterTemplate || false
+              })));
+            }
+
+            // Set conditions
+            if (notes.conditions) {
+              setConditions(notes.conditions);
+            }
+
+            // Set other fields
+            if (notes.isFacadeWidth2m !== undefined) {
+              setIsFacadeWidth2m(notes.isFacadeWidth2m);
+            }
+            if (notes.onGround !== undefined) {
+              setOnGround(notes.onGround);
+            }
+            if (notes.vehicleReachesSite !== undefined) {
+              setVehicleReachesSite(notes.vehicleReachesSite);
+            }
+            if (notes.locationPurpose) {
+              setLocationPurpose(notes.locationPurpose);
+            }
+            if (notes.installationDateTime) {
+              setInstallationDateTime(notes.installationDateTime);
+            }
+          } catch (parseError) {
+            console.error('Error parsing order notes:', parseError);
+            toast({
+              title: 'خطا در بارگذاری اطلاعات',
+              description: 'جزئیات فنی این سفارش در دسترس نیست',
+              variant: 'destructive'
+            });
+          }
+        }
+        
+        // Set address fields
+        if (data.address) {
+          setDetailedAddress(data.address);
+        }
+        if (data.detailed_address) {
+          setDetailedAddress(data.detailed_address);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching order data:', error);
+      toast({
+        title: 'خطا',
+        description: 'امکان بارگذاری اطلاعات سفارش وجود ندارد',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingOrder(false);
+    }
+  };
 
   // Load existing order data when editing
   useEffect(() => {
@@ -824,6 +948,15 @@ export default function ComprehensiveScaffoldingForm({
 
   const priceData = calculatePrice();
 
+  // Show loading spinner while fetching order data
+  if (loadingOrder) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       {/* Hero Background Image */}
@@ -839,6 +972,27 @@ export default function ComprehensiveScaffoldingForm({
 
       {/* Content */}
       <div className="relative z-10 space-y-6 pb-8">
+
+      {/* Header with order info if editing */}
+      {editOrderId && orderData && (
+        <Card className="shadow-2xl bg-white dark:bg-card border-2 border-blue-500">
+          <CardHeader>
+            <CardTitle className="text-blue-800 dark:text-blue-300">
+              جزئیات سفارش - کد: {orderData.code}
+            </CardTitle>
+            <CardDescription className="text-slate-700 dark:text-slate-300">
+              وضعیت: {
+                orderData.status === 'pending' ? 'در انتظار تایید' :
+                orderData.status === 'approved' ? 'تایید شده' :
+                orderData.status === 'in_progress' ? 'در حال اجرا' :
+                orderData.status === 'completed' ? 'تکمیل شده' :
+                orderData.status === 'rejected' ? 'رد شده' :
+                orderData.status
+              }
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-white dark:bg-card border-2">
