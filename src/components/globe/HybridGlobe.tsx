@@ -482,123 +482,197 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     }).addTo(map);
 
     // بستن popup با debounce
-    // بستن popup با debounce
-    let clickTimeout: NodeJS.Timeout;
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      clearTimeout(clickTimeout);
-      clickTimeout = setTimeout(() => {
-        const clickedOnMarker = (e.originalEvent.target as HTMLElement)?.closest('.leaflet-marker-icon');
-        if (!clickedOnMarker) {
-          setSelectedProject(null);
-          setSelectedOrderForUpload(null);
-          
-          // حذف مارکر موقت قبلی اگر وجود دارد
-          if (tempMarkerRef.current) {
-            map.removeLayer(tempMarkerRef.current);
-            tempMarkerRef.current = null;
-          }
+    let longPressTimer: NodeJS.Timeout;
+    let isLongPress = false;
+    let clickCount = 0;
+    let lastClickTime = 0;
+    const DOUBLE_CLICK_DELAY = 300; // میلی‌ثانیه
+    const LONG_PRESS_DURATION = 500; // میلی‌ثانیه
 
-          // ایجاد مارکر موقت جدید با آیکون پین
-          const tempIcon = L.divIcon({
-            className: 'custom-temp-marker',
-            html: `
-              <div style="
-                position: relative;
-                width: 40px;
-                height: 50px;
-                animation: bounce 1s ease-in-out infinite;
-              ">
-                <svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <ellipse cx="20" cy="48" rx="8" ry="2" fill="rgba(0,0,0,0.2)"/>
-                  <path d="M20 2C12 2 6 8 6 16C6 25 20 42 20 42C20 42 34 25 34 16C34 8 28 2 20 2Z" 
-                        fill="url(#pinGradient)" 
-                        stroke="white" 
-                        stroke-width="2"
-                        filter="url(#shadow)"/>
-                  <circle cx="20" cy="16" r="6" fill="white" opacity="0.9"/>
-                  <defs>
-                    <linearGradient id="pinGradient" x1="20" y1="2" x2="20" y2="42" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stop-color="#3b82f6"/>
-                      <stop offset="100%" stop-color="#1d4ed8"/>
-                    </linearGradient>
-                    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-                      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
-                    </filter>
-                  </defs>
-                </svg>
-              </div>
-              <style>
-                @keyframes bounce {
-                  0%, 100% { transform: translateY(0); }
-                  50% { transform: translateY(-5px); }
-                }
-              </style>
-            `,
-            iconSize: [40, 50],
-            iconAnchor: [20, 50],
-          });
+    // هندلر شروع long press (موس و تاچ)
+    const startLongPress = (e: L.LeafletMouseEvent) => {
+      const clickedOnMarker = (e.originalEvent.target as HTMLElement)?.closest('.leaflet-marker-icon');
+      if (clickedOnMarker) return;
 
-          const newTempMarker = L.marker([e.latlng.lat, e.latlng.lng], { icon: tempIcon }).addTo(map);
-          
-          // اضافه کردن popup به مارکر
-          const popupContent = `
-            <div style="text-align: center; padding: 8px;">
-              <button 
-                id="add-project-btn"
-                style="
-                  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-                  color: white;
-                  border: none;
-                  border-radius: 8px;
-                  padding: 12px 20px;
-                  font-family: inherit;
-                  font-size: 14px;
-                  font-weight: 600;
-                  cursor: pointer;
-                  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-                  transition: all 0.2s ease;
-                "
-                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)';"
-                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)';"
-              >
-                ➕ افزودن پروژه در این موقعیت
-              </button>
-            </div>
-          `;
-          
-          newTempMarker.bindPopup(popupContent, {
-            closeButton: false,
-            className: 'custom-add-project-popup',
-            offset: [0, -40]
-          }).openPopup();
-          
-          // اضافه کردن event listener به دکمه بعد از باز شدن popup
-          setTimeout(() => {
-            const addBtn = document.getElementById('add-project-btn');
-            if (addBtn) {
-              addBtn.addEventListener('click', () => {
-                navigate('/user/new-location', {
-                  state: {
-                    lat: e.latlng.lat,
-                    lng: e.latlng.lng
-                  }
-                });
-              });
+      isLongPress = false;
+      longPressTimer = setTimeout(() => {
+        isLongPress = true;
+        showAddProjectMarker(e);
+      }, LONG_PRESS_DURATION);
+    };
+
+    // هندلر پایان long press
+    const endLongPress = () => {
+      clearTimeout(longPressTimer);
+    };
+
+    // تابع نمایش مارکر افزودن پروژه
+    const showAddProjectMarker = (e: L.LeafletMouseEvent) => {
+      setSelectedProject(null);
+      setSelectedOrderForUpload(null);
+      
+      // حذف مارکر موقت قبلی اگر وجود دارد
+      if (tempMarkerRef.current) {
+        map.removeLayer(tempMarkerRef.current);
+        tempMarkerRef.current = null;
+      }
+
+      // ایجاد مارکر موقت جدید با آیکون پین
+      const tempIcon = L.divIcon({
+        className: 'custom-temp-marker',
+        html: `
+          <div style="
+            position: relative;
+            width: 40px;
+            height: 50px;
+            animation: bounce 1s ease-in-out infinite;
+          ">
+            <svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="20" cy="48" rx="8" ry="2" fill="rgba(0,0,0,0.2)"/>
+              <path d="M20 2C12 2 6 8 6 16C6 25 20 42 20 42C20 42 34 25 34 16C34 8 28 2 20 2Z" 
+                    fill="url(#pinGradient)" 
+                    stroke="white" 
+                    stroke-width="2"
+                    filter="url(#shadow)"/>
+              <circle cx="20" cy="16" r="6" fill="white" opacity="0.9"/>
+              <defs>
+                <linearGradient id="pinGradient" x1="20" y1="2" x2="20" y2="42" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#3b82f6"/>
+                  <stop offset="100%" stop-color="#1d4ed8"/>
+                </linearGradient>
+                <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+                </filter>
+              </defs>
+            </svg>
+          </div>
+          <style>
+            @keyframes bounce {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-5px); }
             }
-          }, 100);
-          
-          tempMarkerRef.current = newTempMarker;
-          setSelectedMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+          </style>
+        `,
+        iconSize: [40, 50],
+        iconAnchor: [20, 50],
+      });
+
+      const newTempMarker = L.marker([e.latlng.lat, e.latlng.lng], { icon: tempIcon }).addTo(map);
+      
+      // اضافه کردن popup به مارکر
+      const popupContent = `
+        <div style="text-align: center; padding: 8px;">
+          <button 
+            id="add-project-btn"
+            style="
+              background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+              color: white;
+              border: none;
+              border-radius: 8px;
+              padding: 12px 20px;
+              font-family: inherit;
+              font-size: 14px;
+              font-weight: 600;
+              cursor: pointer;
+              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+              transition: all 0.2s ease;
+            "
+            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)';"
+            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)';"
+          >
+            ➕ افزودن پروژه در این موقعیت
+          </button>
+        </div>
+      `;
+      
+      newTempMarker.bindPopup(popupContent, {
+        closeButton: false,
+        className: 'custom-add-project-popup',
+        offset: [0, -40]
+      }).openPopup();
+      
+      // اضافه کردن event listener به دکمه بعد از باز شدن popup
+      setTimeout(() => {
+        const addBtn = document.getElementById('add-project-btn');
+        if (addBtn) {
+          addBtn.addEventListener('click', () => {
+            navigate('/user/new-location', {
+              state: {
+                lat: e.latlng.lat,
+                lng: e.latlng.lng
+              }
+            });
+          });
         }
       }, 100);
+      
+      tempMarkerRef.current = newTempMarker;
+      setSelectedMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+    };
+
+    // هندلر دوبار کلیک
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      const clickedOnMarker = (e.originalEvent.target as HTMLElement)?.closest('.leaflet-marker-icon');
+      
+      // اگر روی مارکر کلیک شد، پروژه‌ها را ببند و خارج شو
+      if (clickedOnMarker) {
+        return;
+      }
+
+      // اگر این یک long press بود، کار ما تمام است
+      if (isLongPress) {
+        isLongPress = false;
+        return;
+      }
+
+      const currentTime = new Date().getTime();
+      const timeDiff = currentTime - lastClickTime;
+
+      if (timeDiff < DOUBLE_CLICK_DELAY && clickCount === 1) {
+        // دوبار کلیک شناسایی شد
+        clickCount = 0;
+        lastClickTime = 0;
+        showAddProjectMarker(e);
+      } else {
+        // اولین کلیک
+        clickCount = 1;
+        lastClickTime = currentTime;
+        
+        // پس از تاخیر، اگر دومین کلیک نیامد، کلیک‌ها را ریست کن
+        setTimeout(() => {
+          if (clickCount === 1) {
+            clickCount = 0;
+            lastClickTime = 0;
+            // بستن پروژه‌های انتخاب شده با کلیک ساده
+            setSelectedProject(null);
+            setSelectedOrderForUpload(null);
+          }
+        }, DOUBLE_CLICK_DELAY);
+      }
     });
+
+    // رویدادهای long press
+    map.on('mousedown', startLongPress);
+    map.on('mouseup', endLongPress);
+    map.on('mousemove', endLongPress);
+    map.getContainer().addEventListener('touchstart', (e: TouchEvent) => {
+      const touch = e.touches[0];
+      const point = map.containerPointToLatLng([touch.clientX, touch.clientY]);
+      const leafletEvent = {
+        latlng: point,
+        originalEvent: e
+      } as unknown as L.LeafletMouseEvent;
+      startLongPress(leafletEvent);
+    });
+    map.getContainer().addEventListener('touchend', endLongPress);
+    map.getContainer().addEventListener('touchmove', endLongPress);
 
     map.whenReady(() => {
       setMapReady(true);
     });
 
     return () => {
-      clearTimeout(clickTimeout);
+      clearTimeout(longPressTimer);
       setMapReady(false);
       if (tempMarkerRef.current && mapRef.current) {
         mapRef.current.removeLayer(tempMarkerRef.current);
