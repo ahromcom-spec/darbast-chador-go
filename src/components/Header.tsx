@@ -151,6 +151,7 @@ const Header = () => {
                     </div>
                     <DropdownMenuItem 
                       onClick={() => {
+                        setProfileDropdownOpenMobile(false);
                         navigate("/profile");
                       }}
                       className="cursor-pointer gap-2"
@@ -160,6 +161,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
+                        setProfileDropdownOpenMobile(false);
                         navigate("/user/projects");
                       }}
                       className="cursor-pointer gap-2"
@@ -169,6 +171,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
+                        setProfileDropdownOpenMobile(false);
                         navigate("/tickets");
                       }}
                       className="cursor-pointer gap-2"
@@ -178,6 +181,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
+                        setProfileDropdownOpenMobile(false);
                         handleSignOut();
                       }}
                       className="cursor-pointer gap-2 text-red-600 focus:text-red-600"
@@ -306,6 +310,7 @@ const Header = () => {
                     </div>
                     <DropdownMenuItem 
                       onClick={() => {
+                        setProfileDropdownOpenDesktop(false);
                         navigate("/profile");
                       }}
                       className="cursor-pointer gap-3 p-3"
@@ -315,6 +320,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
+                        setProfileDropdownOpenDesktop(false);
                         navigate("/user/projects");
                       }}
                       className="cursor-pointer gap-3 p-3"
@@ -324,6 +330,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
+                        setProfileDropdownOpenDesktop(false);
                         navigate("/tickets");
                       }}
                       className="cursor-pointer gap-3 p-3"
@@ -333,6 +340,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
+                        setProfileDropdownOpenDesktop(false);
                         handleSignOut();
                       }}
                       className="cursor-pointer gap-3 p-3 text-red-600 focus:text-red-600"
