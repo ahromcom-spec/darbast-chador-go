@@ -61,6 +61,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [mapboxToken, setMapboxToken] = useState<string>('');
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [zoomedImages, setZoomedImages] = useState<string[]>([]);
+  const [zoomedImageIndex, setZoomedImageIndex] = useState(0);
   const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number } | null>(null);
   const tempMarkerRef = useRef<L.Marker | null>(null);
 
@@ -1030,7 +1032,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 imgEl.addEventListener('click', (e) => {
                   e.stopPropagation();
                   const imageUrl = (imgEl as HTMLElement).dataset.imageUrl;
+                  const imageIndex = parseInt((imgEl as HTMLElement).id.split('-').pop() || '0');
+                  
                   if (imageUrl) {
+                    // پیدا کردن تمام تصاویر این order
+                    const orderImages = allMedia
+                      .filter(m => m.file_type === 'image')
+                      .map(m => supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl);
+                    
+                    setZoomedImages(orderImages);
+                    setZoomedImageIndex(imageIndex);
                     setZoomedImage(imageUrl);
                   }
                 });
@@ -1401,7 +1412,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       <ImageZoomModal
         isOpen={!!zoomedImage}
         imageUrl={zoomedImage || ''}
-        onClose={() => setZoomedImage(null)}
+        images={zoomedImages}
+        initialIndex={zoomedImageIndex}
+        onClose={() => {
+          setZoomedImage(null);
+          setZoomedImages([]);
+          setZoomedImageIndex(0);
+        }}
       />
     </div>
   );
