@@ -9,13 +9,32 @@ export default function NewLocation() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Get initial lat/lng if coming from map - ensure they are numbers
-  const initialLat = location.state?.lat ? Number(location.state.lat) : undefined;
-  const initialLng = location.state?.lng ? Number(location.state.lng) : undefined;
+  // Check if we're in edit mode
+  const isEditMode = location.state?.editMode === true;
+  const editInitialData = location.state?.initialData;
+  
+  // Get initial lat/lng if coming from map or edit mode - ensure they are numbers
+  const initialLat = editInitialData?.lat 
+    ? Number(editInitialData.lat) 
+    : (location.state?.lat ? Number(location.state.lat) : undefined);
+  const initialLng = editInitialData?.lng 
+    ? Number(editInitialData.lng) 
+    : (location.state?.lng ? Number(location.state.lng) : undefined);
 
+  console.log('🗺️ NewLocation - Mode:', isEditMode ? 'Edit' : 'Create');
   console.log('🗺️ NewLocation - Initial coordinates:', { initialLat, initialLng, state: location.state });
 
   const handleSuccess = async (locationId: string) => {
+    // If in edit mode, go back to projects hierarchy
+    if (isEditMode) {
+      navigate('/user/my-projects-hierarchy', {
+        state: {
+          expandLocationId: locationId
+        }
+      });
+      return;
+    }
+
     // Fetch location details to pass to service selection
     try {
       const { data: locationData, error } = await supabase
@@ -69,16 +88,16 @@ export default function NewLocation() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <MapPin className="w-6 h-6 text-primary" />
-              <CardTitle>ثبت آدرس پروژه</CardTitle>
+              <CardTitle>{isEditMode ? 'ویرایش آدرس پروژه' : 'ثبت آدرس پروژه'}</CardTitle>
             </div>
             <CardDescription>
-              لطفاً اطلاعات آدرس پروژه خود را وارد کنید
+              {isEditMode ? 'اطلاعات آدرس پروژه خود را ویرایش کنید' : 'لطفاً اطلاعات آدرس پروژه خود را وارد کنید'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <NewLocationForm 
               onSuccess={handleSuccess}
-              initialData={initialLat && initialLng ? {
+              initialData={editInitialData || (initialLat && initialLng ? {
                 lat: initialLat,
                 lng: initialLng,
                 title: '',
@@ -89,7 +108,7 @@ export default function NewLocation() {
                 user_id: '',
                 created_at: '',
                 is_active: true
-              } : undefined}
+              } : undefined)}
             />
           </CardContent>
         </Card>
