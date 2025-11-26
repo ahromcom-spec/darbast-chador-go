@@ -72,7 +72,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { projects, loading } = useProjectsHierarchy();
+  const { projects: allProjects, loading } = useProjectsHierarchy();
+  
+  // فیلتر کردن پروژه‌هایی که آدرسشان فعال است
+  const projects = useMemo(() => {
+    return allProjects.filter(project => 
+      project.locations && 
+      (project.locations as any).is_active !== false
+    );
+  }, [allProjects]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
