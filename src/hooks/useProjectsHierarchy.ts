@@ -14,6 +14,7 @@ export interface ProjectHierarchy {
     address_line: string;
     lat: number;
     lng: number;
+    is_active?: boolean;
     provinces?: { name: string };
     districts?: { name: string };
   };
@@ -38,6 +39,7 @@ export const useProjectsHierarchy = () => {
             address_line,
             lat,
             lng,
+            is_active,
             provinces (name),
             districts (name)
           ),
