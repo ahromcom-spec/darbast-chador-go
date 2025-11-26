@@ -1484,12 +1484,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   // نمایش تایید حذف
                   if (confirm(`آیا از حذف سفارش ${orderCode} اطمینان دارید؟\n\nاین عملیات قابل بازگشت نیست.`)) {
                     try {
+                      // حذف واقعی سفارش از دیتابیس
                       const { error } = await supabase
                         .from('projects_v3')
-                        .update({
-                          status: 'rejected',
-                          rejection_reason: 'لغو شده توسط کاربر'
-                        })
+                        .delete()
                         .eq('id', orderId);
 
                       if (error) throw error;
@@ -1499,9 +1497,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                         description: `سفارش ${orderCode} با موفقیت حذف شد`,
                       });
 
-                      // بستن popup و به‌روزرسانی نقشه
-                      mapRef.current?.closePopup();
-                      refetch();
+                      // حفظ موقعیت و فقط به‌روزرسانی داده‌ها
+                      await refetch();
                     } catch (error) {
                       console.error('Error deleting order:', error);
                       toast({
