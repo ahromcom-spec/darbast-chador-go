@@ -196,14 +196,16 @@ const Home = () => {
 
   return (
     <>
-      {/* Subcategory Selection Dialog */}
-      <SubcategoryDialog
-        open={showSubcategoryDialog}
-        onOpenChange={setShowSubcategoryDialog}
-        serviceName={pendingServiceTypeObj?.name || ''}
-        subcategories={pendingServiceTypeObj?.subcategories || []}
-        onSelect={handleSubcategorySelect}
-      />
+      {/* Subcategory Selection Dialog - فقط در صورتی که داده‌های معتبر وجود داشته باشد نمایش داده شود */}
+      {pendingServiceTypeObj && pendingServiceTypeObj.subcategories && pendingServiceTypeObj.subcategories.length > 0 && (
+        <SubcategoryDialog
+          open={showSubcategoryDialog}
+          onOpenChange={setShowSubcategoryDialog}
+          serviceName={pendingServiceTypeObj.name}
+          subcategories={pendingServiceTypeObj.subcategories}
+          onSelect={handleSubcategorySelect}
+        />
+      )}
 
       <div data-tour="create-project">
       {/* SEO Hidden Content */}
