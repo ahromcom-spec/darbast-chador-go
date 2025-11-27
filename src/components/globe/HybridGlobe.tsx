@@ -1172,15 +1172,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         html: `
           <div style="
             position: relative;
-            width: 60px;
-            height: 60px;
+            width: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
           ">
             <div style="
-              width: 36px;
-              height: 36px;
+              width: 12px;
+              height: 12px;
               border-radius: 50%;
               background: #ef4444;
               border: 2px solid white;
@@ -1194,9 +1194,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             </div>
           </div>
         `,
-        iconSize: [60, 60],
-        iconAnchor: [30, 30],
-        popupAnchor: [0, -30],
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+        popupAnchor: [0, -10],
       });
       
       const centerMarker = L.marker([centerLat, centerLng], { 
@@ -1377,18 +1377,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             .getPublicUrl(firstOrderImage.file_path).data.publicUrl;
           
           const html = `
-            <div style="width:84px;height:84px;border-radius:10px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.4);border:3px solid #fff;background:#f0f0f0;position:relative;">
+            <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#f0f0f0;position:relative;">
               <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
-              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:24px;display:flex;align-items:center;justify-content:center;">
-                <span style="color:#fff;font-size:12px;font-weight:bold;">${totalOrderImages}</span>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:18px;display:flex;align-items:center;justify-content:center;">
+                <span style="color:#fff;font-size:10px;font-weight:bold;">${totalOrderImages}</span>
               </div>
             </div>`;
           iconToUse = L.divIcon({
             html,
             className: 'project-thumb-icon',
-            iconSize: [84, 84],
-            iconAnchor: [42, 84],
-            popupAnchor: [0, -84],
+            iconSize: [56, 56],
+            iconAnchor: [28, 56],
+            popupAnchor: [0, -56],
           });
         }
 
