@@ -1088,71 +1088,53 @@ export default function OrderDetail() {
             </Card>
           )}
 
-          {/* Media Upload Section - فقط برای سفارش‌های تایید نشده */}
-          {!order.approved_at && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Upload className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-lg">افزودن تصاویر و ویدیوها</h3>
-                  </div>
-                  <div className="flex gap-2">
-                    {showMediaUpload && (
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowMediaUpload(false)}
-                        className="gap-2"
-                      >
-                        <X className="h-4 w-4" />
-                        بستن
-                      </Button>
-                    )}
-                    <Button
-                      variant="default"
-                      onClick={() => document.getElementById('media-upload-input')?.click()}
-                      disabled={uploadingMedia}
-                      className="gap-2"
-                    >
-                      {uploadingMedia ? (
-                        <>
-                          <Clock className="h-4 w-4 animate-spin" />
-                          در حال آپلود...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4" />
-                          افزودن عکس/ویدیو
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-                
-                <input
-                  id="media-upload-input"
-                  type="file"
-                  accept="image/*,video/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleMediaUpload}
-                  disabled={uploadingMedia}
-                />
-                
-                <p className="text-sm text-muted-foreground">
-                  شما می‌توانید در هر مرحله از پروژه، عکس و ویدیو جدید اضافه کنید (حداکثر 50 مگابایت برای هر فایل)
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
           {/* بخش نمایش عکس‌ها و ویدیوها */}
-          {mediaFiles.length > 0 && (
-            <Card>
-              <CardHeader>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
                 <CardTitle>تصاویر و ویدیوهای پروژه</CardTitle>
-              </CardHeader>
-              <CardContent>
+                {!order.approved_at && (
+                  <Button
+                    variant="default"
+                    onClick={() => document.getElementById('media-upload-input')?.click()}
+                    disabled={uploadingMedia}
+                    className="gap-2"
+                  >
+                    {uploadingMedia ? (
+                      <>
+                        <Clock className="h-4 w-4 animate-spin" />
+                        در حال آپلود...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        افزودن عکس/ویدیو
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <input
+                id="media-upload-input"
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                className="hidden"
+                onChange={handleMediaUpload}
+                disabled={uploadingMedia}
+              />
+              
+              {mediaFiles.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Upload className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>هنوز عکس یا ویدیویی اضافه نشده است</p>
+                  {!order.approved_at && (
+                    <p className="text-sm mt-2">برای افزودن، روی دکمه بالا کلیک کنید</p>
+                  )}
+                </div>
+              ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {mediaFiles.filter(m => m.file_type === 'image').map((media) => {
                     const { data } = supabase.storage
@@ -1307,9 +1289,9 @@ export default function OrderDetail() {
                     );
                   })}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
+            </CardContent>
+          </Card>
 
           {/* Image Zoom Dialog */}
           <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
