@@ -37,7 +37,7 @@ const Index = () => {
             <img 
               src={goldenGlobe} 
               alt="کره زمین طلایی" 
-              className="w-64 h-64 md:w-80 md:h-80 animate-[wiggle_3s_ease-in-out_infinite] drop-shadow-2xl"
+              className="w-64 h-64 md:w-80 md:h-80 animate-[wiggle_3s_ease-in-out_infinite] drop-shadow-2xl outline-none select-none pointer-events-none"
             />
           </div>
           
