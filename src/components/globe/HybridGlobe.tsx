@@ -1602,6 +1602,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 }
 
                 try {
+                  const orderId = btn.dataset.orderId;
+
                   // حذف از storage (در صورت امکان)
                   const { error: storageError } = await supabase.storage
                     .from('order-media')
@@ -1627,9 +1629,27 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                     description: 'رسانه با موفقیت حذف شد',
                   });
 
+                  // به‌روزرسانی state تا این رسانه از سفارش‌ها حذف شود
+                  if (orderId) {
+                    setProjectsWithMedia((prev) =>
+                      prev.map((project) => ({
+                        ...project,
+                        orders:
+                          project.orders?.map((order) =>
+                            order.id === orderId
+                              ? {
+                                  ...order,
+                                  media: (order.media || []).filter((m) => m.id === undefined ? true : m.id !== mediaId),
+                                }
+                              : order
+                          ) || project.orders,
+                      }))
+                    );
+                  }
+
                   // فقط حذف از DOM برای حفظ باز بودن کادر، بدون رفرش مجدد داده‌ها
-                  const mediaElement = btn.closest('[id^="order-media-"]') as HTMLElement;
-                  if (mediaElement && mediaElement.id !== btn.dataset.orderId + '-add') {
+                  const mediaElement = btn.closest('[id^="order-media-"]') as HTMLElement | null;
+                  if (mediaElement) {
                     mediaElement.style.transition = 'opacity 0.3s ease';
                     mediaElement.style.opacity = '0';
                     setTimeout(() => {
