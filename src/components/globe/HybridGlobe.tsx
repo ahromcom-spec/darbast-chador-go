@@ -1501,7 +1501,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             });
 
             // کلیک روی دکمه‌های حذف رسانه (برای همه سفارشات این پروژه)
-            const deleteMediaBtns = popupElement.querySelectorAll<HTMLButtonElement>('.delete-media-btn');
+            const deleteMediaBtns = popupElement.querySelectorAll('.delete-media-btn') as NodeListOf<HTMLButtonElement>;
             deleteMediaBtns.forEach((btn) => {
               btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -1787,44 +1787,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             });
           }
           
-          // هندلر برای حذف پروژه بدون سفارش
-          if (!project.orders || project.orders.length === 0) {
-            const deleteProjectBtn = popupElement.querySelector('.delete-project-btn');
-            if (deleteProjectBtn) {
-              deleteProjectBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                
-                if (confirm('آیا از حذف این پروژه اطمینان دارید؟')) {
-                  try {
-                    const { error } = await supabase
-                      .from('projects_hierarchy')
-                      .delete()
-                      .eq('id', project.id);
+          // TODO: هندلر حذف پروژه بدون سفارش در صورت نیاز می‌تواند اینجا اضافه شود
 
-                    if (error) throw error;
-
-                    toast({
-                      title: "پروژه حذف شد",
-                      description: "پروژه با موفقیت حذف شد",
-                    });
-
-                    // بستن popup و بارگذاری مجدد
-                    marker.closePopup();
-                    refetch();
-                  } catch (error) {
-                    console.error('Error deleting project:', error);
-                    toast({
-                      title: "خطا در حذف",
-                      description: "امکان حذف پروژه وجود ندارد",
-                      variant: "destructive",
-                    });
-                  }
-                }
-              });
-            }
-          }
-          
-          // هندلر برای گالری اصلی پروژه
           const projectImages = images;
           if (projectImages.length > 1) {
             let currentProjectIndex = 0;
