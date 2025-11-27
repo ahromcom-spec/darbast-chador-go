@@ -897,61 +897,63 @@ export default function OrderDetail() {
             approvals={approvals}
           />
 
-          {/* Media Upload Section */}
-          <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-lg">افزودن تصاویر و ویدیوها</h3>
-                </div>
-                <div className="flex gap-2">
-                  {showMediaUpload && (
+          {/* Media Upload Section - فقط برای سفارش‌های تایید نشده */}
+          {!order.approved_at && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Upload className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-lg">افزودن تصاویر و ویدیوها</h3>
+                  </div>
+                  <div className="flex gap-2">
+                    {showMediaUpload && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowMediaUpload(false)}
+                        className="gap-2"
+                      >
+                        <X className="h-4 w-4" />
+                        بستن
+                      </Button>
+                    )}
                     <Button
-                      variant="outline"
-                      onClick={() => setShowMediaUpload(false)}
+                      variant="default"
+                      onClick={() => document.getElementById('media-upload-input')?.click()}
+                      disabled={uploadingMedia}
                       className="gap-2"
                     >
-                      <X className="h-4 w-4" />
-                      بستن
+                      {uploadingMedia ? (
+                        <>
+                          <Clock className="h-4 w-4 animate-spin" />
+                          در حال آپلود...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" />
+                          افزودن عکس/ویدیو
+                        </>
+                      )}
                     </Button>
-                  )}
-                  <Button
-                    variant="default"
-                    onClick={() => document.getElementById('media-upload-input')?.click()}
-                    disabled={uploadingMedia}
-                    className="gap-2"
-                  >
-                    {uploadingMedia ? (
-                      <>
-                        <Clock className="h-4 w-4 animate-spin" />
-                        در حال آپلود...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4" />
-                        افزودن عکس/ویدیو
-                      </>
-                    )}
-                  </Button>
+                  </div>
                 </div>
-              </div>
-              
-              <input
-                id="media-upload-input"
-                type="file"
-                accept="image/*,video/*"
-                multiple
-                className="hidden"
-                onChange={handleMediaUpload}
-                disabled={uploadingMedia}
-              />
-              
-              <p className="text-sm text-muted-foreground">
-                شما می‌توانید در هر مرحله از پروژه، عکس و ویدیو جدید اضافه کنید (حداکثر 50 مگابایت برای هر فایل)
-              </p>
-            </CardContent>
-          </Card>
+                
+                <input
+                  id="media-upload-input"
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleMediaUpload}
+                  disabled={uploadingMedia}
+                />
+                
+                <p className="text-sm text-muted-foreground">
+                  شما می‌توانید در هر مرحله از پروژه، عکس و ویدیو جدید اضافه کنید (حداکثر 50 مگابایت برای هر فایل)
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Status Messages */}
           {order.status === 'pending' && (
