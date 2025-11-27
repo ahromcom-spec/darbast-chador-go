@@ -1398,7 +1398,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                             </svg>
                           </button>
                           <div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:2px 8px;border-radius:10px;font-family:Vazirmatn;font-size:9px;pointer-events:none;">
-                            <span id="order-counter-${order.id}">1 از ${allMedia.length + 1}</span>
+                            <span id="order-counter-${order.id}">1 از ${allMedia.length}</span>
                           </div>
                         ` : ''}
                       </div>
@@ -1497,7 +1497,58 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 });
               }
 
-              // TODO: در صورت نیاز می‌توان از allMedia برای منطق‌های دیگر استفاده کرد
+              // هندلر گالری سفارش (قبلی/بعدی + شمارنده)
+              if (allMedia.length > 0) {
+                const gallerySelector = `#order-gallery-${order.id} [id^="order-media-${order.id}-"]`;
+                const mediaElements = Array.from(
+                  popupElement.querySelectorAll<HTMLElement>(gallerySelector)
+                );
+                let currentIndex = 0;
+                const total = mediaElements.length;
+
+                const counterEl = popupElement.querySelector<HTMLSpanElement>(`#order-counter-${order.id}`);
+                const updateGallery = () => {
+                  mediaElements.forEach((el, idx) => {
+                    el.style.display = idx === currentIndex ? 'block' : 'none';
+                  });
+                  if (counterEl) {
+                    counterEl.textContent = `${currentIndex + 1} از ${total}`;
+                  }
+                };
+
+                const prevBtn = popupElement.querySelector<HTMLButtonElement>(`.order-gallery-prev-${order.id}`);
+                const nextBtn = popupElement.querySelector<HTMLButtonElement>(`.order-gallery-next-${order.id}`);
+
+                if (prevBtn) {
+                  prevBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (total <= 1) return;
+                    currentIndex = (currentIndex - 1 + total) % total;
+                    updateGallery();
+                  });
+                }
+
+                if (nextBtn) {
+                  nextBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (total <= 1) return;
+                    currentIndex = (currentIndex + 1) % total;
+                    updateGallery();
+                  });
+                }
+
+                // اطمینان از هم‌خوانی اولیه با شمارنده
+                updateGallery();
+              }
+
+              // کلیک روی کادر افزودن رسانه
+              const addMediaCard = popupElement.querySelector(`.order-add-media-${order.id}`) as HTMLElement | null;
+              if (addMediaCard) {
+                addMediaCard.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  setSelectedOrderForUpload(order.id);
+                });
+              }
             });
 
             // کلیک روی دکمه‌های حذف رسانه (برای همه سفارشات این پروژه)
