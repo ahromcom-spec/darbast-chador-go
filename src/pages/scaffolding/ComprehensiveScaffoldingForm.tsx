@@ -958,24 +958,12 @@ export default function ComprehensiveScaffoldingForm({
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Hero Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ 
-          backgroundImage: 'url(/hero-background.webp)',
-        }}
-      >
-        {/* Overlay gradient for better readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-10 space-y-6 pb-8">
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="space-y-6">
 
       {/* Header with order info if editing */}
       {editOrderId && orderData && (
-        <Card className="shadow-2xl bg-white dark:bg-card border-2 border-blue-500">
+        <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-blue-500">
           <CardHeader>
             <CardTitle className="text-blue-800 dark:text-blue-300">
               جزئیات سفارش - کد: {orderData.code}
@@ -995,7 +983,7 @@ export default function ComprehensiveScaffoldingForm({
       )}
 
       {/* نوع داربست */}
-      <Card className="shadow-2xl bg-white dark:bg-card border-2">
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardContent className="pt-6">
           <div className="space-y-2">
             <Label htmlFor="scaffold-type-select" className="text-foreground font-semibold">نوع داربست مورد نظر خود را انتخاب کنید</Label>
@@ -1026,7 +1014,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* Dimensions */}
-      <Card className="shadow-2xl bg-white dark:bg-card border-2">
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -1168,7 +1156,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* Location Purpose - محل و هدف انجام خدمات */}
-      <Card className="shadow-2xl bg-white dark:bg-card border-2">
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardContent className="pt-6 space-y-2">
           <Label className="text-foreground font-semibold">شرح خدمات مورد نظر را وارد کنید</Label>
           <Textarea
@@ -1181,7 +1169,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* Service Conditions */}
-      <Card className="shadow-2xl bg-white dark:bg-card border-2">
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader>
           <CardTitle className="text-blue-800 dark:text-blue-300">شرایط سرویس</CardTitle>
         </CardHeader>
@@ -1349,7 +1337,7 @@ export default function ComprehensiveScaffoldingForm({
       />
 
       {/* Installation Date & Time */}
-      <Card className="shadow-2xl bg-white dark:bg-card border-2">
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader>
           <CardTitle className="text-blue-800 dark:text-blue-300">زمان نصب داربست</CardTitle>
           <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">
@@ -1375,7 +1363,7 @@ export default function ComprehensiveScaffoldingForm({
 
       {/* Price Summary */}
       {calculateTotalArea() > 0 && (
-        <Card className="shadow-2xl bg-white dark:bg-card border-2 border-primary">
+        <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-primary">
           <CardHeader>
             <CardTitle className="text-blue-800 dark:text-blue-300">خلاصه قیمت</CardTitle>
           </CardHeader>
@@ -1397,14 +1385,14 @@ export default function ComprehensiveScaffoldingForm({
         </Card>
       )}
 
-      <Button 
-        onClick={onSubmit} 
-        disabled={loading || dimensions.some(d => !d.length || !d.width || !d.height)} 
-        className="w-full" 
-        size="lg"
-      >
-        {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
-      </Button>
+        <Button 
+          onClick={onSubmit} 
+          disabled={loading || dimensions.some(d => !d.length || !d.width || !d.height)} 
+          className="w-full" 
+          size="lg"
+        >
+          {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
+        </Button>
       </div>
     </div>
   );
