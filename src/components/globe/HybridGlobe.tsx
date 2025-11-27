@@ -78,12 +78,83 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
   const { projects: allProjects, loading, refetch } = useProjectsHierarchy();
   
-  // فیلتر کردن پروژه‌هایی که آدرسشان فعال است
+  // مختصات مرکز استان قم
+  const QOM_CENTER = { lat: 34.6416, lng: 50.8746 };
+  const MAX_DISTANCE_KM = 5;
+
+  // تابع محاسبه فاصله با فرمول Haversine (کیلومتر)
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // شعاع زمین به کیلومتر
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // فیلتر کردن پروژه‌هایی که آدرسشان فعال است و در محدوده مجاز قرار دارند
   const projects = useMemo(() => {
-    return allProjects.filter(project => 
+    const activeProjects = allProjects.filter(project => 
       project.locations && 
       (project.locations as any).is_active !== false
     );
+
+    if (activeProjects.length === 0) return [];
+
+    // جمع‌آوری تمام موقعیت‌های پروژه‌های کاربر
+    const userProjectLocations = activeProjects
+      .filter(p => p.locations?.lat && p.locations?.lng)
+      .map(p => ({
+        lat: p.locations!.lat,
+        lng: p.locations!.lng
+      }));
+
+    // اگر پروژه‌ای وجود ندارد، فقط پروژه‌های نزدیک قم را نمایش بده
+    if (userProjectLocations.length === 0) {
+      return activeProjects.filter(project => {
+        if (!project.locations?.lat || !project.locations?.lng) return false;
+        const distanceToQom = calculateDistance(
+          project.locations.lat,
+          project.locations.lng,
+          QOM_CENTER.lat,
+          QOM_CENTER.lng
+        );
+        return distanceToQom <= MAX_DISTANCE_KM;
+      });
+    }
+
+    // فیلتر پروژه‌ها: نمایش فقط پروژه‌هایی که در شعاع 5 کیلومتری پروژه‌های کاربر یا قم هستند
+    return activeProjects.filter(project => {
+      if (!project.locations?.lat || !project.locations?.lng) return false;
+
+      const projectLat = project.locations.lat;
+      const projectLng = project.locations.lng;
+
+      // بررسی فاصله از قم
+      const distanceToQom = calculateDistance(
+        projectLat,
+        projectLng,
+        QOM_CENTER.lat,
+        QOM_CENTER.lng
+      );
+      if (distanceToQom <= MAX_DISTANCE_KM) return true;
+
+      // بررسی فاصله از هر یک از پروژه‌های کاربر
+      for (const userLoc of userProjectLocations) {
+        const distanceToUserProject = calculateDistance(
+          projectLat,
+          projectLng,
+          userLoc.lat,
+          userLoc.lng
+        );
+        if (distanceToUserProject <= MAX_DISTANCE_KM) return true;
+      }
+
+      return false;
+    });
   }, [allProjects]);
   const { toast } = useToast();
   const navigate = useNavigate();
