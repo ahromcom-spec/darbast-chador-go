@@ -1301,10 +1301,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                     <div id="order-gallery-${order.id}" class="swipeable-gallery" style="position:relative;margin-top:6px;touch-action:pan-y;">
                       <div style="overflow:hidden;border-radius:6px;background:#f9fafb;position:relative;height:160px;">
                         ${allMedia.map((m, idx) => {
-                          const baseUrl = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                          const { data: baseData } = supabase.storage
+                            .from('order-media')
+                            .getPublicUrl(m.file_path);
+                          const baseUrl = baseData.publicUrl;
                           const isVideo = m.file_type === 'video';
-                          // استفاده از thumbnail برای عکس‌ها با پارامترهای بهینه‌سازی
-                          const url = isVideo ? baseUrl : `${baseUrl}?width=400&quality=70`;
+                          // استفاده از thumbnail بهینه‌شده برای عکس‌ها (عرض ۴۰۰ و کیفیت ۷۰)
+                          const thumbUrl = isVideo
+                            ? baseUrl
+                            : supabase.storage
+                                .from('order-media')
+                                .getPublicUrl(m.file_path, {
+                                  transform: { width: 400, quality: 70 },
+                                }).data.publicUrl;
                           const showDeleteBtn = !order.approved_at;
                           
                           if (isVideo) {
@@ -1315,7 +1324,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                 data-url="${baseUrl}"
                                 style="position:relative;width:100%;height:100%;background:#f0f0f0;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
                               >
-                                <video src="${baseUrl}" style="width:100%;height:100%;object-fit:cover;user-select:none;background:#000;" preload="metadata" draggable="false" loading="lazy"></video>
+                                <video src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;user-select:none;background:#000;" preload="metadata" draggable="false" loading="lazy"></video>
                                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
                                   <svg style="width:28px;height:28px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M8 5v14l11-7z"/>
@@ -1347,7 +1356,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                   id="order-media-${order.id}-${idx}" 
                                   class="order-image-clickable"
                                   data-image-url="${baseUrl}"
-                                  src="${url}" 
+                                  data-order-id="${order.id}"
+                                  src="${thumbUrl}" 
                                   alt="تصویر سفارش" 
                                   style="width:100%;height:100%;object-fit:cover;cursor:pointer;user-select:none;background:#f0f0f0;"
                                   draggable="false"
@@ -1553,6 +1563,24 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 addMediaCard.addEventListener('click', (e) => {
                   e.stopPropagation();
                   setSelectedOrderForUpload(order.id);
+                });
+              }
+
+              // کلیک روی تصاویر برای بزرگ‌نمایی
+              const clickableImages = popupElement.querySelectorAll<HTMLImageElement>(
+                `.order-image-clickable[data-order-id="${order.id}"]`
+              );
+              if (clickableImages.length > 0) {
+                const imageUrls = Array.from(clickableImages).map(
+                  (img) => img.dataset.imageUrl || img.src
+                );
+                clickableImages.forEach((img, idx) => {
+                  img.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setZoomedImages(imageUrls);
+                    setZoomedImageIndex(idx);
+                    setZoomedImage(imageUrls[idx]);
+                  });
                 });
               }
             });
