@@ -1585,6 +1585,22 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   });
                 });
               }
+
+              // کلیک روی ویدیوها برای پخش در تب جدید
+              const videoItems = popupElement.querySelectorAll<HTMLElement>(`#order-gallery-${order.id} .order-video-item-${order.id}`);
+              if (videoItems.length > 0) {
+                videoItems.forEach((item) => {
+                  item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const url = (item as HTMLElement).dataset.url;
+                    if (url && (window as any).openProjectVideo) {
+                      (window as any).openProjectVideo(url, 'video/mp4');
+                    } else if (url) {
+                      window.open(url, '_blank');
+                    }
+                  });
+                });
+              }
             });
 
             // کلیک روی دکمه‌های حذف رسانه (برای همه سفارشات این پروژه)
@@ -1647,13 +1663,51 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                     );
                   }
 
-                  // فقط حذف از DOM برای حفظ باز بودن کادر، بدون رفرش مجدد داده‌ها
+                  // فقط حذف از DOM و به‌روزرسانی گالری برای حفظ باز بودن کادر
                   const mediaElement = btn.closest('[id^="order-media-"]') as HTMLElement | null;
+
+
                   if (mediaElement) {
                     mediaElement.style.transition = 'opacity 0.3s ease';
                     mediaElement.style.opacity = '0';
                     setTimeout(() => {
                       mediaElement.remove();
+
+                      // به‌روزرسانی گالری همان سفارش بعد از حذف
+                      if (orderId) {
+                        const galleryRoot = popupElement.querySelector(`#order-gallery-${orderId}`) as HTMLElement | null;
+                        if (galleryRoot) {
+                          const addCard = galleryRoot.querySelector<HTMLElement>(`#order-media-${orderId}-add`);
+                          const counterEl = galleryRoot.querySelector<HTMLSpanElement>(`#order-counter-${orderId}`);
+                          const prevBtn = galleryRoot.querySelector<HTMLButtonElement>(`.order-gallery-prev-${orderId}`);
+                          const nextBtn = galleryRoot.querySelector<HTMLButtonElement>(`.order-gallery-next-${orderId}`);
+
+                          const allSlides = Array.from(
+                            galleryRoot.querySelectorAll<HTMLElement>(`[id^="order-media-${orderId}-"]`)
+                          );
+                          const mediaSlides = allSlides.filter((el) => el.dataset.isAdd !== 'true');
+
+                          if (mediaSlides.length === 0) {
+                            // هیچ رسانه‌ای نمانده → فقط کادر افزودن را نشان بده
+                            if (addCard) addCard.style.display = 'flex';
+                            if (prevBtn) prevBtn.style.display = 'none';
+                            if (nextBtn) nextBtn.style.display = 'none';
+                            if (counterEl) counterEl.textContent = 'بدون رسانه';
+                          } else {
+                            // حداقل یک رسانه باقی مانده → اولین را نشان بده و شمارنده را تنظیم کن
+                            mediaSlides.forEach((el, idx) => {
+                              el.style.display = idx === 0 ? 'block' : 'none';
+                            });
+                            if (addCard) addCard.style.display = 'none';
+                            if (counterEl) {
+                              const total = mediaSlides.length + (addCard ? 1 : 0);
+                              counterEl.textContent = `1 از ${total}`;
+                            }
+                            if (prevBtn) prevBtn.style.display = '';
+                            if (nextBtn) nextBtn.style.display = '';
+                          }
+                        }
+                      }
                     }, 300);
                   }
 
