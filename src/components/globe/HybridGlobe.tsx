@@ -1344,7 +1344,22 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         const ordersHTML = project.orders && project.orders.length > 0
           ? `
             <div style="margin-top:10px;padding:8px;background:#f9fafb;border-radius:8px;max-height:60vh;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;">
-              <div style="font-size:11px;font-weight:700;color:#1e293b;margin-bottom:6px;">سفارشات این پروژه (${project.orders.length})</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div style="font-size:11px;font-weight:700;color:#1e293b;">سفارشات این پروژه (${project.orders.length})</div>
+                <button 
+                  class="add-new-order-btn"
+                  data-project-id="${project.id}"
+                  data-location-id="${project.location_id}"
+                  data-service-type-id="${project.service_type_id}"
+                  data-subcategory-id="${project.subcategory_id}"
+                  data-subcategory-code="${project.subcategories?.code || ''}"
+                  style="padding:4px 12px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:Vazirmatn,sans-serif;transition:all 0.2s;box-shadow:0 2px 4px rgba(16,185,129,0.3);"
+                  onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 8px rgba(16,185,129,0.4)'"
+                  onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 4px rgba(16,185,129,0.3)'"
+                >
+                  ➕ افزودن سفارش جدید
+                </button>
+              </div>
               ${project.orders.map((order, orderIdx) => {
                 const allMedia = (order.media || []).sort((a, b) => {
                   if (a.file_type === 'image' && b.file_type === 'video') return -1;
@@ -1818,6 +1833,58 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 }
               });
             }
+          }
+          
+          // هندلر افزودن سفارش جدید به پروژه
+          const addNewOrderBtn = popupElement.querySelector('.add-new-order-btn');
+          if (addNewOrderBtn) {
+            addNewOrderBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const projectId = (addNewOrderBtn as HTMLElement).dataset.projectId;
+              const locationId = (addNewOrderBtn as HTMLElement).dataset.locationId;
+              const serviceTypeId = (addNewOrderBtn as HTMLElement).dataset.serviceTypeId;
+              const subcategoryId = (addNewOrderBtn as HTMLElement).dataset.subcategoryId;
+              const subcategoryCode = (addNewOrderBtn as HTMLElement).dataset.subcategoryCode;
+              
+              console.log('[Map] Adding new order to project:', { projectId, locationId, serviceTypeId, subcategoryId, subcategoryCode });
+              
+              // بستن popup
+              marker.closePopup();
+              
+              // هدایت به فرم مناسب بر اساس subcategory code
+              if (subcategoryCode === '10') {
+                // داربست فلزی اجرا - با مصالح و حمل
+                navigate('/scaffolding/comprehensive-form', {
+                  state: {
+                    fromMap: true,
+                    projectId: projectId,
+                    locationId: locationId,
+                    serviceTypeId: serviceTypeId,
+                    subcategoryId: subcategoryId
+                  }
+                });
+              } else if (subcategoryCode === '30') {
+                // داربست فلزی اجاره
+                navigate('/scaffolding/rental-form', {
+                  state: {
+                    fromMap: true,
+                    projectId: projectId,
+                    locationId: locationId,
+                    serviceTypeId: serviceTypeId,
+                    subcategoryId: subcategoryId
+                  }
+                });
+              } else {
+                // سایر سرویس‌ها - فرم در دسترس نیست
+                navigate('/user/form-not-available', {
+                  state: {
+                    fromMap: true,
+                    projectId: projectId,
+                    subcategoryId: subcategoryId
+                  }
+                });
+              }
+            });
           }
           
           // هندلر برای گالری اصلی پروژه
