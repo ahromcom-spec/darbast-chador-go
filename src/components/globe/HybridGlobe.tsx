@@ -1720,7 +1720,20 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   });
                 }
               });
-           });
+            });
+
+            // کلیک روی دکمه‌های حذف سفارش در این پروژه
+            if (project.orders && project.orders.length > 0) {
+              project.orders.forEach((order) => {
+                const deleteOrderBtn = popupElement.querySelector<HTMLButtonElement>(`.delete-order-btn-${order.id}`);
+                if (deleteOrderBtn) {
+                  deleteOrderBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setDeleteOrderId(order.id);
+                  });
+                }
+              });
+            }
           }
           
           // هندلر حذف پروژه بدون سفارش
