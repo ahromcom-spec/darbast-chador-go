@@ -1319,9 +1319,31 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         if (count > 1) {
           const angle = (2 * Math.PI * index) / count;
-          const radius = 0.0002; // فاصله کم برای باز شدن نزدیک به مرکز
-          targetLat = centerLat + radius * Math.cos(angle);
-          targetLng = centerLng + radius * Math.sin(angle);
+          
+          // فاصله دایره‌ای بر اساس پیکسل تا در همه سطوح زوم، جدا ولی نزدیک به مرکز باشد
+          let targetLatLng: L.LatLngExpression = [centerLat, centerLng];
+          if (mapRef.current) {
+            const map = mapRef.current;
+            const centerPoint = map.latLngToLayerPoint(L.latLng(centerLat, centerLng));
+            // فاصله پایه تقریباً هم‌اندازه مارکر + کمی بیشتر
+            const baseRadiusPx = 40;
+            // اگر پروژه‌های بیشتری باشد کمی فاصله را بیشتر کن تا روی هم نیفتند
+            const adaptiveRadiusPx = baseRadiusPx + Math.min(count, 6) * 4;
+            const dx = adaptiveRadiusPx * Math.cos(angle);
+            const dy = adaptiveRadiusPx * Math.sin(angle);
+            const targetPoint = L.point(centerPoint.x + dx, centerPoint.y + dy);
+            targetLatLng = map.layerPointToLatLng(targetPoint);
+          } else {
+            // حالت پشتیبان در صورت نبودن mapRef (بر اساس درجه جغرافیایی)
+            const radiusDeg = 0.0002;
+            targetLatLng = [
+              centerLat + radiusDeg * Math.cos(angle),
+              centerLng + radiusDeg * Math.sin(angle),
+            ];
+          }
+
+          targetLat = (targetLatLng as any).lat;
+          targetLng = (targetLatLng as any).lng;
           
           // اگر cluster قبلاً expand شده، مارکر را در موقعیت نهایی بگذار
           if (expandedClusters.has(clusterKey)) {
