@@ -100,25 +100,61 @@ export default function SimpleLeafletMap({
       } catch { /* ignore */ }
     })();
 
-    // اضافه کردن لایه تایل OpenStreetMap با fallback
-    const tileUrls = [
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    ];
-    
-    let tileLayerAdded = false;
-    for (const url of tileUrls) {
-      try {
-        L.tileLayer(url, {
+    // اضافه کردن لایه تایل با اولویت Mapbox و fallback به OpenStreetMap
+    const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [];
+
+    try {
+      const envToken = (import.meta as any).env?.VITE_MAPBOX_TOKEN as string | undefined;
+      const resolvedToken = mapboxTokenRef.current || envToken || null;
+
+      if (resolvedToken) {
+        tileConfigs.push({
+          url: `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/256/{z}/{x}/{y}.png?access_token=${resolvedToken}`,
+          options: {
+            attribution: '© OpenStreetMap contributors © Mapbox',
+            maxZoom: 22,
+            tileSize: 256,
+            zoomOffset: 0,
+          },
+        });
+      }
+    } catch (err) {
+      console.warn('[SimpleLeafletMap] Failed to resolve Mapbox token for Leaflet tiles', err);
+    }
+
+    tileConfigs.push(
+      {
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        options: {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 22,
           errorTileUrl: '',
-        }).addTo(map);
+        },
+      },
+      {
+        url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        options: {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 22,
+          errorTileUrl: '',
+        },
+      }
+    );
+    
+    let tileLayerAdded = false;
+    for (const { url, options } of tileConfigs) {
+      try {
+        const layer = L.tileLayer(url, options).addTo(map);
         tileLayerAdded = true;
+
+        layer.on('tileerror', (e) => {
+          console.error('[SimpleLeafletMap] Tile load error:', e);
+        });
+
         console.log('[SimpleLeafletMap] Tile layer added:', url);
         break;
       } catch (err) {
-        console.warn('[SimpleLeafletMap] Tile layer failed:', url);
+        console.warn('[SimpleLeafletMap] Tile layer failed:', url, err);
       }
     }
     
