@@ -1351,9 +1351,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                             `;
                           } else {
                             return `
-                              <div style="position:relative;width:100%;height:100%;display:${idx === 0 ? 'block' : 'none'};">
+                              <div 
+                                id="order-media-${order.id}-${idx}" 
+                                style="position:relative;width:100%;height:100%;display:${idx === 0 ? 'block' : 'none'};"
+                              >
                                 <img 
-                                  id="order-media-${order.id}-${idx}" 
                                   class="order-image-clickable"
                                   data-image-url="${baseUrl}"
                                   data-order-id="${order.id}"
@@ -1361,7 +1363,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                   alt="تصویر سفارش" 
                                   style="width:100%;height:100%;object-fit:cover;cursor:pointer;user-select:none;background:#f0f0f0;"
                                   draggable="false"
-                                  loading="lazy"
+                                  loading="eager"
                                   decoding="async"
                                   onerror="this.style.backgroundColor='#e0e0e0';this.alt='خطا در بارگذاری';"
                                 />
