@@ -543,12 +543,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
 
-      let pmMedia: { project_id: string; file_path: string; file_type: string; created_at: string; mime_type?: string }[] = [];
+      let pmMedia: { id: string; project_id: string; file_path: string; file_type: string; created_at: string; mime_type?: string }[] = [];
       if (v3 && v3.length > 0) {
         const v3Ids = v3.map(x => x.id);
         const { data } = await supabase
           .from('project_media')
-          .select('project_id, file_path, file_type, created_at, mime_type')
+          .select('id, project_id, file_path, file_type, created_at, mime_type')
           .in('project_id', v3Ids)
           .in('file_type', ['image', 'video'])
           .order('created_at', { ascending: false })
@@ -580,7 +580,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         if (!pid) return;
         if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
         mediaByProject.get(pid)!.push({ 
-          id: m.project_id + '-' + m.created_at, 
+          id: m.id, 
           file_path: m.file_path, 
           file_type: m.file_type, 
           created_at: m.created_at, 
