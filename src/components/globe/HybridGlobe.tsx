@@ -223,7 +223,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       });
       
       setDeleteOrderId(null);
-      setSelectedProject(null);
+      // پروژه انتخاب‌شده را نگه می‌داریم تا کادر سفارش باز بماند
       await fetchProjectMedia();
     } catch (error) {
       console.error('خطا در حذف سفارش:', error);
@@ -457,12 +457,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       console.log('[Upload] Upload complete. Total successful:', newMedia.length);
       
       if (newMedia.length > 0) {
-        // ذخیره اطلاعات پروژه و سفارش برای بازگرداندن popup
-        const currentOrderId = selectedOrderForUpload;
-        const currentProjectId = projectsWithMedia.find(p => 
-          p.orders?.some(o => o.id === currentOrderId)
-        )?.id;
-        
         toast({ 
           title: 'موفق', 
           description: `${newMedia.length} فایل با موفقیت آپلود شد و به گالری اضافه گردید.` 
@@ -471,26 +465,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         // بستن دیالوگ آپلود
         setSelectedOrderForUpload(null);
         
-        // بارگذاری مجدد داده‌ها و سپس باز کردن popup با داده‌های جدید
+        // بارگذاری مجدد داده‌ها برای نمایش رسانه‌های جدید در نقشه
         await fetchProjectMedia();
-        
-        // استفاده از setTimeout برای اطمینان از به‌روزرسانی state
-        setTimeout(() => {
-          if (currentProjectId) {
-            const updatedProject = projectsWithMedia.find(p => p.id === currentProjectId);
-            if (updatedProject) {
-              setSelectedProject(updatedProject);
-              // اسکرول به آخرین عکس اضافه شده
-              const order = updatedProject.orders?.find(o => o.id === currentOrderId);
-              if (order && order.media && order.media.length > 0) {
-                setCurrentOrderMediaIndex(prev => ({
-                  ...prev,
-                  [currentOrderId]: order.media!.length - 1
-                }));
-              }
-            }
-          }
-        }, 100);
       } else {
         toast({ 
           title: 'آپلود ناموفق', 
@@ -1210,6 +1186,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           icon: iconToUse,
           opacity: 0 // مخفی در ابتدا تا انیمیشن تمام شود
         }).addTo(mapRef.current!);
+
+        // ذخیره شناسه پروژه روی مارکر برای باز کردن مجدد پاپ‌آپ
+        (marker as any).projectId = project.id;
         
         // تولید HTML برای تصاویر و ویدیوها با قابلیت گالری
         const images = (project.media || []).filter(m => m.file_type === 'image');
@@ -1978,6 +1957,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       locationsMarkersRef.current.push(marker); // اضافه به مرجع جداگانه
     });
 
+    // اگر پروژه‌ای انتخاب شده باشد، پاپ‌آپ همان پروژه را پس از به‌روزرسانی مجدد باز نگه می‌داریم
+    if (selectedProject) {
+      const targetMarker = markersRef.current.find(
+        (m) => (m as any).projectId === selectedProject.id
+      );
+      if (targetMarker) {
+        targetMarker.openPopup();
+      }
+    }
+
     // انیمیشن زوم از نمای کل ایران به پروژه‌ها (مثل Google Earth)
     const allMarkers = markersRef.current;
     console.debug('[HybridGlobe] Total markers created:', allMarkers.length);
@@ -2010,7 +1999,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     } else {
       console.warn('[HybridGlobe] No markers to display on map');
     }
-  }, [projectsWithMedia, loading, mapReady, locationsWithoutProjects, navigate]);
+  }, [projectsWithMedia, loading, mapReady, locationsWithoutProjects, navigate, selectedProject]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
