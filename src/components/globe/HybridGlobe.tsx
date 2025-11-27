@@ -720,7 +720,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     let isLongPress = false;
     let isDragging = false; // برای ردیابی drag کردن نقشه
     let startPos: { x: number, y: number } | null = null; // موقعیت شروع
-    const LONG_PRESS_DURATION = 500; // میلی‌ثانیه
+    const LONG_PRESS_DURATION = 1000; // 1 ثانیه برای نگه‌داشتن ثابت
     const DRAG_THRESHOLD = 5; // حداقل حرکت برای تشخیص drag (پیکسل)
 
 
