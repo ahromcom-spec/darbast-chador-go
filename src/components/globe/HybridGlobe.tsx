@@ -1319,7 +1319,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         if (count > 1) {
           const angle = (2 * Math.PI * index) / count;
-          const radius = 0.0008; // فاصله برای حالت باز
+          const radius = 0.0002; // فاصله کم برای باز شدن نزدیک به مرکز
           targetLat = centerLat + radius * Math.cos(angle);
           targetLng = centerLng + radius * Math.sin(angle);
           
