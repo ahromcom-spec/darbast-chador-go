@@ -739,33 +739,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     if (!map) return;
 
-    // لایه تایل با کش و بهینه‌سازی - با fallback به CDN های مختلف + Mapbox
-    const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [];
-
-    // تلاش برای استفاده از Mapbox در صورت موجود بودن توکن عمومی
-    try {
-      const cachedToken = sessionStorage.getItem('mapbox_token');
-      const envToken = (import.meta as any).env?.VITE_MAPBOX_TOKEN as string | undefined;
-      const resolvedToken = cachedToken || envToken;
-
-      if (resolvedToken) {
-        tileConfigs.push({
-          url: `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/256/{z}/{x}/{y}.png?access_token=${resolvedToken}`,
-          options: {
-            attribution: '© OpenStreetMap contributors © Mapbox',
-            maxZoom: 22,
-            tileSize: 256,
-            zoomOffset: 0,
-            maxNativeZoom: 19,
-          },
-        });
-      }
-    } catch (err) {
-      console.warn('[Map] Failed to resolve Mapbox token for Leaflet tiles', err);
-    }
-
-    // سپس OSM و Carto به عنوان پشتیبان
-    tileConfigs.push(
+    // لایه تایل با کش و بهینه‌سازی - فقط از OSM/Carto برای سازگاری حداکثری استفاده می‌کنیم
+    const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
       {
         url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         options: {
@@ -801,8 +776,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           maxNativeZoom: 19,
           errorTileUrl: '',
         },
-      }
-    );
+      },
+    ];
     
     let tileLayerAdded = false;
     for (const { url, options } of tileConfigs) {

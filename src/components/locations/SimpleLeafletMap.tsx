@@ -100,34 +100,17 @@ export default function SimpleLeafletMap({
       } catch { /* ignore */ }
     })();
 
-    // اضافه کردن لایه تایل با اولویت Mapbox و fallback به OpenStreetMap
-    const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [];
-
-    try {
-      const envToken = (import.meta as any).env?.VITE_MAPBOX_TOKEN as string | undefined;
-      const resolvedToken = mapboxTokenRef.current || envToken || null;
-
-      if (resolvedToken) {
-        tileConfigs.push({
-          url: `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/256/{z}/{x}/{y}.png?access_token=${resolvedToken}`,
-          options: {
-            attribution: '© OpenStreetMap contributors © Mapbox',
-            maxZoom: 22,
-            tileSize: 256,
-            zoomOffset: 0,
-          },
-        });
-      }
-    } catch (err) {
-      console.warn('[SimpleLeafletMap] Failed to resolve Mapbox token for Leaflet tiles', err);
-    }
-
-    tileConfigs.push(
+    // اضافه کردن لایه تایل فقط با استفاده از OpenStreetMap / Carto برای سازگاری حداکثری
+    const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
       {
         url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         options: {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 22,
+          maxNativeZoom: 19,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
           errorTileUrl: '',
         },
       },
@@ -136,10 +119,26 @@ export default function SimpleLeafletMap({
         options: {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 22,
+          maxNativeZoom: 19,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
           errorTileUrl: '',
         },
-      }
-    );
+      },
+      {
+        url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+        options: {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 22,
+          maxNativeZoom: 19,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
+          errorTileUrl: '',
+        },
+      },
+    ];
     
     let tileLayerAdded = false;
     for (const { url, options } of tileConfigs) {
