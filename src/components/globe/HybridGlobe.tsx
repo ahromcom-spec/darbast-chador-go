@@ -691,30 +691,89 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    // ایجاد نقشه با مرکز ایران - بهینه‌سازی شده
-    const map = L.map(mapContainer.current, {
-      center: [32.4279, 53.6880],
-      zoom: 6,
-      minZoom: 5,
-      maxZoom: 22,
-      scrollWheelZoom: true,
-      zoomControl: true,
-      preferCanvas: true, // استفاده از Canvas برای عملکرد بهتر
-      renderer: L.canvas({ tolerance: 5 }), // بهینه‌سازی رندرینگ
-      trackResize: true,
-    });
+    let map: L.Map;
+    
+    try {
+      console.log('[Map] Initializing Leaflet map...');
+      
+      // بررسی پشتیبانی از Leaflet
+      if (typeof L === 'undefined') {
+        console.error('[Map] Leaflet library not loaded');
+        toast({
+          title: 'خطای نقشه',
+          description: 'کتابخانه نقشه بارگذاری نشد. لطفاً صفحه را رفرش کنید.',
+          variant: 'destructive'
+        });
+        return;
+      }
 
-    mapRef.current = map;
+      // ایجاد نقشه با مرکز ایران - بهینه‌سازی شده برای سازگاری بیشتر
+      map = L.map(mapContainer.current, {
+        center: [32.4279, 53.6880],
+        zoom: 6,
+        minZoom: 5,
+        maxZoom: 22,
+        scrollWheelZoom: true,
+        zoomControl: true,
+        preferCanvas: true, // استفاده از Canvas برای عملکرد بهتر
+        renderer: L.canvas({ tolerance: 5 }), // بهینه‌سازی رندرینگ
+        trackResize: true,
+        // تنظیمات اضافی برای سازگاری بهتر
+        attributionControl: true,
+        fadeAnimation: true,
+        zoomAnimation: true,
+        markerZoomAnimation: true,
+      });
 
-    // لایه تایل با کش و بهینه‌سازی
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 22,
-      updateWhenIdle: false,
-      updateWhenZooming: false,
-      keepBuffer: 4, // نگهداری تایل‌ها در حافظه
-      maxNativeZoom: 19,
-    }).addTo(map);
+      mapRef.current = map;
+      console.log('[Map] Leaflet map initialized successfully');
+    } catch (error) {
+      console.error('[Map] Error initializing map:', error);
+      toast({
+        title: 'خطای نقشه',
+        description: 'نقشه قابل اجرا نیست. لطفاً مرورگر خود را به‌روزرسانی کنید.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!map) return;
+
+    // لایه تایل با کش و بهینه‌سازی - با fallback به CDN های مختلف
+    const tileUrls = [
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png'
+    ];
+    
+    let tileLayerAdded = false;
+    for (const url of tileUrls) {
+      try {
+        L.tileLayer(url, {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 22,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4, // نگهداری تایل‌ها در حافظه
+          maxNativeZoom: 19,
+          errorTileUrl: '', // در صورت خطا، تایل خالی نشان بده
+        }).addTo(map);
+        tileLayerAdded = true;
+        console.log('[Map] Tile layer added successfully:', url);
+        break;
+      } catch (err) {
+        console.warn('[Map] Failed to add tile layer:', url, err);
+      }
+    }
+    
+    if (!tileLayerAdded) {
+      console.error('[Map] All tile layers failed to load');
+      toast({
+        title: 'خطای بارگذاری نقشه',
+        description: 'تایل‌های نقشه قابل بارگذاری نیستند. لطفاً اتصال اینترنت خود را بررسی کنید.',
+        variant: 'destructive'
+      });
+    }
 
     // بستن popup با debounce
     let longPressTimer: NodeJS.Timeout;

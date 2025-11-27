@@ -50,6 +50,8 @@ function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }
   return null;
 }
 
+import { MapErrorBoundary } from './MapErrorBoundary';
+
 export default function LeafletFallbackMap({
   onLocationSelect,
   initialLat = 34.6416,
@@ -68,25 +70,28 @@ export default function LeafletFallbackMap({
   };
 
   return (
-    <div className="h-full w-full relative rounded-lg overflow-hidden border-2 border-primary/20 shadow-lg">
-      <MapContainer
-        center={center}
-        zoom={defaultZoom}
-        minZoom={5}
-        maxZoom={22}
-        scrollWheelZoom={true}
-        className="h-full w-full"
-        style={{ height: '100%', width: '100%' }}
-      >
-        <MapInitializer />
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    <MapErrorBoundary>
+      <div className="h-full w-full relative rounded-lg overflow-hidden border-2 border-primary/20 shadow-lg">
+        <MapContainer
+          center={center}
+          zoom={defaultZoom}
+          minZoom={5}
           maxZoom={22}
-        />
-        <ClickHandler onPick={handleLocationPick} />
-        {position && <Marker position={position} icon={customIcon} />}
-      </MapContainer>
-    </div>
+          scrollWheelZoom={true}
+          className="h-full w-full"
+          style={{ height: '100%', width: '100%' }}
+          preferCanvas={true}
+        >
+          <MapInitializer />
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={22}
+          />
+          <ClickHandler onPick={handleLocationPick} />
+          {position && <Marker position={position} icon={customIcon} />}
+        </MapContainer>
+      </div>
+    </MapErrorBoundary>
   );
 }

@@ -40,21 +40,43 @@ export default function SimpleLeafletMap({
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    // محاسبه نقطه شروع: اگر مختصات نامعتبر یا 0 باشند، روی قم قرار بده
-    const startLat = (initialLat >= 24 && initialLat <= 40) ? initialLat : 34.6416;
-    const startLng = (initialLng >= 44 && initialLng <= 64) ? initialLng : 50.8746;
+    let map: L.Map;
 
-    // ایجاد نقشه
-    const map = L.map(mapContainer.current, {
-      center: [startLat, startLng],
-      zoom: 12,
-      minZoom: 5,
-      maxZoom: 22,
-      scrollWheelZoom: true,
-      zoomControl: true,
-    });
+    try {
+      console.log('[SimpleLeafletMap] Initializing map...');
+      
+      // بررسی پشتیبانی از Leaflet
+      if (typeof L === 'undefined') {
+        console.error('[SimpleLeafletMap] Leaflet library not loaded');
+        return;
+      }
 
-    mapRef.current = map;
+      // محاسبه نقطه شروع: اگر مختصات نامعتبر یا 0 باشند، روی قم قرار بده
+      const startLat = (initialLat >= 24 && initialLat <= 40) ? initialLat : 34.6416;
+      const startLng = (initialLng >= 44 && initialLng <= 64) ? initialLng : 50.8746;
+
+      // ایجاد نقشه با تنظیمات بهینه برای سازگاری
+      map = L.map(mapContainer.current, {
+        center: [startLat, startLng],
+        zoom: 12,
+        minZoom: 5,
+        maxZoom: 22,
+        scrollWheelZoom: true,
+        zoomControl: true,
+        preferCanvas: true,
+        attributionControl: true,
+        fadeAnimation: true,
+        zoomAnimation: true,
+      });
+
+      mapRef.current = map;
+      console.log('[SimpleLeafletMap] Map initialized successfully');
+    } catch (error) {
+      console.error('[SimpleLeafletMap] Error initializing map:', error);
+      return;
+    }
+
+    if (!map) return;
 
     // دریافت توکن Mapbox برای fallback مسیریابی
     (async () => {
@@ -78,11 +100,31 @@ export default function SimpleLeafletMap({
       } catch { /* ignore */ }
     })();
 
-    // اضافه کردن لایه تایل OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 22,
-    }).addTo(map);
+    // اضافه کردن لایه تایل OpenStreetMap با fallback
+    const tileUrls = [
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    ];
+    
+    let tileLayerAdded = false;
+    for (const url of tileUrls) {
+      try {
+        L.tileLayer(url, {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 22,
+          errorTileUrl: '',
+        }).addTo(map);
+        tileLayerAdded = true;
+        console.log('[SimpleLeafletMap] Tile layer added:', url);
+        break;
+      } catch (err) {
+        console.warn('[SimpleLeafletMap] Tile layer failed:', url);
+      }
+    }
+    
+    if (!tileLayerAdded) {
+      console.error('[SimpleLeafletMap] All tile layers failed');
+    }
 
     // تنظیم marker icon
     const customIcon = L.icon({

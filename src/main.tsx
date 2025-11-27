@@ -4,6 +4,9 @@ import App from "./App.tsx";
 import "./index.css";
 import { AuthProvider } from "./contexts/AuthContext";
 
+// ✅ Import Leaflet CSS globally for all maps
+import 'leaflet/dist/leaflet.css';
+
 // ثبت Service Worker برای PWA - موقتاً غیرفعال برای رفع مشکل
 // if ('serviceWorker' in navigator) {
 //   navigator.serviceWorker
