@@ -199,13 +199,6 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white px-5 py-2.5 rounded-full text-base font-semibold shadow-lg border border-white/20">
                 {currentIndex + 1} از {images.length}
               </div>
-
-              {/* Swipe indicator */}
-              <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-black/70 text-white px-4 py-2 rounded-full text-sm animate-pulse border border-white/20">
-                <ChevronRight className="h-4 w-4" />
-                <span>برای تغییر عکس، انگشت بکشید</span>
-                <ChevronLeft className="h-4 w-4" />
-              </div>
             </>
           )}
 
