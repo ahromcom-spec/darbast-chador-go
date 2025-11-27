@@ -824,7 +824,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         className: 'custom-add-project-popup',
         offset: [0, -40],
         autoClose: false,
-        closeOnClick: false
+        closeOnClick: false,
+        autoPan: false // جلوگیری از جابجایی خودکار نقشه هنگام باز شدن کادر
       })
         .setLatLng([e.latlng.lat, e.latlng.lng])
         .setContent(popupContent)
@@ -1049,7 +1050,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         `;
         centerMarker.bindPopup(centerPopupContent, {
           maxWidth: 200,
-          className: 'custom-popup center-marker-popup'
+          className: 'custom-popup center-marker-popup',
+          autoPan: false // جلوگیری از جابجایی خودکار نقشه هنگام باز شدن کادر
         });
         
         // کلیک روی مارکر قرمز همه پاپ‌آپ‌های پروژه‌ها را می‌بندد تا کاربر بتواند پروژه‌ها را ببیند
@@ -1405,7 +1407,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         marker.bindPopup(popupContent, {
           maxWidth: 360,
-          className: 'custom-popup'
+          className: 'custom-popup',
+          autoPan: false // جلوگیری از جابجایی خودکار نقشه هنگام باز شدن کادر
         });
 
         // اتصال event listeners بعد از باز شدن popup
