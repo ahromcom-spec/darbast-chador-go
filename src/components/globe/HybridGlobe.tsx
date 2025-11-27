@@ -46,7 +46,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const linesRef = useRef<L.Polyline[]>([]);
-  const centerMarkersRef = useRef<L.CircleMarker[]>([]);
+  const centerMarkersRef = useRef<L.Marker[]>([]);
   const locationsMarkersRef = useRef<L.Marker[]>([]); // مرجع جداگانه برای آدرس‌های بدون پروژه
   const galleryIndexesRef = useRef<Map<string, number>>(new Map());
   const [mapReady, setMapReady] = useState(false);
@@ -54,6 +54,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [selectedOrderForUpload, setSelectedOrderForUpload] = useState<string | null>(null);
   const [currentOrderMediaIndex, setCurrentOrderMediaIndex] = useState<Record<string, number>>({});
   const [projectsWithMedia, setProjectsWithMedia] = useState<ProjectWithMedia[]>([]);
+  const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -1071,17 +1072,54 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const firstProject = group[0];
       const centerLat = firstProject.locations!.lat;
       const centerLng = firstProject.locations!.lng;
+      const clusterKey = centerLat.toFixed(6) + '_' + centerLng.toFixed(6);
 
       // اگر بیش از یک پروژه در این موقعیت وجود دارد، مارکر مرکزی قرمز و خطوط اتصال اضافه کنیم
       if (count > 1) {
-        const centerMarker = L.circleMarker([centerLat, centerLng], {
-          radius: 12,
-          fillColor: '#ef4444',
-          fillOpacity: 0, // مخفی در ابتدا
-          color: '#ffffff',
-          weight: 3,
-          opacity: 0, // مخفی در ابتدا
-          className: 'location-center-marker'
+        // ایجاد آیکون با عدد برای نمایش تعداد پروژه‌ها
+        const clusterIcon = L.divIcon({
+          className: 'cluster-marker-icon',
+          html: `
+            <div style="
+              position: relative;
+              width: 50px;
+              height: 50px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <div style="
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                border: 3px solid white;
+                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: Vazirmatn, sans-serif;
+                font-size: 18px;
+                font-weight: bold;
+                color: white;
+                cursor: pointer;
+                transition: all 0.2s ease;
+              "
+              onmouseover="this.style.transform='scale(1.1)'"
+              onmouseout="this.style.transform='scale(1)'"
+              >
+                ${count}
+              </div>
+            </div>
+          `,
+          iconSize: [50, 50],
+          iconAnchor: [25, 25],
+          popupAnchor: [0, -25],
+        });
+        
+        const centerMarker = L.marker([centerLat, centerLng], { 
+          icon: clusterIcon,
+          zIndexOffset: 1000 // مارکر مرکزی بالاتر از بقیه باشد
         }).addTo(mapRef.current!);
         
         // اضافه کردن popup به مارکر قرمز برای نمایش تعداد پروژه‌ها
@@ -1090,7 +1128,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             <div style="background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%);color:white;padding:12px;border-radius:8px;margin-bottom:8px;">
               <span style="font-size:16px;font-weight:bold;">📍 ${count} پروژه</span>
             </div>
-            <span style="font-size:12px;color:#6b7280;">روی پروژه‌ها کلیک کنید</span>
+            <span style="font-size:12px;color:#6b7280;">کلیک کنید تا پروژه‌ها تفکیک شوند</span>
           </div>
         `;
         centerMarker.bindPopup(centerPopupContent, {
@@ -1099,38 +1137,86 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           autoPan: false // جلوگیری از جابجایی خودکار نقشه هنگام باز شدن کادر
         });
         
-        // کلیک روی مارکر قرمز همه پاپ‌آپ‌های پروژه‌ها را می‌بندد تا کاربر بتواند پروژه‌ها را ببیند
-        centerMarker.on('click', () => {
-          centerMarker.openPopup();
+        // کلیک روی مارکر قرمز برای expand کردن cluster
+        centerMarker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          
+          // Expand the cluster
+          const newExpanded = new Set(expandedClusters);
+          if (!newExpanded.has(clusterKey)) {
+            newExpanded.add(clusterKey);
+            setExpandedClusters(newExpanded);
+            
+            // مخفی کردن مارکر مرکزی
+            centerMarker.setOpacity(0);
+            
+            // پیدا کردن تمام مارکرها و خطوط این cluster
+            markersRef.current.forEach((marker) => {
+              const markerClusterKey = (marker as any).clusterKey;
+              if (markerClusterKey === clusterKey) {
+                const targetLat = (marker as any).targetLat;
+                const targetLng = (marker as any).targetLng;
+                
+                // انیمیشن حرکت به موقعیت نهایی
+                setTimeout(() => {
+                  marker.setLatLng([targetLat, targetLng]);
+                  marker.setOpacity(1);
+                }, 100);
+              }
+            });
+            
+            // نمایش خطوط
+            linesRef.current.forEach((line) => {
+              const lineClusterKey = (line as any).clusterKey;
+              if (lineClusterKey === clusterKey) {
+                setTimeout(() => {
+                  line.setStyle({ opacity: 0.7 });
+                }, 100);
+              }
+            });
+            
+            centerMarker.closePopup();
+          }
         });
         
         centerMarkersRef.current.push(centerMarker);
+        (centerMarker as any).clusterKey = clusterKey;
       }
 
       group.forEach((project, index) => {
         if (!project.locations?.lat || !project.locations?.lng) return;
         
         // محاسبه آفست برای مارکرهای چندگانه در یک آدرس - فاصله بسیار کم
-        let lat = centerLat;
+        let targetLat = centerLat;
+        let targetLng = centerLng;
+        let lat = centerLat; // موقعیت اولیه همیشه مرکز است
         let lng = centerLng;
+        
         if (count > 1) {
           const angle = (2 * Math.PI * index) / count;
           const radius = 0.00008; // فاصله خیلی کم برای قرارگیری بسیار نزدیک به نقطه قرمز
-          lat = centerLat + radius * Math.cos(angle);
-          lng = centerLng + radius * Math.sin(angle);
+          targetLat = centerLat + radius * Math.cos(angle);
+          targetLng = centerLng + radius * Math.sin(angle);
+          
+          // اگر cluster قبلاً expand شده، مارکر را در موقعیت نهایی بگذار
+          if (expandedClusters.has(clusterKey)) {
+            lat = targetLat;
+            lng = targetLng;
+          }
 
           // اضافه کردن خط اتصال از پروژه به مرکز
           const line = L.polyline(
-            [[lat, lng], [centerLat, centerLng]],
+            [[targetLat, targetLng], [centerLat, centerLng]],
             {
               color: '#3b82f6',
               weight: 2,
-              opacity: 0, // مخفی در ابتدا
+              opacity: expandedClusters.has(clusterKey) ? 0.7 : 0, // نمایش خط اگر expand شده
               dashArray: '8, 12',
               className: 'connection-line'
             }
           ).addTo(mapRef.current!);
           linesRef.current.push(line);
+          (line as any).clusterKey = clusterKey;
         }
 
         let iconToUse: any = projectIcon;
@@ -1178,11 +1264,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
         const marker = L.marker([lat, lng], { 
           icon: iconToUse,
-          opacity: 0 // مخفی در ابتدا تا انیمیشن تمام شود
+          opacity: count > 1 ? (expandedClusters.has(clusterKey) ? 1 : 0) : 0 // مخفی در ابتدا یا نمایان اگر expand شده
         }).addTo(mapRef.current!);
 
-        // ذخیره شناسه پروژه روی مارکر برای باز کردن مجدد پاپ‌آپ
+        // ذخیره شناسه پروژه و اطلاعات cluster روی مارکر
         (marker as any).projectId = project.id;
+        (marker as any).clusterKey = clusterKey;
+        (marker as any).targetLat = targetLat;
+        (marker as any).targetLng = targetLng;
+        (marker as any).isInCluster = count > 1;
         
         // تولید HTML برای تصاویر و ویدیوها با قابلیت گالری
         const images = (project.media || []).filter(m => m.file_type === 'image');
@@ -1827,10 +1917,59 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           }
         });
 
-         marker.on('click', () => {
-          setSelectedProject(project);
-          setSelectedOrderForUpload(null);
-          setSelectedMapLocation(null); // Clear map location selection when clicking on a marker
+         marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          
+          // اگر مارکر در cluster است و expand نشده، ابتدا expand کنیم
+          if ((marker as any).isInCluster && !expandedClusters.has((marker as any).clusterKey)) {
+            const markerClusterKey = (marker as any).clusterKey;
+            const newExpanded = new Set(expandedClusters);
+            newExpanded.add(markerClusterKey);
+            setExpandedClusters(newExpanded);
+            
+            // نمایش مارکرهای قرمز مرکزی
+            centerMarkersRef.current.forEach((cm) => {
+              if ((cm as any).clusterKey === markerClusterKey) {
+                cm.setOpacity(0);
+                cm.closePopup();
+              }
+            });
+            
+            // انیمیشن حرکت مارکرها به موقعیت نهایی
+            markersRef.current.forEach((m) => {
+              if ((m as any).clusterKey === markerClusterKey) {
+                const targetLat = (m as any).targetLat;
+                const targetLng = (m as any).targetLng;
+                
+                setTimeout(() => {
+                  m.setLatLng([targetLat, targetLng]);
+                  m.setOpacity(1);
+                }, 100);
+              }
+            });
+            
+            // نمایش خطوط
+            linesRef.current.forEach((line) => {
+              if ((line as any).clusterKey === markerClusterKey) {
+                setTimeout(() => {
+                  line.setStyle({ opacity: 0.7 });
+                }, 100);
+              }
+            });
+            
+            // باز کردن popup بعد از expand
+            setTimeout(() => {
+              setSelectedProject(project);
+              setSelectedOrderForUpload(null);
+              setSelectedMapLocation(null);
+              marker.openPopup();
+            }, 500);
+          } else {
+            // اگر cluster expand شده یا پروژه تکی است، مستقیماً popup را باز کن
+            setSelectedProject(project);
+            setSelectedOrderForUpload(null);
+            setSelectedMapLocation(null);
+          }
         });
 
         markersRef.current.push(marker);
@@ -1881,9 +2020,17 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           
           // نمایش تدریجی مارکرها و خطوط بعد از اتمام انیمیشن
           setTimeout(() => {
-            markersRef.current.forEach(m => m.setOpacity(1));
-            linesRef.current.forEach(l => l.setStyle({ opacity: 0.7 }));
-            centerMarkersRef.current.forEach(cm => cm.setStyle({ fillOpacity: 0.95, opacity: 1 }));
+            // نمایش مارکرهای تکی (که در cluster نیستند)
+            markersRef.current.forEach(m => {
+              if (!(m as any).isInCluster) {
+                m.setOpacity(1);
+              }
+            });
+            
+            // نمایش مارکرهای قرمز مرکزی برای cluster ها
+            centerMarkersRef.current.forEach(cm => cm.setOpacity(1));
+            
+            // خطوط و مارکرهای cluster مخفی می‌مانند تا کاربر روی cluster کلیک کند
           }, 5000); // بعد از 5 ثانیه (مدت زمان انیمیشن)
         } catch (e) {
           console.warn('[HybridGlobe] flyToBounds failed', e, bounds);
@@ -1892,7 +2039,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     } else {
       console.warn('[HybridGlobe] No markers to display on map');
     }
-  }, [projectsWithMedia, loading, mapReady, navigate, selectedProject]);
+  }, [projectsWithMedia, loading, mapReady, navigate, selectedProject, expandedClusters]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
