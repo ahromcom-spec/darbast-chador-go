@@ -1627,21 +1627,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                     description: 'رسانه با موفقیت حذف شد',
                   });
 
-                  // بارگذاری مجدد داده‌ها
+                  // بارگذاری مجدد داده‌ها بدون بستن popup
                   await refetch();
                   await fetchProjectMedia();
                   
-                  // بستن و باز کردن مجدد popup برای نمایش تغییرات
-                  mapRef.current?.closePopup();
-                  setTimeout(() => {
-                    const markerIndex = markersRef.current.findIndex((m) => {
-                      const content = m.getPopup()?.getContent();
-                      return typeof content === 'string' && content.includes(project.id);
-                    });
-                    if (markerIndex !== -1) {
-                      markersRef.current[markerIndex].openPopup();
-                    }
-                  }, 300);
+                  // حذف عنصر رسانه از DOM به‌صورت مستقیم
+                  const mediaElement = btn.closest('[id^="order-media-"]') as HTMLElement;
+                  if (mediaElement && mediaElement.id !== btn.dataset.orderId + '-add') {
+                    mediaElement.style.transition = 'opacity 0.3s ease';
+                    mediaElement.style.opacity = '0';
+                    setTimeout(() => {
+                      mediaElement.remove();
+                    }, 300);
+                  }
                 } catch (error: any) {
                   console.error('[Map] Error deleting media:', error);
                   toast({
