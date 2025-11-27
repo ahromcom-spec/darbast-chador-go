@@ -44,7 +44,7 @@ const Index = () => {
           {/* Globe Button */}
           <button
             onClick={() => setShowGlobe(true)}
-            className="group relative inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            className="group relative inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-0"
           >
             <span className="text-lg font-semibold">
               نمایش پروژه‌ها روی کره زمین
