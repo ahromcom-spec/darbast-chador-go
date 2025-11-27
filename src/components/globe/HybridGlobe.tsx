@@ -748,10 +748,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     // بستن popup با debounce
     let longPressTimer: NodeJS.Timeout;
     let isLongPress = false;
-    let clickCount = 0;
-    let lastClickTime = 0;
-    const DOUBLE_CLICK_DELAY = 300; // میلی‌ثانیه
     const LONG_PRESS_DURATION = 500; // میلی‌ثانیه
+
 
     // هندلر شروع long press (موس و تاچ)
     const startLongPress = (e: L.LeafletMouseEvent) => {
@@ -899,11 +897,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       setSelectedMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
     };
 
-    // هندلر دوبار کلیک
+    // هندلر کلیک روی نقشه
     map.on('click', (e: L.LeafletMouseEvent) => {
       const clickedOnMarker = (e.originalEvent.target as HTMLElement)?.closest('.leaflet-marker-icon');
       
-      // اگر روی مارکر کلیک شد، پروژه‌ها را ببند و خارج شو
+      // اگر روی مارکر کلیک شد، خارج شو
       if (clickedOnMarker) {
         return;
       }
@@ -914,30 +912,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         return;
       }
 
-      const currentTime = new Date().getTime();
-      const timeDiff = currentTime - lastClickTime;
-
-      if (timeDiff < DOUBLE_CLICK_DELAY && clickCount === 1) {
-        // دوبار کلیک شناسایی شد
-        clickCount = 0;
-        lastClickTime = 0;
-        showAddProjectMarker(e);
-      } else {
-        // اولین کلیک
-        clickCount = 1;
-        lastClickTime = currentTime;
-        
-        // پس از تاخیر، اگر دومین کلیک نیامد، کلیک‌ها را ریست کن
-        setTimeout(() => {
-          if (clickCount === 1) {
-            clickCount = 0;
-            lastClickTime = 0;
-            // بستن پروژه‌های انتخاب شده با کلیک ساده
-            setSelectedProject(null);
-            setSelectedOrderForUpload(null);
-          }
-        }, DOUBLE_CLICK_DELAY);
-      }
+      // کلیک ساده برای بستن پروژه‌های انتخاب شده
+      setSelectedProject(null);
+      setSelectedOrderForUpload(null);
     });
 
     // رویدادهای long press
