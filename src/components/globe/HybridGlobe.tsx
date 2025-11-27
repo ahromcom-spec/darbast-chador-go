@@ -1166,37 +1166,37 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       // اگر بیش از یک پروژه در این موقعیت وجود دارد، نقطه مرکزی و خطوط اتصال اضافه کنیم
       if (count > 1) {
-        // ایجاد نقطه مرکزی ساده (بدون عدد)
+        // ایجاد نقطه مرکزی قرمز کوچک
         const clusterIcon = L.divIcon({
           className: 'cluster-marker-icon',
           html: `
             <div style="
               position: relative;
-              width: 30px;
-              height: 30px;
+              width: 20px;
+              height: 20px;
               display: flex;
               align-items: center;
               justify-content: center;
             ">
               <div style="
-                width: 20px;
-                height: 20px;
+                width: 12px;
+                height: 12px;
                 border-radius: 50%;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                border: 3px solid white;
-                box-shadow: 0 3px 10px rgba(102, 126, 234, 0.6);
+                background: #ef4444;
+                border: 2px solid white;
+                box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
                 cursor: pointer;
                 transition: all 0.2s ease;
               "
-              onmouseover="this.style.transform='scale(1.2)'"
+              onmouseover="this.style.transform='scale(1.15)'"
               onmouseout="this.style.transform='scale(1)'"
               >
               </div>
             </div>
           `,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
-          popupAnchor: [0, -15],
+          iconSize: [20, 20],
+          iconAnchor: [10, 10],
+          popupAnchor: [0, -10],
         });
         
         const centerMarker = L.marker([centerLat, centerLng], { 
@@ -1301,15 +1301,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       group.forEach((project, index) => {
         if (!project.locations?.lat || !project.locations?.lng) return;
         
-        // محاسبه آفست برای مارکرهای چندگانه در یک آدرس - فاصله بسیار کم
+        // محاسبه آفست برای مارکرهای چندگانه در یک آدرس
         let targetLat = centerLat;
         let targetLng = centerLng;
-        let lat = centerLat; // موقعیت اولیه همیشه مرکز است
+        let lat = centerLat;
         let lng = centerLng;
         
         if (count > 1) {
           const angle = (2 * Math.PI * index) / count;
-          const radius = 0.0008; // افزایش فاصله برای تفکیک بهتر پروژه‌ها
+          const radius = 0.0008; // فاصله برای حالت باز
           targetLat = centerLat + radius * Math.cos(angle);
           targetLng = centerLng + radius * Math.sin(angle);
           
@@ -1317,6 +1317,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           if (expandedClusters.has(clusterKey)) {
             lat = targetLat;
             lng = targetLng;
+          } else {
+            // در حالت جمع شده: مارکرها زیر نقطه مرکزی به صورت متراکب قرار گیرند
+            const stackOffset = index * 0.00003; // آفست کوچک برای ایجاد افکت تراکم
+            lat = centerLat + stackOffset;
+            lng = centerLng + stackOffset * 0.8;
           }
 
           // اضافه کردن خط اتصال از پروژه به مرکز
@@ -1379,7 +1384,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
         const marker = L.marker([lat, lng], { 
           icon: iconToUse,
-          opacity: count > 1 ? (expandedClusters.has(clusterKey) ? 1 : 0) : 0 // مخفی در ابتدا یا نمایان اگر expand شده
+          opacity: count > 1 ? (expandedClusters.has(clusterKey) ? 1 : 0.85 - (index * 0.12)) : 0 // در حالت جمع شده، تراکم قابل مشاهده با کاهش opacity
         }).addTo(mapRef.current!);
 
         // ذخیره شناسه پروژه و اطلاعات cluster روی مارکر
