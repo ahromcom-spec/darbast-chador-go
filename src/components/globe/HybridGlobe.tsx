@@ -1872,7 +1872,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           // هندلر افزودن سفارش جدید به پروژه
           const addNewOrderBtn = popupElement.querySelector('.add-new-order-btn');
           if (addNewOrderBtn) {
-            addNewOrderBtn.addEventListener('click', (e) => {
+            addNewOrderBtn.addEventListener('click', async (e) => {
               e.stopPropagation();
               const projectId = (addNewOrderBtn as HTMLElement).dataset.projectId;
               const locationId = (addNewOrderBtn as HTMLElement).dataset.locationId;
@@ -1881,6 +1881,35 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               const subcategoryCode = (addNewOrderBtn as HTMLElement).dataset.subcategoryCode;
               
               console.log('[Map] Adding new order to project:', { projectId, locationId, serviceTypeId, subcategoryId, subcategoryCode });
+              
+              // دریافت اطلاعات کامل location برای province_id و district_id
+              let provinceId = null;
+              let districtId = null;
+              let addressLine = '';
+              let provinceName = '';
+              let districtName = '';
+              
+              if (locationId) {
+                const { data: locationData } = await supabase
+                  .from('locations')
+                  .select(`
+                    province_id,
+                    district_id,
+                    address_line,
+                    provinces (name),
+                    districts (name)
+                  `)
+                  .eq('id', locationId)
+                  .single();
+                
+                if (locationData) {
+                  provinceId = locationData.province_id;
+                  districtId = locationData.district_id;
+                  addressLine = locationData.address_line;
+                  provinceName = (locationData.provinces as any)?.name || '';
+                  districtName = (locationData.districts as any)?.name || '';
+                }
+              }
               
               // بستن popup
               marker.closePopup();
@@ -1891,10 +1920,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 navigate('/scaffolding/comprehensive-form', {
                   state: {
                     fromMap: true,
+                    hierarchyProjectId: projectId,
                     projectId: projectId,
                     locationId: locationId,
                     serviceTypeId: serviceTypeId,
-                    subcategoryId: subcategoryId
+                    subcategoryId: subcategoryId,
+                    provinceId: provinceId,
+                    districtId: districtId,
+                    locationAddress: addressLine,
+                    provinceName: provinceName,
+                    districtName: districtName
                   }
                 });
               } else if (subcategoryCode === '30') {
@@ -1902,10 +1937,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 navigate('/scaffolding/rental-form', {
                   state: {
                     fromMap: true,
+                    hierarchyProjectId: projectId,
                     projectId: projectId,
                     locationId: locationId,
                     serviceTypeId: serviceTypeId,
-                    subcategoryId: subcategoryId
+                    subcategoryId: subcategoryId,
+                    provinceId: provinceId,
+                    districtId: districtId,
+                    locationAddress: addressLine,
+                    provinceName: provinceName,
+                    districtName: districtName
                   }
                 });
               } else {
@@ -1914,7 +1955,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   state: {
                     fromMap: true,
                     projectId: projectId,
-                    subcategoryId: subcategoryId
+                    subcategoryId: subcategoryId,
+                    locationAddress: addressLine,
+                    provinceName: provinceName,
+                    districtName: districtName
                   }
                 });
               }
