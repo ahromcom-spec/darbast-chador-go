@@ -215,9 +215,31 @@ export default function MyProjectsHierarchy() {
         );
       });
 
+      // فیلتر کردن: فقط پروژه‌هایی که سفارش دارند و آدرس‌هایی که پروژه با سفارش دارند
+      const filteredProjects: { [key: string]: Project[] } = {};
+      const addressesWithOrders = new Set<string>();
+
+      // پیمایش پروژه‌ها و نگه‌داشتن فقط آن‌هایی که سفارش دارند
+      Object.entries(projectsByLocation).forEach(([locationId, projs]) => {
+        const projectsWithOrders = projs.filter(project => {
+          const projectOrders = ordersByProject[project.id] || [];
+          return projectOrders.length > 0;
+        });
+
+        if (projectsWithOrders.length > 0) {
+          filteredProjects[locationId] = projectsWithOrders;
+          addressesWithOrders.add(locationId);
+        }
+      });
+
+      // فیلتر کردن آدرس‌ها: فقط آدرس‌هایی که پروژه با سفارش دارند
+      const filteredAddresses = (locations || []).filter(loc => 
+        addressesWithOrders.has(loc.id)
+      );
+
       setData({
-        addresses: locations || [],
-        projects: projectsByLocation,
+        addresses: filteredAddresses,
+        projects: filteredProjects,
         orders: ordersByProject
       });
 
