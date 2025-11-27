@@ -1021,6 +1021,7 @@ export default function ComprehensiveScaffoldingForm({
                 <SelectValue placeholder="نوع داربست را انتخاب کنید" />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
+                <SelectItem value="facade">داربست سطحی نما</SelectItem>
                 <SelectItem value="formwork">داربست کفراژ</SelectItem>
                 <SelectItem value="ceiling">داربست زیر بتن (سقف)</SelectItem>
                 <SelectItem value="column">داربست ستونیَ، نورگیر، چاله اسانسور و ...</SelectItem>
