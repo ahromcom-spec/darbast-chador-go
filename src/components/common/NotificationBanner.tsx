@@ -7,14 +7,34 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export function NotificationBanner() {
   const [dismissed, setDismissed] = useState(() => {
-    return localStorage.getItem('notification-banner-dismissed') === 'true';
+    const dismissedData = localStorage.getItem('notification-banner-dismissed');
+    if (!dismissedData) return false;
+    
+    try {
+      const { timestamp } = JSON.parse(dismissedData);
+      const oneMinute = 60 * 1000; // یک دقیقه به میلی‌ثانیه
+      const timePassed = Date.now() - timestamp;
+      
+      if (timePassed > oneMinute) {
+        // اگر بیش از یک دقیقه گذشته باشد، بنر را دوباره نمایش بده
+        localStorage.removeItem('notification-banner-dismissed');
+        return false;
+      }
+      return true;
+    } catch {
+      // اگر فرمت قدیمی بود، بنر را نمایش بده
+      return false;
+    }
   });
   const location = useLocation();
   const { permission, isSupported, requestPermission } = usePushNotifications();
 
   const handleDismiss = () => {
     setDismissed(true);
-    localStorage.setItem('notification-banner-dismissed', 'true');
+    // ذخیره زمان dismiss با timestamp
+    localStorage.setItem('notification-banner-dismissed', JSON.stringify({
+      timestamp: Date.now()
+    }));
   };
 
   const handleEnable = async () => {

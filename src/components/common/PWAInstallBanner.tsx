@@ -13,18 +13,40 @@ export function PWAInstallBanner() {
 
   // بررسی و نمایش بنر بر اساس وضعیت نصب و localStorage
   useEffect(() => {
-    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    const dismissedData = localStorage.getItem('pwa-install-dismissed');
     
-    if (location.pathname === '/' && !isStandalone && dismissed !== 'true') {
-      setShow(true);
-    } else {
-      setShow(false);
+    // بررسی اینکه آیا یک دقیقه از زمان dismiss گذشته است
+    let shouldShow = false;
+    if (location.pathname === '/' && !isStandalone) {
+      if (!dismissedData) {
+        shouldShow = true;
+      } else {
+        try {
+          const { timestamp } = JSON.parse(dismissedData);
+          const oneMinute = 60 * 1000; // یک دقیقه به میلی‌ثانیه
+          const timePassed = Date.now() - timestamp;
+          
+          if (timePassed > oneMinute) {
+            // اگر بیش از یک دقیقه گذشته باشد، بنر را دوباره نمایش بده
+            shouldShow = true;
+            localStorage.removeItem('pwa-install-dismissed');
+          }
+        } catch {
+          // اگر فرمت قدیمی بود، بنر را نمایش بده
+          shouldShow = true;
+        }
+      }
     }
+    
+    setShow(shouldShow);
   }, [location.pathname, isStandalone]);
 
   const handleDismiss = () => {
     setShow(false);
-    localStorage.setItem('pwa-install-dismissed', 'true');
+    // ذخیره زمان dismiss با timestamp
+    localStorage.setItem('pwa-install-dismissed', JSON.stringify({
+      timestamp: Date.now()
+    }));
   };
 
   const handleInstall = async () => {
