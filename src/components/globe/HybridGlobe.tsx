@@ -923,9 +923,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         return;
       }
 
-      // کلیک ساده برای بستن پروژه‌های انتخاب شده
+      // کلیک ساده برای بستن پروژه‌های انتخاب شده و جمع کردن همه cluster ها
       setSelectedProject(null);
       setSelectedOrderForUpload(null);
+      setExpandedClusters(new Set()); // جمع کردن همه پروژه‌ها
     });
 
     // رویدادهای long press
@@ -1128,7 +1129,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             <div style="background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%);color:white;padding:12px;border-radius:8px;margin-bottom:8px;">
               <span style="font-size:16px;font-weight:bold;">📍 ${count} پروژه</span>
             </div>
-            <span style="font-size:12px;color:#6b7280;">کلیک کنید تا پروژه‌ها تفکیک شوند</span>
+            <span style="font-size:12px;color:#6b7280;">کلیک کنید تا پروژه‌ها تفکیک یا جمع شوند</span>
           </div>
         `;
         centerMarker.bindPopup(centerPopupContent, {
@@ -1137,18 +1138,51 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           autoPan: false // جلوگیری از جابجایی خودکار نقشه هنگام باز شدن کادر
         });
         
-        // کلیک روی مارکر قرمز برای expand کردن cluster
+        // کلیک روی مارکر قرمز برای باز/بسته کردن cluster
         centerMarker.on('click', (e) => {
           L.DomEvent.stopPropagation(e);
           
-          // Expand the cluster
           const newExpanded = new Set(expandedClusters);
-          if (!newExpanded.has(clusterKey)) {
+          const isExpanded = newExpanded.has(clusterKey);
+          
+          if (isExpanded) {
+            // جمع کردن cluster
+            console.log('[Map] Collapsing cluster:', clusterKey);
+            newExpanded.delete(clusterKey);
+            setExpandedClusters(newExpanded);
+            
+            // نمایش مارکر مرکزی
+            centerMarker.setOpacity(1);
+            
+            // پیدا کردن تمام مارکرها و خطوط این cluster و جمع کردن آنها
+            markersRef.current.forEach((marker) => {
+              const markerClusterKey = (marker as any).clusterKey;
+              if (markerClusterKey === clusterKey) {
+                // انیمیشن برگشت به مرکز
+                setTimeout(() => {
+                  marker.setLatLng([centerLat, centerLng]);
+                  marker.setOpacity(0);
+                }, 50);
+              }
+            });
+            
+            // مخفی کردن خطوط
+            linesRef.current.forEach((line) => {
+              const lineClusterKey = (line as any).clusterKey;
+              if (lineClusterKey === clusterKey) {
+                setTimeout(() => {
+                  line.setStyle({ opacity: 0 });
+                }, 50);
+              }
+            });
+          } else {
+            // باز کردن cluster
+            console.log('[Map] Expanding cluster:', clusterKey);
             newExpanded.add(clusterKey);
             setExpandedClusters(newExpanded);
             
             // مخفی کردن مارکر مرکزی
-            centerMarker.setOpacity(0);
+            centerMarker.setOpacity(0.3);
             
             // پیدا کردن تمام مارکرها و خطوط این cluster
             markersRef.current.forEach((marker) => {
@@ -1194,7 +1228,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         if (count > 1) {
           const angle = (2 * Math.PI * index) / count;
-          const radius = 0.00008; // فاصله خیلی کم برای قرارگیری بسیار نزدیک به نقطه قرمز
+          const radius = 0.0008; // افزایش فاصله برای تفکیک بهتر پروژه‌ها
           targetLat = centerLat + radius * Math.cos(angle);
           targetLng = centerLng + radius * Math.sin(angle);
           
