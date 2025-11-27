@@ -718,7 +718,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     // بستن popup با debounce
     let longPressTimer: NodeJS.Timeout;
     let isLongPress = false;
+    let isDragging = false; // برای ردیابی drag کردن نقشه
+    let startPos: { x: number, y: number } | null = null; // موقعیت شروع
     const LONG_PRESS_DURATION = 500; // میلی‌ثانیه
+    const DRAG_THRESHOLD = 5; // حداقل حرکت برای تشخیص drag (پیکسل)
 
 
     // هندلر شروع long press (موس و تاچ)
@@ -727,15 +730,51 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       if (clickedOnMarker) return;
 
       isLongPress = false;
+      isDragging = false;
+      
+      // ذخیره موقعیت شروع
+      const mouseEvent = e.originalEvent as MouseEvent;
+      const touchEvent = e.originalEvent as unknown as TouchEvent;
+      
+      startPos = {
+        x: mouseEvent.clientX || touchEvent.touches?.[0]?.clientX || 0,
+        y: mouseEvent.clientY || touchEvent.touches?.[0]?.clientY || 0
+      };
+      
       longPressTimer = setTimeout(() => {
-        isLongPress = true;
-        showAddProjectMarker(e);
+        // فقط اگر کاربر drag نکرده باشد، مارکر را نشان بده
+        if (!isDragging) {
+          isLongPress = true;
+          showAddProjectMarker(e);
+        }
       }, LONG_PRESS_DURATION);
+    };
+
+    // هندلر حرکت - برای تشخیص drag
+    const handleMove = (e: L.LeafletMouseEvent) => {
+      if (!startPos) return;
+      
+      const mouseEvent = e.originalEvent as MouseEvent;
+      const touchEvent = e.originalEvent as unknown as TouchEvent;
+      
+      const currentX = mouseEvent.clientX || touchEvent.touches?.[0]?.clientX || 0;
+      const currentY = mouseEvent.clientY || touchEvent.touches?.[0]?.clientY || 0;
+      
+      const deltaX = Math.abs(currentX - startPos.x);
+      const deltaY = Math.abs(currentY - startPos.y);
+      
+      // اگر بیشتر از threshold حرکت کرد، به عنوان drag شناسایی شود
+      if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
+        isDragging = true;
+        clearTimeout(longPressTimer);
+      }
     };
 
     // هندلر پایان long press
     const endLongPress = () => {
       clearTimeout(longPressTimer);
+      startPos = null;
+      isDragging = false;
     };
 
     // تابع نمایش مارکر افزودن پروژه
@@ -891,7 +930,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     // رویدادهای long press
     map.on('mousedown', startLongPress);
     map.on('mouseup', endLongPress);
-    map.on('mousemove', endLongPress);
+    map.on('mousemove', handleMove); // استفاده از handleMove برای تشخیص drag
     map.getContainer().addEventListener('touchstart', (e: TouchEvent) => {
       // Only trigger long press if exactly one finger is touching
       if (e.touches.length === 1) {
@@ -911,6 +950,20 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         }
       }
     });
+    
+    // هندلر حرکت تاچ - برای تشخیص drag
+    map.getContainer().addEventListener('touchmove', (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const point = map.containerPointToLatLng([touch.clientX, touch.clientY]);
+        const leafletEvent = {
+          latlng: point,
+          originalEvent: e
+        } as unknown as L.LeafletMouseEvent;
+        handleMove(leafletEvent);
+      }
+    });
+    
     map.getContainer().addEventListener('touchend', (e: TouchEvent) => {
       // Only process if it was a single touch ending
       if (e.changedTouches.length === 1 && e.touches.length === 0) {
@@ -922,14 +975,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           longPressTimer = null;
           isLongPress = false;
         }
-      }
-    });
-    map.getContainer().addEventListener('touchmove', (e: TouchEvent) => {
-      // Cancel long press on movement or if multiple fingers detected
-      if (longPressTimer && e.touches.length !== 1) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-        isLongPress = false;
       }
     });
 
