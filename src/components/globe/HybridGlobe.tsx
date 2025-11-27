@@ -1165,46 +1165,46 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const centerLng = firstProject.locations!.lng;
       const clusterKey = centerLat.toFixed(6) + '_' + centerLng.toFixed(6);
 
-      // اگر بیش از یک پروژه در این موقعیت وجود دارد، نقطه مرکزی و خطوط اتصال اضافه کنیم
-      if (count > 1) {
-        // ایجاد نقطه مرکزی قرمز کوچک
-        const clusterIcon = L.divIcon({
-          className: 'cluster-marker-icon',
-          html: `
+      // برای همه موقعیت‌ها (چه تکی چه چندتایی) نقطه مرکزی قرمز اضافه کنیم
+      // ایجاد نقطه مرکزی قرمز کوچک
+      const clusterIcon = L.divIcon({
+        className: 'cluster-marker-icon',
+        html: `
+          <div style="
+            position: relative;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">
             <div style="
-              position: relative;
-              width: 20px;
-              height: 20px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">
-              <div style="
-                width: 12px;
-                height: 12px;
-                border-radius: 50%;
-                background: #ef4444;
-                border: 2px solid white;
-                box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
-                cursor: pointer;
-                transition: all 0.2s ease;
-              "
-              onmouseover="this.style.transform='scale(1.15)'"
-              onmouseout="this.style.transform='scale(1)'"
-              >
-              </div>
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              background: #ef4444;
+              border: 2px solid white;
+              box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+              cursor: pointer;
+              transition: all 0.2s ease;
+            "
+            onmouseover="this.style.transform='scale(1.15)'"
+            onmouseout="this.style.transform='scale(1)'"
+            >
             </div>
-          `,
-          iconSize: [20, 20],
-          iconAnchor: [10, 10],
-          popupAnchor: [0, -10],
-        });
-        
-        const centerMarker = L.marker([centerLat, centerLng], { 
-          icon: clusterIcon,
-          zIndexOffset: 1000 // مارکر مرکزی بالاتر از بقیه باشد
-        }).addTo(mapRef.current!);
-        
+          </div>
+        `,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+        popupAnchor: [0, -10],
+      });
+      
+      const centerMarker = L.marker([centerLat, centerLng], { 
+        icon: clusterIcon,
+        zIndexOffset: 1000 // مارکر مرکزی بالاتر از بقیه باشد
+      }).addTo(mapRef.current!);
+      
+      if (count > 1) {
         // اضافه کردن popup به نقطه مرکزی برای نمایش تعداد پروژه‌ها
         const centerPopupContent = `
           <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: center; padding: 8px;">
@@ -1294,10 +1294,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             centerMarker.closePopup();
           }
         });
-        
-        centerMarkersRef.current.push(centerMarker);
-        (centerMarker as any).clusterKey = clusterKey;
+      } else {
+        // برای پروژه تکی، نقطه قرمز را کلیک‌پذیر کن تا popup پروژه باز شود
+        (centerMarker as any).singleProjectId = firstProject.id;
+        centerMarker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setSelectedProject(firstProject);
+          setSelectedOrderForUpload(null);
+          setSelectedMapLocation(null);
+        });
       }
+      
+      centerMarkersRef.current.push(centerMarker);
+      (centerMarker as any).clusterKey = clusterKey;
 
       group.forEach((project, index) => {
         if (!project.locations?.lat || !project.locations?.lng) return;
@@ -2260,7 +2269,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               }
             });
             
-            // نمایش مارکرهای قرمز مرکزی برای cluster ها
+            // نمایش تمام نقاط قرمز مرکزی (برای همه پروژه‌ها)
             centerMarkersRef.current.forEach(cm => cm.setOpacity(1));
             
             // خطوط و مارکرهای cluster مخفی می‌مانند تا کاربر روی cluster کلیک کند
