@@ -739,26 +739,81 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     if (!map) return;
 
-    // لایه تایل با کش و بهینه‌سازی - با fallback به CDN های مختلف
-    const tileUrls = [
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png'
-    ];
-    
-    let tileLayerAdded = false;
-    for (const url of tileUrls) {
-      try {
-        L.tileLayer(url, {
+    // لایه تایل با کش و بهینه‌سازی - با fallback به CDN های مختلف + Mapbox
+    const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [];
+
+    // تلاش برای استفاده از Mapbox در صورت موجود بودن توکن عمومی
+    try {
+      const cachedToken = sessionStorage.getItem('mapbox_token');
+      const envToken = (import.meta as any).env?.VITE_MAPBOX_TOKEN as string | undefined;
+      const resolvedToken = cachedToken || envToken;
+
+      if (resolvedToken) {
+        tileConfigs.push({
+          url: `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/256/{z}/{x}/{y}.png?access_token=${resolvedToken}`,
+          options: {
+            attribution: '© OpenStreetMap contributors © Mapbox',
+            maxZoom: 22,
+            tileSize: 256,
+            zoomOffset: 0,
+            maxNativeZoom: 19,
+          },
+        });
+      }
+    } catch (err) {
+      console.warn('[Map] Failed to resolve Mapbox token for Leaflet tiles', err);
+    }
+
+    // سپس OSM و Carto به عنوان پشتیبان
+    tileConfigs.push(
+      {
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        options: {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 22,
           updateWhenIdle: false,
           updateWhenZooming: false,
-          keepBuffer: 4, // نگهداری تایل‌ها در حافظه
+          keepBuffer: 4,
           maxNativeZoom: 19,
-          errorTileUrl: '', // در صورت خطا، تایل خالی نشان بده
-        }).addTo(map);
+          errorTileUrl: '',
+        },
+      },
+      {
+        url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        options: {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 22,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
+          maxNativeZoom: 19,
+          errorTileUrl: '',
+        },
+      },
+      {
+        url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+        options: {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 22,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
+          maxNativeZoom: 19,
+          errorTileUrl: '',
+        },
+      }
+    );
+    
+    let tileLayerAdded = false;
+    for (const { url, options } of tileConfigs) {
+      try {
+        const layer = L.tileLayer(url, options).addTo(map);
         tileLayerAdded = true;
+
+        layer.on('tileerror', (e) => {
+          console.error('[Map] Tile load error:', e);
+        });
+
         console.log('[Map] Tile layer added successfully:', url);
         break;
       } catch (err) {
