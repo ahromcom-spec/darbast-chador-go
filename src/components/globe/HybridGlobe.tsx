@@ -601,7 +601,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       pmMedia.forEach(m => {
         if (!orderMediaMap.has(m.project_id)) orderMediaMap.set(m.project_id, []);
         orderMediaMap.get(m.project_id)!.push({ 
-          id: m.project_id + '-' + m.created_at, 
+          id: m.id, 
           file_path: m.file_path, 
           file_type: m.file_type, 
           created_at: m.created_at, 
