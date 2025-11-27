@@ -1164,47 +1164,39 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const centerLng = firstProject.locations!.lng;
       const clusterKey = centerLat.toFixed(6) + '_' + centerLng.toFixed(6);
 
-      // اگر بیش از یک پروژه در این موقعیت وجود دارد، مارکر مرکزی قرمز و خطوط اتصال اضافه کنیم
+      // اگر بیش از یک پروژه در این موقعیت وجود دارد، نقطه مرکزی و خطوط اتصال اضافه کنیم
       if (count > 1) {
-        // ایجاد آیکون با عدد برای نمایش تعداد پروژه‌ها
+        // ایجاد نقطه مرکزی ساده (بدون عدد)
         const clusterIcon = L.divIcon({
           className: 'cluster-marker-icon',
           html: `
             <div style="
               position: relative;
-              width: 50px;
-              height: 50px;
+              width: 30px;
+              height: 30px;
               display: flex;
               align-items: center;
               justify-content: center;
             ">
               <div style="
-                width: 40px;
-                height: 40px;
+                width: 20px;
+                height: 20px;
                 border-radius: 50%;
-                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 border: 3px solid white;
-                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-family: Vazirmatn, sans-serif;
-                font-size: 18px;
-                font-weight: bold;
-                color: white;
+                box-shadow: 0 3px 10px rgba(102, 126, 234, 0.6);
                 cursor: pointer;
                 transition: all 0.2s ease;
               "
-              onmouseover="this.style.transform='scale(1.1)'"
+              onmouseover="this.style.transform='scale(1.2)'"
               onmouseout="this.style.transform='scale(1)'"
               >
-                ${count}
               </div>
             </div>
           `,
-          iconSize: [50, 50],
-          iconAnchor: [25, 25],
-          popupAnchor: [0, -25],
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+          popupAnchor: [0, -15],
         });
         
         const centerMarker = L.marker([centerLat, centerLng], { 
@@ -1212,13 +1204,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           zIndexOffset: 1000 // مارکر مرکزی بالاتر از بقیه باشد
         }).addTo(mapRef.current!);
         
-        // اضافه کردن popup به مارکر قرمز برای نمایش تعداد پروژه‌ها
+        // اضافه کردن popup به نقطه مرکزی برای نمایش تعداد پروژه‌ها
         const centerPopupContent = `
           <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: center; padding: 8px;">
-            <div style="background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%);color:white;padding:12px;border-radius:8px;margin-bottom:8px;">
-              <span style="font-size:16px;font-weight:bold;">📍 ${count} پروژه</span>
+            <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:12px;border-radius:8px;margin-bottom:8px;">
+              <span style="font-size:14px;font-weight:bold;">📍 ${count} پروژه</span>
             </div>
-            <span style="font-size:12px;color:#6b7280;">کلیک کنید تا پروژه‌ها تفکیک یا جمع شوند</span>
+            <span style="font-size:11px;color:#6b7280;">کلیک کنید تا پروژه‌ها باز یا جمع شوند</span>
           </div>
         `;
         centerMarker.bindPopup(centerPopupContent, {
@@ -1227,7 +1219,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           autoPan: false // جلوگیری از جابجایی خودکار نقشه هنگام باز شدن کادر
         });
         
-        // کلیک روی مارکر قرمز برای باز/بسته کردن cluster
+        // کلیک روی نقطه مرکزی برای باز/بسته کردن cluster
         centerMarker.on('click', (e) => {
           L.DomEvent.stopPropagation(e);
           
@@ -1235,19 +1227,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           const isExpanded = newExpanded.has(clusterKey);
           
           if (isExpanded) {
-            // جمع کردن cluster
+            // جمع کردن cluster - مارکرها به مرکز برمی‌گردند
             console.log('[Map] Collapsing cluster:', clusterKey);
             newExpanded.delete(clusterKey);
             setExpandedClusters(newExpanded);
             
-            // نمایش مارکر مرکزی
+            // نمایش کامل نقطه مرکزی
             centerMarker.setOpacity(1);
             
             // پیدا کردن تمام مارکرها و خطوط این cluster و جمع کردن آنها
             markersRef.current.forEach((marker) => {
               const markerClusterKey = (marker as any).clusterKey;
               if (markerClusterKey === clusterKey) {
-                // انیمیشن برگشت به مرکز
+                // انیمیشن برگشت به مرکز با کوچک شدن
                 setTimeout(() => {
                   marker.setLatLng([centerLat, centerLng]);
                   marker.setOpacity(0);
@@ -1265,12 +1257,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               }
             });
           } else {
-            // باز کردن cluster
+            // باز کردن cluster - مارکرها از مرکز جدا می‌شوند
             console.log('[Map] Expanding cluster:', clusterKey);
             newExpanded.add(clusterKey);
             setExpandedClusters(newExpanded);
             
-            // مخفی کردن مارکر مرکزی
+            // کمرنگ کردن نقطه مرکزی
             centerMarker.setOpacity(0.3);
             
             // پیدا کردن تمام مارکرها و خطوط این cluster
@@ -1370,18 +1362,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             .getPublicUrl(firstOrderImage.file_path).data.publicUrl;
           
           const html = `
-            <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.4);border:2px solid #fff;background:#f0f0f0;position:relative;">
+            <div style="width:28px;height:28px;border-radius:6px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff;background:#f0f0f0;position:relative;">
               <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
-              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:14px;display:flex;align-items:center;justify-content:center;">
-                <span style="color:#fff;font-size:7px;font-weight:bold;">${totalOrderImages}</span>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:12px;display:flex;align-items:center;justify-content:center;">
+                <span style="color:#fff;font-size:6px;font-weight:bold;">${totalOrderImages}</span>
               </div>
             </div>`;
           iconToUse = L.divIcon({
             html,
             className: 'project-thumb-icon',
-            iconSize: [40, 40],
-            iconAnchor: [20, 40],
-            popupAnchor: [0, -40],
+            iconSize: [28, 28],
+            iconAnchor: [14, 28],
+            popupAnchor: [0, -28],
           });
         }
 
