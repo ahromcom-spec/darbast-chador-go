@@ -1299,7 +1299,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                     <div style="font-size:11px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
                     <div style="font-size:10px;color:#6b7280;margin-top:2px;">${order.subcategory?.name || 'نامشخص'}</div>
                     <div id="order-gallery-${order.id}" class="swipeable-gallery" style="position:relative;margin-top:6px;touch-action:pan-y;">
-                      <div style="overflow:hidden;border-radius:6px;background:#f9fafb;position:relative;">
+                      <div style="overflow:hidden;border-radius:6px;background:#f9fafb;position:relative;height:160px;">
                         ${allMedia.map((m, idx) => {
                           const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
                           const isVideo = m.file_type === 'video';
@@ -1311,7 +1311,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                 id="order-media-${order.id}-${idx}" 
                                 class="order-video-item-${order.id}" 
                                 data-url="${url}"
-                                style="position:relative;width:100%;height:100px;background:#000;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
+                                style="position:relative;width:100%;height:100%;background:#000;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
                               >
                                 <video src="${url}" style="width:100%;height:100%;object-fit:cover;user-select:none;" preload="metadata" draggable="false"></video>
                                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
@@ -1340,14 +1340,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                             `;
                           } else {
                             return `
-                              <div style="position:relative;width:100%;height:100px;display:${idx === 0 ? 'block' : 'none'};">
+                              <div style="position:relative;width:100%;height:100%;display:${idx === 0 ? 'block' : 'none'};">
                                 <img 
                                   id="order-media-${order.id}-${idx}" 
                                   class="order-image-clickable"
                                   data-image-url="${url}"
                                   src="${url}" 
                                   alt="تصویر سفارش" 
-                                  loading="lazy"
                                   style="width:100%;height:100%;object-fit:cover;cursor:pointer;user-select:none;"
                                   draggable="false"
                                 />
@@ -1376,7 +1375,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                         <div 
                           id="order-media-${order.id}-add" 
                           class="order-add-media-${order.id}"
-                          style="display:${allMedia.length === 0 ? 'flex' : 'none'};flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 15px;background:linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));border:2px dashed #667eea;border-radius:6px;cursor:pointer;height:100px;"
+                          data-is-add="true"
+                          style="display:${allMedia.length === 0 ? 'flex' : 'none'};flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 15px;background:linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));border:2px dashed #667eea;border-radius:6px;cursor:pointer;height:100%;"
                         >
                           <div style="font-size:28px;">📷</div>
                           <div style="text-align:center;">
@@ -1398,7 +1398,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                             </svg>
                           </button>
                           <div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:2px 8px;border-radius:10px;font-family:Vazirmatn;font-size:9px;pointer-events:none;">
-                            <span id="order-counter-${order.id}">1 از ${allMedia.length}</span>
+                            <span id="order-counter-${order.id}">1 از ${allMedia.length + 1}</span>
                           </div>
                         ` : ''}
                       </div>
@@ -1509,7 +1509,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 const counterEl = popupElement.querySelector<HTMLSpanElement>(`#order-counter-${order.id}`);
                 const updateGallery = () => {
                   mediaElements.forEach((el, idx) => {
-                    el.style.display = idx === currentIndex ? 'block' : 'none';
+                    const isAdd = (el as HTMLElement).dataset.isAdd === 'true';
+                    (el as HTMLElement).style.display = idx === currentIndex ? (isAdd ? 'flex' : 'block') : 'none';
                   });
                   if (counterEl) {
                     counterEl.textContent = `${currentIndex + 1} از ${total}`;
