@@ -1564,231 +1564,30 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   });
                 }
               });
-            });
-          }
-
-
-              // کلیک روی دکمه "حذف سفارش"
-              const deleteOrderBtn = popupElement.querySelector(`.delete-order-btn-${order.id}`);
-              if (deleteOrderBtn) {
-                deleteOrderBtn.addEventListener('click', async (e) => {
-                  e.stopPropagation();
-                  const orderId = (deleteOrderBtn as HTMLElement).dataset.orderId;
-                  const orderStatus = (deleteOrderBtn as HTMLElement).dataset.orderStatus;
-                  const orderCode = (deleteOrderBtn as HTMLElement).dataset.orderCode;
-                  
-                  if (!orderId) return;
-
-                  // بررسی اینکه آیا سفارش تایید شده است یا نه
-                  // فقط سفارشات تایید‌شده و در حال اجرا قابل حذف نیستند
-                  const nonDeletableStatuses = ['approved', 'in_progress', 'scheduled', 'completed'];
-                  if (nonDeletableStatuses.includes(orderStatus || '')) {
-                    toast({
-                      title: "امکان حذف وجود ندارد",
-                      description: "شما نمی‌توانید سفارش تأیید‌شده یا در حال اجرا را حذف کنید زیرا این سفارش تأیید شده است و در مراحل اجرا قرار دارد",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-
-                  // نمایش تایید حذف
-                  if (confirm(`آیا از حذف سفارش ${orderCode} اطمینان دارید؟\n\nاین عملیات قابل بازگشت نیست.`)) {
-                    try {
-                      // حذف واقعی سفارش از دیتابیس
-                      const { error } = await supabase
-                        .from('projects_v3')
-                        .delete()
-                        .eq('id', orderId);
-
-                      if (error) throw error;
-
-                      toast({
-                        title: "سفارش حذف شد",
-                        description: `سفارش ${orderCode} با موفقیت حذف شد`,
-                      });
-
-                      // بارگذاری مجدد داده‌ها
-                      await refetch();
-                      await fetchProjectMedia();
-                      
-                      // بستن popup فعلی
-                      mapRef.current?.closePopup();
-                      
-                      // نمایش مجدد پروژه اگر سفارشات دیگر دارد
-                      setTimeout(async () => {
-                        const updatedProject = projectsWithMedia.find(p => p.id === project.id);
-                        if (updatedProject && updatedProject.orders && updatedProject.orders.length > 0) {
-                          // پیدا کردن مارکر همان پروژه و باز کردن popup
-                          const markerIndex = markersRef.current.findIndex(m => {
-                            const content = m.getPopup()?.getContent();
-                            return typeof content === 'string' && content.includes(project.id);
-                          });
-                          if (markerIndex !== -1) {
-                            markersRef.current[markerIndex].openPopup();
-                          }
-                        }
-                      }, 500);
-                    } catch (error) {
-                      console.error('Error deleting order:', error);
-                      toast({
-                        title: "خطا در حذف سفارش",
-                        description: "لطفاً دوباره تلاش کنید",
-                        variant: "destructive",
-                      });
-                    }
-                  }
-                });
-              }
-              
-              // هندلر برای کلیک روی ویدیوها در גالری
-              const videoItems = popupElement.querySelectorAll(`.order-video-item-${order.id}`);
-              videoItems.forEach(videoEl => {
-                videoEl.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  const url = (videoEl as HTMLElement).dataset.url;
-                  if (url) {
-                    window.open(url, '_blank');
-                  }
-                });
-              });
-              
-              // اضافه کردن قابلیت زوم برای تصاویر
-              const imageElements = popupElement.querySelectorAll('.order-image-clickable');
-              imageElements.forEach(imgEl => {
-                imgEl.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  const imageUrl = (imgEl as HTMLElement).dataset.imageUrl;
-                  const imageIndex = parseInt((imgEl as HTMLElement).id.split('-').pop() || '0');
-                  
-                  if (imageUrl) {
-                    // پیدا کردن تمام تصاویر این order
-                    const orderImages = allMedia
-                      .filter(m => m.file_type === 'image')
-                      .map(m => supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl);
-                    
-                    setZoomedImages(orderImages);
-                    setZoomedImageIndex(imageIndex);
-                    setZoomedImage(imageUrl);
-                  }
-                });
-              });
-              
-              // گالری یکپارچه با کادر افزودن
-              let currentOrderIndex = 0;
-              const totalItems = allMedia.length + 1; // +1 برای کادر افزودن
-              
-              const prevBtn = popupElement.querySelector(`.order-gallery-prev-${order.id}`);
-              const nextBtn = popupElement.querySelector(`.order-gallery-next-${order.id}`);
-              const addMediaCard = popupElement.querySelector(`.order-add-media-${order.id}`) as HTMLElement;
-              const orderGalleryEl = popupElement.querySelector(`#order-gallery-${order.id}`) as HTMLElement;
-              
-              if (prevBtn && nextBtn) {
-                prevBtn.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  currentOrderIndex = (currentOrderIndex - 1 + totalItems) % totalItems;
-                  updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
-                });
-                
-                nextBtn.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  currentOrderIndex = (currentOrderIndex + 1) % totalItems;
-                  updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
-                });
-              }
-              
-              // اضافه کردن swipe/drag برای گالری سفارش
-              if (orderGalleryEl && totalItems > 1) {
-                let startX = 0;
-                let startY = 0;
-                let isDragging = false;
-                
-                const handleStart = (e: TouchEvent | MouseEvent) => {
-                  isDragging = true;
-                  startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-                  startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-                };
-                
-                const handleMove = (e: TouchEvent | MouseEvent) => {
-                  if (!isDragging) return;
-                  
-                  const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-                  const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-                  const diffX = startX - currentX;
-                  const diffY = startY - currentY;
-                  
-                  // فقط اگر حرکت افقی بیشتر از عمودی بود
-                  if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
-                    e.preventDefault();
-                  }
-                };
-                
-                const handleEnd = (e: TouchEvent | MouseEvent) => {
-                  if (!isDragging) return;
-                  isDragging = false;
-                  
-                  const endX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
-                  const diffX = startX - endX;
-                  
-                  // حداقل 50 پیکسل حرکت
-                  if (Math.abs(diffX) > 50) {
-                    if (diffX > 0) {
-                      // سوایپ به چپ -> بعدی
-                      currentOrderIndex = (currentOrderIndex + 1) % totalItems;
-                    } else {
-                      // سوایپ به راست -> قبلی
-                      currentOrderIndex = (currentOrderIndex - 1 + totalItems) % totalItems;
-                    }
-                    updateOrderGallery(order.id, currentOrderIndex, allMedia.length);
-                  }
-                };
-                
-                orderGalleryEl.addEventListener('touchstart', handleStart as any, { passive: true });
-                orderGalleryEl.addEventListener('touchmove', handleMove as any, { passive: false });
-                orderGalleryEl.addEventListener('touchend', handleEnd as any, { passive: true });
-                orderGalleryEl.addEventListener('mousedown', handleStart as any);
-                orderGalleryEl.addEventListener('mousemove', handleMove as any);
-                orderGalleryEl.addEventListener('mouseup', handleEnd as any);
-                orderGalleryEl.addEventListener('mouseleave', () => { isDragging = false; });
-              }
-              
-              // کلیک روی کادر افزودن
-              if (addMediaCard) {
-                addMediaCard.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  setSelectedOrderForUpload(order.id);
-                  setSelectedProject(project);
-                });
-              }
-              
-              function updateOrderGallery(orderId: string, index: number, mediaCount: number) {
-                // مخفی کردن همه رسانه‌ها
-                for (let i = 0; i < mediaCount; i++) {
-                  const mediaEl = popupElement.querySelector(`#order-media-${orderId}-${i}`) as HTMLElement;
-                  if (mediaEl) mediaEl.style.display = 'none';
-                }
-                
-                // نمایش/مخفی کردن کادر افزودن
-                const addCard = popupElement.querySelector(`.order-add-media-${orderId}`) as HTMLElement;
-                if (addCard) {
-                  addCard.style.display = index === mediaCount ? 'flex' : 'none';
-                }
-                
-                // نمایش رسانه فعلی
-                if (index < mediaCount) {
-                  const mediaEl = popupElement.querySelector(`#order-media-${orderId}-${index}`) as HTMLElement;
-                  if (mediaEl) mediaEl.style.display = 'block';
-                }
-                
-                const counter = popupElement.querySelector(`#order-counter-${orderId}`);
-                if (counter) {
-                  counter.textContent = `${index + 1} از ${mediaCount + 1}`;
-                }
-              }
-            });
+           });
           }
           
-          // TODO: هندلر حذف پروژه بدون سفارش در صورت نیاز می‌تواند اینجا اضافه شود
-
+          // هندلر حذف پروژه بدون سفارش
+          if (!project.orders || project.orders.length === 0) {
+            const deleteProjectBtn = popupElement.querySelector('.delete-project-btn');
+            if (deleteProjectBtn) {
+              deleteProjectBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (confirm('آیا از حذف این پروژه اطمینان دارید؟')) {
+                  try {
+                    await supabase.from('projects_hierarchy').delete().eq('id', project.id);
+                    toast({ title: "پروژه حذف شد" });
+                    marker.closePopup();
+                    refetch();
+                  } catch {
+                    toast({ title: "خطا", variant: "destructive" });
+                  }
+                }
+              });
+            }
+          }
+          
+          // هندلر برای گالری اصلی پروژه
           const projectImages = images;
           if (projectImages.length > 1) {
             let currentProjectIndex = 0;
