@@ -597,7 +597,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       const orderMediaMap = new Map<string, HierarchyMedia[]>();
       
-      // اضافه کردن media از project_media
+      // اضافه کردن media از project_media با بهینه‌سازی thumbnail
       pmMedia.forEach(m => {
         if (!orderMediaMap.has(m.project_id)) orderMediaMap.set(m.project_id, []);
         orderMediaMap.get(m.project_id)!.push({ 
@@ -1301,19 +1301,21 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                     <div id="order-gallery-${order.id}" class="swipeable-gallery" style="position:relative;margin-top:6px;touch-action:pan-y;">
                       <div style="overflow:hidden;border-radius:6px;background:#f9fafb;position:relative;height:160px;">
                         ${allMedia.map((m, idx) => {
-                          const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                          const baseUrl = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
                           const isVideo = m.file_type === 'video';
-                          const showDeleteBtn = !order.approved_at; // فقط برای سفارش‌های تایید نشده
+                          // استفاده از thumbnail برای عکس‌ها با پارامترهای بهینه‌سازی
+                          const url = isVideo ? baseUrl : `${baseUrl}?width=400&quality=70`;
+                          const showDeleteBtn = !order.approved_at;
                           
                           if (isVideo) {
                             return `
                               <div 
                                 id="order-media-${order.id}-${idx}" 
                                 class="order-video-item-${order.id}" 
-                                data-url="${url}"
-                                style="position:relative;width:100%;height:100%;background:#000;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
+                                data-url="${baseUrl}"
+                                style="position:relative;width:100%;height:100%;background:#f0f0f0;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
                               >
-                                <video src="${url}" style="width:100%;height:100%;object-fit:cover;user-select:none;" preload="metadata" draggable="false"></video>
+                                <video src="${baseUrl}" style="width:100%;height:100%;object-fit:cover;user-select:none;background:#000;" preload="metadata" draggable="false" loading="lazy"></video>
                                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
                                   <svg style="width:28px;height:28px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M8 5v14l11-7z"/>
@@ -1344,11 +1346,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                 <img 
                                   id="order-media-${order.id}-${idx}" 
                                   class="order-image-clickable"
-                                  data-image-url="${url}"
+                                  data-image-url="${baseUrl}"
                                   src="${url}" 
                                   alt="تصویر سفارش" 
-                                  style="width:100%;height:100%;object-fit:cover;cursor:pointer;user-select:none;"
+                                  style="width:100%;height:100%;object-fit:cover;cursor:pointer;user-select:none;background:#f0f0f0;"
                                   draggable="false"
+                                  loading="lazy"
+                                  decoding="async"
+                                  onerror="this.style.backgroundColor='#e0e0e0';this.alt='خطا در بارگذاری';"
                                 />
                                 ${showDeleteBtn ? `
                                   <button 
