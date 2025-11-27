@@ -639,9 +639,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         return { ...project, media: list, orders };
       });
 
-      console.debug('[HybridGlobe] Projects with media prepared:', projectsWithMediaData.length);
+      // فیلتر کردن پروژه‌ها: فقط پروژه‌هایی که حداقل یک سفارش دارند نمایش داده شوند
+      const filteredProjectsWithMedia = projectsWithMediaData.filter(project => 
+        project.orders && project.orders.length > 0
+      );
+
+      console.debug('[HybridGlobe] Projects with media prepared:', filteredProjectsWithMedia.length);
       
-      setProjectsWithMedia(projectsWithMediaData);
+      setProjectsWithMedia(filteredProjectsWithMedia);
       
       // تابع global برای ویدیو
       (window as any).openProjectVideo = (videoUrl: string, mimeType: string) => {
@@ -670,10 +675,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
         if (error) throw error;
         
-        // location هایی که در projects موجود نیستند
-        const projectLocationIds = projects.map(p => p.location_id);
+        // location هایی که در projects موجود نیستند یا پروژه‌هایشان سفارشی ندارند
+        // باید فقط locationهایی نمایش داده شوند که هیچ پروژه‌ای (با سفارش) ندارند
+        const projectsWithOrdersLocationIds = projectsWithMedia
+          .filter(p => p.orders && p.orders.length > 0)
+          .map(p => p.location_id);
+        
         const locationsWithoutProj = (allLocations || []).filter(
-          loc => !projectLocationIds.includes(loc.id)
+          loc => !projectsWithOrdersLocationIds.includes(loc.id)
         );
         
         setLocationsWithoutProjects(locationsWithoutProj);
@@ -683,7 +692,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     };
 
     fetchLocationsWithoutProjects();
-  }, [projects]);
+  }, [projects, projectsWithMedia]);
 
   // دریافت توکن Mapbox برای نمایش قواره‌های ساختمان‌ها
   useEffect(() => {
