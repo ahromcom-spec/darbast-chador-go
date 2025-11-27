@@ -49,6 +49,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const centerMarkersRef = useRef<L.Marker[]>([]);
   const locationsMarkersRef = useRef<L.Marker[]>([]); // مرجع جداگانه برای آدرس‌های بدون پروژه
   const galleryIndexesRef = useRef<Map<string, number>>(new Map());
+  const hasInitialZoomedRef = useRef(false); // برای تشخیص اولین بار زوم خودکار
   const [mapReady, setMapReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProjectWithMedia | null>(null);
   const [selectedOrderForUpload, setSelectedOrderForUpload] = useState<string | null>(null);
@@ -2230,13 +2231,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       }
     }
 
-    // انیمیشن زوم از نمای کل ایران به پروژه‌ها (مثل Google Earth)
+    // انیمیشن زوم از نمای کل ایران به پروژه‌ها (فقط در اولین بار)
     const allMarkers = markersRef.current;
     console.debug('[HybridGlobe] Total markers created:', allMarkers.length);
     
-    if (allMarkers.length > 0) {
+    if (allMarkers.length > 0 && !hasInitialZoomedRef.current) {
+      hasInitialZoomedRef.current = true; // علامت‌گذاری که زوم اولیه انجام شد
       const bounds = L.latLngBounds(allMarkers.map(m => m.getLatLng()));
-      console.debug('[HybridGlobe] Animating to project bounds:', bounds);
+      console.debug('[HybridGlobe] Animating to project bounds (initial zoom only):', bounds);
       
       // ابتدا نقشه را در نمای کل ایران نگه می‌داریم (همان مقدار اولیه)
       // بعد از 1000ms با انیمیشن نرم به پروژه‌ها می‌رویم
@@ -2267,6 +2269,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           console.warn('[HybridGlobe] flyToBounds failed', e, bounds);
         }
       }, 1000);
+    } else if (allMarkers.length > 0) {
+      // در بارهای بعدی، فقط مارکرها را بدون حرکت نقشه نمایش بده
+      setTimeout(() => {
+        markersRef.current.forEach(m => {
+          if (!(m as any).isInCluster) {
+            m.setOpacity(1);
+          }
+        });
+        centerMarkersRef.current.forEach(cm => cm.setOpacity(1));
+      }, 100);
     } else {
       console.warn('[HybridGlobe] No markers to display on map');
     }
