@@ -1444,7 +1444,7 @@ export default function OrderDetail() {
           </Dialog>
 
           {/* بخش پرداخت زرین‌پال */}
-          {order.status === 'approved' && order.payment_amount && !order.payment_confirmed_at && (
+          {(order.status === 'approved' || order.status === 'completed') && order.payment_amount && !order.payment_confirmed_at && (
             <Card className="border-2 border-primary/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
