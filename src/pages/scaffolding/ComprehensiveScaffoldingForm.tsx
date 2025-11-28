@@ -99,7 +99,7 @@ export default function ComprehensiveScaffoldingForm({
   const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade' | 'column' | ''>('');
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab' | 'column' | ''>('');
   const address = prefilledAddress || navState?.locationAddress || '';
-  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '', useTwoMeterTemplate: false }]);
+  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '', height: '', useTwoMeterTemplate: false }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [orderData, setOrderData] = useState<any>(null);
@@ -355,9 +355,9 @@ export default function ComprehensiveScaffoldingForm({
     // محاسبه قیمت برای داربست ستونی
     if (isColumnScaffolding) {
       const getUnits = (dimension: number): number => {
-        if (dimension >= 0.20 && dimension <= 3) return 1;
-        if (dimension > 3 && dimension <= 6) return 2;
-        if (dimension > 6 && dimension <= 9) return 3;
+        if (dimension >= 0.20 && dimension <= 3.5) return 1;
+        if (dimension > 3.5 && dimension <= 7) return 2;
+        if (dimension > 7 && dimension <= 10.5) return 3;
         return 0;
       };
 
@@ -365,8 +365,8 @@ export default function ComprehensiveScaffoldingForm({
       const width = parseFloat(dimensions[0]?.width || '0');
       const height = parseFloat(columnHeight || '0');
       
-      // محاسبه تعداد طبقات از ارتفاع (هر 3 متر = 1 طبقه)
-      const floors = Math.ceil(height / 3);
+      // محاسبه تعداد طبقات از ارتفاع (هر 3.5 متر = 1 طبقه)
+      const floors = Math.ceil(height / 3.5);
 
       const lengthUnits = getUnits(length);
       const widthUnits = getUnits(width);
