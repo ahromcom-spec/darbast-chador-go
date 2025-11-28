@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocations, Location } from '@/hooks/useLocations';
+import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { LocationCard } from './LocationCard';
 import { Button } from '@/components/ui/button';
 import { Plus, MapPin } from 'lucide-react';
@@ -16,8 +17,83 @@ interface LocationSelectorProps {
 
 export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) => {
   const { locations, loading, deleteLocation, refetch } = useLocations();
+  const { projects: allProjects } = useProjectsHierarchy();
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [locationProjectCounts, setLocationProjectCounts] = useState<Record<string, number>>({});
+  
+  // مرکز استان قم و محدوده مجاز (باید با HybridGlobe همخوانی داشته باشد)
+  const QOM_CENTER = { lat: 34.6416, lng: 50.8746 };
+  const MAX_DISTANCE_KM = 5;
+
+  // محاسبه فاصله با فرمول Haversine
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // فیلتر پروژه‌های فعال و در محدوده جغرافیایی (مشابه HybridGlobe)
+  const filteredProjects = useMemo(() => {
+    const activeProjects = allProjects.filter(project => 
+      project.locations && 
+      (project.locations as any).is_active !== false
+    );
+
+    if (activeProjects.length === 0) return [];
+
+    const userProjectLocations = activeProjects
+      .filter(p => p.locations?.lat && p.locations?.lng)
+      .map(p => ({
+        lat: p.locations!.lat,
+        lng: p.locations!.lng
+      }));
+
+    if (userProjectLocations.length === 0) {
+      return activeProjects.filter(project => {
+        if (!project.locations?.lat || !project.locations?.lng) return false;
+        const distanceToQom = calculateDistance(
+          project.locations.lat,
+          project.locations.lng,
+          QOM_CENTER.lat,
+          QOM_CENTER.lng
+        );
+        return distanceToQom <= MAX_DISTANCE_KM;
+      });
+    }
+
+    return activeProjects.filter(project => {
+      if (!project.locations?.lat || !project.locations?.lng) return false;
+
+      const projectLat = project.locations.lat;
+      const projectLng = project.locations.lng;
+
+      const distanceToQom = calculateDistance(
+        projectLat,
+        projectLng,
+        QOM_CENTER.lat,
+        QOM_CENTER.lng
+      );
+      if (distanceToQom <= MAX_DISTANCE_KM) return true;
+
+      for (const userLoc of userProjectLocations) {
+        const distanceToUserProject = calculateDistance(
+          projectLat,
+          projectLng,
+          userLoc.lat,
+          userLoc.lng
+        );
+        if (distanceToUserProject <= MAX_DISTANCE_KM) return true;
+      }
+
+      return false;
+    });
+  }, [allProjects]);
 
   // Auto-select first location when locations load
   useEffect(() => {
@@ -26,39 +102,39 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
     }
   }, [locations, selectedLocationId]);
 
-  // بارگذاری تعداد پروژه‌های هر مکان که حداقل یک سفارش دارند
+  // بارگذاری تعداد پروژه‌های هر مکان (فقط پروژه‌های فیلتر شده با سفارش)
   useEffect(() => {
     const fetchProjectCounts = async () => {
-      if (locations.length === 0) return;
+      if (locations.length === 0 || filteredProjects.length === 0) return;
       
-      const locationIds = locations.map(loc => loc.id);
+      // دریافت فقط IDs پروژه‌های فیلتر شده
+      const filteredProjectIds = filteredProjects.map(p => p.id);
       
-      // دریافت پروژه‌هایی که حداقل یک سفارش دارند
+      // دریافت orders برای این پروژه‌ها
       const { data } = await supabase
         .from('projects_v3')
-        .select('hierarchy_project_id, projects_hierarchy!inner(location_id)')
-        .in('projects_hierarchy.location_id', locationIds)
+        .select('hierarchy_project_id')
+        .in('hierarchy_project_id', filteredProjectIds)
         .not('hierarchy_project_id', 'is', null);
       
       if (data) {
         const counts: Record<string, number> = {};
-        // شمارش پروژه‌های منحصر به فرد برای هر مکان
-        const uniqueProjects = new Set<string>();
-        data.forEach(order => {
-          if (order.hierarchy_project_id && !uniqueProjects.has(order.hierarchy_project_id)) {
-            uniqueProjects.add(order.hierarchy_project_id);
-            const locationId = (order as any).projects_hierarchy?.location_id;
-            if (locationId) {
-              counts[locationId] = (counts[locationId] || 0) + 1;
-            }
+        // شمارش پروژه‌های منحصر به فرد با سفارش
+        const projectsWithOrders = new Set(data.map(o => o.hierarchy_project_id).filter(Boolean));
+        
+        // برای هر location، شمارش پروژه‌هایی که سفارش دارند
+        filteredProjects.forEach(project => {
+          if (projectsWithOrders.has(project.id) && project.location_id) {
+            counts[project.location_id] = (counts[project.location_id] || 0) + 1;
           }
         });
+        
         setLocationProjectCounts(counts);
       }
     };
     
     fetchProjectCounts();
-  }, [locations]);
+  }, [locations, filteredProjects]);
   const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);

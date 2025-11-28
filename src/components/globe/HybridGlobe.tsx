@@ -159,6 +159,31 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // State برای ذخیره پروژه‌هایی که حداقل یک سفارش دارند
+  const [projectsWithOrders, setProjectsWithOrders] = useState<Set<string>>(new Set());
+
+  // دریافت لیست پروژه‌هایی که حداقل یک سفارش دارند
+  useEffect(() => {
+    const fetchProjectsWithOrders = async () => {
+      const { data: ordersData } = await supabase
+        .from('projects_v3')
+        .select('hierarchy_project_id')
+        .not('hierarchy_project_id', 'is', null);
+      
+      if (ordersData) {
+        const uniqueProjectIds = new Set(ordersData.map(o => o.hierarchy_project_id).filter(Boolean) as string[]);
+        setProjectsWithOrders(uniqueProjectIds);
+      }
+    };
+    
+    fetchProjectsWithOrders();
+  }, []);
+
+  // فیلتر کردن پروژه‌ها: فقط نمایش پروژه‌هایی که حداقل یک سفارش دارند
+  const filteredProjects = useMemo(() => {
+    return projects.filter(project => projectsWithOrders.has(project.id));
+  }, [projects, projectsWithOrders]);
+
   // دریافت مجدد داده‌ها وقتی component مانت می‌شود (برای نمایش تغییرات)
   useEffect(() => {
     refetch();
