@@ -26,21 +26,32 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
     }
   }, [locations, selectedLocationId]);
 
-  // بارگذاری تعداد پروژه‌های هر مکان
+  // بارگذاری تعداد پروژه‌های هر مکان که حداقل یک سفارش دارند
   useEffect(() => {
     const fetchProjectCounts = async () => {
       if (locations.length === 0) return;
       
       const locationIds = locations.map(loc => loc.id);
+      
+      // دریافت پروژه‌هایی که حداقل یک سفارش دارند
       const { data } = await supabase
-        .from('projects_hierarchy')
-        .select('location_id')
-        .in('location_id', locationIds);
+        .from('projects_v3')
+        .select('hierarchy_project_id, projects_hierarchy!inner(location_id)')
+        .in('projects_hierarchy.location_id', locationIds)
+        .not('hierarchy_project_id', 'is', null);
       
       if (data) {
         const counts: Record<string, number> = {};
-        data.forEach(project => {
-          counts[project.location_id] = (counts[project.location_id] || 0) + 1;
+        // شمارش پروژه‌های منحصر به فرد برای هر مکان
+        const uniqueProjects = new Set<string>();
+        data.forEach(order => {
+          if (order.hierarchy_project_id && !uniqueProjects.has(order.hierarchy_project_id)) {
+            uniqueProjects.add(order.hierarchy_project_id);
+            const locationId = (order as any).projects_hierarchy?.location_id;
+            if (locationId) {
+              counts[locationId] = (counts[locationId] || 0) + 1;
+            }
+          }
         });
         setLocationProjectCounts(counts);
       }
@@ -145,23 +156,28 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
         </div>
       ) : (
         <div className="grid gap-3">
-          {locations.map((location) => {
-            const projectCount = locationProjectCounts[location.id] || 0;
-            const canDelete = projectCount === 0;
-            
-            return (
-              <LocationCard
-                key={location.id}
-                location={location}
-                selected={selectedLocationId === location.id}
-                onSelect={() => handleSelectLocation(location)}
-                onEdit={canDelete ? () => handleEditLocation(location) : undefined}
-                onDelete={canDelete ? () => handleDeleteClick(location.id) : undefined}
-                onConfirm={handleConfirm}
-                projectCount={projectCount}
-              />
-            );
-          })}
+          {locations
+            .filter((location) => {
+              const projectCount = locationProjectCounts[location.id] || 0;
+              return projectCount > 0; // فقط آدرس‌هایی که حداقل یک پروژه با سفارش دارند
+            })
+            .map((location) => {
+              const projectCount = locationProjectCounts[location.id] || 0;
+              const canDelete = projectCount === 0;
+              
+              return (
+                <LocationCard
+                  key={location.id}
+                  location={location}
+                  selected={selectedLocationId === location.id}
+                  onSelect={() => handleSelectLocation(location)}
+                  onEdit={canDelete ? () => handleEditLocation(location) : undefined}
+                  onDelete={canDelete ? () => handleDeleteClick(location.id) : undefined}
+                  onConfirm={handleConfirm}
+                  projectCount={projectCount}
+                />
+              );
+            })}
         </div>
       )}
 
