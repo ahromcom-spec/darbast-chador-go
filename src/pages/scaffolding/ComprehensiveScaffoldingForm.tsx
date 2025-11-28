@@ -1087,7 +1087,7 @@ export default function ComprehensiveScaffoldingForm({
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
                 <SelectItem value="facade">داربست سطحی نما</SelectItem>
-                <SelectItem value="formwork">داربست کفراژ</SelectItem>
+                <SelectItem value="formwork">داربست حجمی کفراژ</SelectItem>
                 <SelectItem value="ceiling">داربست زیر بتن (سقف)</SelectItem>
                 <SelectItem value="column">داربست ستونی، نورگیر، چاله اسانسور و ...</SelectItem>
               </SelectContent>
