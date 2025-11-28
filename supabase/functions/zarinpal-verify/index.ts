@@ -14,9 +14,29 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const authority = url.searchParams.get('Authority');
-    const status = url.searchParams.get('Status');
-    const order_id = url.searchParams.get('order_id');
+
+    // پشتیبانی از هر دو حالت: callback مستقیم (GET) و فراخوانی از فرانت (POST JSON)
+    let authority: string | null = null;
+    let status: string | null = null;
+    let order_id: string | null = null;
+
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        authority = body.Authority ?? body.authority ?? null;
+        status = body.Status ?? body.status ?? null;
+        order_id = body.order_id ?? null;
+      } catch (parseError) {
+        console.error('Error parsing JSON body:', parseError);
+      }
+    }
+
+    // در صورت نبودن body معتبر، از query string استفاده کن (حالت قدیمی)
+    if (!authority || !order_id) {
+      authority = authority ?? url.searchParams.get('Authority');
+      status = status ?? url.searchParams.get('Status');
+      order_id = order_id ?? url.searchParams.get('order_id');
+    }
 
     console.log('Verify callback:', { authority, status, order_id });
 
@@ -24,11 +44,15 @@ serve(async (req) => {
       throw new Error('Missing required parameters');
     }
 
-    // If payment was cancelled
+    // اگر کاربر از درگاه برگشته ولی پرداخت را لغو کرده باشد
     if (status !== 'OK') {
       return new Response(
-        `<html><body><script>window.location.href = '/user/orders/${order_id}?payment=cancelled';</script></body></html>`,
-        { headers: { ...corsHeaders, 'Content-Type': 'text/html' } }
+        JSON.stringify({
+          success: false,
+          status: 'cancelled',
+          order_id,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -100,16 +124,25 @@ serve(async (req) => {
         },
       });
 
-      // Redirect to success page
+      // در حالت جدید، فقط JSON برمی‌گردانیم و ریدایرکت را به عهده فرانت می‌گذاریم
       return new Response(
-        `<html><body><script>window.location.href = '/user/orders/${order_id}?payment=success';</script></body></html>`,
-        { headers: { ...corsHeaders, 'Content-Type': 'text/html' } }
+        JSON.stringify({
+          success: true,
+          status: 'success',
+          order_id,
+          ref_id: refID,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else if (verifyData.data && verifyData.data.code === 101) {
       // Payment already verified
       return new Response(
-        `<html><body><script>window.location.href = '/user/orders/${order_id}?payment=already_verified';</script></body></html>`,
-        { headers: { ...corsHeaders, 'Content-Type': 'text/html' } }
+        JSON.stringify({
+          success: true,
+          status: 'already_verified',
+          order_id,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
       // Payment verification failed
@@ -127,8 +160,13 @@ serve(async (req) => {
       });
 
       return new Response(
-        `<html><body><script>window.location.href = '/user/orders/${order_id}?payment=failed';</script></body></html>`,
-        { headers: { ...corsHeaders, 'Content-Type': 'text/html' } }
+        JSON.stringify({
+          success: false,
+          status: 'failed',
+          order_id,
+          error: verifyData.errors ?? 'Payment verification failed',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

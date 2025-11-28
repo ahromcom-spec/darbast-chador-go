@@ -81,6 +81,7 @@ const NewLocation = lazy(() => import("./pages/user/NewLocation"));
 const ServiceSelection = lazy(() => import("./pages/user/ServiceSelection"));
 const MyOrders = lazy(() => import("./pages/user/MyOrders"));
 const MyProjectsHierarchy = lazy(() => import("./pages/user/MyProjectsHierarchy"));
+const ZarinpalCallback = lazy(() => import("./pages/payment/ZarinpalCallback"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
 const MapTest = lazy(() => import("@/pages/test/MapTest"));
@@ -343,6 +344,9 @@ const App = () => {
               
               {/* Test route for map */}
               <Route path="/test/map" element={<MapTest />} />
+
+              {/* ZarinPal payment callback */}
+              <Route path="/payment/zarinpal-callback" element={<ZarinpalCallback />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

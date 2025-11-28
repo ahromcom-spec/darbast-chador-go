@@ -74,8 +74,10 @@ serve(async (req) => {
     // ZarinPal configuration
     const ZARINPAL_MERCHANT_ID = '93f06023-423a-44d6-ac08-8ee0aa9ed257';
     const ZARINPAL_API_URL = 'https://api.zarinpal.com/pg/v4/payment/request.json';
-    const CALLBACK_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1/zarinpal-verify`;
-
+    
+    // توجه: دامنه آدرس بازگشت باید با دامنه ثبت‌شده در زرین‌پال یکی باشد (ahrom.ir)
+    const CALLBACK_URL = 'https://ahrom.ir/payment/zarinpal-callback';
+ 
     // Request payment from ZarinPal
     const zarinpalResponse = await fetch(ZARINPAL_API_URL, {
       method: 'POST',
