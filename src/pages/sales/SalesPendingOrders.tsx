@@ -388,75 +388,101 @@ export default function SalesPendingOrders() {
               </div>
               <div>
                 <Label className="font-semibold">آدرس</Label>
-                <p className="text-sm">{selectedOrder.detailed_address || selectedOrder.address}</p>
+                <p className="text-sm">{selectedOrder.address}</p>
+                {selectedOrder.detailed_address && (
+                  <p className="text-sm text-muted-foreground mt-1">{selectedOrder.detailed_address}</p>
+                )}
               </div>
               <div>
                 <Label className="font-semibold">تاریخ ثبت</Label>
                 <p className="text-sm">{formatPersianDate(selectedOrder.created_at, { showDayOfWeek: true })}</p>
               </div>
-              {selectedOrder.notes && (
-                <div className="space-y-2">
-                  <Label className="font-semibold">جزئیات سفارش</Label>
-                  {/* ساختاردهی اطلاعات کلیدی فرم */}
-                  <div className="text-sm space-y-1">
-                    {(() => {
-                      const n: any = selectedOrder.notes || {};
-                      const type = n.scaffold_type || n.service_type || n.scaffoldType;
-                      if (!type) return null;
-                      return (
+              
+              {selectedOrder.notes && (() => {
+                try {
+                  const parsedNotes = typeof selectedOrder.notes === 'string' 
+                    ? JSON.parse(selectedOrder.notes) 
+                    : selectedOrder.notes;
+                  
+                  return (
+                    <div className="space-y-4">
+                      {/* شرح محل نصب */}
+                      {parsedNotes.locationPurpose && (
                         <div>
-                          <span className="font-semibold">نوع خدمت/داربست: </span>
-                          <span>{type}</span>
+                          <Label className="font-semibold">شرح محل نصب و فعالیت با داربست</Label>
+                          <p className="text-sm mt-1">{parsedNotes.locationPurpose}</p>
                         </div>
-                      );
-                    })()}
-
-                    {Array.isArray((selectedOrder as any).notes?.dimensions) && selectedOrder.notes.dimensions.length > 0 && (
-                      <div>
-                        <span className="font-semibold">ابعاد:</span>
-                        <ul className="mt-2 space-y-1 mr-4 list-disc">
-                          {selectedOrder.notes.dimensions.map((dim: any, idx: number) => (
-                            <li key={idx}>
-                              {(dim.length ?? dim.l ?? '?')} × {(dim.width ?? dim.w ?? '-')} × {(dim.height ?? dim.h ?? '?')}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {(() => {
-                      const n: any = selectedOrder.notes || {};
-                      const total = n.total_area ?? n.totalArea;
-                      if (!total) return null;
-                      return (
+                      )}
+                      
+                      {/* نوع خدمت */}
+                      {parsedNotes.service_type && (
                         <div>
-                          <span className="font-semibold">مساحت کل: </span>
-                          <span>{total} متر مربع</span>
+                          <Label className="font-semibold">نوع خدمت</Label>
+                          <p className="text-sm mt-1">{parsedNotes.service_type}</p>
                         </div>
-                      );
-                    })()}
-
-                    {(() => {
-                      const n: any = selectedOrder.notes || {};
-                      const desc = n.additional_notes || n.description;
-                      if (!desc) return null;
-                      return (
+                      )}
+                      
+                      {/* ابعاد */}
+                      {Array.isArray(parsedNotes.dimensions) && parsedNotes.dimensions.length > 0 && (
                         <div>
-                          <span className="font-semibold">توضیحات: </span>
-                          <span>{desc}</span>
+                          <Label className="font-semibold">ابعاد (متر)</Label>
+                          <div className="mt-2 space-y-2">
+                            {parsedNotes.dimensions.map((dim: any, idx: number) => (
+                              <div key={idx} className="flex gap-4 text-sm bg-muted/50 p-2 rounded">
+                                <span>طول: {dim.length || dim.l || '-'}</span>
+                                <span>عرض: {dim.width || dim.w || '-'}</span>
+                                <span>ارتفاع: {dim.height || dim.h || '-'}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* نسخه کامل برای دقت بیشتر */}
-                  <pre className="text-xs bg-secondary p-3 rounded mt-2 overflow-auto max-h-60">
-                    {typeof selectedOrder.notes === 'string' 
-                      ? selectedOrder.notes 
-                      : JSON.stringify(selectedOrder.notes, null, 2)}
-                  </pre>
-                </div>
-              )}
+                      )}
+                      
+                      {/* مساحت کل */}
+                      {(parsedNotes.totalArea || parsedNotes.total_area) && (
+                        <div>
+                          <Label className="font-semibold">مساحت کل</Label>
+                          <p className="text-sm mt-1">{parsedNotes.totalArea || parsedNotes.total_area} متر مربع</p>
+                        </div>
+                      )}
+                      
+                      {/* تاریخ نصب */}
+                      {parsedNotes.installationDateTime && (
+                        <div>
+                          <Label className="font-semibold">تاریخ نصب</Label>
+                          <p className="text-sm mt-1">
+                            {formatPersianDate(parsedNotes.installationDateTime, { showDayOfWeek: true })}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* قیمت تخمینی */}
+                      {parsedNotes.estimated_price && (
+                        <div>
+                          <Label className="font-semibold">قیمت تخمینی</Label>
+                          <p className="text-sm mt-1 font-bold text-primary">
+                            {parsedNotes.estimated_price.toLocaleString('fa-IR')} تومان
+                          </p>
+                          {Array.isArray(parsedNotes.price_breakdown) && (
+                            <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                              {parsedNotes.price_breakdown.map((item: string, idx: number) => (
+                                <div key={idx}>{item}</div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                } catch {
+                  return (
+                    <div>
+                      <Label className="font-semibold">جزئیات سفارش</Label>
+                      <p className="text-sm text-muted-foreground mt-1">جزئیات فنی این سفارش در دسترس نیست</p>
+                    </div>
+                  );
+                }
+              })()}
             </div>
           )}
         </DialogContent>
