@@ -1104,7 +1104,7 @@ export default function ComprehensiveScaffoldingForm({
         <CardHeader className="bg-gradient-to-l from-primary/20 to-secondary/20 border-b-2">
           <CardTitle className="text-foreground text-2xl font-bold flex items-center gap-3">
             <FileText className="h-7 w-7 text-primary" />
-            شرح محل نصب و فعالیت با داربست را وارد کنید
+            شرح محل نصب و فعالیت با داربست
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
