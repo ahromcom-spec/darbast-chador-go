@@ -50,8 +50,10 @@ serve(async (req) => {
       throw new Error('Order not found');
     }
 
-    if (order.status !== 'approved') {
-      throw new Error('Order is not approved for payment');
+    // بررسی وضعیت سفارش - اجازه پرداخت برای سفارش‌های تایید شده، تکمیل شده، و در حال اجرا
+    const allowedStatuses = ['approved', 'completed', 'in_progress', 'paid'];
+    if (!allowedStatuses.includes(order.status)) {
+      throw new Error('Order status does not allow payment');
     }
 
     if (order.payment_confirmed_at) {
