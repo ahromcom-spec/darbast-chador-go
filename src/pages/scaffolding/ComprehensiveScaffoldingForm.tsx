@@ -96,8 +96,8 @@ export default function ComprehensiveScaffoldingForm({
   const serviceTypeId = propServiceTypeId || navState?.serviceTypeId;
   const subcategoryId = propSubcategoryId || navState?.subcategoryId;
 
-  const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade' | 'column'>('facade');
-  const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab' | 'column'>('facade');
+  const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade' | 'column' | ''>('');
+  const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab' | 'column' | ''>('');
   const address = prefilledAddress || navState?.locationAddress || '';
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '', useTwoMeterTemplate: false }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
@@ -1083,7 +1083,7 @@ export default function ComprehensiveScaffoldingForm({
               }}
             >
               <SelectTrigger id="scaffold-type-select" className="w-full bg-background">
-                <SelectValue placeholder="نوع داربست را انتخاب کنید" />
+                <SelectValue placeholder="یکی از نوع خدمات را انتخاب کنید" />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
                 <SelectItem value="facade">داربست سطحی نما</SelectItem>
@@ -1096,6 +1096,9 @@ export default function ComprehensiveScaffoldingForm({
         </CardContent>
       </Card>
 
+      {/* نمایش فیلدهای زیر فقط اگر نوع داربست انتخاب شده باشد */}
+      {scaffoldType && (
+      <>
       {/* Dimensions */}
       <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader>
@@ -1516,6 +1519,7 @@ export default function ComprehensiveScaffoldingForm({
           onClick={onSubmit} 
           disabled={
             loading || 
+            !scaffoldType ||
             (isColumnScaffolding 
               ? !dimensions[0]?.length || !dimensions[0]?.width || !columnHeight
               : dimensions.some(d => !d.length || !d.width || !d.height)
@@ -1526,6 +1530,8 @@ export default function ComprehensiveScaffoldingForm({
         >
           {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
         </Button>
+      </>
+      )}
       </div>
     </div>
   );
