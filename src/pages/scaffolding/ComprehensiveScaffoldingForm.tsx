@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -1099,6 +1099,24 @@ export default function ComprehensiveScaffoldingForm({
       {/* نمایش فیلدهای زیر فقط اگر نوع داربست انتخاب شده باشد */}
       {scaffoldType && (
       <>
+      {/* شرح محل نصب و فعالیت با داربست */}
+      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
+        <CardHeader className="bg-gradient-to-l from-primary/20 to-secondary/20 border-b-2">
+          <CardTitle className="text-foreground text-2xl font-bold flex items-center gap-3">
+            <FileText className="h-7 w-7 text-primary" />
+            شرح محل نصب و فعالیت با داربست را وارد کنید
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+          <Textarea
+            value={locationPurpose}
+            onChange={(e) => setLocationPurpose(e.target.value)}
+            placeholder="مثال: اجرای داربست برای نمای ساختمان برای نماکاری"
+            className="min-h-[100px] text-foreground"
+          />
+        </CardContent>
+      </Card>
+
       {/* Dimensions */}
       <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader>
@@ -1164,9 +1182,19 @@ export default function ComprehensiveScaffoldingForm({
                   <Label className="text-foreground font-semibold">طول (متر)</Label>
                   <Input
                     type="number"
-                    step="0.01"
+                    step={scaffoldType === 'facade' ? '1' : '0.01'}
                     value={dimensions[0].length}
-                    onChange={(e) => updateDimension('1', 'length', e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (scaffoldType === 'facade') {
+                        // فقط اعداد صحیح مثبت
+                        if (value === '' || /^\d+$/.test(value)) {
+                          updateDimension('1', 'length', value);
+                        }
+                      } else {
+                        updateDimension('1', 'length', value);
+                      }
+                    }}
                     placeholder="طول را وارد کنید"
                   />
                 </div>
@@ -1202,10 +1230,20 @@ export default function ComprehensiveScaffoldingForm({
                       <Label className="text-foreground font-semibold">طول (متر)</Label>
                       <Input
                         type="number"
-                        step="0.01"
+                        step={scaffoldType === 'facade' ? '1' : '0.01'}
                         min="3"
                         value={dim.length}
-                        onChange={(e) => updateDimension(dim.id, 'length', e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (scaffoldType === 'facade') {
+                            // فقط اعداد صحیح مثبت برای داربست سطحی نما
+                            if (value === '' || /^\d+$/.test(value)) {
+                              updateDimension(dim.id, 'length', value);
+                            }
+                          } else {
+                            updateDimension(dim.id, 'length', value);
+                          }
+                        }}
                         placeholder="حداقل 3 متر"
                       />
                     </div>
@@ -1285,18 +1323,9 @@ export default function ComprehensiveScaffoldingForm({
         </CardContent>
       </Card>
 
-      {/* Location Purpose - محل و هدف انجام خدمات */}
-      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
-        <CardContent className="pt-6 space-y-2">
-          <Label className="text-foreground font-semibold">شرح خدمات مورد نظر را وارد کنید</Label>
-          <Textarea
-            value={locationPurpose}
-            onChange={(e) => setLocationPurpose(e.target.value)}
-            placeholder="مثال: اجرای داربست برای نمای ساختمان برای نماکاری"
-            className="min-h-[60px] resize-y"
-          />
-        </CardContent>
-      </Card>
+      {/* نمایش کادرهای زیر فقط اگر ابعاد وارد شده باشد */}
+      {(calculateTotalArea() > 0 || (isColumnScaffolding && columnHeight && dimensions[0]?.length && dimensions[0]?.width)) && (
+      <>
 
       {/* Service Conditions */}
       <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
@@ -1491,8 +1520,8 @@ export default function ComprehensiveScaffoldingForm({
         </CardContent>
       </Card>
 
-      {/* Price Summary */}
-      {((calculateTotalArea() > 0 || isColumnScaffolding) && (!isColumnScaffolding || columnHeight)) && (
+            {/* Price Summary */}
+            {(calculateTotalArea() > 0 || (isColumnScaffolding && columnHeight && dimensions[0]?.length && dimensions[0]?.width)) && (
         <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-primary">
           <CardHeader>
             <CardTitle className="text-blue-800 dark:text-blue-300">خلاصه قیمت</CardTitle>
@@ -1514,9 +1543,11 @@ export default function ComprehensiveScaffoldingForm({
           </CardContent>
         </Card>
       )}
+      </>
+      )}
 
         <Button 
-          onClick={onSubmit} 
+          onClick={onSubmit}
           disabled={
             loading || 
             !scaffoldType ||
