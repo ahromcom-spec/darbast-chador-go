@@ -99,7 +99,7 @@ export default function ComprehensiveScaffoldingForm({
   const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade' | 'column' | ''>('');
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab' | 'column' | ''>('');
   const address = prefilledAddress || navState?.locationAddress || '';
-  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '', height: '', useTwoMeterTemplate: false }]);
+  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '', useTwoMeterTemplate: false }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [orderData, setOrderData] = useState<any>(null);
@@ -1254,7 +1254,7 @@ export default function ComprehensiveScaffoldingForm({
                         step="0.01"
                         value={isFacadeScaffolding && dim.useTwoMeterTemplate ? '1.5' : dim.width}
                         onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
-                        placeholder="0"
+                        placeholder="1"
                         readOnly={isFacadeScaffolding}
                         disabled={isFacadeScaffolding}
                         className={isFacadeScaffolding ? "bg-muted" : ""}
