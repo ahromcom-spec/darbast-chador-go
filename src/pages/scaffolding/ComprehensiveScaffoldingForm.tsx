@@ -344,13 +344,34 @@ export default function ComprehensiveScaffoldingForm({
 
     // محاسبه قیمت برای داربست ستونی
     if (isColumnScaffolding) {
+      const getUnits = (dimension: number): number => {
+        if (dimension >= 0.20 && dimension <= 3) return 1;
+        if (dimension > 3 && dimension <= 6) return 2;
+        if (dimension > 6 && dimension <= 9) return 3;
+        return 0;
+      };
+
+      const length = parseFloat(dimensions[0]?.length || '0');
+      const width = parseFloat(dimensions[0]?.width || '0');
       const floors = parseInt(floorCount) || 1;
-      pricePerMeter = 1100000;
-      basePrice = floors * pricePerMeter;
-      breakdown.push(`تعداد طبقه: ${floors}`);
-      breakdown.push(`قیمت هر طبقه: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
+
+      const lengthUnits = getUnits(length);
+      const widthUnits = getUnits(width);
+      const floorUnits = floors;
+
+      const totalUnits = lengthUnits * widthUnits * floorUnits;
+      const pricePerUnit = 1000000;
+
+      basePrice = totalUnits * pricePerUnit;
+
+      breakdown.push(`طول: ${length} متر → ${lengthUnits} واحد`);
+      breakdown.push(`عرض: ${width} متر → ${widthUnits} واحد`);
+      breakdown.push(`تعداد طبقات: ${floors} → ${floorUnits} واحد`);
+      breakdown.push(`مجموع واحدها: ${lengthUnits} × ${widthUnits} × ${floorUnits} = ${totalUnits} واحد`);
+      breakdown.push(`قیمت هر واحد: ${pricePerUnit.toLocaleString('fa-IR')} تومان`);
       breakdown.push(`قیمت کل: ${basePrice.toLocaleString('fa-IR')} تومان`);
-      return { total: Math.round(basePrice), pricePerMeter, breakdown };
+      
+      return { total: Math.round(basePrice), pricePerMeter: null, breakdown };
     }
 
     if (activeService === 'facade') {
