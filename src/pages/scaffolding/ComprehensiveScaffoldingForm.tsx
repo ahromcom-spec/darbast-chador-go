@@ -1453,7 +1453,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* Price Summary */}
-      {calculateTotalArea() > 0 && (
+      {(calculateTotalArea() > 0 || isColumnScaffolding) && (
         <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-primary">
           <CardHeader>
             <CardTitle className="text-blue-800 dark:text-blue-300">خلاصه قیمت</CardTitle>
@@ -1478,7 +1478,13 @@ export default function ComprehensiveScaffoldingForm({
 
         <Button 
           onClick={onSubmit} 
-          disabled={loading || dimensions.some(d => !d.length || !d.width || !d.height)} 
+          disabled={
+            loading || 
+            (isColumnScaffolding 
+              ? !dimensions[0]?.length || !dimensions[0]?.width || !floorCount
+              : dimensions.some(d => !d.length || !d.width || !d.height)
+            )
+          }
           className="w-full" 
           size="lg"
         >
