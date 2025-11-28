@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -1484,7 +1485,39 @@ export default function OrderDetail() {
                         }
                       });
                       
-                      if (error) throw error;
+                      if (error) {
+                        console.error('Supabase function error:', error);
+                        
+                        if (error instanceof FunctionsHttpError) {
+                          try {
+                            const errorDetails = await error.context.json();
+                            const gatewayMessage =
+                              typeof errorDetails === 'object' && errorDetails !== null
+                                ? (errorDetails.error || errorDetails.message || 'خطای ناشناخته از درگاه پرداخت')
+                                : 'خطای ناشناخته از درگاه پرداخت';
+                            
+                            toast({
+                              title: 'خطا در اتصال به درگاه',
+                              description: gatewayMessage,
+                              variant: 'destructive'
+                            });
+                          } catch (parseError) {
+                            console.error('Error parsing function error context:', parseError);
+                            toast({
+                              title: 'خطا در اتصال به درگاه',
+                              description: 'پاسخی نامعتبر از درگاه پرداخت دریافت شد',
+                              variant: 'destructive'
+                            });
+                          }
+                        } else {
+                          toast({
+                            title: 'خطا در اتصال به درگاه',
+                            description: 'لطفاً مجدداً تلاش کنید',
+                            variant: 'destructive'
+                          });
+                        }
+                        return;
+                      }
                       
                       if (data?.payment_url) {
                         window.location.href = data.payment_url;
