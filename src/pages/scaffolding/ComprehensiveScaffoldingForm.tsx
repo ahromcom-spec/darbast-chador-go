@@ -99,7 +99,7 @@ export default function ComprehensiveScaffoldingForm({
   const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade' | 'column'>('facade');
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab' | 'column'>('facade');
   const address = prefilledAddress || navState?.locationAddress || '';
-  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '1', height: '', useTwoMeterTemplate: false }]);
+  const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '', height: '', useTwoMeterTemplate: false }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [orderData, setOrderData] = useState<any>(null);
