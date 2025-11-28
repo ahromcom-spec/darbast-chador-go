@@ -21,6 +21,7 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import OrderChat from "@/components/orders/OrderChat";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import StaticLocationMap from "@/components/locations/StaticLocationMap";
 import {
   ArrowRight,
   MapPin,
@@ -69,6 +70,8 @@ interface Order {
   transaction_reference?: string;
   customer_completion_date?: string;
   executive_completion_date?: string;
+  location_lat?: number;
+  location_lng?: number;
   hierarchy_project_id?: string;
   subcategory_id?: string;
   province_id?: string;
@@ -916,11 +919,85 @@ export default function OrderDetail() {
                   </div>
                 )}
 
-                {notesParseError && (
+                 {notesParseError && (
                   <p className="text-sm text-muted-foreground">
                     جزئیات فنی این سفارش در دسترس نیست.
                   </p>
                 )}
+
+                {/* شرح محل نصب */}
+                {parsedNotes?.locationPurpose && (
+                  <div>
+                    <h3 className="font-medium mb-3">شرح محل نصب و فعالیت با داربست</h3>
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm leading-relaxed">{parsedNotes.locationPurpose}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* تاریخ نصب و سررسید */}
+                {(parsedNotes?.installDate || parsedNotes?.dueDate) && (
+                  <div>
+                    <h3 className="font-medium mb-3">تاریخ‌های مهم</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {parsedNotes.installDate && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">تاریخ نصب: </span>
+                          <span className="font-medium">{parsedNotes.installDate}</span>
+                        </div>
+                      )}
+                      {parsedNotes.dueDate && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">سررسید: </span>
+                          <span className="font-medium">{parsedNotes.dueDate}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* اطلاعات تماس */}
+                {(parsedNotes?.customerName || parsedNotes?.phoneNumber) && (
+                  <div>
+                    <h3 className="font-medium mb-3">اطلاعات تماس</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {parsedNotes.customerName && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">نام: </span>
+                          <span className="font-medium">{parsedNotes.customerName}</span>
+                        </div>
+                      )}
+                      {parsedNotes.phoneNumber && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">شماره تماس: </span>
+                          <span className="font-medium" dir="ltr">{parsedNotes.phoneNumber}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* نقشه موقعیت پروژه */}
+          {order.location_lat && order.location_lng && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  موقعیت پروژه بر روی نقشه
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px] rounded-lg overflow-hidden border-2 border-border">
+                  <StaticLocationMap
+                    lat={order.location_lat}
+                    lng={order.location_lng}
+                    address={order.address}
+                    detailedAddress={order.detailed_address}
+                  />
+                </div>
               </CardContent>
             </Card>
           )}
