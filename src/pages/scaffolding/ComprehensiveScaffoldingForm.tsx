@@ -1099,38 +1099,23 @@ export default function ComprehensiveScaffoldingForm({
       {/* نمایش فیلدهای زیر فقط اگر نوع داربست انتخاب شده باشد */}
       {scaffoldType && (
       <>
-      {/* شرح محل نصب و فعالیت با داربست */}
-      <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
-        <CardHeader className="bg-gradient-to-l from-primary/20 to-secondary/20 border-b-2">
-          <CardTitle className="text-foreground text-2xl font-bold flex items-center gap-3">
-            <FileText className="h-7 w-7 text-primary" />
-            شرح محل نصب و فعالیت با داربست
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <Textarea
-            value={locationPurpose}
-            onChange={(e) => setLocationPurpose(e.target.value)}
-            placeholder="مثال: اجرای داربست برای نمای ساختمان برای نماکاری"
-            className="min-h-[100px] text-foreground"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Dimensions */}
+      {/* شرح محل نصب و ابعاد */}
       <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-blue-800 dark:text-blue-300">ابعاد</CardTitle>
-              <CardDescription className="text-slate-700 dark:text-slate-300 font-semibold">ابعاد به متر وارد شود</CardDescription>
+              <CardTitle className="text-foreground text-xl font-bold flex items-center gap-2">
+                <Box className="h-6 w-6 text-primary" />
+                شرح محل نصب و ابعاد
+              </CardTitle>
+              <CardDescription className="text-muted-foreground">ابعاد به متر وارد شود</CardDescription>
             </div>
             {isFacadeScaffolding && (
               <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     <HelpCircle className="h-4 w-4" />
-                    راهنمای وارد کردن ابعاد
+                    راهنمای ابعاد
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -1173,7 +1158,20 @@ export default function ComprehensiveScaffoldingForm({
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6 pt-6">
+          {/* شرح محل نصب */}
+          <div className="space-y-2">
+            <Label className="text-foreground font-semibold">شرح محل نصب</Label>
+            <Textarea
+              value={locationPurpose}
+              onChange={(e) => setLocationPurpose(e.target.value)}
+              placeholder="مثال: اجرای داربست برای نمای ساختمان"
+              className="min-h-[80px] text-foreground"
+            />
+          </div>
+
+          {/* ابعاد */}
+          <div className="space-y-4">
           {isColumnScaffolding ? (
             // فرم ویژه برای داربست ستونی
             <div className="space-y-4">
@@ -1320,6 +1318,7 @@ export default function ComprehensiveScaffoldingForm({
               مجموع مساحت: <span className="font-semibold">{Math.round(calculateTotalArea())}</span> متر مکعب
             </div>
           )}
+          </div>
         </CardContent>
       </Card>
 
