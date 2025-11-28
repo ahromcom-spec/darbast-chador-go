@@ -103,7 +103,7 @@ export default function ComprehensiveScaffoldingForm({
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [orderData, setOrderData] = useState<any>(null);
-  const [floorCount, setFloorCount] = useState<string>('1'); // تعداد طبقه برای داربست ستونی
+  const [columnHeight, setColumnHeight] = useState<string>(''); // ارتفاع به متر برای داربست ستونی
   
   // Check if this is facade scaffolding type (داربست سطحی نما)
   const isFacadeScaffolding = activeService === 'facade' || scaffoldType === 'facade';
@@ -199,6 +199,11 @@ export default function ComprehensiveScaffoldingForm({
                 useTwoMeterTemplate: dim.useTwoMeterTemplate || false
               })));
             }
+            
+            // Set column height for column scaffolding
+            if (notes.columnHeight !== undefined) {
+              setColumnHeight(notes.columnHeight?.toString() || '');
+            }
 
             // Set conditions
             if (notes.conditions) {
@@ -282,6 +287,11 @@ export default function ComprehensiveScaffoldingForm({
               height: dim.height?.toString() || ''
             })));
           }
+          
+          // Set column height for column scaffolding
+          if (notes.columnHeight !== undefined) {
+            setColumnHeight(notes.columnHeight?.toString() || '');
+          }
 
           // Set conditions
           if (notes.conditions) {
@@ -353,7 +363,10 @@ export default function ComprehensiveScaffoldingForm({
 
       const length = parseFloat(dimensions[0]?.length || '0');
       const width = parseFloat(dimensions[0]?.width || '0');
-      const floors = parseInt(floorCount) || 1;
+      const height = parseFloat(columnHeight || '0');
+      
+      // محاسبه تعداد طبقات از ارتفاع (هر 3 متر = 1 طبقه)
+      const floors = Math.ceil(height / 3);
 
       const lengthUnits = getUnits(length);
       const widthUnits = getUnits(width);
@@ -366,7 +379,7 @@ export default function ComprehensiveScaffoldingForm({
 
       breakdown.push(`طول: ${length} متر → ${lengthUnits} واحد`);
       breakdown.push(`عرض: ${width} متر → ${widthUnits} واحد`);
-      breakdown.push(`تعداد طبقات: ${floors} → ${floorUnits} واحد`);
+      breakdown.push(`ارتفاع: ${height} متر → ${floors} طبقه (${floorUnits} واحد)`);
       breakdown.push(`مجموع واحدها: ${lengthUnits} × ${widthUnits} × ${floorUnits} = ${totalUnits} واحد`);
       breakdown.push(`قیمت هر واحد: ${pricePerUnit.toLocaleString('fa-IR')} تومان`);
       breakdown.push(`قیمت کل: ${basePrice.toLocaleString('fa-IR')} تومان`);
@@ -684,7 +697,12 @@ export default function ComprehensiveScaffoldingForm({
     }
 
     // فقط چک کردن ابعاد به‌عنوان فیلد ضروری
-    if (dimensions.some(d => !d.length || !d.width || !d.height)) {
+    if (isColumnScaffolding) {
+      if (!dimensions[0]?.length || !dimensions[0]?.width || !columnHeight) {
+        toast({ title: 'خطا', description: 'لطفاً تمام ابعاد را وارد کنید', variant: 'destructive' });
+        return;
+      }
+    } else if (dimensions.some(d => !d.length || !d.width || !d.height)) {
       toast({ title: 'خطا', description: 'لطفاً تمام ابعاد را وارد کنید', variant: 'destructive' });
       return;
     }
@@ -707,19 +725,43 @@ export default function ComprehensiveScaffoldingForm({
     }
 
     // Validate dimensions - check minimum 3 meters for length and height
-    const invalidDimensions = dimensions.filter(dim => {
-      const length = parseFloat(dim.length);
-      const height = parseFloat(dim.height);
-      return length < 3 || height < 3 || isNaN(length) || isNaN(height);
-    });
-
-    if (invalidDimensions.length > 0) {
-      toast({ 
-        title: 'خطا در ابعاد', 
-        description: 'حداقل طول و ارتفاع داربست باید 3 متر باشد', 
-        variant: 'destructive' 
+    if (isColumnScaffolding) {
+      const length = parseFloat(dimensions[0]?.length || '0');
+      const width = parseFloat(dimensions[0]?.width || '0');
+      const height = parseFloat(columnHeight || '0');
+      
+      if (length < 3 || isNaN(length)) {
+        toast({ 
+          title: 'خطا در ابعاد', 
+          description: 'حداقل طول داربست باید 3 متر باشد', 
+          variant: 'destructive' 
+        });
+        return;
+      }
+      
+      if (height < 3 || isNaN(height)) {
+        toast({ 
+          title: 'خطا در ابعاد', 
+          description: 'حداقل ارتفاع داربست باید 3 متر باشد', 
+          variant: 'destructive' 
+        });
+        return;
+      }
+    } else {
+      const invalidDimensions = dimensions.filter(dim => {
+        const length = parseFloat(dim.length);
+        const height = parseFloat(dim.height);
+        return length < 3 || height < 3 || isNaN(length) || isNaN(height);
       });
-      return;
+
+      if (invalidDimensions.length > 0) {
+        toast({ 
+          title: 'خطا در ابعاد', 
+          description: 'حداقل طول و ارتفاع داربست باید 3 متر باشد', 
+          variant: 'destructive' 
+        });
+        return;
+      }
     }
 
     // Sanitize address - استفاده از آدرس بازخوانی شده از بالای فرم
@@ -891,6 +933,7 @@ export default function ComprehensiveScaffoldingForm({
                 width: parseFloat(d.width),
                 height: parseFloat(d.height),
               })),
+              columnHeight: isColumnScaffolding ? parseFloat(columnHeight) : undefined,
               isFacadeWidth2m,
               conditions,
               onGround,
@@ -939,6 +982,7 @@ export default function ComprehensiveScaffoldingForm({
               width: parseFloat(d.width),
               height: parseFloat(d.height),
             })),
+            columnHeight: isColumnScaffolding ? parseFloat(columnHeight) : undefined,
             isFacadeWidth2m,
             conditions,
             onGround,
@@ -1124,7 +1168,7 @@ export default function ComprehensiveScaffoldingForm({
                   />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <Label className="text-foreground font-semibold">عرض (متر)</Label>
+                  <Label className="text-foreground font-semibold">عرض داربست را وارد کنید</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -1134,22 +1178,14 @@ export default function ComprehensiveScaffoldingForm({
                   />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <Label className="text-foreground font-semibold">تعداد طبقه سه متری</Label>
-                  <Select
-                    value={floorCount}
-                    onValueChange={setFloorCount}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="انتخاب کنید" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50 max-h-[300px]">
-                      {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num} طبقه
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-foreground font-semibold">ارتفاع (متر)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={columnHeight}
+                    onChange={(e) => setColumnHeight(e.target.value)}
+                    placeholder="ارتفاع را وارد کنید"
+                  />
                 </div>
               </div>
             </div>
@@ -1453,7 +1489,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* Price Summary */}
-      {(calculateTotalArea() > 0 || isColumnScaffolding) && (
+      {((calculateTotalArea() > 0 || isColumnScaffolding) && (!isColumnScaffolding || columnHeight)) && (
         <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-primary">
           <CardHeader>
             <CardTitle className="text-blue-800 dark:text-blue-300">خلاصه قیمت</CardTitle>
@@ -1481,7 +1517,7 @@ export default function ComprehensiveScaffoldingForm({
           disabled={
             loading || 
             (isColumnScaffolding 
-              ? !dimensions[0]?.length || !dimensions[0]?.width || !floorCount
+              ? !dimensions[0]?.length || !dimensions[0]?.width || !columnHeight
               : dimensions.some(d => !d.length || !d.width || !d.height)
             )
           }
