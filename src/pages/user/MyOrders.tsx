@@ -20,6 +20,7 @@ interface Order {
   created_at: string;
   notes: any;
   hierarchy_project_id: string | null;
+  payment_amount?: number;
   subcategories?: { name: string };
   provinces?: { name: string };
   districts?: { name: string };
@@ -30,6 +31,97 @@ interface Order {
     };
   };
 }
+
+interface OrderNotesSummary {
+  hasDimensions: boolean;
+  dimensionsText: string;
+  totalValue: number;
+  unit: string;
+  estimatedPrice: number;
+}
+
+const parseOrderNotes = (raw: any): any | null => {
+  if (!raw) return null;
+  try {
+    if (typeof raw === 'string') {
+      return JSON.parse(raw);
+    }
+    if (typeof raw === 'object') {
+      return raw;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const getOrderNotesSummary = (notes: any, paymentAmount?: number): OrderNotesSummary => {
+  if (!notes || typeof notes !== 'object') {
+    return {
+      hasDimensions: false,
+      dimensionsText: '',
+      totalValue: 0,
+      unit: 'متر مکعب',
+      estimatedPrice: paymentAmount || 0,
+    };
+  }
+
+  const dims = Array.isArray(notes.dimensions) ? notes.dimensions : [];
+  const hasWidth =
+    dims.length > 0 &&
+    dims.some((d: any) => d && typeof d === 'object' && ('width' in d));
+
+  const dimensionsText =
+    dims.length > 0
+      ? dims
+          .map((d: any) => {
+            const l = d.length ?? d.L ?? d.l;
+            const w = d.width ?? d.W ?? d.w;
+            const h = d.height ?? d.H ?? d.h;
+            if (hasWidth) {
+              return `${l}×${w}×${h}`;
+            }
+            return `${l}×${h}`;
+          })
+          .join(' + ')
+      : '';
+
+  const computedFromDims = () => {
+    if (dims.length === 0) return 0;
+    return dims.reduce((sum: number, d: any) => {
+      const l = parseFloat(d.length ?? d.L ?? d.l ?? 0) || 0;
+      const w = parseFloat(d.width ?? d.W ?? d.w ?? 0) || 0;
+      const h = parseFloat(d.height ?? d.H ?? d.h ?? 0) || 0;
+      return sum + (hasWidth ? l * w * h : l * h);
+    }, 0);
+  };
+
+  const totalValue =
+    typeof notes.totalArea === 'number'
+      ? notes.totalArea
+      : typeof notes.total_area === 'number'
+      ? notes.total_area
+      : computedFromDims();
+
+  const isArea =
+    (notes && typeof notes === 'object' && 'total_area' in notes) ||
+    (!hasWidth && dims.length > 0);
+
+  const unit = isArea ? 'متر مربع' : 'متر مکعب';
+
+  const estimatedPrice =
+    typeof notes.estimated_price === 'number'
+      ? notes.estimated_price
+      : paymentAmount || 0;
+
+  return {
+    hasDimensions: dims.length > 0,
+    dimensionsText,
+    totalValue,
+    unit,
+    estimatedPrice,
+  };
+};
 
 export default function MyOrders() {
   const { user } = useAuth();
@@ -67,6 +159,7 @@ export default function MyOrders() {
           created_at,
           notes,
           hierarchy_project_id,
+          payment_amount,
           subcategories(name),
           provinces(name),
           districts(name),
@@ -92,6 +185,9 @@ export default function MyOrders() {
 
   const OrderCard = ({ order }: { order: Order }) => {
     const { approvals, loading: approvalsLoading } = useOrderApprovals(order.id);
+
+    const notes = parseOrderNotes(order.notes);
+    const summary = getOrderNotesSummary(notes, order.payment_amount);
 
     return (
       <Card className="hover:shadow-md transition-shadow">
@@ -120,11 +216,40 @@ export default function MyOrders() {
                 <p className="text-sm">{order.address}</p>
               </div>
             </div>
-            
             {order.subcategories && (
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 <p className="text-sm">{order.subcategories.name}</p>
+              </div>
+            )}
+
+            {(summary.hasDimensions || summary.totalValue > 0 || summary.estimatedPrice > 0) && (
+              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mt-1">
+                {summary.hasDimensions && (
+                  <div className="flex items-center gap-1">
+                    <span>ابعاد:</span>
+                    <span className="font-medium" dir="ltr">
+                      {summary.dimensionsText}
+                      {summary.dimensionsText ? ' متر' : ''}
+                    </span>
+                  </div>
+                )}
+                {summary.totalValue > 0 && (
+                  <div className="flex items-center gap-1">
+                    <span>متراژ:</span>
+                    <span className="font-medium" dir="ltr">
+                      {summary.totalValue.toFixed(2)} {summary.unit}
+                    </span>
+                  </div>
+                )}
+                {summary.estimatedPrice > 0 && (
+                  <div className="flex items-center gap-1 col-span-2">
+                    <span>قیمت:</span>
+                    <span className="font-medium">
+                      {summary.estimatedPrice.toLocaleString('fa-IR')} تومان
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -148,6 +273,9 @@ export default function MyOrders() {
       </Card>
     );
   };
+
+  const selectedNotes = selectedOrder ? parseOrderNotes(selectedOrder.notes) : null;
+  const selectedSummary = selectedOrder ? getOrderNotesSummary(selectedNotes, selectedOrder.payment_amount) : null;
 
   if (loading) return <LoadingSpinner />;
 
@@ -199,7 +327,9 @@ export default function MyOrders() {
               </div>
               <div>
                 <p className="text-sm font-semibold mb-1">تاریخ ثبت</p>
-                <p className="text-sm">{formatPersianDate(selectedOrder.created_at, { showDayOfWeek: true })}</p>
+                <p className="text-sm">
+                  {formatPersianDate(selectedOrder.created_at, { showDayOfWeek: true })}
+                </p>
               </div>
               {selectedOrder.subcategories && (
                 <div>
@@ -207,13 +337,59 @@ export default function MyOrders() {
                   <p className="text-sm">{selectedOrder.subcategories.name}</p>
                 </div>
               )}
-              {selectedOrder.notes && (
-                <div>
-                  <p className="text-sm font-semibold mb-1">جزئیات سفارش</p>
-                  <pre className="text-xs bg-secondary p-3 rounded mt-1 overflow-auto max-h-60">
-                    {JSON.stringify(selectedOrder.notes, null, 2)}
-                  </pre>
+
+              {selectedNotes && selectedSummary && (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold mb-1">ابعاد ثبت‌شده</p>
+                    {selectedSummary.hasDimensions ? (
+                      <p className="text-sm" dir="ltr">
+                        {selectedSummary.dimensionsText} متر
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">ابعاد ثبت نشده است</p>
+                    )}
+                  </div>
+                  {selectedSummary.totalValue > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold mb-1">متراژ</p>
+                      <p className="text-sm" dir="ltr">
+                        {selectedSummary.totalValue.toFixed(2)} {selectedSummary.unit}
+                      </p>
+                    </div>
+                  )}
+                  {selectedSummary.estimatedPrice > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold mb-1">قیمت تخمینی</p>
+                      <p className="text-sm">
+                        {selectedSummary.estimatedPrice.toLocaleString('fa-IR')} تومان
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedNotes.locationPurpose && (
+                    <div>
+                      <p className="text-sm font-semibold mb-1">شرح محل نصب</p>
+                      <p className="text-sm leading-relaxed">
+                        {selectedNotes.locationPurpose}
+                      </p>
+                    </div>
+                  )}
+                  {selectedNotes.installationDateTime && (
+                    <div>
+                      <p className="text-sm font-semibold mb-1">زمان پیشنهادی اجرا</p>
+                      <p className="text-sm" dir="ltr">
+                        {selectedNotes.installationDateTime}
+                      </p>
+                    </div>
+                  )}
                 </div>
+              )}
+
+              {selectedOrder.notes && !selectedNotes && (
+                <p className="text-xs text-muted-foreground">
+                  جزئیات فنی این سفارش در دسترس نیست.
+                </p>
               )}
             </div>
           )}
