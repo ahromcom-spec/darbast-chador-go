@@ -323,12 +323,12 @@ export default function OrderDetail() {
       setNotesParseError(false);
       if (orderData.notes) {
         try {
-          const notes = typeof orderData.notes === 'string' 
-            ? JSON.parse(orderData.notes) 
+          const notes = typeof orderData.notes === 'string'
+            ? JSON.parse(orderData.notes)
             : orderData.notes;
-          
-          const validated = orderNotesSchema.safeParse(notes);
-          setParsedNotes(validated.success ? validated.data : notes);
+
+          // استفاده مستقیم از notes بدون فیلتر کردن
+          setParsedNotes(notes);
         } catch (e) {
           console.error('Error parsing notes:', e);
           setParsedNotes(null);
@@ -337,6 +337,7 @@ export default function OrderDetail() {
       } else {
         setParsedNotes(null);
       }
+
 
       // Fetch media files
       const { data: mediaData } = await supabase
