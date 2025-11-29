@@ -791,10 +791,45 @@ export default function OrderDetail() {
                     <span className="font-medium">نوع داربست: </span>
                     <span className="text-lg">
                       {parsedNotes.service_type === 'facade' && 'داربست سطحی نما'}
-                      {parsedNotes.service_type === 'formwork' && 'داربست کفراژ'}
+                      {parsedNotes.service_type === 'formwork' && 'داربست حجمی کفراژ'}
                       {parsedNotes.service_type === 'ceiling-tiered' && 'داربست زیر بتن - تیرچه'}
                       {parsedNotes.service_type === 'ceiling-slab' && 'داربست زیر بتن - دال بتنی'}
+                      {parsedNotes.service_type === 'column' && 'داربست ستونی، نورگیر، چاله اسانسور و ...'}
+                      {!['facade', 'formwork', 'ceiling-tiered', 'ceiling-slab', 'column'].includes(parsedNotes.service_type) && parsedNotes.service_type}
                     </span>
+                  </div>
+                )}
+                
+                {/* نوع داربست ستونی - اطلاعات اضافی */}
+                {parsedNotes?.column_units && (
+                  <div>
+                    <h3 className="font-medium mb-3">جزئیات محاسبه واحد</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {parsedNotes.column_units.length_units && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">واحد طول: </span>
+                          <span className="font-medium">{parsedNotes.column_units.length_units}</span>
+                        </div>
+                      )}
+                      {parsedNotes.column_units.width_units && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">واحد عرض: </span>
+                          <span className="font-medium">{parsedNotes.column_units.width_units}</span>
+                        </div>
+                      )}
+                      {parsedNotes.column_units.height_units && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">واحد ارتفاع: </span>
+                          <span className="font-medium">{parsedNotes.column_units.height_units}</span>
+                        </div>
+                      )}
+                      {parsedNotes.column_units.total_units && (
+                        <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                          <span className="text-sm text-muted-foreground">مجموع واحدها: </span>
+                          <span className="font-bold text-lg">{parsedNotes.column_units.total_units}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
