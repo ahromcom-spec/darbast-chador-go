@@ -320,26 +320,24 @@ export default function OrderDetail() {
 
       setOrder(orderData);
 
-       // Parse notes if exists
-       setNotesParseError(false);
-       console.log('OrderDetail raw notes value:', orderData.notes);
-       if (orderData.notes) {
-         try {
-           const notes = typeof orderData.notes === 'string'
-             ? JSON.parse(orderData.notes)
-             : orderData.notes;
+      // Parse notes if exists
+      setNotesParseError(false);
+      if (orderData.notes) {
+        try {
+          const notes = typeof orderData.notes === 'string'
+            ? JSON.parse(orderData.notes)
+            : orderData.notes;
 
-           console.log('OrderDetail parsed notes object:', notes);
-           // استفاده مستقیم از notes بدون فیلتر کردن
-           setParsedNotes(notes);
-         } catch (e) {
-           console.error('Error parsing notes:', e);
-           setParsedNotes(null);
-           setNotesParseError(true);
-         }
-       } else {
-         setParsedNotes(null);
-       }
+          // استفاده مستقیم از notes بدون فیلتر کردن
+          setParsedNotes(notes);
+        } catch (e) {
+          console.error('Error parsing notes:', e);
+          setParsedNotes(null);
+          setNotesParseError(true);
+        }
+      } else {
+        setParsedNotes(null);
+      }
 
 
       // Fetch media files
@@ -1154,19 +1152,6 @@ export default function OrderDetail() {
                   <p className="text-sm text-muted-foreground">
                     جزئیات فنی این سفارش در دسترس نیست.
                   </p>
-                )}
-
-                {/* نمایش همه جزئیات ذخیره شده به صورت خام برای اطمینان */}
-                {parsedNotes && (
-                  <div>
-                    <h3 className="font-medium mb-3">تمام جزئیات ثبت‌شده این سفارش</h3>
-                    <pre
-                      className="text-xs bg-muted/40 rounded-lg p-3 overflow-x-auto text-left"
-                      dir="ltr"
-                    >
-                      {JSON.stringify(parsedNotes, null, 2)}
-                    </pre>
-                  </div>
                 )}
 
                 {/* شرح محل نصب */}
