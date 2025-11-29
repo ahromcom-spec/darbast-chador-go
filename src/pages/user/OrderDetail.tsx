@@ -77,6 +77,8 @@ interface Order {
   subcategory_id?: string;
   province_id?: string;
   district_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
   subcategory?: {
     name: string;
     code: string;
@@ -842,17 +844,24 @@ export default function OrderDetail() {
                         const length = typeof dim.length === 'number' ? dim.length : parseFloat(dim.length);
                         const width = dim.width ? (typeof dim.width === 'number' ? dim.width : parseFloat(dim.width)) : null;
                         const height = typeof dim.height === 'number' ? dim.height : parseFloat(dim.height);
-                        const area = dim.area || (length * (width || 1) * height);
+                        
+                        // برای داربست ستونی از columnHeight استفاده کن
+                        const actualHeight = parsedNotes.columnHeight || height;
+                        const area = length * (width || 1) * actualHeight;
                         
                         return (
                           <div key={index} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg flex-wrap">
-                            <span className="font-medium">بعد {index + 1}:</span>
+                            <span className="font-medium">
+                              {parsedNotes.service_type === 'column' ? 'ابعاد:' : `بعد ${index + 1}:`}
+                            </span>
                             <span>طول: {length} متر</span>
                             {width && width !== 1 && <span>× عرض: {width} متر</span>}
-                            <span>× ارتفاع: {height} متر</span>
-                            <span className="text-muted-foreground">
-                              = {area % 1 === 0 ? area : area.toFixed(2)} متر مکعب
-                            </span>
+                            <span>× ارتفاع: {actualHeight} متر</span>
+                            {parsedNotes.service_type !== 'column' && (
+                              <span className="text-muted-foreground">
+                                = {area % 1 === 0 ? area : area.toFixed(2)} متر مکعب
+                              </span>
+                            )}
                           </div>
                         );
                       })}
@@ -873,6 +882,16 @@ export default function OrderDetail() {
                   <div>
                     <h3 className="font-medium mb-3">شرایط خدمات</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {parsedNotes.conditions.rentalMonthsPlan && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">پلان اجاره: </span>
+                          <span className="font-medium">
+                            {parsedNotes.conditions.rentalMonthsPlan === '1' && 'به شرط یک ماه'}
+                            {parsedNotes.conditions.rentalMonthsPlan === '2' && 'به شرط دو ماه'}
+                            {parsedNotes.conditions.rentalMonthsPlan === '3+' && 'به شرط سه ماه و بیشتر'}
+                          </span>
+                        </div>
+                      )}
                       {parsedNotes.conditions.totalMonths && (
                         <div className="p-3 bg-muted/50 rounded-lg">
                           <span className="text-sm text-muted-foreground">مدت قرارداد: </span>
@@ -971,8 +990,8 @@ export default function OrderDetail() {
                   </div>
                 )}
 
-                {/* تاریخ نصب و سررسید */}
-                {(parsedNotes?.installDate || parsedNotes?.dueDate) && (
+                {/* تاریخ نصب */}
+                {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime) && (
                   <div>
                     <h3 className="font-medium mb-3">تاریخ‌های مهم</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -980,6 +999,12 @@ export default function OrderDetail() {
                         <div className="p-3 bg-muted/50 rounded-lg">
                           <span className="text-sm text-muted-foreground">تاریخ نصب: </span>
                           <span className="font-medium">{parsedNotes.installDate}</span>
+                        </div>
+                      )}
+                      {parsedNotes.installationDateTime && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">زمان نصب درخواستی: </span>
+                          <span className="font-medium">{parsedNotes.installationDateTime}</span>
                         </div>
                       )}
                       {parsedNotes.dueDate && (
@@ -993,20 +1018,20 @@ export default function OrderDetail() {
                 )}
 
                 {/* اطلاعات تماس */}
-                {(parsedNotes?.customerName || parsedNotes?.phoneNumber) && (
+                {(order.customer_name || order.customer_phone || parsedNotes?.customerName || parsedNotes?.phoneNumber) && (
                   <div>
                     <h3 className="font-medium mb-3">اطلاعات تماس</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {parsedNotes.customerName && (
+                      {(order.customer_name || parsedNotes?.customerName) && (
                         <div className="p-3 bg-muted/50 rounded-lg">
                           <span className="text-sm text-muted-foreground">نام: </span>
-                          <span className="font-medium">{parsedNotes.customerName}</span>
+                          <span className="font-medium">{order.customer_name || parsedNotes?.customerName}</span>
                         </div>
                       )}
-                      {parsedNotes.phoneNumber && (
+                      {(order.customer_phone || parsedNotes?.phoneNumber) && (
                         <div className="p-3 bg-muted/50 rounded-lg">
                           <span className="text-sm text-muted-foreground">شماره تماس: </span>
-                          <span className="font-medium" dir="ltr">{parsedNotes.phoneNumber}</span>
+                          <span className="font-medium" dir="ltr">{order.customer_phone || parsedNotes?.phoneNumber}</span>
                         </div>
                       )}
                     </div>

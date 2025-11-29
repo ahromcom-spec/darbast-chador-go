@@ -934,14 +934,39 @@ export default function ComprehensiveScaffoldingForm({
                 height: parseFloat(d.height),
               })),
               columnHeight: isColumnScaffolding ? parseFloat(columnHeight) : undefined,
+              column_units: isColumnScaffolding ? (() => {
+                const getUnits = (dimension: number): number => {
+                  if (dimension >= 0.20 && dimension <= 3.5) return 1;
+                  if (dimension > 3.5 && dimension <= 7) return 2;
+                  if (dimension > 7 && dimension <= 10.5) return 3;
+                  return 0;
+                };
+                const length = parseFloat(dimensions[0]?.length || '0');
+                const width = parseFloat(dimensions[0]?.width || '0');
+                const height = parseFloat(columnHeight || '0');
+                const floors = Math.ceil(height / 3.5);
+                const lengthUnits = getUnits(length);
+                const widthUnits = getUnits(width);
+                const floorUnits = floors;
+                const totalUnits = lengthUnits * widthUnits * floorUnits;
+                return {
+                  length_units: lengthUnits,
+                  width_units: widthUnits,
+                  height_units: floorUnits,
+                  total_units: totalUnits
+                };
+              })() : undefined,
               isFacadeWidth2m,
               conditions,
               onGround,
               vehicleReachesSite,
+              locationPurpose,
               totalArea: calculateTotalArea(),
               estimated_price: priceData.total,
               price_breakdown: priceData.breakdown,
               installationDateTime,
+              customerName: user?.user_metadata?.full_name || '',
+              phoneNumber: user?.phone || '',
             } as any
           })
           .eq('id', editOrderId);
@@ -983,6 +1008,28 @@ export default function ComprehensiveScaffoldingForm({
               height: parseFloat(d.height),
             })),
             columnHeight: isColumnScaffolding ? parseFloat(columnHeight) : undefined,
+            column_units: isColumnScaffolding ? (() => {
+              const getUnits = (dimension: number): number => {
+                if (dimension >= 0.20 && dimension <= 3.5) return 1;
+                if (dimension > 3.5 && dimension <= 7) return 2;
+                if (dimension > 7 && dimension <= 10.5) return 3;
+                return 0;
+              };
+              const length = parseFloat(dimensions[0]?.length || '0');
+              const width = parseFloat(dimensions[0]?.width || '0');
+              const height = parseFloat(columnHeight || '0');
+              const floors = Math.ceil(height / 3.5);
+              const lengthUnits = getUnits(length);
+              const widthUnits = getUnits(width);
+              const floorUnits = floors;
+              const totalUnits = lengthUnits * widthUnits * floorUnits;
+              return {
+                length_units: lengthUnits,
+                width_units: widthUnits,
+                height_units: floorUnits,
+                total_units: totalUnits
+              };
+            })() : undefined,
             isFacadeWidth2m,
             conditions,
             onGround,
@@ -992,6 +1039,8 @@ export default function ComprehensiveScaffoldingForm({
             estimated_price: priceData.total,
             price_breakdown: priceData.breakdown,
             installationDateTime,
+            customerName: user?.user_metadata?.full_name || '',
+            phoneNumber: user?.phone || '',
           })
         });
         
