@@ -1,8 +1,9 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Trash2, Edit } from 'lucide-react';
+import { MapPin, Trash2, Edit, Loader2 } from 'lucide-react';
 import { Location } from '@/hooks/useLocations';
+import { useState } from 'react';
 
 interface LocationCardProps {
   location: Location;
@@ -15,6 +16,15 @@ interface LocationCardProps {
 }
 
 export const LocationCard = ({ location, onSelect, onDelete, onEdit, onConfirm, selected, projectCount }: LocationCardProps) => {
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleConfirm = () => {
+    if (onConfirm) {
+      setIsConfirming(true);
+      onConfirm();
+    }
+  };
+
   return (
     <Card 
       className={`transition-all ${
@@ -83,11 +93,23 @@ export const LocationCard = ({ location, onSelect, onDelete, onEdit, onConfirm, 
         {selected && onConfirm && (
           <div className="mt-4 pt-4 border-t border-border">
             <Button 
-              onClick={onConfirm} 
+              onClick={handleConfirm} 
               size="lg" 
-              className="w-full active:bg-orange-500 hover:bg-orange-600 transition-colors"
+              disabled={isConfirming}
+              className={`w-full transition-colors ${
+                isConfirming 
+                  ? 'bg-orange-500 hover:bg-orange-500 text-white' 
+                  : 'hover:bg-orange-600 active:bg-orange-500'
+              }`}
             >
-              تایید و ادامه
+              {isConfirming ? (
+                <>
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  در حال بارگذاری...
+                </>
+              ) : (
+                'تایید و ادامه'
+              )}
             </Button>
           </div>
         )}
