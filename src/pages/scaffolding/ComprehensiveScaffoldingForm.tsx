@@ -326,7 +326,8 @@ export default function ComprehensiveScaffoldingForm({
 
   const addDimension = () => {
     const newId = (dimensions.length + 1).toString();
-    const defaultWidth = activeService === 'facade' ? (isFacadeWidth2m ? '1.5' : '1') : ((isColumnScaffolding || isPipeLengthScaffolding) ? '' : '');
+    // فقط داربست سطحی نما عرض پیش‌فرض دارد، بقیه خالی
+    const defaultWidth = activeService === 'facade' ? (isFacadeWidth2m ? '1.5' : '1') : '';
     setDimensions([...dimensions, { id: newId, length: '', width: defaultWidth, height: '' }]);
   };
 
@@ -1146,8 +1147,8 @@ export default function ComprehensiveScaffoldingForm({
               value={scaffoldType}
               onValueChange={(value: 'formwork' | 'ceiling' | 'facade' | 'column' | 'pipe-length') => {
                 setScaffoldType(value);
-                // Reset dimensions با width مناسب برای هر نوع
-                const defaultWidth = (value === 'column' || value === 'pipe-length') ? '' : (value === 'facade' ? '1' : '');
+                // Reset dimensions - فقط داربست سطحی نما عرض پیش‌فرض ۱ دارد
+                const defaultWidth = value === 'facade' ? '1' : '';
                 setDimensions([{ id: '1', length: '', width: defaultWidth, height: '', useTwoMeterTemplate: false }]);
                 setColumnHeight('');
                 
