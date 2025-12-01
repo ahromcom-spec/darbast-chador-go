@@ -2096,113 +2096,83 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               
               console.log('[Map] Adding new order to project:', { projectId, locationId, serviceTypeId, subcategoryId, subcategoryCode });
               
-              // دریافت اطلاعات کامل location برای province_id و district_id
-              let provinceId = null;
-              let districtId = null;
+              // هاردکد اطلاعات قم و نوع خدمات مشخص برای سفارش جدید
               let addressLine = '';
-              let provinceName = '';
-              let districtName = '';
-              let serviceName = '';
-              let subcategoryName = '';
               
+              // دریافت آدرس پروژه از location
               if (locationId) {
                 const { data: locationData } = await supabase
                   .from('locations')
-                  .select(`
-                    province_id,
-                    district_id,
-                    address_line,
-                    provinces (name),
-                    districts (name)
-                  `)
+                  .select('address_line')
                   .eq('id', locationId)
                   .single();
                 
                 if (locationData) {
-                  provinceId = locationData.province_id;
-                  districtId = locationData.district_id;
                   addressLine = locationData.address_line;
-                  provinceName = (locationData.provinces as any)?.name || '';
-                  districtName = (locationData.districts as any)?.name || '';
                 }
               }
               
-              // دریافت اطلاعات service type و subcategory
-              if (subcategoryId) {
-                const { data: subcategoryData } = await supabase
-                  .from('subcategories')
-                  .select(`
-                    name,
-                    service_type:service_types_v3!subcategories_service_type_id_fkey (
-                      name
-                    )
-                  `)
-                  .eq('id', subcategoryId)
-                  .single();
-                
-                if (subcategoryData) {
-                  subcategoryName = subcategoryData.name;
-                  serviceName = (subcategoryData.service_type as any)?.name || '';
-                }
-              }
+              // دریافت IDs برای قم (استان و شهر)
+              const { data: qomProvince } = await supabase
+                .from('provinces')
+                .select('id, name')
+                .eq('name', 'قم')
+                .single();
+              
+              const { data: qomDistrict } = await supabase
+                .from('districts')
+                .select('id, name')
+                .eq('name', 'قم')
+                .eq('province_id', qomProvince?.id)
+                .maybeSingle();
+              
+              // دریافت IDs برای خدمات فلزی و زیرشاخه اجرای داربست
+              const { data: metalService } = await supabase
+                .from('service_types_v3')
+                .select('id, name')
+                .eq('name', 'خدمات فلزی')
+                .single();
+              
+              const { data: scaffoldingSubcategory } = await supabase
+                .from('subcategories')
+                .select('id, name, code')
+                .eq('code', '10')
+                .eq('service_type_id', metalService?.id)
+                .single();
+              
+              // استفاده از اطلاعات هاردکد شده
+              const provinceId = qomProvince?.id || null;
+              const districtId = qomDistrict?.id || null;
+              const provinceName = 'قم';
+              const districtName = 'قم';
+              const serviceName = 'خدمات فلزی';
+              const subcategoryName = 'خدمات اجرای داربست به همراه اجناس داربست و حمل و نقل';
+              const finalServiceTypeId = metalService?.id || serviceTypeId;
+              const finalSubcategoryId = scaffoldingSubcategory?.id || subcategoryId;
+              const finalSubcategoryCode = '10';
               
               // بستن popup
               marker.closePopup();
               
-              // هدایت به فرم مناسب بر اساس subcategory code
-              if (subcategoryCode === '10') {
-                // داربست فلزی اجرا - با مصالح و حمل
-                navigate('/scaffolding/form', {
-                  state: {
-                    fromMap: true,
-                    hierarchyProjectId: projectId,
-                    projectId: projectId,
-                    locationId: locationId,
-                    serviceTypeId: serviceTypeId,
-                    subcategoryId: subcategoryId,
-                    subcategoryCode: subcategoryCode,
-                    provinceId: provinceId,
-                    districtId: districtId,
-                    locationAddress: addressLine,
-                    provinceName: provinceName,
-                    districtName: districtName,
-                    serviceName: serviceName,
-                    subcategoryName: subcategoryName
-                  }
-                });
-              } else if (subcategoryCode === '30') {
-                // داربست فلزی اجاره
-                navigate('/scaffolding/rental-form', {
-                  state: {
-                    fromMap: true,
-                    hierarchyProjectId: projectId,
-                    projectId: projectId,
-                    locationId: locationId,
-                    serviceTypeId: serviceTypeId,
-                    subcategoryId: subcategoryId,
-                    subcategoryCode: subcategoryCode,
-                    provinceId: provinceId,
-                    districtId: districtId,
-                    locationAddress: addressLine,
-                    provinceName: provinceName,
-                    districtName: districtName,
-                    serviceName: serviceName,
-                    subcategoryName: subcategoryName
-                  }
-                });
-              } else {
-                // سایر سرویس‌ها - فرم در دسترس نیست
-                navigate('/user/form-not-available', {
-                  state: {
-                    fromMap: true,
-                    projectId: projectId,
-                    subcategoryId: subcategoryId,
-                    locationAddress: addressLine,
-                    provinceName: provinceName,
-                    districtName: districtName
-                  }
-                });
-              }
+              // هدایت به فرم داربست فلزی اجرا (همیشه)
+              navigate('/scaffolding/form', {
+                state: {
+                  fromMap: true,
+                  hierarchyProjectId: projectId,
+                  projectId: projectId,
+                  locationId: locationId,
+                  serviceTypeId: finalServiceTypeId,
+                  subcategoryId: finalSubcategoryId,
+                  subcategoryCode: finalSubcategoryCode,
+                  provinceId: provinceId,
+                  districtId: districtId,
+                  locationAddress: addressLine,
+                  provinceName: provinceName,
+                  districtName: districtName,
+                  serviceName: serviceName,
+                  subcategoryName: subcategoryName
+                }
+              });
             });
           }
           
