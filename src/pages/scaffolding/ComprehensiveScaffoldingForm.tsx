@@ -1746,6 +1746,8 @@ export default function ComprehensiveScaffoldingForm({
           disabled={
             loading || 
             !scaffoldType ||
+            !!getFacadeWarning() ||
+            !!getFormworkWarning() ||
             (isPipeLengthScaffolding 
               ? parseFloat(dimensions[0]?.length || '0') <= 0
               : isColumnScaffolding 
