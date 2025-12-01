@@ -97,7 +97,8 @@ export default function ComprehensiveScaffoldingForm({
   const subcategoryId = propSubcategoryId || navState?.subcategoryId;
 
   const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade' | 'column' | 'pipe-length' | ''>('');
-  const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab' | 'column' | 'pipe-length' | ''>('');
+  const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-beam-yonolit' | 'ceiling-beam-ceramic' | 'ceiling-slab' | 'column' | 'pipe-length' | ''>('');
+  const [ceilingSubType, setCeilingSubType] = useState<'ceiling-beam-yonolit' | 'ceiling-beam-ceramic' | 'ceiling-slab' | ''>('');
   const address = prefilledAddress || navState?.locationAddress || '';
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '', height: '', useTwoMeterTemplate: false }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
@@ -202,8 +203,9 @@ export default function ComprehensiveScaffoldingForm({
               setActiveService(notes.service_type);
               if (notes.service_type === 'formwork') {
                 setScaffoldType('formwork');
-              } else if (notes.service_type === 'ceiling-tiered' || notes.service_type === 'ceiling-slab') {
+              } else if (notes.service_type === 'ceiling-beam-yonolit' || notes.service_type === 'ceiling-beam-ceramic' || notes.service_type === 'ceiling-slab') {
                 setScaffoldType('ceiling');
+                setCeilingSubType(notes.service_type);
               } else {
                 setScaffoldType('facade');
               }
@@ -291,8 +293,9 @@ export default function ComprehensiveScaffoldingForm({
             setActiveService(notes.service_type);
             if (notes.service_type === 'formwork') {
               setScaffoldType('formwork');
-            } else if (notes.service_type === 'ceiling-tiered' || notes.service_type === 'ceiling-slab') {
+            } else if (notes.service_type === 'ceiling-beam-yonolit' || notes.service_type === 'ceiling-beam-ceramic' || notes.service_type === 'ceiling-slab') {
               setScaffoldType('ceiling');
+              setCeilingSubType(notes.service_type);
             } else {
               setScaffoldType('facade');
             }
@@ -449,7 +452,8 @@ export default function ComprehensiveScaffoldingForm({
         pricePerMeter = 20000;
         basePrice = area * pricePerMeter;
       }
-    } else if (activeService === 'ceiling-tiered') {
+    } else if (activeService === 'ceiling-beam-yonolit' || activeService === 'ceiling-beam-ceramic') {
+      // زیربتن تیرچه یونولیت و سفال - قیمت یکسان
       if (area <= 100) {
         basePrice = 7500000;
       } else if (area <= 200) {
@@ -459,6 +463,7 @@ export default function ComprehensiveScaffoldingForm({
         basePrice = area * pricePerMeter;
       }
     } else if (activeService === 'ceiling-slab') {
+      // زیربتن دال و وافل
       if (area <= 100) {
         basePrice = 8000000;
       } else if (area <= 200) {
@@ -1168,11 +1173,12 @@ export default function ComprehensiveScaffoldingForm({
                 const defaultWidth = value === 'facade' ? '1' : '';
                 setDimensions([{ id: '1', length: '', width: defaultWidth, height: '', useTwoMeterTemplate: false }]);
                 setColumnHeight('');
+                setCeilingSubType('');
                 
                 if (value === 'formwork') {
                   setActiveService('formwork');
                 } else if (value === 'ceiling') {
-                  setActiveService('ceiling-tiered');
+                  setActiveService(''); // Reset - user must select sub-type
                 } else if (value === 'column') {
                   setActiveService('column');
                 } else if (value === 'pipe-length') {
@@ -1194,11 +1200,34 @@ export default function ComprehensiveScaffoldingForm({
               </SelectContent>
             </Select>
           </div>
+
+          {/* لیست کشویی نوع زیربتن */}
+          {scaffoldType === 'ceiling' && (
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="ceiling-subtype-select" className="text-foreground font-semibold">نوع زیربتن را انتخاب کنید</Label>
+              <Select
+                value={ceilingSubType}
+                onValueChange={(value: 'ceiling-beam-yonolit' | 'ceiling-beam-ceramic' | 'ceiling-slab') => {
+                  setCeilingSubType(value);
+                  setActiveService(value);
+                }}
+              >
+                <SelectTrigger id="ceiling-subtype-select" className="w-full bg-background">
+                  <SelectValue placeholder="نوع زیربتن را انتخاب کنید" />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="ceiling-beam-yonolit">زیربتن تیرچه یونولیت</SelectItem>
+                  <SelectItem value="ceiling-beam-ceramic">زیربتن تیرچه سفال</SelectItem>
+                  <SelectItem value="ceiling-slab">زیربتن دال و وافل</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* نمایش فیلدهای زیر فقط اگر نوع داربست انتخاب شده باشد */}
-      {scaffoldType && (
+      {scaffoldType && (scaffoldType !== 'ceiling' || ceilingSubType) && (
       <>
       {/* شرح محل نصب و ابعاد */}
       <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
