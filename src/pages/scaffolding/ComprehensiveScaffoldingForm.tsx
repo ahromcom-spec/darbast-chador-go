@@ -132,14 +132,16 @@ export default function ComprehensiveScaffoldingForm({
     return null;
   };
 
-  // هشدار برای داربست سطحی نما: ارتفاع بیشتر از 12 متر و بیشتر از دو برابر طول
+  // هشدار برای داربست سطحی نما: ارتفاع بیشتر از 12 متر و بیشتر از دو برابر مجموع طول‌ها
   const getFacadeWarning = () => {
     if (!isFacadeScaffolding) return null;
-    const length = parseFloat(dimensions[0]?.length || '0');
+    
+    // محاسبه مجموع طول‌های همه ابعاد
+    const totalLength = dimensions.reduce((sum, dim) => sum + parseFloat(dim.length || '0'), 0);
     const height = parseFloat(dimensions[0]?.height || '0');
     
-    if (height > 12 && height > (2 * length)) {
-      return 'ارتفاع داربست از دو برابر طول بیشتر است. پیشنهاد می‌شود نوع داربست خود را داربست ستونی انتخاب کنید.';
+    if (height > 12 && height > (2 * totalLength)) {
+      return 'ارتفاع داربست از دو برابر مجموع طول‌ها بیشتر است. پیشنهاد می‌شود نوع داربست خود را داربست ستونی انتخاب کنید.';
     }
     return null;
   };
