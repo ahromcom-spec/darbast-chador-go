@@ -1512,8 +1512,8 @@ export default function ComprehensiveScaffoldingForm({
         </CardContent>
       </Card>
 
-      {/* نمایش کادرهای زیر فقط اگر ابعاد وارد شده باشد */}
-      {(calculateTotalArea() > 0 || 
+      {/* نمایش کادرهای زیر فقط اگر ابعاد وارد شده باشد و هشدار نما فعال نباشد */}
+      {!getFacadeWarning() && (calculateTotalArea() > 0 || 
         (isColumnScaffolding && columnHeight && dimensions[0]?.length && dimensions[0]?.width) ||
         (isPipeLengthScaffolding && parseFloat(dimensions[0]?.length || '0') > 0)
       ) && (
