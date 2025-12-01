@@ -2102,6 +2102,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               let addressLine = '';
               let provinceName = '';
               let districtName = '';
+              let serviceName = '';
+              let subcategoryName = '';
               
               if (locationId) {
                 const { data: locationData } = await supabase
@@ -2125,6 +2127,25 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 }
               }
               
+              // دریافت اطلاعات service type و subcategory
+              if (subcategoryId) {
+                const { data: subcategoryData } = await supabase
+                  .from('subcategories')
+                  .select(`
+                    name,
+                    service_type:service_types_v3!subcategories_service_type_id_fkey (
+                      name
+                    )
+                  `)
+                  .eq('id', subcategoryId)
+                  .single();
+                
+                if (subcategoryData) {
+                  subcategoryName = subcategoryData.name;
+                  serviceName = (subcategoryData.service_type as any)?.name || '';
+                }
+              }
+              
               // بستن popup
               marker.closePopup();
               
@@ -2139,11 +2160,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                     locationId: locationId,
                     serviceTypeId: serviceTypeId,
                     subcategoryId: subcategoryId,
+                    subcategoryCode: subcategoryCode,
                     provinceId: provinceId,
                     districtId: districtId,
                     locationAddress: addressLine,
                     provinceName: provinceName,
-                    districtName: districtName
+                    districtName: districtName,
+                    serviceName: serviceName,
+                    subcategoryName: subcategoryName
                   }
                 });
               } else if (subcategoryCode === '30') {
@@ -2156,11 +2180,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                     locationId: locationId,
                     serviceTypeId: serviceTypeId,
                     subcategoryId: subcategoryId,
+                    subcategoryCode: subcategoryCode,
                     provinceId: provinceId,
                     districtId: districtId,
                     locationAddress: addressLine,
                     provinceName: provinceName,
-                    districtName: districtName
+                    districtName: districtName,
+                    serviceName: serviceName,
+                    subcategoryName: subcategoryName
                   }
                 });
               } else {
