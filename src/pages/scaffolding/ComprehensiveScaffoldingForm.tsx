@@ -1436,7 +1436,10 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* نمایش کادرهای زیر فقط اگر ابعاد وارد شده باشد */}
-      {(calculateTotalArea() > 0 || ((isColumnScaffolding || isPipeLengthScaffolding) && columnHeight && dimensions[0]?.length && dimensions[0]?.width)) && (
+      {(calculateTotalArea() > 0 || 
+        (isColumnScaffolding && columnHeight && dimensions[0]?.length && dimensions[0]?.width) ||
+        (isPipeLengthScaffolding && parseFloat(dimensions[0]?.length || '0') > 0)
+      ) && (
       <>
 
       {/* Service Conditions */}
@@ -1633,7 +1636,10 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
             {/* Price Summary */}
-            {(calculateTotalArea() > 0 || ((isColumnScaffolding || isPipeLengthScaffolding) && columnHeight && dimensions[0]?.length && dimensions[0]?.width)) && (
+            {(calculateTotalArea() > 0 || 
+              (isColumnScaffolding && columnHeight && dimensions[0]?.length && dimensions[0]?.width) ||
+              (isPipeLengthScaffolding && parseFloat(dimensions[0]?.length || '0') > 0)
+            ) && (
         <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-primary">
           <CardHeader>
             <CardTitle className="text-blue-800 dark:text-blue-300">خلاصه قیمت</CardTitle>
@@ -1663,9 +1669,11 @@ export default function ComprehensiveScaffoldingForm({
           disabled={
             loading || 
             !scaffoldType ||
-            (isColumnScaffolding 
-              ? !dimensions[0]?.length || !dimensions[0]?.width || !columnHeight
-              : dimensions.some(d => !d.length || !d.width || !d.height)
+            (isPipeLengthScaffolding 
+              ? parseFloat(dimensions[0]?.length || '0') <= 0
+              : isColumnScaffolding 
+                ? !dimensions[0]?.length || !dimensions[0]?.width || !columnHeight
+                : dimensions.some(d => !d.length || !d.width || !d.height)
             )
           }
           className="w-full" 
