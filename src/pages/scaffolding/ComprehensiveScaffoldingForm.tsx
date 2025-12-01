@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -113,6 +113,23 @@ export default function ComprehensiveScaffoldingForm({
   
   // Check if this is pipe-length scaffolding type (داربست به طول لوله مصرفی)
   const isPipeLengthScaffolding = scaffoldType === 'pipe-length' || activeService === 'pipe-length';
+
+  // Check if this is formwork scaffolding type (داربست حجمی کفراژ)
+  const isFormworkScaffolding = scaffoldType === 'formwork' || activeService === 'formwork';
+
+  // هشدار برای داربست حجمی کفراژ: ارتفاع بیشتر از 12 متر و بیشتر از مساحت زیرین
+  const getFormworkWarning = () => {
+    if (!isFormworkScaffolding) return null;
+    const length = parseFloat(dimensions[0]?.length || '0');
+    const width = parseFloat(dimensions[0]?.width || '0');
+    const height = parseFloat(dimensions[0]?.height || '0');
+    const floorArea = length * width;
+    
+    if (height > 12 && height > floorArea) {
+      return 'ارتفاع داربست از مساحت زیرین بیشتر است. پیشنهاد می‌شود سفارش خود را در نوع داربست ستونی انجام دهید.';
+    }
+    return null;
+  };
   
   // Location fields - دریافت از state (در صورت عدم وجود در props)
   const [detailedAddress, setDetailedAddress] = useState(navState?.detailedAddress || address);
@@ -1363,9 +1380,10 @@ export default function ComprehensiveScaffoldingForm({
                       <Input
                         type="number"
                         step="0.01"
+                        min={isFormworkScaffolding ? "3" : undefined}
                         value={isFacadeScaffolding && dim.useTwoMeterTemplate ? '1.5' : dim.width}
                         onChange={(e) => updateDimension(dim.id, 'width', e.target.value)}
-                        placeholder="1"
+                        placeholder={isFormworkScaffolding ? "حداقل 3 متر" : "1"}
                         readOnly={isFacadeScaffolding}
                         disabled={isFacadeScaffolding}
                         className={isFacadeScaffolding ? "bg-muted" : ""}
@@ -1430,6 +1448,15 @@ export default function ComprehensiveScaffoldingForm({
             <div className="text-sm text-slate-700 dark:text-slate-300 pt-2">
               مجموع مساحت: <span className="font-semibold">{Math.round(calculateTotalArea())}</span> متر مکعب
             </div>
+          )}
+
+          {/* هشدار برای داربست حجمی کفراژ */}
+          {getFormworkWarning() && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>توجه</AlertTitle>
+              <AlertDescription>{getFormworkWarning()}</AlertDescription>
+            </Alert>
           )}
           </div>
         </CardContent>
