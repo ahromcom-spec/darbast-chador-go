@@ -415,7 +415,14 @@ export default function ComprehensiveScaffoldingForm({
 
     // محاسبه قیمت برای داربست ستونی
     if (isColumnScaffolding) {
-      const getUnits = (dimension: number): number => {
+      // محاسبه واحد طول: هر 3 متر = 1 واحد
+      const getLengthUnits = (dimension: number): number => {
+        if (dimension <= 0) return 0;
+        return Math.ceil(dimension / 3);
+      };
+      
+      // محاسبه واحد عرض: منطق قبلی
+      const getWidthUnits = (dimension: number): number => {
         if (dimension >= 0.20 && dimension <= 3.5) return 1;
         if (dimension > 3.5 && dimension <= 7) return 2;
         if (dimension > 7 && dimension <= 10.5) return 3;
@@ -429,8 +436,8 @@ export default function ComprehensiveScaffoldingForm({
       // محاسبه تعداد طبقات از ارتفاع (هر 3.5 متر = 1 طبقه)
       const floors = Math.ceil(height / 3.5);
 
-      const lengthUnits = getUnits(length);
-      const widthUnits = getUnits(width);
+      const lengthUnits = getLengthUnits(length);
+      const widthUnits = getWidthUnits(width);
       const floorUnits = floors;
 
       const totalUnits = lengthUnits * widthUnits * floorUnits;
