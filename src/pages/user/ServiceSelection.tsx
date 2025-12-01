@@ -39,7 +39,7 @@ export default function ServiceSelection() {
   const getFormPath = (subcategoryCode: string) => {
     // Map subcategory codes to form routes
     const formMap: Record<string, string> = {
-      '10': '/scaffolding/comprehensive-form', // داربست فلزی اجرا به همراه اجناس و حمل و نقل
+      '10': '/scaffolding/form', // داربست فلزی اجرا به همراه اجناس و حمل و نقل
       '30': '/scaffolding/rental-form', // اجاره داربست
     };
 

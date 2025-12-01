@@ -2131,7 +2131,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               // هدایت به فرم مناسب بر اساس subcategory code
               if (subcategoryCode === '10') {
                 // داربست فلزی اجرا - با مصالح و حمل
-                navigate('/scaffolding/comprehensive-form', {
+                navigate('/scaffolding/form', {
                   state: {
                     fromMap: true,
                     hierarchyProjectId: projectId,
