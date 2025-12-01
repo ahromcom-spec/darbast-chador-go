@@ -355,6 +355,29 @@ export default function ComprehensiveScaffoldingForm({
     let pricePerMeter: number | null = null;
     const breakdown: string[] = [];
 
+    // محاسبه قیمت برای داربست به طول لوله مصرفی
+    if (isPipeLengthScaffolding) {
+      const pipeLength = parseFloat(dimensions[0]?.length || '0');
+      
+      if (pipeLength <= 100) {
+        basePrice = 3200000;
+        breakdown.push(`طول لوله: ${pipeLength} متر (زیر 100 متر)`);
+        breakdown.push(`قیمت ثابت: ${basePrice.toLocaleString('fa-IR')} تومان`);
+      } else if (pipeLength <= 200) {
+        basePrice = 4200000;
+        breakdown.push(`طول لوله: ${pipeLength} متر (100-200 متر)`);
+        breakdown.push(`قیمت ثابت: ${basePrice.toLocaleString('fa-IR')} تومان`);
+      } else {
+        pricePerMeter = 30000;
+        basePrice = pipeLength * pricePerMeter;
+        breakdown.push(`طول لوله: ${pipeLength} متر (بیش از 200 متر)`);
+        breakdown.push(`فی هر متر لوله: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
+        breakdown.push(`قیمت کل: ${pipeLength} × ${pricePerMeter.toLocaleString('fa-IR')} = ${basePrice.toLocaleString('fa-IR')} تومان`);
+      }
+      
+      return { total: Math.round(basePrice), pricePerMeter, breakdown };
+    }
+
     // محاسبه قیمت برای داربست ستونی
     if (isColumnScaffolding) {
       const getUnits = (dimension: number): number => {
@@ -1245,6 +1268,31 @@ export default function ComprehensiveScaffoldingForm({
                   placeholder="طول مجموع را وارد کنید"
                 />
               </div>
+              
+              {/* نمایش قیمت‌گذاری برای داربست به طول لوله مصرفی */}
+              {parseFloat(dimensions[0]?.length || '0') > 0 && (
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 space-y-2">
+                  <div className="text-sm text-foreground font-semibold">اطلاعات قیمت‌گذاری:</div>
+                  {parseFloat(dimensions[0]?.length || '0') <= 100 && (
+                    <div className="text-sm text-muted-foreground">
+                      زیر ۱۰۰ متر: قیمت ثابت ۳,۲۰۰,۰۰۰ تومان
+                    </div>
+                  )}
+                  {parseFloat(dimensions[0]?.length || '0') > 100 && parseFloat(dimensions[0]?.length || '0') <= 200 && (
+                    <div className="text-sm text-muted-foreground">
+                      ۱۰۰ تا ۲۰۰ متر: قیمت ثابت ۴,۲۰۰,۰۰۰ تومان
+                    </div>
+                  )}
+                  {parseFloat(dimensions[0]?.length || '0') > 200 && (
+                    <div className="text-sm text-muted-foreground">
+                      بیش از ۲۰۰ متر: فی هر متر لوله ۳۰,۰۰۰ تومان
+                    </div>
+                  )}
+                  <div className="text-sm font-semibold text-primary">
+                    قیمت تخمینی: {calculatePrice().total.toLocaleString('fa-IR')} تومان
+                  </div>
+                </div>
+              )}
             </div>
           ) : isColumnScaffolding ? (
             // فرم ویژه برای داربست ستونی
