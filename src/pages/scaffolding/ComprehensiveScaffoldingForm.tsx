@@ -96,8 +96,8 @@ export default function ComprehensiveScaffoldingForm({
   const serviceTypeId = propServiceTypeId || navState?.serviceTypeId;
   const subcategoryId = propSubcategoryId || navState?.subcategoryId;
 
-  const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade' | 'column' | ''>('');
-  const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab' | 'column' | ''>('');
+  const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade' | 'column' | 'pipe-length' | ''>('');
+  const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-tiered' | 'ceiling-slab' | 'column' | 'pipe-length' | ''>('');
   const address = prefilledAddress || navState?.locationAddress || '';
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '', height: '', useTwoMeterTemplate: false }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
@@ -110,6 +110,9 @@ export default function ComprehensiveScaffoldingForm({
   
   // Check if this is column scaffolding type (داربست ستونی)
   const isColumnScaffolding = scaffoldType === 'column' || activeService === 'column';
+  
+  // Check if this is pipe-length scaffolding type (داربست به طول لوله مصرفی)
+  const isPipeLengthScaffolding = scaffoldType === 'pipe-length' || activeService === 'pipe-length';
   
   // Location fields - دریافت از state (در صورت عدم وجود در props)
   const [detailedAddress, setDetailedAddress] = useState(navState?.detailedAddress || address);
@@ -323,7 +326,7 @@ export default function ComprehensiveScaffoldingForm({
 
   const addDimension = () => {
     const newId = (dimensions.length + 1).toString();
-    const defaultWidth = activeService === 'facade' ? (isFacadeWidth2m ? '1.5' : '1') : (isColumnScaffolding ? '' : '');
+    const defaultWidth = activeService === 'facade' ? (isFacadeWidth2m ? '1.5' : '1') : ((isColumnScaffolding || isPipeLengthScaffolding) ? '' : '');
     setDimensions([...dimensions, { id: newId, length: '', width: defaultWidth, height: '' }]);
   };
 
@@ -697,7 +700,7 @@ export default function ComprehensiveScaffoldingForm({
     }
 
     // فقط چک کردن ابعاد به‌عنوان فیلد ضروری
-    if (isColumnScaffolding) {
+    if (isColumnScaffolding || isPipeLengthScaffolding) {
       if (!dimensions[0]?.length || !dimensions[0]?.width || !columnHeight) {
         toast({ title: 'خطا', description: 'لطفاً تمام ابعاد را وارد کنید', variant: 'destructive' });
         return;
@@ -725,7 +728,7 @@ export default function ComprehensiveScaffoldingForm({
     }
 
     // Validate dimensions - check minimum 3 meters for length and height
-    if (isColumnScaffolding) {
+    if (isColumnScaffolding || isPipeLengthScaffolding) {
       const length = parseFloat(dimensions[0]?.length || '0');
       const width = parseFloat(dimensions[0]?.width || '0');
       const height = parseFloat(columnHeight || '0');
@@ -1118,10 +1121,10 @@ export default function ComprehensiveScaffoldingForm({
             <Label htmlFor="scaffold-type-select" className="text-foreground font-semibold">نوع داربست مورد نظر خود را انتخاب کنید</Label>
             <Select
               value={scaffoldType}
-              onValueChange={(value: 'formwork' | 'ceiling' | 'facade' | 'column') => {
+              onValueChange={(value: 'formwork' | 'ceiling' | 'facade' | 'column' | 'pipe-length') => {
                 setScaffoldType(value);
                 // Reset dimensions با width مناسب برای هر نوع
-                const defaultWidth = value === 'column' ? '' : (value === 'facade' ? '1' : '');
+                const defaultWidth = (value === 'column' || value === 'pipe-length') ? '' : (value === 'facade' ? '1' : '');
                 setDimensions([{ id: '1', length: '', width: defaultWidth, height: '', useTwoMeterTemplate: false }]);
                 setColumnHeight('');
                 
@@ -1131,6 +1134,8 @@ export default function ComprehensiveScaffoldingForm({
                   setActiveService('ceiling-tiered');
                 } else if (value === 'column') {
                   setActiveService('column');
+                } else if (value === 'pipe-length') {
+                  setActiveService('pipe-length');
                 } else {
                   setActiveService('facade');
                 }
@@ -1144,6 +1149,7 @@ export default function ComprehensiveScaffoldingForm({
                 <SelectItem value="formwork">داربست حجمی کفراژ</SelectItem>
                 <SelectItem value="ceiling">داربست زیر بتن (سقف)</SelectItem>
                 <SelectItem value="column">داربست ستونی، نورگیر، چاله اسانسور و ...</SelectItem>
+                <SelectItem value="pipe-length">داربست به طول لوله مصرفی</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1226,8 +1232,8 @@ export default function ComprehensiveScaffoldingForm({
 
           {/* ابعاد */}
           <div className="space-y-4">
-          {isColumnScaffolding ? (
-            // فرم ویژه برای داربست ستونی
+          {isColumnScaffolding || isPipeLengthScaffolding ? (
+            // فرم ویژه برای داربست ستونی و به طول لوله مصرفی
             <div className="space-y-4">
               <div className="flex gap-4">
                 <div className="flex-1 space-y-2">
@@ -1367,7 +1373,7 @@ export default function ComprehensiveScaffoldingForm({
             </>
           )}
           
-          {!isColumnScaffolding && (
+          {!isColumnScaffolding && !isPipeLengthScaffolding && (
             <div className="text-sm text-slate-700 dark:text-slate-300 pt-2">
               مجموع مساحت: <span className="font-semibold">{Math.round(calculateTotalArea())}</span> متر مکعب
             </div>
@@ -1377,7 +1383,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
       {/* نمایش کادرهای زیر فقط اگر ابعاد وارد شده باشد */}
-      {(calculateTotalArea() > 0 || (isColumnScaffolding && columnHeight && dimensions[0]?.length && dimensions[0]?.width)) && (
+      {(calculateTotalArea() > 0 || ((isColumnScaffolding || isPipeLengthScaffolding) && columnHeight && dimensions[0]?.length && dimensions[0]?.width)) && (
       <>
 
       {/* Service Conditions */}
@@ -1574,7 +1580,7 @@ export default function ComprehensiveScaffoldingForm({
       </Card>
 
             {/* Price Summary */}
-            {(calculateTotalArea() > 0 || (isColumnScaffolding && columnHeight && dimensions[0]?.length && dimensions[0]?.width)) && (
+            {(calculateTotalArea() > 0 || ((isColumnScaffolding || isPipeLengthScaffolding) && columnHeight && dimensions[0]?.length && dimensions[0]?.width)) && (
         <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-primary">
           <CardHeader>
             <CardTitle className="text-blue-800 dark:text-blue-300">خلاصه قیمت</CardTitle>
