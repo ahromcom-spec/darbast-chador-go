@@ -1219,9 +1219,9 @@ export default function ComprehensiveScaffoldingForm({
           </div>
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
-          {/* شرح محل نصب */}
+          {/* شرح محل نصب و نوع فعالیت */}
           <div className="space-y-2">
-            <Label className="text-foreground font-semibold">شرح محل نصب</Label>
+            <Label className="text-foreground font-semibold">شرح محل نصب و نوع فعالیت</Label>
             <Textarea
               value={locationPurpose}
               onChange={(e) => setLocationPurpose(e.target.value)}
