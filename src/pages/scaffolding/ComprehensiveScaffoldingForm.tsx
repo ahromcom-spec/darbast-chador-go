@@ -131,6 +131,18 @@ export default function ComprehensiveScaffoldingForm({
     }
     return null;
   };
+
+  // هشدار برای داربست سطحی نما: ارتفاع بیشتر از 12 متر و بیشتر از دو برابر طول
+  const getFacadeWarning = () => {
+    if (!isFacadeScaffolding) return null;
+    const length = parseFloat(dimensions[0]?.length || '0');
+    const height = parseFloat(dimensions[0]?.height || '0');
+    
+    if (height > 12 && height > (2 * length)) {
+      return 'ارتفاع داربست از دو برابر طول بیشتر است. پیشنهاد می‌شود نوع داربست خود را داربست ستونی انتخاب کنید.';
+    }
+    return null;
+  };
   
   // Location fields - دریافت از state (در صورت عدم وجود در props)
   const [detailedAddress, setDetailedAddress] = useState(navState?.detailedAddress || address);
@@ -1485,6 +1497,15 @@ export default function ComprehensiveScaffoldingForm({
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>توجه</AlertTitle>
               <AlertDescription>{getFormworkWarning()}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* هشدار برای داربست سطحی نما */}
+          {getFacadeWarning() && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>توجه</AlertTitle>
+              <AlertDescription>{getFacadeWarning()}</AlertDescription>
             </Alert>
           )}
           </div>
