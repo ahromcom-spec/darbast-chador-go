@@ -1232,27 +1232,31 @@ export default function ComprehensiveScaffoldingForm({
 
           {/* ابعاد */}
           <div className="space-y-4">
-          {isColumnScaffolding || isPipeLengthScaffolding ? (
-            // فرم ویژه برای داربست ستونی و به طول لوله مصرفی
+          {isPipeLengthScaffolding ? (
+            // فرم ویژه برای داربست به طول لوله مصرفی - فقط یک فیلد
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-foreground font-semibold">طول مجموع لوله داربست‌های استفاده شده (متر)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={dimensions[0].length}
+                  onChange={(e) => updateDimension('1', 'length', e.target.value)}
+                  placeholder="طول مجموع را وارد کنید"
+                />
+              </div>
+            </div>
+          ) : isColumnScaffolding ? (
+            // فرم ویژه برای داربست ستونی
             <div className="space-y-4">
               <div className="flex gap-4">
                 <div className="flex-1 space-y-2">
                   <Label className="text-foreground font-semibold">طول (متر)</Label>
                   <Input
                     type="number"
-                    step={scaffoldType === 'facade' ? '1' : '0.01'}
+                    step="0.01"
                     value={dimensions[0].length}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (scaffoldType === 'facade') {
-                        // فقط اعداد صحیح مثبت
-                        if (value === '' || /^\d+$/.test(value)) {
-                          updateDimension('1', 'length', value);
-                        }
-                      } else {
-                        updateDimension('1', 'length', value);
-                      }
-                    }}
+                    onChange={(e) => updateDimension('1', 'length', e.target.value)}
                     placeholder="طول را وارد کنید"
                   />
                 </div>
