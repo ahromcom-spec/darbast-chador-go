@@ -200,10 +200,18 @@ export default function ScaffoldingForm() {
                   <Alert className="border-primary/30">
                     <Package className="h-4 w-4 text-primary" />
                     <AlertDescription>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <p className="font-semibold text-sm">نوع خدمات:</p>
-                        <p className="text-sm">{finalServiceName}</p>
-                        <p className="text-xs text-muted-foreground">{finalSubcategoryName}</p>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">خدمات اصلی:</span>
+                            <span className="text-sm font-medium">{finalServiceName || 'خدمات فلزی'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">زیرشاخه:</span>
+                            <span className="text-sm">{finalSubcategoryName || 'خدمات اجرای داربست به همراه اجناس داربست و حمل و نقل'}</span>
+                          </div>
+                        </div>
                       </div>
                     </AlertDescription>
                   </Alert>
