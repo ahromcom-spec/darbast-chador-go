@@ -296,14 +296,31 @@ export default function ExecutivePendingOrders() {
             .single();
 
           if (customerData?.user_id) {
+            const notificationTitle = '✅ سفارش شما تایید شد';
+            const notificationBody = `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`;
+            
             const validated = sendNotificationSchema.parse({
               _user_id: customerData.user_id,
-              _title: '✅ سفارش شما تایید شد',
-              _body: `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`,
+              _title: notificationTitle,
+              _body: notificationBody,
               _link: '/user/my-orders',
               _type: 'success'
             });
             await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+            
+            // ارسال Push Notification به گوشی کاربر
+            try {
+              await supabase.functions.invoke('send-push-notification', {
+                body: {
+                  user_id: customerData.user_id,
+                  title: notificationTitle,
+                  body: notificationBody,
+                  url: '/user/my-orders'
+                }
+              });
+            } catch (pushError) {
+              console.log('Push notification skipped (user may not have enabled)');
+            }
           }
         }
       }
