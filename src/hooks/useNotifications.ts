@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -12,16 +12,42 @@ interface Notification {
   created_at: string;
 }
 
+// پخش صدای اعلان
+const playNotificationSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.4);
+  } catch (error) {
+    console.log('Could not play notification sound:', error);
+  }
+};
+
 export const useNotifications = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const lastNotificationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      subscribeToNotifications();
+      const cleanup = subscribeToNotifications();
+      return cleanup;
     }
   }, [user]);
 
@@ -38,7 +64,14 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      setNotifications((data || []) as Notification[]);
+      const notifs = (data || []) as Notification[];
+      
+      // ذخیره آخرین id برای تشخیص اعلان‌های جدید
+      if (notifs.length > 0 && !lastNotificationIdRef.current) {
+        lastNotificationIdRef.current = notifs[0].id;
+      }
+      
+      setNotifications(notifs);
       setUnreadCount(data?.filter(n => !n.read_at).length || 0);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -48,14 +81,32 @@ export const useNotifications = () => {
   };
 
   const subscribeToNotifications = () => {
-    if (!user) return;
+    if (!user) return () => {};
 
     const channel = supabase
       .channel('notifications-changes')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          // پخش صدا برای اعلان جدید
+          playNotificationSound();
+          
+          const newNotif = payload.new as Notification;
+          setNotifications(prev => [newNotif, ...prev.slice(0, 19)]);
+          setUnreadCount(prev => prev + 1);
+          lastNotificationIdRef.current = newNotif.id;
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: 'notifications',
           filter: `user_id=eq.${user.id}`
