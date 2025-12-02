@@ -58,18 +58,18 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
           
           if (projError) throw projError;
           
-          if (project) {
-            onClose?.();
-            // هدایت به پروژه‌های من با باز کردن خودکار آدرس، پروژه و هایلایت سفارش
-            setTimeout(() => navigate('/user/projects', {
-              state: {
-                expandLocationId: project.location_id,
-                expandProjectId: project.id,
-                highlightOrderId: orderId
-              }
-            }), 50);
-            return;
-          }
+            if (project) {
+              onClose?.();
+              // هدایت به پروژه‌های من با باز کردن خودکار آدرس، پروژه و هایلایت سفارش
+              setTimeout(() => navigate('/user/projects', {
+                state: {
+                  expandLocationId: project.location_id,
+                  expandProjectId: project.id,
+                  highlightOrderId: orderId
+                }
+              }), 200);
+              return;
+            }
         }
       } catch (error) {
         console.error('خطا در دریافت اطلاعات سفارش:', error);
@@ -104,7 +104,7 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
                   expandProjectId: project2.id,
                   highlightOrderId: orderByCode.id
                 }
-              }), 50);
+              }), 200);
               return;
             }
           }
@@ -118,13 +118,13 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
     if (notification.link) {
       const ordersList = /^\/user\/(orders|my-orders)/.test(notification.link) || notification.link === '/projects';
       onClose?.();
-      setTimeout(() => navigate(ordersList ? '/user/projects' : notification.link), 50);
+      setTimeout(() => navigate(ordersList ? '/user/projects' : notification.link), 200);
       return;
     }
     
     // هدایت به صفحه پروژه‌های من
     onClose?.();
-    setTimeout(() => navigate('/user/projects'), 50);
+    setTimeout(() => navigate('/user/projects'), 200);
   };
 
   if (loading) {
