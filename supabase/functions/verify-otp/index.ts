@@ -59,99 +59,65 @@ serve(async (req) => {
     
     let normalizedPhone: string;
     let authPhone: string;
-    let isWhitelistedPhone = false;
     
     if (isTestPhone) {
-      // For test phones, use as-is without validation
       normalizedPhone = phone_number;
-      authPhone = phone_number; // No E.164 conversion for test phones
+      authPhone = phone_number;
     } else {
-      // Regular phone validation for real phones
       normalizedPhone = normalizeIranPhone(phone_number);
-      // Enforce strict 11-digit format: 09XXXXXXXXX
       if (!/^09[0-9]{9}$/.test(normalizedPhone)) {
         return new Response(
           JSON.stringify({ error: 'شماره تلفن باید 11 رقم و با 09 شروع شود' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      // Convert to E.164 format for Supabase Auth (+98XXXXXXXXXX)
       authPhone = normalizedPhone.startsWith('0') 
         ? '+98' + normalizedPhone.slice(1) 
         : '+98' + normalizedPhone;
-      
-      // Check if this phone number is in the whitelist (management numbers)
-      const { data: whitelistData } = await supabase
-        .from('phone_whitelist')
-        .select('phone_number')
-        .eq('phone_number', normalizedPhone)
-        .maybeSingle();
-      
-      isWhitelistedPhone = !!whitelistData;
     }
 
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
-    // Normalize OTP code to ASCII digits (handles Persian/Arabic numerals)
+    // Normalize OTP code
     const normalizeOtpCode = (input: string) => {
-      if (!input || typeof input !== 'string') {
-        return '';
-      }
-      
-      // Limit input length for security
-      const limitedInput = input.slice(0, 20);
-      
+      if (!input || typeof input !== 'string') return '';
+      const limited = input.slice(0, 20);
       const persian = '۰۱۲۳۴۵۶۷۸۹';
       const arabic = '٠١٢٣٤٥٦٧٨٩';
-      
-      const normalized = limitedInput
+      const normalized = limited
         .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
         .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)))
         .replace(/[^0-9]/g, '');
-      
-      // Must be exactly 5 digits
-      if (normalized.length !== 5) {
-        return '';
-      }
-      
-      return normalized;
+      return normalized.length === 5 ? normalized : '';
     };
     
     const normalizedCode = normalizeOtpCode(code);
-    
-    // Validate OTP code length
-    if (!normalizedCode || normalizedCode.length !== 5) {
+    if (!normalizedCode) {
       return new Response(
         JSON.stringify({ error: 'کد تایید باید دقیقاً 5 رقم باشد' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    // Build a strong per-login password from OTP to satisfy password policy
+    
     const loginPassword = `otp-${normalizedCode}-x`;
 
-    // For whitelisted phone numbers, allow fixed test code 12345
-    let isValid = false;
-    if (isWhitelistedPhone && normalizedCode === '12345') {
-      // Allow fixed test code for whitelisted numbers
-      isValid = true;
-    } else {
-      // Verify OTP from database for all other cases
-      const { data: otpValid, error: verifyError } = await supabase
-        .rpc('verify_otp_code', { 
-          _phone_number: normalizedPhone, 
-          _code: normalizedCode 
-        });
+    // Run whitelist check and OTP verification in parallel for speed
+    const [whitelistResult, otpResult] = await Promise.all([
+      isTestPhone ? Promise.resolve({ data: null }) : supabase
+        .from('phone_whitelist')
+        .select('phone_number')
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle(),
+      supabase.rpc('verify_otp_code', { 
+        _phone_number: normalizedPhone, 
+        _code: normalizedCode 
+      })
+    ]);
 
-      if (verifyError) {
-        console.error('OTP verification error');
-        return new Response(
-          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      isValid = !!otpValid;
-    }
+    const isWhitelistedPhone = !!whitelistResult.data;
+    
+    // Check validity
+    const isValid = (isWhitelistedPhone && normalizedCode === '12345') || !!otpResult.data;
 
     if (!isValid) {
       return new Response(
@@ -160,12 +126,13 @@ serve(async (req) => {
       );
     }
 
-    // Mark OTP as verified
-    await supabase
+    // Mark OTP as verified (non-blocking)
+    supabase
       .from('otp_codes')
       .update({ verified: true })
       .eq('phone_number', normalizedPhone)
-      .eq('code', normalizedCode);
+      .eq('code', normalizedCode)
+      .then(() => {});
 
     // Auth: attempt password sign-in first, then create/recover as needed
     let session;
