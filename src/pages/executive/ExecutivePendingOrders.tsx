@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map } from 'lucide-react';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -26,6 +26,126 @@ import { Separator } from '@/components/ui/separator';
 import { ProjectLocationMap } from '@/components/locations/ProjectLocationMap';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
 
+// Helper to parse order notes safely - handles double-stringified JSON
+const parseOrderNotes = (notes: any): any => {
+  if (!notes) return null;
+  try {
+    let parsed = notes;
+    // First parse if it's a string
+    if (typeof parsed === 'string') {
+      parsed = JSON.parse(parsed);
+    }
+    // Handle double-stringified JSON
+    if (typeof parsed === 'string') {
+      parsed = JSON.parse(parsed);
+    }
+    return parsed;
+  } catch (e) {
+    console.error('Error parsing notes:', e);
+    return null;
+  }
+};
+
+// Component to display order media
+const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
+  const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string }>>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMedia = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('project_media')
+          .select('id, file_path, file_type')
+          .eq('project_id', orderId)
+          .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        setMedia(data || []);
+      } catch (err) {
+        console.error('Error fetching media:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMedia();
+  }, [orderId]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center p-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (media.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground text-sm p-4 bg-muted/50 rounded-lg">
+        <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        هنوز تصویری برای این سفارش ثبت نشده است
+      </div>
+    );
+  }
+
+  const getMediaUrl = (filePath: string) => {
+    const { data } = supabase.storage.from('project-media').getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const currentMedia = media[currentIndex];
+  const isVideo = currentMedia?.file_type?.includes('video');
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs text-muted-foreground flex items-center gap-2">
+        <ImageIcon className="h-3 w-3" />
+        تصاویر و فایل‌های سفارش ({media.length})
+      </Label>
+      <div className="relative bg-black/5 rounded-lg overflow-hidden">
+        {isVideo ? (
+          <video
+            src={getMediaUrl(currentMedia.file_path)}
+            controls
+            className="w-full max-h-64 object-contain"
+          />
+        ) : (
+          <img
+            src={getMediaUrl(currentMedia.file_path)}
+            alt={`تصویر ${currentIndex + 1}`}
+            className="w-full max-h-64 object-contain"
+          />
+        )}
+        
+        {media.length > 1 && (
+          <>
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
+              onClick={() => setCurrentIndex(i => (i + 1) % media.length)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
+              onClick={() => setCurrentIndex(i => (i - 1 + media.length) % media.length)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/80 px-2 py-1 rounded text-xs">
+              {currentIndex + 1} / {media.length}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 
 interface Order {
   id: string;
@@ -42,6 +162,7 @@ interface Order {
   district_id?: string;
   location_lat?: number | null;
   location_lng?: number | null;
+  payment_amount?: number | null;
 }
 
 export default function ExecutivePendingOrders() {
@@ -94,7 +215,8 @@ export default function ExecutivePendingOrders() {
           customer_name,
           customer_phone,
           location_lat,
-          location_lng
+          location_lng,
+          payment_amount
         `)
         .in('status', ['pending', 'approved', 'in_progress'])
         .order('created_at', { ascending: false });
@@ -103,15 +225,8 @@ export default function ExecutivePendingOrders() {
 
       // Map orders with denormalized data
       const rows = (data || []).map((order: any) => {
-        // Parse notes (stored as text) into object
-        const notesObj = (() => {
-          try {
-            if (!order.notes) return {};
-            return typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
-          } catch {
-            return {};
-          }
-        })();
+        // Parse notes using robust parser that handles double-stringified JSON
+        const notesObj = parseOrderNotes(order.notes) || {};
 
         return {
           id: order.id,
@@ -128,6 +243,7 @@ export default function ExecutivePendingOrders() {
           customer_phone: order.customer_phone || '',
           location_lat: order.location_lat,
           location_lng: order.location_lng,
+          payment_amount: order.payment_amount,
         };
       });
 
@@ -611,14 +727,14 @@ export default function ExecutivePendingOrders() {
                   <Label className="text-xs text-muted-foreground">نام مشتری</Label>
                   <p className="text-sm font-medium flex items-center gap-2">
                     <User className="h-4 w-4 text-primary" />
-                    {selectedOrder.customer_name}
+                    {selectedOrder.customer_name || selectedOrder.notes?.customerName || 'نامشخص'}
                   </p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">شماره تماس</Label>
                   <p className="text-sm font-medium flex items-center gap-2" dir="ltr">
                     <Phone className="h-4 w-4 text-primary" />
-                    {selectedOrder.customer_phone}
+                    {selectedOrder.customer_phone || selectedOrder.notes?.phoneNumber || '-'}
                   </p>
                 </div>
               </div>
@@ -667,156 +783,162 @@ export default function ExecutivePendingOrders() {
                 })}</p>
               </div>
 
-              {selectedOrder.notes && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">جزئیات فنی سفارش</Label>
-                    <div className="bg-muted p-4 rounded-lg space-y-3">
-                      {/* نوع داربست */}
-                      {(() => {
-                        const n = selectedOrder.notes || {};
-                        const type = n.scaffold_type || n.service_type || n.scaffoldType || '';
-                        if (!type) return null;
-                        return (
-                          <div>
-                            <span className="font-semibold">نوع داربست:</span>{' '}
-                            <span className="text-sm">
-                              {type === 'facade' ? 'داربست نما' :
-                               type === 'formwork' ? 'قالب فلزی' :
-                               type?.includes('ceiling') ? 'داربست سقف' : String(type)}
+              {/* گالری تصاویر سفارش */}
+              <Separator />
+              <OrderMediaGallery orderId={selectedOrder.id} />
+
+              {/* جزئیات فنی سفارش */}
+              <Separator />
+              <div className="space-y-4">
+                <Label className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Wrench className="h-4 w-4" />
+                  جزئیات فنی سفارش
+                </Label>
+                
+                {!selectedOrder.notes || Object.keys(selectedOrder.notes).length === 0 ? (
+                  <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                    جزئیات فنی این سفارش در دسترس نیست
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* نوع داربست */}
+                    {(() => {
+                      const n = selectedOrder.notes || {};
+                      const type = n.scaffold_type || n.service_type || n.scaffoldType || '';
+                      const scaffoldingTypeLabels: Record<string, string> = {
+                        facade: 'داربست سطحی نما',
+                        formwork: 'داربست حجمی کفراژ',
+                        ceiling: 'داربست زیربتن سقف',
+                        column: 'داربست ستونی',
+                        pipe_length: 'داربست به طول لوله مصرفی'
+                      };
+                      if (!type) return null;
+                      return (
+                        <div className="bg-muted/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">نوع داربست:</span>
+                            <span className="text-sm font-medium">
+                              {scaffoldingTypeLabels[type] || type}
                             </span>
                           </div>
-                        );
-                      })()}
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* ابعاد */}
+                    {(() => {
+                      const n = selectedOrder.notes || {};
+                      const dims = n.dimensions;
+                      const total = n.total_area ?? n.totalArea;
                       
-                      {/* مساحت کل */}
-                      {(() => {
-                        const n = selectedOrder.notes || {};
-                        const total = n.total_area ?? n.totalArea;
-                        if (!total) return null;
-                        return (
-                          <div>
-                            <span className="font-semibold">مساحت کل:</span> {total} متر مربع
-                          </div>
-                        );
-                      })()}
+                      if (!dims && !total && !n.length && !n.width && !n.height) return null;
                       
-                      {/* ابعاد */}
-                      {selectedOrder.notes.dimensions && selectedOrder.notes.dimensions.length > 0 && (
-                        <div>
-                          <span className="font-semibold">ابعاد:</span>
-                          <ul className="mt-2 space-y-1 mr-4">
-                            {selectedOrder.notes.dimensions.map((dim: any, idx: number) => (
-                              <li key={idx} className="text-sm">
-                                {dim.length && dim.height ? (
-                                  <>طول: {dim.length}م × ارتفاع: {dim.height}م{dim.area && ` = ${dim.area} متر مربع`}</>
-                                ) : (
-                                  <>طول: {dim.length}م × عرض: {dim.width}م × ارتفاع: {dim.height}م</>
+                      return (
+                        <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-2">
+                            <Ruler className="h-3 w-3" />
+                            ابعاد
+                          </Label>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            {dims && Array.isArray(dims) && dims.length > 0 && (
+                              <>
+                                {dims[0].length != null && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">طول:</span>
+                                    <span className="font-medium">{dims[0].length} متر</span>
+                                  </div>
                                 )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      
-                      {/* شرایط خدمات/محیط */}
-                      {(() => {
-                        const n = selectedOrder.notes || {};
-                        const sc = n.service_conditions || n.conditions || {};
-                        const distance = sc.distance_range || sc.distanceRange;
-                        const platformH = sc.platform_height ?? sc.platformHeight;
-                        const scaffoldFromPlatform = sc.scaffold_height_from_platform ?? sc.scaffoldHeightFromPlatform;
-                        const vehicleDist = sc.vehicle_distance ?? sc.vehicleDistance;
-                        const totalMonths = sc.total_months ?? sc.totalMonths;
-                        const currentMonth = sc.current_month ?? sc.currentMonth;
-                        
-                        const hasConditions = Object.keys(sc).length > 0;
-                        const hasEnvData = n.onGround !== undefined || n.vehicleReachesSite !== undefined || 
-                                          n.isFacadeWidth2m !== undefined || n.locationPurpose || 
-                                          n.estimated_price || n.price_breakdown;
-                        
-                        if (!hasConditions && !hasEnvData) return null;
-                        
-                        return (
-                          <div className="space-y-3">
-                            <span className="font-semibold">شرایط خدمات و محیط:</span>
-                            <div className="mr-4 space-y-1 text-sm">
-                              {totalMonths && (<div>مدت خدمات: {totalMonths} ماه</div>)}
-                              {currentMonth && (<div>ماه جاری: {currentMonth}</div>)}
-                              {distance && (
-                                <div>
-                                  محدوده فاصله: {distance === '0-15' ? '0 تا 15 کیلومتر' : 
-                                                distance === '15-25' ? '15 تا 25 کیلومتر' : 
-                                                distance === '25-50' ? '25 تا 50 کیلومتر' : 
-                                                distance === '50-85' ? '50 تا 85 کیلومتر' : String(distance)}
-                                </div>
-                              )}
-                              {platformH != null && (<div>ارتفاع کف بلوکی: {platformH} متر</div>)}
-                              {scaffoldFromPlatform != null && (<div>ارتفاع داربست از کف بلوکی: {scaffoldFromPlatform} متر</div>)}
-                              {vehicleDist != null && (<div>فاصله تا محل توقف خودرو: {vehicleDist} متر</div>)}
-                              {n.onGround != null && (<div>محل نصب: {n.onGround ? 'روی زمین' : 'غیرزمینی/سایر'}</div>)}
-                              {n.vehicleReachesSite != null && (<div>دسترسی خودرو: {n.vehicleReachesSite ? 'امکان تردد دارد' : 'امکان تردد ندارد'}</div>)}
-                              {n.isFacadeWidth2m != null && (<div>عرض داربست نما: {n.isFacadeWidth2m ? '۲ متر' : '۱٫۲ متر'}</div>)}
-                              {n.locationPurpose && (<div>کاربری محل: {n.locationPurpose}</div>)}
-                              {n.estimated_price != null && (<div>برآورد قیمت: {n.estimated_price.toLocaleString()} تومان</div>)}
-                              {Array.isArray(n.price_breakdown) && n.price_breakdown.length > 0 && (
-                                <div className="space-y-1">
-                                  <div className="font-medium">ریز هزینه‌ها:</div>
-                                  <ul className="mr-4 list-disc">
-                                    {n.price_breakdown.map((p: any, i: number) => (
-                                      <li key={i}>{typeof p === 'string' ? p : JSON.stringify(p)}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
+                                {dims[0].width != null && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">عرض:</span>
+                                    <span className="font-medium">{dims[0].width} متر</span>
+                                  </div>
+                                )}
+                                {dims[0].height != null && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">ارتفاع:</span>
+                                    <span className="font-medium">{dims[0].height} متر</span>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            {total != null && (
+                              <div className="flex justify-between col-span-2">
+                                <span className="text-muted-foreground">مساحت کل:</span>
+                                <span className="font-medium">{total} متر مربع</span>
+                              </div>
+                            )}
                           </div>
-                        );
-                      })()}
-                      
-                      {/* ضمیمه‌های اضافی */}
-                      {selectedOrder.notes.additional_items && selectedOrder.notes.additional_items.length > 0 && (
-                        <div>
-                          <span className="font-semibold">ضمیمه‌های اضافی:</span>
-                          <ul className="mt-2 space-y-1 mr-4 text-sm">
-                            {selectedOrder.notes.additional_items.map((item: any, idx: number) => (
-                              <li key={idx}>
-                                {item.item_name || item.item_type} - تعداد: {item.quantity}
-                                {item.price && ` - قیمت: ${item.price}`}
-                              </li>
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* توضیحات */}
+                    {selectedOrder.notes.locationPurpose && (
+                      <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                        <Label className="text-xs text-muted-foreground flex items-center gap-2">
+                          <FileText className="h-3 w-3" />
+                          شرح محل نصب و فعالیت
+                        </Label>
+                        <p className="text-sm">{selectedOrder.notes.locationPurpose}</p>
+                      </div>
+                    )}
+                    
+                    {/* شرایط سرویس */}
+                    {selectedOrder.notes.conditions && (
+                      <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                        <Label className="text-xs text-muted-foreground">شرایط سرویس</Label>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          {selectedOrder.notes.conditions.totalMonths && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">مدت اجاره:</span>
+                              <span className="font-medium">{selectedOrder.notes.conditions.totalMonths} ماه</span>
+                            </div>
+                          )}
+                          {selectedOrder.notes.conditions.distanceRange && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">فاصله:</span>
+                              <span className="font-medium">{selectedOrder.notes.conditions.distanceRange} کیلومتر</span>
+                            </div>
+                          )}
+                          {selectedOrder.notes.onGround !== undefined && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">روی زمین:</span>
+                              <span className="font-medium">{selectedOrder.notes.onGround ? 'بله' : 'خیر'}</span>
+                            </div>
+                          )}
+                          {selectedOrder.notes.vehicleReachesSite !== undefined && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">دسترسی ماشین:</span>
+                              <span className="font-medium">{selectedOrder.notes.vehicleReachesSite ? 'بله' : 'خیر'}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* قیمت */}
+                    {(selectedOrder.notes.estimated_price || selectedOrder.payment_amount) && (
+                      <div className="bg-primary/10 rounded-lg p-3 space-y-2">
+                        <Label className="text-xs text-muted-foreground flex items-center gap-2">
+                          <Banknote className="h-3 w-3" />
+                          قیمت
+                        </Label>
+                        <p className="text-lg font-bold text-primary">
+                          {(selectedOrder.notes.estimated_price || selectedOrder.payment_amount)?.toLocaleString('fa-IR')} تومان
+                        </p>
+                        {selectedOrder.notes.price_breakdown && Array.isArray(selectedOrder.notes.price_breakdown) && (
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            {selectedOrder.notes.price_breakdown.map((item: string, idx: number) => (
+                              <p key={idx}>{item}</p>
                             ))}
-                          </ul>
-                        </div>
-                      )}
-                      
-                      {/* موارد امنیتی */}
-                      {selectedOrder.notes.safety_equipment && selectedOrder.notes.safety_equipment.length > 0 && (
-                        <div>
-                          <span className="font-semibold">تجهیزات ایمنی:</span>
-                          <ul className="mt-2 space-y-1 mr-4 text-sm">
-                            {selectedOrder.notes.safety_equipment.map((item: string, idx: number) => (
-                              <li key={idx}>• {item}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      
-                      {/* دیگر موارد */}
-                      {selectedOrder.notes.has_stairs !== undefined && (
-                        <div>
-                          <span className="font-semibold">نیاز به پله:</span> {selectedOrder.notes.has_stairs ? 'بله' : 'خیر'}
-                        </div>
-                      )}
-                      {selectedOrder.notes.has_handrail !== undefined && (
-                        <div>
-                          <span className="font-semibold">نیاز به نرده:</span> {selectedOrder.notes.has_handrail ? 'بله' : 'خیر'}
-                        </div>
-                      )}
-                    </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </>
-              )}
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
