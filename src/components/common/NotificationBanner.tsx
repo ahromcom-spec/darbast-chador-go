@@ -1,9 +1,10 @@
-import { Bell, X } from 'lucide-react';
+import { Bell, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useToast } from '@/hooks/use-toast';
 
 export function NotificationBanner() {
   const [dismissed, setDismissed] = useState(() => {
@@ -16,31 +17,56 @@ export function NotificationBanner() {
       const timePassed = Date.now() - timestamp;
       
       if (timePassed > oneMinute) {
-        // اگر بیش از یک دقیقه گذشته باشد، بنر را دوباره نمایش بده
         localStorage.removeItem('notification-banner-dismissed');
         return false;
       }
       return true;
     } catch {
-      // اگر فرمت قدیمی بود، بنر را نمایش بده
       return false;
     }
   });
+  const [enabling, setEnabling] = useState(false);
   const location = useLocation();
-  const { permission, isSupported, requestPermission } = usePushNotifications();
+  const { permission, isSupported, requestPermission, subscribeToPush } = usePushNotifications();
+  const { toast } = useToast();
 
   const handleDismiss = () => {
     setDismissed(true);
-    // ذخیره زمان dismiss با timestamp
     localStorage.setItem('notification-banner-dismissed', JSON.stringify({
       timestamp: Date.now()
     }));
   };
 
   const handleEnable = async () => {
-    await requestPermission();
-    if (permission === 'granted') {
-      setDismissed(true);
+    setEnabling(true);
+    try {
+      // ابتدا درخواست مجوز
+      const result = await requestPermission();
+      
+      if (result === 'granted') {
+        // سپس ثبت دستگاه برای دریافت اعلان
+        await subscribeToPush();
+        toast({
+          title: 'اعلان‌ها فعال شد',
+          description: 'از این پس اعلان‌های جدید را دریافت خواهید کرد',
+        });
+        setDismissed(true);
+      } else if (result === 'denied') {
+        toast({
+          title: 'دسترسی رد شد',
+          description: 'لطفا در تنظیمات مرورگر اجازه ارسال اعلان را فعال کنید',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+      toast({
+        title: 'خطا',
+        description: 'فعال‌سازی اعلان‌ها با مشکل مواجه شد',
+        variant: 'destructive'
+      });
+    } finally {
+      setEnabling(false);
     }
   };
 
@@ -50,7 +76,7 @@ export function NotificationBanner() {
   }
 
   return (
-    <div className="fixed bottom-20 left-4 z-[100] max-w-md" data-notification-banner>
+    <div className="fixed top-4 left-4 right-4 z-[100] max-w-md mx-auto" data-notification-banner>
       <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-xl">
         <div className="p-4 flex items-center gap-3">
           <div className="flex-shrink-0 p-2 rounded-lg bg-primary/10">
@@ -66,14 +92,23 @@ export function NotificationBanner() {
             onClick={handleEnable}
             size="sm"
             className="whitespace-nowrap"
+            disabled={enabling}
           >
-            فعال‌سازی
+            {enabling ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin ml-1" />
+                در حال فعال‌سازی
+              </>
+            ) : (
+              'فعال‌سازی'
+            )}
           </Button>
           <Button
             onClick={handleDismiss}
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0 flex-shrink-0"
+            disabled={enabling}
           >
             <X className="h-4 w-4" />
           </Button>
