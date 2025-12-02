@@ -45,7 +45,7 @@ import {
   Printer
 } from "lucide-react";
 import { RatingForm } from "@/components/ratings/RatingForm";
-import { useRatingCriteria, useProjectRatings, useCreateRating } from "@/hooks/useRatings";
+import { useProjectRatings, RatingCriteria } from "@/hooks/useRatings";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -174,10 +174,20 @@ export default function OrderDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  
-  // Fetch rating data
-  const { data: staffCriteria } = useRatingCriteria('customer_to_staff');
-  const { data: contractorCriteria } = useRatingCriteria('customer_to_contractor');
+   
+  // معیارهای ثابت امتیازدهی - بدون نیاز به کوئری دیتابیس
+  const staffCriteria: RatingCriteria[] = [
+    { id: '1', rating_type: 'customer_to_staff', key: 'support', title: 'کیفیت پشتیبانی', description: 'نحوه پاسخگویی و پشتیبانی', weight: 1, is_active: true },
+    { id: '2', rating_type: 'customer_to_staff', key: 'execution_quality', title: 'کیفیت اجرایی', description: 'کیفیت کار انجام شده', weight: 1, is_active: true },
+    { id: '3', rating_type: 'customer_to_staff', key: 'staff_behavior', title: 'برخورد مناسب نیروها', description: 'نحوه برخورد و رفتار پرسنل', weight: 1, is_active: true },
+  ];
+
+  const contractorCriteria: RatingCriteria[] = [
+    { id: '4', rating_type: 'customer_to_contractor', key: 'overall_performance', title: 'عملکرد کلی', description: 'عملکرد کلی مدیر اجرایی', weight: 1, is_active: true },
+    { id: '5', rating_type: 'customer_to_contractor', key: 'timely_approval', title: 'تایید به موقع', description: 'سرعت تایید سفارش', weight: 1, is_active: true },
+    { id: '6', rating_type: 'customer_to_contractor', key: 'order_followup', title: 'پیگیری سفارش', description: 'پیگیری و هماهنگی سفارش', weight: 1, is_active: true },
+  ];
+
   const { data: projectRatings, refetch: refetchRatings } = useProjectRatings(id || '');
 
   useEffect(() => {
@@ -2026,7 +2036,7 @@ export default function OrderDetail() {
                   ratedUserId={ratingType === 'customer_to_staff' ? staffId! : contractorId!}
                   ratedUserName={ratedUserName}
                   ratingType={ratingType}
-                  criteria={ratingType === 'customer_to_staff' ? staffCriteria || [] : contractorCriteria || []}
+                  criteria={ratingType === 'customer_to_staff' ? staffCriteria : contractorCriteria}
                   onSuccess={() => {
                     setShowRatingForm(false);
                     refetchRatings();
