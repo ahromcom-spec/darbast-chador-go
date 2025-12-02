@@ -324,14 +324,28 @@ export default function OrderDetail() {
       setNotesParseError(false);
       if (orderData.notes) {
         try {
-          const notes = typeof orderData.notes === 'string'
-            ? JSON.parse(orderData.notes)
-            : orderData.notes;
-
-          // استفاده مستقیم از notes بدون فیلتر کردن
-          setParsedNotes(notes);
+          let notes = orderData.notes;
+          
+          // Handle string that needs parsing
+          if (typeof notes === 'string') {
+            notes = JSON.parse(notes);
+          }
+          
+          // Handle double-stringified JSON (stored as '"{...}"')
+          if (typeof notes === 'string') {
+            notes = JSON.parse(notes);
+          }
+          
+          // Ensure we have an object
+          if (notes && typeof notes === 'object') {
+            console.log('Parsed notes:', notes);
+            setParsedNotes(notes);
+          } else {
+            console.warn('Notes is not a valid object:', notes);
+            setParsedNotes(null);
+          }
         } catch (e) {
-          console.error('Error parsing notes:', e);
+          console.error('Error parsing notes:', e, 'Raw notes:', orderData.notes);
           setParsedNotes(null);
           setNotesParseError(true);
         }
