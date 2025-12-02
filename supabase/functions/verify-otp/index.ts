@@ -174,10 +174,6 @@ serve(async (req) => {
       return await supabase.auth.signInWithPassword({ email, password: loginPassword });
     };
 
-    // Small random delay to reduce timing side-channels
-    const randomDelay = Math.floor(Math.random() * 100) + 50;
-    await new Promise((r) => setTimeout(r, randomDelay));
-
     if (is_registration) {
       // Registration flow: prevent duplicate signups
       const { data: created, error: createErr } = await supabase.auth.admin.createUser({
@@ -285,8 +281,8 @@ serve(async (req) => {
       }
     }
 
-    // Clean up old OTP codes
-    await supabase.rpc('cleanup_expired_otps');
+    // Clean up old OTP codes in background (non-blocking)
+    Promise.resolve(supabase.rpc('cleanup_expired_otps')).catch(() => {});
 
     return new Response(
       JSON.stringify({ success: true, session, message: 'ورود با موفقیت انجام شد' }),
