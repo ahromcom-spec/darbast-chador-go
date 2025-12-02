@@ -4,18 +4,21 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { sendNotificationSchema } from '@/lib/rpcValidation';
 
 interface ExecutiveStage {
   key: string;
   label: string;
   order: number;
+  statusMapping: string; // وضعیت متناظر در projects_v3.status
 }
 
+// مراحل اجرایی با mapping به status
 const executiveStages: ExecutiveStage[] = [
-  { key: 'awaiting_payment', label: 'در انتظار پرداخت', order: 1 },
-  { key: 'order_executed', label: 'سفارش اجرا شده', order: 2 },
-  { key: 'awaiting_collection', label: 'سفارش در انتظار جمع‌آوری', order: 3 },
-  { key: 'in_collection', label: 'سفارش در حال جمع‌آوری', order: 4 },
+  { key: 'awaiting_payment', label: 'در انتظار پرداخت', order: 1, statusMapping: 'completed' },
+  { key: 'order_executed', label: 'سفارش اجرا شده', order: 2, statusMapping: 'completed' },
+  { key: 'awaiting_collection', label: 'سفارش در انتظار جمع‌آوری', order: 3, statusMapping: 'completed' },
+  { key: 'in_collection', label: 'سفارش در حال جمع‌آوری', order: 4, statusMapping: 'completed' },
 ];
 
 interface ExecutiveStageTimelineProps {
@@ -51,19 +54,76 @@ export const ExecutiveStageTimeline = ({
 
     setUpdating(true);
     try {
+      // دریافت اطلاعات سفارش برای ارسال اعلان
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('customer_id, code')
+        .eq('id', projectId)
+        .single();
+
+      // به‌روزرسانی هم execution_stage و هم status
+      const updateData: any = {
+        execution_stage: stage.key as 'awaiting_payment' | 'order_executed' | 'awaiting_collection' | 'in_collection',
+        execution_stage_updated_at: new Date().toISOString(),
+        status: stage.statusMapping as 'completed'
+      };
+
       const { error } = await supabase
         .from('projects_v3')
-        .update({
-          execution_stage: stage.key as 'awaiting_payment' | 'order_executed' | 'awaiting_collection' | 'in_collection',
-          execution_stage_updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', projectId);
 
       if (error) throw error;
 
+      // ارسال اعلان به مشتری
+      if (orderData?.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', orderData.customer_id)
+          .single();
+
+        if (customerData?.user_id) {
+          const stageMessages: Record<string, { title: string; body: string }> = {
+            awaiting_payment: {
+              title: '💰 سفارش در انتظار پرداخت',
+              body: `سفارش ${orderData.code} اجرا شده و منتظر پرداخت شماست.`
+            },
+            order_executed: {
+              title: '✅ سفارش اجرا شد',
+              body: `سفارش ${orderData.code} با موفقیت اجرا شد.`
+            },
+            awaiting_collection: {
+              title: '📦 سفارش در انتظار جمع‌آوری',
+              body: `سفارش ${orderData.code} آماده جمع‌آوری است.`
+            },
+            in_collection: {
+              title: '🚚 جمع‌آوری در حال انجام',
+              body: `جمع‌آوری سفارش ${orderData.code} آغاز شده است.`
+            }
+          };
+
+          const message = stageMessages[stage.key];
+          if (message) {
+            try {
+              const validated = sendNotificationSchema.parse({
+                _user_id: customerData.user_id,
+                _title: message.title,
+                _body: message.body,
+                _link: '/user/my-orders',
+                _type: 'info'
+              });
+              await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+            } catch (notifError) {
+              console.error('Error sending notification:', notifError);
+            }
+          }
+        }
+      }
+
       toast({
         title: '✓ مرحله به‌روزرسانی شد',
-        description: `سفارش به مرحله "${stage.label}" منتقل شد.`
+        description: `سفارش به مرحله "${stage.label}" منتقل شد و به مشتری اطلاع داده شد.`
       });
 
       onStageChange?.();

@@ -66,6 +66,8 @@ interface Order {
   approved_by?: string;
   execution_start_date?: string;
   execution_end_date?: string;
+  execution_stage?: string | null;
+  execution_stage_updated_at?: string | null;
   payment_amount?: number;
   payment_method?: string;
   payment_confirmed_at?: string;
@@ -1287,6 +1289,8 @@ export default function OrderDetail() {
             executionEndDate={order.execution_end_date}
             customerCompletionDate={order.customer_completion_date}
             rejectionReason={order.rejection_reason}
+            executionStage={order.execution_stage}
+            executionStageUpdatedAt={order.execution_stage_updated_at}
             approvals={approvals}
           />
 

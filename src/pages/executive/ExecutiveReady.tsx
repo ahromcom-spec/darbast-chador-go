@@ -147,29 +147,61 @@ export default function ExecutiveReady() {
   const handleStageUpdate = async (orderId: string, newStage: string, orderCode: string) => {
     setUpdatingStage(true);
     try {
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('customer_id')
+        .eq('id', orderId)
+        .single();
+
       const { error } = await supabase
         .from('projects_v3')
         .update({ 
           execution_stage: newStage as 'awaiting_payment' | 'order_executed' | 'awaiting_collection' | 'in_collection',
-          execution_stage_updated_at: new Date().toISOString()
+          execution_stage_updated_at: new Date().toISOString(),
+          status: 'completed'
         })
         .eq('id', orderId);
 
       if (error) throw error;
 
+      if (orderData?.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', orderData.customer_id)
+          .single();
+
+        if (customerData?.user_id) {
+          const stageMessages: Record<string, { title: string; body: string }> = {
+            awaiting_payment: { title: '💰 در انتظار پرداخت', body: `سفارش ${orderCode} منتظر پرداخت شماست.` },
+            order_executed: { title: '✅ سفارش اجرا شد', body: `سفارش ${orderCode} با موفقیت اجرا شد.` },
+            awaiting_collection: { title: '📦 در انتظار جمع‌آوری', body: `سفارش ${orderCode} آماده جمع‌آوری است.` },
+            in_collection: { title: '🚚 در حال جمع‌آوری', body: `جمع‌آوری سفارش ${orderCode} آغاز شد.` }
+          };
+          const message = stageMessages[newStage];
+          if (message) {
+            try {
+              const validated = sendNotificationSchema.parse({
+                _user_id: customerData.user_id,
+                _title: message.title,
+                _body: message.body,
+                _link: '/user/my-orders',
+                _type: 'info'
+              });
+              await supabase.rpc('send_notification', validated as any);
+            } catch (e) { console.error('Notification error:', e); }
+          }
+        }
+      }
+
       toast({
         title: '✓ مرحله به‌روزرسانی شد',
-        description: `مرحله سفارش ${orderCode} به "${stageLabels[newStage]}" تغییر یافت.`
+        description: `سفارش ${orderCode} به "${stageLabels[newStage]}" منتقل شد.`
       });
-
       fetchOrders();
     } catch (error) {
       console.error('Error updating stage:', error);
-      toast({
-        variant: 'destructive',
-        title: 'خطا',
-        description: 'خطا در به‌روزرسانی مرحله'
-      });
+      toast({ variant: 'destructive', title: 'خطا', description: 'خطا در به‌روزرسانی مرحله' });
     } finally {
       setUpdatingStage(false);
     }
