@@ -43,6 +43,7 @@ export const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
   const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string }>>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchMedia = async () => {
@@ -64,6 +65,39 @@ export const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
     fetchMedia();
   }, [orderId]);
 
+  useEffect(() => {
+    const fetchUrls = async () => {
+      const urls: Record<string, string> = {};
+      for (const item of media) {
+        try {
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from('project-media')
+            .createSignedUrl(item.file_path, 3600);
+          
+          if (signedData?.signedUrl && !signedError) {
+            urls[item.id] = signedData.signedUrl;
+          } else {
+            const { data } = supabase.storage.from('project-media').getPublicUrl(item.file_path);
+            urls[item.id] = data.publicUrl;
+          }
+        } catch (err) {
+          console.error('Error getting URL for', item.file_path, err);
+          const { data } = supabase.storage.from('project-media').getPublicUrl(item.file_path);
+          urls[item.id] = data.publicUrl;
+        }
+      }
+      setMediaUrls(urls);
+    };
+    
+    if (media.length > 0) {
+      fetchUrls();
+    }
+  }, [media]);
+
+  const getMediaUrl = (mediaItem: { id: string; file_path: string }) => {
+    return mediaUrls[mediaItem.id] || '';
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center p-4">
@@ -81,11 +115,6 @@ export const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
     );
   }
 
-  const getMediaUrl = (filePath: string) => {
-    const { data } = supabase.storage.from('project-media').getPublicUrl(filePath);
-    return data.publicUrl;
-  };
-
   const currentMedia = media[currentIndex];
   const isVideo = currentMedia?.file_type?.includes('video');
 
@@ -98,13 +127,13 @@ export const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
       <div className="relative bg-black/5 rounded-lg overflow-hidden">
         {isVideo ? (
           <video
-            src={getMediaUrl(currentMedia.file_path)}
+            src={getMediaUrl(currentMedia)}
             controls
             className="w-full max-h-64 object-contain"
           />
         ) : (
           <img
-            src={getMediaUrl(currentMedia.file_path)}
+            src={getMediaUrl(currentMedia)}
             alt={`تصویر ${currentIndex + 1}`}
             className="w-full max-h-64 object-contain"
           />
