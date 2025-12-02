@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { DollarSign, Eye, Search, MapPin, Phone, User, CheckCircle2, Calendar, ImageIcon, ChevronLeft, ChevronRight, Ruler, FileText, Layers } from 'lucide-react';
+import { DollarSign, Eye, Search, MapPin, Phone, User, CheckCircle2, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -12,7 +12,7 @@ import { ProgressMediaUploader } from '@/components/executive/ProgressMediaUploa
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { Badge } from '@/components/ui/badge';
+import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 
 // Helper function to parse order notes (handles double-stringified JSON)
 const parseOrderNotes = (notes: string | null | undefined): any => {
@@ -29,65 +29,6 @@ const parseOrderNotes = (notes: string | null | undefined): any => {
   } catch {
     return null;
   }
-};
-
-const scaffoldingTypeLabels: Record<string, string> = {
-  facade: 'داربست سطحی نما',
-  formwork: 'داربست حجمی کفراژ',
-  ceiling: 'داربست زیربتن سقف',
-  column: 'داربست ستونی',
-  pipe_length: 'داربست به طول لوله مصرفی'
-};
-
-const ceilingSubtypeLabels: Record<string, string> = {
-  yonolit: 'تیرچه یونولیت',
-  ceramic: 'تیرچه سفال',
-  slab: 'دال و وافل'
-};
-
-// Media gallery component for orders
-const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
-  const [media, setMedia] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const fetchMedia = async () => {
-      const { data } = await supabase
-        .from('project_media')
-        .select('*')
-        .eq('project_id', orderId)
-        .order('created_at', { ascending: false });
-      setMedia(data || []);
-      setLoading(false);
-    };
-    fetchMedia();
-  }, [orderId]);
-
-  if (loading) return <div className="text-center py-4 text-muted-foreground text-sm">در حال بارگذاری...</div>;
-  if (media.length === 0) return <div className="text-center py-4 text-muted-foreground text-sm flex flex-col items-center gap-2"><ImageIcon className="h-8 w-8 opacity-40" /><span>تصویری آپلود نشده است</span></div>;
-
-  const currentMedia = media[currentIndex];
-  const { data: urlData } = supabase.storage.from('project-media').getPublicUrl(currentMedia.file_path);
-
-  return (
-    <div className="space-y-2">
-      <div className="relative bg-muted rounded-lg overflow-hidden aspect-video flex items-center justify-center">
-        {currentMedia.file_type === 'video' ? (
-          <video src={urlData.publicUrl} controls className="max-h-full max-w-full" />
-        ) : (
-          <img src={urlData.publicUrl} alt="Order media" className="max-h-full max-w-full object-contain" />
-        )}
-      </div>
-      {media.length > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => setCurrentIndex(i => i > 0 ? i - 1 : media.length - 1)}><ChevronRight className="h-4 w-4" /></Button>
-          <span className="text-sm text-muted-foreground">{currentIndex + 1} / {media.length}</span>
-          <Button variant="ghost" size="icon" onClick={() => setCurrentIndex(i => i < media.length - 1 ? i + 1 : 0)}><ChevronLeft className="h-4 w-4" /></Button>
-        </div>
-      )}
-    </div>
-  );
 };
 
 interface Order {
@@ -305,159 +246,19 @@ export default function ExecutiveCompleted() {
           <DialogHeader>
             <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
           </DialogHeader>
-          {selectedOrder && (() => {
-            const parsedNotes = selectedOrder.notes;
-            const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
-            const dimensions = parsedNotes?.dimensions;
-            const totalArea = parsedNotes?.totalArea || parsedNotes?.total_area;
-            const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
-            const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes;
-            const estimatedPrice = parsedNotes?.estimated_price || parsedNotes?.price || parsedNotes?.totalPrice || selectedOrder.payment_amount;
-            const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
-
-            return (
-              <div className="space-y-4 py-4">
-                {/* Customer Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">نام مشتری</Label>
-                    <p className="font-medium">{selectedOrder.customer_name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">شماره تماس</Label>
-                    <p className="font-medium" dir="ltr">{selectedOrder.customer_phone}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <Label className="text-xs text-muted-foreground">آدرس</Label>
-                  <p className="font-medium">{selectedOrder.address}</p>
-                </div>
-                
-                {selectedOrder.detailed_address && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">آدرس تفصیلی</Label>
-                    <p className="font-medium">{selectedOrder.detailed_address}</p>
-                  </div>
-                )}
-
-                <Separator />
-
-                {/* Technical Details */}
-                {scaffoldingType && (
-                  <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Layers className="h-4 w-4 text-primary" />
-                      <span className="font-semibold">مشخصات فنی</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">نوع داربست</Label>
-                        <p className="font-medium">{scaffoldingTypeLabels[scaffoldingType] || scaffoldingType}</p>
-                      </div>
-                      
-                      {ceilingSubtype && (
-                        <div>
-                          <Label className="text-xs text-muted-foreground">زیرنوع</Label>
-                          <p className="font-medium">{ceilingSubtypeLabels[ceilingSubtype] || ceilingSubtype}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Dimensions */}
-                    {dimensions && Array.isArray(dimensions) && dimensions.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Ruler className="h-4 w-4 text-muted-foreground" />
-                          <Label className="text-xs text-muted-foreground">ابعاد</Label>
-                        </div>
-                        <div className="grid gap-2">
-                          {dimensions.map((dim: any, idx: number) => (
-                            <div key={idx} className="bg-background p-2 rounded border text-sm">
-                              طول: {dim.length || '-'} × عرض: {dim.width || '-'} × ارتفاع: {dim.height || '-'} متر
-                              {dim.unitCount && <span className="text-muted-foreground"> ({dim.unitCount} یونیت)</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Direct dimensions (not array) */}
-                    {dimensions && !Array.isArray(dimensions) && (
-                      <div className="bg-background p-2 rounded border text-sm">
-                        <Ruler className="h-4 w-4 inline mr-1 text-muted-foreground" />
-                        طول: {dimensions.length || '-'} × عرض: {dimensions.width || '-'} × ارتفاع: {dimensions.height || '-'} متر
-                      </div>
-                    )}
-
-                    {/* Single dimension fields */}
-                    {!dimensions && (parsedNotes?.length || parsedNotes?.width || parsedNotes?.height) && (
-                      <div className="bg-background p-2 rounded border text-sm">
-                        <Ruler className="h-4 w-4 inline mr-1 text-muted-foreground" />
-                        طول: {parsedNotes.length || '-'} × عرض: {parsedNotes.width || '-'} × ارتفاع: {parsedNotes.height || '-'} متر
-                      </div>
-                    )}
-
-                    {totalArea && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">مساحت کل</Label>
-                        <p className="font-medium">{totalArea} متر مربع</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Description */}
-                {description && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <Label className="text-xs text-muted-foreground">شرح محل نصب و نوع فعالیت</Label>
-                    </div>
-                    <p className="text-sm bg-muted/50 p-3 rounded-lg">{description}</p>
-                  </div>
-                )}
-
-                {/* Conditions */}
-                {conditions && Array.isArray(conditions) && conditions.length > 0 && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground mb-2 block">شرایط خدمات</Label>
-                    <div className="flex flex-wrap gap-1">
-                      {conditions.map((cond: string, i: number) => (
-                        <Badge key={i} variant="secondary" className="text-xs">{cond}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Price */}
-                {estimatedPrice && (
-                  <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg">
-                    <Label className="text-xs text-muted-foreground">مبلغ سفارش</Label>
-                    <p className="font-bold text-lg text-green-700 dark:text-green-300">
-                      {Number(estimatedPrice).toLocaleString('fa-IR')} تومان
-                    </p>
-                  </div>
-                )}
-
-                <Separator />
-
-                {/* Media Gallery */}
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-2 block">تصاویر و ویدیوهای سفارش</Label>
-                  <OrderMediaGallery orderId={selectedOrder.id} />
-                </div>
-
-                {/* Progress Media Uploader */}
-                <ProgressMediaUploader
-                  projectId={selectedOrder.id}
-                  stage="completed"
-                  stageName="تکمیل شده"
-                />
-              </div>
-            );
-          })()}
+          {selectedOrder && (
+            <div className="space-y-4 py-4">
+              <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} />
+              
+              {/* Progress Media Uploader */}
+              <Separator />
+              <ProgressMediaUploader
+                projectId={selectedOrder.id}
+                stage="completed"
+                stageName="تکمیل شده"
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

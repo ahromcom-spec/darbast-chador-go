@@ -14,28 +14,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
 import { setOrderScheduleSchema } from '@/lib/rpcValidation';
-import { OrderDetailsView, parseOrderNotes, OrderMediaGallery } from '@/components/orders/OrderDetailsView';
+import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
+import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 
-const scaffoldingTypeLabels: Record<string, string> = {
-  facade: 'داربست سطحی نما',
-  formwork: 'داربست حجمی کفراژ',
-  ceiling: 'داربست زیربتن سقف',
-  column: 'داربست ستونی',
-  pipe_length: 'داربست به طول لوله مصرفی'
-};
-
-const ceilingSubtypeLabels: Record<string, string> = {
-  yonolit: 'تیرچه یونولیت',
-  ceramic: 'تیرچه سفال',
-  slab: 'دال و وافل'
-};
-
-// Component to display order technical details (using shared component with extra fields)
-const OrderDetailsContent = ({ order, getStatusBadge }: { order: Order; getStatusBadge: (status: string) => JSX.Element }) => {
+// Component to display order technical details with edit capability
+const OrderDetailsContent = ({ order, getStatusBadge, onUpdate }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void }) => {
   return (
     <div className="space-y-4">
-      {/* Use shared component for basic details */}
-      <OrderDetailsView order={order} showMedia={true} />
+      {/* Use editable component for details */}
+      <EditableOrderDetails order={order} onUpdate={onUpdate} />
       
       {/* Additional execution-specific info */}
       {order.execution_start_date && (
@@ -784,7 +771,7 @@ export default function ExecutiveOrders() {
             <DialogDescription>اطلاعات جامع سفارش</DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} />
+            <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={fetchOrders} />
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>

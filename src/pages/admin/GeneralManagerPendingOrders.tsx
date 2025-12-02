@@ -20,7 +20,8 @@ import {
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { formatPersianDate } from '@/lib/dateUtils';
-import { OrderDetailsView, parseOrderNotes } from '@/components/orders/OrderDetailsView';
+import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
+import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 
 interface Order {
   id: string;
@@ -274,7 +275,7 @@ export default function GeneralManagerPendingOrders() {
             <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <OrderDetailsView order={selectedOrder} showMedia={true} />
+            <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} />
           )}
         </DialogContent>
       </Dialog>
