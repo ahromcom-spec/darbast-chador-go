@@ -361,7 +361,18 @@ export default function Register() {
                   <InputOTP
                     maxLength={5}
                     value={otpCode}
-                    onChange={(value) => setOtpCode(value)}
+                    onChange={(value) => {
+                      setOtpCode(value);
+                      // تایید خودکار وقتی کد کامل شد
+                      if (value.length === 5 && !loading) {
+                        setTimeout(() => {
+                          const form = document.querySelector('form');
+                          form?.requestSubmit();
+                        }, 100);
+                      }
+                    }}
+                    inputMode="numeric"
+                    autoFocus
                   >
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
