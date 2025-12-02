@@ -1,8 +1,8 @@
-const CACHE_VERSION = 'ahrom-v17-hard-refresh';
+const CACHE_VERSION = 'ahrom-v18-push';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
-// فایل‌های ضروری برای نصب اولیه (App Shell) - با آیکون‌های PWA جدید
+// فایل‌های ضروری برای نصب اولیه (App Shell)
 const SHELL_FILES = [
   '/',
   '/index.html',
@@ -57,7 +57,6 @@ self.addEventListener('activate', (event) => {
     await Promise.all(
       keys.map((request) => {
         const url = new URL(request.url);
-        // حذف آیکون‌های قدیمی که ممکن است با نام دیگر کش شده باشند
         if (url.pathname.includes('icon-') || 
             url.pathname.includes('apple-touch') ||
             (url.pathname.includes('ahrom') && !url.pathname.includes('pwa-icon'))) {
@@ -72,10 +71,109 @@ self.addEventListener('activate', (event) => {
       try { await self.registration.navigationPreload.enable(); } catch (e) {}
     }
 
-    console.log('[SW] Service Worker activated with new PWA icons');
+    console.log('[SW] Service Worker activated with Push Notification support');
     await self.clients.claim();
   })());
 });
+
+// ==================== PUSH NOTIFICATIONS ====================
+
+// دریافت Push Notification
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received');
+  
+  let data = {
+    title: 'اعلان جدید',
+    body: 'شما یک اعلان جدید دارید',
+    link: '/',
+    type: 'info'
+  };
+
+  try {
+    if (event.data) {
+      const payload = event.data.json();
+      data = { ...data, ...payload };
+    }
+  } catch (e) {
+    console.error('[SW] Error parsing push data:', e);
+    if (event.data) {
+      data.body = event.data.text();
+    }
+  }
+
+  // انتخاب آیکون بر اساس نوع اعلان
+  let icon = '/ahrom-pwa-icon.png';
+  let badge = '/ahrom-app-icon.png';
+
+  const options = {
+    body: data.body,
+    icon: icon,
+    badge: badge,
+    vibrate: [200, 100, 200],
+    dir: 'rtl',
+    lang: 'fa',
+    tag: `ahrom-${data.type || 'notification'}-${Date.now()}`,
+    renotify: true,
+    requireInteraction: data.type === 'error' || data.type === 'warning',
+    data: {
+      link: data.link || '/',
+      type: data.type,
+      timestamp: data.timestamp || new Date().toISOString()
+    },
+    actions: [
+      {
+        action: 'open',
+        title: 'مشاهده'
+      },
+      {
+        action: 'dismiss',
+        title: 'بستن'
+      }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// کلیک روی نوتیفیکیشن
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked:', event.action);
+  
+  event.notification.close();
+
+  // اگر روی دکمه بستن کلیک شد
+  if (event.action === 'dismiss') {
+    return;
+  }
+
+  const link = event.notification.data?.link || '/';
+  const urlToOpen = new URL(link, self.location.origin).href;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // اگر پنجره‌ای از اپلیکیشن باز است، آن را فوکوس کن
+        for (const client of clientList) {
+          if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+            return client.navigate(urlToOpen).then(() => client.focus());
+          }
+        }
+        // اگر هیچ پنجره‌ای باز نیست، یکی باز کن
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});
+
+// بستن نوتیفیکیشن
+self.addEventListener('notificationclose', (event) => {
+  console.log('[SW] Notification closed');
+});
+
+// ==================== CACHING ====================
 
 // محدود کردن سایز کش Runtime
 async function trimCache(cacheName, maxItems) {
@@ -114,7 +212,6 @@ self.addEventListener('fetch', (event) => {
         if (response.status === 200) {
           const cache = await caches.open(RUNTIME_CACHE);
           cache.put(request, response.clone());
-          // محدود کردن سایز کش
           trimCache(RUNTIME_CACHE, MAX_RUNTIME_CACHE_SIZE);
         }
         return response;
@@ -127,7 +224,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // فایل‌های استاتیک (JS, CSS، فونت، تصاویر): Network Only برای جلوگیری از ناسازگاری نسخه‌ها
+  // فایل‌های استاتیک (JS, CSS، فونت): Network Only
   if (request.destination === 'script' || 
       request.destination === 'style' || 
       request.destination === 'font') {
@@ -135,7 +232,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // تصاویر: Stale-While-Revalidate سبک
+  // تصاویر: Stale-While-Revalidate
   if (request.destination === 'image') {
     event.respondWith(
       caches.match(request).then((cached) => {
