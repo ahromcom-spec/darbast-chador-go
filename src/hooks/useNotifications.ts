@@ -12,27 +12,39 @@ interface Notification {
   created_at: string;
 }
 
-// پخش صدای اعلان
-const playNotificationSound = () => {
-  try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.4);
-  } catch (error) {
-    console.log('Could not play notification sound:', error);
+// نمایش اعلان سیستمی با صدا
+const showSystemNotification = (title: string, body: string, link?: string) => {
+  // بررسی پشتیبانی و مجوز
+  if (!('Notification' in window)) {
+    console.log('Browser does not support notifications');
+    return;
+  }
+  
+  if (Notification.permission === 'granted') {
+    try {
+      const notification = new Notification(title, {
+        body: body,
+        icon: '/ahrom-pwa-icon.png',
+        badge: '/ahrom-pwa-icon.png',
+        tag: `ahrom-${Date.now()}`, // یکتا برای هر اعلان
+        requireInteraction: false,
+        silent: false // صدای پیش‌فرض سیستم پخش شود
+      });
+      
+      // کلیک روی اعلان
+      notification.onclick = () => {
+        window.focus();
+        if (link) {
+          window.location.href = link;
+        }
+        notification.close();
+      };
+      
+      // بستن خودکار بعد از 5 ثانیه
+      setTimeout(() => notification.close(), 5000);
+    } catch (error) {
+      console.log('Error showing notification:', error);
+    }
   }
 };
 
@@ -94,10 +106,11 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          // پخش صدا برای اعلان جدید
-          playNotificationSound();
-          
           const newNotif = payload.new as Notification;
+          
+          // نمایش اعلان سیستمی با صدا
+          showSystemNotification(newNotif.title, newNotif.body, newNotif.link);
+          
           setNotifications(prev => [newNotif, ...prev.slice(0, 19)]);
           setUnreadCount(prev => prev + 1);
           lastNotificationIdRef.current = newNotif.id;
