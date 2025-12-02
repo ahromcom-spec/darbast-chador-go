@@ -1184,6 +1184,39 @@ export default function ComprehensiveScaffoldingForm({
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardContent className="pt-6">
+          {/* راهنمای انواع داربست */}
+          <Collapsible className="mb-4">
+            <CollapsibleTrigger className="flex items-center gap-2 text-primary hover:text-primary/80 font-medium text-sm cursor-pointer w-full justify-end">
+              <HelpCircle className="h-4 w-4" />
+              <span>راهنمای انتخاب نوع داربست</span>
+              <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3 text-sm text-right border border-border/50">
+                <div className="border-b border-border/30 pb-3">
+                  <h4 className="font-bold text-foreground mb-1">داربست سطحی نما:</h4>
+                  <p className="text-muted-foreground leading-relaxed">داربست‌های سطحی برای نماکاری، سیمانکاری، دیوارچینی و محیط‌هایی که برای یک بدنه سطح مربع می‌خواهند فعالیتی در ارتفاع انجام دهند مورد استفاده قرار می‌گیرد.</p>
+                </div>
+                <div className="border-b border-border/30 pb-3">
+                  <h4 className="font-bold text-foreground mb-1">داربست حجمی کفراژ:</h4>
+                  <p className="text-muted-foreground leading-relaxed">داربست برای محیط‌هایی که به صورت حجمی داربست بسته می‌شود، مثل داربست برای چادر خیمه‌ای یا داخل سالن که می‌خواهند بر روی سقف فعالیتی انجام دهند و یا برای کفراژ پشت داربست برای نگهداری از داربست و یا برای فنس‌کشی بر روی داربست می‌خواهند انجام دهند که باید داربست حجمی نصب شود.</p>
+                </div>
+                <div className="border-b border-border/30 pb-3">
+                  <h4 className="font-bold text-foreground mb-1">داربست زیربتن سقف:</h4>
+                  <p className="text-muted-foreground leading-relaxed">این نوع داربست برای نگهداری وزن سقف در زمان بتن‌ریزی برای سقف بسته می‌شود.</p>
+                </div>
+                <div className="border-b border-border/30 pb-3">
+                  <h4 className="font-bold text-foreground mb-1">داربست ستونی:</h4>
+                  <p className="text-muted-foreground leading-relaxed">این نوع داربست برای محل‌هایی نصب می‌شود که ارتفاع کار از طول و عرض محل فعالیت بیش از اندازه بیشتر باشد.</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-foreground mb-1">داربست به طول لوله مصرفی:</h4>
+                  <p className="text-muted-foreground leading-relaxed">این نوع داربست برای نرده‌کشی و یا اشکالی که در ابعاد و نوع داربست‌های بالا قرار نمی‌گیرد.</p>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
           <div className="space-y-2">
             <Label htmlFor="scaffold-type-select" className="text-foreground font-semibold">نوع داربست مورد نظر خود را انتخاب کنید</Label>
             <Select
