@@ -1881,51 +1881,56 @@ export default function OrderDetail() {
 
                 {/* دکمه‌های امتیازدهی */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* امتیازدهی به پرسنل اداری - پیمانکار واقعی یا اجرایی */}
                   <Button
                     variant="outline"
                     onClick={async () => {
+                      // امتیازدهی به پرسنل اداری شرکت اهرم (contractor_id یا executed_by)
                       let staffUserId: string | null = null;
-                      let staffName: string = 'پرسنل';
+                      let staffName: string = 'پرسنل اداری';
 
-                      // First try to get staff who worked on this project from order_approvals
-                      const { data: approvals } = await supabase
-                        .from('order_approvals')
-                        .select('approver_user_id, approver_role')
-                        .eq('order_id', order.id)
-                        .not('approver_user_id', 'is', null);
-                      
-                      const staffApproval = approvals?.find(a => 
-                        a.approver_role === 'scaffold_executive_manager' || 
-                        a.approver_role === 'executive_manager_scaffold_execution_with_materials' ||
-                        a.approver_role === 'sales_manager' ||
-                        a.approver_role === 'ceo'
-                      );
-                      
-                      if (staffApproval?.approver_user_id) {
-                        staffUserId = staffApproval.approver_user_id;
-                      } else if (order.approved_by) {
-                        // Fallback to approved_by from the order itself
-                        staffUserId = order.approved_by;
+                      // Query order details
+                      const { data: orderData } = await supabase
+                        .from('projects_v3')
+                        .select('contractor_id, executed_by')
+                        .eq('id', order.id)
+                        .single();
+
+                      // First check for contractor assigned to this project
+                      if (orderData?.contractor_id) {
+                        const { data: contractorData } = await supabase
+                          .from('contractors')
+                          .select('user_id, company_name')
+                          .eq('id', orderData.contractor_id)
+                          .single();
+                        
+                        if (contractorData?.user_id) {
+                          staffUserId = contractorData.user_id;
+                          staffName = contractorData.company_name || 'پرسنل اداری';
+                        }
                       }
                       
-                      if (staffUserId) {
-                        // Get staff name
+                      // Fallback to executed_by if no contractor
+                      if (!staffUserId && orderData?.executed_by) {
+                        staffUserId = orderData.executed_by;
                         const { data: profile } = await supabase
                           .from('profiles')
                           .select('full_name')
                           .eq('user_id', staffUserId)
                           .single();
-                        
-                        staffName = profile?.full_name || 'پرسنل';
+                        staffName = profile?.full_name || 'پرسنل اداری';
+                      }
+                      
+                      if (staffUserId) {
                         setStaffId(staffUserId);
                         setRatedUserName(staffName);
                         setRatingType('customer_to_staff');
                         setShowRatingForm(true);
                       } else {
                         toast({
-                          title: 'خطا',
-                          description: 'پرسنلی برای این سفارش یافت نشد',
-                          variant: 'destructive'
+                          title: 'اطلاع',
+                          description: 'پرسنل اداری برای این سفارش یافت نشد',
+                          variant: 'default'
                         });
                       }
                     }}
@@ -1938,44 +1943,56 @@ export default function OrderDetail() {
                       : 'امتیازدهی به پرسنل'}
                   </Button>
 
+                  {/* امتیازدهی به پیمانکار - مدیر تایید کننده سفارش */}
                   <Button
                     variant="outline"
                     onClick={async () => {
-                      // Get contractor assigned to this project
-                      if (order.status === 'completed' || order.status === 'paid' || order.status === 'closed') {
-                        const { data: projectData } = await supabase
-                          .from('projects_v3')
-                          .select('contractor_id')
-                          .eq('id', order.id)
+                      // امتیازدهی به مدیر تایید کننده سفارش (approved_by)
+                      let contractorUserId: string | null = null;
+                      let contractorName: string = 'پیمانکار';
+
+                      // First try approved_by from order
+                      if (order.approved_by) {
+                        contractorUserId = order.approved_by;
+                      } else {
+                        // Fallback to order_approvals
+                        const { data: approvals } = await supabase
+                          .from('order_approvals')
+                          .select('approver_user_id, approver_role')
+                          .eq('order_id', order.id)
+                          .not('approver_user_id', 'is', null);
+                        
+                        const staffApproval = approvals?.find(a => 
+                          a.approver_role === 'scaffold_executive_manager' || 
+                          a.approver_role === 'executive_manager_scaffold_execution_with_materials' ||
+                          a.approver_role === 'sales_manager' ||
+                          a.approver_role === 'ceo'
+                        );
+                        
+                        if (staffApproval?.approver_user_id) {
+                          contractorUserId = staffApproval.approver_user_id;
+                        }
+                      }
+                      
+                      if (contractorUserId) {
+                        // Get manager name
+                        const { data: profile } = await supabase
+                          .from('profiles')
+                          .select('full_name')
+                          .eq('user_id', contractorUserId)
                           .single();
                         
-                        if (projectData?.contractor_id) {
-                          // Get contractor's user_id and name
-                          const { data: contractorData } = await supabase
-                            .from('contractors')
-                            .select('user_id, company_name')
-                            .eq('id', projectData.contractor_id)
-                            .single();
-                          
-                          if (contractorData?.user_id) {
-                            setContractorId(contractorData.user_id);
-                            setRatedUserName(contractorData.company_name || 'پیمانکار');
-                            setRatingType('customer_to_contractor');
-                            setShowRatingForm(true);
-                          } else {
-                            toast({
-                              title: 'اطلاع',
-                              description: 'پیمانکاری برای این سفارش تخصیص داده نشده',
-                              variant: 'default'
-                            });
-                          }
-                        } else {
-                          toast({
-                            title: 'اطلاع',
-                            description: 'پیمانکاری برای این سفارش تخصیص داده نشده',
-                            variant: 'default'
-                          });
-                        }
+                        contractorName = profile?.full_name || 'پیمانکار';
+                        setContractorId(contractorUserId);
+                        setRatedUserName(contractorName);
+                        setRatingType('customer_to_contractor');
+                        setShowRatingForm(true);
+                      } else {
+                        toast({
+                          title: 'اطلاع',
+                          description: 'مدیر تایید کننده برای این سفارش یافت نشد',
+                          variant: 'default'
+                        });
                       }
                     }}
                     className="gap-2"
