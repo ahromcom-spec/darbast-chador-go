@@ -193,19 +193,23 @@ const handleResendOTP = async () => {
 
     if (error) {
       const errorMessage = error.message || 'کد تایید نامعتبر است.';
-      const isGenericEdgeError = /non-2xx|Edge Function returned/i.test(errorMessage);
-      // If backend says number is not registered, guide user to registration step
-      if (errorMessage.includes('ثبت نشده') || isGenericEdgeError) {
-        navigate('/auth/register', { state: { phone: phoneNumber } });
+      
+      // فقط در صورتی که خطا صریحاً بگوید کاربر ثبت‌نام نشده، به صفحه ثبت‌نام برود
+      // خطاهای عمومی یا کد اشتباه نباید کاربر را به ثبت‌نام ببرند
+      if (errorMessage.includes('ثبت نشده') && !errorMessage.includes('نامعتبر')) {
+        setStep('not-registered');
         toast({ title: 'نیاز به ثبت‌نام', description: 'برای ادامه، لطفاً ثبت‌نام کنید.' });
         return;
       }
+      
+      // نمایش پیام خطا و ماندن در همین صفحه برای وارد کردن مجدد کد
       toast({
         variant: 'destructive',
-        title: 'خطا',
-        description: errorMessage,
+        title: 'کد تایید اشتباه است',
+        description: 'لطفاً کد تایید را مجدداً وارد کنید.',
       });
-      setErrors({ otp: errorMessage });
+      setErrors({ otp: 'کد تایید اشتباه است. لطفاً مجدداً تلاش کنید.' });
+      setOtpCode(''); // پاک کردن کد اشتباه برای وارد کردن مجدد
       return;
     }
 
