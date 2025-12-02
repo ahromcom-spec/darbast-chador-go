@@ -48,6 +48,46 @@ const OrderDetailsContent = ({ order, getStatusBadge }: { order: Order; getStatu
     slab: 'دال و وافل'
   };
 
+  // Extract dimensions from different data formats
+  const getDimensions = () => {
+    if (!parsedNotes) return null;
+    
+    // Check for dimensions array format (new format)
+    if (parsedNotes.dimensions && Array.isArray(parsedNotes.dimensions) && parsedNotes.dimensions.length > 0) {
+      const dim = parsedNotes.dimensions[0];
+      return {
+        length: dim.length,
+        width: dim.width,
+        height: dim.height
+      };
+    }
+    
+    // Check for direct properties (old format)
+    if (parsedNotes.length || parsedNotes.width || parsedNotes.height) {
+      return {
+        length: parsedNotes.length,
+        width: parsedNotes.width,
+        height: parsedNotes.height
+      };
+    }
+    
+    return null;
+  };
+
+  // Get scaffolding type from different field names
+  const getScaffoldingType = () => {
+    return parsedNotes?.scaffoldingType || parsedNotes?.service_type || null;
+  };
+
+  // Get description from different field names
+  const getDescription = () => {
+    return parsedNotes?.description || parsedNotes?.locationPurpose || null;
+  };
+
+  const dimensions = getDimensions();
+  const scaffoldingType = getScaffoldingType();
+  const description = getDescription();
+
   return (
     <div className="space-y-6">
       {/* Customer Info */}
@@ -56,14 +96,14 @@ const OrderDetailsContent = ({ order, getStatusBadge }: { order: Order; getStatu
           <Label className="text-xs text-muted-foreground">نام مشتری</Label>
           <p className="text-sm font-medium flex items-center gap-2">
             <User className="h-4 w-4 text-primary" />
-            {order.customer_name}
+            {order.customer_name || parsedNotes?.customerName || 'نامشخص'}
           </p>
         </div>
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">شماره تماس</Label>
           <p className="text-sm font-medium flex items-center gap-2" dir="ltr">
             <Phone className="h-4 w-4 text-primary" />
-            {order.customer_phone || '-'}
+            {order.customer_phone || parsedNotes?.phoneNumber || '-'}
           </p>
         </div>
       </div>
@@ -107,12 +147,12 @@ const OrderDetailsContent = ({ order, getStatusBadge }: { order: Order; getStatu
             </Label>
 
             {/* Scaffolding Type */}
-            {parsedNotes.scaffoldingType && (
+            {scaffoldingType && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">نوع داربست:</span>
                   <span className="text-sm font-medium">
-                    {scaffoldingTypeLabels[parsedNotes.scaffoldingType] || parsedNotes.scaffoldingType}
+                    {scaffoldingTypeLabels[scaffoldingType] || scaffoldingType}
                   </span>
                 </div>
                 {parsedNotes.ceilingSubtype && (
@@ -127,29 +167,29 @@ const OrderDetailsContent = ({ order, getStatusBadge }: { order: Order; getStatu
             )}
 
             {/* Dimensions */}
-            {(parsedNotes.length || parsedNotes.width || parsedNotes.height || parsedNotes.pipeLength) && (
+            {dimensions && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                 <Label className="text-xs text-muted-foreground flex items-center gap-2">
                   <Ruler className="h-3 w-3" />
                   ابعاد
                 </Label>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  {parsedNotes.length && (
+                  {dimensions.length && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">طول:</span>
-                      <span className="font-medium">{parsedNotes.length} متر</span>
+                      <span className="font-medium">{dimensions.length} متر</span>
                     </div>
                   )}
-                  {parsedNotes.width && (
+                  {dimensions.width && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">عرض:</span>
-                      <span className="font-medium">{parsedNotes.width} متر</span>
+                      <span className="font-medium">{dimensions.width} متر</span>
                     </div>
                   )}
-                  {parsedNotes.height && (
+                  {dimensions.height && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">ارتفاع:</span>
-                      <span className="font-medium">{parsedNotes.height} متر</span>
+                      <span className="font-medium">{dimensions.height} متر</span>
                     </div>
                   )}
                   {parsedNotes.pipeLength && (
@@ -175,75 +215,85 @@ const OrderDetailsContent = ({ order, getStatusBadge }: { order: Order; getStatu
             )}
 
             {/* Description */}
-            {parsedNotes.description && (
+            {description && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                 <Label className="text-xs text-muted-foreground flex items-center gap-2">
                   <FileText className="h-3 w-3" />
                   شرح محل نصب و فعالیت
                 </Label>
-                <p className="text-sm">{parsedNotes.description}</p>
+                <p className="text-sm">{description}</p>
               </div>
             )}
 
             {/* Service Conditions */}
-            {parsedNotes.conditions && Object.keys(parsedNotes.conditions).length > 0 && (
+            {parsedNotes.conditions && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                 <Label className="text-xs text-muted-foreground">شرایط سرویس</Label>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(parsedNotes.conditions).map(([key, value]) => (
-                    value && (
-                      <Badge key={key} variant="outline" className="text-xs">
-                        {key === 'hasElevator' && 'آسانسور'}
-                        {key === 'hasCrane' && 'جرثقیل'}
-                        {key === 'hasParking' && 'پارکینگ'}
-                        {key === 'needsPermit' && 'نیاز به مجوز'}
-                        {key === 'difficult_access' && 'دسترسی سخت'}
-                        {key === 'night_work' && 'کار شبانه'}
-                      </Badge>
-                    )
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Dates from Notes */}
-            {(parsedNotes.installationDate || parsedNotes.dueDate) && (
-              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                <Label className="text-xs text-muted-foreground">تاریخ‌های درخواستی</Label>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  {parsedNotes.installationDate && (
+                  {parsedNotes.conditions.totalMonths && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">تاریخ نصب:</span>
-                      <span className="font-medium">{formatPersianDate(parsedNotes.installationDate)}</span>
+                      <span className="text-muted-foreground">مدت اجاره:</span>
+                      <span className="font-medium">{parsedNotes.conditions.totalMonths} ماه</span>
                     </div>
                   )}
-                  {parsedNotes.dueDate && (
+                  {parsedNotes.conditions.distanceRange && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">تاریخ فک:</span>
-                      <span className="font-medium">{formatPersianDate(parsedNotes.dueDate)}</span>
+                      <span className="text-muted-foreground">فاصله:</span>
+                      <span className="font-medium">{parsedNotes.conditions.distanceRange} کیلومتر</span>
                     </div>
+                  )}
+                  {parsedNotes.onGround !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">روی زمین:</span>
+                      <span className="font-medium">{parsedNotes.onGround ? 'بله' : 'خیر'}</span>
+                    </div>
+                  )}
+                  {parsedNotes.vehicleReachesSite !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">دسترسی ماشین:</span>
+                      <span className="font-medium">{parsedNotes.vehicleReachesSite ? 'بله' : 'خیر'}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {parsedNotes.conditions.hasElevator && (
+                    <Badge variant="outline" className="text-xs">آسانسور</Badge>
+                  )}
+                  {parsedNotes.conditions.hasCrane && (
+                    <Badge variant="outline" className="text-xs">جرثقیل</Badge>
+                  )}
+                  {parsedNotes.conditions.hasParking && (
+                    <Badge variant="outline" className="text-xs">پارکینگ</Badge>
+                  )}
+                  {parsedNotes.conditions.needsPermit && (
+                    <Badge variant="outline" className="text-xs">نیاز به مجوز</Badge>
+                  )}
+                  {parsedNotes.conditions.difficult_access && (
+                    <Badge variant="outline" className="text-xs">دسترسی سخت</Badge>
                   )}
                 </div>
               </div>
             )}
-          </div>
-        </>
-      )}
 
-      {/* Price */}
-      {order.payment_amount && (
-        <>
-          <Separator />
-          <div className="bg-primary/5 rounded-lg p-3">
-            <div className="flex justify-between items-center">
-              <Label className="text-sm flex items-center gap-2">
-                <Banknote className="h-4 w-4 text-primary" />
-                مبلغ کل
-              </Label>
-              <span className="text-lg font-bold text-primary">
-                {order.payment_amount.toLocaleString('fa-IR')} تومان
-              </span>
-            </div>
+            {/* Price */}
+            {(parsedNotes.estimated_price || order.payment_amount) && (
+              <div className="bg-primary/10 rounded-lg p-3 space-y-2">
+                <Label className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Banknote className="h-3 w-3" />
+                  قیمت
+                </Label>
+                <p className="text-lg font-bold text-primary">
+                  {(parsedNotes.estimated_price || order.payment_amount)?.toLocaleString('fa-IR')} تومان
+                </p>
+                {parsedNotes.price_breakdown && Array.isArray(parsedNotes.price_breakdown) && (
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {parsedNotes.price_breakdown.map((item: string, idx: number) => (
+                      <p key={idx}>{item}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
