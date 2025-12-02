@@ -1210,7 +1210,7 @@ export default function ComprehensiveScaffoldingForm({
               }}
             >
               <SelectTrigger id="scaffold-type-select" className="w-full bg-background">
-                <SelectValue placeholder="یکی از نوع خدمات را انتخاب کنید" />
+                <SelectValue placeholder="یکی از نوع داربست را انتخاب کنید" />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
                 <SelectItem value="facade">داربست سطحی نما</SelectItem>
