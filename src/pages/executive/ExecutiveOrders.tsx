@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -16,18 +16,123 @@ import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
 import { setOrderScheduleSchema } from '@/lib/rpcValidation';
 
 // Helper to parse order notes safely
-const parseOrderNotes = (notes: string | null | undefined) => {
+const parseOrderNotes = (notes: string | null | undefined): any => {
   if (!notes) return null;
   try {
-    let parsed = typeof notes === 'string' ? JSON.parse(notes) : notes;
+    let parsed = notes;
+    // First parse if it's a string
+    if (typeof parsed === 'string') {
+      parsed = JSON.parse(parsed);
+    }
     // Handle double-stringified JSON
     if (typeof parsed === 'string') {
       parsed = JSON.parse(parsed);
     }
     return parsed;
-  } catch {
+  } catch (e) {
+    console.error('Error parsing notes:', e);
     return null;
   }
+};
+
+// Component to display order media
+const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
+  const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string }>>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMedia = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('project_media')
+          .select('id, file_path, file_type')
+          .eq('project_id', orderId)
+          .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        setMedia(data || []);
+      } catch (err) {
+        console.error('Error fetching media:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMedia();
+  }, [orderId]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center p-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (media.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground text-sm p-4 bg-muted/50 rounded-lg">
+        <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        هنوز تصویری برای این سفارش ثبت نشده است
+      </div>
+    );
+  }
+
+  const getMediaUrl = (filePath: string) => {
+    const { data } = supabase.storage.from('project-media').getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const currentMedia = media[currentIndex];
+  const isVideo = currentMedia?.file_type?.includes('video');
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs text-muted-foreground flex items-center gap-2">
+        <ImageIcon className="h-3 w-3" />
+        تصاویر و فایل‌های سفارش ({media.length})
+      </Label>
+      <div className="relative bg-black/5 rounded-lg overflow-hidden">
+        {isVideo ? (
+          <video
+            src={getMediaUrl(currentMedia.file_path)}
+            controls
+            className="w-full max-h-64 object-contain"
+          />
+        ) : (
+          <img
+            src={getMediaUrl(currentMedia.file_path)}
+            alt={`تصویر ${currentIndex + 1}`}
+            className="w-full max-h-64 object-contain"
+          />
+        )}
+        
+        {media.length > 1 && (
+          <>
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
+              onClick={() => setCurrentIndex(i => (i + 1) % media.length)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
+              onClick={() => setCurrentIndex(i => (i - 1 + media.length) % media.length)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/80 px-2 py-1 rounded text-xs">
+              {currentIndex + 1} / {media.length}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 };
 
 // Component to display order technical details
@@ -136,16 +241,24 @@ const OrderDetailsContent = ({ order, getStatusBadge }: { order: Order; getStatu
         </div>
       </div>
 
-      {/* Technical Details from Notes */}
-      {parsedNotes && (
-        <>
-          <Separator />
-          <div className="space-y-4">
-            <Label className="text-xs text-muted-foreground flex items-center gap-2">
-              <Wrench className="h-4 w-4" />
-              جزئیات فنی سفارش
-            </Label>
+      {/* Order Media Gallery */}
+      <Separator />
+      <OrderMediaGallery orderId={order.id} />
 
+      {/* Technical Details from Notes */}
+      <Separator />
+      <div className="space-y-4">
+        <Label className="text-xs text-muted-foreground flex items-center gap-2">
+          <Wrench className="h-4 w-4" />
+          جزئیات فنی سفارش
+        </Label>
+
+        {!parsedNotes ? (
+          <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+            جزئیات فنی این سفارش در دسترس نیست
+          </div>
+        ) : (
+          <>
             {/* Scaffolding Type */}
             {scaffoldingType && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-2">
@@ -174,19 +287,19 @@ const OrderDetailsContent = ({ order, getStatusBadge }: { order: Order; getStatu
                   ابعاد
                 </Label>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  {dimensions.length && (
+                  {dimensions.length != null && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">طول:</span>
                       <span className="font-medium">{dimensions.length} متر</span>
                     </div>
                   )}
-                  {dimensions.width && (
+                  {dimensions.width != null && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">عرض:</span>
                       <span className="font-medium">{dimensions.width} متر</span>
                     </div>
                   )}
-                  {dimensions.height && (
+                  {dimensions.height != null && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">ارتفاع:</span>
                       <span className="font-medium">{dimensions.height} متر</span>
@@ -294,9 +407,9 @@ const OrderDetailsContent = ({ order, getStatusBadge }: { order: Order; getStatu
                 )}
               </div>
             )}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
 
       {/* Execution Dates */}
       {order.execution_start_date && (
