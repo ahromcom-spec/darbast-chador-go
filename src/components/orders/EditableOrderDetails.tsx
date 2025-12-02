@@ -176,58 +176,72 @@ const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMe
       </div>
 
       {media.length === 0 ? (
-        <div className="text-center text-muted-foreground text-sm p-4 bg-muted/50 rounded-lg">
-          <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <div className="text-center text-muted-foreground text-sm p-6 bg-muted/50 rounded-lg border-2 border-dashed border-muted-foreground/20">
+          <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
           هنوز تصویری ثبت نشده است
         </div>
       ) : (
-        <div className="relative bg-black/5 rounded-lg overflow-hidden">
-          {isVideo ? (
-            <video
-              src={getMediaUrl(currentMedia.file_path)}
-              controls
-              className="w-full max-h-64 object-contain"
-            />
-          ) : (
-            <img
-              src={getMediaUrl(currentMedia.file_path)}
-              alt={`تصویر ${currentIndex + 1}`}
-              className="w-full max-h-64 object-contain"
-            />
-          )}
+        <div className="relative bg-muted/30 rounded-lg overflow-hidden border">
+          <div className="aspect-video flex items-center justify-center bg-black/5 min-h-[200px]">
+            {isVideo ? (
+              <video
+                src={getMediaUrl(currentMedia.file_path)}
+                controls
+                className="w-full h-full max-h-[400px] object-contain"
+              />
+            ) : (
+              <img
+                src={getMediaUrl(currentMedia.file_path)}
+                alt={`تصویر ${currentIndex + 1}`}
+                className="w-full h-full max-h-[400px] object-contain"
+              />
+            )}
+          </div>
           
           {/* Delete button */}
           <Button
             variant="destructive"
             size="icon"
-            className="absolute top-2 right-2 h-8 w-8"
+            className="absolute top-3 left-3 h-9 w-9 shadow-lg"
             onClick={() => handleDelete(currentMedia.id, currentMedia.file_path)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
 
+          {/* Navigation controls */}
           {media.length > 1 && (
-            <>
-              <Button
-                variant="outline"
-                size="icon"
-                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
-                onClick={() => setCurrentIndex(i => (i + 1) % media.length)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
-                onClick={() => setCurrentIndex(i => (i - 1 + media.length) % media.length)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/80 px-2 py-1 rounded text-xs">
-                {currentIndex + 1} / {media.length}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-10 w-10 bg-background/90 hover:bg-background shadow-lg"
+                  onClick={() => setCurrentIndex(i => (i + 1) % media.length)}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                
+                <div className="bg-background/90 px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+                  {currentIndex + 1} از {media.length}
+                </div>
+                
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-10 w-10 bg-background/90 hover:bg-background shadow-lg"
+                  onClick={() => setCurrentIndex(i => (i - 1 + media.length) % media.length)}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
               </div>
-            </>
+            </div>
+          )}
+          
+          {/* Image counter badge */}
+          {media.length === 1 && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-background/90 px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+              تصویر ۱
+            </div>
           )}
         </div>
       )}
