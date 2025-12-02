@@ -59,9 +59,41 @@ const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMe
     fetchMedia();
   }, [orderId]);
 
-  const getMediaUrl = (filePath: string) => {
-    const { data } = supabase.storage.from('project-media').getPublicUrl(filePath);
-    return data.publicUrl;
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchUrls = async () => {
+      const urls: Record<string, string> = {};
+      for (const item of media) {
+        try {
+          // Try signed URL first for better access
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from('project-media')
+            .createSignedUrl(item.file_path, 3600); // 1 hour expiry
+          
+          if (signedData?.signedUrl && !signedError) {
+            urls[item.id] = signedData.signedUrl;
+          } else {
+            // Fallback to public URL
+            const { data } = supabase.storage.from('project-media').getPublicUrl(item.file_path);
+            urls[item.id] = data.publicUrl;
+          }
+        } catch (err) {
+          console.error('Error getting URL for', item.file_path, err);
+          const { data } = supabase.storage.from('project-media').getPublicUrl(item.file_path);
+          urls[item.id] = data.publicUrl;
+        }
+      }
+      setMediaUrls(urls);
+    };
+    
+    if (media.length > 0) {
+      fetchUrls();
+    }
+  }, [media]);
+
+  const getMediaUrl = (mediaItem: { id: string; file_path: string }) => {
+    return mediaUrls[mediaItem.id] || '';
   };
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,13 +217,13 @@ const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMe
           <div className="aspect-video flex items-center justify-center bg-black/5 min-h-[200px]">
             {isVideo ? (
               <video
-                src={getMediaUrl(currentMedia.file_path)}
+                src={getMediaUrl(currentMedia)}
                 controls
                 className="w-full h-full max-h-[400px] object-contain"
               />
             ) : (
               <img
-                src={getMediaUrl(currentMedia.file_path)}
+                src={getMediaUrl(currentMedia)}
                 alt={`تصویر ${currentIndex + 1}`}
                 className="w-full h-full max-h-[400px] object-contain"
               />
