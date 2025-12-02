@@ -1884,7 +1884,10 @@ export default function OrderDetail() {
                   <Button
                     variant="outline"
                     onClick={async () => {
-                      // Get staff who worked on this project
+                      let staffUserId: string | null = null;
+                      let staffName: string = 'پرسنل';
+
+                      // First try to get staff who worked on this project from order_approvals
                       const { data: approvals } = await supabase
                         .from('order_approvals')
                         .select('approver_user_id, approver_role')
@@ -1893,19 +1896,29 @@ export default function OrderDetail() {
                       
                       const staffApproval = approvals?.find(a => 
                         a.approver_role === 'scaffold_executive_manager' || 
-                        a.approver_role === 'sales_manager'
+                        a.approver_role === 'executive_manager_scaffold_execution_with_materials' ||
+                        a.approver_role === 'sales_manager' ||
+                        a.approver_role === 'ceo'
                       );
                       
                       if (staffApproval?.approver_user_id) {
+                        staffUserId = staffApproval.approver_user_id;
+                      } else if (order.approved_by) {
+                        // Fallback to approved_by from the order itself
+                        staffUserId = order.approved_by;
+                      }
+                      
+                      if (staffUserId) {
                         // Get staff name
                         const { data: profile } = await supabase
                           .from('profiles')
                           .select('full_name')
-                          .eq('user_id', staffApproval.approver_user_id)
+                          .eq('user_id', staffUserId)
                           .single();
                         
-                        setStaffId(staffApproval.approver_user_id);
-                        setRatedUserName(profile?.full_name || 'پرسنل');
+                        staffName = profile?.full_name || 'پرسنل';
+                        setStaffId(staffUserId);
+                        setRatedUserName(staffName);
                         setRatingType('customer_to_staff');
                         setShowRatingForm(true);
                       } else {
