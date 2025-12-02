@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -14,6 +14,278 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
 import { setOrderScheduleSchema } from '@/lib/rpcValidation';
+
+// Helper to parse order notes safely
+const parseOrderNotes = (notes: string | null | undefined) => {
+  if (!notes) return null;
+  try {
+    let parsed = typeof notes === 'string' ? JSON.parse(notes) : notes;
+    // Handle double-stringified JSON
+    if (typeof parsed === 'string') {
+      parsed = JSON.parse(parsed);
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+// Component to display order technical details
+const OrderDetailsContent = ({ order, getStatusBadge }: { order: Order; getStatusBadge: (status: string) => JSX.Element }) => {
+  const parsedNotes = parseOrderNotes(order.notes);
+  
+  const scaffoldingTypeLabels: Record<string, string> = {
+    facade: 'داربست سطحی نما',
+    formwork: 'داربست حجمی کفراژ',
+    ceiling: 'داربست زیربتن سقف',
+    column: 'داربست ستونی',
+    pipe_length: 'داربست به طول لوله مصرفی'
+  };
+
+  const ceilingSubtypeLabels: Record<string, string> = {
+    yonolit: 'تیرچه یونولیت',
+    ceramic: 'تیرچه سفال',
+    slab: 'دال و وافل'
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Customer Info */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">نام مشتری</Label>
+          <p className="text-sm font-medium flex items-center gap-2">
+            <User className="h-4 w-4 text-primary" />
+            {order.customer_name}
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">شماره تماس</Label>
+          <p className="text-sm font-medium flex items-center gap-2" dir="ltr">
+            <Phone className="h-4 w-4 text-primary" />
+            {order.customer_phone || '-'}
+          </p>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Address */}
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">آدرس</Label>
+        <p className="text-sm flex items-start gap-2">
+          <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+          <span>{order.address}</span>
+        </p>
+        {order.detailed_address && (
+          <p className="text-sm text-muted-foreground mr-6">{order.detailed_address}</p>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Status and Date */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">وضعیت</Label>
+          <div>{getStatusBadge(order.status)}</div>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">تاریخ ثبت</Label>
+          <p className="text-sm">{formatPersianDate(order.created_at, { showDayOfWeek: true })}</p>
+        </div>
+      </div>
+
+      {/* Technical Details from Notes */}
+      {parsedNotes && (
+        <>
+          <Separator />
+          <div className="space-y-4">
+            <Label className="text-xs text-muted-foreground flex items-center gap-2">
+              <Wrench className="h-4 w-4" />
+              جزئیات فنی سفارش
+            </Label>
+
+            {/* Scaffolding Type */}
+            {parsedNotes.scaffoldingType && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">نوع داربست:</span>
+                  <span className="text-sm font-medium">
+                    {scaffoldingTypeLabels[parsedNotes.scaffoldingType] || parsedNotes.scaffoldingType}
+                  </span>
+                </div>
+                {parsedNotes.ceilingSubtype && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">زیرنوع سقف:</span>
+                    <span className="text-sm font-medium">
+                      {ceilingSubtypeLabels[parsedNotes.ceilingSubtype] || parsedNotes.ceilingSubtype}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Dimensions */}
+            {(parsedNotes.length || parsedNotes.width || parsedNotes.height || parsedNotes.pipeLength) && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                <Label className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Ruler className="h-3 w-3" />
+                  ابعاد
+                </Label>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {parsedNotes.length && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">طول:</span>
+                      <span className="font-medium">{parsedNotes.length} متر</span>
+                    </div>
+                  )}
+                  {parsedNotes.width && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">عرض:</span>
+                      <span className="font-medium">{parsedNotes.width} متر</span>
+                    </div>
+                  )}
+                  {parsedNotes.height && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ارتفاع:</span>
+                      <span className="font-medium">{parsedNotes.height} متر</span>
+                    </div>
+                  )}
+                  {parsedNotes.pipeLength && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">طول لوله:</span>
+                      <span className="font-medium">{parsedNotes.pipeLength} متر</span>
+                    </div>
+                  )}
+                  {parsedNotes.totalArea && (
+                    <div className="flex justify-between col-span-2">
+                      <span className="text-muted-foreground">مساحت کل:</span>
+                      <span className="font-medium">{parsedNotes.totalArea} متر مربع</span>
+                    </div>
+                  )}
+                  {parsedNotes.units && (
+                    <div className="flex justify-between col-span-2">
+                      <span className="text-muted-foreground">تعداد واحد:</span>
+                      <span className="font-medium">{parsedNotes.units} واحد</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Description */}
+            {parsedNotes.description && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                <Label className="text-xs text-muted-foreground flex items-center gap-2">
+                  <FileText className="h-3 w-3" />
+                  شرح محل نصب و فعالیت
+                </Label>
+                <p className="text-sm">{parsedNotes.description}</p>
+              </div>
+            )}
+
+            {/* Service Conditions */}
+            {parsedNotes.conditions && Object.keys(parsedNotes.conditions).length > 0 && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                <Label className="text-xs text-muted-foreground">شرایط سرویس</Label>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(parsedNotes.conditions).map(([key, value]) => (
+                    value && (
+                      <Badge key={key} variant="outline" className="text-xs">
+                        {key === 'hasElevator' && 'آسانسور'}
+                        {key === 'hasCrane' && 'جرثقیل'}
+                        {key === 'hasParking' && 'پارکینگ'}
+                        {key === 'needsPermit' && 'نیاز به مجوز'}
+                        {key === 'difficult_access' && 'دسترسی سخت'}
+                        {key === 'night_work' && 'کار شبانه'}
+                      </Badge>
+                    )
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dates from Notes */}
+            {(parsedNotes.installationDate || parsedNotes.dueDate) && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                <Label className="text-xs text-muted-foreground">تاریخ‌های درخواستی</Label>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {parsedNotes.installationDate && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">تاریخ نصب:</span>
+                      <span className="font-medium">{formatPersianDate(parsedNotes.installationDate)}</span>
+                    </div>
+                  )}
+                  {parsedNotes.dueDate && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">تاریخ فک:</span>
+                      <span className="font-medium">{formatPersianDate(parsedNotes.dueDate)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Price */}
+      {order.payment_amount && (
+        <>
+          <Separator />
+          <div className="bg-primary/5 rounded-lg p-3">
+            <div className="flex justify-between items-center">
+              <Label className="text-sm flex items-center gap-2">
+                <Banknote className="h-4 w-4 text-primary" />
+                مبلغ کل
+              </Label>
+              <span className="text-lg font-bold text-primary">
+                {order.payment_amount.toLocaleString('fa-IR')} تومان
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Execution Dates */}
+      {order.execution_start_date && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">تاریخ شروع اجرا</Label>
+            <p className="text-sm flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-blue-600" />
+              {formatPersianDateTimeFull(order.execution_start_date)}
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Completion Confirmations */}
+      {(order.customer_completion_date || order.executive_completion_date) && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <Label className="text-xs text-muted-foreground">تاییدات اتمام کار</Label>
+            {order.customer_completion_date && (
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>تایید مشتری: {formatPersianDate(order.customer_completion_date, { showDayOfWeek: true })}</span>
+              </div>
+            )}
+            {order.executive_completion_date && (
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>تایید مدیر اجرایی: {formatPersianDate(order.executive_completion_date, { showDayOfWeek: true })}</span>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 interface Order {
   id: string;
@@ -30,6 +302,8 @@ interface Order {
   customer_phone: string;
   project_lat?: number | null;
   project_lng?: number | null;
+  notes?: string | null;
+  payment_amount?: number | null;
 }
 
 export default function ExecutiveOrders() {
@@ -92,7 +366,9 @@ export default function ExecutiveOrders() {
           executive_completion_date,
           created_at,
           customer_id,
-          hierarchy_project_id
+          hierarchy_project_id,
+          notes,
+          payment_amount
         `)
         .in('status', ['approved', 'in_progress', 'completed', 'paid'])
         .order('created_at', { ascending: false });
@@ -162,6 +438,8 @@ export default function ExecutiveOrders() {
             customer_phone: customerPhone,
             project_lat: projectLat,
             project_lng: projectLng,
+            notes: order.notes,
+            payment_amount: order.payment_amount,
           } as Order;
         })
       );
@@ -717,89 +995,7 @@ export default function ExecutiveOrders() {
             <DialogDescription>اطلاعات جامع سفارش</DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">نام مشتری</Label>
-                  <p className="text-sm font-medium flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" />
-                    {selectedOrder.customer_name}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">شماره تماس</Label>
-                  <p className="text-sm font-medium flex items-center gap-2" dir="ltr">
-                    <Phone className="h-4 w-4 text-primary" />
-                    {selectedOrder.customer_phone}
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">آدرس</Label>
-                <p className="text-sm flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <span>{selectedOrder.address}</span>
-                </p>
-                {selectedOrder.detailed_address && (
-                  <p className="text-sm text-muted-foreground mr-6">{selectedOrder.detailed_address}</p>
-                )}
-                {selectedOrder.project_lat && selectedOrder.project_lng && (
-                  <p className="text-xs text-muted-foreground mr-6 mt-1">
-                    موقعیت جغرافیایی: {selectedOrder.project_lat.toFixed(6)}, {selectedOrder.project_lng.toFixed(6)}
-                  </p>
-                )}
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">وضعیت</Label>
-                  <div>{getStatusBadge(selectedOrder.status)}</div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">تاریخ ثبت</Label>
-                  <p className="text-sm">{formatPersianDate(selectedOrder.created_at, { showDayOfWeek: true })}</p>
-                </div>
-              </div>
-
-              {selectedOrder.execution_start_date && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">تاریخ شروع اجرا</Label>
-                    <p className="text-sm flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                      {formatPersianDateTimeFull(selectedOrder.execution_start_date)}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {(selectedOrder.customer_completion_date || selectedOrder.executive_completion_date) && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <Label className="text-xs text-muted-foreground">تاییدات اتمام کار</Label>
-                    {selectedOrder.customer_completion_date && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span>تایید مشتری: {formatPersianDate(selectedOrder.customer_completion_date, { showDayOfWeek: true })}</span>
-                      </div>
-                    )}
-                    {selectedOrder.executive_completion_date && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span>تایید مدیر اجرایی: {formatPersianDate(selectedOrder.executive_completion_date, { showDayOfWeek: true })}</span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} />
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
