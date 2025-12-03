@@ -383,15 +383,13 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     };
   }, [user, orderId, callState, createPeerConnection]);
 
-  // Don't render if no manager assigned yet (for customers)
-  if (!isManager && !managerId) {
-    return null;
-  }
-
   // Don't render if no customer info (for managers)
   if (isManager && !customerId) {
     return null;
   }
+
+  // برای مشتریان همیشه نمایش بده، حتی اگر مدیر تعیین نشده
+  const canMakeCall = !isManager ? !!managerId : !!customerId;
 
   return (
     <Card className="mt-4">
@@ -406,19 +404,36 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         
         {callState === 'idle' && (
           <div className="text-center">
-            <p className="text-sm text-muted-foreground mb-4">
-              {isManager 
-                ? 'برای تماس با مشتری این سفارش کلیک کنید'
-                : 'برای تماس با مدیر پروژه کلیک کنید'
-              }
-            </p>
-            <Button 
-              onClick={startCall}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Phone className="h-4 w-4 ml-2" />
-              شروع تماس
-            </Button>
+            {canMakeCall ? (
+              <>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {isManager 
+                    ? 'برای تماس با مشتری این سفارش کلیک کنید'
+                    : 'برای تماس با مدیر پروژه کلیک کنید'
+                  }
+                </p>
+                <Button 
+                  onClick={startCall}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Phone className="h-4 w-4 ml-2" />
+                  شروع تماس
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground mb-4">
+                  هنوز مدیری برای این سفارش تعیین نشده است
+                </p>
+                <Button 
+                  disabled
+                  className="bg-gray-400"
+                >
+                  <Phone className="h-4 w-4 ml-2" />
+                  تماس (در انتظار تعیین مدیر)
+                </Button>
+              </>
+            )}
           </div>
         )}
 
