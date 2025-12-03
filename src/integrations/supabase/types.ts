@@ -2725,6 +2725,44 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_call_signals: {
+        Row: {
+          caller_id: string
+          created_at: string
+          id: string
+          order_id: string
+          receiver_id: string
+          signal_data: Json | null
+          signal_type: string
+        }
+        Insert: {
+          caller_id: string
+          created_at?: string
+          id?: string
+          order_id: string
+          receiver_id: string
+          signal_data?: Json | null
+          signal_type: string
+        }
+        Update: {
+          caller_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          receiver_id?: string
+          signal_data?: Json | null
+          signal_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_call_signals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_tasks: {
         Row: {
           assignee_role: Database["public"]["Enums"]["app_role"] | null

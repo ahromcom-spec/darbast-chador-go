@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import OrderChat from "@/components/orders/OrderChat";
+import VoiceCall from "@/components/orders/VoiceCall";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import StaticLocationMap from "@/components/locations/StaticLocationMap";
 import {
@@ -1850,6 +1851,13 @@ export default function OrderDetail() {
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
+
+          {/* تماس صوتی اینترنتی با مدیر */}
+          <VoiceCall 
+            orderId={order.id} 
+            managerId={order.approved_by}
+            isManager={false}
+          />
 
           {/* بخش امتیازدهی - فقط برای سفارشات تکمیل شده یا بسته شده */}
           {(order.status === 'completed' || order.status === 'paid' || order.status === 'closed') && (
