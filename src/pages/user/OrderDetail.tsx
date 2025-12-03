@@ -65,6 +65,7 @@ interface Order {
   rejection_reason?: string;
   approved_at?: string;
   approved_by?: string;
+  executed_by?: string;
   execution_start_date?: string;
   execution_end_date?: string;
   execution_stage?: string | null;
@@ -1855,7 +1856,7 @@ export default function OrderDetail() {
           {/* تماس صوتی اینترنتی با مدیر */}
           <VoiceCall 
             orderId={order.id} 
-            managerId={order.approved_by}
+            managerId={order.executed_by || order.approved_by}
             isManager={false}
           />
 
