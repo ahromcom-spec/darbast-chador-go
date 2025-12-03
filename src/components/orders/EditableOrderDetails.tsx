@@ -15,6 +15,7 @@ import {
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { parseOrderNotes } from './OrderDetailsView';
+import VoiceCall from './VoiceCall';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -287,6 +288,7 @@ interface EditableOrderDetailsProps {
     code: string;
     customer_name?: string;
     customer_phone?: string;
+    customer_id?: string;
     address?: string;
     detailed_address?: string | null;
     created_at?: string;
@@ -595,6 +597,13 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
 
       {/* Media Gallery with upload/delete for managers */}
       <ManagerMediaGallery orderId={order.id} onMediaChange={onUpdate} />
+
+      {/* Voice Call for managers to call customers */}
+      <VoiceCall 
+        orderId={order.id}
+        customerId={order.customer_id}
+        isManager={true}
+      />
     </div>
   );
 };
