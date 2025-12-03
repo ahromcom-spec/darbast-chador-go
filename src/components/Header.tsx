@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle } from "lucide-react";
+import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -172,6 +172,26 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenMobile(false);
+                        setTimeout(() => navigate("/user/orders"), 200);
+                      }}
+                      className="cursor-pointer gap-2"
+                    >
+                      <ShoppingCart className="h-4 w-4 text-blue-600" />
+                      <span>سفارشات من</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        setProfileDropdownOpenMobile(false);
+                        setTimeout(() => navigate("/profile?tab=invoice"), 200);
+                      }}
+                      className="cursor-pointer gap-2"
+                    >
+                      <Receipt className="h-4 w-4 text-purple-600" />
+                      <span>صورتحساب من</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/tickets"), 200);
                       }}
                       className="cursor-pointer gap-2"
@@ -327,6 +347,26 @@ const Header = () => {
                     >
                       <FolderKanban className="h-4 w-4 text-green-600" />
                       <span>پروژه‌های من</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        setProfileDropdownOpenDesktop(false);
+                        setTimeout(() => navigate("/user/orders"), 200);
+                      }}
+                      className="cursor-pointer gap-3 p-3"
+                    >
+                      <ShoppingCart className="h-4 w-4 text-blue-600" />
+                      <span>سفارشات من</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        setProfileDropdownOpenDesktop(false);
+                        setTimeout(() => navigate("/profile?tab=invoice"), 200);
+                      }}
+                      className="cursor-pointer gap-3 p-3"
+                    >
+                      <Receipt className="h-4 w-4 text-purple-600" />
+                      <span>صورتحساب من</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => {
