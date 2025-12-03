@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Package, MapPin, Calendar, FileText } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Package, MapPin, Calendar, FileText, Ruler, CheckSquare, Phone, User, Clock, ExternalLink, Wrench } from 'lucide-react';
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { OrderWorkflowStatus } from '@/components/orders/OrderWorkflowStatus';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
@@ -124,6 +127,7 @@ const getOrderNotesSummary = (notes: any, paymentAmount?: number): OrderNotesSum
 };
 
 export default function MyOrders() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -306,95 +310,250 @@ export default function MyOrders() {
 
       {/* Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              جزئیات سفارش {selectedOrder?.code}
+            </DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm font-semibold mb-1">وضعیت</p>
+            <div className="space-y-5">
+              {/* Status Section */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">وضعیت سفارش</p>
                 {getStatusBadge(selectedOrder.status)}
               </div>
-              <div>
-                <p className="text-sm font-semibold mb-1">آدرس</p>
+              
+              <Separator />
+
+              {/* Address Section */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  آدرس
+                </div>
                 {selectedOrder.hierarchy_project?.location?.title && (
-                  <p className="text-xs font-semibold text-muted-foreground mb-1">
+                  <Badge variant="outline" className="mb-1">
                     {selectedOrder.hierarchy_project.location.title}
+                  </Badge>
+                )}
+                <p className="text-sm text-muted-foreground">{selectedOrder.address}</p>
+                {selectedOrder.provinces?.name && (
+                  <p className="text-xs text-muted-foreground">
+                    استان: {selectedOrder.provinces.name}
+                    {selectedOrder.districts?.name && ` - شهرستان: ${selectedOrder.districts.name}`}
                   </p>
                 )}
-                <p className="text-sm">{selectedOrder.address}</p>
               </div>
-              <div>
-                <p className="text-sm font-semibold mb-1">تاریخ ثبت</p>
-                <p className="text-sm">
-                  {formatPersianDate(selectedOrder.created_at, { showDayOfWeek: true })}
-                </p>
-              </div>
+
+              <Separator />
+
+              {/* Service Type */}
               {selectedOrder.subcategories && (
-                <div>
-                  <p className="text-sm font-semibold mb-1">نوع خدمت</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <FileText className="h-4 w-4 text-primary" />
+                    نوع خدمت
+                  </div>
                   <p className="text-sm">{selectedOrder.subcategories.name}</p>
                 </div>
               )}
 
-              {selectedNotes && selectedSummary && (
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-semibold mb-1">ابعاد ثبت‌شده</p>
-                    {selectedSummary.hasDimensions ? (
-                      <p className="text-sm" dir="ltr">
-                        {selectedSummary.dimensionsText} متر
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">ابعاد ثبت نشده است</p>
-                    )}
-                  </div>
-                  {selectedSummary.totalValue > 0 && (
-                    <div>
-                      <p className="text-sm font-semibold mb-1">متراژ</p>
-                      <p className="text-sm" dir="ltr">
-                        {selectedSummary.totalValue.toFixed(2)} {selectedSummary.unit}
-                      </p>
-                    </div>
-                  )}
-                  {selectedSummary.estimatedPrice > 0 && (
-                    <div>
-                      <p className="text-sm font-semibold mb-1">قیمت تخمینی</p>
-                      <p className="text-sm">
-                        {selectedSummary.estimatedPrice.toLocaleString('fa-IR')} تومان
-                      </p>
-                    </div>
+              {/* Notes Details */}
+              {selectedNotes && (
+                <>
+                  {/* Scaffold Type */}
+                  {selectedNotes.scaffold_type && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                          <Wrench className="h-4 w-4 text-primary" />
+                          نوع داربست
+                        </div>
+                        <p className="text-sm">{selectedNotes.scaffold_type}</p>
+                      </div>
+                    </>
                   )}
 
-                  {selectedNotes.locationPurpose && (
-                    <div>
-                      <p className="text-sm font-semibold mb-1">شرح محل نصب</p>
-                      <p className="text-sm leading-relaxed">
-                        {selectedNotes.locationPurpose}
-                      </p>
-                    </div>
+                  {/* Dimensions */}
+                  {selectedSummary?.hasDimensions && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                          <Ruler className="h-4 w-4 text-primary" />
+                          ابعاد ثبت‌شده
+                        </div>
+                        <div className="bg-muted/50 p-3 rounded-lg">
+                          <p className="text-sm font-medium" dir="ltr">
+                            {selectedSummary.dimensionsText} متر
+                          </p>
+                          {selectedSummary.totalValue > 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              متراژ کل: {selectedSummary.totalValue.toFixed(2)} {selectedSummary.unit}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </>
                   )}
-                  {selectedNotes.installationDateTime && (
-                    <div>
-                      <p className="text-sm font-semibold mb-1">زمان پیشنهادی اجرا</p>
-                      <p className="text-sm" dir="ltr">
-                        {selectedNotes.installationDateTime}
-                      </p>
-                    </div>
+
+                  {/* Service Conditions */}
+                  {selectedNotes.service_conditions && Array.isArray(selectedNotes.service_conditions) && selectedNotes.service_conditions.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                          شرایط خدمات
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedNotes.service_conditions.map((condition: string, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {condition}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </>
                   )}
-                </div>
+
+                  {/* Location Purpose / Description */}
+                  {(selectedNotes.locationPurpose || selectedNotes.description || selectedNotes.additional_notes) && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                          <FileText className="h-4 w-4 text-primary" />
+                          توضیحات محل نصب و فعالیت
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed bg-muted/50 p-3 rounded-lg">
+                          {selectedNotes.locationPurpose || selectedNotes.description || selectedNotes.additional_notes}
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Dates */}
+                  {(selectedNotes.installationDate || selectedNotes.installationDateTime || selectedNotes.dueDate) && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                          <Clock className="h-4 w-4 text-primary" />
+                          تاریخ‌ها
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {(selectedNotes.installationDate || selectedNotes.installationDateTime) && (
+                            <div className="bg-muted/50 p-3 rounded-lg">
+                              <p className="text-xs text-muted-foreground">تاریخ نصب</p>
+                              <p className="text-sm font-medium">
+                                {selectedNotes.installationDate || selectedNotes.installationDateTime}
+                              </p>
+                            </div>
+                          )}
+                          {selectedNotes.dueDate && (
+                            <div className="bg-muted/50 p-3 rounded-lg">
+                              <p className="text-xs text-muted-foreground">تاریخ موعد</p>
+                              <p className="text-sm font-medium">{selectedNotes.dueDate}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Customer Info */}
+                  {(selectedNotes.customerName || selectedNotes.customerPhone) && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                          <User className="h-4 w-4 text-primary" />
+                          اطلاعات مشتری
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {selectedNotes.customerName && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <User className="h-3.5 w-3.5 text-muted-foreground" />
+                              {selectedNotes.customerName}
+                            </div>
+                          )}
+                          {selectedNotes.customerPhone && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                              <a href={`tel:${selectedNotes.customerPhone}`} className="text-primary hover:underline">
+                                {selectedNotes.customerPhone}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Price */}
+                  {selectedSummary && selectedSummary.estimatedPrice > 0 && (
+                    <>
+                      <Separator />
+                      <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg">
+                        <p className="text-sm font-semibold mb-1">قیمت تخمینی</p>
+                        <p className="text-xl font-bold text-primary">
+                          {selectedSummary.estimatedPrice.toLocaleString('fa-IR')} تومان
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Registration Date */}
+              <Separator />
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" />
+                تاریخ ثبت: {formatPersianDate(selectedOrder.created_at, { showDayOfWeek: true })}
+              </div>
+
+              {/* Approval Progress */}
+              {selectedOrder.status === 'pending' && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm font-semibold mb-2">وضعیت تایید</p>
+                    <ApprovalProgressComponent orderId={selectedOrder.id} />
+                  </div>
+                </>
               )}
 
               {selectedOrder.notes && !selectedNotes && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
                   جزئیات فنی این سفارش در دسترس نیست.
                 </p>
               )}
             </div>
           )}
+          <DialogFooter className="mt-4">
+            <Button
+              onClick={() => {
+                setDetailsOpen(false);
+                navigate(`/user/orders/${selectedOrder?.id}`);
+              }}
+              className="w-full gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              مشاهده صفحه کامل سفارش
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
+}
+
+// Separate component for approval progress to use hook
+function ApprovalProgressComponent({ orderId }: { orderId: string }) {
+  const { approvals, loading } = useOrderApprovals(orderId);
+  return <ApprovalProgress approvals={approvals} loading={loading} />;
 }
