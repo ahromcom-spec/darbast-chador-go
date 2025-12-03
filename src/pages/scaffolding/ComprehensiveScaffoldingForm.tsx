@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box, MapPin } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useCustomer } from '@/hooks/useCustomer';
 import { useProvinces } from '@/hooks/useProvinces';
 import { useDistricts } from '@/hooks/useDistricts';
+import { useLocations } from '@/hooks/useLocations';
 import { sanitizeHtml } from '@/lib/security';
 import { scaffoldingFormSchema } from '@/lib/validations';
 import { MediaUploader } from '@/components/orders/MediaUploader';
@@ -25,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValidation';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { NewLocationForm } from '@/components/locations/NewLocationForm';
 
 interface Dimension {
   id: string;
@@ -84,17 +86,24 @@ export default function ComprehensiveScaffoldingForm({
   const { user } = useAuth();
   const { customerId } = useCustomer();
   const { provinces } = useProvinces();
+  const { locations, loading: locationsLoading, refetch: refetchLocations } = useLocations();
   
   // دریافت editOrderId از query parameter یا prop
   const editOrderId = searchParams.get('edit') || propEditOrderId;
   
   // دریافت hierarchyProjectId از props یا state برای لینک کردن سفارش
   const hierarchyProjectId = propHierarchyProjectId || navState?.hierarchyProjectId || null;
-  const locationId = propLocationId || navState?.locationId;
-  const provinceId = propProvinceId || navState?.provinceId || null;
-  const districtId = propDistrictId || navState?.districtId || null;
+  const initialLocationId = propLocationId || navState?.locationId;
+  const initialProvinceId = propProvinceId || navState?.provinceId || null;
+  const initialDistrictId = propDistrictId || navState?.districtId || null;
   const serviceTypeId = propServiceTypeId || navState?.serviceTypeId;
   const subcategoryId = propSubcategoryId || navState?.subcategoryId;
+
+  // State برای آدرس انتخابی
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(initialLocationId || null);
+  const [selectedProvinceId, setSelectedProvinceId] = useState<string | null>(initialProvinceId);
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(initialDistrictId);
+  const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
 
   const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade' | 'column' | 'pipe-length' | ''>('');
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-beam-yonolit' | 'ceiling-beam-ceramic' | 'ceiling-slab' | 'column' | 'pipe-length' | ''>('');
@@ -148,7 +157,7 @@ export default function ComprehensiveScaffoldingForm({
   
   // Location fields - دریافت از state (در صورت عدم وجود در props)
   const [detailedAddress, setDetailedAddress] = useState(navState?.detailedAddress || address);
-  const { districts } = useDistricts(provinceId || '');
+  const { districts } = useDistricts(selectedProvinceId || '');
 
   const [conditions, setConditions] = useState<ServiceConditions>({
     totalMonths: 1,
@@ -950,8 +959,8 @@ export default function ComprehensiveScaffoldingForm({
               .from('locations')
               .insert([{
                 user_id: user.id,
-                province_id: provinceId || null,
-                district_id: districtId || null,
+                province_id: selectedProvinceId || null,
+                district_id: selectedDistrictId || null,
                 address_line: sanitizedAddress,
                 lat: 0,
                 lng: 0,
@@ -1059,8 +1068,8 @@ export default function ComprehensiveScaffoldingForm({
       } else {
         // ایجاد سفارش جدید به‌صورت اتمیک در دیتابیس با لینک به پروژه سلسله‌مراتبی
         // مطمئن شویم که provinceId و districtId UUID معتبر یا null هستند
-        const validProvinceId = provinceId && provinceId.trim() !== '' ? provinceId : null;
-        const validDistrictId = districtId && districtId.trim() !== '' ? districtId : null;
+        const validProvinceId = selectedProvinceId && selectedProvinceId.trim() !== '' ? selectedProvinceId : null;
+        const validDistrictId = selectedDistrictId && selectedDistrictId.trim() !== '' ? selectedDistrictId : null;
         
         const validated = createProjectV3Schema.parse({
           _customer_id: customerId,
@@ -1181,6 +1190,113 @@ export default function ComprehensiveScaffoldingForm({
         </Card>
       )}
 
+      {/* انتخاب آدرس - فقط در حالت ایجاد سفارش جدید نمایش داده شود */}
+      {!editOrderId && (
+        <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              انتخاب آدرس پروژه
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              آدرس محل اجرای داربست را انتخاب کنید یا آدرس جدید ثبت کنید
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {locationsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : locations.length === 0 ? (
+              <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                <MapPin className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground mb-4">هنوز آدرسی ثبت نشده است</p>
+                <Button onClick={() => setShowNewLocationDialog(true)}>
+                  <Plus className="w-4 h-4 ml-2" />
+                  ثبت اولین آدرس
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-foreground font-semibold">آدرس‌های ثبت شده</Label>
+                  <Button variant="outline" size="sm" onClick={() => setShowNewLocationDialog(true)}>
+                    <Plus className="w-4 h-4 ml-2" />
+                    آدرس جدید
+                  </Button>
+                </div>
+                <Select
+                  value={selectedLocationId || ''}
+                  onValueChange={(value) => {
+                    setSelectedLocationId(value);
+                    const location = locations.find(l => l.id === value);
+                    if (location) {
+                      setSelectedProvinceId(location.province_id || null);
+                      setSelectedDistrictId(location.district_id || null);
+                      setDetailedAddress(location.address_line);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full bg-background">
+                    <SelectValue placeholder="یک آدرس انتخاب کنید" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">{location.title || 'بدون عنوان'}</span>
+                          <span className="text-xs text-muted-foreground truncate max-w-[300px]">
+                            {location.address_line}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {selectedLocationId && (
+                  <div className="p-3 bg-muted/50 rounded-lg border">
+                    <p className="text-sm text-foreground">
+                      {locations.find(l => l.id === selectedLocationId)?.address_line}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Dialog for new location */}
+      <Dialog open={showNewLocationDialog} onOpenChange={setShowNewLocationDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ثبت آدرس جدید</DialogTitle>
+          </DialogHeader>
+          <NewLocationForm 
+            onSuccess={async (locationId) => {
+              setShowNewLocationDialog(false);
+              await refetchLocations();
+              setSelectedLocationId(locationId);
+              // بارگذاری اطلاعات آدرس جدید
+              const { data: newLocation } = await supabase
+                .from('locations')
+                .select('*')
+                .eq('id', locationId)
+                .single();
+              if (newLocation) {
+                setSelectedProvinceId(newLocation.province_id || null);
+                setSelectedDistrictId(newLocation.district_id || null);
+                setDetailedAddress(newLocation.address_line);
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* نمایش فرم فقط اگر آدرس انتخاب شده یا در حالت ویرایش هستیم */}
+      {(selectedLocationId || editOrderId) && (
+      <>
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
         <CardContent className="pt-6">
@@ -1787,6 +1903,7 @@ export default function ComprehensiveScaffoldingForm({
           onClick={onSubmit}
           disabled={
             loading || 
+            (!editOrderId && !selectedLocationId) ||
             !scaffoldType ||
             !!getFacadeWarning() ||
             !!getFormworkWarning() ||
@@ -1802,6 +1919,8 @@ export default function ComprehensiveScaffoldingForm({
         >
           {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
         </Button>
+      </>
+      )}
       </>
       )}
       </div>
