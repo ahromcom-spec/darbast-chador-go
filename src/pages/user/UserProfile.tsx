@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, MessageSquare, Briefcase, FolderKanban } from 'lucide-react';
+import { Package, MessageSquare, Briefcase, FolderKanban, ClipboardList } from 'lucide-react';
+import { MyOrdersList } from '@/components/profile/MyOrdersList';
 import { toast } from 'sonner';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -258,12 +259,18 @@ const fetchOrders = async () => {
 
         {/* Tabs */}
         <Tabs defaultValue="info" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto gap-2 bg-muted/50 p-1">
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4 h-auto gap-2 bg-muted/50 p-1">
             <TabsTrigger 
               value="info" 
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               اطلاعات کاربری
+            </TabsTrigger>
+            <TabsTrigger 
+              value="projects" 
+              className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
+              پروژه‌های من
             </TabsTrigger>
             <TabsTrigger 
               value="orders" 
@@ -316,10 +323,10 @@ const fetchOrders = async () => {
             </div>
           </TabsContent>
 
-{/* Orders Tab */}
-<TabsContent value="orders" className="mt-4">
+{/* Projects Tab */}
+<TabsContent value="projects" className="mt-4">
   <div className="space-y-6">
-    {/* Project Management Section - در سفارشات */}
+    {/* Project Management Section */}
     <div className="space-y-4 p-4 rounded-lg border-2 border-primary/20 bg-card" data-tour="my-projects">
       <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
         <FolderKanban className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
@@ -356,8 +363,12 @@ const fetchOrders = async () => {
         </button>
       </div>
     </div>
-
   </div>
+</TabsContent>
+
+{/* Orders Tab */}
+<TabsContent value="orders" className="mt-4">
+  <MyOrdersList userId={user.id} />
 </TabsContent>
 
           {/* Quick Actions Tab */}
