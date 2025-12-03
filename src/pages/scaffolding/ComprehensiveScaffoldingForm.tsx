@@ -1055,7 +1055,7 @@ export default function ComprehensiveScaffoldingForm({
           });
         }
 
-        navigate(`/orders/${editOrderId}`);
+        navigate(`/user/orders/${editOrderId}`);
       } else {
         // ایجاد سفارش جدید به‌صورت اتمیک در دیتابیس با لینک به پروژه سلسله‌مراتبی
         // مطمئن شویم که provinceId و districtId UUID معتبر یا null هستند
@@ -1135,7 +1135,7 @@ export default function ComprehensiveScaffoldingForm({
         // اتوماسیون اداری حالا با database trigger اجرا می‌شود (order-automation function حذف شد)
 
         // هدایت کاربر به صفحه جزئیات سفارش بلافاصله
-        navigate(`/orders/${createdProject.id}`);
+        navigate(`/user/orders/${createdProject.id}`);
       }
     } catch (e: any) {
       console.error('Error:', e);

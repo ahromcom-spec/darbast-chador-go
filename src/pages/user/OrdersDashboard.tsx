@@ -323,7 +323,7 @@ export default function OrdersDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate(`/orders/${order.id}`)}
+                          onClick={() => navigate(`/user/orders/${order.id}`)}
                         >
                           <Eye className="h-4 w-4 ml-2" />
                           مشاهده جزئیات

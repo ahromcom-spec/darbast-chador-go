@@ -107,7 +107,7 @@ export default function MyProjectsHierarchy() {
       setHighlightedOrderId(state.highlightOrderId);
       // بعد از اسکرول، به صفحه جزئیات سفارش هدایت کن
       setTimeout(() => {
-        navigate(`/orders/${state.highlightOrderId}`, { replace: true });
+        navigate(`/user/orders/${state.highlightOrderId}`, { replace: true });
       }, 800);
     }
   }, [location.state, navigate]);
@@ -771,7 +771,7 @@ export default function MyProjectsHierarchy() {
                                               className="flex items-center gap-2 flex-1 cursor-pointer"
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                navigate(`/orders/${order.id}`);
+                                                navigate(`/user/orders/${order.id}`);
                                               }}
                                             >
                                               <FileText className="h-4 w-4 text-muted-foreground" />
@@ -823,7 +823,7 @@ export default function MyProjectsHierarchy() {
                                             className="grid grid-cols-2 gap-2 text-xs mr-6 cursor-pointer"
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              navigate(`/orders/${order.id}`);
+                                              navigate(`/user/orders/${order.id}`);
                                             }}
                                           >
                                             <div className="flex items-center gap-1">
