@@ -4,8 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, MessageSquare, Briefcase, FolderKanban, ClipboardList } from 'lucide-react';
+import { Package, MessageSquare, Briefcase, FolderKanban, ClipboardList, Receipt } from 'lucide-react';
 import { MyOrdersList } from '@/components/profile/MyOrdersList';
+import { CustomerInvoice } from '@/components/profile/CustomerInvoice';
 import { toast } from 'sonner';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -259,7 +260,7 @@ const fetchOrders = async () => {
 
         {/* Tabs */}
         <Tabs defaultValue="info" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4 h-auto gap-2 bg-muted/50 p-1">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto gap-2 bg-muted/50 p-1">
             <TabsTrigger 
               value="info" 
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
@@ -277,6 +278,13 @@ const fetchOrders = async () => {
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               سفارشات من
+            </TabsTrigger>
+            <TabsTrigger 
+              value="invoice" 
+              className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
+              <Receipt className="h-4 w-4 ml-1 hidden sm:inline" />
+              صورتحساب
             </TabsTrigger>
             <TabsTrigger 
               value="actions" 
@@ -369,6 +377,11 @@ const fetchOrders = async () => {
 {/* Orders Tab */}
 <TabsContent value="orders" className="mt-4">
   <MyOrdersList userId={user.id} />
+</TabsContent>
+
+{/* Invoice Tab */}
+<TabsContent value="invoice" className="mt-4">
+  <CustomerInvoice />
 </TabsContent>
 
           {/* Quick Actions Tab */}

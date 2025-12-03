@@ -1,0 +1,409 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useToast } from '@/hooks/use-toast';
+import { Receipt, CreditCard, Wallet, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
+interface OrderInvoice {
+  id: string;
+  code: string;
+  address: string;
+  status: string;
+  payment_amount: number | null;
+  payment_confirmed_at: string | null;
+  created_at: string;
+  subcategory: { name: string } | null;
+  province: { name: string } | null;
+  // علی‌الحساب پرداخت شده (از فیلد notes یا جدول جداگانه)
+  advance_payment: number;
+  remaining_amount: number;
+}
+
+interface InvoiceSummary {
+  totalOrders: number;
+  totalAmount: number;
+  totalPaid: number;
+  totalAdvance: number;
+  totalRemaining: number;
+}
+
+const getStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    pending: 'در انتظار تایید',
+    approved: 'تایید شده',
+    in_progress: 'در حال اجرا',
+    completed: 'تکمیل شده',
+    paid: 'پرداخت شده',
+    closed: 'بسته شده',
+    rejected: 'رد شده',
+  };
+  return labels[status] || status;
+};
+
+const getPaymentStatusBadge = (order: OrderInvoice) => {
+  if (order.payment_confirmed_at) {
+    return <Badge className="bg-green-500/20 text-green-700">پرداخت کامل</Badge>;
+  }
+  if (order.advance_payment > 0) {
+    return <Badge className="bg-yellow-500/20 text-yellow-700">علی‌الحساب</Badge>;
+  }
+  return <Badge className="bg-red-500/20 text-red-700">پرداخت نشده</Badge>;
+};
+
+export const CustomerInvoice = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<OrderInvoice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [summary, setSummary] = useState<InvoiceSummary>({
+    totalOrders: 0,
+    totalAmount: 0,
+    totalPaid: 0,
+    totalAdvance: 0,
+    totalRemaining: 0,
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchOrders();
+    }
+  }, [user]);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      
+      // Get customer id
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (!customer) {
+        setOrders([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('projects_v3')
+        .select(`
+          id,
+          code,
+          address,
+          status,
+          payment_amount,
+          payment_confirmed_at,
+          created_at,
+          notes,
+          subcategories (name),
+          provinces (name)
+        `)
+        .eq('customer_id', customer.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const processedOrders: OrderInvoice[] = (data || []).map(order => {
+        // استخراج علی‌الحساب از notes (اگر ذخیره شده باشد)
+        let advancePayment = 0;
+        try {
+          if (order.notes) {
+            const notesData = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+            advancePayment = notesData?.advance_payment || 0;
+          }
+        } catch {
+          advancePayment = 0;
+        }
+
+        const totalAmount = order.payment_amount || 0;
+        const paidAmount = order.payment_confirmed_at ? totalAmount : advancePayment;
+        const remaining = totalAmount - paidAmount;
+
+        return {
+          id: order.id,
+          code: order.code,
+          address: order.address,
+          status: order.status || 'pending',
+          payment_amount: order.payment_amount,
+          payment_confirmed_at: order.payment_confirmed_at,
+          created_at: order.created_at,
+          subcategory: order.subcategories,
+          province: order.provinces,
+          advance_payment: advancePayment,
+          remaining_amount: remaining > 0 ? remaining : 0,
+        };
+      });
+
+      setOrders(processedOrders);
+      calculateSummary(processedOrders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در بارگذاری صورتحساب',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateSummary = (orderList: OrderInvoice[]) => {
+    const summary = orderList.reduce(
+      (acc, order) => ({
+        totalOrders: acc.totalOrders + 1,
+        totalAmount: acc.totalAmount + (order.payment_amount || 0),
+        totalPaid: acc.totalPaid + (order.payment_confirmed_at ? (order.payment_amount || 0) : 0),
+        totalAdvance: acc.totalAdvance + order.advance_payment,
+        totalRemaining: acc.totalRemaining + order.remaining_amount,
+      }),
+      { totalOrders: 0, totalAmount: 0, totalPaid: 0, totalAdvance: 0, totalRemaining: 0 }
+    );
+    setSummary(summary);
+  };
+
+  const filteredOrders = orders.filter(order => {
+    if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+    if (paymentFilter === 'paid' && !order.payment_confirmed_at) return false;
+    if (paymentFilter === 'advance' && (order.advance_payment === 0 || order.payment_confirmed_at)) return false;
+    if (paymentFilter === 'unpaid' && (order.payment_confirmed_at || order.advance_payment > 0)) return false;
+    return true;
+  });
+
+  const toggleOrderExpand = (orderId: string) => {
+    setExpandedOrders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const handlePayment = (orderId: string) => {
+    navigate(`/user/orders/${orderId}`);
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('fa-IR').format(price) + ' تومان';
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* خلاصه صورتحساب */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200">
+          <CardContent className="p-4 text-center">
+            <Receipt className="h-6 w-6 mx-auto mb-2 text-blue-600" />
+            <p className="text-xs text-muted-foreground">تعداد سفارشات</p>
+            <p className="text-lg font-bold text-blue-600">{summary.totalOrders}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-200">
+          <CardContent className="p-4 text-center">
+            <Wallet className="h-6 w-6 mx-auto mb-2 text-purple-600" />
+            <p className="text-xs text-muted-foreground">مجموع کل</p>
+            <p className="text-sm font-bold text-purple-600">{formatPrice(summary.totalAmount)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200">
+          <CardContent className="p-4 text-center">
+            <TrendingUp className="h-6 w-6 mx-auto mb-2 text-green-600" />
+            <p className="text-xs text-muted-foreground">پرداخت شده</p>
+            <p className="text-sm font-bold text-green-600">{formatPrice(summary.totalPaid)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 border-yellow-200">
+          <CardContent className="p-4 text-center">
+            <CreditCard className="h-6 w-6 mx-auto mb-2 text-yellow-600" />
+            <p className="text-xs text-muted-foreground">علی‌الحساب</p>
+            <p className="text-sm font-bold text-yellow-600">{formatPrice(summary.totalAdvance)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-red-500/10 to-red-600/5 border-red-200">
+          <CardContent className="p-4 text-center">
+            <TrendingDown className="h-6 w-6 mx-auto mb-2 text-red-600" />
+            <p className="text-xs text-muted-foreground">مانده بدهی</p>
+            <p className="text-sm font-bold text-red-600">{formatPrice(summary.totalRemaining)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* فیلترها */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-3">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="وضعیت سفارش" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">همه وضعیت‌ها</SelectItem>
+                <SelectItem value="pending">در انتظار تایید</SelectItem>
+                <SelectItem value="approved">تایید شده</SelectItem>
+                <SelectItem value="in_progress">در حال اجرا</SelectItem>
+                <SelectItem value="completed">تکمیل شده</SelectItem>
+                <SelectItem value="paid">پرداخت شده</SelectItem>
+                <SelectItem value="closed">بسته شده</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="وضعیت پرداخت" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">همه پرداخت‌ها</SelectItem>
+                <SelectItem value="paid">پرداخت کامل</SelectItem>
+                <SelectItem value="advance">علی‌الحساب</SelectItem>
+                <SelectItem value="unpaid">پرداخت نشده</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* لیست سفارشات */}
+      <div className="space-y-3">
+        {filteredOrders.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              سفارشی یافت نشد
+            </CardContent>
+          </Card>
+        ) : (
+          filteredOrders.map(order => (
+            <Collapsible
+              key={order.id}
+              open={expandedOrders.has(order.id)}
+              onOpenChange={() => toggleOrderExpand(order.id)}
+            >
+              <Card>
+                <CollapsibleTrigger className="w-full">
+                  <CardHeader className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className="font-semibold text-sm">کد: {order.code}</p>
+                          <p className="text-xs text-muted-foreground">{order.subcategory?.name}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {getPaymentStatusBadge(order)}
+                        <Badge variant="outline">{getStatusLabel(order.status)}</Badge>
+                        {expandedOrders.has(order.id) ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <CardContent className="p-4 pt-0 space-y-4">
+                    <Separator />
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">آدرس:</p>
+                        <p className="font-medium">{order.address}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">استان:</p>
+                        <p className="font-medium">{order.province?.name}</p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* جزئیات مالی */}
+                    <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">مبلغ کل سفارش:</span>
+                        <span className="font-bold">{formatPrice(order.payment_amount || 0)}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-green-600">
+                        <span>پرداخت شده:</span>
+                        <span className="font-medium">
+                          {formatPrice(order.payment_confirmed_at ? (order.payment_amount || 0) : 0)}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-yellow-600">
+                        <span>علی‌الحساب:</span>
+                        <span className="font-medium">{formatPrice(order.advance_payment)}</span>
+                      </div>
+
+                      <Separator />
+
+                      <div className="flex justify-between items-center text-red-600 text-lg">
+                        <span className="font-bold">مانده بدهی:</span>
+                        <span className="font-bold">{formatPrice(order.remaining_amount)}</span>
+                      </div>
+                    </div>
+
+                    {/* دکمه‌های عملیات */}
+                    {order.remaining_amount > 0 && !order.payment_confirmed_at && (
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handlePayment(order.id)}
+                          className="flex-1"
+                        >
+                          <CreditCard className="h-4 w-4 ml-2" />
+                          پرداخت کامل
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handlePayment(order.id)}
+                          className="flex-1"
+                        >
+                          <Wallet className="h-4 w-4 ml-2" />
+                          پرداخت علی‌الحساب
+                        </Button>
+                      </div>
+                    )}
+
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => navigate(`/user/orders/${order.id}`)}
+                      className="w-full"
+                    >
+                      مشاهده جزئیات سفارش
+                    </Button>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
