@@ -203,7 +203,7 @@ const App = () => {
                   <MyOrders />
                 </ProtectedRoute>
               } />
-              <Route path="/orders/:id" element={
+              <Route path="/user/orders/:id" element={
                 <ProtectedRoute>
                   <OrderDetail />
                 </ProtectedRoute>
