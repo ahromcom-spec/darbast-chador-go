@@ -51,7 +51,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { z } from "zod";
-import { formatPersianDate, formatPersianDateTimeFull } from "@/lib/dateUtils";
+import { formatPersianDate, formatPersianDateTime, formatPersianDateTimeFull } from "@/lib/dateUtils";
 
 interface Order {
   id: string;
@@ -1219,19 +1219,31 @@ export default function OrderDetail() {
                           {parsedNotes.installDate && (
                             <div className="p-3 bg-muted/40 rounded-lg">
                               <span className="text-xs text-muted-foreground block mb-1">تاریخ نصب پیشنهادی</span>
-                              <span className="font-medium text-sm">{parsedNotes.installDate}</span>
+                              <span className="font-medium text-sm">
+                                {parsedNotes.installDate.includes('T') || parsedNotes.installDate.includes('-')
+                                  ? formatPersianDateTime(parsedNotes.installDate)
+                                  : parsedNotes.installDate}
+                              </span>
                             </div>
                           )}
                           {parsedNotes.installationDateTime && (
                             <div className="p-3 bg-muted/40 rounded-lg">
                               <span className="text-xs text-muted-foreground block mb-1">زمان نصب درخواستی</span>
-                              <span className="font-medium text-sm">{parsedNotes.installationDateTime}</span>
+                              <span className="font-medium text-sm">
+                                {parsedNotes.installationDateTime.includes('T') || parsedNotes.installationDateTime.includes('-')
+                                  ? formatPersianDateTime(parsedNotes.installationDateTime)
+                                  : parsedNotes.installationDateTime}
+                              </span>
                             </div>
                           )}
                           {parsedNotes.dueDate && (
                             <div className="p-3 bg-muted/40 rounded-lg">
                               <span className="text-xs text-muted-foreground block mb-1">سررسید قرارداد</span>
-                              <span className="font-medium text-sm">{parsedNotes.dueDate}</span>
+                              <span className="font-medium text-sm">
+                                {parsedNotes.dueDate.includes('T') || parsedNotes.dueDate.includes('-')
+                                  ? formatPersianDate(parsedNotes.dueDate)
+                                  : parsedNotes.dueDate}
+                              </span>
                             </div>
                           )}
                         </div>
