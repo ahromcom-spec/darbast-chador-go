@@ -208,6 +208,12 @@ const App = () => {
                   <OrderDetail />
                 </ProtectedRoute>
               } />
+              {/* Redirect for backward compatibility with old /orders/:id links */}
+              <Route path="/orders/:id" element={
+                <ProtectedRoute>
+                  <OrderDetail />
+                </ProtectedRoute>
+              } />
               <Route path="/user/new-location" element={
                 <ProtectedRoute>
                   <NewLocation />
