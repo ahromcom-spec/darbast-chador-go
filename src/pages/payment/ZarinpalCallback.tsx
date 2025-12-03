@@ -48,7 +48,7 @@ const ZarinpalCallback = () => {
             description: "لطفاً وضعیت سفارش را در صفحه سفارش‌ها بررسی کنید.",
             variant: "destructive",
           });
-          navigate(`/orders/${orderId}?payment=failed`);
+          navigate(`/user/orders/${orderId}?payment=failed`);
           return;
         }
 
@@ -67,7 +67,7 @@ const ZarinpalCallback = () => {
           });
         }
 
-        navigate(`/orders/${orderId}?payment=${paymentStatus}`);
+        navigate(`/user/orders/${orderId}?payment=${paymentStatus}`);
       } catch (err) {
         console.error("ZarinPal verify error:", err);
         toast({
