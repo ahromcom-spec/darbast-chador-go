@@ -121,23 +121,7 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
       
       console.log('✅ Validated data:', validatedData);
       
-      // بررسی آدرس تکراری (فقط برای ثبت جدید)
-      if (!isEditMode && validatedData.lat && validatedData.lng) {
-        const duplicateLocation = locations.find(loc => {
-          if (!loc.lat || !loc.lng) return false;
-          const distance = calculateDistance(validatedData.lat, validatedData.lng, loc.lat, loc.lng);
-          return distance < 50; // فاصله کمتر از 50 متر
-        });
-        
-        if (duplicateLocation) {
-          toast({
-            title: 'آدرس موجود است',
-            description: `این موقعیت قبلاً با عنوان "${duplicateLocation.title || duplicateLocation.address_line}" ثبت شده است. می‌توانید از همان آدرس استفاده کنید.`,
-          });
-          setIsSubmitting(false);
-          return;
-        }
-      }
+      // کاربران می‌توانند چندین آدرس در یک موقعیت ثبت کنند (مثلاً پلاک‌های مختلف)
       
       if (isEditMode && initialData) {
         // Update existing location - convert empty district_id to null
