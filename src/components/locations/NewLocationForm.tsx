@@ -121,7 +121,21 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
       
       console.log('✅ Validated data:', validatedData);
       
-      // کاربران می‌توانند چندین آدرس در یک موقعیت ثبت کنند (مثلاً پلاک‌های مختلف)
+      // بررسی آدرس تکراری فقط اگر متن آدرس دقیقاً یکسان باشد
+      if (!isEditMode) {
+        const duplicateLocation = locations.find(loc => 
+          loc.address_line.trim() === validatedData.address_line.trim()
+        );
+        
+        if (duplicateLocation) {
+          toast({
+            title: 'آدرس تکراری',
+            description: 'این آدرس قبلاً ثبت شده است. لطفاً آدرس متفاوتی وارد کنید.',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
       
       if (isEditMode && initialData) {
         // Update existing location - convert empty district_id to null
