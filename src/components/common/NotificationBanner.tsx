@@ -76,7 +76,7 @@ export function NotificationBanner() {
   }
 
   return (
-    <div className="fixed top-4 left-4 right-4 z-[100] max-w-md mx-auto" data-notification-banner>
+    <div className="fixed bottom-20 left-4 z-[100] max-w-md" data-notification-banner>
       <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-xl">
         <div className="p-4 flex items-center gap-3">
           <div className="flex-shrink-0 p-2 rounded-lg bg-primary/10">
