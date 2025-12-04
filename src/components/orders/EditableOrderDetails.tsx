@@ -16,6 +16,7 @@ import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { parseOrderNotes } from './OrderDetailsView';
 import VoiceCall from './VoiceCall';
+import OrderChat from './OrderChat';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -607,6 +608,10 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         customerId={order.customer_id}
         isManager={true}
       />
+
+      {/* Chat with customer */}
+      <Separator />
+      <OrderChat orderId={order.id} orderStatus="pending" />
     </div>
   );
 };

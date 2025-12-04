@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, PhoneCall } from 'lucide-react';
 import VoiceCall from '@/components/orders/VoiceCall';
+import OrderChat from '@/components/orders/OrderChat';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -47,11 +48,12 @@ const parseOrderNotes = (notes: any): any => {
   }
 };
 
-// Component to display order media
+// Component to display order media with signed URLs
 const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
   const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string }>>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchMedia = async () => {
@@ -73,6 +75,36 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
     fetchMedia();
   }, [orderId]);
 
+  // Fetch signed URLs for all media items
+  useEffect(() => {
+    const fetchUrls = async () => {
+      const urls: Record<string, string> = {};
+      for (const item of media) {
+        try {
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from('project-media')
+            .createSignedUrl(item.file_path, 3600);
+          
+          if (signedData?.signedUrl && !signedError) {
+            urls[item.id] = signedData.signedUrl;
+          } else {
+            const { data } = supabase.storage.from('project-media').getPublicUrl(item.file_path);
+            urls[item.id] = data.publicUrl;
+          }
+        } catch (err) {
+          console.error('Error getting URL for', item.file_path, err);
+          const { data } = supabase.storage.from('project-media').getPublicUrl(item.file_path);
+          urls[item.id] = data.publicUrl;
+        }
+      }
+      setMediaUrls(urls);
+    };
+    
+    if (media.length > 0) {
+      fetchUrls();
+    }
+  }, [media]);
+
   if (loading) {
     return (
       <div className="flex justify-center p-4">
@@ -90,9 +122,8 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
     );
   }
 
-  const getMediaUrl = (filePath: string) => {
-    const { data } = supabase.storage.from('project-media').getPublicUrl(filePath);
-    return data.publicUrl;
+  const getMediaUrl = (mediaItem: { id: string; file_path: string }) => {
+    return mediaUrls[mediaItem.id] || '';
   };
 
   const currentMedia = media[currentIndex];
@@ -104,19 +135,25 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
         <ImageIcon className="h-3 w-3" />
         تصاویر و فایل‌های سفارش ({media.length})
       </Label>
-      <div className="relative bg-black/5 rounded-lg overflow-hidden">
-        {isVideo ? (
-          <video
-            src={getMediaUrl(currentMedia.file_path)}
-            controls
-            className="w-full max-h-64 object-contain"
-          />
+      <div className="relative bg-black/5 rounded-lg overflow-hidden min-h-[200px]">
+        {mediaUrls[currentMedia?.id] ? (
+          isVideo ? (
+            <video
+              src={getMediaUrl(currentMedia)}
+              controls
+              className="w-full max-h-80 object-contain"
+            />
+          ) : (
+            <img
+              src={getMediaUrl(currentMedia)}
+              alt={`تصویر ${currentIndex + 1}`}
+              className="w-full max-h-80 object-contain"
+            />
+          )
         ) : (
-          <img
-            src={getMediaUrl(currentMedia.file_path)}
-            alt={`تصویر ${currentIndex + 1}`}
-            className="w-full max-h-64 object-contain"
-          />
+          <div className="flex justify-center items-center h-48">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
         )}
         
         {media.length > 1 && (
@@ -967,6 +1004,10 @@ export default function ExecutivePendingOrders() {
                   </div>
                 )}
               </div>
+
+              {/* چت سفارش */}
+              <Separator />
+              <OrderChat orderId={selectedOrder.id} orderStatus={selectedOrder.status} />
             </div>
           )}
         </DialogContent>
