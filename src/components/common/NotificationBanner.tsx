@@ -1,23 +1,27 @@
 import { Bell, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+
+const DISMISSAL_KEY = 'notification-banner-dismissed';
+const DISMISSAL_DURATION = 24 * 60 * 60 * 1000; // 24 ساعت
 
 export function NotificationBanner() {
+  const { user } = useAuth();
   const [dismissed, setDismissed] = useState(() => {
-    const dismissedData = localStorage.getItem('notification-banner-dismissed');
+    const dismissedData = localStorage.getItem(DISMISSAL_KEY);
     if (!dismissedData) return false;
     
     try {
       const { timestamp } = JSON.parse(dismissedData);
-      const oneMinute = 60 * 1000; // یک دقیقه به میلی‌ثانیه
       const timePassed = Date.now() - timestamp;
       
-      if (timePassed > oneMinute) {
-        localStorage.removeItem('notification-banner-dismissed');
+      if (timePassed > DISMISSAL_DURATION) {
+        localStorage.removeItem(DISMISSAL_KEY);
         return false;
       }
       return true;
@@ -26,13 +30,30 @@ export function NotificationBanner() {
     }
   });
   const [enabling, setEnabling] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
   const location = useLocation();
-  const { permission, isSupported, requestPermission, subscribeToPush } = usePushNotifications();
+  const { permission, isSupported, requestPermission, subscribeToPush, subscription } = usePushNotifications();
   const { toast } = useToast();
+
+  // نمایش بنر بعد از 2 ثانیه اگر کاربر لاگین کرده
+  useEffect(() => {
+    if (!user || !isSupported || permission === 'granted' || dismissed || subscription) {
+      setShowBanner(false);
+      return;
+    }
+    
+    // نمایش بنر پس از تاخیر کوتاه
+    const timer = setTimeout(() => {
+      setShowBanner(true);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [user, isSupported, permission, dismissed, subscription]);
 
   const handleDismiss = () => {
     setDismissed(true);
-    localStorage.setItem('notification-banner-dismissed', JSON.stringify({
+    setShowBanner(false);
+    localStorage.setItem(DISMISSAL_KEY, JSON.stringify({
       timestamp: Date.now()
     }));
   };
@@ -48,9 +69,10 @@ export function NotificationBanner() {
         await subscribeToPush();
         toast({
           title: 'اعلان‌ها فعال شد',
-          description: 'از این پس اعلان‌های جدید را دریافت خواهید کرد',
+          description: 'از این پس تماس‌های ورودی و به‌روزرسانی سفارشات را دریافت خواهید کرد',
         });
         setDismissed(true);
+        setShowBanner(false);
       } else if (result === 'denied') {
         toast({
           title: 'دسترسی رد شد',
@@ -70,22 +92,22 @@ export function NotificationBanner() {
     }
   };
 
-  // فقط در صفحه اصلی نمایش بده
-  if (!isSupported || permission === 'granted' || dismissed || location.pathname !== '/') {
+  // فقط نمایش اگر کاربر لاگین کرده و اشتراک نداشته باشد
+  if (!showBanner) {
     return null;
   }
 
   return (
-    <div className="fixed bottom-20 left-4 z-[100] max-w-md" data-notification-banner>
+    <div className="fixed bottom-20 left-4 z-[100] max-w-md animate-in slide-in-from-bottom-4" data-notification-banner>
       <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-xl">
         <div className="p-4 flex items-center gap-3">
           <div className="flex-shrink-0 p-2 rounded-lg bg-primary/10">
             <Bell className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm">دریافت اعلان‌های فوری</h3>
+            <h3 className="font-semibold text-sm">دریافت اعلان تماس‌های ورودی</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              از سفارشات جدید و به‌روزرسانی‌ها مطلع شوید
+              از تماس‌های مدیران و وضعیت سفارشات مطلع شوید
             </p>
           </div>
           <Button
