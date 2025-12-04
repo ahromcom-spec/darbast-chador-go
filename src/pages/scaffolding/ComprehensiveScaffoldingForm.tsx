@@ -1218,49 +1218,57 @@ export default function ComprehensiveScaffoldingForm({
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-4">
                   <Label className="text-foreground font-semibold">آدرس‌های ثبت شده</Label>
                   <Button variant="outline" size="sm" onClick={() => setShowNewLocationDialog(true)}>
                     <Plus className="w-4 h-4 ml-2" />
                     آدرس جدید
                   </Button>
                 </div>
-                <Select
-                  value={selectedLocationId || ''}
-                  onValueChange={(value) => {
-                    setSelectedLocationId(value);
-                    const location = locations.find(l => l.id === value);
-                    if (location) {
-                      setSelectedProvinceId(location.province_id || null);
-                      setSelectedDistrictId(location.district_id || null);
-                      setDetailedAddress(location.address_line);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full bg-background">
-                    <SelectValue placeholder="یک آدرس انتخاب کنید" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
-                    {locations.map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        <div className="flex flex-col items-start">
-                          <span className="font-medium">{location.title || 'بدون عنوان'}</span>
-                          <span className="text-xs text-muted-foreground truncate max-w-[300px]">
-                            {location.address_line}
-                          </span>
+                <div className="space-y-2">
+                  {locations.map((loc) => (
+                    <Collapsible
+                      key={loc.id}
+                      open={selectedLocationId === loc.id}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          setSelectedLocationId(loc.id);
+                          setSelectedProvinceId(loc.province_id || null);
+                          setSelectedDistrictId(loc.district_id || null);
+                          setDetailedAddress(loc.address_line);
+                        }
+                      }}
+                    >
+                      <CollapsibleTrigger className="w-full">
+                        <div className={`flex items-center justify-between p-4 rounded-lg border transition-all cursor-pointer ${
+                          selectedLocationId === loc.id 
+                            ? 'border-primary bg-primary/5 ring-2 ring-primary' 
+                            : 'border-border bg-background hover:bg-muted/50'
+                        }`}>
+                          <div className="flex items-center gap-3 text-right">
+                            <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
+                            <div>
+                              <p className="font-semibold text-foreground">{loc.title || 'بدون عنوان'}</p>
+                              <p className="text-sm text-muted-foreground">{loc.address_line}</p>
+                            </div>
+                          </div>
+                          <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${
+                            selectedLocationId === loc.id ? 'rotate-180' : ''
+                          }`} />
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                {selectedLocationId && (
-                  <div className="p-3 bg-muted/50 rounded-lg border">
-                    <p className="text-sm text-foreground">
-                      {locations.find(l => l.id === selectedLocationId)?.address_line}
-                    </p>
-                  </div>
-                )}
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="p-4 mt-1 rounded-lg bg-muted/30 border border-border/50">
+                          <div className="flex gap-2 text-sm text-muted-foreground mb-2">
+                            {loc.provinces && <span>{loc.provinces.name}</span>}
+                            {loc.districts && <span>• {loc.districts.name}</span>}
+                          </div>
+                          <p className="text-sm text-foreground">{loc.address_line}</p>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
+                </div>
               </>
             )}
           </CardContent>
