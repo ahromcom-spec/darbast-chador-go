@@ -89,6 +89,17 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const incomingSignalRef = useRef<any>(null);
+  const callStateRef = useRef<CallState>('idle');
+  const otherPartyIdRef = useRef<string | null>(null);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    callStateRef.current = callState;
+  }, [callState]);
+
+  useEffect(() => {
+    otherPartyIdRef.current = otherPartyId;
+  }, [otherPartyId]);
 
   // Resolve the other party's user ID
   useEffect(() => {
@@ -334,17 +345,20 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     }
 
     // Send end signal if we have other party
-    if (user && otherPartyId && callState !== 'idle') {
+    const currentOtherParty = otherPartyIdRef.current;
+    const currentCallState = callStateRef.current;
+    
+    if (user && currentOtherParty && currentCallState !== 'idle') {
       await supabase.from('voice_call_signals' as any).insert({
         order_id: orderId,
         caller_id: user.id,
-        receiver_id: otherPartyId,
+        receiver_id: currentOtherParty,
         signal_type: 'call-end',
         signal_data: {}
       });
     }
 
-    // Cleanup old signals
+    // Cleanup old signals after delay
     if (user) {
       setTimeout(async () => {
         await supabase
@@ -352,14 +366,14 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           .delete()
           .eq('order_id', orderId)
           .or(`caller_id.eq.${user.id},receiver_id.eq.${user.id}`);
-      }, 3000);
+      }, 5000);
     }
 
     setCallState('idle');
     setCallDuration(0);
     incomingSignalRef.current = null;
     setDebugInfo('');
-  }, [user, otherPartyId, orderId, callState]);
+  }, [user, orderId]);
 
   // Toggle mute
   const toggleMute = () => {
@@ -372,7 +386,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     }
   };
 
-  // Listen for signals via realtime
+  // Listen for signals via realtime - STABLE subscription that doesn't re-create
   useEffect(() => {
     if (!user) return;
 
@@ -392,11 +406,12 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           const signal = payload.new as any;
           if (signal.order_id !== orderId) return;
 
-          console.log('[VoiceCall] Received signal:', signal.signal_type);
+          console.log('[VoiceCall] Received signal:', signal.signal_type, 'Current state:', callStateRef.current);
 
           switch (signal.signal_type) {
             case 'call-request':
-              if (callState === 'idle') {
+              // Use ref to check current state
+              if (callStateRef.current === 'idle') {
                 incomingSignalRef.current = signal;
                 
                 // Get caller name
@@ -414,11 +429,18 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               break;
 
             case 'call-accept':
-              if (callState === 'calling' && peerConnectionRef.current && signal.signal_data?.answer) {
+              // Use ref to check current state
+              if (callStateRef.current === 'calling' && peerConnectionRef.current && signal.signal_data?.answer) {
+                console.log('[VoiceCall] Processing call-accept');
                 stopRingtone();
-                await peerConnectionRef.current.setRemoteDescription(
-                  new RTCSessionDescription(signal.signal_data.answer)
-                );
+                try {
+                  await peerConnectionRef.current.setRemoteDescription(
+                    new RTCSessionDescription(signal.signal_data.answer)
+                  );
+                  console.log('[VoiceCall] Remote description set successfully');
+                } catch (e) {
+                  console.error('[VoiceCall] Error setting remote description:', e);
+                }
               }
               break;
 
@@ -451,10 +473,10 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       });
 
     return () => {
-      console.log('[VoiceCall] Cleaning up');
+      console.log('[VoiceCall] Cleaning up subscription');
       supabase.removeChannel(channel);
     };
-  }, [user, orderId, callState, endCall]);
+  }, [user, orderId, endCall]); // Removed callState from deps - using ref instead
 
   // Don't render if manager has no customer
   if (isManager && !customerId) return null;
