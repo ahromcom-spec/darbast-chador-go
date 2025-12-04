@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, PhoneCall } from 'lucide-react';
+import VoiceCall from '@/components/orders/VoiceCall';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -747,6 +748,24 @@ export default function ExecutivePendingOrders() {
                   </p>
                 </div>
               </div>
+
+              {/* تماس صوتی با مشتری */}
+              {selectedOrder.customer_id && (
+                <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <PhoneCall className="h-4 w-4 text-primary" />
+                    <Label className="text-sm font-semibold">تماس صوتی با مشتری</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    برای هماهنگی زمان‌بندی و جزئیات سفارش با مشتری تماس بگیرید
+                  </p>
+                  <VoiceCall 
+                    orderId={selectedOrder.id}
+                    customerId={selectedOrder.customer_id}
+                    isManager={true}
+                  />
+                </div>
+              )}
 
               <Separator />
 
