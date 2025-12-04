@@ -14,13 +14,22 @@ export function usePushNotifications() {
   useEffect(() => {
     const fetchVapidKey = async () => {
       try {
+        console.log('🔑 Fetching VAPID public key...');
         const { data, error } = await supabase.functions.invoke('get-vapid-public-key');
-        if (error) throw error;
+        
+        if (error) {
+          console.error('❌ Error fetching VAPID key:', error);
+          throw error;
+        }
+        
         if (data?.publicKey) {
+          console.log('✅ VAPID key received:', data.publicKey.substring(0, 20) + '...');
           setVapidPublicKey(data.publicKey);
+        } else {
+          console.error('❌ No publicKey in response:', data);
         }
       } catch (error) {
-        console.error('Failed to fetch VAPID public key:', error);
+        console.error('❌ Failed to fetch VAPID public key:', error);
       }
     };
 

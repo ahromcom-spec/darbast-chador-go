@@ -115,11 +115,23 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         // نمایش راهنمای فعال‌سازی در تنظیمات مرورگر
         setShowDeniedHelp(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error enabling notifications:', error);
+      
+      // نمایش پیام خطای مناسب‌تر
+      let errorMessage = 'فعال‌سازی اعلان‌ها با مشکل مواجه شد';
+      
+      if (error?.message?.includes('VAPID')) {
+        errorMessage = 'کلید سرور در دسترس نیست. لطفاً صفحه را رفرش کنید';
+      } else if (error?.message?.includes('Permission')) {
+        errorMessage = 'مجوز اعلان داده نشده است';
+      } else if (error?.message?.includes('not authenticated')) {
+        errorMessage = 'لطفاً ابتدا وارد حساب کاربری شوید';
+      }
+      
       toast({
         title: 'خطا',
-        description: 'فعال‌سازی اعلان‌ها با مشکل مواجه شد',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
