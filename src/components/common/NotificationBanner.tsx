@@ -96,13 +96,35 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
 
   const handleEnable = async () => {
     setEnabling(true);
+    
+    // Timeout برای جلوگیری از گیر کردن بی‌نهایت
+    const timeoutId = setTimeout(() => {
+      setEnabling(false);
+      toast({
+        title: 'خطا',
+        description: 'فعال‌سازی اعلان‌ها بیش از حد طول کشید. لطفاً صفحه را رفرش کرده و دوباره تلاش کنید.',
+        variant: 'destructive'
+      });
+    }, 15000); // 15 ثانیه timeout
+    
     try {
+      console.log('🔔 Starting notification enablement...');
+      
+      // بررسی وجود کاربر
+      if (!user) {
+        throw new Error('not authenticated');
+      }
+      
       const result = await requestPermission();
       console.log('🔔 Permission result:', result);
       
       if (result === 'granted') {
+        console.log('🔔 Permission granted, subscribing to push...');
         // پاس دادن نتیجه مجوز به subscribeToPush
         await subscribeToPush(result);
+        console.log('🔔 Push subscription successful!');
+        
+        clearTimeout(timeoutId);
         toast({
           title: '✅ اعلان‌ها فعال شد',
           description: 'از این پس تماس‌های ورودی و به‌روزرسانی سفارشات را دریافت خواهید کرد',
@@ -112,10 +134,19 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         setShowDialog(false);
         setShowDeniedHelp(false);
       } else if (result === 'denied') {
+        clearTimeout(timeoutId);
         // نمایش راهنمای فعال‌سازی در تنظیمات مرورگر
         setShowDeniedHelp(true);
+      } else {
+        // default یا هر وضعیت دیگر
+        clearTimeout(timeoutId);
+        toast({
+          title: 'توجه',
+          description: 'لطفاً در پنجره مرورگر روی "اجازه" یا "Allow" کلیک کنید',
+        });
       }
     } catch (error: any) {
+      clearTimeout(timeoutId);
       console.error('Error enabling notifications:', error);
       
       // نمایش پیام خطای مناسب‌تر
@@ -127,6 +158,8 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         errorMessage = 'مجوز اعلان داده نشده است';
       } else if (error?.message?.includes('not authenticated')) {
         errorMessage = 'لطفاً ابتدا وارد حساب کاربری شوید';
+      } else if (error?.message?.includes('service worker')) {
+        errorMessage = 'Service Worker در دسترس نیست. لطفاً صفحه را رفرش کنید';
       }
       
       toast({
@@ -135,6 +168,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         variant: 'destructive'
       });
     } finally {
+      clearTimeout(timeoutId);
       setEnabling(false);
     }
   };

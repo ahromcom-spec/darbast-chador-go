@@ -15,11 +15,17 @@ export function usePushNotifications() {
     const fetchVapidKey = async () => {
       try {
         console.log('🔑 Fetching VAPID public key...');
+        
+        // اضافه کردن timeout برای fetch
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
         const { data, error } = await supabase.functions.invoke('get-vapid-public-key');
+        clearTimeout(timeoutId);
         
         if (error) {
           console.error('❌ Error fetching VAPID key:', error);
-          throw error;
+          return;
         }
         
         if (data?.publicKey) {
@@ -88,7 +94,7 @@ export function usePushNotifications() {
 
     if (!vapidPublicKey) {
       console.error('❌ VAPID key not available');
-      throw new Error('VAPID key not available');
+      throw new Error('VAPID key not available. Please refresh the page.');
     }
 
     if (!user) {
@@ -100,7 +106,14 @@ export function usePushNotifications() {
 
     try {
       console.log('📡 Waiting for Service Worker...');
-      const registration = await navigator.serviceWorker.ready;
+      
+      // منتظر آماده شدن Service Worker با timeout
+      const swReadyPromise = navigator.serviceWorker.ready;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Service Worker timeout')), 8000);
+      });
+      
+      const registration = await Promise.race([swReadyPromise, timeoutPromise]);
       console.log('✅ Service Worker ready:', registration.scope);
       
       // Unsubscribe from existing subscription if any
@@ -125,8 +138,12 @@ export function usePushNotifications() {
       console.log('✅ Subscription saved successfully!');
       
       return sub;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Failed to subscribe to push notifications:', error);
+      
+      if (error?.message?.includes('timeout')) {
+        throw new Error('Service Worker timeout - please refresh the page');
+      }
       throw error;
     } finally {
       setLoading(false);
