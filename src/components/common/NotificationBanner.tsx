@@ -1,8 +1,8 @@
-import { Bell, X, Loader2, Phone, AlertTriangle } from 'lucide-react';
+import { Bell, X, Loader2, Phone, AlertTriangle, Settings, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +24,7 @@ interface NotificationBannerProps {
 
 export function NotificationBanner({ variant = 'floating' }: NotificationBannerProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(() => {
     const dismissedData = localStorage.getItem(DISMISSAL_KEY);
     if (!dismissedData) return false;
@@ -44,6 +45,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
   const [enabling, setEnabling] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [showDeniedHelp, setShowDeniedHelp] = useState(false);
   const location = useLocation();
   const { permission, isSupported, requestPermission, subscribeToPush, subscription } = usePushNotifications();
   const { toast } = useToast();
@@ -54,6 +56,11 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
       setShowBanner(false);
       setShowDialog(false);
       return;
+    }
+
+    // اگر permission denied است، نشان دادن راهنما
+    if (permission === 'denied') {
+      setShowDeniedHelp(true);
     }
 
     // اگر اولین بار است یا مدت زیادی گذشته، دیالوگ نشان بده
@@ -103,12 +110,10 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         setDismissed(true);
         setShowBanner(false);
         setShowDialog(false);
+        setShowDeniedHelp(false);
       } else if (result === 'denied') {
-        toast({
-          title: 'دسترسی رد شد',
-          description: 'لطفا در تنظیمات مرورگر اجازه ارسال اعلان را فعال کنید',
-          variant: 'destructive'
-        });
+        // نمایش راهنمای فعال‌سازی در تنظیمات مرورگر
+        setShowDeniedHelp(true);
       }
     } catch (error) {
       console.error('Error enabling notifications:', error);
@@ -120,6 +125,12 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
     } finally {
       setEnabling(false);
     }
+  };
+
+  const handleGoToSettings = () => {
+    setShowDialog(false);
+    setShowDeniedHelp(false);
+    navigate('/settings/notifications');
   };
 
   // نمایش inline بنر در بالای صفحه
@@ -179,56 +190,110 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
       )}
 
       {/* دیالوگ اصلی برای فعال‌سازی - مهم‌تر و برجسته‌تر */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <Dialog open={showDialog} onOpenChange={(open) => {
+        setShowDialog(open);
+        if (!open) setShowDeniedHelp(false);
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <div className="flex items-center justify-center mb-4">
-              <div className="p-4 rounded-full bg-primary/10 animate-pulse">
-                <Phone className="h-10 w-10 text-primary" />
+              <div className={`p-4 rounded-full ${showDeniedHelp ? 'bg-destructive/10' : 'bg-primary/10 animate-pulse'}`}>
+                {showDeniedHelp ? (
+                  <Settings className="h-10 w-10 text-destructive" />
+                ) : (
+                  <Phone className="h-10 w-10 text-primary" />
+                )}
               </div>
             </div>
             <DialogTitle className="text-center text-xl">
-              فعال‌سازی اعلان تماس‌ها
+              {showDeniedHelp ? 'دسترسی رد شده است' : 'فعال‌سازی اعلان تماس‌ها'}
             </DialogTitle>
             <DialogDescription className="text-center space-y-3 pt-2">
-              <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                <p className="text-sm text-amber-800 dark:text-amber-200">
-                  بدون فعال‌سازی اعلان‌ها، تماس‌های مدیران را دریافت نمی‌کنید!
-                </p>
-              </div>
-              <p className="text-muted-foreground">
-                با فعال‌سازی اعلان‌ها، حتی زمانی که سایت بسته است از تماس‌های مدیران و وضعیت سفارشات مطلع می‌شوید.
-              </p>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-col">
-            <Button 
-              onClick={handleEnable} 
-              className="w-full"
-              size="lg"
-              disabled={enabling}
-            >
-              {enabling ? (
+              {showDeniedHelp ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin ml-2" />
-                  در حال فعال‌سازی...
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/30">
+                    <X className="h-5 w-5 text-destructive flex-shrink-0" />
+                    <p className="text-sm text-destructive">
+                      دسترسی اعلان در مرورگر مسدود شده است
+                    </p>
+                  </div>
+                  <div className="text-right space-y-2 bg-muted/50 p-4 rounded-lg">
+                    <p className="font-medium text-foreground text-sm">برای فعال‌سازی:</p>
+                    <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                      <li>روی آیکون قفل کنار آدرس سایت کلیک کنید</li>
+                      <li>گزینه "اعلان‌ها" یا "Notifications" را پیدا کنید</li>
+                      <li>آن را از "مسدود" به "اجازه" تغییر دهید</li>
+                      <li>صفحه را رفرش کنید</li>
+                    </ol>
+                  </div>
+                  <p className="text-muted-foreground text-sm">
+                    یا می‌توانید به صفحه تنظیمات اعلان‌ها بروید:
+                  </p>
                 </>
               ) : (
                 <>
-                  <Bell className="h-5 w-5 ml-2" />
-                  فعال‌سازی اعلان‌ها
+                  <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      بدون فعال‌سازی اعلان‌ها، تماس‌های مدیران را دریافت نمی‌کنید!
+                    </p>
+                  </div>
+                  <p className="text-muted-foreground">
+                    با فعال‌سازی اعلان‌ها، حتی زمانی که سایت بسته است از تماس‌های مدیران و وضعیت سفارشات مطلع می‌شوید.
+                  </p>
                 </>
               )}
-            </Button>
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowDialog(false)}
-              className="w-full text-muted-foreground"
-              disabled={enabling}
-            >
-              بعداً یادآوری کن
-            </Button>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            {showDeniedHelp ? (
+              <>
+                <Button 
+                  onClick={handleGoToSettings}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Settings className="h-5 w-5 ml-2" />
+                  رفتن به تنظیمات اعلان‌ها
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowDeniedHelp(false)}
+                  className="w-full"
+                >
+                  تلاش مجدد
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  onClick={handleEnable} 
+                  className="w-full"
+                  size="lg"
+                  disabled={enabling}
+                >
+                  {enabling ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin ml-2" />
+                      در حال فعال‌سازی...
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="h-5 w-5 ml-2" />
+                      فعال‌سازی اعلان‌ها
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowDialog(false)}
+                  className="w-full text-muted-foreground"
+                  disabled={enabling}
+                >
+                  بعداً یادآوری کن
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
