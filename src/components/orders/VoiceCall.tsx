@@ -37,80 +37,122 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const [callDuration, setCallDuration] = useState(0);
   const [callerName, setCallerName] = useState<string>('');
   const [resolvedOtherPartyId, setResolvedOtherPartyId] = useState<string | null>(null);
+  const [isResolving, setIsResolving] = useState(true);
   
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const incomingCallIdRef = useRef<string | null>(null);
+  const otherPartyIdRef = useRef<string | null>(null);
+
+  // Keep otherPartyIdRef in sync
+  useEffect(() => {
+    otherPartyIdRef.current = resolvedOtherPartyId;
+  }, [resolvedOtherPartyId]);
 
   // Resolve customer user_id if manager is calling
   useEffect(() => {
     const resolveOtherPartyId = async () => {
+      setIsResolving(true);
+      console.log('[VoiceCall] Resolving other party ID...', { isManager, customerId, managerId });
+      
       if (isManager && customerId) {
-        // customerId might be the customer table ID, need to get user_id
-        const { data: customerData } = await supabase
-          .from('customers')
-          .select('user_id')
-          .eq('id', customerId)
-          .single();
-        
-        if (customerData?.user_id) {
-          setResolvedOtherPartyId(customerData.user_id);
+        try {
+          const { data: customerData, error } = await supabase
+            .from('customers')
+            .select('user_id')
+            .eq('id', customerId)
+            .single();
+          
+          if (error) {
+            console.error('[VoiceCall] Error fetching customer:', error);
+          } else if (customerData?.user_id) {
+            console.log('[VoiceCall] Resolved customer user_id:', customerData.user_id);
+            setResolvedOtherPartyId(customerData.user_id);
+          } else {
+            console.warn('[VoiceCall] No user_id found for customer:', customerId);
+          }
+        } catch (err) {
+          console.error('[VoiceCall] Exception resolving customer:', err);
         }
       } else if (!isManager && managerId) {
+        console.log('[VoiceCall] Using manager ID directly:', managerId);
         setResolvedOtherPartyId(managerId);
+      } else {
+        console.log('[VoiceCall] No party to resolve', { isManager, customerId, managerId });
       }
+      
+      setIsResolving(false);
     };
 
     resolveOtherPartyId();
   }, [isManager, customerId, managerId]);
-
-  // Determine the other party's ID
-  const otherPartyId = resolvedOtherPartyId;
 
   // ICE servers for NAT traversal
   const iceServers: RTCConfiguration = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
     ]
   };
 
-  // Initialize peer connection
+  // Initialize peer connection - using ref to get latest otherPartyId
   const createPeerConnection = useCallback(() => {
+    console.log('[VoiceCall] Creating peer connection');
     const pc = new RTCPeerConnection(iceServers);
 
     pc.onicecandidate = async (event) => {
-      if (event.candidate && user && otherPartyId) {
-        await (supabase.from('voice_call_signals') as any).insert({
+      const currentOtherPartyId = otherPartyIdRef.current;
+      if (event.candidate && user && currentOtherPartyId) {
+        console.log('[VoiceCall] Sending ICE candidate to:', currentOtherPartyId);
+        const { error } = await (supabase.from('voice_call_signals') as any).insert({
           order_id: orderId,
           caller_id: user.id,
-          receiver_id: otherPartyId,
+          receiver_id: currentOtherPartyId,
           signal_type: 'ice-candidate',
           signal_data: { candidate: event.candidate }
         });
+        if (error) {
+          console.error('[VoiceCall] Error sending ICE candidate:', error);
+        }
       }
     };
 
     pc.ontrack = (event) => {
+      console.log('[VoiceCall] Received remote track');
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = event.streams[0];
       }
     };
 
+    pc.oniceconnectionstatechange = () => {
+      console.log('[VoiceCall] ICE connection state:', pc.iceConnectionState);
+    };
+
     pc.onconnectionstatechange = () => {
-      console.log('Connection state:', pc.connectionState);
+      console.log('[VoiceCall] Connection state:', pc.connectionState);
       if (pc.connectionState === 'connected') {
+        // Clear timeout since we connected
+        if (callTimeoutRef.current) {
+          clearTimeout(callTimeoutRef.current);
+          callTimeoutRef.current = null;
+        }
         setCallState('connected');
         startCallTimer();
-      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        toast.success('تماس برقرار شد');
+      } else if (pc.connectionState === 'disconnected') {
+        toast.info('اتصال قطع شد، در حال تلاش مجدد...');
+      } else if (pc.connectionState === 'failed') {
+        toast.error('اتصال ناموفق بود');
         endCall();
       }
     };
 
     return pc;
-  }, [orderId, user, otherPartyId]);
+  }, [orderId, user]);
 
   // Start call timer
   const startCallTimer = () => {
@@ -128,10 +170,20 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
   // Start a call
   const startCall = async () => {
-    if (!user || !otherPartyId) {
+    const currentOtherPartyId = otherPartyIdRef.current;
+    
+    if (!user) {
+      toast.error('لطفاً وارد حساب کاربری شوید');
+      return;
+    }
+    
+    if (!currentOtherPartyId) {
+      console.error('[VoiceCall] No other party ID available');
       toast.error('اطلاعات تماس در دسترس نیست');
       return;
     }
+
+    console.log('[VoiceCall] Starting call to:', currentOtherPartyId);
 
     try {
       setCallState('calling');
@@ -139,6 +191,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       // Get local audio stream
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
+      console.log('[VoiceCall] Got local audio stream');
 
       // Create peer connection
       const pc = createPeerConnection();
@@ -150,19 +203,38 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       // Create and send offer
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
+      console.log('[VoiceCall] Created offer, sending signal...');
 
       // Send call request signal
-      await (supabase.from('voice_call_signals') as any).insert({
+      const { error } = await (supabase.from('voice_call_signals') as any).insert({
         order_id: orderId,
         caller_id: user.id,
-        receiver_id: otherPartyId,
+        receiver_id: currentOtherPartyId,
         signal_type: 'call-request',
         signal_data: { offer: offer }
       });
 
-      toast.info('در حال برقراری تماس...');
+      if (error) {
+        console.error('[VoiceCall] Error sending call request:', error);
+        toast.error('خطا در ارسال درخواست تماس');
+        setCallState('idle');
+        return;
+      }
+
+      console.log('[VoiceCall] Call request sent successfully');
+      toast.info('در حال برقراری تماس... منتظر پاسخ طرف مقابل');
+
+      // Set timeout for answer (60 seconds)
+      callTimeoutRef.current = setTimeout(() => {
+        if (callState === 'calling') {
+          console.log('[VoiceCall] Call timeout - no answer received');
+          toast.error('پاسخی دریافت نشد. طرف مقابل در دسترس نیست');
+          endCall();
+        }
+      }, 60000);
+
     } catch (error) {
-      console.error('Error starting call:', error);
+      console.error('[VoiceCall] Error starting call:', error);
       toast.error('خطا در برقراری تماس. لطفاً دسترسی میکروفون را بررسی کنید.');
       setCallState('idle');
     }
@@ -172,13 +244,18 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const acceptCall = async () => {
     if (!user || !incomingCallIdRef.current) return;
 
+    console.log('[VoiceCall] Accepting incoming call');
+
     try {
       // Get local audio stream
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
 
       const pc = peerConnectionRef.current;
-      if (!pc) return;
+      if (!pc) {
+        console.error('[VoiceCall] No peer connection available');
+        return;
+      }
 
       // Add local stream
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
@@ -195,19 +272,25 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         .single();
 
       if (signalData) {
-        await (supabase.from('voice_call_signals') as any).insert({
+        console.log('[VoiceCall] Sending answer to:', signalData.caller_id);
+        const { error } = await (supabase.from('voice_call_signals') as any).insert({
           order_id: orderId,
           caller_id: user.id,
           receiver_id: signalData.caller_id,
           signal_type: 'call-accept',
           signal_data: { answer: answer }
         });
+        
+        if (error) {
+          console.error('[VoiceCall] Error sending answer:', error);
+        }
       }
 
       setCallState('connected');
       startCallTimer();
+      toast.success('تماس برقرار شد');
     } catch (error) {
-      console.error('Error accepting call:', error);
+      console.error('[VoiceCall] Error accepting call:', error);
       toast.error('خطا در پذیرش تماس');
       endCall();
     }
@@ -216,6 +299,8 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   // Reject incoming call
   const rejectCall = async () => {
     if (!user || !incomingCallIdRef.current) return;
+
+    console.log('[VoiceCall] Rejecting call');
 
     const { data: signalData } = await (supabase
       .from('voice_call_signals') as any)
@@ -238,6 +323,14 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
   // End call
   const endCall = async () => {
+    console.log('[VoiceCall] Ending call');
+    
+    // Clear timeout
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
+    }
+
     // Stop local stream
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
@@ -257,24 +350,27 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     }
 
     // Send end signal
-    if (user && otherPartyId && callState !== 'idle') {
+    const currentOtherPartyId = otherPartyIdRef.current;
+    if (user && currentOtherPartyId && callState !== 'idle') {
       await (supabase.from('voice_call_signals') as any).insert({
         order_id: orderId,
         caller_id: user.id,
-        receiver_id: otherPartyId,
+        receiver_id: currentOtherPartyId,
         signal_type: 'call-end',
         signal_data: {}
       });
     }
 
-    // Clean up old signals
-    if (user) {
-      await (supabase
-        .from('voice_call_signals') as any)
-        .delete()
-        .eq('order_id', orderId)
-        .or(`caller_id.eq.${user.id},receiver_id.eq.${user.id}`);
-    }
+    // Clean up old signals after a delay to ensure receiver gets them
+    setTimeout(async () => {
+      if (user) {
+        await (supabase
+          .from('voice_call_signals') as any)
+          .delete()
+          .eq('order_id', orderId)
+          .or(`caller_id.eq.${user.id},receiver_id.eq.${user.id}`);
+      }
+    }, 2000);
 
     setCallState('idle');
     setCallDuration(0);
@@ -296,8 +392,10 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   useEffect(() => {
     if (!user) return;
 
+    console.log('[VoiceCall] Setting up realtime subscription for user:', user.id);
+
     const channel = supabase
-      .channel(`voice-calls-${orderId}`)
+      .channel(`voice-calls-${orderId}-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -311,7 +409,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           
           if (signal.order_id !== orderId) return;
 
-          console.log('Received signal:', signal.signal_type);
+          console.log('[VoiceCall] Received signal:', signal.signal_type, 'from:', signal.caller_id);
 
           switch (signal.signal_type) {
             case 'call-request':
@@ -339,13 +437,21 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
                 setCallState('incoming');
                 
                 // Play ringtone notification
-                toast.info(`تماس ورودی از ${profile?.full_name || 'کاربر'}`);
+                toast.info(`تماس ورودی از ${profile?.full_name || 'کاربر'}`, {
+                  duration: 10000
+                });
               }
               break;
 
             case 'call-accept':
               // Call was accepted
+              console.log('[VoiceCall] Call accepted, setting remote description');
               if (callState === 'calling' && peerConnectionRef.current && signal.signal_data?.answer) {
+                // Clear timeout
+                if (callTimeoutRef.current) {
+                  clearTimeout(callTimeoutRef.current);
+                  callTimeoutRef.current = null;
+                }
                 await peerConnectionRef.current.setRemoteDescription(
                   new RTCSessionDescription(signal.signal_data.answer)
                 );
@@ -355,29 +461,39 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
             case 'ice-candidate':
               // ICE candidate received
               if (peerConnectionRef.current && signal.signal_data?.candidate) {
-                await peerConnectionRef.current.addIceCandidate(
-                  new RTCIceCandidate(signal.signal_data.candidate)
-                );
+                console.log('[VoiceCall] Adding ICE candidate');
+                try {
+                  await peerConnectionRef.current.addIceCandidate(
+                    new RTCIceCandidate(signal.signal_data.candidate)
+                  );
+                } catch (err) {
+                  console.error('[VoiceCall] Error adding ICE candidate:', err);
+                }
               }
               break;
 
             case 'call-reject':
               // Call was rejected
+              console.log('[VoiceCall] Call rejected');
               toast.error('تماس رد شد');
               endCall();
               break;
 
             case 'call-end':
               // Call ended by other party
+              console.log('[VoiceCall] Call ended by other party');
               toast.info('تماس پایان یافت');
               endCall();
               break;
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[VoiceCall] Subscription status:', status);
+      });
 
     return () => {
+      console.log('[VoiceCall] Cleaning up subscription');
       supabase.removeChannel(channel);
       endCall();
     };
@@ -388,8 +504,18 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     return null;
   }
 
-  // برای مشتریان همیشه نمایش بده، حتی اگر مدیر تعیین نشده
-  const canMakeCall = !isManager ? !!managerId : !!customerId;
+  // Show loading while resolving
+  if (isResolving) {
+    return (
+      <Card className="mt-4">
+        <CardContent className="py-4 text-center text-muted-foreground">
+          در حال بارگذاری اطلاعات تماس...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const canMakeCall = !isManager ? !!managerId : !!resolvedOtherPartyId;
 
   return (
     <Card className="mt-4">
@@ -441,7 +567,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-4">
               <PhoneOutgoing className="h-5 w-5 text-primary animate-pulse" />
-              <span className="text-muted-foreground">در حال برقراری تماس...</span>
+              <span className="text-muted-foreground">در حال برقراری تماس... منتظر پاسخ</span>
             </div>
             <Button 
               onClick={endCall}
