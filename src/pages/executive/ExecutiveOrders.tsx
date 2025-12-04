@@ -80,6 +80,9 @@ interface Order {
   project_lng?: number | null;
   notes?: string | null;
   payment_amount?: number | null;
+  customer_id?: string;
+  executed_by?: string | null;
+  approved_by?: string | null;
 }
 
 export default function ExecutiveOrders() {
@@ -144,7 +147,9 @@ export default function ExecutiveOrders() {
           customer_id,
           hierarchy_project_id,
           notes,
-          payment_amount
+          payment_amount,
+          executed_by,
+          approved_by
         `)
         .in('status', ['approved', 'in_progress', 'completed', 'paid'])
         .order('created_at', { ascending: false });
@@ -216,6 +221,9 @@ export default function ExecutiveOrders() {
             project_lng: projectLng,
             notes: order.notes,
             payment_amount: order.payment_amount,
+            customer_id: order.customer_id,
+            executed_by: order.executed_by,
+            approved_by: order.approved_by,
           } as Order;
         })
       );

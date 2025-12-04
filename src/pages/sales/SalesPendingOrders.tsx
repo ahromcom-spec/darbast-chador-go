@@ -34,6 +34,9 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   notes: any;
+  customer_id?: string;
+  executed_by?: string | null;
+  approved_by?: string | null;
 }
 
 export default function SalesPendingOrders() {
@@ -73,7 +76,7 @@ export default function SalesPendingOrders() {
       // حالا سفارشات را با این IDها دریافت کنیم
       const { data: baseOrders, error: selectError } = await supabase
         .from('projects_v3')
-        .select('id, code, status, address, detailed_address, created_at, notes')
+        .select('id, code, status, address, detailed_address, created_at, notes, customer_id, executed_by, approved_by')
         .in('id', orderIds)
         .order('created_at', { ascending: false });
 

@@ -43,6 +43,9 @@ interface Order {
   executive_completion_date: string | null;
   notes: any;
   payment_amount: number | null;
+  customer_id?: string;
+  executed_by?: string | null;
+  approved_by?: string | null;
 }
 
 export default function ExecutiveCompleted() {
@@ -87,7 +90,9 @@ export default function ExecutiveCompleted() {
           executive_completion_date,
           notes,
           payment_amount,
-          customer_id
+          customer_id,
+          executed_by,
+          approved_by
         `)
         .eq('status', 'completed')
         .order('executive_completion_date', { ascending: false });

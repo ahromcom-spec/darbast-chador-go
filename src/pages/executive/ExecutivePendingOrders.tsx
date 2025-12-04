@@ -163,6 +163,9 @@ interface Order {
   location_lat?: number | null;
   location_lng?: number | null;
   payment_amount?: number | null;
+  customer_id?: string;
+  executed_by?: string | null;
+  approved_by?: string | null;
 }
 
 export default function ExecutivePendingOrders() {
@@ -216,7 +219,10 @@ export default function ExecutivePendingOrders() {
           customer_phone,
           location_lat,
           location_lng,
-          payment_amount
+          payment_amount,
+          customer_id,
+          executed_by,
+          approved_by
         `)
         .in('status', ['pending', 'approved', 'in_progress'])
         .order('created_at', { ascending: false });
@@ -244,6 +250,9 @@ export default function ExecutivePendingOrders() {
           location_lat: order.location_lat,
           location_lng: order.location_lng,
           payment_amount: order.payment_amount,
+          customer_id: order.customer_id,
+          executed_by: order.executed_by,
+          approved_by: order.approved_by,
         };
       });
 

@@ -33,6 +33,9 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   notes: any;
+  customer_id?: string;
+  executed_by?: string | null;
+  approved_by?: string | null;
 }
 
 export default function GeneralManagerPendingOrders() {
@@ -63,6 +66,8 @@ export default function GeneralManagerPendingOrders() {
           notes,
           customer_id,
           subcategory_id,
+          executed_by,
+          approved_by,
           customers!inner(
             user_id,
             profiles!inner(full_name, phone_number)
@@ -92,6 +97,9 @@ export default function GeneralManagerPendingOrders() {
             detailed_address: order.detailed_address,
             created_at: order.created_at,
             notes: order.notes,
+            customer_id: order.customer_id,
+            executed_by: order.executed_by,
+            approved_by: order.approved_by,
             customer_name: order.customers?.profiles?.full_name || 'نامشخص',
             customer_phone: order.customers?.profiles?.phone_number || ''
           } : null;
