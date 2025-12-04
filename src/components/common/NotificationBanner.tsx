@@ -91,9 +91,11 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
     setEnabling(true);
     try {
       const result = await requestPermission();
+      console.log('🔔 Permission result:', result);
       
       if (result === 'granted') {
-        await subscribeToPush();
+        // پاس دادن نتیجه مجوز به subscribeToPush
+        await subscribeToPush(result);
         toast({
           title: '✅ اعلان‌ها فعال شد',
           description: 'از این پس تماس‌های ورودی و به‌روزرسانی سفارشات را دریافت خواهید کرد',

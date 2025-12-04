@@ -62,7 +62,7 @@ export function usePushNotifications() {
     return result;
   }, [isSupported]);
 
-  const subscribeToPush = useCallback(async () => {
+  const subscribeToPush = useCallback(async (grantedPermission?: NotificationPermission) => {
     console.log('🔔 Starting push subscription process...');
     
     if (!isSupported) {
@@ -70,8 +70,10 @@ export function usePushNotifications() {
       throw new Error('Push notifications are not supported');
     }
 
-    if (permission !== 'granted') {
-      console.error('❌ Permission not granted:', permission);
+    // استفاده از مجوز پاس شده یا مجوز فعلی
+    const currentPermission = grantedPermission || permission;
+    if (currentPermission !== 'granted') {
+      console.error('❌ Permission not granted:', currentPermission);
       throw new Error('Permission not granted');
     }
 
