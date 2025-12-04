@@ -10,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ImageIcon, ChevronLeft, ChevronRight, Ruler, FileText, Layers, User, Phone, MapPin, 
-  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2
+  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer
 } from 'lucide-react';
+import { ManagerOrderInvoice } from './ManagerOrderInvoice';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { parseOrderNotes } from './OrderDetailsView';
@@ -379,8 +380,9 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
 
   return (
     <div className="space-y-4">
-      {/* Edit Toggle Button */}
-      <div className="flex justify-end">
+      {/* Edit Toggle Button & Print */}
+      <div className="flex justify-end gap-2">
+        <ManagerOrderInvoice order={order} />
         {!isEditing ? (
           <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
             <Edit className="h-4 w-4 ml-1" />
