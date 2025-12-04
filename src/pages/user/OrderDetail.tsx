@@ -1256,6 +1256,111 @@ export default function OrderDetail() {
                         جزئیات فنی این سفارش در دسترس نیست.
                       </p>
                     )}
+
+                    {/* دکمه پرداخت - فقط بعد از تایید سفارش */}
+                    {['approved', 'completed', 'in_progress', 'pending_execution'].includes(order.status) && 
+                     ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount) && 
+                     !order.payment_confirmed_at && (
+                      <div className="pt-4 border-t border-emerald-200 dark:border-emerald-800">
+                        <Button 
+                          className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                          size="lg"
+                          onClick={async () => {
+                            const paymentAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice;
+                            if (!paymentAmount) {
+                              toast({
+                                title: 'خطا',
+                                description: 'مبلغ پرداخت مشخص نیست',
+                                variant: 'destructive'
+                              });
+                              return;
+                            }
+                            
+                            try {
+                              toast({
+                                title: 'در حال اتصال به درگاه پرداخت',
+                                description: 'لطفاً صبر کنید...'
+                              });
+                              
+                              const { data, error } = await supabase.functions.invoke('zarinpal-payment', {
+                                body: {
+                                  order_id: order.id,
+                                  amount: paymentAmount,
+                                  description: `پرداخت سفارش ${order.code}`
+                                }
+                              });
+                              
+                              if (error) {
+                                console.error('Supabase function error:', error);
+                                
+                                if (error instanceof FunctionsHttpError) {
+                                  try {
+                                    const errorDetails = await error.context.json();
+                                    const gatewayMessage =
+                                      typeof errorDetails === 'object' && errorDetails !== null
+                                        ? (errorDetails.error || errorDetails.message || 'خطای ناشناخته از درگاه پرداخت')
+                                        : 'خطای ناشناخته از درگاه پرداخت';
+                                    
+                                    toast({
+                                      title: 'خطا در اتصال به درگاه',
+                                      description: gatewayMessage,
+                                      variant: 'destructive'
+                                    });
+                                  } catch (parseError) {
+                                    toast({
+                                      title: 'خطا در اتصال به درگاه',
+                                      description: 'پاسخی نامعتبر از درگاه پرداخت دریافت شد',
+                                      variant: 'destructive'
+                                    });
+                                  }
+                                } else {
+                                  toast({
+                                    title: 'خطا در اتصال به درگاه',
+                                    description: 'لطفاً مجدداً تلاش کنید',
+                                    variant: 'destructive'
+                                  });
+                                }
+                                return;
+                              }
+                              
+                              if (data?.payment_url) {
+                                window.location.href = data.payment_url;
+                              } else {
+                                throw new Error('URL پرداخت دریافت نشد');
+                              }
+                            } catch (error) {
+                              console.error('Payment error:', error);
+                              toast({
+                                title: 'خطا در اتصال به درگاه',
+                                description: 'لطفاً مجدداً تلاش کنید',
+                                variant: 'destructive'
+                              });
+                            }
+                          }}
+                        >
+                          <CreditCard className="h-5 w-5" />
+                          پرداخت آنلاین - {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount)?.toLocaleString('fa-IR')} تومان
+                        </Button>
+                        <p className="text-xs text-center text-muted-foreground mt-2">
+                          پرداخت از طریق درگاه امن زرین‌پال انجام می‌شود
+                        </p>
+                      </div>
+                    )}
+
+                    {/* نمایش وضعیت پرداخت شده */}
+                    {order.payment_confirmed_at && (
+                      <div className="pt-4 border-t border-emerald-200 dark:border-emerald-800">
+                        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-lg">
+                          <CheckCircle className="h-5 w-5" />
+                          <span className="font-medium">پرداخت شده</span>
+                          {order.transaction_reference && (
+                            <span className="text-xs text-muted-foreground mr-auto" dir="ltr">
+                              کد پیگیری: {order.transaction_reference}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </section>
                 )}
 
@@ -1761,107 +1866,6 @@ export default function OrderDetail() {
               </div>
             </DialogContent>
           </Dialog>
-
-          {/* بخش پرداخت زرین‌پال */}
-          {['approved', 'completed', 'in_progress', 'paid'].includes(order.status) && order.payment_amount && !order.payment_confirmed_at && (
-            <Card className="border-2 border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  پرداخت سفارش
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">مبلغ قابل پرداخت:</span>
-                    <span className="text-2xl font-bold text-primary">
-                      {order.payment_amount.toLocaleString('fa-IR')} تومان
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">کد سفارش:</span>
-                    <span className="font-mono">{order.code}</span>
-                  </div>
-                </div>
-                
-                <Button 
-                  className="w-full gap-2"
-                  size="lg"
-                  onClick={async () => {
-                    try {
-                      toast({
-                        title: 'در حال اتصال به درگاه پرداخت',
-                        description: 'لطفاً صبر کنید...'
-                      });
-                      
-                      const { data, error } = await supabase.functions.invoke('zarinpal-payment', {
-                        body: {
-                          order_id: order.id,
-                          amount: order.payment_amount,
-                          description: `پرداخت سفارش ${order.code}`
-                        }
-                      });
-                      
-                      if (error) {
-                        console.error('Supabase function error:', error);
-                        
-                        if (error instanceof FunctionsHttpError) {
-                          try {
-                            const errorDetails = await error.context.json();
-                            const gatewayMessage =
-                              typeof errorDetails === 'object' && errorDetails !== null
-                                ? (errorDetails.error || errorDetails.message || 'خطای ناشناخته از درگاه پرداخت')
-                                : 'خطای ناشناخته از درگاه پرداخت';
-                            
-                            toast({
-                              title: 'خطا در اتصال به درگاه',
-                              description: gatewayMessage,
-                              variant: 'destructive'
-                            });
-                          } catch (parseError) {
-                            console.error('Error parsing function error context:', parseError);
-                            toast({
-                              title: 'خطا در اتصال به درگاه',
-                              description: 'پاسخی نامعتبر از درگاه پرداخت دریافت شد',
-                              variant: 'destructive'
-                            });
-                          }
-                        } else {
-                          toast({
-                            title: 'خطا در اتصال به درگاه',
-                            description: 'لطفاً مجدداً تلاش کنید',
-                            variant: 'destructive'
-                          });
-                        }
-                        return;
-                      }
-                      
-                      if (data?.payment_url) {
-                        window.location.href = data.payment_url;
-                      } else {
-                        throw new Error('URL پرداخت دریافت نشد');
-                      }
-                    } catch (error) {
-                      console.error('Payment error:', error);
-                      toast({
-                        title: 'خطا در اتصال به درگاه',
-                        description: 'لطفاً مجدداً تلاش کنید',
-                        variant: 'destructive'
-                      });
-                    }
-                  }}
-                >
-                  <CreditCard className="h-5 w-5" />
-                  پرداخت آنلاین
-                </Button>
-                
-                <p className="text-xs text-center text-muted-foreground">
-                  پرداخت از طریق درگاه امن زرین‌پال انجام می‌شود
-                </p>
-              </CardContent>
-            </Card>
-          )}
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
