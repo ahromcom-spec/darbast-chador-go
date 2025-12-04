@@ -5,6 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Version 2 - Force fresh deployment
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -13,6 +14,7 @@ serve(async (req) => {
 
   try {
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
+    console.log('🔑 VAPID key fetched:', vapidPublicKey ? vapidPublicKey.substring(0, 20) + '...' : 'NOT SET');
 
     if (!vapidPublicKey) {
       return new Response(
