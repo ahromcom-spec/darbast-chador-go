@@ -1,10 +1,99 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, PhoneOff, PhoneIncoming, PhoneOutgoing, Mic, MicOff } from 'lucide-react';
+import { Phone, PhoneOff, PhoneIncoming, PhoneOutgoing, Mic, MicOff, Volume2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+
+// Ringtone generator using Web Audio API
+class RingtonePlayer {
+  private audioContext: AudioContext | null = null;
+  private oscillator: OscillatorNode | null = null;
+  private gainNode: GainNode | null = null;
+  private isPlaying = false;
+  private intervalId: NodeJS.Timeout | null = null;
+
+  private getContext(): AudioContext {
+    if (!this.audioContext) {
+      this.audioContext = new AudioContext();
+    }
+    return this.audioContext;
+  }
+
+  // Play outgoing call tone (like phone ringing)
+  playOutgoingTone() {
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+    
+    const playTone = () => {
+      const ctx = this.getContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.frequency.value = 440;
+      osc.type = 'sine';
+      gain.gain.value = 0.3;
+      
+      osc.start();
+      
+      // Ring pattern: on for 1s, off for 2s
+      setTimeout(() => {
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+        setTimeout(() => osc.stop(), 100);
+      }, 1000);
+    };
+
+    playTone();
+    this.intervalId = setInterval(playTone, 3000);
+  }
+
+  // Play incoming call ringtone
+  playIncomingTone() {
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+    
+    const playRing = () => {
+      const ctx = this.getContext();
+      
+      // Two-tone ring (like classic phone)
+      [440, 480].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.value = 0.2;
+        
+        osc.start(ctx.currentTime + i * 0.1);
+        
+        setTimeout(() => {
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+          setTimeout(() => osc.stop(), 100);
+        }, 400);
+      });
+    };
+
+    playRing();
+    this.intervalId = setInterval(playRing, 1500);
+  }
+
+  stop() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+    this.isPlaying = false;
+  }
+}
+
+const ringtone = new RingtonePlayer();
 
 interface VoiceCallProps {
   orderId: string;
@@ -187,6 +276,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
     try {
       setCallState('calling');
+      
+      // Start outgoing ringtone
+      ringtone.playOutgoingTone();
 
       // Get local audio stream
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -206,22 +298,23 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       console.log('[VoiceCall] Created offer, sending signal...');
 
       // Send call request signal
-      const { error } = await (supabase.from('voice_call_signals') as any).insert({
+      const { data, error } = await (supabase.from('voice_call_signals') as any).insert({
         order_id: orderId,
         caller_id: user.id,
         receiver_id: currentOtherPartyId,
         signal_type: 'call-request',
         signal_data: { offer: offer }
-      });
+      }).select();
 
       if (error) {
         console.error('[VoiceCall] Error sending call request:', error);
-        toast.error('خطا در ارسال درخواست تماس');
+        toast.error('خطا در ارسال درخواست تماس: ' + error.message);
+        ringtone.stop();
         setCallState('idle');
         return;
       }
 
-      console.log('[VoiceCall] Call request sent successfully');
+      console.log('[VoiceCall] Call request sent successfully:', data);
       toast.info('در حال برقراری تماس... منتظر پاسخ طرف مقابل');
 
       // Set timeout for answer (60 seconds)
@@ -236,6 +329,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     } catch (error) {
       console.error('[VoiceCall] Error starting call:', error);
       toast.error('خطا در برقراری تماس. لطفاً دسترسی میکروفون را بررسی کنید.');
+      ringtone.stop();
       setCallState('idle');
     }
   };
@@ -245,6 +339,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     if (!user || !incomingCallIdRef.current) return;
 
     console.log('[VoiceCall] Accepting incoming call');
+    
+    // Stop incoming ringtone
+    ringtone.stop();
 
     try {
       // Get local audio stream
@@ -301,6 +398,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     if (!user || !incomingCallIdRef.current) return;
 
     console.log('[VoiceCall] Rejecting call');
+    
+    // Stop incoming ringtone
+    ringtone.stop();
 
     const { data: signalData } = await (supabase
       .from('voice_call_signals') as any)
@@ -324,6 +424,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   // End call
   const endCall = async () => {
     console.log('[VoiceCall] Ending call');
+    
+    // Stop ringtone
+    ringtone.stop();
     
     // Clear timeout
     if (callTimeoutRef.current) {
@@ -370,7 +473,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           .eq('order_id', orderId)
           .or(`caller_id.eq.${user.id},receiver_id.eq.${user.id}`);
       }
-    }, 2000);
+    }, 5000);
 
     setCallState('idle');
     setCallDuration(0);
@@ -436,6 +539,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
                 
                 setCallState('incoming');
                 
+                // Start incoming ringtone
+                ringtone.playIncomingTone();
+                
                 // Play ringtone notification
                 toast.info(`تماس ورودی از ${profile?.full_name || 'کاربر'}`, {
                   duration: 10000
@@ -447,6 +553,8 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               // Call was accepted
               console.log('[VoiceCall] Call accepted, setting remote description');
               if (callState === 'calling' && peerConnectionRef.current && signal.signal_data?.answer) {
+                // Stop ringtone
+                ringtone.stop();
                 // Clear timeout
                 if (callTimeoutRef.current) {
                   clearTimeout(callTimeoutRef.current);
