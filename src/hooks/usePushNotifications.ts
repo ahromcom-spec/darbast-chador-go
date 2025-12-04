@@ -31,15 +31,18 @@ export function usePushNotifications() {
     const checkSupport = async () => {
       const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
       setIsSupported(supported);
+      console.log('🔔 Push support check:', { supported, serviceWorker: 'serviceWorker' in navigator, PushManager: 'PushManager' in window });
       
       if (supported) {
         setPermission(Notification.permission);
+        console.log('🔔 Current permission:', Notification.permission);
         
         // Check for existing subscription
         try {
           const registration = await navigator.serviceWorker.ready;
           const existingSub = await registration.pushManager.getSubscription();
           setSubscription(existingSub);
+          console.log('🔔 Existing subscription:', existingSub ? 'Found' : 'None');
         } catch (error) {
           console.error('Error checking existing subscription:', error);
         }
@@ -60,42 +63,59 @@ export function usePushNotifications() {
   }, [isSupported]);
 
   const subscribeToPush = useCallback(async () => {
-    if (!isSupported || permission !== 'granted') {
+    console.log('🔔 Starting push subscription process...');
+    
+    if (!isSupported) {
+      console.error('❌ Push notifications not supported');
+      throw new Error('Push notifications are not supported');
+    }
+
+    if (permission !== 'granted') {
+      console.error('❌ Permission not granted:', permission);
       throw new Error('Permission not granted');
     }
 
     if (!vapidPublicKey) {
+      console.error('❌ VAPID key not available');
       throw new Error('VAPID key not available');
     }
 
     if (!user) {
+      console.error('❌ User not authenticated');
       throw new Error('User not authenticated');
     }
 
     setLoading(true);
 
     try {
+      console.log('📡 Waiting for Service Worker...');
       const registration = await navigator.serviceWorker.ready;
+      console.log('✅ Service Worker ready:', registration.scope);
       
       // Unsubscribe from existing subscription if any
       const existingSub = await registration.pushManager.getSubscription();
       if (existingSub) {
+        console.log('🔄 Unsubscribing from existing subscription...');
         await existingSub.unsubscribe();
       }
 
+      console.log('📲 Subscribing to push manager...');
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
       });
-
+      
+      console.log('✅ Push subscription created:', sub.endpoint.substring(0, 50) + '...');
       setSubscription(sub);
       
       // Save subscription to database
+      console.log('💾 Saving subscription to database...');
       await saveSubscriptionToServer(sub, user.id);
+      console.log('✅ Subscription saved successfully!');
       
       return sub;
     } catch (error) {
-      console.error('Failed to subscribe to push notifications:', error);
+      console.error('❌ Failed to subscribe to push notifications:', error);
       throw error;
     } finally {
       setLoading(false);
