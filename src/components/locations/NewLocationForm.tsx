@@ -7,11 +7,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin, Info } from 'lucide-react';
+import { MapPin, Info, Loader2 } from 'lucide-react';
 import { locationSchema } from '@/lib/validations';
 import { z } from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InteractiveLocationMap } from './InteractiveLocationMap';
+
+// محاسبه فاصله بین دو نقطه (بر حسب متر)
+const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371000; // شعاع زمین به متر
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 interface NewLocationFormProps {
   onSuccess: (locationId: string) => void;
@@ -19,11 +31,12 @@ interface NewLocationFormProps {
 }
 
 export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps) => {
-  const { createLocation, updateLocation } = useLocations();
+  const { createLocation, updateLocation, locations } = useLocations();
   const { provinces } = useProvinces();
   const { districts, fetchDistrictsByProvince } = useDistricts();
   const { toast } = useToast();
   const isEditMode = !!initialData?.id;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
@@ -97,6 +110,8 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
       // Debug: نمایش داده‌های فرم قبل از validation
       console.log('📍 Form data before validation:', formData);
@@ -105,6 +120,25 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
       const validatedData = locationSchema.parse(formData);
       
       console.log('✅ Validated data:', validatedData);
+      
+      // بررسی آدرس تکراری (فقط برای ثبت جدید)
+      if (!isEditMode && validatedData.lat && validatedData.lng) {
+        const duplicateLocation = locations.find(loc => {
+          if (!loc.lat || !loc.lng) return false;
+          const distance = calculateDistance(validatedData.lat, validatedData.lng, loc.lat, loc.lng);
+          return distance < 50; // فاصله کمتر از 50 متر
+        });
+        
+        if (duplicateLocation) {
+          toast({
+            title: 'آدرس تکراری',
+            description: `شما قبلاً این آدرس را با عنوان "${duplicateLocation.title || duplicateLocation.address_line}" ثبت کرده‌اید`,
+            variant: 'destructive'
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
       
       if (isEditMode && initialData) {
         // Update existing location - convert empty district_id to null
@@ -157,6 +191,8 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
           variant: 'destructive'
         });
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -252,8 +288,15 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
         />
       </div>
 
-      <Button type="submit" className="w-full" disabled={!isQomSelected}>
-        {isEditMode ? 'ذخیره تغییرات' : 'ثبت و تایید آدرس'}
+      <Button type="submit" className="w-full" disabled={!isQomSelected || isSubmitting}>
+        {isSubmitting ? (
+          <>
+            <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+            در حال بررسی...
+          </>
+        ) : (
+          isEditMode ? 'ذخیره تغییرات' : 'ثبت و تایید آدرس'
+        )}
       </Button>
     </form>
   );
