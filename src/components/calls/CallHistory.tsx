@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneOff, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneOff, Clock, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CallLog {
   id: string;
@@ -24,10 +26,14 @@ interface CallHistoryProps {
   orderId: string;
 }
 
+const INITIAL_VISIBLE_COUNT = 6;
+const LOAD_MORE_COUNT = 10;
+
 const CallHistory: React.FC<CallHistoryProps> = ({ orderId }) => {
   const { user } = useAuth();
   const [callLogs, setCallLogs] = useState<CallLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
 
   useEffect(() => {
     const fetchCallLogs = async () => {
@@ -35,8 +41,7 @@ const CallHistory: React.FC<CallHistoryProps> = ({ orderId }) => {
         .from('call_logs')
         .select('*')
         .eq('order_id', orderId)
-        .order('started_at', { ascending: false })
-        .limit(20);
+        .order('started_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching call logs:', error);
@@ -120,6 +125,10 @@ const CallHistory: React.FC<CallHistoryProps> = ({ orderId }) => {
     }
   };
 
+  const handleLoadMore = () => {
+    setVisibleCount(prev => prev + LOAD_MORE_COUNT);
+  };
+
   if (loading) {
     return (
       <Card className="mt-4">
@@ -134,57 +143,83 @@ const CallHistory: React.FC<CallHistoryProps> = ({ orderId }) => {
     return null;
   }
 
+  const visibleLogs = callLogs.slice(0, visibleCount);
+  const hasMore = callLogs.length > visibleCount;
+  const remainingCount = callLogs.length - visibleCount;
+
   return (
     <Card className="mt-4">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Phone className="h-5 w-5" />
-          تاریخچه تماس‌ها
+        <CardTitle className="text-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Phone className="h-5 w-5" />
+            تاریخچه تماس‌ها
+          </div>
+          <span className="text-sm font-normal text-muted-foreground">
+            {callLogs.length} تماس
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {callLogs.map((log) => {
-            const isOutgoing = log.caller_id === user?.id;
-            const otherPartyName = isOutgoing ? log.receiver_name : log.caller_name;
-            
-            return (
-              <div 
-                key={log.id} 
-                className={`flex items-center justify-between p-3 rounded-lg border ${
-                  log.status === 'missed' && !isOutgoing ? 'bg-orange-50 border-orange-200' : 'bg-muted/30'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  {isOutgoing ? (
-                    <PhoneOutgoing className="h-4 w-4 text-blue-500" />
-                  ) : (
-                    <PhoneIncoming className="h-4 w-4 text-green-500" />
-                  )}
-                  <div>
-                    <p className="text-sm font-medium">
-                      {isOutgoing ? `تماس با ${otherPartyName}` : `تماس از ${otherPartyName}`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(log.started_at), { addSuffix: true, locale: faIR })}
-                    </p>
+        <ScrollArea className={visibleLogs.length > 4 ? "h-[320px]" : ""}>
+          <div className="space-y-3 pl-2">
+            {visibleLogs.map((log) => {
+              const isOutgoing = log.caller_id === user?.id;
+              const otherPartyName = isOutgoing ? log.receiver_name : log.caller_name;
+              
+              return (
+                <div 
+                  key={log.id} 
+                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                    log.status === 'missed' && !isOutgoing ? 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800' : 'bg-muted/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {isOutgoing ? (
+                      <PhoneOutgoing className="h-4 w-4 text-blue-500" />
+                    ) : (
+                      <PhoneIncoming className="h-4 w-4 text-green-500" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium">
+                        {isOutgoing ? `تماس با ${otherPartyName}` : `تماس از ${otherPartyName}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(log.started_at), { addSuffix: true, locale: faIR })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="flex items-center gap-1">
+                      {getStatusIcon(log)}
+                      <span className="text-xs">{getStatusText(log.status)}</span>
+                    </div>
+                    {log.duration_seconds > 0 && (
+                      <span className="text-muted-foreground">
+                        {formatDuration(log.duration_seconds)}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="flex items-center gap-1">
-                    {getStatusIcon(log)}
-                    <span className="text-xs">{getStatusText(log.status)}</span>
-                  </div>
-                  {log.duration_seconds > 0 && (
-                    <span className="text-muted-foreground">
-                      {formatDuration(log.duration_seconds)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+        
+        {/* Load More Button */}
+        {hasMore && (
+          <div className="mt-4 text-center">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleLoadMore}
+              className="w-full"
+            >
+              <ChevronDown className="h-4 w-4 ml-2" />
+              دیدن بیشتر ({remainingCount} تماس دیگر)
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
