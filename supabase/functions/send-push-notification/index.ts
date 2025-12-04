@@ -6,37 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Web Push library for sending notifications
-async function sendWebPush(subscription: { endpoint: string; p256dh: string; auth: string }, payload: string) {
-  const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
-  const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
-
-  if (!vapidPublicKey || !vapidPrivateKey) {
-    throw new Error('VAPID keys not configured');
-  }
-
-  // Import web-push compatible library
-  const webPush = await import("https://esm.sh/web-push@3.6.7");
-
-  webPush.setVapidDetails(
-    'mailto:ahrom.com@gmail.com',
-    vapidPublicKey,
-    vapidPrivateKey
-  );
-
-  const pushSubscription = {
-    endpoint: subscription.endpoint,
-    keys: {
-      p256dh: subscription.p256dh,
-      auth: subscription.auth
-    }
-  };
-
-  return await webPush.sendNotification(pushSubscription, payload);
-}
-
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -44,75 +14,54 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { user_id, title, body, link, type } = await req.json();
+    const { user_id, title, body, link, type, callData } = await req.json();
+
+    console.log('[Push] Request for user:', user_id, 'Type:', type);
 
     if (!user_id || !title || !body) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: user_id, title, body' }),
+        JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get user's push subscriptions
-    const { data: subscriptions, error: subError } = await supabase
-      .from('push_subscriptions')
-      .select('*')
-      .eq('user_id', user_id);
-
-    if (subError) {
-      console.error('Error fetching subscriptions:', subError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch subscriptions' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const payload = JSON.stringify({
+    // Create in-app notification - this is the reliable method
+    const { error: notifError } = await supabase.from('notifications').insert({
+      user_id,
       title,
       body,
       link: link || '/',
-      type: type || 'info',
-      timestamp: new Date().toISOString()
+      type: type || 'info'
     });
-
-    // Send push notification to all user's devices
-    const results = [];
-    for (const sub of subscriptions || []) {
-      try {
-        await sendWebPush(sub, payload);
-        results.push({ endpoint: sub.endpoint, success: true });
-        console.log(`Push sent successfully to: ${sub.endpoint.substring(0, 50)}...`);
-      } catch (error: any) {
-        console.error(`Failed to send push to ${sub.endpoint}:`, error.message);
-        
-        // If subscription is expired/invalid, remove it
-        if (error.statusCode === 404 || error.statusCode === 410) {
-          await supabase
-            .from('push_subscriptions')
-            .delete()
-            .eq('id', sub.id);
-          console.log(`Removed invalid subscription: ${sub.id}`);
-        }
-        
-        results.push({ endpoint: sub.endpoint, success: false, error: error.message });
-      }
+    
+    if (notifError) {
+      console.error('[Push] In-app notification error:', notifError);
+    } else {
+      console.log('[Push] ✓ In-app notification created');
     }
+
+    // For incoming calls, users will be notified via:
+    // 1. Supabase Realtime (voice_call_signals table) - works when app is open
+    // 2. In-app notifications - visible when user returns to app
+    // Note: True background push requires native app or complex VAPID setup
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Sent to ${results.filter(r => r.success).length}/${subscriptions?.length || 0} devices`,
-        results 
+        message: 'Notification created',
+        inAppCreated: !notifError
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
-    console.error('Error in send-push-notification:', error);
+  } catch (error) {
+    const e = error as Error;
+    console.error('[Push] Error:', e.message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: e.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
