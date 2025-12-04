@@ -232,12 +232,7 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
         </div>
       ) : (
         <div className="grid gap-3">
-          {locations
-            .filter((location) => {
-              const projectCount = locationProjectCounts[location.id] || 0;
-              return projectCount > 0; // فقط آدرس‌هایی که حداقل یک پروژه با سفارش دارند
-            })
-            .map((location) => {
+          {locations.map((location) => {
               const projectCount = locationProjectCounts[location.id] || 0;
               const canDelete = projectCount === 0;
               
