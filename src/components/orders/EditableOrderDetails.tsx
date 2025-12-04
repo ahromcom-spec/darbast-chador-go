@@ -16,6 +16,7 @@ import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { parseOrderNotes } from './OrderDetailsView';
 import VoiceCall from './VoiceCall';
+import CallHistory from '@/components/calls/CallHistory';
 import OrderChat from './OrderChat';
 
 const scaffoldingTypeLabels: Record<string, string> = {
@@ -608,6 +609,9 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         customerId={order.customer_id}
         isManager={true}
       />
+
+      {/* Call History */}
+      <CallHistory orderId={order.id} />
 
       {/* Chat with customer */}
       <Separator />

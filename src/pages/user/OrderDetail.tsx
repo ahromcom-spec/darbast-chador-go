@@ -22,6 +22,7 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import OrderChat from "@/components/orders/OrderChat";
 import VoiceCall from "@/components/orders/VoiceCall";
+import CallHistory from "@/components/calls/CallHistory";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import StaticLocationMap from "@/components/locations/StaticLocationMap";
 import {
@@ -1871,6 +1872,9 @@ export default function OrderDetail() {
             managerId={order.executed_by || order.approved_by}
             isManager={false}
           />
+
+          {/* تاریخچه تماس‌ها */}
+          <CallHistory orderId={order.id} />
 
           {/* بخش امتیازدهی - فقط برای سفارشات تکمیل شده یا بسته شده */}
           {(order.status === 'completed' || order.status === 'paid' || order.status === 'closed') && (

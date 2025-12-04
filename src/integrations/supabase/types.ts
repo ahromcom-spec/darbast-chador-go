@@ -172,6 +172,53 @@ export type Database = {
         }
         Relationships: []
       }
+      call_logs: {
+        Row: {
+          answered_at: string | null
+          caller_id: string
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          order_id: string
+          receiver_id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          answered_at?: string | null
+          caller_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          order_id: string
+          receiver_id: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          answered_at?: string | null
+          caller_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          order_id?: string
+          receiver_id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractor_profiles: {
         Row: {
           activity_type_id: string | null

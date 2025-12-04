@@ -15,6 +15,10 @@ interface VoiceCallProps {
 
 type CallState = 'idle' | 'calling' | 'incoming' | 'connected';
 
+// Constants for call timeouts
+const UNANSWERED_TIMEOUT_MS = 90 * 1000; // 90 seconds
+const MAX_CALL_DURATION_MS = 7 * 60 * 1000; // 7 minutes
+
 // Audio context for ringtones
 let audioContext: AudioContext | null = null;
 let ringtoneInterval: NodeJS.Timeout | null = null;
@@ -69,6 +73,26 @@ const stopRingtone = () => {
   }
 };
 
+// Show native browser notification
+const showNativeNotification = async (title: string, body: string, tag?: string) => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const options: NotificationOptions = {
+      body,
+      icon: '/ahrom-pwa-icon.png',
+      tag: tag || 'ahrom-call',
+      requireInteraction: true
+    };
+    
+    const notification = new Notification(title, options);
+    
+    // Auto-close after 30 seconds
+    setTimeout(() => notification.close(), 30000);
+    
+    return notification;
+  }
+  return null;
+};
+
 const VoiceCall: React.FC<VoiceCallProps> = ({ 
   orderId, 
   managerId, 
@@ -91,6 +115,10 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const incomingSignalRef = useRef<any>(null);
   const callStateRef = useRef<CallState>('idle');
   const otherPartyIdRef = useRef<string | null>(null);
+  const callLogIdRef = useRef<string | null>(null);
+  const unansweredTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const maxDurationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callStartTimeRef = useRef<Date | null>(null);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -108,7 +136,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       console.log('[VoiceCall] Resolving other party...', { isManager, customerId, managerId });
       
       if (isManager && customerId) {
-        // Manager calling customer - get customer's user_id
         const { data, error } = await supabase
           .from('customers')
           .select('user_id')
@@ -123,7 +150,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           setOtherPartyId(data.user_id);
         }
       } else if (!isManager && managerId) {
-        // Customer calling manager
         console.log('[VoiceCall] Using manager ID:', managerId);
         setOtherPartyId(managerId);
       }
@@ -140,6 +166,52 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
     ]
+  };
+
+  // Create call log entry
+  const createCallLog = async (receiverId: string, status: string = 'ringing') => {
+    if (!user) return null;
+    
+    const { data, error } = await supabase
+      .from('call_logs')
+      .insert({
+        order_id: orderId,
+        caller_id: user.id,
+        receiver_id: receiverId,
+        status,
+        started_at: new Date().toISOString()
+      })
+      .select('id')
+      .single();
+    
+    if (error) {
+      console.error('[VoiceCall] Error creating call log:', error);
+      return null;
+    }
+    
+    return data?.id;
+  };
+
+  // Update call log
+  const updateCallLog = async (logId: string, updates: Record<string, any>) => {
+    if (!logId) return;
+    
+    await supabase
+      .from('call_logs')
+      .update(updates)
+      .eq('id', logId);
+  };
+
+  // Clear timeouts
+  const clearTimeouts = () => {
+    if (unansweredTimeoutRef.current) {
+      clearTimeout(unansweredTimeoutRef.current);
+      unansweredTimeoutRef.current = null;
+    }
+    if (maxDurationTimeoutRef.current) {
+      clearTimeout(maxDurationTimeoutRef.current);
+      maxDurationTimeoutRef.current = null;
+    }
   };
 
   // Create peer connection
@@ -171,8 +243,25 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       console.log('[VoiceCall] Connection state:', pc.connectionState);
       if (pc.connectionState === 'connected') {
         stopRingtone();
+        clearTimeouts();
         setCallState('connected');
+        callStartTimeRef.current = new Date();
         startCallTimer();
+        
+        // Update call log as answered
+        if (callLogIdRef.current) {
+          updateCallLog(callLogIdRef.current, {
+            status: 'answered',
+            answered_at: new Date().toISOString()
+          });
+        }
+        
+        // Set max call duration timeout (7 minutes)
+        maxDurationTimeoutRef.current = setTimeout(() => {
+          toast.warning('حداکثر زمان مکالمه (۷ دقیقه) به پایان رسید');
+          endCall();
+        }, MAX_CALL_DURATION_MS);
+        
         toast.success('تماس برقرار شد');
       } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
         toast.error('اتصال قطع شد');
@@ -209,34 +298,47 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     setDebugInfo('در حال شروع تماس...');
 
     try {
-      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
       console.log('[VoiceCall] Got microphone access');
       
+      // Create call log
+      const logId = await createCallLog(otherPartyId);
+      callLogIdRef.current = logId;
+      
       setCallState('calling');
       startOutgoingRingtone();
 
-      // Create peer connection
+      // Set unanswered timeout (90 seconds)
+      unansweredTimeoutRef.current = setTimeout(async () => {
+        if (callStateRef.current === 'calling') {
+          toast.warning('تماس بدون پاسخ ماند');
+          if (callLogIdRef.current) {
+            await updateCallLog(callLogIdRef.current, {
+              status: 'timeout',
+              ended_at: new Date().toISOString()
+            });
+          }
+          endCall();
+        }
+      }, UNANSWERED_TIMEOUT_MS);
+
       const pc = createPeerConnection(otherPartyId);
       peerConnectionRef.current = pc;
 
-      // Add audio track
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      // Create offer
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       console.log('[VoiceCall] Created offer');
 
-      // Get caller's name for push notification
       const { data: callerProfile } = await supabase
         .from('profiles')
         .select('full_name')
         .eq('user_id', user.id)
         .single();
 
-      // Send push notification to receiver (even if site is closed)
+      // Send push notification to receiver
       try {
         await supabase.functions.invoke('send-push-notification', {
           body: {
@@ -255,10 +357,8 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         console.log('[VoiceCall] Push notification sent to receiver');
       } catch (pushError) {
         console.warn('[VoiceCall] Failed to send push notification:', pushError);
-        // Continue with call even if push fails
       }
 
-      // Send call request
       const { error } = await supabase.from('voice_call_signals' as any).insert({
         order_id: orderId,
         caller_id: user.id,
@@ -272,6 +372,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         toast.error('خطا در ارسال درخواست تماس');
         setDebugInfo('خطا: ' + error.message);
         stopRingtone();
+        clearTimeouts();
         setCallState('idle');
         return;
       }
@@ -285,6 +386,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       toast.error('خطا در دسترسی به میکروفون');
       setDebugInfo('خطا: ' + error.message);
       stopRingtone();
+      clearTimeouts();
       setCallState('idle');
     }
   };
@@ -296,6 +398,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     const signal = incomingSignalRef.current;
     console.log('[VoiceCall] Accepting call from:', signal.caller_id);
     stopRingtone();
+    clearTimeouts();
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -306,12 +409,10 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      // Set remote description from offer
       if (signal.signal_data?.offer) {
         await pc.setRemoteDescription(new RTCSessionDescription(signal.signal_data.offer));
       }
 
-      // Create and send answer
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
@@ -325,7 +426,15 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
       console.log('[VoiceCall] Answer sent');
       setCallState('connected');
+      callStartTimeRef.current = new Date();
       startCallTimer();
+      
+      // Set max call duration timeout
+      maxDurationTimeoutRef.current = setTimeout(() => {
+        toast.warning('حداکثر زمان مکالمه (۷ دقیقه) به پایان رسید');
+        endCall();
+      }, MAX_CALL_DURATION_MS);
+      
       toast.success('تماس برقرار شد');
 
     } catch (error: any) {
@@ -341,6 +450,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     
     const signal = incomingSignalRef.current;
     stopRingtone();
+    clearTimeouts();
 
     await supabase.from('voice_call_signals' as any).insert({
       order_id: orderId,
@@ -357,6 +467,31 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const endCall = useCallback(async () => {
     console.log('[VoiceCall] Ending call');
     stopRingtone();
+    clearTimeouts();
+
+    // Calculate duration if call was connected
+    let finalDuration = 0;
+    if (callStartTimeRef.current) {
+      finalDuration = Math.floor((new Date().getTime() - callStartTimeRef.current.getTime()) / 1000);
+    }
+
+    // Update call log with end time and duration
+    if (callLogIdRef.current) {
+      const currentStatus = callStateRef.current;
+      let finalStatus = 'missed';
+      
+      if (currentStatus === 'connected') {
+        finalStatus = 'answered';
+      } else if (currentStatus === 'calling') {
+        finalStatus = 'timeout';
+      }
+      
+      await updateCallLog(callLogIdRef.current, {
+        status: finalStatus,
+        ended_at: new Date().toISOString(),
+        duration_seconds: finalDuration
+      });
+    }
 
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
@@ -373,7 +508,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       callTimerRef.current = null;
     }
 
-    // Send end signal if we have other party
     const currentOtherParty = otherPartyIdRef.current;
     const currentCallState = callStateRef.current;
     
@@ -387,7 +521,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       });
     }
 
-    // Cleanup old signals after delay
     if (user) {
       setTimeout(async () => {
         await supabase
@@ -401,6 +534,8 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     setCallState('idle');
     setCallDuration(0);
     incomingSignalRef.current = null;
+    callLogIdRef.current = null;
+    callStartTimeRef.current = null;
     setDebugInfo('');
   }, [user, orderId]);
 
@@ -415,7 +550,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     }
   };
 
-  // Listen for signals via realtime - STABLE subscription that doesn't re-create
+  // Listen for signals via realtime
   useEffect(() => {
     if (!user) return;
 
@@ -439,29 +574,54 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
           switch (signal.signal_type) {
             case 'call-request':
-              // Use ref to check current state
               if (callStateRef.current === 'idle') {
                 incomingSignalRef.current = signal;
                 
-                // Get caller name
                 const { data: profile } = await supabase
                   .from('profiles')
                   .select('full_name')
                   .eq('user_id', signal.caller_id)
                   .single();
                 
-                setCallerName(profile?.full_name || 'کاربر');
+                const name = profile?.full_name || 'کاربر';
+                setCallerName(name);
                 setCallState('incoming');
                 startIncomingRingtone();
-                toast.info(`تماس ورودی از ${profile?.full_name || 'کاربر'}`);
+                
+                // Show native browser notification
+                showNativeNotification(
+                  '📞 تماس ورودی از اهرم',
+                  `${name} در حال تماس با شماست`,
+                  `call-${signal.caller_id}`
+                );
+                
+                toast.info(`تماس ورودی از ${name}`);
+                
+                // Set timeout for incoming call (90 seconds)
+                unansweredTimeoutRef.current = setTimeout(async () => {
+                  if (callStateRef.current === 'incoming') {
+                    // Create missed call log for receiver
+                    await supabase.from('call_logs').insert({
+                      order_id: orderId,
+                      caller_id: signal.caller_id,
+                      receiver_id: user.id,
+                      status: 'missed',
+                      started_at: signal.created_at,
+                      ended_at: new Date().toISOString()
+                    });
+                    
+                    toast.warning('تماس از دست رفت');
+                    endCall();
+                  }
+                }, UNANSWERED_TIMEOUT_MS);
               }
               break;
 
             case 'call-accept':
-              // Use ref to check current state
               if (callStateRef.current === 'calling' && peerConnectionRef.current && signal.signal_data?.answer) {
                 console.log('[VoiceCall] Processing call-accept');
                 stopRingtone();
+                clearTimeouts();
                 try {
                   await peerConnectionRef.current.setRemoteDescription(
                     new RTCSessionDescription(signal.signal_data.answer)
@@ -486,6 +646,12 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               break;
 
             case 'call-reject':
+              if (callLogIdRef.current) {
+                await updateCallLog(callLogIdRef.current, {
+                  status: 'rejected',
+                  ended_at: new Date().toISOString()
+                });
+              }
               toast.error('تماس رد شد');
               endCall();
               break;
@@ -503,14 +669,13 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
     return () => {
       console.log('[VoiceCall] Cleaning up subscription');
+      clearTimeouts();
       supabase.removeChannel(channel);
     };
-  }, [user, orderId, endCall]); // Removed callState from deps - using ref instead
+  }, [user, orderId, endCall]);
 
-  // Don't render if manager has no customer
   if (isManager && !customerId) return null;
 
-  // Loading state
   if (isLoading) {
     return (
       <Card className="mt-4">
@@ -563,6 +728,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               <PhoneOutgoing className="h-5 w-5 text-primary animate-pulse" />
               <span>در حال زنگ زدن...</span>
             </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              در صورت عدم پاسخ، تماس پس از ۹۰ ثانیه قطع می‌شود
+            </p>
             <Button onClick={endCall} variant="destructive">
               <PhoneOff className="h-4 w-4 ml-2" />
               لغو
@@ -599,6 +767,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               <span className="text-green-600 font-medium">در حال مکالمه</span>
               <span className="text-muted-foreground">{formatDuration(callDuration)}</span>
             </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              حداکثر مدت مکالمه: ۷ دقیقه
+            </p>
             <div className="flex gap-2 justify-center">
               <Button onClick={toggleMute} variant={isMuted ? "destructive" : "secondary"}>
                 {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
