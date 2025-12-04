@@ -1,27 +1,33 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocations, Location } from '@/hooks/useLocations';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
-import { LocationCard } from './LocationCard';
 import { Button } from '@/components/ui/button';
-import { Plus, MapPin } from 'lucide-react';
+import { Plus, MapPin, ChevronDown, Loader2 } from 'lucide-react';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { NewLocationForm } from './NewLocationForm';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface LocationSelectorProps {
   onLocationSelected: (locationId: string) => void;
 }
 
 export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) => {
-  const { locations, loading, deleteLocation, refetch } = useLocations();
+  const { locations, loading, refetch } = useLocations();
   const { projects: allProjects } = useProjectsHierarchy();
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [locationProjectCounts, setLocationProjectCounts] = useState<Record<string, number>>({});
+  const [isConfirming, setIsConfirming] = useState(false);
   
-  // مرکز استان قم و محدوده مجاز (باید با HybridGlobe همخوانی داشته باشد)
+  // مرکز استان قم و محدوده مجاز
   const QOM_CENTER = { lat: 34.6416, lng: 50.8746 };
   const MAX_DISTANCE_KM = 5;
 
@@ -38,7 +44,7 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
     return R * c;
   };
 
-  // فیلتر پروژه‌های فعال و در محدوده جغرافیایی (مشابه HybridGlobe)
+  // فیلتر پروژه‌های فعال و در محدوده جغرافیایی
   const filteredProjects = useMemo(() => {
     const activeProjects = allProjects.filter(project => 
       project.locations && 
@@ -102,15 +108,13 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
     }
   }, [locations, selectedLocationId]);
 
-  // بارگذاری تعداد پروژه‌های هر مکان (فقط پروژه‌های فیلتر شده با سفارش)
+  // بارگذاری تعداد پروژه‌های هر مکان
   useEffect(() => {
     const fetchProjectCounts = async () => {
       if (locations.length === 0 || filteredProjects.length === 0) return;
       
-      // دریافت فقط IDs پروژه‌های فیلتر شده
       const filteredProjectIds = filteredProjects.map(p => p.id);
       
-      // دریافت orders برای این پروژه‌ها
       const { data } = await supabase
         .from('projects_v3')
         .select('hierarchy_project_id')
@@ -119,10 +123,8 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
       
       if (data) {
         const counts: Record<string, number> = {};
-        // شمارش پروژه‌های منحصر به فرد با سفارش
         const projectsWithOrders = new Set(data.map(o => o.hierarchy_project_id).filter(Boolean));
         
-        // برای هر location، شمارش پروژه‌هایی که سفارش دارند
         filteredProjects.forEach(project => {
           if (projectsWithOrders.has(project.id) && project.location_id) {
             counts[project.location_id] = (counts[project.location_id] || 0) + 1;
@@ -135,66 +137,23 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
     
     fetchProjectCounts();
   }, [locations, filteredProjects]);
-  const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deletingLocationId, setDeletingLocationId] = useState<string | null>(null);
 
-  const handleSelectLocation = (location: Location) => {
-    setSelectedLocationId(location.id);
-  };
+  const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
+
+  const selectedLocation = locations.find(l => l.id === selectedLocationId);
 
   const handleConfirm = () => {
     if (selectedLocationId) {
+      setIsConfirming(true);
       onLocationSelected(selectedLocationId);
     }
   };
 
   const handleLocationCreated = async (locationId: string) => {
     setShowNewLocationDialog(false);
-    await refetch(); // رفرش لیست آدرس‌ها
-    setSelectedLocationId(locationId); // انتخاب خودکار آدرس جدید
-  };
-
-  const handleLocationUpdated = async () => {
-    setShowEditDialog(false);
-    setEditingLocation(null);
     await refetch();
-    toast.success('آدرس با موفقیت ویرایش شد');
-  };
-
-  const handleEditLocation = (location: Location) => {
-    setEditingLocation(location);
-    setShowEditDialog(true);
-  };
-
-  const handleDeleteClick = (locationId: string) => {
-    // بررسی وجود پروژه برای این مکان
-    const projectCount = locationProjectCounts[locationId] || 0;
-    if (projectCount > 0) {
-      toast.error(`این آدرس دارای ${projectCount} پروژه فعال است و قابل حذف نیست`);
-      return;
-    }
-    
-    setDeletingLocationId(locationId);
-    setShowDeleteDialog(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (deletingLocationId) {
-      try {
-        await deleteLocation(deletingLocationId);
-        if (selectedLocationId === deletingLocationId) {
-          setSelectedLocationId(null);
-        }
-        toast.success('آدرس با موفقیت حذف شد');
-        setShowDeleteDialog(false);
-        setDeletingLocationId(null);
-      } catch (error) {
-        toast.error('خطا در حذف آدرس');
-      }
-    }
+    setSelectedLocationId(locationId);
+    toast.success('آدرس با موفقیت ثبت شد');
   };
 
   if (loading) {
@@ -203,87 +162,129 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">انتخاب یا ثبت آدرس پروژه</h2>
-        <Dialog open={showNewLocationDialog} onOpenChange={setShowNewLocationDialog}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Plus className="w-4 h-4 ml-2" />
-              آدرس جدید
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>ثبت آدرس جدید</DialogTitle>
-            </DialogHeader>
-            <NewLocationForm onSuccess={handleLocationCreated} />
-          </DialogContent>
-        </Dialog>
+      <div className="flex items-center gap-3">
+        <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
+        <h2 className="text-lg font-semibold">انتخاب آدرس پروژه</h2>
       </div>
 
       {locations.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed rounded-lg">
-          <MapPin className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-          <p className="text-muted-foreground mb-4">هنوز آدرسی ثبت نشده است</p>
-          <Button onClick={() => setShowNewLocationDialog(true)}>
-            <Plus className="w-4 h-4 ml-2" />
-            ثبت اولین آدرس
-          </Button>
+        <div className="text-center py-8 border border-dashed rounded-lg bg-muted/30">
+          <MapPin className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+          <p className="text-muted-foreground mb-4 text-sm">هنوز آدرسی ثبت نشده است</p>
+          <Dialog open={showNewLocationDialog} onOpenChange={setShowNewLocationDialog}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="w-4 h-4 ml-2" />
+                ثبت آدرس
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>ثبت آدرس جدید</DialogTitle>
+              </DialogHeader>
+              <NewLocationForm onSuccess={handleLocationCreated} />
+            </DialogContent>
+          </Dialog>
         </div>
       ) : (
-        <div className="grid gap-3">
-          {locations.map((location) => {
-              const projectCount = locationProjectCounts[location.id] || 0;
-              const canDelete = projectCount === 0;
-              
-              return (
-                <LocationCard
-                  key={location.id}
-                  location={location}
-                  selected={selectedLocationId === location.id}
-                  onSelect={() => handleSelectLocation(location)}
-                  onEdit={canDelete ? () => handleEditLocation(location) : undefined}
-                  onDelete={canDelete ? () => handleDeleteClick(location.id) : undefined}
-                  onConfirm={handleConfirm}
-                  projectCount={projectCount}
-                />
-              );
-            })}
+        <div className="space-y-3">
+          {/* دراپ‌داون ساده انتخاب آدرس */}
+          <div className="flex gap-2">
+            <Select
+              value={selectedLocationId || ''}
+              onValueChange={setSelectedLocationId}
+            >
+              <SelectTrigger className="flex-1 bg-background">
+                <SelectValue placeholder="یک آدرس انتخاب کنید">
+                  {selectedLocation && (
+                    <span className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      <span className="truncate">
+                        {selectedLocation.title || selectedLocation.address_line}
+                      </span>
+                    </span>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="bg-background border shadow-lg z-50">
+                {locations.map((location) => {
+                  const projectCount = locationProjectCounts[location.id] || 0;
+                  return (
+                    <SelectItem 
+                      key={location.id} 
+                      value={location.id}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2 py-1">
+                        <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {location.title || 'بدون عنوان'}
+                          </span>
+                          <span className="text-xs text-muted-foreground truncate max-w-[250px]">
+                            {location.address_line}
+                          </span>
+                        </div>
+                        {projectCount > 0 && (
+                          <span className="text-xs bg-secondary px-1.5 py-0.5 rounded mr-auto">
+                            {projectCount} پروژه
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+
+            <Dialog open={showNewLocationDialog} onOpenChange={setShowNewLocationDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon" className="flex-shrink-0">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>ثبت آدرس جدید</DialogTitle>
+                </DialogHeader>
+                <NewLocationForm onSuccess={handleLocationCreated} />
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* نمایش جزئیات آدرس انتخاب شده */}
+          {selectedLocation && (
+            <div className="p-3 rounded-lg border bg-muted/30 text-sm space-y-1">
+              <p className="text-foreground">{selectedLocation.address_line}</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedLocation.provinces?.name}
+                {selectedLocation.districts && ` • ${selectedLocation.districts.name}`}
+              </p>
+            </div>
+          )}
+
+          {/* دکمه تایید */}
+          <Button 
+            onClick={handleConfirm} 
+            size="lg" 
+            disabled={!selectedLocationId || isConfirming}
+            className={`w-full transition-colors ${
+              isConfirming 
+                ? 'bg-orange-500 hover:bg-orange-500 text-white' 
+                : ''
+            }`}
+          >
+            {isConfirming ? (
+              <>
+                <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                در حال بارگذاری...
+              </>
+            ) : (
+              'تایید و ادامه'
+            )}
+          </Button>
         </div>
       )}
-
-      {/* Dialog for editing location */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>ویرایش آدرس</DialogTitle>
-          </DialogHeader>
-          {editingLocation && (
-            <NewLocationForm 
-              onSuccess={handleLocationUpdated}
-              initialData={editingLocation}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Alert dialog for delete confirmation */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>حذف آدرس</AlertDialogTitle>
-            <AlertDialogDescription>
-              آیا از حذف این آدرس اطمینان دارید؟ این عملیات قابل بازگشت نیست.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>انصراف</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90">
-              حذف
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
