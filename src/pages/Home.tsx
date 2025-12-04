@@ -309,6 +309,9 @@ const Home = () => {
         </div>
         <div className="fixed inset-0 bg-black/10 z-0" aria-hidden="true" />
 
+        {/* Notification Alert at Top */}
+        <NotificationBanner variant="inline" />
+
         {/* Main Content */}
         <main className="flex-1 flex items-start md:items-center justify-center py-4 sm:py-6 md:py-8 px-4 sm:px-6 relative z-10" role="main">
           <article className="w-full max-w-2xl mt-2 sm:mt-4 md:mt-0">

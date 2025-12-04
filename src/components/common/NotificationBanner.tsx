@@ -18,7 +18,11 @@ import {
 const DISMISSAL_KEY = 'notification-banner-dismissed';
 const DISMISSAL_DURATION = 4 * 60 * 60 * 1000; // 4 ساعت (کمتر از قبل تا بیشتر نمایش داده شود)
 
-export function NotificationBanner() {
+interface NotificationBannerProps {
+  variant?: 'floating' | 'inline';
+}
+
+export function NotificationBanner({ variant = 'floating' }: NotificationBannerProps) {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState(() => {
     const dismissedData = localStorage.getItem(DISMISSAL_KEY);
@@ -116,8 +120,62 @@ export function NotificationBanner() {
     }
   };
 
+  // نمایش inline بنر در بالای صفحه
+  const showInline = variant === 'inline' && user && isSupported && !subscription && permission !== 'granted' && !dismissed;
+
   return (
     <>
+      {/* بنر inline در بالای صفحه اصلی */}
+      {showInline && (
+        <div className="w-full px-4 sm:px-6 pt-4 relative z-20">
+          <Card className="border-primary/40 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 shadow-lg max-w-2xl mx-auto">
+            <div className="p-4 flex flex-col sm:flex-row items-center gap-3">
+              <div className="flex-shrink-0 p-3 rounded-full bg-primary/20 animate-pulse">
+                <Phone className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 text-center sm:text-right">
+                <h3 className="font-bold text-base text-foreground flex items-center justify-center sm:justify-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
+                  اعلان‌ها را فعال کنید!
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  بدون فعال‌سازی، تماس‌های مدیران و وضعیت سفارشات را دریافت نخواهید کرد
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleEnable}
+                  size="sm"
+                  className="whitespace-nowrap"
+                  disabled={enabling}
+                >
+                  {enabling ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin ml-1" />
+                      در حال فعال‌سازی...
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="h-4 w-4 ml-1" />
+                      فعال‌سازی
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={handleDismiss}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  disabled={enabling}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* دیالوگ اصلی برای فعال‌سازی - مهم‌تر و برجسته‌تر */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md">
@@ -173,8 +231,8 @@ export function NotificationBanner() {
         </DialogContent>
       </Dialog>
 
-      {/* بنر پایین صفحه */}
-      {showBanner && !showDialog && (
+      {/* بنر floating پایین صفحه - فقط برای variant floating */}
+      {variant === 'floating' && showBanner && !showDialog && (
         <div className="fixed bottom-20 left-4 right-4 sm:left-4 sm:right-auto z-[100] max-w-md animate-in slide-in-from-bottom-4" data-notification-banner>
           <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-xl">
             <div className="p-4 flex items-center gap-3">
