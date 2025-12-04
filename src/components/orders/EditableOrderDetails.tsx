@@ -296,6 +296,8 @@ interface EditableOrderDetailsProps {
     payment_amount?: number | null;
     location_lat?: number | null;
     location_lng?: number | null;
+    executed_by?: string | null;
+    approved_by?: string | null;
   };
   onUpdate?: () => void;
 }
@@ -601,6 +603,7 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
       {/* Voice Call for managers to call customers */}
       <VoiceCall 
         orderId={order.id}
+        managerId={order.executed_by || order.approved_by}
         customerId={order.customer_id}
         isManager={true}
       />
