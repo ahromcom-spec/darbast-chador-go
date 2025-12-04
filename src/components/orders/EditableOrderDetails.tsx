@@ -63,41 +63,10 @@ const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMe
     fetchMedia();
   }, [orderId]);
 
-  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const fetchUrls = async () => {
-      const urls: Record<string, string> = {};
-      for (const item of media) {
-        try {
-          // Try signed URL first for better access
-          const { data: signedData, error: signedError } = await supabase.storage
-            .from('project-media')
-            .createSignedUrl(item.file_path, 3600); // 1 hour expiry
-          
-          if (signedData?.signedUrl && !signedError) {
-            urls[item.id] = signedData.signedUrl;
-          } else {
-            // Fallback to public URL
-            const { data } = supabase.storage.from('project-media').getPublicUrl(item.file_path);
-            urls[item.id] = data.publicUrl;
-          }
-        } catch (err) {
-          console.error('Error getting URL for', item.file_path, err);
-          const { data } = supabase.storage.from('project-media').getPublicUrl(item.file_path);
-          urls[item.id] = data.publicUrl;
-        }
-      }
-      setMediaUrls(urls);
-    };
-    
-    if (media.length > 0) {
-      fetchUrls();
-    }
-  }, [media]);
-
-  const getMediaUrl = (mediaItem: { id: string; file_path: string }) => {
-    return mediaUrls[mediaItem.id] || '';
+  // For public bucket, use public URL directly
+  const getMediaUrl = (mediaItem: { file_path: string }) => {
+    const { data } = supabase.storage.from('project-media').getPublicUrl(mediaItem.file_path);
+    return data.publicUrl;
   };
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,12 +193,17 @@ const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMe
                 src={getMediaUrl(currentMedia)}
                 controls
                 className="w-full h-full max-h-[400px] object-contain"
+                onError={(e) => console.error('Video load error:', currentMedia.file_path)}
               />
             ) : (
               <img
                 src={getMediaUrl(currentMedia)}
                 alt={`تصویر ${currentIndex + 1}`}
                 className="w-full h-full max-h-[400px] object-contain"
+                onError={(e) => {
+                  console.error('Image load error:', currentMedia.file_path);
+                  (e.target as HTMLImageElement).src = '/placeholder.svg';
+                }}
               />
             )}
           </div>
