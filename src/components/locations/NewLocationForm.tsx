@@ -131,9 +131,8 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
         
         if (duplicateLocation) {
           toast({
-            title: 'آدرس تکراری',
-            description: `شما قبلاً این آدرس را با عنوان "${duplicateLocation.title || duplicateLocation.address_line}" ثبت کرده‌اید`,
-            variant: 'destructive'
+            title: 'آدرس موجود است',
+            description: `این موقعیت قبلاً با عنوان "${duplicateLocation.title || duplicateLocation.address_line}" ثبت شده است. می‌توانید از همان آدرس استفاده کنید.`,
           });
           setIsSubmitting(false);
           return;
