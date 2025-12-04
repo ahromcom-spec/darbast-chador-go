@@ -12,6 +12,8 @@ import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 import { AdminImpersonationBanner } from "@/components/common/AdminImpersonationBanner";
 // import { PageLoadProgress } from "@/components/common/PageLoadProgress";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { IncomingCallProvider } from "@/contexts/IncomingCallContext";
+import GlobalIncomingCallPopup from "@/components/calls/GlobalIncomingCallPopup";
 
 import Header from "./components/Header";
 import Home from "./pages/Home";
@@ -131,10 +133,11 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            
+            <IncomingCallProvider>
               {/* <PageLoadProgress /> */}
               <AdminImpersonationBanner />
               <OfflineIndicator />
+              <GlobalIncomingCallPopup />
               
               <Suspense fallback={<PageLoader />}>
                 <div className="min-h-screen bg-background">
@@ -354,7 +357,7 @@ const App = () => {
                 </Routes>
               </div>
             </Suspense>
-          
+            </IncomingCallProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
