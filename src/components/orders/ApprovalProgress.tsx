@@ -30,18 +30,7 @@ export const ApprovalProgress = ({ approvals, loading }: ApprovalProgressProps) 
   }
 
   if (approvals.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">وضعیت تایید</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            این سفارش نیاز به تایید چندمرحله‌ای ندارد
-          </p>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   const totalApprovals = approvals.length;
