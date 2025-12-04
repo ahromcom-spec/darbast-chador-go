@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ahrom-v18-push';
+const CACHE_VERSION = 'ahrom-v19-call-push';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -105,31 +105,55 @@ self.addEventListener('push', (event) => {
   let icon = '/ahrom-pwa-icon.png';
   let badge = '/ahrom-app-icon.png';
 
+  // تنظیمات خاص برای تماس ورودی
+  const isIncomingCall = data.type === 'incoming-call';
+  
   const options = {
     body: data.body,
     icon: icon,
     badge: badge,
-    vibrate: [200, 100, 200],
+    // الگوی لرزش مخصوص تماس ورودی (مثل زنگ تلفن)
+    vibrate: isIncomingCall 
+      ? [500, 200, 500, 200, 500, 200, 500, 200, 500] // لرزش طولانی‌تر و تکرار شونده برای تماس
+      : [200, 100, 200],
     dir: 'rtl',
     lang: 'fa',
-    tag: `ahrom-${data.type || 'notification'}-${Date.now()}`,
+    tag: isIncomingCall 
+      ? `ahrom-call-${data.callData?.orderId || Date.now()}` // تگ یکتا برای هر تماس
+      : `ahrom-${data.type || 'notification'}-${Date.now()}`,
     renotify: true,
-    requireInteraction: data.type === 'error' || data.type === 'warning',
+    // تماس ورودی باید تا پاسخ/رد کاربر بماند
+    requireInteraction: isIncomingCall || data.type === 'error' || data.type === 'warning',
+    // صدای پیش‌فرض سیستم
+    silent: false,
     data: {
       link: data.link || '/',
       type: data.type,
-      timestamp: data.timestamp || new Date().toISOString()
+      timestamp: data.timestamp || new Date().toISOString(),
+      callData: data.callData || null
     },
-    actions: [
-      {
-        action: 'open',
-        title: 'مشاهده'
-      },
-      {
-        action: 'dismiss',
-        title: 'بستن'
-      }
-    ]
+    // دکمه‌های مخصوص تماس ورودی
+    actions: isIncomingCall 
+      ? [
+          {
+            action: 'answer',
+            title: '📞 پاسخ'
+          },
+          {
+            action: 'reject',
+            title: '❌ رد تماس'
+          }
+        ]
+      : [
+          {
+            action: 'open',
+            title: 'مشاهده'
+          },
+          {
+            action: 'dismiss',
+            title: 'بستن'
+          }
+        ]
   };
 
   event.waitUntil(
@@ -141,14 +165,19 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification clicked:', event.action);
   
+  const notificationData = event.notification.data;
+  const isIncomingCall = notificationData?.type === 'incoming-call';
+  
   event.notification.close();
 
-  // اگر روی دکمه بستن کلیک شد
-  if (event.action === 'dismiss') {
+  // اگر روی دکمه بستن یا رد تماس کلیک شد
+  if (event.action === 'dismiss' || event.action === 'reject') {
+    console.log('[SW] Call rejected or notification dismissed');
     return;
   }
 
-  const link = event.notification.data?.link || '/';
+  // لینک برای باز کردن
+  const link = notificationData?.link || '/';
   const urlToOpen = new URL(link, self.location.origin).href;
 
   event.waitUntil(
@@ -157,6 +186,13 @@ self.addEventListener('notificationclick', (event) => {
         // اگر پنجره‌ای از اپلیکیشن باز است، آن را فوکوس کن
         for (const client of clientList) {
           if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+            // اگر تماس ورودی است، پیام به کلاینت بفرست
+            if (isIncomingCall && event.action === 'answer') {
+              client.postMessage({
+                type: 'INCOMING_CALL_ANSWERED',
+                callData: notificationData.callData
+              });
+            }
             return client.navigate(urlToOpen).then(() => client.focus());
           }
         }
