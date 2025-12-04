@@ -309,8 +309,6 @@ const Home = () => {
         </div>
         <div className="fixed inset-0 bg-black/10 z-0" aria-hidden="true" />
 
-        {/* Notification Alert at Top */}
-        <NotificationBanner variant="inline" />
 
         {/* Main Content */}
         <main className="flex-1 flex items-start md:items-center justify-center py-4 sm:py-6 md:py-8 px-4 sm:px-6 relative z-10" role="main">
@@ -376,12 +374,12 @@ const Home = () => {
       </div>
       </div>
 
-      {/* PWA Install and Notification Banners - فقط در صفحه اصلی و نه روی نقشه */}
+      {/* Bottom Banners - PWA Install + Notification */}
       {!showGlobe && (
-        <>
+        <div className="fixed bottom-4 left-4 right-4 z-50 flex flex-col gap-3 max-w-md mx-auto md:left-auto md:right-4 md:mx-0">
+          <NotificationBanner variant="floating" />
           <PWAInstallBanner />
-          <NotificationBanner />
-        </>
+        </div>
       )}
     </>
   );

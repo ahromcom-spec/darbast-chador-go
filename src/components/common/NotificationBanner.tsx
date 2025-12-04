@@ -233,7 +233,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
 
       {/* بنر floating پایین صفحه - فقط برای variant floating */}
       {variant === 'floating' && showBanner && !showDialog && (
-        <div className="fixed bottom-20 left-4 right-4 sm:left-4 sm:right-auto z-[100] max-w-md animate-in slide-in-from-bottom-4" data-notification-banner>
+        <div className="w-full animate-in slide-in-from-bottom-4" data-notification-banner>
           <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-xl">
             <div className="p-4 flex items-center gap-3">
               <div className="flex-shrink-0 p-2 rounded-lg bg-primary/10 animate-pulse">
