@@ -229,6 +229,35 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       await pc.setLocalDescription(offer);
       console.log('[VoiceCall] Created offer');
 
+      // Get caller's name for push notification
+      const { data: callerProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', user.id)
+        .single();
+
+      // Send push notification to receiver (even if site is closed)
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_id: otherPartyId,
+            title: '📞 تماس ورودی',
+            body: `${callerProfile?.full_name || 'مدیر'} در حال تماس با شماست`,
+            link: `/user/orders/${orderId}`,
+            type: 'incoming-call',
+            callData: {
+              orderId,
+              callerId: user.id,
+              callerName: callerProfile?.full_name || 'مدیر'
+            }
+          }
+        });
+        console.log('[VoiceCall] Push notification sent to receiver');
+      } catch (pushError) {
+        console.warn('[VoiceCall] Failed to send push notification:', pushError);
+        // Continue with call even if push fails
+      }
+
       // Send call request
       const { error } = await supabase.from('voice_call_signals' as any).insert({
         order_id: orderId,
