@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Send, MessageCircle, User, UserCheck } from 'lucide-react';
+import { Send, MessageCircle, User, UserCheck, Mic, Square, Play, Pause, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
@@ -14,6 +14,7 @@ interface Message {
   message: string;
   is_staff: boolean;
   created_at: string;
+  audio_path?: string;
   profiles?: {
     full_name: string;
   };
@@ -33,6 +34,18 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Audio playback state
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   // بررسی نقش کاربر
   useEffect(() => {
     checkUserRole();
@@ -45,7 +58,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
-      .in('role', ['admin', 'ceo', 'general_manager', 'sales_manager', 'scaffold_executive_manager'])
+      .in('role', ['admin', 'ceo', 'general_manager', 'sales_manager', 'scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
       .maybeSingle();
 
     setIsStaff(!!data);
@@ -59,12 +72,8 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   }, [orderId]);
 
-  // اسکرول به پایین فقط هنگام ارسال پیام جدید توسط کاربر
-  // (حذف اسکرول خودکار هنگام بارگذاری اولیه صفحه)
-
   const fetchMessages = async () => {
     try {
-      // دریافت پیام‌ها
       const { data: messagesData, error: messagesError } = await supabase
         .from('order_messages')
         .select('*')
@@ -73,7 +82,6 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
 
       if (messagesError) throw messagesError;
 
-      // دریافت اطلاعات پروفایل برای هر پیام
       if (messagesData && messagesData.length > 0) {
         const userIds = [...new Set(messagesData.map(m => m.user_id))];
         const { data: profilesData } = await supabase
@@ -111,7 +119,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
           filter: `order_id=eq.${orderId}`
         },
         (payload) => {
-          fetchMessages(); // دریافت مجدد برای گرفتن اطلاعات پروفایل
+          fetchMessages();
         }
       )
       .subscribe();
@@ -122,7 +130,6 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
   };
 
   const scrollToBottom = () => {
-    // اسکرول فقط زمانی که کاربر پیام ارسال می‌کند
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -143,7 +150,6 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       if (error) throw error;
 
       setNewMessage('');
-      // اسکرول به پایین فقط بعد از ارسال موفق پیام
       scrollToBottom();
       toast({
         title: 'پیام ارسال شد',
@@ -167,7 +173,199 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   };
 
-  // نمایش چت برای همه سفارشات غیر از rejected و closed
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+      
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start(100);
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+
+    } catch (error: any) {
+      console.error('Error starting recording:', error);
+      toast({
+        title: 'خطا در دسترسی به میکروفون',
+        description: 'لطفاً دسترسی میکروفون را فعال کنید',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!mediaRecorderRef.current || !user) return;
+
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+
+    setIsRecording(false);
+    setIsUploading(true);
+
+    return new Promise<void>((resolve) => {
+      const mediaRecorder = mediaRecorderRef.current!;
+      
+      mediaRecorder.onstop = async () => {
+        try {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          
+          if (audioBlob.size < 1000) {
+            toast({
+              title: 'پیام صوتی خیلی کوتاه است',
+              variant: 'destructive'
+            });
+            setIsUploading(false);
+            resolve();
+            return;
+          }
+
+          // Upload to storage
+          const fileName = `${orderId}/${user.id}/${Date.now()}.webm`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('voice-messages')
+            .upload(fileName, audioBlob, {
+              contentType: 'audio/webm',
+              upsert: false
+            });
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            throw uploadError;
+          }
+
+          // Save message with audio path
+          const { error: messageError } = await supabase
+            .from('order_messages')
+            .insert([{
+              order_id: orderId,
+              user_id: user.id,
+              message: '🎤 پیام صوتی',
+              is_staff: isStaff,
+              audio_path: uploadData.path
+            }]);
+
+          if (messageError) throw messageError;
+
+          scrollToBottom();
+          toast({
+            title: 'پیام صوتی ارسال شد'
+          });
+
+        } catch (error: any) {
+          console.error('Error uploading voice message:', error);
+          toast({
+            title: 'خطا در ارسال پیام صوتی',
+            description: error.message,
+            variant: 'destructive'
+          });
+        } finally {
+          setIsUploading(false);
+          setRecordingDuration(0);
+          audioChunksRef.current = [];
+          resolve();
+        }
+      };
+
+      if (mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      } else {
+        setIsUploading(false);
+        resolve();
+      }
+    });
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Audio playback
+  const playAudio = async (messageId: string, audioPath: string) => {
+    try {
+      // Stop currently playing audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+
+      if (playingAudioId === messageId) {
+        setPlayingAudioId(null);
+        return;
+      }
+
+      // Get signed URL
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('voice-messages')
+        .createSignedUrl(audioPath, 3600);
+
+      if (signedError || !signedData?.signedUrl) {
+        throw new Error('خطا در دریافت فایل صوتی');
+      }
+
+      const audio = new Audio(signedData.signedUrl);
+      audioRef.current = audio;
+      
+      audio.onended = () => {
+        setPlayingAudioId(null);
+        audioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        toast({
+          title: 'خطا در پخش صدا',
+          variant: 'destructive'
+        });
+        setPlayingAudioId(null);
+        audioRef.current = null;
+      };
+
+      setPlayingAudioId(messageId);
+      await audio.play();
+
+    } catch (error: any) {
+      console.error('Error playing audio:', error);
+      toast({
+        title: 'خطا در پخش صدا',
+        description: error.message,
+        variant: 'destructive'
+      });
+      setPlayingAudioId(null);
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
+
   if (['rejected', 'closed'].includes(orderStatus)) {
     return null;
   }
@@ -227,7 +425,27 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
                         {msg.profiles?.full_name || 'مدیریت'}
                       </div>
                     )}
-                    <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                    
+                    {/* Voice message */}
+                    {msg.audio_path ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant={msg.user_id === user?.id ? "secondary" : "outline"}
+                          className="h-8 w-8 p-0"
+                          onClick={() => playAudio(msg.id, msg.audio_path!)}
+                        >
+                          {playingAudioId === msg.id ? (
+                            <Pause className="h-4 w-4" />
+                          ) : (
+                            <Play className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <span className="text-sm">🎤 پیام صوتی</span>
+                      </div>
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1 px-1">
                     {new Date(msg.created_at).toLocaleString('fa-IR', {
@@ -253,20 +471,62 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
             onKeyPress={handleKeyPress}
             placeholder="پیام خود را بنویسید..."
             className="min-h-[80px] resize-none"
-            disabled={loading}
+            disabled={loading || isRecording || isUploading}
           />
-          <Button
-            onClick={sendMessage}
-            disabled={loading || !newMessage.trim()}
-            className="flex-shrink-0"
-            size="lg"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={sendMessage}
+              disabled={loading || !newMessage.trim() || isRecording || isUploading}
+              className="flex-shrink-0"
+              size="lg"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+            
+            {/* Voice record button */}
+            {isRecording ? (
+              <Button
+                onClick={stopRecording}
+                variant="destructive"
+                size="lg"
+                className="flex-shrink-0"
+                disabled={isUploading}
+              >
+                <Square className="h-4 w-4" />
+              </Button>
+            ) : isUploading ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                className="flex-shrink-0"
+                disabled
+              >
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </Button>
+            ) : (
+              <Button
+                onClick={startRecording}
+                variant="secondary"
+                size="lg"
+                className="flex-shrink-0"
+                disabled={loading}
+              >
+                <Mic className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
+        {/* Recording indicator */}
+        {isRecording && (
+          <div className="flex items-center justify-center gap-2 text-destructive animate-pulse">
+            <div className="h-2 w-2 rounded-full bg-destructive" />
+            <span className="text-sm">در حال ضبط... {formatDuration(recordingDuration)}</span>
+          </div>
+        )}
+
         <p className="text-xs text-muted-foreground">
-          برای ارسال پیام، Enter را فشار دهید. برای خط جدید، Shift+Enter استفاده کنید.
+          برای ارسال پیام متنی، Enter را فشار دهید. برای ارسال پیام صوتی، روی آیکون میکروفون کلیک کنید.
         </p>
       </CardContent>
     </Card>
