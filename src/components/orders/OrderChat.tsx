@@ -174,10 +174,40 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
   };
 
   // Voice recording functions
+  const getSupportedMimeType = (): string => {
+    // Try formats in order of compatibility
+    const types = [
+      'audio/mp4',
+      'audio/aac',
+      'audio/mpeg',
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+    ];
+    
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+    return ''; // Default - let browser choose
+  };
+
+  const getFileExtension = (mimeType: string): string => {
+    if (mimeType.includes('mp4') || mimeType.includes('aac')) return 'mp4';
+    if (mimeType.includes('mpeg') || mimeType.includes('mp3')) return 'mp3';
+    if (mimeType.includes('ogg')) return 'ogg';
+    return 'webm';
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+      
+      const mimeType = getSupportedMimeType();
+      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
+      
+      const mediaRecorder = new MediaRecorder(stream, options);
       
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -226,7 +256,8 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       
       mediaRecorder.onstop = async () => {
         try {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
+          const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
           
           if (audioBlob.size < 1000) {
             toast({
@@ -238,12 +269,13 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
             return;
           }
 
-          // Upload to storage
-          const fileName = `${orderId}/${user.id}/${Date.now()}.webm`;
+          // Upload to storage with correct extension
+          const extension = getFileExtension(actualMimeType);
+          const fileName = `${orderId}/${user.id}/${Date.now()}.${extension}`;
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('voice-messages')
             .upload(fileName, audioBlob, {
-              contentType: 'audio/webm',
+              contentType: actualMimeType,
               upsert: false
             });
 
@@ -314,34 +346,60 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
         return;
       }
 
+      setPlayingAudioId(messageId);
+
       // Get signed URL
       const { data: signedData, error: signedError } = await supabase.storage
         .from('voice-messages')
         .createSignedUrl(audioPath, 3600);
 
       if (signedError || !signedData?.signedUrl) {
+        console.error('Signed URL error:', signedError);
         throw new Error('خطا در دریافت فایل صوتی');
       }
 
-      const audio = new Audio(signedData.signedUrl);
+      console.log('Playing audio from:', signedData.signedUrl);
+
+      const audio = new Audio();
       audioRef.current = audio;
+      
+      // Set up event handlers before setting src
+      audio.oncanplaythrough = async () => {
+        try {
+          await audio.play();
+        } catch (playError) {
+          console.error('Play error:', playError);
+          toast({
+            title: 'خطا در پخش صدا',
+            description: 'مرورگر اجازه پخش خودکار نداد',
+            variant: 'destructive'
+          });
+          setPlayingAudioId(null);
+        }
+      };
       
       audio.onended = () => {
         setPlayingAudioId(null);
         audioRef.current = null;
       };
 
-      audio.onerror = () => {
+      audio.onerror = (e) => {
+        console.error('Audio error:', e, audio.error);
+        const errorMsg = audioPath.endsWith('.webm') 
+          ? 'فرمت صدا توسط این دستگاه پشتیبانی نمی‌شود'
+          : 'خطا در پخش فایل صوتی';
         toast({
           title: 'خطا در پخش صدا',
+          description: errorMsg,
           variant: 'destructive'
         });
         setPlayingAudioId(null);
         audioRef.current = null;
       };
 
-      setPlayingAudioId(messageId);
-      await audio.play();
+      // Set source and load
+      audio.src = signedData.signedUrl;
+      audio.load();
 
     } catch (error: any) {
       console.error('Error playing audio:', error);
