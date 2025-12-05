@@ -16,7 +16,7 @@ interface VoiceCallProps {
 type CallState = 'idle' | 'calling' | 'incoming' | 'connected';
 
 // Constants for call timeouts
-const UNANSWERED_TIMEOUT_MS = 90 * 1000; // 90 seconds
+const UNANSWERED_TIMEOUT_MS = 60 * 1000; // 60 seconds (1 minute)
 const MAX_CALL_DURATION_MS = 7 * 60 * 1000; // 7 minutes
 
 // Audio context for ringtones
