@@ -97,6 +97,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
   const handleEnable = async () => {
     setEnabling(true);
     
+    // Timeout افزایش یافته به 30 ثانیه برای اینترنت کند موبایل
     const timeoutId = setTimeout(() => {
       setEnabling(false);
       toast({
@@ -104,20 +105,21 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         description: 'فعال‌سازی اعلان‌ها بیش از حد طول کشید. لطفاً صفحه را رفرش کنید.',
         variant: 'destructive'
       });
-    }, 15000);
+    }, 30000);
     
     try {
       console.log('🔔 Starting notification enablement...');
       
       if (!user) {
+        clearTimeout(timeoutId);
         throw new Error('not authenticated');
       }
       
       const result = await subscribe();
+      clearTimeout(timeoutId);
       console.log('🔔 Subscribe result:', result);
       
       if (result) {
-        clearTimeout(timeoutId);
         toast({
           title: '✅ اعلان‌ها فعال شد',
           description: 'از این پس تماس‌های ورودی و به‌روزرسانی سفارشات را دریافت خواهید کرد',
@@ -127,7 +129,6 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         setShowDialog(false);
         setShowDeniedHelp(false);
       } else {
-        clearTimeout(timeoutId);
         setShowDeniedHelp(true);
       }
     } catch (error: any) {
@@ -146,7 +147,6 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         variant: 'destructive'
       });
     } finally {
-      clearTimeout(timeoutId);
       setEnabling(false);
     }
   };
