@@ -52,15 +52,17 @@ export function useOneSignal() {
     console.log('🔔 Starting OneSignal initialization...');
 
     const initOneSignal = async () => {
-      // Wait for SDK to be available with timeout
+      // Wait for SDK to be available with timeout - افزایش به 15 ثانیه برای اینترنت کند
       const waitForSDK = (): Promise<any> => {
         return new Promise((resolve, reject) => {
           let attempts = 0;
-          const maxAttempts = 50; // 5 seconds max wait
+          const maxAttempts = 150; // 15 seconds max wait
           
           const checkSDK = () => {
             attempts++;
-            console.log(`🔔 Checking for OneSignal SDK (attempt ${attempts})...`);
+            if (attempts % 10 === 0) {
+              console.log(`🔔 Checking for OneSignal SDK (attempt ${attempts})...`);
+            }
             
             if (window.OneSignal) {
               console.log('✅ OneSignal SDK found directly');
@@ -184,12 +186,12 @@ export function useOneSignal() {
     try {
       console.log('🔔 Requesting notification permission...');
       
-      // Wait for OneSignal SDK if not available
+      // Wait for OneSignal SDK if not available - افزایش timeout به 10 ثانیه
       let OneSignal = window.OneSignal;
       if (!OneSignal) {
         console.log('🔔 Waiting for OneSignal SDK...');
         let attempts = 0;
-        while (!window.OneSignal && attempts < 30) {
+        while (!window.OneSignal && attempts < 100) { // 10 seconds
           await new Promise(resolve => setTimeout(resolve, 100));
           attempts++;
         }
