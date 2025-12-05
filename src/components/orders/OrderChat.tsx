@@ -226,8 +226,22 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       setIsRecording(true);
       setRecordingDuration(0);
 
+      // Max recording duration: 3 minutes (180 seconds)
+      const MAX_RECORDING_DURATION = 180;
+      
       recordingTimerRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
+        setRecordingDuration(prev => {
+          const newDuration = prev + 1;
+          if (newDuration >= MAX_RECORDING_DURATION) {
+            // Auto-stop recording when max duration reached
+            stopRecording();
+            toast({
+              title: 'حداکثر زمان ضبط',
+              description: 'ضبط صدا به حداکثر ۳ دقیقه رسید',
+            });
+          }
+          return newDuration;
+        });
       }, 1000);
 
     } catch (error: any) {
