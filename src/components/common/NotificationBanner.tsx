@@ -97,15 +97,15 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
   const handleEnable = async () => {
     setEnabling(true);
     
-    // Timeout افزایش یافته به 30 ثانیه برای اینترنت کند موبایل
+    // Timeout کوتاه‌تر چون حالا از Native API استفاده می‌کنیم
     const timeoutId = setTimeout(() => {
       setEnabling(false);
       toast({
-        title: 'خطا',
-        description: 'فعال‌سازی اعلان‌ها بیش از حد طول کشید. لطفاً صفحه را رفرش کنید.',
+        title: '❌ خطا',
+        description: 'لطفاً صفحه را رفرش کرده و دوباره تلاش کنید.',
         variant: 'destructive'
       });
-    }, 30000);
+    }, 15000);
     
     try {
       console.log('🔔 Starting notification enablement...');
