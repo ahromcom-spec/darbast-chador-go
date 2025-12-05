@@ -14,6 +14,8 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const oneSignalAppId = Deno.env.get('ONESIGNAL_APP_ID');
+    const oneSignalApiKey = Deno.env.get('ONESIGNAL_REST_API_KEY');
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -28,7 +30,7 @@ serve(async (req) => {
       );
     }
 
-    // Create in-app notification - this is the reliable method
+    // Create in-app notification
     const { error: notifError } = await supabase.from('notifications').insert({
       user_id,
       title,
@@ -43,16 +45,73 @@ serve(async (req) => {
       console.log('[Push] ✓ In-app notification created');
     }
 
-    // For incoming calls, users will be notified via:
-    // 1. Supabase Realtime (voice_call_signals table) - works when app is open
-    // 2. In-app notifications - visible when user returns to app
-    // Note: True background push requires native app or complex VAPID setup
+    // Send OneSignal push notification
+    let pushSent = false;
+    if (oneSignalAppId && oneSignalApiKey) {
+      try {
+        console.log('[Push] Sending OneSignal notification...');
+        
+        // Prepare notification data
+        const notificationData: any = {
+          app_id: oneSignalAppId,
+          include_external_user_ids: [user_id],
+          headings: { fa: title, en: title },
+          contents: { fa: body, en: body },
+          url: link ? `https://ahrom.org${link}` : 'https://ahrom.org/',
+          // چند ثانیه زمان برای دریافت اعلان
+          ttl: 86400, // 24 hours
+        };
+
+        // Add special handling for incoming calls
+        if (type === 'incoming-call' && callData) {
+          notificationData.data = {
+            type: 'incoming-call',
+            orderId: callData.orderId,
+            callerName: callData.callerName,
+            callerId: callData.callerId
+          };
+          // Higher priority for calls
+          notificationData.priority = 10;
+          // Custom sound for calls
+          notificationData.android_sound = 'incoming_call';
+          notificationData.ios_sound = 'incoming_call.caf';
+          // Action buttons for calls
+          notificationData.buttons = [
+            { id: 'answer', text: 'پاسخ' },
+            { id: 'reject', text: 'رد' }
+          ];
+        }
+
+        const response = await fetch('https://onesignal.com/api/v1/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Authorization': `Basic ${oneSignalApiKey}`
+          },
+          body: JSON.stringify(notificationData)
+        });
+
+        const result = await response.json();
+        
+        if (response.ok && result.id) {
+          console.log('[Push] ✓ OneSignal notification sent:', result.id);
+          pushSent = true;
+        } else {
+          console.error('[Push] OneSignal error:', result);
+        }
+      } catch (oneSignalError) {
+        console.error('[Push] OneSignal request failed:', oneSignalError);
+      }
+    } else {
+      console.log('[Push] OneSignal not configured, skipping push');
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Notification created',
-        inAppCreated: !notifError
+        inAppCreated: !notifError,
+        pushSent
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

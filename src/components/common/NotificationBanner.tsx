@@ -1,9 +1,9 @@
-import { Bell, X, Loader2, Phone, AlertTriangle, Settings, ExternalLink } from 'lucide-react';
+import { Bell, X, Loader2, Phone, AlertTriangle, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useOneSignal } from '@/hooks/useOneSignal';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog';
 
 const DISMISSAL_KEY = 'notification-banner-dismissed';
-const DISMISSAL_DURATION = 4 * 60 * 60 * 1000; // 4 ساعت (کمتر از قبل تا بیشتر نمایش داده شود)
+const DISMISSAL_DURATION = 4 * 60 * 60 * 1000; // 4 ساعت
 
 interface NotificationBannerProps {
   variant?: 'floating' | 'inline';
@@ -47,12 +47,12 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
   const [showDialog, setShowDialog] = useState(false);
   const [showDeniedHelp, setShowDeniedHelp] = useState(false);
   const location = useLocation();
-  const { permission, isSupported, requestPermission, subscribeToPush, subscription } = usePushNotifications();
+  const { permission, isSupported, isSubscribed, subscribe, isInitialized } = useOneSignal();
   const { toast } = useToast();
 
   // بررسی اگر کاربر هنوز اعلان ندارد - نمایش دیالوگ
   useEffect(() => {
-    if (!user || !isSupported || subscription) {
+    if (!user || !isSupported || isSubscribed) {
       setShowBanner(false);
       setShowDialog(false);
       return;
@@ -69,7 +69,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
     const hoursSinceDialog = (Date.now() - dialogTimestamp) / (1000 * 60 * 60);
 
     // نمایش دیالوگ هر 12 ساعت تا کاربر فعال کند
-    if (!subscription && hoursSinceDialog > 12) {
+    if (!isSubscribed && hoursSinceDialog > 12) {
       const timer = setTimeout(() => {
         setShowDialog(true);
         localStorage.setItem('notification-dialog-seen', Date.now().toString());
@@ -84,7 +84,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [user, isSupported, permission, dismissed, subscription]);
+  }, [user, isSupported, permission, dismissed, isSubscribed]);
 
   const handleDismiss = () => {
     setDismissed(true);
@@ -97,33 +97,30 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
   const handleEnable = async () => {
     setEnabling(true);
     
-    // Timeout برای جلوگیری از گیر کردن بی‌نهایت
     const timeoutId = setTimeout(() => {
       setEnabling(false);
       toast({
         title: 'خطا',
-        description: 'فعال‌سازی اعلان‌ها بیش از حد طول کشید. لطفاً صفحه را رفرش کرده و دوباره تلاش کنید.',
+        description: 'فعال‌سازی اعلان‌ها بیش از حد طول کشید. لطفاً صفحه را رفرش کنید.',
         variant: 'destructive'
       });
-    }, 15000); // 15 ثانیه timeout
+    }, 15000);
     
     try {
-      console.log('🔔 Starting notification enablement...');
+      console.log('🔔 Starting OneSignal notification enablement...');
       
-      // بررسی وجود کاربر
       if (!user) {
         throw new Error('not authenticated');
       }
+
+      if (!isInitialized) {
+        throw new Error('OneSignal not ready');
+      }
       
-      const result = await requestPermission();
-      console.log('🔔 Permission result:', result);
+      const result = await subscribe();
+      console.log('🔔 Subscribe result:', result);
       
-      if (result === 'granted') {
-        console.log('🔔 Permission granted, subscribing to push...');
-        // پاس دادن نتیجه مجوز به subscribeToPush
-        await subscribeToPush(result);
-        console.log('🔔 Push subscription successful!');
-        
+      if (result) {
         clearTimeout(timeoutId);
         toast({
           title: '✅ اعلان‌ها فعال شد',
@@ -133,33 +130,20 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         setShowBanner(false);
         setShowDialog(false);
         setShowDeniedHelp(false);
-      } else if (result === 'denied') {
-        clearTimeout(timeoutId);
-        // نمایش راهنمای فعال‌سازی در تنظیمات مرورگر
-        setShowDeniedHelp(true);
       } else {
-        // default یا هر وضعیت دیگر
         clearTimeout(timeoutId);
-        toast({
-          title: 'توجه',
-          description: 'لطفاً در پنجره مرورگر روی "اجازه" یا "Allow" کلیک کنید',
-        });
+        setShowDeniedHelp(true);
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
       console.error('Error enabling notifications:', error);
       
-      // نمایش پیام خطای مناسب‌تر
       let errorMessage = 'فعال‌سازی اعلان‌ها با مشکل مواجه شد';
       
-      if (error?.message?.includes('VAPID')) {
-        errorMessage = 'کلید سرور در دسترس نیست. لطفاً صفحه را رفرش کنید';
-      } else if (error?.message?.includes('Permission')) {
-        errorMessage = 'مجوز اعلان داده نشده است';
-      } else if (error?.message?.includes('not authenticated')) {
+      if (error?.message?.includes('not authenticated')) {
         errorMessage = 'لطفاً ابتدا وارد حساب کاربری شوید';
-      } else if (error?.message?.includes('service worker')) {
-        errorMessage = 'Service Worker در دسترس نیست. لطفاً صفحه را رفرش کنید';
+      } else if (error?.message?.includes('not ready') || error?.message?.includes('not initialized')) {
+        errorMessage = 'لطفاً چند ثانیه صبر کنید و دوباره تلاش کنید';
       }
       
       toast({
@@ -180,7 +164,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
   };
 
   // نمایش inline بنر در بالای صفحه
-  const showInline = variant === 'inline' && user && isSupported && !subscription && permission !== 'granted' && !dismissed;
+  const showInline = variant === 'inline' && user && isSupported && !isSubscribed && permission !== 'granted' && !dismissed;
 
   return (
     <>
@@ -206,7 +190,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
                   onClick={handleEnable}
                   size="sm"
                   className="whitespace-nowrap"
-                  disabled={enabling}
+                  disabled={enabling || !isInitialized}
                 >
                   {enabling ? (
                     <>
@@ -235,7 +219,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         </div>
       )}
 
-      {/* دیالوگ اصلی برای فعال‌سازی - مهم‌تر و برجسته‌تر */}
+      {/* دیالوگ اصلی برای فعال‌سازی */}
       <Dialog open={showDialog} onOpenChange={(open) => {
         setShowDialog(open);
         if (!open) setShowDeniedHelp(false);
@@ -316,7 +300,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
                   onClick={handleEnable} 
                   className="w-full"
                   size="lg"
-                  disabled={enabling}
+                  disabled={enabling || !isInitialized}
                 >
                   {enabling ? (
                     <>
@@ -344,7 +328,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         </DialogContent>
       </Dialog>
 
-      {/* بنر floating پایین صفحه - فقط برای variant floating */}
+      {/* بنر floating پایین صفحه */}
       {variant === 'floating' && showBanner && !showDialog && (
         <div className="w-full animate-in slide-in-from-bottom-4" data-notification-banner>
           <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-xl">
@@ -362,7 +346,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
                 onClick={handleEnable}
                 size="sm"
                 className="whitespace-nowrap"
-                disabled={enabling}
+                disabled={enabling || !isInitialized}
               >
                 {enabling ? (
                   <>
