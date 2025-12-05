@@ -1,30 +1,29 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, BellOff, CheckCircle, XCircle, Smartphone, AlertCircle } from 'lucide-react';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { Bell, BellOff, CheckCircle, XCircle, Smartphone, AlertCircle, Loader2 } from 'lucide-react';
+import { useOneSignal } from '@/hooks/useOneSignal';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/common/PageHeader';
 
 export default function NotificationSettings() {
   const {
     isSupported,
+    isInitialized,
+    isSubscribed,
     permission,
-    subscription,
-    requestPermission,
-    subscribeToPush,
+    subscribe,
     unsubscribe
-  } = usePushNotifications();
+  } = useOneSignal();
 
   const [loading, setLoading] = useState(false);
 
   const handleEnableNotifications = async () => {
     setLoading(true);
     try {
-      const perm = await requestPermission();
+      const result = await subscribe();
       
-      if (perm === 'granted') {
-        await subscribeToPush();
+      if (result) {
         toast.success('اعلان‌ها با موفقیت فعال شد!');
       } else {
         toast.error('لطفاً دسترسی به اعلان‌ها را مجاز کنید');
@@ -96,6 +95,12 @@ export default function NotificationSettings() {
               ? 'می‌توانید اعلان‌ها را فعال کنید تا از به‌روزرسانی‌های مهم مطلع شوید'
               : 'لطفاً از مرورگر Chrome، Firefox، Edge یا Safari استفاده کنید'}
           </p>
+          {!isInitialized && isSupported && (
+            <div className="flex items-center gap-2 mt-3 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">در حال بارگذاری سیستم اعلان...</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -113,17 +118,17 @@ export default function NotificationSettings() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">
-                    {permission === 'granted' && 'دسترسی داده شده ✓'}
-                    {permission === 'denied' && 'دسترسی رد شده ✗'}
-                    {permission === 'default' && 'دسترسی درخواست نشده'}
+                    {isSubscribed && 'اعلان‌ها فعال ✓'}
+                    {!isSubscribed && permission === 'denied' && 'دسترسی رد شده ✗'}
+                    {!isSubscribed && permission !== 'denied' && 'اعلان‌ها غیرفعال'}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {permission === 'granted' && 'اعلان‌ها فعال هستند و می‌توانید اعلان دریافت کنید'}
-                    {permission === 'denied' && 'برای دریافت اعلان، باید از تنظیمات مرورگر دسترسی را مجاز کنید'}
-                    {permission === 'default' && 'هنوز درخواست دسترسی به اعلان‌ها نداده‌اید'}
+                    {isSubscribed && 'اعلان‌ها فعال هستند و می‌توانید اعلان دریافت کنید'}
+                    {!isSubscribed && permission === 'denied' && 'برای دریافت اعلان، باید از تنظیمات مرورگر دسترسی را مجاز کنید'}
+                    {!isSubscribed && permission !== 'denied' && 'روی دکمه فعال‌سازی کلیک کنید'}
                   </p>
                 </div>
-                {permission === 'granted' ? (
+                {isSubscribed ? (
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 ) : permission === 'denied' ? (
                   <XCircle className="h-8 w-8 text-destructive" />
@@ -132,19 +137,28 @@ export default function NotificationSettings() {
                 )}
               </div>
 
-              {permission !== 'granted' && (
+              {!isSubscribed && (
                 <Button
                   onClick={handleEnableNotifications}
-                  disabled={loading || permission === 'denied'}
+                  disabled={loading || permission === 'denied' || !isInitialized}
                   className="w-full"
                   size="lg"
                 >
-                  <Bell className="h-4 w-4 mr-2" />
-                  {permission === 'denied' ? 'دسترسی رد شده' : 'فعال‌سازی اعلان‌ها'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      در حال فعال‌سازی...
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="h-4 w-4 mr-2" />
+                      {permission === 'denied' ? 'دسترسی رد شده' : 'فعال‌سازی اعلان‌ها'}
+                    </>
+                  )}
                 </Button>
               )}
 
-              {permission === 'granted' && subscription && (
+              {isSubscribed && (
                 <div className="space-y-3">
                   <Button
                     onClick={sendTestNotification}
@@ -160,8 +174,17 @@ export default function NotificationSettings() {
                     variant="destructive"
                     className="w-full"
                   >
-                    <BellOff className="h-4 w-4 mr-2" />
-                    غیرفعال‌سازی اعلان‌ها
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        در حال غیرفعال‌سازی...
+                      </>
+                    ) : (
+                      <>
+                        <BellOff className="h-4 w-4 mr-2" />
+                        غیرفعال‌سازی اعلان‌ها
+                      </>
+                    )}
                   </Button>
                 </div>
               )}
@@ -178,7 +201,7 @@ export default function NotificationSettings() {
         <CardContent className="space-y-3 text-sm">
           <div className="flex items-start gap-2">
             <span className="text-primary">•</span>
-            <p>اعلان‌های پوش به شما کمک می‌کند تا از سفارشات جدید، تغییر وضعیت سفارشات و پیام‌های مهم بلافاصله مطلع شوید</p>
+            <p>اعلان‌های پوش به شما کمک می‌کند تا از تماس‌های ورودی، سفارشات جدید و پیام‌های مهم بلافاصله مطلع شوید</p>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-primary">•</span>
