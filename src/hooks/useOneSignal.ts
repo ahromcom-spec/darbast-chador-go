@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,6 +16,7 @@ export function useOneSignal() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [loading, setLoading] = useState(false);
+  const initAttemptedRef = useRef(false);
 
   // Fetch App ID from server
   useEffect(() => {
@@ -30,8 +31,10 @@ export function useOneSignal() {
         }
         
         if (data?.appId) {
-          console.log('✅ OneSignal App ID received');
+          console.log('✅ OneSignal App ID received:', data.appId.substring(0, 8) + '...');
           setAppId(data.appId);
+        } else {
+          console.error('❌ No App ID in response');
         }
       } catch (error) {
         console.error('❌ Failed to fetch OneSignal App ID:', error);
@@ -43,62 +46,100 @@ export function useOneSignal() {
 
   // Initialize OneSignal when App ID is available
   useEffect(() => {
-    if (!appId || typeof window === 'undefined') return;
+    if (!appId || typeof window === 'undefined' || initAttemptedRef.current) return;
     
-    // Check if already initialized
-    if (window.OneSignal?.initialized) {
-      setIsInitialized(true);
-      return;
-    }
+    initAttemptedRef.current = true;
+    console.log('🔔 Starting OneSignal initialization...');
 
     const initOneSignal = async () => {
-      // Wait for OneSignal SDK to load
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      
-      window.OneSignalDeferred.push(async (OneSignal: any) => {
-        try {
-          console.log('🔔 Initializing OneSignal with App ID...');
+      // Wait for SDK to be available with timeout
+      const waitForSDK = (): Promise<any> => {
+        return new Promise((resolve, reject) => {
+          let attempts = 0;
+          const maxAttempts = 50; // 5 seconds max wait
           
-          await OneSignal.init({
-            appId: appId,
-            allowLocalhostAsSecureOrigin: true,
-            serviceWorkerParam: { scope: '/' },
-            promptOptions: {
-              slidedown: {
-                prompts: [{
-                  type: "push",
-                  autoPrompt: false,
-                  text: {
-                    actionMessage: "برای دریافت تماس‌ها و وضعیت سفارشات، اعلان‌ها را فعال کنید",
-                    acceptButton: "فعال‌سازی",
-                    cancelButton: "بعداً"
-                  }
-                }]
-              }
+          const checkSDK = () => {
+            attempts++;
+            console.log(`🔔 Checking for OneSignal SDK (attempt ${attempts})...`);
+            
+            if (window.OneSignal) {
+              console.log('✅ OneSignal SDK found directly');
+              resolve(window.OneSignal);
+              return;
             }
-          });
-
-          setIsInitialized(true);
-          console.log('✅ OneSignal initialized');
-
-          // Check current subscription status
-          const subscribed = await OneSignal.User.PushSubscription.optedIn;
-          setIsSubscribed(subscribed || false);
+            
+            if (attempts >= maxAttempts) {
+              reject(new Error('OneSignal SDK not loaded after timeout'));
+              return;
+            }
+            
+            setTimeout(checkSDK, 100);
+          };
           
-          // Update permission state
-          const perm = await OneSignal.Notifications.permission;
-          setPermission(perm ? 'granted' : 'default');
+          checkSDK();
+        });
+      };
 
-          // Listen for subscription changes
+      try {
+        const OneSignal = await waitForSDK();
+        
+        console.log('🔔 Initializing OneSignal with App ID...');
+        
+        await OneSignal.init({
+          appId: appId,
+          allowLocalhostAsSecureOrigin: true,
+          serviceWorkerParam: { scope: '/' },
+          promptOptions: {
+            slidedown: {
+              prompts: [{
+                type: "push",
+                autoPrompt: false,
+                text: {
+                  actionMessage: "برای دریافت تماس‌ها و وضعیت سفارشات، اعلان‌ها را فعال کنید",
+                  acceptButton: "فعال‌سازی",
+                  cancelButton: "بعداً"
+                }
+              }]
+            }
+          }
+        });
+
+        setIsInitialized(true);
+        console.log('✅ OneSignal initialized successfully');
+
+        // Check current subscription status
+        try {
+          const subscribed = await OneSignal.User.PushSubscription.optedIn;
+          console.log('🔔 Current subscription status:', subscribed);
+          setIsSubscribed(subscribed || false);
+        } catch (e) {
+          console.log('⚠️ Could not check subscription:', e);
+        }
+        
+        // Update permission state
+        try {
+          const perm = await OneSignal.Notifications.permission;
+          console.log('🔔 Current permission status:', perm);
+          setPermission(perm ? 'granted' : 'default');
+        } catch (e) {
+          console.log('⚠️ Could not check permission:', e);
+        }
+
+        // Listen for subscription changes
+        try {
           OneSignal.User.PushSubscription.addEventListener('change', (event: any) => {
             console.log('🔔 Subscription changed:', event);
-            setIsSubscribed(event.current.optedIn || false);
+            setIsSubscribed(event.current?.optedIn || false);
           });
-
-        } catch (error) {
-          console.error('❌ OneSignal init error:', error);
+        } catch (e) {
+          console.log('⚠️ Could not add subscription listener:', e);
         }
-      });
+
+      } catch (error) {
+        console.error('❌ OneSignal init error:', error);
+        // Still mark as initialized so button isn't permanently disabled
+        setIsInitialized(true);
+      }
     };
 
     initOneSignal();
