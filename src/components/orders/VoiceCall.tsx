@@ -107,6 +107,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const [otherPartyId, setOtherPartyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [debugInfo, setDebugInfo] = useState<string>('');
+  const [isRecording, setIsRecording] = useState(false);
   
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -119,6 +120,10 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const unansweredTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const maxDurationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const callStartTimeRef = useRef<Date | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const destinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -202,6 +207,117 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       .eq('id', logId);
   };
 
+  // Start recording the call
+  const startRecording = useCallback((localStream: MediaStream, remoteStream: MediaStream | null) => {
+    try {
+      console.log('[VoiceCall] Starting call recording...');
+      
+      // Create AudioContext to mix local and remote audio
+      const ctx = new AudioContext();
+      audioContextRef.current = ctx;
+      
+      const destination = ctx.createMediaStreamDestination();
+      destinationRef.current = destination;
+      
+      // Add local audio
+      const localSource = ctx.createMediaStreamSource(localStream);
+      localSource.connect(destination);
+      
+      // Add remote audio if available
+      if (remoteStream) {
+        const remoteSource = ctx.createMediaStreamSource(remoteStream);
+        remoteSource.connect(destination);
+      }
+      
+      // Create MediaRecorder
+      const options = { mimeType: 'audio/webm;codecs=opus' };
+      let recorder: MediaRecorder;
+      
+      try {
+        recorder = new MediaRecorder(destination.stream, options);
+      } catch (e) {
+        // Fallback for browsers that don't support the preferred format
+        recorder = new MediaRecorder(destination.stream);
+      }
+      
+      recordedChunksRef.current = [];
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+      
+      recorder.start(1000); // Collect data every second
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+      
+      console.log('[VoiceCall] Recording started');
+    } catch (error) {
+      console.error('[VoiceCall] Error starting recording:', error);
+    }
+  }, []);
+
+  // Stop recording and upload
+  const stopRecordingAndUpload = useCallback(async () => {
+    if (!mediaRecorderRef.current || !user) return;
+    
+    console.log('[VoiceCall] Stopping recording...');
+    
+    return new Promise<string | null>((resolve) => {
+      const recorder = mediaRecorderRef.current!;
+      
+      recorder.onstop = async () => {
+        try {
+          if (recordedChunksRef.current.length === 0) {
+            console.log('[VoiceCall] No recorded data');
+            resolve(null);
+            return;
+          }
+          
+          const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
+          const fileName = `${orderId}/${callLogIdRef.current || Date.now()}.webm`;
+          
+          console.log('[VoiceCall] Uploading recording:', fileName, 'Size:', blob.size);
+          
+          const { data, error } = await supabase.storage
+            .from('call-recordings')
+            .upload(fileName, blob, {
+              contentType: 'audio/webm',
+              upsert: true
+            });
+          
+          if (error) {
+            console.error('[VoiceCall] Upload error:', error);
+            resolve(null);
+          } else {
+            console.log('[VoiceCall] Recording uploaded:', data?.path);
+            resolve(data?.path || null);
+          }
+        } catch (e) {
+          console.error('[VoiceCall] Error uploading recording:', e);
+          resolve(null);
+        } finally {
+          // Cleanup
+          recordedChunksRef.current = [];
+          mediaRecorderRef.current = null;
+          setIsRecording(false);
+          
+          if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+          }
+        }
+      };
+      
+      if (recorder.state !== 'inactive') {
+        recorder.stop();
+      } else {
+        resolve(null);
+      }
+    });
+  }, [orderId, user]);
+
   // Clear timeouts
   const clearTimeouts = () => {
     if (unansweredTimeoutRef.current) {
@@ -247,6 +363,12 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         setCallState('connected');
         callStartTimeRef.current = new Date();
         startCallTimer();
+        
+        // Start recording when call is connected
+        const remoteStream = remoteAudioRef.current?.srcObject as MediaStream | null;
+        if (localStreamRef.current) {
+          startRecording(localStreamRef.current, remoteStream);
+        }
         
         // Update call log as answered
         if (callLogIdRef.current) {
@@ -469,13 +591,20 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     stopRingtone();
     clearTimeouts();
 
+    // Stop recording and upload if there was a recording
+    let recordingPath: string | null = null;
+    if (isRecording || mediaRecorderRef.current) {
+      recordingPath = await stopRecordingAndUpload();
+      console.log('[VoiceCall] Recording path:', recordingPath);
+    }
+
     // Calculate duration if call was connected
     let finalDuration = 0;
     if (callStartTimeRef.current) {
       finalDuration = Math.floor((new Date().getTime() - callStartTimeRef.current.getTime()) / 1000);
     }
 
-    // Update call log with end time and duration
+    // Update call log with end time, duration, and recording path
     if (callLogIdRef.current) {
       const currentStatus = callStateRef.current;
       let finalStatus = 'missed';
@@ -489,7 +618,8 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       await updateCallLog(callLogIdRef.current, {
         status: finalStatus,
         ended_at: new Date().toISOString(),
-        duration_seconds: finalDuration
+        duration_seconds: finalDuration,
+        ...(recordingPath && { recording_path: recordingPath })
       });
     }
 
@@ -537,7 +667,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     callLogIdRef.current = null;
     callStartTimeRef.current = null;
     setDebugInfo('');
-  }, [user, orderId]);
+  }, [user, orderId, isRecording, stopRecordingAndUpload]);
 
   // Toggle mute
   const toggleMute = () => {
@@ -766,9 +896,15 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse" />
               <span className="text-green-600 font-medium">در حال مکالمه</span>
               <span className="text-muted-foreground">{formatDuration(callDuration)}</span>
+              {isRecording && (
+                <span className="flex items-center gap-1 text-red-500 text-xs">
+                  <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse" />
+                  ضبط
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mb-4">
-              حداکثر مدت مکالمه: ۷ دقیقه
+              حداکثر مدت مکالمه: ۷ دقیقه • تماس ضبط می‌شود
             </p>
             <div className="flex gap-2 justify-center">
               <Button onClick={toggleMute} variant={isMuted ? "destructive" : "secondary"}>

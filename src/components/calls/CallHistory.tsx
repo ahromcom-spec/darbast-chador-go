@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneOff, Clock, ChevronDown } from 'lucide-react';
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneOff, Clock, ChevronDown, Play, Pause, Volume2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
 
 interface CallLog {
   id: string;
@@ -18,6 +19,7 @@ interface CallLog {
   ended_at: string | null;
   duration_seconds: number;
   status: 'ringing' | 'answered' | 'missed' | 'rejected' | 'timeout';
+  recording_path?: string | null;
   caller_name?: string;
   receiver_name?: string;
 }
@@ -34,6 +36,72 @@ const CallHistory: React.FC<CallHistoryProps> = ({ orderId }) => {
   const [callLogs, setCallLogs] = useState<CallLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Get signed URL for recording
+  const getRecordingUrl = async (recordingPath: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('call-recordings')
+        .createSignedUrl(recordingPath, 3600); // 1 hour validity
+      
+      if (error) {
+        console.error('Error getting signed URL:', error);
+        return null;
+      }
+      return data?.signedUrl || null;
+    } catch (e) {
+      console.error('Error getting recording URL:', e);
+      return null;
+    }
+  };
+
+  // Play/pause recording
+  const togglePlayRecording = async (log: CallLog) => {
+    if (playingId === log.id) {
+      // Pause current
+      audioRef.current?.pause();
+      setPlayingId(null);
+      return;
+    }
+
+    if (!log.recording_path) {
+      toast.error('فایل ضبط‌شده یافت نشد');
+      return;
+    }
+
+    try {
+      const url = await getRecordingUrl(log.recording_path);
+      if (!url) {
+        toast.error('خطا در دریافت فایل ضبط‌شده');
+        return;
+      }
+
+      setAudioUrl(url);
+      setPlayingId(log.id);
+      
+      // Play after state update
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.play().catch(e => {
+            console.error('Error playing audio:', e);
+            toast.error('خطا در پخش فایل صوتی');
+            setPlayingId(null);
+          });
+        }
+      }, 100);
+    } catch (e) {
+      console.error('Error playing recording:', e);
+      toast.error('خطا در پخش فایل');
+    }
+  };
+
+  // Handle audio ended
+  const handleAudioEnded = () => {
+    setPlayingId(null);
+  };
 
   useEffect(() => {
     const fetchCallLogs = async () => {
@@ -149,6 +217,14 @@ const CallHistory: React.FC<CallHistoryProps> = ({ orderId }) => {
 
   return (
     <Card className="mt-4">
+      {/* Hidden audio element for playback */}
+      <audio 
+        ref={audioRef} 
+        src={audioUrl || undefined} 
+        onEnded={handleAudioEnded}
+        className="hidden"
+      />
+      
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -166,6 +242,7 @@ const CallHistory: React.FC<CallHistoryProps> = ({ orderId }) => {
             {visibleLogs.map((log) => {
               const isOutgoing = log.caller_id === user?.id;
               const otherPartyName = isOutgoing ? log.receiver_name : log.caller_name;
+              const isPlaying = playingId === log.id;
               
               return (
                 <div 
@@ -189,7 +266,23 @@ const CallHistory: React.FC<CallHistoryProps> = ({ orderId }) => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 text-sm">
+                  <div className="flex items-center gap-2 text-sm">
+                    {/* Play Recording Button */}
+                    {log.recording_path && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => togglePlayRecording(log)}
+                        className={`h-8 w-8 p-0 ${isPlaying ? 'text-primary animate-pulse' : 'text-muted-foreground hover:text-primary'}`}
+                        title={isPlaying ? 'توقف پخش' : 'پخش ضبط تماس'}
+                      >
+                        {isPlaying ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Volume2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                     <div className="flex items-center gap-1">
                       {getStatusIcon(log)}
                       <span className="text-xs">{getStatusText(log.status)}</span>
