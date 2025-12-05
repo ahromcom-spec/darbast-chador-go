@@ -332,7 +332,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Audio playback
+  // Audio playback with better mobile support
   const playAudio = async (messageId: string, audioPath: string) => {
     try {
       // Stop currently playing audio
@@ -348,68 +348,109 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
 
       setPlayingAudioId(messageId);
 
-      // Get signed URL
-      const { data: signedData, error: signedError } = await supabase.storage
+      // Get public URL instead of signed URL for better compatibility
+      const { data: publicData } = supabase.storage
         .from('voice-messages')
-        .createSignedUrl(audioPath, 3600);
+        .getPublicUrl(audioPath);
 
-      if (signedError || !signedData?.signedUrl) {
-        console.error('Signed URL error:', signedError);
-        throw new Error('خطا در دریافت فایل صوتی');
-      }
+      if (!publicData?.publicUrl) {
+        // Fallback to signed URL
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from('voice-messages')
+          .createSignedUrl(audioPath, 3600);
 
-      console.log('Playing audio from:', signedData.signedUrl);
-
-      const audio = new Audio();
-      audioRef.current = audio;
-      
-      // Set up event handlers before setting src
-      audio.oncanplaythrough = async () => {
-        try {
-          await audio.play();
-        } catch (playError) {
-          console.error('Play error:', playError);
-          toast({
-            title: 'خطا در پخش صدا',
-            description: 'مرورگر اجازه پخش خودکار نداد',
-            variant: 'destructive'
-          });
-          setPlayingAudioId(null);
+        if (signedError || !signedData?.signedUrl) {
+          console.error('URL error:', signedError);
+          throw new Error('خطا در دریافت فایل صوتی');
         }
-      };
-      
-      audio.onended = () => {
-        setPlayingAudioId(null);
-        audioRef.current = null;
-      };
-
-      audio.onerror = (e) => {
-        console.error('Audio error:', e, audio.error);
-        const errorMsg = audioPath.endsWith('.webm') 
-          ? 'فرمت صدا توسط این دستگاه پشتیبانی نمی‌شود'
-          : 'خطا در پخش فایل صوتی';
-        toast({
-          title: 'خطا در پخش صدا',
-          description: errorMsg,
-          variant: 'destructive'
-        });
-        setPlayingAudioId(null);
-        audioRef.current = null;
-      };
-
-      // Set source and load
-      audio.src = signedData.signedUrl;
-      audio.load();
+        
+        await playAudioUrl(signedData.signedUrl, messageId, audioPath);
+      } else {
+        await playAudioUrl(publicData.publicUrl, messageId, audioPath);
+      }
 
     } catch (error: any) {
       console.error('Error playing audio:', error);
       toast({
         title: 'خطا در پخش صدا',
-        description: error.message,
+        description: error.message || 'خطا در پخش فایل صوتی',
         variant: 'destructive'
       });
       setPlayingAudioId(null);
     }
+  };
+
+  const playAudioUrl = async (url: string, messageId: string, audioPath: string) => {
+    return new Promise<void>((resolve, reject) => {
+      const audio = new Audio();
+      audioRef.current = audio;
+      
+      // For better mobile compatibility
+      audio.preload = 'auto';
+      audio.crossOrigin = 'anonymous';
+      
+      let hasStarted = false;
+      
+      const handlePlay = () => {
+        hasStarted = true;
+      };
+      
+      const handleEnded = () => {
+        setPlayingAudioId(null);
+        audioRef.current = null;
+        resolve();
+      };
+
+      const handleError = (e: Event) => {
+        console.error('Audio error:', e, audio.error);
+        
+        // If webm format failed, show specific message
+        if (audioPath.endsWith('.webm')) {
+          toast({
+            title: 'فرمت صدا پشتیبانی نمی‌شود',
+            description: 'این پیام صوتی با فرمت قدیمی ضبط شده است',
+            variant: 'destructive'
+          });
+        } else {
+          toast({
+            title: 'خطا در پخش صدا',
+            description: 'لطفاً دوباره تلاش کنید',
+            variant: 'destructive'
+          });
+        }
+        setPlayingAudioId(null);
+        audioRef.current = null;
+        reject(new Error('Audio playback failed'));
+      };
+
+      audio.addEventListener('play', handlePlay);
+      audio.addEventListener('ended', handleEnded);
+      audio.addEventListener('error', handleError);
+      
+      // Set source and try to play
+      audio.src = url;
+      
+      // Use user gesture to play
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('Audio playing successfully');
+          })
+          .catch((err) => {
+            console.error('Play promise rejected:', err);
+            // Try loading first then playing
+            audio.load();
+            setTimeout(() => {
+              audio.play().catch((retryErr) => {
+                console.error('Retry play failed:', retryErr);
+                handleError(new Event('error'));
+              });
+            }, 100);
+          });
+      }
+    });
   };
 
   // Cleanup on unmount
