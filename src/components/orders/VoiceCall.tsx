@@ -546,18 +546,10 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         signal_data: { answer }
       });
 
-      console.log('[VoiceCall] Answer sent');
-      setCallState('connected');
-      callStartTimeRef.current = new Date();
-      startCallTimer();
-      
-      // Set max call duration timeout
-      maxDurationTimeoutRef.current = setTimeout(() => {
-        toast.warning('حداکثر زمان مکالمه (۷ دقیقه) به پایان رسید');
-        endCall();
-      }, MAX_CALL_DURATION_MS);
-      
-      toast.success('تماس برقرار شد');
+      console.log('[VoiceCall] Answer sent, waiting for WebRTC connection...');
+      setDebugInfo('در انتظار برقراری اتصال...');
+      // Don't set connected state here - let onconnectionstatechange handle it
+      // The connection will be confirmed when ICE negotiation completes
 
     } catch (error: any) {
       console.error('[VoiceCall] Error accepting call:', error);
@@ -859,7 +851,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               <span>در حال زنگ زدن...</span>
             </div>
             <p className="text-xs text-muted-foreground mb-4">
-              در صورت عدم پاسخ، تماس پس از ۹۰ ثانیه قطع می‌شود
+              در صورت عدم پاسخ، تماس پس از ۱ دقیقه قطع می‌شود
             </p>
             <Button onClick={endCall} variant="destructive">
               <PhoneOff className="h-4 w-4 ml-2" />
