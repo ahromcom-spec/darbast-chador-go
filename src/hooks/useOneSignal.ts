@@ -89,6 +89,8 @@ export function useOneSignal() {
           appId: appId,
           allowLocalhostAsSecureOrigin: true,
           serviceWorkerParam: { scope: '/' },
+          notificationClickHandlerMatch: 'origin',
+          notificationClickHandlerAction: 'navigate',
           promptOptions: {
             slidedown: {
               prompts: [{
@@ -106,6 +108,20 @@ export function useOneSignal() {
 
         setIsInitialized(true);
         console.log('✅ OneSignal initialized successfully');
+
+        // Handle notification click - navigate to the URL in notification data
+        try {
+          OneSignal.Notifications.addEventListener('click', (event: any) => {
+            console.log('🔔 Notification clicked:', event);
+            const url = event.notification?.launchURL || event.notification?.data?.url;
+            if (url) {
+              console.log('🔔 Navigating to:', url);
+              window.location.href = url;
+            }
+          });
+        } catch (e) {
+          console.log('⚠️ Could not add click listener:', e);
+        }
 
         // Check current subscription status
         try {
