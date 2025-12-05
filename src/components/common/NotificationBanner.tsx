@@ -107,14 +107,10 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
     }, 15000);
     
     try {
-      console.log('🔔 Starting OneSignal notification enablement...');
+      console.log('🔔 Starting notification enablement...');
       
       if (!user) {
         throw new Error('not authenticated');
-      }
-
-      if (!isInitialized) {
-        throw new Error('OneSignal not ready');
       }
       
       const result = await subscribe();
@@ -138,12 +134,10 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
       clearTimeout(timeoutId);
       console.error('Error enabling notifications:', error);
       
-      let errorMessage = 'فعال‌سازی اعلان‌ها با مشکل مواجه شد';
+      let errorMessage = 'فعال‌سازی اعلان‌ها با مشکل مواجه شد. لطفاً دوباره تلاش کنید.';
       
       if (error?.message?.includes('not authenticated')) {
         errorMessage = 'لطفاً ابتدا وارد حساب کاربری شوید';
-      } else if (error?.message?.includes('not ready') || error?.message?.includes('not initialized')) {
-        errorMessage = 'لطفاً چند ثانیه صبر کنید و دوباره تلاش کنید';
       }
       
       toast({
@@ -186,11 +180,11 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Button
+              <Button
                   onClick={handleEnable}
                   size="sm"
                   className="whitespace-nowrap"
-                  disabled={enabling || !isInitialized}
+                  disabled={enabling}
                 >
                   {enabling ? (
                     <>
@@ -300,7 +294,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
                   onClick={handleEnable} 
                   className="w-full"
                   size="lg"
-                  disabled={enabling || !isInitialized}
+                  disabled={enabling}
                 >
                   {enabling ? (
                     <>
@@ -346,7 +340,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
                 onClick={handleEnable}
                 size="sm"
                 className="whitespace-nowrap"
-                disabled={enabling || !isInitialized}
+                disabled={enabling}
               >
                 {enabling ? (
                   <>
