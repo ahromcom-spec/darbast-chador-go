@@ -164,24 +164,61 @@ export function useOneSignal() {
 
   // Request permission and subscribe
   const subscribe = useCallback(async () => {
-    if (!isInitialized || !window.OneSignal) {
-      throw new Error('OneSignal not initialized');
-    }
-
     setLoading(true);
     try {
-      console.log('🔔 Requesting OneSignal permission...');
+      console.log('🔔 Requesting notification permission...');
+      
+      // Wait for OneSignal SDK if not available
+      let OneSignal = window.OneSignal;
+      if (!OneSignal) {
+        console.log('🔔 Waiting for OneSignal SDK...');
+        let attempts = 0;
+        while (!window.OneSignal && attempts < 30) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        OneSignal = window.OneSignal;
+      }
+      
+      if (!OneSignal) {
+        // Fallback to native Notification API
+        console.log('⚠️ OneSignal not available, using native API');
+        const permission = await Notification.requestPermission();
+        setPermission(permission);
+        if (permission === 'granted') {
+          setIsSubscribed(true);
+          return true;
+        }
+        return false;
+      }
+      
+      // Try to initialize OneSignal if not already
+      if (!isInitialized && appId) {
+        console.log('🔔 Initializing OneSignal on-demand...');
+        try {
+          await OneSignal.init({
+            appId: appId,
+            allowLocalhostAsSecureOrigin: true,
+          });
+          setIsInitialized(true);
+        } catch (initError: any) {
+          // Might already be initialized
+          if (!initError?.message?.includes('already')) {
+            console.error('❌ Init error:', initError);
+          }
+        }
+      }
       
       // Show native permission prompt
-      await window.OneSignal.Notifications.requestPermission();
+      await OneSignal.Notifications.requestPermission();
       
       // Check if granted
-      const perm = await window.OneSignal.Notifications.permission;
+      const perm = await OneSignal.Notifications.permission;
       setPermission(perm ? 'granted' : 'denied');
       
       if (perm) {
         // Opt in to push
-        await window.OneSignal.User.PushSubscription.optIn();
+        await OneSignal.User.PushSubscription.optIn();
         setIsSubscribed(true);
         console.log('✅ OneSignal subscribed successfully');
         return true;
@@ -190,12 +227,12 @@ export function useOneSignal() {
         return false;
       }
     } catch (error) {
-      console.error('❌ OneSignal subscribe error:', error);
+      console.error('❌ Subscribe error:', error);
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [isInitialized]);
+  }, [isInitialized, appId]);
 
   // Unsubscribe
   const unsubscribe = useCallback(async () => {
