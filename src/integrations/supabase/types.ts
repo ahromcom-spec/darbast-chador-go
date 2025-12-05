@@ -807,6 +807,7 @@ export type Database = {
       }
       order_messages: {
         Row: {
+          audio_path: string | null
           created_at: string | null
           id: string
           is_staff: boolean | null
@@ -816,6 +817,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          audio_path?: string | null
           created_at?: string | null
           id?: string
           is_staff?: boolean | null
@@ -825,6 +827,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          audio_path?: string | null
           created_at?: string | null
           id?: string
           is_staff?: boolean | null
