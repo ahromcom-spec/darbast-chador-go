@@ -61,7 +61,7 @@ const navItems = [
   },
   {
     title: 'انتقال سفارش',
-    href: '/admin/order-transfers',
+    href: '/executive/order-transfers',
     icon: ArrowLeftRight
   }
 ];

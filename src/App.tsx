@@ -291,6 +291,7 @@ const App = () => {
                 <Route path="orders" element={<ExecutiveOrders />} />
                 <Route path="pending-orders" element={<ExecutivePendingOrders />} />
                 <Route path="customers" element={<ExecutiveCustomers />} />
+                <Route path="order-transfers" element={<OrderTransferManagement />} />
               </Route>
               <Route path="/sales" element={
                 <ProtectedRoute>
