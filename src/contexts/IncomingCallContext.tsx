@@ -84,6 +84,7 @@ export const IncomingCallProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const callStateRef = useRef<'idle' | 'incoming' | 'connected'>('idle');
   const incomingCallRef = useRef<IncomingCall | null>(null);
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]); // Queue for ICE candidates
 
   // Keep refs in sync
   useEffect(() => {
@@ -106,6 +107,21 @@ export const IncomingCallProvider: React.FC<{ children: React.ReactNode }> = ({ 
     callTimerRef.current = setInterval(() => {
       setCallDuration(prev => prev + 1);
     }, 1000);
+  };
+
+  // Process any queued ICE candidates
+  const processPendingCandidates = async (pc: RTCPeerConnection) => {
+    const candidates = pendingCandidatesRef.current;
+    pendingCandidatesRef.current = [];
+    
+    for (const candidate of candidates) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log('[IncomingCall] Added queued ICE candidate');
+      } catch (e) {
+        console.error('[IncomingCall] Error adding queued ICE candidate:', e);
+      }
+    }
   };
 
   // End call - sendSignal param determines if we should notify the other party
@@ -139,6 +155,9 @@ export const IncomingCallProvider: React.FC<{ children: React.ReactNode }> = ({ 
       });
     }
 
+    // Clear pending candidates
+    pendingCandidatesRef.current = [];
+    
     setCallState('idle');
     setCallDuration(0);
     setIncomingCall(null);
@@ -190,6 +209,9 @@ export const IncomingCallProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       // Set remote description from offer
       await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+      
+      // Process any queued ICE candidates now that remote description is set
+      await processPendingCandidates(pc);
 
       // Create and send answer
       const answer = await pc.createAnswer();
@@ -285,13 +307,21 @@ export const IncomingCallProvider: React.FC<{ children: React.ReactNode }> = ({ 
               break;
 
             case 'ice-candidate':
-              if (peerConnectionRef.current && signal.signal_data?.candidate) {
-                try {
-                  await peerConnectionRef.current.addIceCandidate(
-                    new RTCIceCandidate(signal.signal_data.candidate)
-                  );
-                } catch (e) {
-                  console.error('[IncomingCall] Error adding ICE candidate:', e);
+              if (signal.signal_data?.candidate) {
+                // If peer connection is ready, add candidate immediately
+                if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
+                  try {
+                    await peerConnectionRef.current.addIceCandidate(
+                      new RTCIceCandidate(signal.signal_data.candidate)
+                    );
+                    console.log('[IncomingCall] Added ICE candidate immediately');
+                  } catch (e) {
+                    console.error('[IncomingCall] Error adding ICE candidate:', e);
+                  }
+                } else {
+                  // Queue candidate for later when remote description is set
+                  console.log('[IncomingCall] Queuing ICE candidate for later');
+                  pendingCandidatesRef.current.push(signal.signal_data.candidate);
                 }
               }
               break;
