@@ -149,6 +149,10 @@ export function IncomingTransferRequests() {
       }
 
       const customerId = recipientCustomer?.id;
+      
+      if (!customerId) {
+        throw new Error('خطا در ایجاد پروفایل مشتری');
+      }
 
       // Get original owner's phone
       const { data: fromProfile } = await supabase
@@ -174,13 +178,19 @@ export function IncomingTransferRequests() {
 
       if (locationError) throw locationError;
 
+      // Get service_type_id from subcategory
+      const serviceTypeId = order.subcategory?.service_type_id;
+      if (!serviceTypeId) {
+        throw new Error('خطا در دریافت نوع خدمات');
+      }
+
       // Create a projects_hierarchy entry for the recipient
       const { data: newHierarchy, error: hierarchyError } = await supabase
         .from('projects_hierarchy')
         .insert({
           user_id: user?.id,
           location_id: newLocation.id,
-          service_type_id: order.subcategory?.service_type_id,
+          service_type_id: serviceTypeId,
           subcategory_id: order.subcategory_id,
           title: `پروژه انتقالی - ${order.code}`,
           status: 'active',
@@ -222,7 +232,7 @@ export function IncomingTransferRequests() {
       console.error('Error accepting transfer:', error);
       toast({
         title: 'خطا',
-        description: 'خطا در پذیرش انتقال سفارش',
+        description: error.message || 'خطا در پذیرش انتقال سفارش',
         variant: 'destructive',
       });
     } finally {
