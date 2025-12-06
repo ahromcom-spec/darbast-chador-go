@@ -204,21 +204,28 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       
       streamRef.current = stream;
       
-      // Find best supported format - prefer webm for web compatibility
+      // Find best supported format - prioritize mp4/aac for cross-browser compatibility (especially Safari/iOS)
       let mimeType = '';
       const formats = [
+        'audio/mp4',           // Best for Safari/iOS
+        'audio/aac',           // AAC codec - widely supported
         'audio/webm;codecs=opus',
         'audio/webm',
         'audio/ogg;codecs=opus',
-        'audio/mp4',
         'audio/mpeg'
       ];
       
       for (const format of formats) {
         if (MediaRecorder.isTypeSupported(format)) {
           mimeType = format;
+          console.log('Selected audio format:', format);
           break;
         }
+      }
+      
+      // If no preferred format found, log what the browser defaults to
+      if (!mimeType) {
+        console.log('No preferred format supported, using browser default');
       }
       
       console.log('Using mimeType:', mimeType || 'default');
@@ -436,6 +443,9 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     try {
       console.log('Attempting to play audio:', audioPath);
       
+      // Check if file is webm format (may not work on Safari/iOS)
+      const isWebm = audioPath.toLowerCase().endsWith('.webm');
+      
       // Method 1: Try public URL first (fastest)
       const { data: publicUrlData } = supabase.storage
         .from('voice-messages')
@@ -485,6 +495,10 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       
       if (!blobSuccess) {
         URL.revokeObjectURL(objectUrl);
+        // More specific error message for webm files
+        if (isWebm) {
+          throw new Error('این پیام صوتی با فرمت قدیمی ضبط شده و در مرورگر شما قابل پخش نیست. لطفاً از مرورگر Chrome یا Firefox استفاده کنید.');
+        }
         throw new Error('فرمت فایل صوتی توسط مرورگر پشتیبانی نمی‌شود');
       }
       
