@@ -67,9 +67,20 @@ export function IncomingTransferRequests() {
       // Fetch transfer requests where status = 'pending_recipient' and to_user_id = current user
       const { data, error } = await supabase
         .from('order_transfer_requests')
-        .select(`
-          *,
-          order:projects_v3!order_id(
+        .select('*')
+        .eq('to_user_id', user?.id)
+        .eq('status', 'pending_recipient')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch order and profile details for each request
+      const requestsWithDetails: TransferRequest[] = [];
+      for (const req of (data || [])) {
+        // Fetch order details separately
+        const { data: orderData } = await supabase
+          .from('projects_v3')
+          .select(`
             code,
             address,
             status,
@@ -77,30 +88,25 @@ export function IncomingTransferRequests() {
               name,
               service_type:service_types_v3(name)
             )
-          )
-        `)
-        .eq('to_user_id', user?.id)
-        .eq('status', 'pending_recipient')
-        .order('created_at', { ascending: false });
+          `)
+          .eq('id', req.order_id)
+          .maybeSingle();
 
-      if (error) throw error;
-
-      // Fetch from_user profiles
-      const requestsWithProfiles: TransferRequest[] = [];
-      for (const req of (data || [])) {
+        // Fetch sender profile
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name, phone_number')
           .eq('user_id', req.from_user_id)
           .maybeSingle();
 
-        requestsWithProfiles.push({
+        requestsWithDetails.push({
           ...req,
+          order: orderData || undefined,
           from_profile: profile || undefined,
         } as TransferRequest);
       }
 
-      setRequests(requestsWithProfiles);
+      setRequests(requestsWithDetails);
     } catch (error) {
       console.error('Error fetching incoming requests:', error);
     } finally {
