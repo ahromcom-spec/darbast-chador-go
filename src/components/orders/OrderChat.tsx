@@ -371,7 +371,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   }, [user, orderId, isStaff, toast]);
 
-  // Play audio message
+  // Play audio message - using blob download for cross-browser compatibility
   const playAudio = useCallback(async (messageId: string, audioPath: string) => {
     // If same audio is playing, stop it
     if (playingAudioId === messageId) {
@@ -390,94 +390,82 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
 
     setLoadingAudioId(messageId);
+    setPlayingAudioId(null);
 
     try {
-      // Get signed URL (valid for 1 hour)
-      const { data: signedData, error: signedError } = await supabase.storage
+      console.log('Downloading audio for path:', audioPath);
+      
+      // Download the file as blob directly from storage
+      const { data: blobData, error: downloadError } = await supabase.storage
         .from('voice-messages')
-        .createSignedUrl(audioPath, 3600);
+        .download(audioPath);
 
-      if (signedError || !signedData?.signedUrl) {
-        console.error('Signed URL error:', signedError);
-        // Fallback to public URL
-        const { data: publicData } = supabase.storage
-          .from('voice-messages')
-          .getPublicUrl(audioPath);
-        
-        if (!publicData?.publicUrl) {
-          throw new Error('فایل صوتی یافت نشد');
-        }
-        
-        await playFromUrl(publicData.publicUrl, messageId);
-      } else {
-        await playFromUrl(signedData.signedUrl, messageId);
+      if (downloadError || !blobData) {
+        console.error('Download error:', downloadError);
+        throw new Error('فایل صوتی دانلود نشد');
       }
-    } catch (error: any) {
-      console.error('Audio playback error:', error);
-      toast({
-        title: 'خطا در پخش صدا',
-        description: 'فایل صوتی قابل پخش نیست',
-        variant: 'destructive'
-      });
-      setPlayingAudioId(null);
-    } finally {
-      setLoadingAudioId(null);
-    }
-  }, [playingAudioId, toast]);
 
-  // Helper to play audio from URL
-  const playFromUrl = async (url: string, messageId: string) => {
-    console.log('Playing from URL:', url);
-    
-    // First, fetch the audio as blob to ensure it's accessible
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
-    const blob = await response.blob();
-    console.log('Fetched blob:', blob.size, 'bytes, type:', blob.type);
-    
-    if (blob.size === 0) {
-      throw new Error('فایل خالی است');
-    }
-    
-    // Create object URL from blob
-    const objectUrl = URL.createObjectURL(blob);
-    
-    return new Promise<void>((resolve, reject) => {
+      console.log('Downloaded blob:', blobData.size, 'bytes, type:', blobData.type);
+
+      // Create object URL from downloaded blob
+      const objectUrl = URL.createObjectURL(blobData);
+      
       const audio = new Audio();
       audioElementRef.current = audio;
       
       const cleanup = () => {
         URL.revokeObjectURL(objectUrl);
       };
-      
-      audio.onloadeddata = () => {
-        console.log('Audio loaded, playing...');
+
+      audio.oncanplaythrough = () => {
+        console.log('Audio ready, playing...');
+        setLoadingAudioId(null);
         setPlayingAudioId(messageId);
         audio.play().catch((err) => {
+          console.error('Play error:', err);
           cleanup();
-          reject(err);
+          setPlayingAudioId(null);
+          toast({
+            title: 'خطا در پخش صدا',
+            description: 'لطفاً دوباره تلاش کنید',
+            variant: 'destructive'
+          });
         });
       };
       
       audio.onended = () => {
+        console.log('Audio ended');
         setPlayingAudioId(null);
         audioElementRef.current = null;
         cleanup();
-        resolve();
       };
       
-      audio.onerror = () => {
-        console.error('Audio element error');
+      audio.onerror = (e) => {
+        console.error('Audio element error:', e, audio.error);
+        setLoadingAudioId(null);
+        setPlayingAudioId(null);
+        audioElementRef.current = null;
         cleanup();
-        reject(new Error('خطا در پخش فایل صوتی'));
+        toast({
+          title: 'خطا در پخش صدا',
+          description: 'فایل صوتی قابل پخش نیست',
+          variant: 'destructive'
+        });
       };
       
       audio.src = objectUrl;
-    });
-  };
+      audio.load();
+      
+    } catch (error: any) {
+      console.error('Audio playback error:', error);
+      setLoadingAudioId(null);
+      toast({
+        title: 'خطا در پخش صدا',
+        description: error.message || 'فایل صوتی قابل پخش نیست',
+        variant: 'destructive'
+      });
+    }
+  }, [playingAudioId, toast]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
