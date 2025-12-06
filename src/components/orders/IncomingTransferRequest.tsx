@@ -111,17 +111,33 @@ export function IncomingTransferRequests() {
   const handleAccept = async (request: TransferRequest) => {
     setProcessingId(request.id);
     try {
-      // Get customer record for the recipient
-      const { data: recipientCustomer, error: customerError } = await supabase
+      // Get the order details first
+      const { data: order, error: orderFetchError } = await supabase
+        .from('projects_v3')
+        .select(`
+          *,
+          subcategory:subcategories(
+            id,
+            name,
+            service_type_id,
+            service_type:service_types_v3(id, name, code)
+          ),
+          province:provinces(id, name),
+          district:districts(id, name)
+        `)
+        .eq('id', request.order_id)
+        .single();
+
+      if (orderFetchError) throw orderFetchError;
+
+      // Get or create customer record for the recipient
+      let { data: recipientCustomer } = await supabase
         .from('customers')
         .select('id')
         .eq('user_id', user?.id)
         .maybeSingle();
 
-      if (customerError) throw customerError;
-
       if (!recipientCustomer) {
-        // Create customer record for recipient if not exists
         const { data: newCustomer, error: createError } = await supabase
           .from('customers')
           .insert({ user_id: user?.id })
@@ -129,13 +145,10 @@ export function IncomingTransferRequests() {
           .single();
 
         if (createError) throw createError;
+        recipientCustomer = newCustomer;
       }
 
-      const customerId = recipientCustomer?.id || (await supabase
-        .from('customers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single()).data?.id;
+      const customerId = recipientCustomer?.id;
 
       // Get original owner's phone
       const { data: fromProfile } = await supabase
@@ -144,11 +157,45 @@ export function IncomingTransferRequests() {
         .eq('user_id', request.from_user_id)
         .maybeSingle();
 
-      // Update the order to transfer ownership
+      // Create a location for the recipient user with the order address
+      const { data: newLocation, error: locationError } = await supabase
+        .from('locations')
+        .insert({
+          user_id: user?.id,
+          address_line: order.address,
+          title: order.detailed_address || 'آدرس انتقالی',
+          lat: order.location_lat || 34.6401,
+          lng: order.location_lng || 50.8764,
+          province_id: order.province_id,
+          district_id: order.district_id,
+        })
+        .select('id')
+        .single();
+
+      if (locationError) throw locationError;
+
+      // Create a projects_hierarchy entry for the recipient
+      const { data: newHierarchy, error: hierarchyError } = await supabase
+        .from('projects_hierarchy')
+        .insert({
+          user_id: user?.id,
+          location_id: newLocation.id,
+          service_type_id: order.subcategory?.service_type_id,
+          subcategory_id: order.subcategory_id,
+          title: `پروژه انتقالی - ${order.code}`,
+          status: 'active',
+        })
+        .select('id')
+        .single();
+
+      if (hierarchyError) throw hierarchyError;
+
+      // Update the order to transfer ownership and link to new hierarchy
       const { error: orderError } = await supabase
         .from('projects_v3')
         .update({
           customer_id: customerId,
+          hierarchy_project_id: newHierarchy.id,
           transferred_from_user_id: request.from_user_id,
           transferred_from_phone: fromProfile?.phone_number || request.to_phone_number,
         })
@@ -169,7 +216,7 @@ export function IncomingTransferRequests() {
 
       toast({
         title: '✓ موفق',
-        description: 'سفارش با موفقیت به شما منتقل شد',
+        description: 'سفارش با موفقیت به شما منتقل شد و در پروژه‌های شما قرار گرفت',
       });
 
       fetchIncomingRequests();
