@@ -174,18 +174,26 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   };
 
-  // Voice recording functions - use most compatible format
+  // Voice recording functions - use webm which is widely supported
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        } 
+      });
       
-      // Try mp4/aac first (best iOS compatibility), then webm
-      let mimeType = '';
-      const formats = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm'];
-      for (const format of formats) {
-        if (MediaRecorder.isTypeSupported(format)) {
-          mimeType = format;
-          break;
+      // Use webm/opus as primary format (best cross-browser support for playback)
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/webm';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'audio/mp4';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = ''; // Let browser choose
+          }
         }
       }
       
@@ -255,8 +263,8 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     // Stop recording and wait for data
     mediaRecorder.stop();
     
-    // Wait a bit for all data to be collected
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Wait for all data to be collected
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     try {
       const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
@@ -272,14 +280,25 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
         return;
       }
 
-      // Always use webm extension for simplicity
-      const fileName = `${orderId}/${user.id}/${Date.now()}.webm`;
-      console.log('Uploading file:', fileName);
+      // Determine file extension based on actual mimeType
+      let fileExtension = 'webm';
+      let uploadContentType = 'audio/webm';
+      
+      if (actualMimeType.includes('mp4') || actualMimeType.includes('aac')) {
+        fileExtension = 'mp4';
+        uploadContentType = 'audio/mp4';
+      } else if (actualMimeType.includes('ogg')) {
+        fileExtension = 'ogg';
+        uploadContentType = 'audio/ogg';
+      }
+      
+      const fileName = `${orderId}/${user.id}/${Date.now()}.${fileExtension}`;
+      console.log('Uploading file:', fileName, 'with contentType:', uploadContentType);
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('voice-messages')
         .upload(fileName, audioBlob, {
-          contentType: 'audio/webm',
+          contentType: uploadContentType,
           upsert: false
         });
 
@@ -348,31 +367,34 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     setPlayingAudioId(messageId);
 
     try {
-      // Get signed URL (more reliable than public URL)
-      const { data, error } = await supabase.storage
+      // Get public URL since bucket is public
+      const { data } = supabase.storage
         .from('voice-messages')
-        .createSignedUrl(audioPath, 3600);
+        .getPublicUrl(audioPath);
 
-      if (error || !data?.signedUrl) {
+      if (!data?.publicUrl) {
         throw new Error('فایل صوتی یافت نشد');
       }
 
-      setAudioSrc(data.signedUrl);
+      console.log('Playing audio from:', data.publicUrl);
+      setAudioSrc(data.publicUrl);
       
-      // Wait a bit for the audio element to update its src
+      // Wait for the audio element to update and start playing
       setTimeout(() => {
         if (audioPlayerRef.current) {
+          audioPlayerRef.current.load(); // Force reload of the audio element
           audioPlayerRef.current.play().catch((e) => {
             console.error('Play error:', e);
             toast({
               title: 'خطا در پخش صدا',
+              description: 'لطفاً دوباره تلاش کنید',
               variant: 'destructive'
             });
             setPlayingAudioId(null);
             setAudioSrc(null);
           });
         }
-      }, 100);
+      }, 150);
     } catch (error: any) {
       console.error('Play error:', error);
       toast({
