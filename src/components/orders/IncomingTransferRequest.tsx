@@ -190,8 +190,7 @@ export function IncomingTransferRequests() {
 
       if (hierarchyError) throw hierarchyError;
 
-      // First update transfer request status to 'completed' 
-      // This removes the recipient's ability to modify via the transfer policy
+      // Update transfer request status to 'completed' first
       const { error: transferError } = await supabase
         .from('order_transfer_requests')
         .update({
@@ -202,10 +201,8 @@ export function IncomingTransferRequests() {
 
       if (transferError) throw transferError;
 
-      // Now update the order to transfer ownership using RPC or direct update
-      // Since transfer request is now completed, we need admin-level update
-      // Use a database function call to bypass RLS
-      const { error: orderError } = await supabase.rpc('transfer_order_ownership', {
+      // Use RPC function to update order ownership (bypasses RLS)
+      const { error: orderError } = await supabase.rpc('transfer_order_ownership' as any, {
         p_order_id: request.order_id,
         p_new_customer_id: customerId,
         p_new_hierarchy_id: newHierarchy.id,
