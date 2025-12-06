@@ -2,19 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocations, Location } from '@/hooks/useLocations';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { Button } from '@/components/ui/button';
-import { Plus, MapPin, ChevronDown, Loader2 } from 'lucide-react';
+import { Plus, MapPin, Loader2 } from 'lucide-react';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { NewLocationForm } from './NewLocationForm';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface LocationSelectorProps {
   onLocationSelected: (locationId: string) => void;
@@ -167,101 +160,80 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
         <h2 className="text-lg font-semibold">انتخاب آدرس پروژه</h2>
       </div>
 
+      {/* دکمه افزودن آدرس جدید */}
+      <Dialog open={showNewLocationDialog} onOpenChange={setShowNewLocationDialog}>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="w-full">
+            <Plus className="w-4 h-4 ml-2" />
+            افزودن آدرس جدید
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ثبت آدرس جدید</DialogTitle>
+          </DialogHeader>
+          <NewLocationForm onSuccess={handleLocationCreated} />
+        </DialogContent>
+      </Dialog>
+
       {locations.length === 0 ? (
         <div className="text-center py-8 border border-dashed rounded-lg bg-muted/30">
           <MapPin className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-          <p className="text-muted-foreground mb-4 text-sm">هنوز آدرسی ثبت نشده است</p>
-          <Dialog open={showNewLocationDialog} onOpenChange={setShowNewLocationDialog}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="w-4 h-4 ml-2" />
-                ثبت آدرس
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>ثبت آدرس جدید</DialogTitle>
-              </DialogHeader>
-              <NewLocationForm onSuccess={handleLocationCreated} />
-            </DialogContent>
-          </Dialog>
+          <p className="text-muted-foreground text-sm">هنوز آدرسی ثبت نشده است</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {/* دراپ‌داون ساده انتخاب آدرس */}
-          <div className="flex gap-2">
-            <Select
-              value={selectedLocationId || ''}
-              onValueChange={setSelectedLocationId}
-            >
-              <SelectTrigger className="flex-1 bg-background">
-                <SelectValue placeholder="یک آدرس انتخاب کنید">
-                  {selectedLocation && (
-                    <span className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-primary" />
-                      <span className="truncate">
-                        {selectedLocation.title || selectedLocation.address_line}
-                      </span>
-                    </span>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="bg-background border shadow-lg z-50">
-                {locations.map((location) => {
-                  const projectCount = locationProjectCounts[location.id] || 0;
-                  return (
-                    <SelectItem 
-                      key={location.id} 
-                      value={location.id}
-                      className="cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2 py-1">
-                        <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {location.title || 'بدون عنوان'}
-                          </span>
-                          <span className="text-xs text-muted-foreground truncate max-w-[250px]">
-                            {location.address_line}
-                          </span>
-                        </div>
+          {/* لیست همه آدرس‌ها به صورت کارت */}
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {locations.map((location) => {
+              const projectCount = locationProjectCounts[location.id] || 0;
+              const isSelected = selectedLocationId === location.id;
+              
+              return (
+                <div
+                  key={location.id}
+                  onClick={() => setSelectedLocationId(location.id)}
+                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                    isSelected 
+                      ? 'border-primary bg-primary/10 ring-2 ring-primary/30' 
+                      : 'border-border bg-background hover:border-primary/50 hover:bg-muted/50'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-full ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">
+                          {location.title || 'بدون عنوان'}
+                        </span>
                         {projectCount > 0 && (
-                          <span className="text-xs bg-secondary px-1.5 py-0.5 rounded mr-auto">
+                          <span className="text-xs bg-secondary px-1.5 py-0.5 rounded">
                             {projectCount} پروژه
                           </span>
                         )}
                       </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-
-            <Dialog open={showNewLocationDialog} onOpenChange={setShowNewLocationDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="icon" className="flex-shrink-0">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>ثبت آدرس جدید</DialogTitle>
-                </DialogHeader>
-                <NewLocationForm onSuccess={handleLocationCreated} />
-              </DialogContent>
-            </Dialog>
+                      <p className="text-sm text-muted-foreground truncate mt-0.5">
+                        {location.address_line}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {location.provinces?.name}
+                        {location.districts && ` • ${location.districts.name}`}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <div className="text-primary">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
-          {/* نمایش جزئیات آدرس انتخاب شده */}
-          {selectedLocation && (
-            <div className="p-3 rounded-lg border bg-muted/30 text-sm space-y-1">
-              <p className="text-foreground">{selectedLocation.address_line}</p>
-              <p className="text-xs text-muted-foreground">
-                {selectedLocation.provinces?.name}
-                {selectedLocation.districts && ` • ${selectedLocation.districts.name}`}
-              </p>
-            </div>
-          )}
 
           {/* دکمه تایید */}
           <Button 
