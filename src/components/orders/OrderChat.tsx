@@ -390,28 +390,53 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
   const playFromUrl = async (url: string, messageId: string) => {
     console.log('Playing from URL:', url);
     
+    // First, fetch the audio as blob to ensure it's accessible
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const blob = await response.blob();
+    console.log('Fetched blob:', blob.size, 'bytes, type:', blob.type);
+    
+    if (blob.size === 0) {
+      throw new Error('فایل خالی است');
+    }
+    
+    // Create object URL from blob
+    const objectUrl = URL.createObjectURL(blob);
+    
     return new Promise<void>((resolve, reject) => {
       const audio = new Audio();
+      audioElementRef.current = audio;
       
-      audio.oncanplaythrough = () => {
+      const cleanup = () => {
+        URL.revokeObjectURL(objectUrl);
+      };
+      
+      audio.onloadeddata = () => {
+        console.log('Audio loaded, playing...');
         setPlayingAudioId(messageId);
-        audio.play().catch(reject);
+        audio.play().catch((err) => {
+          cleanup();
+          reject(err);
+        });
       };
       
       audio.onended = () => {
         setPlayingAudioId(null);
         audioElementRef.current = null;
+        cleanup();
         resolve();
       };
       
-      audio.onerror = (e) => {
-        console.error('Audio element error:', e);
-        reject(new Error('خطا در بارگذاری فایل صوتی'));
+      audio.onerror = () => {
+        console.error('Audio element error');
+        cleanup();
+        reject(new Error('خطا در پخش فایل صوتی'));
       };
       
-      audio.src = url;
-      audio.load();
-      audioElementRef.current = audio;
+      audio.src = objectUrl;
     });
   };
 
