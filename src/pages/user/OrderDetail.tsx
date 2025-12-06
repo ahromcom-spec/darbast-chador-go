@@ -851,7 +851,7 @@ export default function OrderDetail() {
 
     ${installationDate ? `
       <h2>زمان نصب درخواستی</h2>
-      <div class="box">${installationDate}</div>
+      <div class="box">${formatPersianDateTimeFull(installationDate)}</div>
     ` : ''}
 
     <h2>خلاصه مالی</h2>
