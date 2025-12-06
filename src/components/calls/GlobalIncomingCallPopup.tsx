@@ -152,7 +152,7 @@ const GlobalIncomingCallPopup: React.FC = () => {
                   {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </Button>
                 <Button
-                  onClick={endCall}
+                  onClick={() => endCall(true)}
                   variant="destructive"
                   className="rounded-full px-4"
                   size="sm"
