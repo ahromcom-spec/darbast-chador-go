@@ -117,24 +117,22 @@ export function IncomingTransferRequests() {
   const handleAccept = async (request: TransferRequest) => {
     setProcessingId(request.id);
     try {
-      // Get the order details first
+      // Get the order details first - use separate queries to avoid coercion issues
       const { data: order, error: orderFetchError } = await supabase
         .from('projects_v3')
-        .select(`
-          *,
-          subcategory:subcategories(
-            id,
-            name,
-            service_type_id,
-            service_type:service_types_v3(id, name, code)
-          ),
-          province:provinces(id, name),
-          district:districts(id, name)
-        `)
+        .select('*')
         .eq('id', request.order_id)
-        .single();
+        .maybeSingle();
 
       if (orderFetchError) throw orderFetchError;
+      if (!order) throw new Error('سفارش یافت نشد');
+
+      // Fetch subcategory separately
+      const { data: subcategory } = await supabase
+        .from('subcategories')
+        .select('id, name, service_type_id')
+        .eq('id', order.subcategory_id)
+        .maybeSingle();
 
       // Get or create customer record for the recipient
       let { data: recipientCustomer } = await supabase
@@ -185,7 +183,7 @@ export function IncomingTransferRequests() {
       if (locationError) throw locationError;
 
       // Get service_type_id from subcategory
-      const serviceTypeId = order.subcategory?.service_type_id;
+      const serviceTypeId = subcategory?.service_type_id;
       if (!serviceTypeId) {
         throw new Error('خطا در دریافت نوع خدمات');
       }
