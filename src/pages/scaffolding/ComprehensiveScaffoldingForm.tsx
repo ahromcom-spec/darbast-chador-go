@@ -27,6 +27,7 @@ import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValidation';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NewLocationForm } from '@/components/locations/NewLocationForm';
+import { OrderForOthers, RecipientData } from '@/components/orders/OrderForOthers';
 
 interface Dimension {
   id: string;
@@ -177,6 +178,9 @@ export default function ComprehensiveScaffoldingForm({
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [locationPurpose, setLocationPurpose] = useState('');
   const [installationDateTime, setInstallationDateTime] = useState<string>('');
+  
+  // State برای ثبت سفارش برای دیگری
+  const [recipientData, setRecipientData] = useState<RecipientData | null>(null);
 
   // Fetch order data if editing from query parameter
   useEffect(() => {
@@ -1129,10 +1133,39 @@ export default function ComprehensiveScaffoldingForm({
         const createdProject = createdRows?.[0];
         if (!createdProject) throw new Error('خطا در ایجاد سفارش');
 
-        toast({ 
-          title: 'ثبت شد', 
-          description: `سفارش شما با کد ${createdProject.code} ثبت شد و در انتظار تایید است.` 
-        });
+        // اگر سفارش برای شخص دیگری ثبت شده باشد، درخواست انتقال ایجاد می‌کنیم
+        if (recipientData) {
+          try {
+            const { error: transferError } = await supabase
+              .from('order_transfer_requests')
+              .insert({
+                order_id: createdProject.id,
+                from_user_id: user!.id,
+                to_phone_number: recipientData.phoneNumber,
+                to_user_id: recipientData.userId, // اگر کاربر ثبت‌نام کرده باشد
+                status: recipientData.isRegistered ? 'pending_recipient' : 'pending_registration'
+              });
+
+            if (transferError) {
+              console.error('Transfer request error:', transferError);
+              // خطای انتقال مانع از ادامه نمی‌شود - سفارش ثبت شده
+            } else {
+              toast({
+                title: 'سفارش ثبت شد',
+                description: recipientData.isRegistered 
+                  ? `سفارش برای ${recipientData.fullName || recipientData.phoneNumber} ثبت شد و در انتظار تایید ایشان است`
+                  : `سفارش ثبت شد. پس از ثبت‌نام کاربر با شماره ${recipientData.phoneNumber}، سفارش به او منتقل خواهد شد`,
+              });
+            }
+          } catch (transferErr) {
+            console.error('Transfer creation error:', transferErr);
+          }
+        } else {
+          toast({ 
+            title: 'ثبت شد', 
+            description: `سفارش شما با کد ${createdProject.code} ثبت شد و در انتظار تایید است.` 
+          });
+        }
 
         // آپلود فایل‌ها در پس‌زمینه (بدون انتظار) - کاربر بلافاصله هدایت می‌شود
         if (mediaFiles && mediaFiles.length > 0) {
@@ -1188,6 +1221,16 @@ export default function ComprehensiveScaffoldingForm({
             </CardDescription>
           </CardHeader>
         </Card>
+      )}
+
+      {/* دکمه ثبت سفارش برای دیگری - فقط برای سفارش جدید */}
+      {!editOrderId && (selectedLocationId || initialLocationId) && (
+        <div className="flex justify-center">
+          <OrderForOthers 
+            onRecipientSelected={setRecipientData}
+            disabled={loading}
+          />
+        </div>
       )}
 
       {/* نمایش فرم - آدرس قبلاً در صفحه SelectLocation انتخاب شده است */}
