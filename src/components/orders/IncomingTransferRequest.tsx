@@ -77,20 +77,33 @@ export function IncomingTransferRequests() {
       // Fetch order and profile details for each request
       const requestsWithDetails: TransferRequest[] = [];
       for (const req of (data || [])) {
-        // Fetch order details separately
+        // Fetch order details separately - no nested queries
         const { data: orderData } = await supabase
           .from('projects_v3')
-          .select(`
-            code,
-            address,
-            status,
-            subcategory:subcategories(
-              name,
-              service_type:service_types_v3(name)
-            )
-          `)
+          .select('code, address, status, subcategory_id')
           .eq('id', req.order_id)
           .maybeSingle();
+
+        // Fetch subcategory separately
+        let subcategoryData = null;
+        let serviceTypeData = null;
+        if (orderData?.subcategory_id) {
+          const { data: subcat } = await supabase
+            .from('subcategories')
+            .select('name, service_type_id')
+            .eq('id', orderData.subcategory_id)
+            .maybeSingle();
+          subcategoryData = subcat;
+          
+          if (subcat?.service_type_id) {
+            const { data: svcType } = await supabase
+              .from('service_types_v3')
+              .select('name')
+              .eq('id', subcat.service_type_id)
+              .maybeSingle();
+            serviceTypeData = svcType;
+          }
+        }
 
         // Fetch sender profile
         const { data: profile } = await supabase
@@ -101,7 +114,15 @@ export function IncomingTransferRequests() {
 
         requestsWithDetails.push({
           ...req,
-          order: orderData || undefined,
+          order: orderData ? {
+            code: orderData.code,
+            address: orderData.address,
+            status: orderData.status,
+            subcategory: subcategoryData ? {
+              name: subcategoryData.name,
+              service_type: serviceTypeData ? { name: serviceTypeData.name } : undefined,
+            } : undefined,
+          } : undefined,
           from_profile: profile || undefined,
         } as TransferRequest);
       }
