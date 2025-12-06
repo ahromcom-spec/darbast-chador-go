@@ -33,6 +33,7 @@ import { CEOManagementSection } from '@/components/profile/CEOManagementSection'
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { RecentActivityFeed } from '@/components/profile/RecentActivityFeed';
+import { IncomingTransferRequests } from '@/components/orders/IncomingTransferRequest';
 
 interface UserOrder {
   id: string;
@@ -254,6 +255,9 @@ const fetchOrders = async () => {
           description="مدیریت اطلاعات شخصی و سفارشات"
           showBackButton={true}
         />
+
+        {/* Incoming Transfer Requests */}
+        <IncomingTransferRequests />
 
         {/* Profile Header */}
         <ProfileHeader user={user} fullName={fullName} roles={roles} />
