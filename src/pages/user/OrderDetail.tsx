@@ -901,6 +901,43 @@ export default function OrderDetail() {
         </Button>
 
         <div className="space-y-6">
+          {/* Action Buttons - Above Card */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
+             (order.status === 'completed' || order.status === 'paid') && (
+              <Button
+                onClick={handleRenewOrder}
+                disabled={isRenewing}
+                variant="default"
+                size="sm"
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRenewing ? 'animate-spin' : ''}`} />
+                تمدید سفارش
+              </Button>
+            )}
+            {canEdit && (
+              <Button
+                onClick={() => navigate(`/scaffolding/form?edit=${order.id}`)}
+                size="sm"
+              >
+                <Edit className="h-4 w-4 ml-2" />
+                ویرایش سفارش
+              </Button>
+            )}
+            {order.status !== 'rejected' && order.status !== 'closed' && (
+              <Button
+                variant="outline"
+                onClick={() => setShowTransferDialog(true)}
+                size="sm"
+                className="gap-2"
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+                انتقال سفارش
+              </Button>
+            )}
+          </div>
+
           {/* Order Header */}
           <Card>
             <CardHeader>
@@ -919,37 +956,6 @@ export default function OrderDetail() {
                     </p>
                   )}
                 </div>
-                
-                {order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
-                 (order.status === 'completed' || order.status === 'paid') && (
-                  <Button
-                    onClick={handleRenewOrder}
-                    disabled={isRenewing}
-                    variant="default"
-                    className="gap-2"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isRenewing ? 'animate-spin' : ''}`} />
-                    تمدید سفارش
-                  </Button>
-                )}
-                {canEdit && (
-                  <Button
-                    onClick={() => navigate(`/scaffolding/form?edit=${order.id}`)}
-                  >
-                    <Edit className="h-4 w-4 ml-2" />
-                    ویرایش سفارش
-                  </Button>
-                )}
-                {order.status !== 'rejected' && order.status !== 'closed' && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowTransferDialog(true)}
-                    className="gap-2"
-                  >
-                    <ArrowLeftRight className="h-4 w-4" />
-                    انتقال سفارش
-                  </Button>
-                )}
               </div>
             </CardHeader>
             
