@@ -182,9 +182,9 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
           <p className="text-muted-foreground text-sm">هنوز آدرسی ثبت نشده است</p>
         </div>
       ) : (
-        <div className="border rounded-lg p-4 bg-background/50">
+        <div className="border-2 rounded-xl bg-background shadow-sm">
           {/* لیست همه آدرس‌ها به صورت کارت */}
-          <div className="space-y-2 max-h-[300px] overflow-y-auto mb-4">
+          <div className="space-y-2 max-h-[300px] overflow-y-auto p-4">
             {locations.map((location) => {
               const projectCount = locationProjectCounts[location.id] || 0;
               const isSelected = selectedLocationId === location.id;
@@ -235,26 +235,28 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
             })}
           </div>
 
-          {/* دکمه تایید - داخل کادر */}
-          <Button 
-            onClick={handleConfirm} 
-            size="lg" 
-            disabled={!selectedLocationId || isConfirming}
-            className={`w-full transition-colors ${
-              isConfirming 
-                ? 'bg-orange-500 hover:bg-orange-500 text-white' 
-                : ''
-            }`}
-          >
-            {isConfirming ? (
-              <>
-                <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                در حال بارگذاری...
-              </>
-            ) : (
-              'تایید و ادامه'
-            )}
-          </Button>
+          {/* دکمه تایید - داخل کادر با خط جداکننده */}
+          <div className="border-t bg-muted/30 p-4 rounded-b-xl">
+            <Button 
+              onClick={handleConfirm} 
+              size="lg" 
+              disabled={!selectedLocationId || isConfirming}
+              className={`w-full transition-colors ${
+                isConfirming 
+                  ? 'bg-orange-500 hover:bg-orange-500 text-white' 
+                  : ''
+              }`}
+            >
+              {isConfirming ? (
+                <>
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  در حال بارگذاری...
+                </>
+              ) : (
+                'تایید و ادامه'
+              )}
+            </Button>
+          </div>
         </div>
       )}
     </div>
