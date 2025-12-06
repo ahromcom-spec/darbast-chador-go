@@ -14,6 +14,7 @@ import { OrderWorkflowStatus } from '@/components/orders/OrderWorkflowStatus';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { IncomingTransferRequests } from '@/components/orders/IncomingTransferRequest';
 
 interface Order {
   id: string;
@@ -289,6 +290,11 @@ export default function MyOrders() {
         title="سفارشات من"
         description="مشاهده تمام سفارشات شما و وضعیت آن‌ها"
       />
+
+      {/* کارتابل درخواست‌های انتقال سفارش به شما */}
+      <div className="mt-6">
+        <IncomingTransferRequests />
+      </div>
 
       {orders.length === 0 ? (
         <Card className="mt-6">
