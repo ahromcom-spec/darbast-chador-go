@@ -11,7 +11,8 @@ import {
   FileText,
   Banknote,
   CheckSquare,
-  PackageOpen
+  PackageOpen,
+  ArrowLeftRight
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
@@ -206,6 +207,11 @@ export function ExecutiveSidebar() {
       title: 'مشتریان',
       href: '/executive/customers',
       icon: Users
+    },
+    {
+      title: 'درخواست‌های انتقال سفارش',
+      href: '/admin/order-transfers',
+      icon: ArrowLeftRight
     }
   ];
 
