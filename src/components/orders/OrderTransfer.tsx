@@ -205,6 +205,39 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
     }
   };
 
+  const cancelTransferRequest = async () => {
+    if (!existingRequest || !user) return;
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('order_transfer_requests')
+        .delete()
+        .eq('id', existingRequest.id)
+        .eq('from_user_id', user.id)
+        .eq('status', 'pending_manager');
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ لغو شد',
+        description: 'درخواست انتقال سفارش لغو شد.',
+      });
+
+      setExistingRequest(null);
+      onTransferRequested?.();
+    } catch (error: any) {
+      console.error('Error cancelling transfer request:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در لغو درخواست انتقال',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -251,6 +284,23 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
             <p className="text-xs text-muted-foreground text-center">
               یک درخواست انتقال فعال برای این سفارش وجود دارد.
             </p>
+            
+            {/* Cancel button - only show for pending_manager status */}
+            {existingRequest.status === 'pending_manager' && (
+              <Button
+                variant="destructive"
+                onClick={cancelTransferRequest}
+                disabled={submitting}
+                className="w-full gap-2"
+              >
+                {submitting ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                ) : (
+                  <XCircle className="h-4 w-4" />
+                )}
+                لغو درخواست انتقال
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
