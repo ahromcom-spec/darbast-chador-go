@@ -245,98 +245,83 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       recordingTimerRef.current = null;
     }
 
+    const mediaRecorder = mediaRecorderRef.current;
+    const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
+    
     setIsRecording(false);
     setIsUploading(true);
 
-    return new Promise<void>((resolve) => {
-      const mediaRecorder = mediaRecorderRef.current!;
-      const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
+    // Stop recording and wait for data
+    mediaRecorder.stop();
+    
+    // Wait a bit for all data to be collected
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    try {
+      const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
       
-      mediaRecorder.onstop = async () => {
-        try {
-          const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
-          
-          console.log('Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
-          
-          if (audioBlob.size < 1000) {
-            toast({
-              title: 'پیام صوتی خیلی کوتاه است',
-              variant: 'destructive'
-            });
-            setIsUploading(false);
-            resolve();
-            return;
-          }
-
-          // Determine file extension based on mime type
-          let extension = 'webm';
-          if (actualMimeType.includes('mp4') || actualMimeType.includes('aac')) {
-            extension = 'm4a';
-          } else if (actualMimeType.includes('ogg')) {
-            extension = 'ogg';
-          }
-
-          // Upload to storage
-          const fileName = `${orderId}/${user.id}/${Date.now()}.${extension}`;
-          console.log('Uploading file:', fileName);
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('voice-messages')
-            .upload(fileName, audioBlob, {
-              contentType: actualMimeType,
-              upsert: false
-            });
-
-          if (uploadError) {
-            console.error('Upload error:', uploadError);
-            throw uploadError;
-          }
-
-          console.log('Upload success:', uploadData);
-
-          // Save message with audio path
-          const { error: messageError } = await supabase
-            .from('order_messages')
-            .insert([{
-              order_id: orderId,
-              user_id: user.id,
-              message: '🎤 پیام صوتی',
-              is_staff: isStaff,
-              audio_path: uploadData.path
-            }]);
-
-          if (messageError) {
-            console.error('Message error:', messageError);
-            throw messageError;
-          }
-
-          scrollToBottom();
-          toast({
-            title: 'پیام صوتی ارسال شد'
-          });
-
-        } catch (error: any) {
-          console.error('Error uploading voice message:', error);
-          toast({
-            title: 'خطا در ارسال پیام صوتی',
-            description: error.message,
-            variant: 'destructive'
-          });
-        } finally {
-          setIsUploading(false);
-          setRecordingDuration(0);
-          audioChunksRef.current = [];
-          resolve();
-        }
-      };
-
-      if (mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      } else {
+      console.log('Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
+      
+      if (audioBlob.size < 1000) {
+        toast({
+          title: 'پیام صوتی خیلی کوتاه است',
+          variant: 'destructive'
+        });
         setIsUploading(false);
-        resolve();
+        return;
       }
-    });
+
+      // Always use webm extension for simplicity
+      const fileName = `${orderId}/${user.id}/${Date.now()}.webm`;
+      console.log('Uploading file:', fileName);
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('voice-messages')
+        .upload(fileName, audioBlob, {
+          contentType: 'audio/webm',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('Upload success:', uploadData);
+
+      // Save message with audio path
+      const { error: messageError } = await supabase
+        .from('order_messages')
+        .insert([{
+          order_id: orderId,
+          user_id: user.id,
+          message: '🎤 پیام صوتی',
+          is_staff: isStaff,
+          audio_path: uploadData.path
+        }]);
+
+      if (messageError) {
+        console.error('Message error:', messageError);
+        throw messageError;
+      }
+
+      scrollToBottom();
+      toast({
+        title: 'پیام صوتی ارسال شد'
+      });
+
+    } catch (error: any) {
+      console.error('Error uploading voice message:', error);
+      toast({
+        title: 'خطا در ارسال پیام صوتی',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUploading(false);
+      setRecordingDuration(0);
+      audioChunksRef.current = [];
+    }
   };
 
   const formatDuration = (seconds: number) => {
