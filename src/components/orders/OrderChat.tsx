@@ -330,125 +330,57 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Audio playback with better mobile support
+  // Audio playback - simple approach
   const playAudio = async (messageId: string, audioPath: string) => {
+    // Stop currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    if (playingAudioId === messageId) {
+      setPlayingAudioId(null);
+      return;
+    }
+
+    setPlayingAudioId(messageId);
+
     try {
-      // Stop currently playing audio
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-
-      if (playingAudioId === messageId) {
-        setPlayingAudioId(null);
-        return;
-      }
-
-      setPlayingAudioId(messageId);
-
-      // Get public URL instead of signed URL for better compatibility
-      const { data: publicData } = supabase.storage
+      // Get signed URL (more reliable than public URL)
+      const { data, error } = await supabase.storage
         .from('voice-messages')
-        .getPublicUrl(audioPath);
+        .createSignedUrl(audioPath, 3600);
 
-      if (!publicData?.publicUrl) {
-        // Fallback to signed URL
-        const { data: signedData, error: signedError } = await supabase.storage
-          .from('voice-messages')
-          .createSignedUrl(audioPath, 3600);
-
-        if (signedError || !signedData?.signedUrl) {
-          console.error('URL error:', signedError);
-          throw new Error('خطا در دریافت فایل صوتی');
-        }
-        
-        await playAudioUrl(signedData.signedUrl, messageId, audioPath);
-      } else {
-        await playAudioUrl(publicData.publicUrl, messageId, audioPath);
+      if (error || !data?.signedUrl) {
+        throw new Error('فایل صوتی یافت نشد');
       }
 
+      const audio = new Audio(data.signedUrl);
+      audioRef.current = audio;
+      
+      audio.onended = () => {
+        setPlayingAudioId(null);
+        audioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        toast({
+          title: 'خطا در پخش صدا',
+          variant: 'destructive'
+        });
+        setPlayingAudioId(null);
+        audioRef.current = null;
+      };
+
+      await audio.play();
     } catch (error: any) {
-      console.error('Error playing audio:', error);
+      console.error('Play error:', error);
       toast({
         title: 'خطا در پخش صدا',
-        description: error.message || 'خطا در پخش فایل صوتی',
         variant: 'destructive'
       });
       setPlayingAudioId(null);
     }
-  };
-
-  const playAudioUrl = async (url: string, messageId: string, audioPath: string) => {
-    return new Promise<void>((resolve, reject) => {
-      const audio = new Audio();
-      audioRef.current = audio;
-      
-      // For better mobile compatibility
-      audio.preload = 'auto';
-      audio.crossOrigin = 'anonymous';
-      
-      let hasStarted = false;
-      
-      const handlePlay = () => {
-        hasStarted = true;
-      };
-      
-      const handleEnded = () => {
-        setPlayingAudioId(null);
-        audioRef.current = null;
-        resolve();
-      };
-
-      const handleError = (e: Event) => {
-        console.error('Audio error:', e, audio.error);
-        
-        // If webm format failed, show specific message
-        if (audioPath.endsWith('.webm')) {
-          toast({
-            title: 'فرمت صدا پشتیبانی نمی‌شود',
-            description: 'این پیام صوتی با فرمت قدیمی ضبط شده است',
-            variant: 'destructive'
-          });
-        } else {
-          toast({
-            title: 'خطا در پخش صدا',
-            description: 'لطفاً دوباره تلاش کنید',
-            variant: 'destructive'
-          });
-        }
-        setPlayingAudioId(null);
-        audioRef.current = null;
-        reject(new Error('Audio playback failed'));
-      };
-
-      audio.addEventListener('play', handlePlay);
-      audio.addEventListener('ended', handleEnded);
-      audio.addEventListener('error', handleError);
-      
-      // Set source and try to play
-      audio.src = url;
-      
-      // Use user gesture to play
-      const playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log('Audio playing successfully');
-          })
-          .catch((err) => {
-            console.error('Play promise rejected:', err);
-            // Try loading first then playing
-            audio.load();
-            setTimeout(() => {
-              audio.play().catch((retryErr) => {
-                console.error('Retry play failed:', retryErr);
-                handleError(new Event('error'));
-              });
-            }, 100);
-          });
-      }
-    });
   };
 
   // Cleanup on unmount
