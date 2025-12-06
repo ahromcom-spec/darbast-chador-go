@@ -190,20 +190,8 @@ export function IncomingTransferRequests() {
 
       if (hierarchyError) throw hierarchyError;
 
-      // Update the order to transfer ownership and link to new hierarchy
-      const { error: orderError } = await supabase
-        .from('projects_v3')
-        .update({
-          customer_id: customerId,
-          hierarchy_project_id: newHierarchy.id,
-          transferred_from_user_id: request.from_user_id,
-          transferred_from_phone: fromProfile?.phone_number || request.to_phone_number,
-        })
-        .eq('id', request.order_id);
-
-      if (orderError) throw orderError;
-
-      // Update transfer request status
+      // First update transfer request status to 'completed' 
+      // This removes the recipient's ability to modify via the transfer policy
       const { error: transferError } = await supabase
         .from('order_transfer_requests')
         .update({
@@ -213,6 +201,19 @@ export function IncomingTransferRequests() {
         .eq('id', request.id);
 
       if (transferError) throw transferError;
+
+      // Now update the order to transfer ownership using RPC or direct update
+      // Since transfer request is now completed, we need admin-level update
+      // Use a database function call to bypass RLS
+      const { error: orderError } = await supabase.rpc('transfer_order_ownership', {
+        p_order_id: request.order_id,
+        p_new_customer_id: customerId,
+        p_new_hierarchy_id: newHierarchy.id,
+        p_transferred_from_user_id: request.from_user_id,
+        p_transferred_from_phone: fromProfile?.phone_number || request.to_phone_number,
+      });
+
+      if (orderError) throw orderError;
 
       toast({
         title: '✓ موفق',
