@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Check, Clock, AlertCircle } from 'lucide-react';
+import { Users, Check, Clock, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface OrderForOthersProps {
@@ -48,30 +48,18 @@ export function OrderForOthers({ onRecipientSelected, disabled }: OrderForOthers
     return normalized;
   };
 
-  const searchRecipient = async () => {
-    if (!phoneNumber.trim()) {
-      toast({
-        title: 'خطا',
-        description: 'لطفاً شماره موبایل را وارد کنید',
-        variant: 'destructive'
-      });
-      return;
-    }
+  const searchRecipient = useCallback(async (phone: string) => {
+    const normalizedPhone = normalizePhoneNumber(phone.trim());
 
-    const normalizedPhone = normalizePhoneNumber(phoneNumber.trim());
-
+    // اعتبارسنجی شماره موبایل
     if (!/^09\d{9}$/.test(normalizedPhone)) {
-      toast({
-        title: 'خطا',
-        description: 'شماره موبایل باید با 09 شروع شود و 11 رقم باشد',
-        variant: 'destructive'
-      });
+      setRecipientInfo(null);
+      setSearchCompleted(false);
       return;
     }
 
     setSearching(true);
     setSearchCompleted(false);
-    setRecipientInfo(null);
 
     try {
       // جستجو در جدول profiles با شماره موبایل
@@ -106,15 +94,29 @@ export function OrderForOthers({ onRecipientSelected, disabled }: OrderForOthers
       setSearchCompleted(true);
     } catch (error) {
       console.error('Search error:', error);
-      toast({
-        title: 'خطا',
-        description: 'خطا در جستجوی کاربر',
-        variant: 'destructive'
-      });
+      setRecipientInfo(null);
+      setSearchCompleted(false);
     } finally {
       setSearching(false);
     }
-  };
+  }, []);
+
+  // جستجوی خودکار با debounce
+  useEffect(() => {
+    const normalizedPhone = normalizePhoneNumber(phoneNumber.trim());
+    
+    // فقط وقتی شماره کامل است جستجو کن
+    if (normalizedPhone.length === 11 && normalizedPhone.startsWith('09')) {
+      const debounceTimer = setTimeout(() => {
+        searchRecipient(phoneNumber);
+      }, 300);
+
+      return () => clearTimeout(debounceTimer);
+    } else {
+      setRecipientInfo(null);
+      setSearchCompleted(false);
+    }
+  }, [phoneNumber, searchRecipient]);
 
   const handleConfirm = () => {
     if (!recipientInfo) return;
@@ -185,7 +187,7 @@ export function OrderForOthers({ onRecipientSelected, disabled }: OrderForOthers
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="recipient-phone" className="text-right block">شماره موبایل مقصد</Label>
-              <div className="flex gap-2">
+              <div className="relative">
                 <Input
                   id="recipient-phone"
                   type="tel"
@@ -193,24 +195,19 @@ export function OrderForOthers({ onRecipientSelected, disabled }: OrderForOthers
                   value={phoneNumber}
                   onChange={(e) => {
                     setPhoneNumber(e.target.value);
-                    setSearchCompleted(false);
-                    setRecipientInfo(null);
                   }}
-                  className="flex-1 text-left"
+                  className="text-left pr-10"
                   dir="ltr"
                 />
-                <Button
-                  onClick={searchRecipient}
-                  disabled={searching || !phoneNumber.trim()}
-                  variant="secondary"
-                >
-                  {searching ? (
-                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
-                </Button>
+                {searching && (
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
               </div>
+              {phoneNumber && !searching && !searchCompleted && phoneNumber.length < 11 && (
+                <p className="text-xs text-muted-foreground">شماره باید 11 رقم باشد ({phoneNumber.length}/11)</p>
+              )}
             </div>
 
             {/* نتیجه جستجو */}
