@@ -173,40 +173,19 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   };
 
-  // Voice recording functions
-  const getSupportedMimeType = (): string => {
-    // Try formats in order of compatibility
-    const types = [
-      'audio/mp4',
-      'audio/aac',
-      'audio/mpeg',
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/ogg;codecs=opus',
-    ];
-    
-    for (const type of types) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        return type;
-      }
-    }
-    return ''; // Default - let browser choose
-  };
-
-  const getFileExtension = (mimeType: string): string => {
-    if (mimeType.includes('mp4') || mimeType.includes('aac')) return 'mp4';
-    if (mimeType.includes('mpeg') || mimeType.includes('mp3')) return 'mp3';
-    if (mimeType.includes('ogg')) return 'ogg';
-    return 'webm';
-  };
-
+  // Voice recording functions - record as webm then convert to mp3
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      const mimeType = getSupportedMimeType();
-      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
+      // Use webm for recording (most compatible for MediaRecorder)
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus' 
+        : MediaRecorder.isTypeSupported('audio/webm') 
+          ? 'audio/webm' 
+          : '';
       
+      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
       const mediaRecorder = new MediaRecorder(stream, options);
       
       mediaRecorderRef.current = mediaRecorder;
@@ -233,7 +212,6 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
         setRecordingDuration(prev => {
           const newDuration = prev + 1;
           if (newDuration >= MAX_RECORDING_DURATION) {
-            // Auto-stop recording when max duration reached
             stopRecording();
             toast({
               title: 'حداکثر زمان ضبط',
@@ -254,6 +232,40 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   };
 
+  // Convert audio blob to MP3 using FFmpeg
+  const convertToMp3 = async (audioBlob: Blob): Promise<Blob> => {
+    try {
+      const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+      
+      const ffmpeg = new FFmpeg();
+      await ffmpeg.load();
+      
+      // Write input file
+      const inputData = new Uint8Array(await audioBlob.arrayBuffer());
+      await ffmpeg.writeFile('input.webm', inputData);
+      
+      // Convert to MP3
+      await ffmpeg.exec(['-i', 'input.webm', '-vn', '-ar', '44100', '-ac', '1', '-b:a', '128k', 'output.mp3']);
+      
+      // Read output file
+      const outputData = await ffmpeg.readFile('output.mp3');
+      
+      // Create a new ArrayBuffer and copy the data to avoid SharedArrayBuffer issues
+      if (outputData instanceof Uint8Array) {
+        const arrayBuffer = new ArrayBuffer(outputData.length);
+        const uint8View = new Uint8Array(arrayBuffer);
+        uint8View.set(outputData);
+        return new Blob([arrayBuffer], { type: 'audio/mpeg' });
+      }
+      
+      return new Blob([outputData as string], { type: 'audio/mpeg' });
+    } catch (error) {
+      console.error('FFmpeg conversion failed:', error);
+      // Return original blob if conversion fails
+      return audioBlob;
+    }
+  };
+
   const stopRecording = async () => {
     if (!mediaRecorderRef.current || !user) return;
 
@@ -270,8 +282,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       
       mediaRecorder.onstop = async () => {
         try {
-          const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
-          const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
           
           if (audioBlob.size < 1000) {
             toast({
@@ -283,13 +294,23 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
             return;
           }
 
-          // Upload to storage with correct extension
-          const extension = getFileExtension(actualMimeType);
+          toast({
+            title: 'در حال تبدیل صدا...',
+            description: 'لطفاً صبر کنید'
+          });
+
+          // Convert to MP3
+          const mp3Blob = await convertToMp3(audioBlob);
+          const isMp3 = mp3Blob.type === 'audio/mpeg';
+          const extension = isMp3 ? 'mp3' : 'webm';
+          const contentType = isMp3 ? 'audio/mpeg' : 'audio/webm';
+
+          // Upload to storage
           const fileName = `${orderId}/${user.id}/${Date.now()}.${extension}`;
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('voice-messages')
-            .upload(fileName, audioBlob, {
-              contentType: actualMimeType,
+            .upload(fileName, mp3Blob, {
+              contentType: contentType,
               upsert: false
             });
 
