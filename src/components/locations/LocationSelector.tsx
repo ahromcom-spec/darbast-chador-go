@@ -182,9 +182,9 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
           <p className="text-muted-foreground text-sm">هنوز آدرسی ثبت نشده است</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="border rounded-lg p-4 bg-background/50">
           {/* لیست همه آدرس‌ها به صورت کارت */}
-          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+          <div className="space-y-2 max-h-[300px] overflow-y-auto mb-4">
             {locations.map((location) => {
               const projectCount = locationProjectCounts[location.id] || 0;
               const isSelected = selectedLocationId === location.id;
@@ -235,7 +235,7 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
             })}
           </div>
 
-          {/* دکمه تایید */}
+          {/* دکمه تایید - داخل کادر */}
           <Button 
             onClick={handleConfirm} 
             size="lg" 
