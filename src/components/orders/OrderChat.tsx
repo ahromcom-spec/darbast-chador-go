@@ -164,9 +164,35 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   };
 
+  // Check microphone permission status
+  const checkMicrophonePermission = useCallback(async (): Promise<'granted' | 'denied' | 'prompt'> => {
+    try {
+      if (navigator.permissions) {
+        const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        return result.state;
+      }
+      return 'prompt';
+    } catch {
+      return 'prompt';
+    }
+  }, []);
+
   // Start recording voice
   const startRecording = useCallback(async () => {
     try {
+      // First check if microphone permission is already denied
+      const permissionState = await checkMicrophonePermission();
+      
+      if (permissionState === 'denied') {
+        toast({
+          title: 'دسترسی میکروفون رد شده است',
+          description: 'لطفاً ابتدا در تنظیمات مرورگر خود، دسترسی میکروفون را برای این سایت فعال کنید. سپس صفحه را رفرش کنید.',
+          variant: 'destructive',
+          duration: 8000
+        });
+        return;
+      }
+
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -225,13 +251,26 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
 
     } catch (error: any) {
       console.error('Microphone error:', error);
+      
+      // Provide specific error messages based on error type
+      let errorMessage = 'لطفاً دسترسی میکروفون را در تنظیمات مرورگر فعال کنید';
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = 'دسترسی به میکروفون رد شد. برای ضبط صدا، لطفاً روی آیکون قفل در نوار آدرس کلیک کنید و دسترسی میکروفون را فعال نمایید.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = 'میکروفونی یافت نشد. لطفاً از اتصال میکروفون به دستگاه مطمئن شوید.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = 'میکروفون در دسترس نیست. ممکن است برنامه دیگری از آن استفاده می‌کند.';
+      }
+      
       toast({
         title: 'خطا در دسترسی به میکروفون',
-        description: 'لطفاً دسترسی میکروفون را در تنظیمات مرورگر فعال کنید',
-        variant: 'destructive'
+        description: errorMessage,
+        variant: 'destructive',
+        duration: 8000
       });
     }
-  }, [toast]);
+  }, [toast, checkMicrophonePermission]);
 
   // Stop recording and upload
   const stopRecording = useCallback(async () => {
