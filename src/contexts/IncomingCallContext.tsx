@@ -14,7 +14,7 @@ interface IncomingCallContextType {
   incomingCall: IncomingCall | null;
   acceptCall: () => Promise<void>;
   rejectCall: () => Promise<void>;
-  endCall: () => Promise<void>;
+  endCall: (sendSignal?: boolean) => Promise<void>;
   callState: 'idle' | 'incoming' | 'connected';
   callDuration: number;
   isMuted: boolean;
@@ -108,8 +108,9 @@ export const IncomingCallProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }, 1000);
   };
 
-  const endCall = useCallback(async () => {
-    console.log('[IncomingCall] Ending call');
+  // End call - sendSignal param determines if we should notify the other party
+  const endCall = useCallback(async (sendSignal: boolean = true) => {
+    console.log('[IncomingCall] Ending call, sendSignal:', sendSignal);
     stopRingtone();
 
     if (localStreamRef.current) {
@@ -127,12 +128,12 @@ export const IncomingCallProvider: React.FC<{ children: React.ReactNode }> = ({ 
       callTimerRef.current = null;
     }
 
-    // Send end signal if we have incoming call
-    if (user && incomingCall) {
+    // Send end signal only if we're the one initiating the end (not receiving call-end signal)
+    if (sendSignal && user && incomingCallRef.current) {
       await supabase.from('voice_call_signals' as any).insert({
-        order_id: incomingCall.orderId,
+        order_id: incomingCallRef.current.orderId,
         caller_id: user.id,
-        receiver_id: incomingCall.callerId,
+        receiver_id: incomingCallRef.current.callerId,
         signal_type: 'call-end',
         signal_data: {}
       });
@@ -141,7 +142,7 @@ export const IncomingCallProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setCallState('idle');
     setCallDuration(0);
     setIncomingCall(null);
-  }, [user, incomingCall]);
+  }, [user]);
 
   const acceptCall = useCallback(async () => {
     if (!user || !incomingCall) return;
@@ -296,10 +297,12 @@ export const IncomingCallProvider: React.FC<{ children: React.ReactNode }> = ({ 
               break;
 
             case 'call-end':
+              // Immediately stop ringtone before anything else
+              stopRingtone();
               // Use ref to check current state
               if (callStateRef.current !== 'idle') {
-                stopRingtone();
-                endCall();
+                // Don't send signal back - we received the end signal
+                endCall(false);
               }
               break;
           }

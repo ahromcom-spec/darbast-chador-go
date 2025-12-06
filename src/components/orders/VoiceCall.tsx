@@ -585,9 +585,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     endCall();
   };
 
-  // End call
-  const endCall = useCallback(async () => {
-    console.log('[VoiceCall] Ending call');
+  // End call - sendSignal param determines if we should notify the other party
+  const endCall = useCallback(async (sendSignal: boolean = true) => {
+    console.log('[VoiceCall] Ending call, sendSignal:', sendSignal);
     stopRingtone();
     clearTimeouts();
 
@@ -638,10 +638,11 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       callTimerRef.current = null;
     }
 
+    // Only send signal if we're the one initiating the end (not receiving call-end signal)
     const currentOtherParty = otherPartyIdRef.current;
     const currentCallState = callStateRef.current;
     
-    if (user && currentOtherParty && currentCallState !== 'idle') {
+    if (sendSignal && user && currentOtherParty && currentCallState !== 'idle') {
       await supabase.from('voice_call_signals' as any).insert({
         order_id: orderId,
         caller_id: user.id,
@@ -776,6 +777,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               break;
 
             case 'call-reject':
+              // Immediately stop ringtone
+              stopRingtone();
+              clearTimeouts();
               if (callLogIdRef.current) {
                 await updateCallLog(callLogIdRef.current, {
                   status: 'rejected',
@@ -783,12 +787,17 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
                 });
               }
               toast.error('تماس رد شد');
-              endCall();
+              // Don't send signal back - we received the reject signal
+              endCall(false);
               break;
 
             case 'call-end':
+              // Immediately stop ringtone before anything else
+              stopRingtone();
+              clearTimeouts();
               toast.info('تماس پایان یافت');
-              endCall();
+              // Don't send signal back - we received the end signal
+              endCall(false);
               break;
           }
         }
@@ -861,7 +870,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
             <p className="text-xs text-muted-foreground mb-4">
               در صورت عدم پاسخ، تماس پس از ۱ دقیقه قطع می‌شود
             </p>
-            <Button onClick={endCall} variant="destructive">
+            <Button onClick={() => endCall(true)} variant="destructive">
               <PhoneOff className="h-4 w-4 ml-2" />
               لغو
             </Button>
@@ -910,7 +919,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               <Button onClick={toggleMute} variant={isMuted ? "destructive" : "secondary"}>
                 {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
-              <Button onClick={endCall} variant="destructive">
+              <Button onClick={() => endCall(true)} variant="destructive">
                 <PhoneOff className="h-4 w-4 ml-2" />
                 پایان
               </Button>
