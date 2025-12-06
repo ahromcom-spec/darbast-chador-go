@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, Users, LogOut, UserPlus } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut, UserPlus, ArrowLeftRight } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -20,6 +20,7 @@ const menuItems = [
   { title: 'سفارشات', url: '/admin/orders', icon: Package },
   { title: 'مدیریت کاربران', url: '/admin/users', icon: Users },
   { title: 'درخواست‌های پرسنل', url: '/admin/staff-requests', icon: UserPlus },
+  { title: 'درخواست‌های انتقال سفارش', url: '/admin/order-transfers', icon: ArrowLeftRight },
   { title: 'مدیریت لیست مجاز', url: '/admin/whitelist', icon: Users },
 ];
 
