@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -14,8 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
-import { UserPlus, Search, CheckCircle, XCircle, Clock, ArrowLeftRight } from 'lucide-react';
+import { UserPlus, Search, CheckCircle, XCircle, ArrowLeftRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface OrderTransferProps {
   orderId: string;
@@ -60,11 +61,39 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Debounce phone number for auto-search
+  const debouncedPhone = useDebounce(phoneNumber, 500);
+
   useEffect(() => {
     if (open) {
       checkExistingRequest();
     }
   }, [open, orderId]);
+
+  const formatPhoneNumber = (phone: string): string => {
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('98')) {
+      cleaned = '0' + cleaned.slice(2);
+    }
+    if (!cleaned.startsWith('0') && cleaned.length === 10) {
+      cleaned = '0' + cleaned;
+    }
+    return cleaned;
+  };
+
+  // Auto-search when debounced phone changes
+  useEffect(() => {
+    const formattedPhone = formatPhoneNumber(debouncedPhone);
+    
+    // Only search if phone is valid format (11 digits starting with 09)
+    if (formattedPhone.length === 11 && formattedPhone.startsWith('09')) {
+      searchUser(formattedPhone);
+    } else {
+      // Reset if phone is incomplete
+      setTargetUser(null);
+      setUserNotFound(false);
+    }
+  }, [debouncedPhone, user?.id]);
 
   const checkExistingRequest = async () => {
     setLoadingRequest(true);
@@ -87,26 +116,8 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
     }
   };
 
-  const formatPhoneNumber = (phone: string): string => {
-    let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.startsWith('98')) {
-      cleaned = '0' + cleaned.slice(2);
-    }
-    if (!cleaned.startsWith('0') && cleaned.length === 10) {
-      cleaned = '0' + cleaned;
-    }
-    return cleaned;
-  };
-
-  const searchUser = async () => {
-    const formattedPhone = formatPhoneNumber(phoneNumber);
-    
+  const searchUser = useCallback(async (formattedPhone: string) => {
     if (!formattedPhone || formattedPhone.length !== 11 || !formattedPhone.startsWith('09')) {
-      toast({
-        title: 'خطا',
-        description: 'لطفاً یک شماره تماس معتبر وارد کنید',
-        variant: 'destructive',
-      });
       return;
     }
 
@@ -132,6 +143,7 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
             description: 'نمی‌توانید سفارش را به خودتان انتقال دهید',
             variant: 'destructive',
           });
+          setUserNotFound(true);
           return;
         }
 
@@ -153,7 +165,7 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
     } finally {
       setSearching(false);
     }
-  };
+  }, [user?.id, toast]);
 
   const submitTransferRequest = async () => {
     if (!targetUser || !user) return;
@@ -190,13 +202,6 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
       });
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handlePhoneKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      searchUser();
     }
   };
 
@@ -257,18 +262,20 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
                   placeholder="09123456789"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  onKeyPress={handlePhoneKeyPress}
                   className="flex-1"
                   dir="ltr"
                 />
-                <Button onClick={searchUser} disabled={searching} variant="secondary">
+                <Button variant="secondary" disabled className="cursor-default">
                   {searching ? (
-                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Search className="h-4 w-4" />
                   )}
                 </Button>
               </div>
+              {phoneNumber && formatPhoneNumber(phoneNumber).length < 11 && (
+                <p className="text-xs text-muted-foreground">شماره باید ۱۱ رقم باشد (مثال: 09123456789)</p>
+              )}
             </div>
 
             {userNotFound && (
