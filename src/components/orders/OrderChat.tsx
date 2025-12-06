@@ -371,7 +371,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   }, [user, orderId, isStaff, toast]);
 
-  // Play audio message - using blob download for cross-browser compatibility
+  // Play audio message - try public URL first, then download as fallback
   const playAudio = useCallback(async (messageId: string, audioPath: string) => {
     // If same audio is playing, stop it
     if (playingAudioId === messageId) {
@@ -392,10 +392,83 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     setLoadingAudioId(messageId);
     setPlayingAudioId(null);
 
+    const tryPlayWithUrl = (url: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        const audio = new Audio();
+        audioElementRef.current = audio;
+        
+        const timeout = setTimeout(() => {
+          console.log('Audio load timeout');
+          audio.pause();
+          resolve(false);
+        }, 10000);
+
+        audio.oncanplaythrough = () => {
+          clearTimeout(timeout);
+          console.log('Audio ready, playing...');
+          setLoadingAudioId(null);
+          setPlayingAudioId(messageId);
+          audio.play().catch((err) => {
+            console.error('Play error:', err);
+            setPlayingAudioId(null);
+            resolve(false);
+          });
+          resolve(true);
+        };
+        
+        audio.onended = () => {
+          console.log('Audio ended');
+          setPlayingAudioId(null);
+          audioElementRef.current = null;
+        };
+        
+        audio.onerror = (e) => {
+          clearTimeout(timeout);
+          console.error('Audio error with URL:', url, audio.error);
+          resolve(false);
+        };
+        
+        audio.src = url;
+        audio.load();
+      });
+    };
+
     try {
-      console.log('Downloading audio for path:', audioPath);
+      console.log('Attempting to play audio:', audioPath);
       
-      // Download the file as blob directly from storage
+      // Method 1: Try public URL first (fastest)
+      const { data: publicUrlData } = supabase.storage
+        .from('voice-messages')
+        .getPublicUrl(audioPath);
+      
+      console.log('Trying public URL:', publicUrlData.publicUrl);
+      const publicSuccess = await tryPlayWithUrl(publicUrlData.publicUrl);
+      
+      if (publicSuccess) {
+        console.log('Public URL playback successful');
+        return;
+      }
+      
+      console.log('Public URL failed, trying signed URL...');
+      
+      // Method 2: Try signed URL
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('voice-messages')
+        .createSignedUrl(audioPath, 3600);
+      
+      if (!signedError && signedData?.signedUrl) {
+        console.log('Trying signed URL:', signedData.signedUrl);
+        const signedSuccess = await tryPlayWithUrl(signedData.signedUrl);
+        
+        if (signedSuccess) {
+          console.log('Signed URL playback successful');
+          return;
+        }
+      }
+      
+      console.log('Signed URL failed, trying blob download...');
+      
+      // Method 3: Download as blob (last resort)
       const { data: blobData, error: downloadError } = await supabase.storage
         .from('voice-messages')
         .download(audioPath);
@@ -407,61 +480,31 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
 
       console.log('Downloaded blob:', blobData.size, 'bytes, type:', blobData.type);
 
-      // Create object URL from downloaded blob
       const objectUrl = URL.createObjectURL(blobData);
+      const blobSuccess = await tryPlayWithUrl(objectUrl);
       
-      const audio = new Audio();
-      audioElementRef.current = audio;
-      
-      const cleanup = () => {
+      if (!blobSuccess) {
         URL.revokeObjectURL(objectUrl);
-      };
-
-      audio.oncanplaythrough = () => {
-        console.log('Audio ready, playing...');
-        setLoadingAudioId(null);
-        setPlayingAudioId(messageId);
-        audio.play().catch((err) => {
-          console.error('Play error:', err);
-          cleanup();
-          setPlayingAudioId(null);
-          toast({
-            title: 'خطا در پخش صدا',
-            description: 'لطفاً دوباره تلاش کنید',
-            variant: 'destructive'
-          });
-        });
-      };
+        throw new Error('فرمت فایل صوتی توسط مرورگر پشتیبانی نمی‌شود');
+      }
       
-      audio.onended = () => {
-        console.log('Audio ended');
-        setPlayingAudioId(null);
-        audioElementRef.current = null;
-        cleanup();
-      };
-      
-      audio.onerror = (e) => {
-        console.error('Audio element error:', e, audio.error);
-        setLoadingAudioId(null);
-        setPlayingAudioId(null);
-        audioElementRef.current = null;
-        cleanup();
-        toast({
-          title: 'خطا در پخش صدا',
-          description: 'فایل صوتی قابل پخش نیست',
-          variant: 'destructive'
-        });
-      };
-      
-      audio.src = objectUrl;
-      audio.load();
+      // Cleanup object URL when audio ends
+      if (audioElementRef.current) {
+        const currentAudio = audioElementRef.current;
+        const originalOnended = currentAudio.onended;
+        currentAudio.onended = (e) => {
+          URL.revokeObjectURL(objectUrl);
+          if (originalOnended) originalOnended.call(currentAudio, e);
+        };
+      }
       
     } catch (error: any) {
       console.error('Audio playback error:', error);
       setLoadingAudioId(null);
+      setPlayingAudioId(null);
       toast({
         title: 'خطا در پخش صدا',
-        description: error.message || 'فایل صوتی قابل پخش نیست',
+        description: error.message || 'فایل صوتی قابل پخش نیست. ممکن است فرمت آن توسط مرورگر شما پشتیبانی نشود.',
         variant: 'destructive'
       });
     }
