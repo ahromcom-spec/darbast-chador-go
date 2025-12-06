@@ -44,7 +44,8 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
 
   // Audio playback state
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
   // بررسی نقش کاربر
   useEffect(() => {
@@ -330,16 +331,17 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Audio playback - simple approach
+  // Audio playback using embedded audio element
   const playAudio = async (messageId: string, audioPath: string) => {
     // Stop currently playing audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.currentTime = 0;
     }
 
     if (playingAudioId === messageId) {
       setPlayingAudioId(null);
+      setAudioSrc(null);
       return;
     }
 
@@ -355,24 +357,22 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
         throw new Error('فایل صوتی یافت نشد');
       }
 
-      const audio = new Audio(data.signedUrl);
-      audioRef.current = audio;
+      setAudioSrc(data.signedUrl);
       
-      audio.onended = () => {
-        setPlayingAudioId(null);
-        audioRef.current = null;
-      };
-
-      audio.onerror = () => {
-        toast({
-          title: 'خطا در پخش صدا',
-          variant: 'destructive'
-        });
-        setPlayingAudioId(null);
-        audioRef.current = null;
-      };
-
-      await audio.play();
+      // Wait a bit for the audio element to update its src
+      setTimeout(() => {
+        if (audioPlayerRef.current) {
+          audioPlayerRef.current.play().catch((e) => {
+            console.error('Play error:', e);
+            toast({
+              title: 'خطا در پخش صدا',
+              variant: 'destructive'
+            });
+            setPlayingAudioId(null);
+            setAudioSrc(null);
+          });
+        }
+      }, 100);
     } catch (error: any) {
       console.error('Play error:', error);
       toast({
@@ -380,7 +380,23 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
         variant: 'destructive'
       });
       setPlayingAudioId(null);
+      setAudioSrc(null);
     }
+  };
+
+  // Handle audio ended event
+  const handleAudioEnded = () => {
+    setPlayingAudioId(null);
+    setAudioSrc(null);
+  };
+
+  const handleAudioError = () => {
+    toast({
+      title: 'خطا در پخش صدا',
+      variant: 'destructive'
+    });
+    setPlayingAudioId(null);
+    setAudioSrc(null);
   };
 
   // Cleanup on unmount
@@ -389,8 +405,8 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
       }
-      if (audioRef.current) {
-        audioRef.current.pause();
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
       }
     };
   }, []);
@@ -401,6 +417,15 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
 
   return (
     <Card>
+      {/* Hidden audio player for voice messages */}
+      <audio
+        ref={audioPlayerRef}
+        src={audioSrc || undefined}
+        onEnded={handleAudioEnded}
+        onError={handleAudioError}
+        style={{ display: 'none' }}
+      />
+      
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5" />
