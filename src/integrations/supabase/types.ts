@@ -3188,6 +3188,16 @@ export type Database = {
             }
             Returns: undefined
           }
+      transfer_order_ownership: {
+        Args: {
+          p_new_customer_id: string
+          p_new_hierarchy_id: string
+          p_order_id: string
+          p_transferred_from_phone: string
+          p_transferred_from_user_id: string
+        }
+        Returns: undefined
+      }
       validate_contractor_phone: {
         Args: { _phone_number: string }
         Returns: boolean
