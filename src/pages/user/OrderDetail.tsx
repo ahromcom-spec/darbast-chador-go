@@ -44,8 +44,10 @@ import {
   Upload,
   X,
   CreditCard,
-  Printer
+  Printer,
+  ArrowLeftRight
 } from "lucide-react";
+import { OrderTransfer } from "@/components/orders/OrderTransfer";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { useProjectRatings, RatingCriteria } from "@/hooks/useRatings";
 import { useAuth } from "@/contexts/AuthContext";
@@ -174,6 +176,7 @@ export default function OrderDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -935,6 +938,16 @@ export default function OrderDetail() {
                   >
                     <Edit className="h-4 w-4 ml-2" />
                     ویرایش سفارش
+                  </Button>
+                )}
+                {order.status !== 'rejected' && order.status !== 'closed' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowTransferDialog(true)}
+                    className="gap-2"
+                  >
+                    <ArrowLeftRight className="h-4 w-4" />
+                    انتقال سفارش
                   </Button>
                 )}
               </div>
@@ -2079,6 +2092,15 @@ export default function OrderDetail() {
               )}
             </DialogContent>
           </Dialog>
+
+          {/* Order Transfer Dialog */}
+          <OrderTransfer
+            orderId={order.id}
+            orderCode={order.code}
+            open={showTransferDialog}
+            onOpenChange={setShowTransferDialog}
+            onTransferRequested={fetchOrderDetails}
+          />
 
         </div>
       </div>
