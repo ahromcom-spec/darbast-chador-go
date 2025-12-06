@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,36 +41,53 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Audio playback state
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const [audioSrc, setAudioSrc] = useState<string | null>(null);
-  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const [loadingAudioId, setLoadingAudioId] = useState<string | null>(null);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
-  // بررسی نقش کاربر
+  // Check user role
   useEffect(() => {
-    checkUserRole();
+    if (!user) return;
+    
+    const checkRole = async () => {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .in('role', ['admin', 'ceo', 'general_manager', 'sales_manager', 'scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
+        .maybeSingle();
+      setIsStaff(!!data);
+    };
+    
+    checkRole();
   }, [user]);
 
-  const checkUserRole = async () => {
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .in('role', ['admin', 'ceo', 'general_manager', 'sales_manager', 'scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
-      .maybeSingle();
-
-    setIsStaff(!!data);
-  };
-
-  // دریافت پیام‌ها
+  // Fetch messages
   useEffect(() => {
-    if (orderId) {
-      fetchMessages();
-      subscribeToMessages();
-    }
+    if (!orderId) return;
+    
+    fetchMessages();
+    
+    const channel = supabase
+      .channel(`order-messages-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'order_messages',
+          filter: `order_id=eq.${orderId}`
+        },
+        () => fetchMessages()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [orderId]);
 
   const fetchMessages = async () => {
@@ -94,40 +111,16 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
           profilesData?.map(p => [p.user_id, p]) || []
         );
 
-        const enrichedMessages = messagesData.map(msg => ({
+        setMessages(messagesData.map(msg => ({
           ...msg,
           profiles: profilesMap.get(msg.user_id)
-        }));
-
-        setMessages(enrichedMessages);
+        })));
       } else {
         setMessages([]);
       }
-    } catch (error: any) {
-      console.error('خطا در دریافت پیام‌ها:', error);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
     }
-  };
-
-  const subscribeToMessages = () => {
-    const channel = supabase
-      .channel('order-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'order_messages',
-          filter: `order_id=eq.${orderId}`
-        },
-        (payload) => {
-          fetchMessages();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   };
 
   const scrollToBottom = () => {
@@ -152,10 +145,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
 
       setNewMessage('');
       scrollToBottom();
-      toast({
-        title: 'پیام ارسال شد',
-        description: 'پیام شما با موفقیت ارسال شد'
-      });
+      toast({ title: 'پیام ارسال شد' });
     } catch (error: any) {
       toast({
         title: 'خطا در ارسال پیام',
@@ -174,34 +164,40 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   };
 
-  // Voice recording functions - use webm which is widely supported
-  const startRecording = async () => {
+  // Start recording voice
+  const startRecording = useCallback(async () => {
     try {
+      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          sampleRate: 44100
+          autoGainControl: true
         } 
       });
       
-      // Use webm/opus as primary format (best cross-browser support for playback)
-      let mimeType = 'audio/webm;codecs=opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'audio/webm';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'audio/mp4';
-          if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = ''; // Let browser choose
-          }
+      streamRef.current = stream;
+      
+      // Find best supported format - prefer webm for web compatibility
+      let mimeType = '';
+      const formats = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/mp4',
+        'audio/mpeg'
+      ];
+      
+      for (const format of formats) {
+        if (MediaRecorder.isTypeSupported(format)) {
+          mimeType = format;
+          break;
         }
       }
       
-      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
-      const mediaRecorder = new MediaRecorder(stream, options);
+      console.log('Using mimeType:', mimeType || 'default');
       
-      console.log('Recording with mimeType:', mediaRecorder.mimeType);
-      
+      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -211,105 +207,102 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
         }
       };
 
-      mediaRecorder.onstop = () => {
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start(100);
+      mediaRecorder.start(100); // Collect data every 100ms
       setIsRecording(true);
       setRecordingDuration(0);
 
-      // Max recording duration: 3 minutes (180 seconds)
-      const MAX_RECORDING_DURATION = 180;
-      
+      // Timer for duration display (max 3 minutes)
       recordingTimerRef.current = setInterval(() => {
         setRecordingDuration(prev => {
-          const newDuration = prev + 1;
-          if (newDuration >= MAX_RECORDING_DURATION) {
+          if (prev >= 179) {
             stopRecording();
-            toast({
-              title: 'حداکثر زمان ضبط',
-              description: 'ضبط صدا به حداکثر ۳ دقیقه رسید',
-            });
+            toast({ title: 'حداکثر زمان ضبط: ۳ دقیقه' });
+            return 180;
           }
-          return newDuration;
+          return prev + 1;
         });
       }, 1000);
 
     } catch (error: any) {
-      console.error('Error starting recording:', error);
+      console.error('Microphone error:', error);
       toast({
         title: 'خطا در دسترسی به میکروفون',
-        description: 'لطفاً دسترسی میکروفون را فعال کنید',
+        description: 'لطفاً دسترسی میکروفون را در تنظیمات مرورگر فعال کنید',
         variant: 'destructive'
       });
     }
-  };
+  }, [toast]);
 
-  const stopRecording = async () => {
+  // Stop recording and upload
+  const stopRecording = useCallback(async () => {
     if (!mediaRecorderRef.current || !user) return;
 
+    // Clear timer
     if (recordingTimerRef.current) {
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
 
     const mediaRecorder = mediaRecorderRef.current;
-    const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
+    const recordedMimeType = mediaRecorder.mimeType || 'audio/webm';
     
     setIsRecording(false);
     setIsUploading(true);
 
-    // Stop recording and wait for data
+    // Create a promise to wait for recording to stop
+    const recordingComplete = new Promise<void>((resolve) => {
+      mediaRecorder.onstop = () => {
+        // Stop all tracks
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
+        resolve();
+      };
+    });
+
     mediaRecorder.stop();
-    
-    // Wait for all data to be collected
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await recordingComplete;
+
+    // Small delay to ensure all data is collected
+    await new Promise(resolve => setTimeout(resolve, 200));
+
     try {
-      const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
+      // Create blob from chunks
+      const audioBlob = new Blob(audioChunksRef.current, { type: recordedMimeType });
       
-      console.log('Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
-      
-      if (audioBlob.size < 1000) {
-        toast({
-          title: 'پیام صوتی خیلی کوتاه است',
-          variant: 'destructive'
-        });
+      console.log('Recording complete. Size:', audioBlob.size, 'Type:', audioBlob.type);
+
+      if (audioBlob.size < 500) {
+        toast({ title: 'ضبط صوتی خیلی کوتاه است', variant: 'destructive' });
         setIsUploading(false);
         return;
       }
 
-      // Determine file extension based on actual mimeType
-      let fileExtension = 'webm';
-      let uploadContentType = 'audio/webm';
+      // Determine file extension from mime type
+      let extension = 'webm';
+      if (recordedMimeType.includes('mp4')) extension = 'mp4';
+      else if (recordedMimeType.includes('ogg')) extension = 'ogg';
+      else if (recordedMimeType.includes('mpeg') || recordedMimeType.includes('mp3')) extension = 'mp3';
+
+      const fileName = `${orderId}/${user.id}/${Date.now()}.${extension}`;
       
-      if (actualMimeType.includes('mp4') || actualMimeType.includes('aac')) {
-        fileExtension = 'mp4';
-        uploadContentType = 'audio/mp4';
-      } else if (actualMimeType.includes('ogg')) {
-        fileExtension = 'ogg';
-        uploadContentType = 'audio/ogg';
-      }
-      
-      const fileName = `${orderId}/${user.id}/${Date.now()}.${fileExtension}`;
-      console.log('Uploading file:', fileName, 'with contentType:', uploadContentType);
-      
+      console.log('Uploading:', fileName);
+
+      // Upload to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('voice-messages')
         .upload(fileName, audioBlob, {
-          contentType: uploadContentType,
+          contentType: recordedMimeType,
+          cacheControl: '3600',
           upsert: false
         });
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      console.log('Upload success:', uploadData);
+      console.log('Upload success:', uploadData.path);
 
-      // Save message with audio path
+      // Create message record
       const { error: messageError } = await supabase
         .from('order_messages')
         .insert([{
@@ -320,21 +313,16 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
           audio_path: uploadData.path
         }]);
 
-      if (messageError) {
-        console.error('Message error:', messageError);
-        throw messageError;
-      }
+      if (messageError) throw messageError;
 
+      toast({ title: 'پیام صوتی ارسال شد ✓' });
       scrollToBottom();
-      toast({
-        title: 'پیام صوتی ارسال شد'
-      });
 
     } catch (error: any) {
-      console.error('Error uploading voice message:', error);
+      console.error('Upload error:', error);
       toast({
         title: 'خطا در ارسال پیام صوتی',
-        description: error.message,
+        description: error.message || 'لطفاً دوباره تلاش کنید',
         variant: 'destructive'
       });
     } finally {
@@ -342,6 +330,89 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       setRecordingDuration(0);
       audioChunksRef.current = [];
     }
+  }, [user, orderId, isStaff, toast]);
+
+  // Play audio message
+  const playAudio = useCallback(async (messageId: string, audioPath: string) => {
+    // If same audio is playing, stop it
+    if (playingAudioId === messageId) {
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
+        audioElementRef.current = null;
+      }
+      setPlayingAudioId(null);
+      return;
+    }
+
+    // Stop any currently playing audio
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current = null;
+    }
+
+    setLoadingAudioId(messageId);
+
+    try {
+      // Get signed URL (valid for 1 hour)
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('voice-messages')
+        .createSignedUrl(audioPath, 3600);
+
+      if (signedError || !signedData?.signedUrl) {
+        console.error('Signed URL error:', signedError);
+        // Fallback to public URL
+        const { data: publicData } = supabase.storage
+          .from('voice-messages')
+          .getPublicUrl(audioPath);
+        
+        if (!publicData?.publicUrl) {
+          throw new Error('فایل صوتی یافت نشد');
+        }
+        
+        await playFromUrl(publicData.publicUrl, messageId);
+      } else {
+        await playFromUrl(signedData.signedUrl, messageId);
+      }
+    } catch (error: any) {
+      console.error('Audio playback error:', error);
+      toast({
+        title: 'خطا در پخش صدا',
+        description: 'فایل صوتی قابل پخش نیست',
+        variant: 'destructive'
+      });
+      setPlayingAudioId(null);
+    } finally {
+      setLoadingAudioId(null);
+    }
+  }, [playingAudioId, toast]);
+
+  // Helper to play audio from URL
+  const playFromUrl = async (url: string, messageId: string) => {
+    console.log('Playing from URL:', url);
+    
+    return new Promise<void>((resolve, reject) => {
+      const audio = new Audio();
+      
+      audio.oncanplaythrough = () => {
+        setPlayingAudioId(messageId);
+        audio.play().catch(reject);
+      };
+      
+      audio.onended = () => {
+        setPlayingAudioId(null);
+        audioElementRef.current = null;
+        resolve();
+      };
+      
+      audio.onerror = (e) => {
+        console.error('Audio element error:', e);
+        reject(new Error('خطا در بارگذاری فایل صوتی'));
+      };
+      
+      audio.src = url;
+      audio.load();
+      audioElementRef.current = audio;
+    });
   };
 
   const formatDuration = (seconds: number) => {
@@ -350,104 +421,28 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Audio playback using embedded audio element
-  const playAudio = async (messageId: string, audioPath: string) => {
-    // Stop currently playing audio
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause();
-      audioPlayerRef.current.currentTime = 0;
-    }
-
-    if (playingAudioId === messageId) {
-      setPlayingAudioId(null);
-      setAudioSrc(null);
-      return;
-    }
-
-    setPlayingAudioId(messageId);
-
-    try {
-      // Get public URL since bucket is public
-      const { data } = supabase.storage
-        .from('voice-messages')
-        .getPublicUrl(audioPath);
-
-      if (!data?.publicUrl) {
-        throw new Error('فایل صوتی یافت نشد');
-      }
-
-      console.log('Playing audio from:', data.publicUrl);
-      setAudioSrc(data.publicUrl);
-      
-      // Wait for the audio element to update and start playing
-      setTimeout(() => {
-        if (audioPlayerRef.current) {
-          audioPlayerRef.current.load(); // Force reload of the audio element
-          audioPlayerRef.current.play().catch((e) => {
-            console.error('Play error:', e);
-            toast({
-              title: 'خطا در پخش صدا',
-              description: 'لطفاً دوباره تلاش کنید',
-              variant: 'destructive'
-            });
-            setPlayingAudioId(null);
-            setAudioSrc(null);
-          });
-        }
-      }, 150);
-    } catch (error: any) {
-      console.error('Play error:', error);
-      toast({
-        title: 'خطا در پخش صدا',
-        variant: 'destructive'
-      });
-      setPlayingAudioId(null);
-      setAudioSrc(null);
-    }
-  };
-
-  // Handle audio ended event
-  const handleAudioEnded = () => {
-    setPlayingAudioId(null);
-    setAudioSrc(null);
-  };
-
-  const handleAudioError = () => {
-    toast({
-      title: 'خطا در پخش صدا',
-      variant: 'destructive'
-    });
-    setPlayingAudioId(null);
-    setAudioSrc(null);
-  };
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
       }
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.pause();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
       }
     };
   }, []);
 
+  // Don't show chat for closed/rejected orders
   if (['rejected', 'closed'].includes(orderStatus)) {
     return null;
   }
 
   return (
     <Card>
-      {/* Hidden audio player for voice messages */}
-      <audio
-        ref={audioPlayerRef}
-        src={audioSrc || undefined}
-        onEnded={handleAudioEnded}
-        onError={handleAudioError}
-        style={{ display: 'none' }}
-      />
-      
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5" />
@@ -455,7 +450,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* لیست پیام‌ها */}
+        {/* Messages list */}
         <div className="max-h-96 overflow-y-auto space-y-3 p-4 bg-muted/30 rounded-lg">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
@@ -467,28 +462,16 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
             messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-3 ${
-                  msg.user_id === user?.id ? 'flex-row-reverse' : 'flex-row'
-                }`}
+                className={`flex gap-3 ${msg.user_id === user?.id ? 'flex-row-reverse' : 'flex-row'}`}
               >
                 <div
                   className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
-                    msg.is_staff
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground'
+                    msg.is_staff ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                   }`}
                 >
-                  {msg.is_staff ? (
-                    <UserCheck className="h-4 w-4" />
-                  ) : (
-                    <User className="h-4 w-4" />
-                  )}
+                  {msg.is_staff ? <UserCheck className="h-4 w-4" /> : <User className="h-4 w-4" />}
                 </div>
-                <div
-                  className={`flex-1 max-w-[70%] ${
-                    msg.user_id === user?.id ? 'text-right' : 'text-left'
-                  }`}
-                >
+                <div className={`flex-1 max-w-[70%] ${msg.user_id === user?.id ? 'text-right' : 'text-left'}`}>
                   <div
                     className={`rounded-lg p-3 ${
                       msg.user_id === user?.id
@@ -510,8 +493,11 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
                           variant={msg.user_id === user?.id ? "secondary" : "outline"}
                           className="h-8 w-8 p-0"
                           onClick={() => playAudio(msg.id, msg.audio_path!)}
+                          disabled={loadingAudioId === msg.id}
                         >
-                          {playingAudioId === msg.id ? (
+                          {loadingAudioId === msg.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : playingAudioId === msg.id ? (
                             <Pause className="h-4 w-4" />
                           ) : (
                             <Play className="h-4 w-4" />
@@ -539,7 +525,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* فرم ارسال پیام */}
+        {/* Message input */}
         <div className="flex gap-2">
           <Textarea
             value={newMessage}
