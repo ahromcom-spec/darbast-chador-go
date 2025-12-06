@@ -124,6 +124,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const recordedChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const destinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]); // Queue for ICE candidates
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -330,6 +331,21 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     }
   };
 
+  // Process any queued ICE candidates
+  const processPendingCandidates = async (pc: RTCPeerConnection) => {
+    const candidates = pendingCandidatesRef.current;
+    pendingCandidatesRef.current = [];
+    
+    for (const candidate of candidates) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log('[VoiceCall] Added queued ICE candidate');
+      } catch (e) {
+        console.error('[VoiceCall] Error adding queued ICE candidate:', e);
+      }
+    }
+  };
+
   // Create peer connection
   const createPeerConnection = useCallback((targetUserId: string) => {
     console.log('[VoiceCall] Creating peer connection');
@@ -533,6 +549,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
       if (signal.signal_data?.offer) {
         await pc.setRemoteDescription(new RTCSessionDescription(signal.signal_data.offer));
+        
+        // Process any queued ICE candidates now that remote description is set
+        await processPendingCandidates(pc);
       }
 
       const answer = await pc.createAnswer();
@@ -662,6 +681,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       }, 5000);
     }
 
+    // Clear pending candidates
+    pendingCandidatesRef.current = [];
+    
     setCallState('idle');
     setCallDuration(0);
     incomingSignalRef.current = null;
@@ -758,6 +780,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
                     new RTCSessionDescription(signal.signal_data.answer)
                   );
                   console.log('[VoiceCall] Remote description set successfully');
+                  
+                  // Process any queued ICE candidates now that remote description is set
+                  await processPendingCandidates(peerConnectionRef.current);
                 } catch (e) {
                   console.error('[VoiceCall] Error setting remote description:', e);
                 }
@@ -765,13 +790,21 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               break;
 
             case 'ice-candidate':
-              if (peerConnectionRef.current && signal.signal_data?.candidate) {
-                try {
-                  await peerConnectionRef.current.addIceCandidate(
-                    new RTCIceCandidate(signal.signal_data.candidate)
-                  );
-                } catch (e) {
-                  console.error('[VoiceCall] Error adding ICE candidate:', e);
+              if (signal.signal_data?.candidate) {
+                // If peer connection is ready and has remote description, add candidate immediately
+                if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
+                  try {
+                    await peerConnectionRef.current.addIceCandidate(
+                      new RTCIceCandidate(signal.signal_data.candidate)
+                    );
+                    console.log('[VoiceCall] Added ICE candidate immediately');
+                  } catch (e) {
+                    console.error('[VoiceCall] Error adding ICE candidate:', e);
+                  }
+                } else {
+                  // Queue candidate for later when remote description is set
+                  console.log('[VoiceCall] Queuing ICE candidate for later');
+                  pendingCandidatesRef.current.push(signal.signal_data.candidate);
                 }
               }
               break;
