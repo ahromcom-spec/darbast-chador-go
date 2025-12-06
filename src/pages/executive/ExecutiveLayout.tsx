@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, CheckSquare, PackageOpen, Truck } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, CheckSquare, PackageOpen, Truck, ArrowLeftRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
@@ -58,6 +58,11 @@ const navItems = [
     title: 'مشتریان',
     href: '/executive/customers',
     icon: Users
+  },
+  {
+    title: 'انتقال سفارش',
+    href: '/admin/order-transfers',
+    icon: ArrowLeftRight
   }
 ];
 
