@@ -846,6 +846,62 @@ export type Database = {
           },
         ]
       }
+      order_transfer_requests: {
+        Row: {
+          created_at: string
+          from_user_id: string
+          id: string
+          manager_approved_at: string | null
+          manager_approved_by: string | null
+          manager_rejection_reason: string | null
+          order_id: string
+          recipient_rejection_reason: string | null
+          recipient_responded_at: string | null
+          status: string
+          to_phone_number: string
+          to_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_user_id: string
+          id?: string
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
+          manager_rejection_reason?: string | null
+          order_id: string
+          recipient_rejection_reason?: string | null
+          recipient_responded_at?: string | null
+          status?: string
+          to_phone_number: string
+          to_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
+          manager_rejection_reason?: string | null
+          order_id?: string
+          recipient_rejection_reason?: string | null
+          recipient_responded_at?: string | null
+          status?: string
+          to_phone_number?: string
+          to_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_transfer_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string | null
@@ -1477,6 +1533,8 @@ export type Database = {
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           transaction_reference: string | null
+          transferred_from_phone: string | null
+          transferred_from_user_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1520,6 +1578,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           transaction_reference?: string | null
+          transferred_from_phone?: string | null
+          transferred_from_user_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1563,6 +1623,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id?: string
           transaction_reference?: string | null
+          transferred_from_phone?: string | null
+          transferred_from_user_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2965,6 +3027,8 @@ export type Database = {
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           transaction_reference: string | null
+          transferred_from_phone: string | null
+          transferred_from_user_id: string | null
           updated_at: string | null
         }[]
         SetofOptions: {

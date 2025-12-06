@@ -86,6 +86,7 @@ const MyProjectsHierarchy = lazy(() => import("./pages/user/MyProjectsHierarchy"
 const ZarinpalCallback = lazy(() => import("./pages/payment/ZarinpalCallback"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
+const OrderTransferManagement = lazy(() => import("@/pages/admin/OrderTransferManagement"));
 const MapTest = lazy(() => import("@/pages/test/MapTest"));
 
 
@@ -261,6 +262,7 @@ const App = () => {
                 <Route path="staff-requests" element={<StaffRequests />} />
                 <Route path="whitelist" element={<WhitelistManagement />} />
                 <Route path="test-order" element={<TestOrderCreator />} />
+                <Route path="order-transfers" element={<OrderTransferManagement />} />
               </Route>
               <Route path="/ceo" element={<CEOLayout />}>
                 <Route index element={<CEODashboardEnhanced />} />
