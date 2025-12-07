@@ -86,10 +86,15 @@ serve(async (req) => {
     if (oneSignalAppId && oneSignalApiKey) {
       try {
         console.log('[NotifyManagers] Sending OneSignal push to', uniqueManagerIds.length, 'managers');
+        console.log('[NotifyManagers] Manager IDs:', uniqueManagerIds);
         
+        // استفاده از include_aliases به جای include_external_user_ids (deprecated)
         const notificationData = {
           app_id: oneSignalAppId,
-          include_external_user_ids: uniqueManagerIds,
+          include_aliases: {
+            external_id: uniqueManagerIds
+          },
+          target_channel: "push",
           headings: { fa: title, en: title },
           contents: { fa: body, en: body },
           url: `https://ahrom.org${link}`,
@@ -97,6 +102,8 @@ serve(async (req) => {
           priority: 10,
           android_channel_id: 'new_orders',
         };
+
+        console.log('[NotifyManagers] Notification payload:', JSON.stringify(notificationData));
 
         const response = await fetch('https://onesignal.com/api/v1/notifications', {
           method: 'POST',
@@ -110,16 +117,16 @@ serve(async (req) => {
         const result = await response.json();
         
         if (response.ok && result.id) {
-          console.log('[NotifyManagers] ✓ OneSignal push sent successfully:', result.id);
-          pushSentCount = uniqueManagerIds.length;
+          console.log('[NotifyManagers] ✓ OneSignal push sent successfully:', result.id, 'recipients:', result.recipients);
+          pushSentCount = result.recipients || uniqueManagerIds.length;
         } else {
-          console.error('[NotifyManagers] OneSignal error:', result);
+          console.error('[NotifyManagers] OneSignal error response:', JSON.stringify(result));
         }
       } catch (oneSignalError) {
         console.error('[NotifyManagers] OneSignal request failed:', oneSignalError);
       }
     } else {
-      console.log('[NotifyManagers] OneSignal not configured, skipping push notifications');
+      console.log('[NotifyManagers] OneSignal not configured - AppId:', !!oneSignalAppId, 'ApiKey:', !!oneSignalApiKey);
     }
 
     return new Response(
