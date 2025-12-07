@@ -235,5 +235,13 @@
     
     <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "bbc288e4-bad9-4da0-9270-d499e0aa1eb3",
+        });
+      });
+    </script>
   </body>
 </html>
