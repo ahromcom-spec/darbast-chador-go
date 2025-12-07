@@ -352,7 +352,18 @@ export default function ScaffoldingFacadeForm() {
         duration: 5000,
       });
 
-      // اتوماسیون اداری حالا با database trigger اجرا می‌شود (order-automation function حذف شد)
+      // ارسال نوتیفیکیشن به مدیران (در پس‌زمینه)
+      supabase.functions.invoke('notify-managers-new-order', {
+        body: {
+          order_code: createdProject.code,
+          order_id: createdProject.id,
+          customer_name: user?.user_metadata?.full_name || '',
+          customer_phone: user?.phone || '',
+          service_type: 'داربست نما'
+        }
+      }).catch(err => {
+        console.error('Notify managers error:', err);
+      });
 
       // Navigate after a short delay to let user see the success message
       setTimeout(() => {
