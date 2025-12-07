@@ -265,7 +265,21 @@ export default function ScaffoldingRentalForm() {
 
       // Save order ID for media upload (orderData is the order ID string)
       const orderId = Array.isArray(orderData) ? orderData[0]?.id : orderData;
+      const orderCode = Array.isArray(orderData) ? orderData[0]?.code : null;
       setCreatedOrderId(orderId);
+
+      // ارسال نوتیفیکیشن به مدیران (در پس‌زمینه)
+      supabase.functions.invoke('notify-managers-new-order', {
+        body: {
+          order_code: orderCode || orderId,
+          order_id: orderId,
+          customer_name: user?.user_metadata?.full_name || '',
+          customer_phone: user?.phone || '',
+          service_type: 'کرایه اجناس داربست'
+        }
+      }).catch(err => {
+        console.error('Notify managers error:', err);
+      });
 
       toast({
         title: '✅ سفارش ثبت شد',

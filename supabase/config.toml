@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.get-onesignal-app-id]
 verify_jwt = false
+
+[functions.notify-managers-new-order]
+verify_jwt = true

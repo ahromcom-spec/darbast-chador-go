@@ -1174,7 +1174,24 @@ export default function ComprehensiveScaffoldingForm({
           });
         }
 
-        // اتوماسیون اداری حالا با database trigger اجرا می‌شود (order-automation function حذف شد)
+        // ارسال نوتیفیکیشن به مدیران (در پس‌زمینه)
+        const serviceTypeName = activeService === 'facade' ? 'داربست نما' :
+                                activeService === 'column' ? 'داربست ستون' :
+                                activeService === 'formwork' ? 'داربست حجمی کفراژ' :
+                                activeService === 'pipe-length' ? 'داربست متراژ' :
+                                activeService.includes('ceiling') ? 'داربست سقف' : 'داربست';
+        
+        supabase.functions.invoke('notify-managers-new-order', {
+          body: {
+            order_code: createdProject.code,
+            order_id: createdProject.id,
+            customer_name: user?.user_metadata?.full_name || '',
+            customer_phone: user?.phone || '',
+            service_type: serviceTypeName
+          }
+        }).catch(err => {
+          console.error('Notify managers error:', err);
+        });
 
         // هدایت کاربر به صفحه جزئیات سفارش بلافاصله
         navigate(`/user/orders/${createdProject.id}`);
