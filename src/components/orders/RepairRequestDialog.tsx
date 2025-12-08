@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import {
@@ -24,6 +26,9 @@ import {
   Send,
   Image,
   Film,
+  User,
+  ShieldCheck,
+  Coins,
 } from "lucide-react";
 import { formatPersianDateTime } from "@/lib/dateUtils";
 
@@ -61,6 +66,7 @@ interface RepairRequestDialogProps {
   orderCode: string;
   customerId: string;
   onRepairCostChange?: (cost: number) => void;
+  isManager?: boolean;
 }
 
 export function RepairRequestDialog({
@@ -70,6 +76,7 @@ export function RepairRequestDialog({
   orderCode,
   customerId,
   onRepairCostChange,
+  isManager = false,
 }: RepairRequestDialogProps) {
   const [loading, setLoading] = useState(true);
   const [existingRequest, setExistingRequest] = useState<RepairRequest | null>(null);
@@ -80,7 +87,47 @@ export function RepairRequestDialog({
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [repairCostInput, setRepairCostInput] = useState("");
+  const [updatingCost, setUpdatingCost] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Auto scroll to bottom of messages
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Subscribe to realtime messages
+  useEffect(() => {
+    if (!existingRequest) return;
+
+    const channel = supabase
+      .channel(`repair-messages-${existingRequest.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'repair_request_messages',
+          filter: `repair_request_id=eq.${existingRequest.id}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as RepairMessage;
+          setMessages((prev) => {
+            // Avoid duplicates
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [existingRequest?.id]);
 
   useEffect(() => {
     if (open) {
@@ -289,7 +336,7 @@ export function RepairRequestDialog({
           repair_request_id: existingRequest.id,
           user_id: user.id,
           message: message.trim(),
-          is_staff: false,
+          is_staff: isManager,
         })
         .select()
         .single();
@@ -307,6 +354,46 @@ export function RepairRequestDialog({
       });
     } finally {
       setSendingMessage(false);
+    }
+  };
+
+  // Manager can update repair cost
+  const handleUpdateRepairCost = async () => {
+    if (!existingRequest || !isManager) return;
+    const costValue = parseInt(repairCostInput.replace(/,/g, ''), 10);
+    if (isNaN(costValue) || costValue < 0) {
+      toast({
+        title: 'خطا',
+        description: 'لطفاً یک عدد معتبر وارد کنید',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUpdatingCost(true);
+    try {
+      const { error } = await supabase
+        .from('repair_requests')
+        .update({ final_cost: costValue })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      setExistingRequest({ ...existingRequest, final_cost: costValue });
+      onRepairCostChange?.(costValue);
+      toast({
+        title: '✓ موفق',
+        description: 'هزینه تعمیر با موفقیت به‌روزرسانی شد',
+      });
+    } catch (error: any) {
+      console.error('Error updating repair cost:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در به‌روزرسانی هزینه',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingCost(false);
     }
   };
 
@@ -353,17 +440,50 @@ export function RepairRequestDialog({
             </div>
 
             {/* Cost Info */}
-            <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+            <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">هزینه تخمینی:</span>
+                <span className="text-sm text-muted-foreground">هزینه تعمیر:</span>
                 <span className="font-bold text-lg text-primary">
                   {(existingRequest.final_cost || existingRequest.estimated_cost).toLocaleString('fa-IR')} تومان
                 </span>
               </div>
               {existingRequest.final_cost && existingRequest.final_cost !== existingRequest.estimated_cost && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground">
                   هزینه اولیه: {existingRequest.estimated_cost.toLocaleString('fa-IR')} تومان
                 </p>
+              )}
+              
+              {/* Manager can set/update cost */}
+              {isManager && (
+                <div className="pt-2 border-t border-primary/20">
+                  <Label className="text-sm font-medium flex items-center gap-1 mb-2">
+                    <Coins className="h-4 w-4" />
+                    تنظیم هزینه تعمیر (تومان):
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={repairCostInput}
+                      onChange={(e) => setRepairCostInput(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="مثال: 2500000"
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={handleUpdateRepairCost}
+                      disabled={updatingCost || !repairCostInput}
+                      size="sm"
+                    >
+                      {updatingCost ? (
+                        <Clock className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'اعمال'
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    هزینه را از صفر تومان به بالا می‌توانید تنظیم کنید.
+                  </p>
+                </div>
               )}
             </div>
 
@@ -379,22 +499,21 @@ export function RepairRequestDialog({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">تصاویر و ویدیوها:</label>
-                {existingRequest.status === 'pending' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => document.getElementById('repair-media-upload')?.click()}
-                    disabled={uploading}
-                    className="gap-1"
-                  >
-                    {uploading ? (
-                      <Clock className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Upload className="h-4 w-4" />
-                    )}
-                    افزودن
-                  </Button>
-                )}
+                {/* Both customer and manager can upload media */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('repair-media-upload')?.click()}
+                  disabled={uploading}
+                  className="gap-1"
+                >
+                  {uploading ? (
+                    <Clock className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  افزودن {isManager ? '(مدیر)' : ''}
+                </Button>
               </div>
               <input
                 id="repair-media-upload"
@@ -442,27 +561,40 @@ export function RepairRequestDialog({
 
             {/* Chat Messages */}
             <div className="space-y-3">
-              <label className="text-sm font-medium">پیام‌ها:</label>
-              <div className="space-y-2 max-h-48 overflow-y-auto p-2 bg-muted/20 rounded-lg">
+              <label className="text-sm font-medium flex items-center gap-2">
+                گفتگو بین مشتری و مدیر:
+              </label>
+              <div className="space-y-2 max-h-64 overflow-y-auto p-3 bg-muted/20 rounded-lg border">
                 {messages.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">هنوز پیامی ارسال نشده است</p>
                 ) : (
                   messages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`p-2 rounded-lg max-w-[80%] ${
+                      className={`p-3 rounded-lg max-w-[85%] ${
                         msg.is_staff
-                          ? 'bg-primary/10 ml-auto'
-                          : 'bg-muted mr-auto'
+                          ? 'bg-primary/15 ml-auto border-r-2 border-primary'
+                          : 'bg-muted mr-auto border-l-2 border-blue-500'
                       }`}
                     >
+                      <div className="flex items-center gap-1 mb-1">
+                        {msg.is_staff ? (
+                          <ShieldCheck className="h-3 w-3 text-primary" />
+                        ) : (
+                          <User className="h-3 w-3 text-blue-500" />
+                        )}
+                        <span className="text-xs font-medium">
+                          {msg.is_staff ? 'مدیر' : 'مشتری'}
+                        </span>
+                      </div>
                       <p className="text-sm">{msg.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-1 text-left">
                         {formatPersianDateTime(msg.created_at)}
                       </p>
                     </div>
                   ))
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Send Message */}
@@ -470,8 +602,14 @@ export function RepairRequestDialog({
                 <Textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="پیام خود را بنویسید..."
+                  placeholder={isManager ? 'پیام مدیر را بنویسید...' : 'پیام خود را بنویسید...'}
                   className="resize-none h-20"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
                 />
                 <Button
                   onClick={handleSendMessage}
@@ -485,6 +623,9 @@ export function RepairRequestDialog({
                   )}
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                {isManager ? 'شما به عنوان مدیر پیام ارسال می‌کنید' : 'پیام شما برای مدیر ارسال می‌شود'}
+              </p>
             </div>
 
             {/* Payment Button for approved/completed repairs */}
