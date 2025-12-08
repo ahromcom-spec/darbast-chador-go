@@ -48,6 +48,7 @@ import {
   ArrowLeftRight
 } from "lucide-react";
 import { OrderTransfer } from "@/components/orders/OrderTransfer";
+import { RepairRequestDialog } from "@/components/orders/RepairRequestDialog";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { useProjectRatings, RatingCriteria } from "@/hooks/useRatings";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,6 +60,7 @@ import { formatPersianDate, formatPersianDateTime, formatPersianDateTimeFull } f
 interface Order {
   id: string;
   code: string;
+  customer_id: string;
   status: 'draft' | 'pending' | 'approved' | 'rejected' | 'scheduled' | 'active' | 'pending_execution' | 'completed' | 'in_progress' | 'paid' | 'closed';
   created_at: string;
   updated_at: string;
@@ -177,6 +179,8 @@ export default function OrderDetail() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [showRepairDialog, setShowRepairDialog] = useState(false);
+  const [repairCost, setRepairCost] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -1407,6 +1411,37 @@ export default function OrderDetail() {
             </Card>
           )}
 
+          {/* دکمه درخواست تعمیر - فقط برای سفارش‌های اجرا شده و پرداخت شده */}
+          {order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
+           ['approved', 'in_progress', 'completed', 'paid', 'closed'].includes(order.status) && (
+            <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
+                      <Edit className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
+                        آیا نیاز به تعمیر داربست دارید؟
+                      </p>
+                      <p className="text-sm text-amber-700 dark:text-amber-300">
+                        در صورت آسیب‌دیدگی یا نیاز به تعمیر داربست، درخواست خود را ثبت کنید.
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => setShowRepairDialog(true)}
+                    className="gap-2 bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
+                  >
+                    <Edit className="h-4 w-4" />
+                    نیاز به تعمیر سفارش انجام شده داریم
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* نقشه موقعیت پروژه */}
           {order.location_lat && order.location_lng && (
             <Card>
@@ -2106,6 +2141,16 @@ export default function OrderDetail() {
             open={showTransferDialog}
             onOpenChange={setShowTransferDialog}
             onTransferRequested={fetchOrderDetails}
+          />
+
+          {/* Repair Request Dialog */}
+          <RepairRequestDialog
+            open={showRepairDialog}
+            onOpenChange={setShowRepairDialog}
+            orderId={order.id}
+            orderCode={order.code}
+            customerId={(order as any).customer_id || ''}
+            onRepairCostChange={(cost) => setRepairCost(cost)}
           />
 
         </div>
