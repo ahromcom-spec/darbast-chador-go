@@ -1411,8 +1411,8 @@ export default function OrderDetail() {
             </Card>
           )}
 
-          {/* دکمه درخواست تعمیر - فقط برای سفارش‌های اجرا شده و پرداخت شده */}
-          {order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
+          {/* دکمه درخواست تعمیر - فقط برای سفارش‌های تایید شده خدمات اجرای داربست به همراه اجناس */}
+          {order.subcategory?.code === '10' && 
            ['approved', 'in_progress', 'completed', 'paid', 'closed'].includes(order.status) && (
             <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
               <CardContent className="pt-6">
