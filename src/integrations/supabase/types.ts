@@ -1958,6 +1958,151 @@ export type Database = {
           },
         ]
       }
+      repair_request_media: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_size: number | null
+          file_type: string
+          id: string
+          mime_type: string | null
+          repair_request_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_size?: number | null
+          file_type: string
+          id?: string
+          mime_type?: string | null
+          repair_request_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string
+          id?: string
+          mime_type?: string | null
+          repair_request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_request_media_repair_request_id_fkey"
+            columns: ["repair_request_id"]
+            isOneToOne: false
+            referencedRelation: "repair_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repair_request_messages: {
+        Row: {
+          audio_path: string | null
+          created_at: string
+          id: string
+          is_staff: boolean | null
+          message: string
+          repair_request_id: string
+          user_id: string
+        }
+        Insert: {
+          audio_path?: string | null
+          created_at?: string
+          id?: string
+          is_staff?: boolean | null
+          message: string
+          repair_request_id: string
+          user_id: string
+        }
+        Update: {
+          audio_path?: string | null
+          created_at?: string
+          id?: string
+          is_staff?: boolean | null
+          message?: string
+          repair_request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_request_messages_repair_request_id_fkey"
+            columns: ["repair_request_id"]
+            isOneToOne: false
+            referencedRelation: "repair_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repair_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          created_at: string
+          customer_id: string
+          description: string | null
+          estimated_cost: number | null
+          final_cost: number | null
+          id: string
+          order_id: string
+          paid_at: string | null
+          payment_reference: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          estimated_cost?: number | null
+          final_cost?: number | null
+          id?: string
+          order_id: string
+          paid_at?: string | null
+          payment_reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          estimated_cost?: number | null
+          final_cost?: number | null
+          id?: string
+          order_id?: string
+          paid_at?: string | null
+          payment_reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repair_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reputation_scores: {
         Row: {
           contractor_score: number | null
