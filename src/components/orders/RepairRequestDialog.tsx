@@ -89,6 +89,8 @@ export function RepairRequestDialog({
   const [sendingMessage, setSendingMessage] = useState(false);
   const [repairCostInput, setRepairCostInput] = useState("");
   const [updatingCost, setUpdatingCost] = useState(false);
+  const [approvingRepair, setApprovingRepair] = useState(false);
+  const [completingRepair, setCompletingRepair] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -397,6 +399,90 @@ export function RepairRequestDialog({
     }
   };
 
+  // Manager approves repair and sets it to approved status
+  const handleApproveRepair = async () => {
+    if (!existingRequest || !isManager) return;
+
+    setApprovingRepair(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const finalCost = existingRequest.final_cost || existingRequest.estimated_cost;
+
+      const { error } = await supabase
+        .from('repair_requests')
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user.id,
+          final_cost: finalCost,
+        })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      setExistingRequest({
+        ...existingRequest,
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+        final_cost: finalCost,
+      });
+      onRepairCostChange?.(finalCost);
+
+      toast({
+        title: '✓ موفق',
+        description: 'درخواست تعمیر تایید شد و هزینه به حساب مشتری اضافه شد',
+      });
+    } catch (error: any) {
+      console.error('Error approving repair:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در تایید درخواست تعمیر',
+        variant: 'destructive',
+      });
+    } finally {
+      setApprovingRepair(false);
+    }
+  };
+
+  // Manager marks repair as completed
+  const handleCompleteRepair = async () => {
+    if (!existingRequest || !isManager) return;
+
+    setCompletingRepair(true);
+    try {
+      const { error } = await supabase
+        .from('repair_requests')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      setExistingRequest({
+        ...existingRequest,
+        status: 'completed',
+      });
+
+      toast({
+        title: '✓ موفق',
+        description: 'تعمیر به عنوان تکمیل‌شده ثبت شد. مشتری می‌تواند هزینه را پرداخت کند.',
+      });
+    } catch (error: any) {
+      console.error('Error completing repair:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در ثبت تکمیل تعمیر',
+        variant: 'destructive',
+      });
+    } finally {
+      setCompletingRepair(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -483,6 +569,44 @@ export function RepairRequestDialog({
                   <p className="text-xs text-muted-foreground mt-1">
                     هزینه را از صفر تومان به بالا می‌توانید تنظیم کنید.
                   </p>
+                </div>
+              )}
+              
+              {/* Manager approve/complete repair button */}
+              {isManager && existingRequest.status === 'pending' && (
+                <div className="pt-3 mt-3 border-t border-primary/20">
+                  <Button
+                    onClick={handleApproveRepair}
+                    disabled={approvingRepair}
+                    className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    {approvingRepair ? (
+                      <Clock className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4" />
+                    )}
+                    تایید و ثبت هزینه تعمیر در سفارش
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    با تایید، هزینه تعمیر به حساب مشتری اضافه می‌شود و مشتری می‌تواند پرداخت کند.
+                  </p>
+                </div>
+              )}
+              
+              {isManager && existingRequest.status === 'approved' && (
+                <div className="pt-3 mt-3 border-t border-primary/20">
+                  <Button
+                    onClick={handleCompleteRepair}
+                    disabled={completingRepair}
+                    className="w-full gap-2 bg-purple-600 hover:bg-purple-700"
+                  >
+                    {completingRepair ? (
+                      <Clock className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4" />
+                    )}
+                    تکمیل تعمیر
+                  </Button>
                 </div>
               )}
             </div>
