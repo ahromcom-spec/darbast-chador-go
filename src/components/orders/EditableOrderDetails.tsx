@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ImageIcon, ChevronLeft, ChevronRight, Ruler, FileText, Layers, User, Phone, MapPin, 
-  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer
+  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench
 } from 'lucide-react';
 import { ManagerOrderInvoice } from './ManagerOrderInvoice';
 import { formatPersianDate } from '@/lib/dateUtils';
@@ -19,6 +19,7 @@ import { parseOrderNotes } from './OrderDetailsView';
 import VoiceCall from './VoiceCall';
 import CallHistory from '@/components/calls/CallHistory';
 import OrderChat from './OrderChat';
+import { RepairRequestDialog } from './RepairRequestDialog';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -282,6 +283,7 @@ interface EditableOrderDetailsProps {
 export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [repairDialogOpen, setRepairDialogOpen] = useState(false);
   const { toast } = useToast();
   
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
@@ -592,6 +594,30 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
       {/* Chat with customer */}
       <Separator />
       <OrderChat orderId={order.id} orderStatus="pending" />
+
+      {/* Repair Request Section for Managers */}
+      <Separator />
+      <div className="space-y-2">
+        <Button 
+          variant="outline" 
+          className="w-full gap-2"
+          onClick={() => setRepairDialogOpen(true)}
+        >
+          <Wrench className="h-4 w-4" />
+          نیاز به تعمیر داربست
+        </Button>
+      </div>
+
+      {/* Repair Request Dialog - Manager Mode */}
+      <RepairRequestDialog
+        open={repairDialogOpen}
+        onOpenChange={setRepairDialogOpen}
+        orderId={order.id}
+        orderCode={order.code}
+        customerId={order.customer_id || ''}
+        isManager={true}
+        onRepairCostChange={onUpdate}
+      />
     </div>
   );
 };
