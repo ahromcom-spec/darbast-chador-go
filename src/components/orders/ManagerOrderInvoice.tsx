@@ -48,6 +48,15 @@ interface ManagerOrderInvoiceProps {
   };
 }
 
+interface RepairRequest {
+  id: string;
+  description: string | null;
+  estimated_cost: number | null;
+  final_cost: number | null;
+  status: string;
+  created_at: string;
+}
+
 export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
   const [open, setOpen] = useState(false);
   const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string }>>([]);
@@ -55,6 +64,7 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
   const [messages, setMessages] = useState<Array<{ message: string; is_staff: boolean; created_at: string; user_id: string }>>([]);
   const [provinceName, setProvinceName] = useState('');
   const [subcategoryName, setSubcategoryName] = useState('');
+  const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
 
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
@@ -119,6 +129,15 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
           .single();
         if (subcategory) setSubcategoryName(subcategory.name);
       }
+
+      // Fetch repair requests
+      const { data: repairData } = await supabase
+        .from('repair_requests')
+        .select('id, description, estimated_cost, final_cost, status, created_at')
+        .eq('order_id', order.id)
+        .order('created_at', { ascending: true });
+      
+      if (repairData) setRepairRequests(repairData);
     };
 
     fetchData();
@@ -134,8 +153,8 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
     const styles = `
       <style>
         @page { 
-          size: A4; 
-          margin: 15mm; 
+          size: A4 landscape; 
+          margin: 10mm; 
         }
         * {
           box-sizing: border-box;
@@ -145,179 +164,211 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
           direction: rtl; 
           padding: 0;
           margin: 0;
-          font-size: 11px;
-          line-height: 1.6;
+          font-size: 10px;
+          line-height: 1.4;
           color: #333;
         }
         .invoice-container {
           max-width: 100%;
         }
-        .header {
+        
+        /* Header Section */
+        .header-box {
+          border: 2px solid #f97316;
+          border-radius: 8px;
+          padding: 10px;
+          margin-bottom: 10px;
+          background: linear-gradient(to bottom, #fff, #fef3e2);
+        }
+        .header-top {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          border-bottom: 2px solid #2563eb;
-          padding-bottom: 12px;
-          margin-bottom: 15px;
+          border-bottom: 1px solid #f97316;
+          padding-bottom: 8px;
+          margin-bottom: 8px;
         }
-        .logo-section {
+        .logo-left, .logo-right {
+          width: 80px;
+        }
+        .logo-left img, .logo-right img {
+          height: 50px;
+        }
+        .header-center {
+          text-align: center;
+          flex: 1;
+        }
+        .header-title {
+          font-size: 16px;
+          font-weight: bold;
+          color: #f97316;
+        }
+        .header-subtitle {
+          font-size: 11px;
+          color: #333;
+        }
+        .header-website {
+          font-size: 12px;
+          color: #3b82f6;
+          font-weight: bold;
+        }
+        
+        /* Info Grid */
+        .info-section {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          margin-bottom: 10px;
+        }
+        .info-box {
           display: flex;
-          align-items: center;
-          gap: 10px;
+          border: 1px solid #ddd;
         }
-        .logo-section img {
-          height: 40px;
-        }
-        .company-name {
-          font-size: 18px;
+        .info-label {
+          background: #1e3a5f;
+          color: white;
+          padding: 5px 10px;
+          min-width: 140px;
           font-weight: bold;
-          color: #2563eb;
+          font-size: 9px;
         }
-        .invoice-title {
-          font-size: 14px;
-          color: #666;
+        .info-value {
+          padding: 5px 10px;
+          flex: 1;
+          background: white;
+          font-size: 10px;
         }
-        .order-code {
-          background: #f1f5f9;
-          padding: 8px 15px;
-          border-radius: 8px;
+        
+        /* Order Table */
+        .order-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 10px;
+          font-size: 9px;
+        }
+        .order-table th {
+          background: #3b82f6;
+          color: white;
+          padding: 6px 4px;
+          border: 1px solid #2563eb;
+          text-align: center;
           font-weight: bold;
-          font-size: 14px;
         }
-        .section {
-          margin-bottom: 15px;
-          padding: 12px;
+        .order-table td {
+          border: 1px solid #ddd;
+          padding: 5px 4px;
+          text-align: center;
+          background: white;
+        }
+        .order-table tr:nth-child(even) td {
           background: #f8fafc;
-          border-radius: 8px;
+        }
+        .repair-row td {
+          background: #fef3c7 !important;
+        }
+        
+        /* Total Row */
+        .total-row {
+          background: #fef3c7 !important;
+          font-weight: bold;
+        }
+        .total-row td {
+          background: #fef3c7 !important;
+        }
+        
+        /* Images Section */
+        .images-section {
+          margin-top: 10px;
+          padding: 10px;
+          background: #f8fafc;
           border: 1px solid #e2e8f0;
+          border-radius: 4px;
         }
         .section-title {
           font-weight: bold;
-          font-size: 12px;
-          color: #1e40af;
+          font-size: 11px;
+          color: #1e3a5f;
           margin-bottom: 8px;
-          display: flex;
-          align-items: center;
-          gap: 5px;
-        }
-        .info-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 10px;
-        }
-        .info-item {
-          display: flex;
-          flex-direction: column;
-        }
-        .info-label {
-          font-size: 10px;
-          color: #64748b;
-        }
-        .info-value {
-          font-weight: 500;
-        }
-        .full-width {
-          grid-column: span 2;
-        }
-        .dimensions-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 8px;
-        }
-        .dimensions-table th,
-        .dimensions-table td {
-          border: 1px solid #e2e8f0;
-          padding: 6px 8px;
-          text-align: center;
-          font-size: 10px;
-        }
-        .dimensions-table th {
-          background: #e2e8f0;
-          font-weight: bold;
-        }
-        .conditions-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 5px;
-          margin-top: 5px;
-        }
-        .condition-badge {
-          background: #dbeafe;
-          color: #1e40af;
-          padding: 3px 8px;
-          border-radius: 4px;
-          font-size: 9px;
-        }
-        .price-box {
-          background: #dcfce7;
-          border: 1px solid #86efac;
-          padding: 12px;
-          border-radius: 8px;
-          text-align: center;
-        }
-        .price-value {
-          font-size: 18px;
-          font-weight: bold;
-          color: #166534;
+          border-bottom: 1px solid #ddd;
+          padding-bottom: 4px;
         }
         .images-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 8px;
-          margin-top: 8px;
         }
         .image-thumb {
           width: 100%;
           height: 80px;
           object-fit: cover;
           border-radius: 4px;
-          border: 1px solid #e2e8f0;
+          border: 1px solid #ddd;
         }
-        .messages-list {
-          max-height: 150px;
-          overflow: hidden;
-          margin-top: 8px;
+        
+        /* Messages Section */
+        .messages-section {
+          margin-top: 10px;
+          padding: 10px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
         }
         .message-item {
-          padding: 6px 8px;
-          margin-bottom: 5px;
-          border-radius: 6px;
-          font-size: 10px;
+          padding: 5px 8px;
+          margin-bottom: 4px;
+          border-radius: 4px;
+          font-size: 9px;
         }
         .message-customer {
-          background: #f1f5f9;
-          margin-left: 20%;
+          background: #e2e8f0;
+          margin-left: 30%;
         }
         .message-staff {
           background: #dbeafe;
-          margin-right: 20%;
+          margin-right: 30%;
         }
         .message-time {
           font-size: 8px;
-          color: #94a3b8;
-          margin-top: 3px;
+          color: #64748b;
+          margin-top: 2px;
         }
-        .status-badge {
-          display: inline-block;
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 11px;
+        
+        /* Footer */
+        .footer-section {
+          margin-top: 15px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+        .signature-box {
+          text-align: center;
+          padding: 10px;
+        }
+        .signature-label {
+          font-size: 10px;
           font-weight: bold;
+          margin-bottom: 30px;
         }
-        .status-pending { background: #fef3c7; color: #92400e; }
-        .status-approved { background: #d1fae5; color: #065f46; }
-        .status-in_progress { background: #dbeafe; color: #1e40af; }
-        .status-completed { background: #d1fae5; color: #065f46; }
-        .status-paid { background: #dcfce7; color: #166534; }
-        .status-rejected { background: #fee2e2; color: #991b1b; }
-        .footer {
-          margin-top: 20px;
-          padding-top: 12px;
-          border-top: 1px solid #e2e8f0;
+        .signature-line {
+          border-top: 1px solid #333;
+          width: 150px;
+          margin: 0 auto;
+        }
+        .bank-info {
           text-align: center;
           font-size: 9px;
-          color: #64748b;
+          margin-top: 10px;
+          padding: 8px;
+          background: #f1f5f9;
+          border-radius: 4px;
         }
+        .print-date {
+          text-align: center;
+          font-size: 8px;
+          color: #64748b;
+          margin-top: 10px;
+        }
+        
         @media print {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -341,7 +392,6 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
     
     printWindow.document.close();
     
-    // Wait for fonts and images to load
     setTimeout(() => {
       printWindow.print();
     }, 1000);
@@ -349,16 +399,58 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
 
   const dimensions = parsedNotes?.dimensions;
   const totalArea = parsedNotes?.totalArea || parsedNotes?.total_area;
-  const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
   const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
   const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
   const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes;
   const installDate = parsedNotes?.installDate || parsedNotes?.install_date;
   const dueDate = parsedNotes?.dueDate || parsedNotes?.due_date;
-  const rentalDuration = parsedNotes?.rentalDuration;
-  const distance = parsedNotes?.distance;
-  const vehicleAccess = parsedNotes?.vehicleAccess;
-  const groundCondition = parsedNotes?.groundCondition;
+
+  // Calculate total price including repairs
+  const orderPrice = order.payment_amount ? Number(order.payment_amount) : 0;
+  const repairTotal = repairRequests.reduce((sum, r) => sum + (r.final_cost || r.estimated_cost || 0), 0);
+  const grandTotal = orderPrice + repairTotal;
+
+  // Get dimension info
+  const getDimensionText = () => {
+    if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
+      const dim = dimensions[0];
+      return `طول${dim.length || dim.l || '-'}در${dim.width || dim.w || '-'}ارتفاع${dim.height || dim.h || '-'}`;
+    }
+    if (dimensions && !Array.isArray(dimensions)) {
+      return `طول${dimensions.length || '-'}در${dimensions.width || '-'}ارتفاع${dimensions.height || '-'}`;
+    }
+    return '-';
+  };
+
+  const getLength = () => {
+    if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
+      return dimensions[0].length || dimensions[0].l || '-';
+    }
+    if (dimensions && !Array.isArray(dimensions)) {
+      return dimensions.length || '-';
+    }
+    return '-';
+  };
+
+  const getWidth = () => {
+    if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
+      return dimensions[0].width || dimensions[0].w || '-';
+    }
+    if (dimensions && !Array.isArray(dimensions)) {
+      return dimensions.width || '-';
+    }
+    return '-';
+  };
+
+  const getHeight = () => {
+    if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
+      return dimensions[0].height || dimensions[0].h || '-';
+    }
+    if (dimensions && !Array.isArray(dimensions)) {
+      return dimensions.height || '-';
+    }
+    return '-';
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -368,7 +460,7 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
           پرینت فاکتور
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>پیش‌نمایش فاکتور سفارش</span>
@@ -385,213 +477,164 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         </DialogHeader>
 
         {/* Print Content */}
-        <div ref={printRef} className="bg-white p-6" dir="rtl">
+        <div ref={printRef} className="bg-white p-4" dir="rtl">
           <div className="invoice-container">
-            {/* Header */}
-            <div className="header">
-              <div className="logo-section">
-                <img src="/ahrom-logo.png" alt="اهرم" />
-                <div>
-                  <div className="company-name">خدمات ساختمان و منزل اهرم</div>
-                  <div className="invoice-title">فاکتور سفارش</div>
-                </div>
+            
+            {/* Top Service Name Row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '10px' }}>
+              <div style={{ border: '1px solid #ddd', padding: '4px 8px' }}>
+                نام خدمات: {subcategoryName || 'داربست، اجرا از مبدا با اجناس، قم'}
               </div>
-              <div className="order-code">
-                کد سفارش: {order.code}
+              <div style={{ border: '1px solid #ddd', padding: '4px 8px', fontWeight: 'bold', fontSize: '12px' }}>
+                {order.code}
               </div>
             </div>
 
-            {/* Order Status & Date */}
-            <div className="section">
-              <div className="info-grid">
-                <div className="info-item">
-                  <span className="info-label">وضعیت سفارش</span>
-                  <span className={`status-badge status-${order.status || 'pending'}`}>
-                    {statusLabels[order.status || 'pending'] || order.status}
-                  </span>
+            {/* Header Box */}
+            <div className="header-box">
+              <div className="header-top">
+                <div className="logo-left">
+                  <img src="/ahrom-logo.png" alt="اهرم" />
                 </div>
-                <div className="info-item">
-                  <span className="info-label">تاریخ ثبت</span>
-                  <span className="info-value">{order.created_at ? formatPersianDate(order.created_at) : '-'}</span>
-                </div>
-                {subcategoryName && (
-                  <div className="info-item full-width">
-                    <span className="info-label">نوع خدمات</span>
-                    <span className="info-value">{subcategoryName}</span>
+                <div className="header-center">
+                  <div className="header-title">فاکتور نصب و کرایه داربست فلزی اهرُم</div>
+                  <div className="header-website">www.ahrom.ir</div>
+                  <div className="header-subtitle">
+                    دفتر: ۰۲۵ ۳۸۸۶ ۵۰۴۰ &nbsp;&nbsp;&nbsp; همراه محمدی: ۰۹۱۲ ۵۵۱ ۱۴۹۴
                   </div>
-                )}
+                  <div className="header-subtitle">تلفن گویا ۹۰۰۰۰۰۳۱۹</div>
+                </div>
+                <div className="logo-right">
+                  <img src="/ahrom-logo.png" alt="اهرم" />
+                </div>
+              </div>
+
+              {/* Info Grid */}
+              <div className="info-section">
+                <div className="info-box">
+                  <div className="info-label">نام و شماره تماس هماهنگ کننده:</div>
+                  <div className="info-value">{order.customer_name || '-'} {order.customer_phone || ''}</div>
+                </div>
+                <div className="info-box">
+                  <div className="info-label">فاکتور سری:</div>
+                  <div className="info-value">اول</div>
+                </div>
+                <div className="info-box">
+                  <div className="info-label">آدرس کارفرما/شرکت:</div>
+                  <div className="info-value">{provinceName && `${provinceName}، `}{order.address || '-'}</div>
+                </div>
+                <div className="info-box">
+                  <div className="info-label">شماره فاکتور:</div>
+                  <div className="info-value">{order.code}</div>
+                </div>
+                <div className="info-box">
+                  <div className="info-label">آدرس محل نصب:</div>
+                  <div className="info-value">{provinceName && `${provinceName}، `}{order.address || '-'}{order.detailed_address ? ` - ${order.detailed_address}` : ''}</div>
+                </div>
+                <div className="info-box">
+                  <div className="info-label">تاریخ تنظیم:</div>
+                  <div className="info-value">{order.created_at ? formatPersianDate(order.created_at) : '-'}</div>
+                </div>
+                <div className="info-box">
+                  <div className="info-label">صورت حساب آقای/خانم/شرکت:</div>
+                  <div className="info-value">{order.customer_name || '-'}</div>
+                </div>
+                <div className="info-box">
+                  <div className="info-label">پیوست:</div>
+                  <div className="info-value">{media.length > 0 ? 'دارد' : 'ندارد'}</div>
+                </div>
               </div>
             </div>
 
-            {/* Customer Info */}
-            <div className="section">
-              <div className="section-title">👤 اطلاعات مشتری</div>
-              <div className="info-grid">
-                <div className="info-item">
-                  <span className="info-label">نام مشتری</span>
-                  <span className="info-value">{order.customer_name || 'نامشخص'}</span>
-                </div>
-                <div className="info-item">
-                  <span className="info-label">شماره تماس</span>
-                  <span className="info-value" dir="ltr">{order.customer_phone || '-'}</span>
-                </div>
-                <div className="info-item full-width">
-                  <span className="info-label">آدرس</span>
-                  <span className="info-value">
-                    {provinceName && `${provinceName} - `}{order.address || '-'}
-                    {order.detailed_address && ` (${order.detailed_address})`}
-                  </span>
-                </div>
-              </div>
-            </div>
+            {/* Orders Table */}
+            <table className="order-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '30px' }}>ردیف</th>
+                  <th style={{ width: '50px' }}>پیوست</th>
+                  <th>محل داربست در پروژه</th>
+                  <th>فعالیت مورد نظر با داربست</th>
+                  <th>شرح ابعاد</th>
+                  <th style={{ width: '50px' }}>شماره خدما</th>
+                  <th style={{ width: '40px' }}>طول</th>
+                  <th style={{ width: '40px' }}>عرض</th>
+                  <th style={{ width: '45px' }}>ارتفاع</th>
+                  <th style={{ width: '45px' }}>متراژ</th>
+                  <th style={{ width: '45px' }}>تعداد</th>
+                  <th style={{ width: '70px' }}>تاریخ شروع</th>
+                  <th style={{ width: '70px' }}>تاریخ پایان</th>
+                  <th style={{ width: '70px' }}>تاریخ فک</th>
+                  <th style={{ width: '50px' }}>تعداد ماه</th>
+                  <th style={{ width: '60px' }}>چندمین ماه</th>
+                  <th style={{ width: '70px' }}>فی قیمت</th>
+                  <th style={{ width: '90px' }}>قیمت کل</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Main Order Row */}
+                <tr>
+                  <td>۱</td>
+                  <td>{media.length > 0 ? 'دارد' : 'ندارد'}</td>
+                  <td>{order.detailed_address || order.address || '-'}</td>
+                  <td>{scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || description || '-'}</td>
+                  <td>{getDimensionText()}</td>
+                  <td>۱</td>
+                  <td>{getLength()}</td>
+                  <td>{getWidth()}</td>
+                  <td>{getHeight()}</td>
+                  <td>{totalArea || '-'}</td>
+                  <td>۱ عدد</td>
+                  <td>{installDate ? formatPersianDate(installDate) : '-'}</td>
+                  <td>{dueDate ? formatPersianDate(dueDate) : '-'}</td>
+                  <td>نصب مانده</td>
+                  <td>-</td>
+                  <td>ماه اول</td>
+                  <td>-</td>
+                  <td>{orderPrice > 0 ? `${orderPrice.toLocaleString('fa-IR')} تومان` : '-'}</td>
+                </tr>
 
-            {/* Technical Specs */}
-            <div className="section">
-              <div className="section-title">📐 مشخصات فنی سفارش</div>
-              <div className="info-grid">
-                <div className="info-item">
-                  <span className="info-label">نوع داربست</span>
-                  <span className="info-value">{scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || '-'}</span>
-                </div>
-                {ceilingSubtype && (
-                  <div className="info-item">
-                    <span className="info-label">زیرنوع سقف</span>
-                    <span className="info-value">{ceilingSubtypeLabels[ceilingSubtype] || ceilingSubtype}</span>
-                  </div>
-                )}
-                {totalArea && (
-                  <div className="info-item">
-                    <span className="info-label">مساحت کل</span>
-                    <span className="info-value">{totalArea} متر مربع</span>
-                  </div>
-                )}
-              </div>
+                {/* Repair Request Rows */}
+                {repairRequests.map((repair, idx) => (
+                  <tr key={repair.id} className="repair-row">
+                    <td>{(idx + 2).toLocaleString('fa-IR')}</td>
+                    <td>ندارد</td>
+                    <td>{order.detailed_address || order.address || '-'}</td>
+                    <td>تعمیر داربست - {repair.description || 'بدون توضیحات'}</td>
+                    <td>-</td>
+                    <td>{(idx + 2).toLocaleString('fa-IR')}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>۱ عدد</td>
+                    <td>{formatPersianDate(repair.created_at)}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>{(repair.final_cost || repair.estimated_cost || 0).toLocaleString('fa-IR')} تومان</td>
+                  </tr>
+                ))}
 
-              {/* Dimensions Table */}
-              {dimensions && Array.isArray(dimensions) && dimensions.length > 0 && (
-                <table className="dimensions-table">
-                  <thead>
-                    <tr>
-                      <th>ردیف</th>
-                      <th>طول (متر)</th>
-                      <th>عرض (متر)</th>
-                      <th>ارتفاع (متر)</th>
-                      <th>تعداد یونیت</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dimensions.map((dim: any, idx: number) => (
-                      <tr key={idx}>
-                        <td>{idx + 1}</td>
-                        <td>{dim.length || dim.l || '-'}</td>
-                        <td>{dim.width || dim.w || '-'}</td>
-                        <td>{dim.height || dim.h || '-'}</td>
-                        <td>{dim.unitCount || 1}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                {/* Total Row */}
+                <tr className="total-row">
+                  <td colSpan={17} style={{ textAlign: 'left', paddingLeft: '10px', fontWeight: 'bold' }}>
+                    جمع قیمت کل:
+                  </td>
+                  <td style={{ fontWeight: 'bold', fontSize: '11px' }}>
+                    {grandTotal.toLocaleString('fa-IR')} تومان
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-              {dimensions && !Array.isArray(dimensions) && (
-                <div className="info-grid" style={{ marginTop: '8px' }}>
-                  <div className="info-item">
-                    <span className="info-label">طول</span>
-                    <span className="info-value">{dimensions.length || '-'} متر</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">عرض</span>
-                    <span className="info-value">{dimensions.width || '-'} متر</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">ارتفاع</span>
-                    <span className="info-value">{dimensions.height || '-'} متر</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Description */}
-            {description && (
-              <div className="section">
-                <div className="section-title">📝 شرح محل نصب و فعالیت</div>
-                <p style={{ margin: 0, fontSize: '11px' }}>{description}</p>
-              </div>
-            )}
-
-            {/* Service Conditions */}
-            {conditions && Array.isArray(conditions) && conditions.length > 0 && (
-              <div className="section">
-                <div className="section-title">⚙️ شرایط سرویس</div>
-                <div className="info-grid">
-                  {rentalDuration && (
-                    <div className="info-item">
-                      <span className="info-label">مدت اجاره</span>
-                      <span className="info-value">{rentalDuration}</span>
-                    </div>
-                  )}
-                  {distance && (
-                    <div className="info-item">
-                      <span className="info-label">فاصله</span>
-                      <span className="info-value">{distance}</span>
-                    </div>
-                  )}
-                  {vehicleAccess !== undefined && (
-                    <div className="info-item">
-                      <span className="info-label">دسترسی ماشین</span>
-                      <span className="info-value">{vehicleAccess ? 'بله' : 'خیر'}</span>
-                    </div>
-                  )}
-                  {groundCondition && (
-                    <div className="info-item">
-                      <span className="info-label">وضعیت زمین</span>
-                      <span className="info-value">{groundCondition}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="conditions-list">
-                  {conditions.map((cond: string, i: number) => (
-                    <span key={i} className="condition-badge">{cond}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Dates */}
-            {(installDate || dueDate) && (
-              <div className="section">
-                <div className="section-title">📅 تاریخ‌ها</div>
-                <div className="info-grid">
-                  {installDate && (
-                    <div className="info-item">
-                      <span className="info-label">تاریخ نصب</span>
-                      <span className="info-value">{formatPersianDate(installDate)}</span>
-                    </div>
-                  )}
-                  {dueDate && (
-                    <div className="info-item">
-                      <span className="info-label">تاریخ سررسید</span>
-                      <span className="info-value">{formatPersianDate(dueDate)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Price */}
-            {order.payment_amount && (
-              <div className="price-box">
-                <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '5px' }}>مبلغ کل سفارش</div>
-                <div className="price-value">{Number(order.payment_amount).toLocaleString('fa-IR')} تومان</div>
-              </div>
-            )}
-
-            {/* Images */}
+            {/* Images Section */}
             {media.length > 0 && (
-              <div className="section">
-                <div className="section-title">🖼️ تصاویر سفارش ({media.length} تصویر)</div>
+              <div className="images-section">
+                <div className="section-title">🖼️ تصاویر پیوست سفارش ({media.length} تصویر)</div>
                 <div className="images-grid">
-                  {media.slice(0, 6).map((item) => (
+                  {media.slice(0, 8).map((item) => (
                     <img 
                       key={item.id} 
                       src={mediaUrls[item.id] || ''} 
@@ -601,38 +644,56 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
                     />
                   ))}
                 </div>
-                {media.length > 6 && (
+                {media.length > 8 && (
                   <p style={{ fontSize: '9px', color: '#64748b', marginTop: '5px' }}>
-                    و {media.length - 6} تصویر دیگر...
+                    و {media.length - 8} تصویر دیگر...
                   </p>
                 )}
               </div>
             )}
 
-            {/* Messages */}
+            {/* Messages Section */}
             {messages.length > 0 && (
-              <div className="section">
+              <div className="messages-section">
                 <div className="section-title">💬 گفتگوها ({messages.length} پیام)</div>
-                <div className="messages-list">
-                  {messages.slice(0, 5).map((msg, idx) => (
+                <div style={{ maxHeight: '120px', overflow: 'hidden' }}>
+                  {messages.slice(0, 6).map((msg, idx) => (
                     <div key={idx} className={`message-item ${msg.is_staff ? 'message-staff' : 'message-customer'}`}>
-                      <div>{msg.message}</div>
+                      <strong>{msg.is_staff ? 'مدیر: ' : 'مشتری: '}</strong>
+                      {msg.message}
                       <div className="message-time">{formatPersianDate(msg.created_at)}</div>
                     </div>
                   ))}
-                  {messages.length > 5 && (
+                  {messages.length > 6 && (
                     <p style={{ fontSize: '9px', color: '#64748b', textAlign: 'center' }}>
-                      و {messages.length - 5} پیام دیگر...
+                      و {messages.length - 6} پیام دیگر...
                     </p>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Footer */}
-            <div className="footer">
-              <p>خدمات ساختمان و منزل اهرم | تماس: ۰۲۵-۳۲۹۱۰۰۰۰</p>
-              <p>تاریخ چاپ: {formatPersianDate(new Date().toISOString())}</p>
+            {/* Bank Info */}
+            <div className="bank-info">
+              <div><strong>شبا ملت محمدی:</strong> IR 280120000000009812328696</div>
+              <div><strong>کارت ملت رضا محمدی:</strong> 6104338621521349</div>
+            </div>
+
+            {/* Footer Signatures */}
+            <div className="footer-section">
+              <div className="signature-box">
+                <div className="signature-label">امضای کارفرما:</div>
+                <div className="signature-line"></div>
+              </div>
+              <div className="signature-box">
+                <div className="signature-label">امضای پیمانکار:</div>
+                <div className="signature-line"></div>
+              </div>
+            </div>
+
+            {/* Print Date */}
+            <div className="print-date">
+              تاریخ چاپ: {formatPersianDate(new Date().toISOString())}
             </div>
           </div>
         </div>
