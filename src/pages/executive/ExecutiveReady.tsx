@@ -271,8 +271,8 @@ export default function ExecutiveReady() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="سفارشات آماده اجرا"
-        description={`${orders.length} سفارش آماده شروع اجرا`}
+        title="در انتظار اجرا"
+        description={`${orders.length} سفارش در انتظار شروع اجرا`}
       />
 
       {orders.length > 0 && (

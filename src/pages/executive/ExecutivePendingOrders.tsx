@@ -262,7 +262,7 @@ export default function ExecutivePendingOrders() {
           executed_by,
           approved_by
         `)
-        .in('status', ['pending', 'approved', 'in_progress'])
+        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
