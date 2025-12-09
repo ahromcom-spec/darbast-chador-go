@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { OrderTransfer } from "@/components/orders/OrderTransfer";
 import { RepairRequestDialog } from "@/components/orders/RepairRequestDialog";
+import { ManagerOrderInvoice } from "@/components/orders/ManagerOrderInvoice";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { useProjectRatings, RatingCriteria } from "@/hooks/useRatings";
 import { useAuth } from "@/contexts/AuthContext";
@@ -703,178 +704,6 @@ export default function OrderDetail() {
     }
   };
 
-  const handlePrintInvoice = () => {
-    if (!order) return;
-
-    const notes = parsedNotes || {};
-    const status = getStatusInfo(order.status).label;
-    const priceValue = (notes.estimated_price || notes.estimatedPrice || order.payment_amount || 0) as number;
-    const customerName = order.customer_name || notes.customerName || '';
-    const customerPhone = order.customer_phone || notes.phoneNumber || '';
-
-    const dimensionsHtml = Array.isArray(notes.dimensions)
-      ? notes.dimensions
-          .map((dim: any, index: number) => {
-            const length = typeof dim.length === 'number' ? dim.length : parseFloat(dim.length);
-            const width = dim.width ? (typeof dim.width === 'number' ? dim.width : parseFloat(dim.width)) : null;
-            const height = typeof dim.height === 'number' ? dim.height : parseFloat(dim.height);
-            return `
-              <tr>
-                <td style="padding:6px;border:1px solid #e5e7eb;">${index + 1}</td>
-                <td style="padding:6px;border:1px solid #e5e7eb;">${length}</td>
-                <td style="padding:6px;border:1px solid #e5e7eb;">${width ?? '-'}</td>
-                <td style="padding:6px;border:1px solid #e5e7eb;">${height}</td>
-              </tr>
-            `;
-          })
-          .join('')
-      : '';
-
-    const conditionsParts: string[] = [];
-    if (notes.conditions) {
-      if (notes.conditions.rentalMonthsPlan) {
-        const plan = notes.conditions.rentalMonthsPlan;
-        const label = plan === '1' ? 'به شرط یک ماه' : plan === '2' ? 'به شرط دو ماه' : 'به شرط سه ماه و بیشتر';
-        conditionsParts.push(`پلان اجاره: ${label}`);
-      }
-      if (notes.conditions.totalMonths) {
-        conditionsParts.push(`مدت قرارداد: ${notes.conditions.totalMonths} ماه`);
-      }
-      if (notes.conditions.distanceRange) {
-        conditionsParts.push(`فاصله تا پروژه: ${notes.conditions.distanceRange} کیلومتر`);
-      }
-      if (notes.platformHeight) {
-        conditionsParts.push(`ارتفاع پای کار: ${notes.platformHeight} متر`);
-      }
-      if (notes.scaffoldHeightFromPlatform) {
-        conditionsParts.push(`ارتفاع داربست از پای کار: ${notes.scaffoldHeightFromPlatform} متر`);
-      }
-      if (typeof notes.onGround === 'boolean') {
-        conditionsParts.push(`محل نصب: ${notes.onGround ? 'روی زمین' : 'روی سکو/پشت‌بام'}`);
-      }
-      if (typeof notes.vehicleReachesSite === 'boolean') {
-        conditionsParts.push(`دسترسی خودرو: ${notes.vehicleReachesSite ? 'خودرو به محل می‌رسد' : 'خودرو به محل نمی‌رسد'}`);
-      }
-    }
-
-    const conditionsHtml = conditionsParts
-      .map((c) => `<li style="margin-bottom:4px;">${c}</li>`)
-      .join('');
-
-    const priceBreakdownHtml = Array.isArray(notes.price_breakdown)
-      ? notes.price_breakdown
-          .map((item: string) => `<li style="margin-bottom:4px;">${item}</li>`)
-          .join('')
-      : '';
-
-    const installationDate = notes.installationDateTime || notes.installDate || notes.dueDate || '';
-
-    const win = window.open('', '_blank', 'width=900,height=1000');
-    if (!win) return;
-
-    win.document.write(`<!doctype html>
-<html lang="fa" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <title>فاکتور سفارش ${order.code}</title>
-  <style>
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f3f4f6; margin:0; padding:24px; }
-    .invoice { max-width:800px; margin:0 auto; background:#ffffff; border-radius:12px; padding:24px 32px; box-shadow:0 10px 40px rgba(15,23,42,0.15); }
-    h1 { font-size:22px; margin-bottom:4px; }
-    h2 { font-size:16px; margin:24px 0 8px; }
-    .muted { color:#6b7280; font-size:13px; }
-    .row { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:8px; }
-    .label { font-weight:600; min-width:90px; }
-    .box { border:1px solid #e5e7eb; border-radius:10px; padding:12px 16px; margin-top:8px; }
-    .price { font-size:20px; font-weight:700; color:#15803d; }
-    table { width:100%; border-collapse:collapse; margin-top:4px; font-size:13px; }
-    th { background:#f3f4f6; padding:6px; border:1px solid #e5e7eb; text-align:center; }
-    td { text-align:center; }
-    ul { margin:4px 0 0; padding-right:18px; font-size:13px; }
-    @media print { body { background:#ffffff; padding:0; } .invoice { box-shadow:none; border-radius:0; } }
-  </style>
-</head>
-<body>
-  <div class="invoice">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:16px;">
-      <div>
-        <h1>فاکتور سفارش ${order.code}</h1>
-        <div class="muted">وضعیت سفارش: ${status}</div>
-      </div>
-      <div style="text-align:left; font-size:13px;">
-        <div>تاریخ ثبت: ${formatPersianDateTimeFull(order.created_at)}</div>
-        ${order.approved_at ? `<div>تاریخ تایید: ${formatPersianDate(order.approved_at)}</div>` : ''}
-      </div>
-    </div>
-
-    <div class="box">
-      <div class="row">
-        <div class="label">نام مشتری</div>
-        <div>${customerName || '---'}</div>
-      </div>
-      <div class="row">
-        <div class="label">شماره تماس</div>
-        <div>${customerPhone || '---'}</div>
-      </div>
-      <div class="row" style="margin-top:4px;">
-        <div class="label">آدرس پروژه</div>
-        <div>${order.address}</div>
-      </div>
-    </div>
-
-    ${dimensionsHtml ? `
-      <h2>ابعاد پروژه</h2>
-      <div class="box">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>طول (متر)</th>
-              <th>عرض (متر)</th>
-              <th>ارتفاع (متر)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${dimensionsHtml}
-          </tbody>
-        </table>
-      </div>
-    ` : ''}
-
-    ${conditionsHtml ? `
-      <h2>شرایط خدمات</h2>
-      <div class="box">
-        <ul>${conditionsHtml}</ul>
-      </div>
-    ` : ''}
-
-    ${notes.locationPurpose ? `
-      <h2>شرح محل نصب و فعالیت</h2>
-      <div class="box">${notes.locationPurpose}</div>
-    ` : ''}
-
-    ${installationDate ? `
-      <h2>زمان نصب درخواستی</h2>
-      <div class="box">${formatPersianDateTimeFull(installationDate)}</div>
-    ` : ''}
-
-    <h2>خلاصه مالی</h2>
-    <div class="box">
-      <div class="row">
-        <div class="label">مبلغ کل</div>
-        <div class="price">${priceValue.toLocaleString('fa-IR')} تومان</div>
-      </div>
-      ${priceBreakdownHtml ? `<ul>${priceBreakdownHtml}</ul>` : ''}
-    </div>
-  </div>
-</body>
-</html>`);
-
-    win.document.close();
-    win.focus();
-    win.print();
-  };
-
   if (loading) {
     return (
       <MainLayout>
@@ -940,6 +769,23 @@ export default function OrderDetail() {
                 انتقال سفارش
               </Button>
             )}
+            {/* دکمه پرینت فاکتور - برای همه سفارشات */}
+            <ManagerOrderInvoice 
+              order={{
+                id: order.id,
+                code: order.code,
+                customer_name: order.customer_name || parsedNotes?.customerName,
+                customer_phone: order.customer_phone || parsedNotes?.phoneNumber,
+                address: order.address,
+                detailed_address: order.detailed_address,
+                created_at: order.created_at,
+                notes: order.notes,
+                payment_amount: order.payment_amount,
+                status: order.status,
+                province_id: order.province_id,
+                subcategory_id: order.subcategory_id
+              }}
+            />
           </div>
 
           {/* Order Header */}
@@ -1669,19 +1515,6 @@ export default function OrderDetail() {
             </Card>
           )}
 
-          {/* دکمه چاپ فاکتور */}
-          <Card>
-            <CardContent className="pt-6 flex justify-end">
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={handlePrintInvoice}
-              >
-                <Printer className="h-4 w-4" />
-                چاپ فاکتور سفارش
-              </Button>
-            </CardContent>
-          </Card>
 
           {/* بخش نمایش عکس‌ها و ویدیوها */}
           <Card>

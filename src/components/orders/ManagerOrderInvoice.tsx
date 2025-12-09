@@ -401,12 +401,16 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
   const totalArea = parsedNotes?.totalArea || parsedNotes?.total_area;
   const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
   const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
-  const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes;
-  const installDate = parsedNotes?.installDate || parsedNotes?.install_date;
-  const dueDate = parsedNotes?.dueDate || parsedNotes?.due_date;
+  const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || parsedNotes?.locationPurpose;
+  // تاریخ‌ها - از هر دو فرمت جدید و قدیم
+  const installDate = parsedNotes?.installationDateTime || parsedNotes?.installation_date || parsedNotes?.installDate || parsedNotes?.install_date;
+  const dueDate = parsedNotes?.dueDateTime || parsedNotes?.due_date || parsedNotes?.dueDate;
+  
+  // شرایط اجرا
+  const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
 
   // Calculate total price including repairs
-  const orderPrice = order.payment_amount ? Number(order.payment_amount) : 0;
+  const orderPrice = order.payment_amount ? Number(order.payment_amount) : (parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0);
   const repairTotal = repairRequests.reduce((sum, r) => sum + (r.final_cost || r.estimated_cost || 0), 0);
   const grandTotal = orderPrice + repairTotal;
 
@@ -575,8 +579,8 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
                 <tr>
                   <td>۱</td>
                   <td>{media.length > 0 ? 'دارد' : 'ندارد'}</td>
-                  <td>{order.detailed_address || order.address || '-'}</td>
-                  <td>{scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || description || '-'}</td>
+                  <td>{description || order.detailed_address || order.address || '-'}</td>
+                  <td>{scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || '-'}</td>
                   <td>{getDimensionText()}</td>
                   <td>۱</td>
                   <td>{getLength()}</td>
@@ -628,6 +632,24 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
                 </tr>
               </tbody>
             </table>
+
+            {/* Conditions Section */}
+            {conditions && (
+              <div className="images-section" style={{ marginTop: '10px' }}>
+                <div className="section-title">📋 شرایط اجرا</div>
+                <div style={{ fontSize: '10px', lineHeight: '1.6' }}>
+                  {conditions.rentalMonthsPlan && (
+                    <div>پلان اجاره: {conditions.rentalMonthsPlan === '1' ? 'به شرط یک ماه' : conditions.rentalMonthsPlan === '2' ? 'به شرط دو ماه' : 'به شرط سه ماه و بیشتر'}</div>
+                  )}
+                  {conditions.totalMonths && <div>مدت قرارداد: {conditions.totalMonths} ماه</div>}
+                  {conditions.distanceRange && <div>فاصله از قم: {conditions.distanceRange} کیلومتر</div>}
+                  {parsedNotes?.onGround !== undefined && <div>محل نصب: {parsedNotes.onGround ? 'روی زمین' : 'روی سکو/پشت‌بام'}</div>}
+                  {parsedNotes?.vehicleReachesSite !== undefined && <div>دسترسی خودرو: {parsedNotes.vehicleReachesSite ? 'خودرو به محل می‌رسد' : 'خودرو به محل نمی‌رسد'}</div>}
+                  {conditions.platformHeight && <div>ارتفاع پای کار: {conditions.platformHeight} متر</div>}
+                  {conditions.scaffoldHeightFromPlatform && <div>ارتفاع داربست از پای کار: {conditions.scaffoldHeightFromPlatform} متر</div>}
+                </div>
+              </div>
+            )}
 
             {/* Images Section */}
             {media.length > 0 && (
