@@ -230,12 +230,13 @@ export default function ExecutiveInProgress() {
         .eq('id', orderData.customer_id)
         .single();
 
-      // به‌روزرسانی وضعیت سفارش - تغییر به completed و تنظیم execution_stage به awaiting_payment
+      // به‌روزرسانی وضعیت سفارش - تغییر به completed و تنظیم execution_stage به awaiting_payment_and_collection
+      // این مرحله باعث نمایش سفارش در هر دو پوشه "در انتظار پرداخت" و "در انتظار جمع‌آوری" می‌شود
       const { error } = await supabase
         .from('projects_v3')
         .update({ 
           status: 'completed',
-          execution_stage: 'awaiting_payment',
+          execution_stage: 'awaiting_payment_and_collection',
           execution_stage_updated_at: new Date().toISOString(),
           executive_completion_date: new Date().toISOString()
         })
@@ -247,8 +248,8 @@ export default function ExecutiveInProgress() {
       if (customerData?.user_id) {
         const validated = sendNotificationSchema.parse({
           _user_id: customerData.user_id,
-          _title: '💰 سفارش در انتظار پرداخت',
-          _body: `سفارش با کد ${orderCode} اجرا شد و منتظر پرداخت شماست. لطفاً برای پرداخت اقدام کنید.`,
+          _title: '💰 سفارش در انتظار پرداخت و جمع‌آوری',
+          _body: `سفارش با کد ${orderCode} اجرا شد و منتظر پرداخت و جمع‌آوری است. لطفاً برای پرداخت اقدام کنید.`,
           _link: '/user/my-orders',
           _type: 'success'
         });
@@ -257,7 +258,7 @@ export default function ExecutiveInProgress() {
 
       toast({
         title: '✓ اجرا تکمیل شد',
-        description: `سفارش ${orderCode} به مرحله در انتظار پرداخت منتقل شد و به مشتری اطلاع داده شد.`
+        description: `سفارش ${orderCode} به مرحله در انتظار پرداخت و جمع‌آوری منتقل شد.`
       });
 
       fetchOrders();
