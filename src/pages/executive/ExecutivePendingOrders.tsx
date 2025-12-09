@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, PhoneCall } from 'lucide-react';
 import VoiceCall from '@/components/orders/VoiceCall';
 import OrderChat from '@/components/orders/OrderChat';
+import { OrderDetailsView as OrderDetailsViewComponent } from '@/components/orders/OrderDetailsView';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -710,62 +711,18 @@ export default function ExecutivePendingOrders() {
 
       {/* Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
+            <DialogTitle>جزئیات کامل سفارش {selectedOrder?.code}</DialogTitle>
+            <DialogDescription>
+              مشاهده تمامی جزئیات سفارش مشتری
+            </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">نام مشتری</Label>
-                  <p className="text-sm font-medium flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" />
-                    {selectedOrder.customer_name || selectedOrder.notes?.customerName || 'نامشخص'}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">شماره تماس</Label>
-                  <p className="text-sm font-medium flex items-center gap-2" dir="ltr">
-                    <Phone className="h-4 w-4 text-primary" />
-                    {selectedOrder.customer_phone || selectedOrder.notes?.phoneNumber || '-'}
-                  </p>
-                </div>
-              </div>
-
-              {/* تماس صوتی با مشتری */}
-              {selectedOrder.customer_id && (
-                <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
-                  <div className="flex items-center gap-2 mb-3">
-                    <PhoneCall className="h-4 w-4 text-primary" />
-                    <Label className="text-sm font-semibold">تماس صوتی با مشتری</Label>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    برای هماهنگی زمان‌بندی و جزئیات سفارش با مشتری تماس بگیرید
-                  </p>
-                  <VoiceCall 
-                    orderId={selectedOrder.id}
-                    customerId={selectedOrder.customer_id}
-                    isManager={true}
-                  />
-                </div>
-              )}
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">آدرس</Label>
-                <p className="text-sm flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <span>{selectedOrder.detailed_address || selectedOrder.address}</span>
-                </p>
-                {selectedOrder.location_lat && selectedOrder.location_lng && (
-                  <p className="text-xs text-muted-foreground pr-6">
-                    موقعیت جغرافیایی: {selectedOrder.location_lat.toFixed(6)}, {selectedOrder.location_lng.toFixed(6)}
-                  </p>
-                )}
-              </div>
-
+              {/* استفاده از کامپوننت OrderDetailsView برای نمایش جزئیات کامل */}
+              <OrderDetailsViewComponent order={selectedOrder} showMedia={true} />
+              
               {/* نقشه موقعیت پروژه */}
               {selectedOrder.location_lat && selectedOrder.location_lng && (
                 <>
@@ -785,172 +742,26 @@ export default function ExecutivePendingOrders() {
                 </>
               )}
 
-              <Separator />
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">تاریخ ثبت سفارش</Label>
-                <p className="text-sm">{formatPersianDate(selectedOrder.created_at, { 
-                  showDayOfWeek: true,
-                  showTime: true
-                })}</p>
-              </div>
-
-              {/* گالری تصاویر سفارش */}
-              <Separator />
-              <OrderMediaGallery orderId={selectedOrder.id} />
-
-              {/* جزئیات فنی سفارش */}
-              <Separator />
-              <div className="space-y-4">
-                <Label className="text-xs text-muted-foreground flex items-center gap-2">
-                  <Wrench className="h-4 w-4" />
-                  جزئیات فنی سفارش
-                </Label>
-                
-                {!selectedOrder.notes || Object.keys(selectedOrder.notes).length === 0 ? (
-                  <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
-                    جزئیات فنی این سفارش در دسترس نیست
+              {/* تماس صوتی با مشتری */}
+              {selectedOrder.customer_id && (
+                <>
+                  <Separator />
+                  <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PhoneCall className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold">تماس صوتی با مشتری</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      برای هماهنگی زمان‌بندی و جزئیات سفارش با مشتری تماس بگیرید
+                    </p>
+                    <VoiceCall 
+                      orderId={selectedOrder.id}
+                      customerId={selectedOrder.customer_id}
+                      isManager={true}
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* نوع داربست */}
-                    {(() => {
-                      const n = selectedOrder.notes || {};
-                      const type = n.scaffold_type || n.service_type || n.scaffoldType || '';
-                      const scaffoldingTypeLabels: Record<string, string> = {
-                        facade: 'داربست سطحی نما',
-                        formwork: 'داربست حجمی کفراژ',
-                        ceiling: 'داربست زیربتن سقف',
-                        column: 'داربست ستونی',
-                        pipe_length: 'داربست به طول لوله مصرفی'
-                      };
-                      if (!type) return null;
-                      return (
-                        <div className="bg-muted/50 rounded-lg p-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">نوع داربست:</span>
-                            <span className="text-sm font-medium">
-                              {scaffoldingTypeLabels[type] || type}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    
-                    {/* ابعاد */}
-                    {(() => {
-                      const n = selectedOrder.notes || {};
-                      const dims = n.dimensions;
-                      const total = n.total_area ?? n.totalArea;
-                      
-                      if (!dims && !total && !n.length && !n.width && !n.height) return null;
-                      
-                      return (
-                        <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-2">
-                            <Ruler className="h-3 w-3" />
-                            ابعاد
-                          </Label>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            {dims && Array.isArray(dims) && dims.length > 0 && (
-                              <>
-                                {dims[0].length != null && (
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">طول:</span>
-                                    <span className="font-medium">{dims[0].length} متر</span>
-                                  </div>
-                                )}
-                                {dims[0].width != null && (
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">عرض:</span>
-                                    <span className="font-medium">{dims[0].width} متر</span>
-                                  </div>
-                                )}
-                                {dims[0].height != null && (
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">ارتفاع:</span>
-                                    <span className="font-medium">{dims[0].height} متر</span>
-                                  </div>
-                                )}
-                              </>
-                            )}
-                            {total != null && (
-                              <div className="flex justify-between col-span-2">
-                                <span className="text-muted-foreground">مساحت کل:</span>
-                                <span className="font-medium">{total} متر مربع</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    
-                    {/* توضیحات */}
-                    {selectedOrder.notes.locationPurpose && (
-                      <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                        <Label className="text-xs text-muted-foreground flex items-center gap-2">
-                          <FileText className="h-3 w-3" />
-                          شرح محل نصب و فعالیت
-                        </Label>
-                        <p className="text-sm">{selectedOrder.notes.locationPurpose}</p>
-                      </div>
-                    )}
-                    
-                    {/* شرایط سرویس */}
-                    {selectedOrder.notes.conditions && (
-                      <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                        <Label className="text-xs text-muted-foreground">شرایط سرویس</Label>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          {selectedOrder.notes.conditions.totalMonths && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">مدت اجاره:</span>
-                              <span className="font-medium">{selectedOrder.notes.conditions.totalMonths} ماه</span>
-                            </div>
-                          )}
-                          {selectedOrder.notes.conditions.distanceRange && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">فاصله:</span>
-                              <span className="font-medium">{selectedOrder.notes.conditions.distanceRange} کیلومتر</span>
-                            </div>
-                          )}
-                          {selectedOrder.notes.onGround !== undefined && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">روی زمین:</span>
-                              <span className="font-medium">{selectedOrder.notes.onGround ? 'بله' : 'خیر'}</span>
-                            </div>
-                          )}
-                          {selectedOrder.notes.vehicleReachesSite !== undefined && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">دسترسی ماشین:</span>
-                              <span className="font-medium">{selectedOrder.notes.vehicleReachesSite ? 'بله' : 'خیر'}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* قیمت */}
-                    {(selectedOrder.notes.estimated_price || selectedOrder.payment_amount) && (
-                      <div className="bg-primary/10 rounded-lg p-3 space-y-2">
-                        <Label className="text-xs text-muted-foreground flex items-center gap-2">
-                          <Banknote className="h-3 w-3" />
-                          قیمت
-                        </Label>
-                        <p className="text-lg font-bold text-primary">
-                          {(selectedOrder.notes.estimated_price || selectedOrder.payment_amount)?.toLocaleString('fa-IR')} تومان
-                        </p>
-                        {selectedOrder.notes.price_breakdown && Array.isArray(selectedOrder.notes.price_breakdown) && (
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            {selectedOrder.notes.price_breakdown.map((item: string, idx: number) => (
-                              <p key={idx}>{item}</p>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                </>
+              )}
 
               {/* چت سفارش */}
               <Separator />
