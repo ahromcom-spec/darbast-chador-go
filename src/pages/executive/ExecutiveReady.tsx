@@ -393,7 +393,7 @@ export default function ExecutiveReady() {
                     className="gap-2 bg-blue-600 hover:bg-blue-700"
                   >
                     <PlayCircle className="h-4 w-4" />
-                    اجرا شد
+                    اجرا شود
                   </Button>
                 </div>
               </CardContent>
