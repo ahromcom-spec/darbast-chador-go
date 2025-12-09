@@ -151,7 +151,7 @@ export function ExecutiveSidebar() {
       icon: LayoutDashboard
     },
     {
-      title: 'کارتابل',
+      title: 'در انتظار تایید مدیران',
       href: '/executive/pending-orders',
       icon: FileText,
       badge: workbenchCount
@@ -163,7 +163,7 @@ export function ExecutiveSidebar() {
       badge: pendingCount
     },
     {
-      title: 'آماده اجرا',
+      title: 'در انتظار اجرا',
       href: '/executive/ready',
       icon: Package,
       badge: approvedCount
