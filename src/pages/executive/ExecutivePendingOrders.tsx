@@ -387,58 +387,34 @@ export default function ExecutivePendingOrders() {
     }
 
     try {
-      // Find the pending approval row for executive manager for this order
-      const { data: pendingApproval, error: fetchApprovalError } = await supabase
-        .from('order_approvals')
-        .select('approver_role')
-        .eq('order_id', selectedOrder.id)
-        .in('approver_role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
-        .is('approved_at', null)
-        .maybeSingle();
-
-      if (fetchApprovalError || !pendingApproval) {
-        throw new Error('هیچ تایید در انتظار برای مدیر اجرایی یافت نشد');
-      }
-
-      // Record executive manager approval on the pending row
-      const { error: approvalError } = await supabase
-        .from('order_approvals')
-        .update({
-          approver_user_id: user.id,
-          approved_at: new Date().toISOString()
-        })
-        .eq('order_id', selectedOrder.id)
-        .eq('approver_role', pendingApproval.approver_role)
-        .is('approved_at', null);
-
-      if (approvalError) throw approvalError;
-
-      // Update execution dates in the order
+      // تغییر وضعیت سفارش به approved و ثبت تاریخ‌های اجرا
       const { error: updateError } = await supabase
-        .from('projects_v3')
-        .update({
-          execution_start_date: executionStartDate,
-          execution_end_date: executionEndDate,
-          executed_by: user.id
-        })
-        .eq('id', selectedOrder.id);
-
-      if (updateError) throw updateError;
-
-      // تغییر وضعیت سفارش به approved بعد از تایید مدیر اجرایی
-      const { error: statusError } = await supabase
         .from('projects_v3')
         .update({
           status: 'approved',
           approved_by: user.id,
-          approved_at: new Date().toISOString()
+          approved_at: new Date().toISOString(),
+          executed_by: user.id,
+          execution_start_date: executionStartDate,
+          execution_end_date: executionEndDate
         })
         .eq('id', selectedOrder.id);
 
-      if (statusError) {
-        console.error('Error updating order status:', statusError);
-        throw statusError;
+      if (updateError) {
+        console.error('Error updating order:', updateError);
+        throw updateError;
       }
+
+      // ثبت تایید در جدول order_approvals (اختیاری - برای سوابق)
+      await supabase
+        .from('order_approvals')
+        .upsert({
+          order_id: selectedOrder.id,
+          approver_role: 'scaffold_executive_manager',
+          approver_user_id: user.id,
+          approved_at: new Date().toISOString()
+        }, { onConflict: 'order_id,approver_role' })
+        .select();
 
       // ارسال اعلان به مشتری
       const { data: orderData } = await supabase
