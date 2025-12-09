@@ -425,72 +425,67 @@ export default function ExecutivePendingOrders() {
 
       if (updateError) throw updateError;
 
-      // بررسی اینکه آیا همه تاییدهای لازم انجام شده است
-      const { data: allApprovals } = await supabase
-        .from('order_approvals')
-        .select('approved_at')
-        .eq('order_id', selectedOrder.id);
+      // تغییر وضعیت سفارش به approved بعد از تایید مدیر اجرایی
+      const { error: statusError } = await supabase
+        .from('projects_v3')
+        .update({
+          status: 'approved',
+          approved_by: user.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', selectedOrder.id);
 
-      // اگر همه تاییدها انجام شده باشد، وضعیت سفارش را به approved تغییر می‌دهیم
-      if (allApprovals && allApprovals.every(approval => approval.approved_at !== null)) {
-        const { error: statusError } = await supabase
-          .from('projects_v3')
-          .update({
-            status: 'approved',
-            approved_by: user.id,
-            approved_at: new Date().toISOString()
-          })
-          .eq('id', selectedOrder.id);
+      if (statusError) {
+        console.error('Error updating order status:', statusError);
+        throw statusError;
+      }
 
-        if (statusError) console.error('Error updating order status:', statusError);
+      // ارسال اعلان به مشتری
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('customer_id')
+        .eq('id', selectedOrder.id)
+        .single();
 
-        // ارسال اعلان به مشتری
-        const { data: orderData } = await supabase
-          .from('projects_v3')
-          .select('customer_id')
-          .eq('id', selectedOrder.id)
+      if (orderData) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', orderData.customer_id)
           .single();
 
-        if (orderData) {
-          const { data: customerData } = await supabase
-            .from('customers')
-            .select('user_id')
-            .eq('id', orderData.customer_id)
-            .single();
-
-          if (customerData?.user_id) {
-            const notificationTitle = '✅ سفارش شما تایید شد';
-            const notificationBody = `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`;
-            
-            const validated = sendNotificationSchema.parse({
-              _user_id: customerData.user_id,
-              _title: notificationTitle,
-              _body: notificationBody,
-              _link: '/user/my-orders',
-              _type: 'success'
+        if (customerData?.user_id) {
+          const notificationTitle = '✅ سفارش شما تایید شد';
+          const notificationBody = `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`;
+          
+          const validated = sendNotificationSchema.parse({
+            _user_id: customerData.user_id,
+            _title: notificationTitle,
+            _body: notificationBody,
+            _link: '/user/my-orders',
+            _type: 'success'
+          });
+          await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+          
+          // ارسال Push Notification به گوشی کاربر
+          try {
+            await supabase.functions.invoke('send-push-notification', {
+              body: {
+                user_id: customerData.user_id,
+                title: notificationTitle,
+                body: notificationBody,
+                url: '/user/my-orders'
+              }
             });
-            await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
-            
-            // ارسال Push Notification به گوشی کاربر
-            try {
-              await supabase.functions.invoke('send-push-notification', {
-                body: {
-                  user_id: customerData.user_id,
-                  title: notificationTitle,
-                  body: notificationBody,
-                  url: '/user/my-orders'
-                }
-              });
-            } catch (pushError) {
-              console.log('Push notification skipped (user may not have enabled)');
-            }
+          } catch (pushError) {
+            console.log('Push notification skipped (user may not have enabled)');
           }
         }
       }
 
       toast({
-        title: '✓ تایید شما ثبت شد',
-        description: `تایید شما برای سفارش ${selectedOrder.code} با زمان‌بندی اجرا ثبت شد.`
+        title: '✓ سفارش تایید شد',
+        description: `سفارش ${selectedOrder.code} به مرحله در انتظار اجرا منتقل شد.`
       });
 
       setActionType(null);
