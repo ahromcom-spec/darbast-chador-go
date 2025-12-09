@@ -223,9 +223,10 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         border-collapse: collapse;
         margin-bottom: 12px;
         font-size: 10px;
+        border: 2px solid #1e3a5f;
       }
       .main-info-table td {
-        border: 1px solid #374151;
+        border: 1px solid #1e3a5f;
         padding: 6px 10px;
         vertical-align: middle;
       }
@@ -235,10 +236,12 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         font-weight: bold;
         width: 140px;
         text-align: right;
+        border: 1px solid #0f2744;
       }
       .main-info-table .value-cell {
         background: #f8fafc;
         text-align: right;
+        border: 1px solid #1e3a5f;
       }
       
       /* Order Details Table - Main Professional Table */
@@ -247,6 +250,7 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         border-collapse: collapse;
         margin: 15px 0;
         font-size: 9px;
+        border: 2px solid #1e3a5f;
       }
       .order-details-table thead tr {
         background: #1e3a5f;
@@ -254,14 +258,14 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
       .order-details-table th {
         color: white;
         padding: 8px 4px;
-        border: 1px solid #1e3a5f;
+        border: 1px solid #0f2744;
         text-align: center;
         font-weight: bold;
         font-size: 8px;
         white-space: nowrap;
       }
       .order-details-table td {
-        border: 1px solid #d1d5db;
+        border: 1px solid #1e3a5f;
         padding: 7px 4px;
         text-align: center;
         background: white;
@@ -269,16 +273,17 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
       }
       .order-details-table tbody tr:nth-child(even) td {
         background: #f1f5f9;
+        border: 1px solid #1e3a5f;
       }
       .repair-row td {
         background: #fef3c7 !important;
-        border-color: #f59e0b;
+        border: 1px solid #1e3a5f !important;
       }
       .total-row td {
         background: #fef3c7 !important;
         font-weight: bold;
         font-size: 11px;
-        border: 2px solid #1e3a5f;
+        border: 2px solid #1e3a5f !important;
       }
       
       /* Conditions Section */
@@ -358,9 +363,12 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
       .bank-info-table {
         width: 100%;
         font-size: 10px;
+        border-collapse: collapse;
+        border: 1px solid #1e3a5f;
       }
       .bank-info-table td {
         padding: 4px 8px;
+        border: 1px solid #1e3a5f;
       }
       
       /* Signatures */
