@@ -172,7 +172,7 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenMobile(false);
-                        setTimeout(() => navigate("/user/orders"), 200);
+                        setTimeout(() => navigate("/profile?tab=orders"), 200);
                       }}
                       className="cursor-pointer gap-2"
                     >
@@ -351,7 +351,7 @@ const Header = () => {
                     <DropdownMenuItem 
                       onClick={() => {
                         setProfileDropdownOpenDesktop(false);
-                        setTimeout(() => navigate("/user/orders"), 200);
+                        setTimeout(() => navigate("/profile?tab=orders"), 200);
                       }}
                       className="cursor-pointer gap-3 p-3"
                     >
