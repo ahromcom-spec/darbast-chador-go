@@ -180,8 +180,11 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
   // Start recording voice
   const startRecording = useCallback(async () => {
     try {
+      console.log('Starting voice recording...');
+      
       // First check if microphone permission is already denied
       const permissionState = await checkMicrophonePermission();
+      console.log('Permission state:', permissionState);
       
       if (permissionState === 'denied') {
         toast({
@@ -194,53 +197,35 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       }
 
       // Request microphone access
+      console.log('Requesting microphone access...');
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
+        audio: true
       });
       
+      console.log('Microphone access granted');
       streamRef.current = stream;
       
-      // Find best supported format - prioritize mp4/aac for cross-browser compatibility (especially Safari/iOS)
-      let mimeType = '';
-      const formats = [
-        'audio/mp4',           // Best for Safari/iOS
-        'audio/aac',           // AAC codec - widely supported
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/ogg;codecs=opus',
-        'audio/mpeg'
-      ];
+      // Use default format - don't specify mimeType for maximum compatibility
+      console.log('Creating MediaRecorder...');
+      const mediaRecorder = new MediaRecorder(stream);
+      console.log('MediaRecorder created with mimeType:', mediaRecorder.mimeType);
       
-      for (const format of formats) {
-        if (MediaRecorder.isTypeSupported(format)) {
-          mimeType = format;
-          console.log('Selected audio format:', format);
-          break;
-        }
-      }
-      
-      // If no preferred format found, log what the browser defaults to
-      if (!mimeType) {
-        console.log('No preferred format supported, using browser default');
-      }
-      
-      console.log('Using mimeType:', mimeType || 'default');
-      
-      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
+        console.log('Data available:', event.data.size, 'bytes');
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
-      mediaRecorder.start(100); // Collect data every 100ms
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+      };
+
+      mediaRecorder.start(500); // Collect data every 500ms
+      console.log('Recording started');
       setIsRecording(true);
       setRecordingDuration(0);
 
@@ -259,7 +244,6 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     } catch (error: any) {
       console.error('Microphone error:', error);
       
-      // Provide specific error messages based on error type
       let errorMessage = 'لطفاً دسترسی میکروفون را در تنظیمات مرورگر فعال کنید';
       
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
@@ -281,7 +265,11 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
 
   // Stop recording and upload
   const stopRecording = useCallback(async () => {
-    if (!mediaRecorderRef.current || !user) return;
+    console.log('Stopping recording...');
+    if (!mediaRecorderRef.current || !user) {
+      console.log('No mediaRecorder or user');
+      return;
+    }
 
     // Clear timer
     if (recordingTimerRef.current) {
@@ -291,6 +279,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
 
     const mediaRecorder = mediaRecorderRef.current;
     const recordedMimeType = mediaRecorder.mimeType || 'audio/webm';
+    console.log('Recorded mimeType:', recordedMimeType);
     
     setIsRecording(false);
     setIsUploading(true);
@@ -298,6 +287,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     // Create a promise to wait for recording to stop
     const recordingComplete = new Promise<void>((resolve) => {
       mediaRecorder.onstop = () => {
+        console.log('MediaRecorder stopped');
         // Stop all tracks
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
@@ -311,13 +301,15 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     await recordingComplete;
 
     // Small delay to ensure all data is collected
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     try {
-      // Create blob from chunks
+      console.log('Audio chunks collected:', audioChunksRef.current.length);
+      
+      // Create blob from chunks - use the recorded mimeType
       const audioBlob = new Blob(audioChunksRef.current, { type: recordedMimeType });
       
-      console.log('Recording complete. Size:', audioBlob.size, 'Type:', audioBlob.type);
+      console.log('Audio blob created. Size:', audioBlob.size, 'Type:', audioBlob.type);
 
       if (audioBlob.size < 500) {
         toast({ title: 'ضبط صوتی خیلی کوتاه است', variant: 'destructive' });
@@ -330,10 +322,11 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       if (recordedMimeType.includes('mp4')) extension = 'mp4';
       else if (recordedMimeType.includes('ogg')) extension = 'ogg';
       else if (recordedMimeType.includes('mpeg') || recordedMimeType.includes('mp3')) extension = 'mp3';
+      else if (recordedMimeType.includes('aac')) extension = 'aac';
 
       const fileName = `${orderId}/${user.id}/${Date.now()}.${extension}`;
       
-      console.log('Uploading:', fileName);
+      console.log('Uploading to voice-messages bucket:', fileName);
 
       // Upload to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -344,9 +337,12 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
           upsert: false
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
 
-      console.log('Upload success:', uploadData.path);
+      console.log('Upload success, path:', uploadData.path);
 
       // Create message record
       const { error: messageError } = await supabase
@@ -359,13 +355,17 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
           audio_path: uploadData.path
         }]);
 
-      if (messageError) throw messageError;
+      if (messageError) {
+        console.error('Message insert error:', messageError);
+        throw messageError;
+      }
 
+      console.log('Voice message saved successfully');
       toast({ title: 'پیام صوتی ارسال شد ✓' });
       scrollToBottom();
 
     } catch (error: any) {
-      console.error('Upload error:', error);
+      console.error('Upload/save error:', error);
       toast({
         title: 'خطا در ارسال پیام صوتی',
         description: error.message || 'لطفاً دوباره تلاش کنید',
@@ -378,8 +378,10 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   }, [user, orderId, isStaff, toast]);
 
-  // Play audio message - download blob and play with correct MIME type
+  // Play audio message - use public URL since bucket is public
   const playAudio = useCallback(async (messageId: string, audioPath: string) => {
+    console.log('Play audio requested:', messageId, audioPath);
+    
     // If same audio is playing, stop it
     if (playingAudioId === messageId) {
       if (audioElementRef.current) {
@@ -400,53 +402,12 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     setPlayingAudioId(null);
 
     try {
-      console.log('Attempting to play audio:', audioPath);
-      
-      // Download the file as blob directly - most reliable method
-      const { data: blobData, error: downloadError } = await supabase.storage
+      // Since bucket is public, try public URL first (faster)
+      const { data: publicUrlData } = supabase.storage
         .from('voice-messages')
-        .download(audioPath);
-
-      if (downloadError || !blobData) {
-        console.error('Download error:', downloadError);
-        throw new Error('فایل صوتی دانلود نشد');
-      }
-
-      console.log('Downloaded blob:', blobData.size, 'bytes, original type:', blobData.type);
+        .getPublicUrl(audioPath);
       
-      // Determine the correct MIME type based on file extension
-      const extension = audioPath.split('.').pop()?.toLowerCase();
-      let mimeType = blobData.type;
-      
-      // Force correct MIME type based on extension
-      if (!mimeType || mimeType === 'application/octet-stream' || mimeType === '') {
-        switch (extension) {
-          case 'mp4':
-          case 'm4a':
-            mimeType = 'audio/mp4';
-            break;
-          case 'webm':
-            mimeType = 'audio/webm';
-            break;
-          case 'ogg':
-            mimeType = 'audio/ogg';
-            break;
-          case 'mp3':
-            mimeType = 'audio/mpeg';
-            break;
-          case 'aac':
-            mimeType = 'audio/aac';
-            break;
-          default:
-            mimeType = 'audio/webm';
-        }
-      }
-      
-      console.log('Using MIME type:', mimeType, 'for extension:', extension);
-      
-      // Create a new blob with the correct MIME type
-      const typedBlob = new Blob([blobData], { type: mimeType });
-      const objectUrl = URL.createObjectURL(typedBlob);
+      console.log('Public URL:', publicUrlData.publicUrl);
       
       // Create and configure audio element
       const audio = new Audio();
@@ -457,14 +418,14 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
         const timeout = setTimeout(() => {
           console.log('Audio load timeout');
           resolve(false);
-        }, 15000);
+        }, 10000);
         
         audio.oncanplaythrough = () => {
           clearTimeout(timeout);
-          console.log('Audio ready, attempting to play...');
+          console.log('Audio ready, playing...');
           audio.play()
             .then(() => {
-              console.log('Playback started successfully');
+              console.log('Playback started');
               setPlayingAudioId(messageId);
               setLoadingAudioId(null);
               resolve(true);
@@ -475,7 +436,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
             });
         };
         
-        audio.onerror = (e) => {
+        audio.onerror = () => {
           clearTimeout(timeout);
           console.error('Audio error:', audio.error?.code, audio.error?.message);
           resolve(false);
@@ -485,24 +446,47 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       audio.onended = () => {
         console.log('Audio ended');
         setPlayingAudioId(null);
-        URL.revokeObjectURL(objectUrl);
         audioElementRef.current = null;
       };
       
-      audio.onpause = () => {
-        // Only clear playing state if manually paused
-      };
-      
       // Set source and load
-      audio.src = objectUrl;
+      audio.src = publicUrlData.publicUrl;
       audio.load();
       
       const success = await playPromise;
       
       if (!success) {
-        URL.revokeObjectURL(objectUrl);
+        // Fallback: try downloading blob
+        console.log('Public URL failed, trying blob download...');
         audioElementRef.current = null;
-        throw new Error('این فایل صوتی در مرورگر شما پخش نشد. لطفاً یک صدای جدید ضبط کنید.');
+        
+        const { data: blobData, error: downloadError } = await supabase.storage
+          .from('voice-messages')
+          .download(audioPath);
+
+        if (downloadError || !blobData) {
+          console.error('Download error:', downloadError);
+          throw new Error('فایل صوتی دانلود نشد');
+        }
+
+        const objectUrl = URL.createObjectURL(blobData);
+        const fallbackAudio = new Audio(objectUrl);
+        audioElementRef.current = fallbackAudio;
+        
+        fallbackAudio.onended = () => {
+          setPlayingAudioId(null);
+          URL.revokeObjectURL(objectUrl);
+          audioElementRef.current = null;
+        };
+        
+        try {
+          await fallbackAudio.play();
+          setPlayingAudioId(messageId);
+          setLoadingAudioId(null);
+        } catch (playError) {
+          URL.revokeObjectURL(objectUrl);
+          throw new Error('فایل صوتی قابل پخش نیست');
+        }
       }
       
     } catch (error: any) {
