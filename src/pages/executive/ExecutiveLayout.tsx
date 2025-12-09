@@ -10,12 +10,12 @@ const navItems = [
     icon: LayoutDashboard
   },
   {
-    title: 'کارتابل اجرایی',
+    title: 'در انتظار تایید مدیران',
     href: '/executive/pending-orders',
     icon: ClipboardCheck
   },
   {
-    title: 'آماده اجرا',
+    title: 'در انتظار اجرا',
     href: '/executive/ready',
     icon: Play
   },
@@ -30,22 +30,12 @@ const navItems = [
     icon: Banknote
   },
   {
-    title: 'سفارش اجرا شده',
-    href: '/executive/stage-order-executed',
-    icon: CheckSquare
-  },
-  {
     title: 'در انتظار جمع‌آوری',
     href: '/executive/stage-awaiting-collection',
     icon: PackageOpen
   },
   {
-    title: 'در حال جمع‌آوری',
-    href: '/executive/stage-in-collection',
-    icon: Truck
-  },
-  {
-    title: 'تکمیل شده',
+    title: 'تکمیل سفارش',
     href: '/executive/completed',
     icon: CheckCircle
   },

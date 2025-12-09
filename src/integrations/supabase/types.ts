@@ -3074,7 +3074,6 @@ export type Database = {
         Returns: undefined
       }
       assign_role_to_user:
-        | { Args: { _role: string; _user_id: string }; Returns: undefined }
         | {
             Args: {
               _role: Database["public"]["Enums"]["app_role"]
@@ -3082,6 +3081,7 @@ export type Database = {
             }
             Returns: undefined
           }
+        | { Args: { _role: string; _user_id: string }; Returns: undefined }
       calculate_reputation_score: {
         Args: { _user_id: string }
         Returns: undefined
@@ -3272,9 +3272,8 @@ export type Database = {
         | {
             Args: {
               _action: string
-              _actor_user_id: string
               _entity: string
-              _entity_id: string
+              _entity_id?: string
               _meta?: Json
             }
             Returns: string
@@ -3282,8 +3281,9 @@ export type Database = {
         | {
             Args: {
               _action: string
+              _actor_user_id: string
               _entity: string
-              _entity_id?: string
+              _entity_id: string
               _meta?: Json
             }
             Returns: string
