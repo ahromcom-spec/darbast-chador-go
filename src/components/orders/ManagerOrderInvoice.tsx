@@ -367,8 +367,17 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         border: 1px solid #1e3a5f;
       }
       .bank-info-table td {
-        padding: 4px 8px;
+        padding: 6px 10px;
         border: 1px solid #1e3a5f;
+      }
+      .bank-info-table .label-cell {
+        background: #1e3a5f;
+        color: white;
+        font-weight: bold;
+        width: 120px;
+      }
+      .bank-info-table .value-cell {
+        background: #f8fafc;
       }
       
       /* Signatures */
@@ -497,102 +506,159 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
           <div class="company-contacts">
             دفتر: ۰۲۵ ۳۸۸۶ ۵۰۴۰ &nbsp;|&nbsp; همراه محمدی: ۰۹۱۲ ۵۵۱ ۱۴۹۴ &nbsp;|&nbsp; تلفن گویا: ۹۰۰۰۰۰۳۱۹
           </div>
-          <div class="order-code-badge">شماره فاکتور: ${order.code}</div>
         </div>
 
-        <!-- Customer Info Table -->
+        <!-- Invoice Info Row -->
         <table class="main-info-table">
           <tr>
-            <td class="label-cell">نام و شماره تماس هماهنگ کننده:</td>
-            <td class="value-cell">${order.customer_name || '-'} - ${order.customer_phone || '۰۹۰۰۰۰۰۰۰۰۰'}</td>
-            <td class="label-cell">فاکتور سری:</td>
+            <td class="label-cell">شماره فاکتور:</td>
+            <td class="value-cell">${order.code}</td>
+            <td class="label-cell">تاریخ صدور:</td>
+            <td class="value-cell">${order.created_at ? formatPersianDate(order.created_at) : '-'}</td>
+            <td class="label-cell">سری فاکتور:</td>
             <td class="value-cell">اول</td>
           </tr>
+        </table>
+
+        <!-- Customer Info Section -->
+        <table class="main-info-table">
           <tr>
-            <td class="label-cell">آدرس کارفرما/شرکت:</td>
-            <td class="value-cell">${provinceName ? `${provinceName}، ` : ''}${order.address || '-'}</td>
-            <td class="label-cell">تاریخ تنظیم:</td>
-            <td class="value-cell">${order.created_at ? formatPersianDate(order.created_at) : '-'}</td>
+            <td class="label-cell" colspan="6" style="text-align:center; font-size:12px;">🧑‍💼 اطلاعات مشتری</td>
+          </tr>
+          <tr>
+            <td class="label-cell">نام کارفرما:</td>
+            <td class="value-cell">${order.customer_name || '-'}</td>
+            <td class="label-cell">شماره تماس:</td>
+            <td class="value-cell">${order.customer_phone || '-'}</td>
+            <td class="label-cell">وضعیت سفارش:</td>
+            <td class="value-cell">${statusLabels[order.status || ''] || order.status || '-'}</td>
+          </tr>
+        </table>
+
+        <!-- Address Section -->
+        <table class="main-info-table">
+          <tr>
+            <td class="label-cell" colspan="4" style="text-align:center; font-size:12px;">📍 اطلاعات آدرس</td>
+          </tr>
+          <tr>
+            <td class="label-cell">استان/شهر:</td>
+            <td class="value-cell">${provinceName || '-'}</td>
+            <td class="label-cell">آدرس کارفرما:</td>
+            <td class="value-cell">${order.address || '-'}</td>
           </tr>
           <tr>
             <td class="label-cell">آدرس محل نصب:</td>
             <td class="value-cell" colspan="3">${provinceName ? `${provinceName}، ` : ''}${order.address || '-'}${order.detailed_address ? ` - ${order.detailed_address}` : ''}</td>
           </tr>
+          ${description ? `
           <tr>
-            <td class="label-cell">صورت حساب آقای/خانم/شرکت:</td>
-            <td class="value-cell">${order.customer_name || '-'}</td>
-            <td class="label-cell">پیوست:</td>
-            <td class="value-cell">${media.length > 0 ? 'دارد' : 'ندارد'}</td>
+            <td class="label-cell">توضیحات محل نصب:</td>
+            <td class="value-cell" colspan="3">${description}</td>
+          </tr>
+          ` : ''}
+        </table>
+
+        <!-- Scaffolding Details Section -->
+        <table class="main-info-table">
+          <tr>
+            <td class="label-cell" colspan="6" style="text-align:center; font-size:12px;">🏗️ مشخصات داربست</td>
+          </tr>
+          <tr>
+            <td class="label-cell">نوع داربست:</td>
+            <td class="value-cell">${scaffoldTypeName}</td>
+            <td class="label-cell">زیرنوع:</td>
+            <td class="value-cell">${subtypeName}</td>
+            <td class="label-cell">متراژ کل:</td>
+            <td class="value-cell">${totalArea || '-'} متر مربع</td>
+          </tr>
+          <tr>
+            <td class="label-cell">طول (متر):</td>
+            <td class="value-cell">${getLength()}</td>
+            <td class="label-cell">عرض (متر):</td>
+            <td class="value-cell">${getWidth()}</td>
+            <td class="label-cell">ارتفاع (متر):</td>
+            <td class="value-cell">${getHeight()}</td>
           </tr>
         </table>
 
-        <!-- Orders Table -->
+        <!-- Dates Section -->
+        <table class="main-info-table">
+          <tr>
+            <td class="label-cell" colspan="4" style="text-align:center; font-size:12px;">📅 تاریخ‌های مهم</td>
+          </tr>
+          <tr>
+            <td class="label-cell">تاریخ نصب:</td>
+            <td class="value-cell">${installDate ? formatPersianDate(installDate) : '-'}</td>
+            <td class="label-cell">تاریخ پایان:</td>
+            <td class="value-cell">${dueDate ? formatPersianDate(dueDate) : '-'}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">مدت قرارداد:</td>
+            <td class="value-cell">${conditions?.totalMonths || '۱'} ماه</td>
+            <td class="label-cell">پیوست:</td>
+            <td class="value-cell">${media.length > 0 ? `دارد (${media.length} فایل)` : 'ندارد'}</td>
+          </tr>
+        </table>
+
+        ${conditions ? `
+        <!-- Conditions Section -->
+        <table class="main-info-table">
+          <tr>
+            <td class="label-cell" colspan="6" style="text-align:center; font-size:12px;">📋 شرایط اجرا</td>
+          </tr>
+          <tr>
+            ${conditions.rentalMonthsPlan ? `<td class="label-cell">پلان اجاره:</td><td class="value-cell">${conditions.rentalMonthsPlan === '1' ? 'به شرط یک ماه' : conditions.rentalMonthsPlan === '2' ? 'به شرط دو ماه' : 'سه ماه و بیشتر'}</td>` : '<td class="label-cell">پلان اجاره:</td><td class="value-cell">-</td>'}
+            ${conditions.distanceRange ? `<td class="label-cell">فاصله از قم:</td><td class="value-cell">${conditions.distanceRange} کیلومتر</td>` : '<td class="label-cell">فاصله از قم:</td><td class="value-cell">-</td>'}
+            <td class="label-cell">محل نصب:</td>
+            <td class="value-cell">${parsedNotes?.onGround !== undefined ? (parsedNotes.onGround ? 'روی زمین' : 'روی سکو/پشت‌بام') : '-'}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">دسترسی خودرو:</td>
+            <td class="value-cell">${parsedNotes?.vehicleReachesSite !== undefined ? (parsedNotes.vehicleReachesSite ? 'می‌رسد' : 'نمی‌رسد') : '-'}</td>
+            ${parsedNotes?.facadeWidth ? `<td class="label-cell">عرض داربست نما:</td><td class="value-cell">${parsedNotes.facadeWidth} متر</td>` : '<td class="label-cell">-</td><td class="value-cell">-</td>'}
+            <td class="label-cell">-</td>
+            <td class="value-cell">-</td>
+          </tr>
+        </table>
+        ` : ''}
+
+        <!-- Pricing Table -->
         <table class="order-details-table">
           <thead>
             <tr>
               <th>ردیف</th>
-              <th>محل داربست در پروژه</th>
-              <th>فعالیت مورد نظر</th>
-              <th>نوع داربست</th>
-              <th>طول (م)</th>
-              <th>عرض (م)</th>
-              <th>ارتفاع (م)</th>
-              <th>متراژ کل</th>
-              <th>تاریخ شروع</th>
-              <th>تاریخ پایان</th>
-              <th>تعداد ماه</th>
-              <th>قیمت کل (تومان)</th>
+              <th>شرح خدمات</th>
+              <th>متراژ/تعداد</th>
+              <th>مدت (ماه)</th>
+              <th>قیمت واحد</th>
+              <th>مبلغ کل (تومان)</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>۱</td>
-              <td>${description || order.detailed_address || '-'}</td>
-              <td>${scaffoldTypeName}</td>
-              <td>${subtypeName}</td>
-              <td>${getLength()}</td>
-              <td>${getWidth()}</td>
-              <td>${getHeight()}</td>
-              <td>${totalArea || '-'}</td>
-              <td>${installDate ? formatPersianDate(installDate) : '-'}</td>
-              <td>${dueDate ? formatPersianDate(dueDate) : '-'}</td>
+              <td>${scaffoldTypeName} - ${subtypeName}</td>
+              <td>${totalArea || '-'} متر</td>
               <td>${conditions?.totalMonths || '۱'}</td>
+              <td>${totalArea && orderPrice > 0 ? Math.round(orderPrice / Number(totalArea)).toLocaleString('fa-IR') : '-'}</td>
               <td>${orderPrice > 0 ? orderPrice.toLocaleString('fa-IR') : '-'}</td>
             </tr>
             ${repairRequests.map((repair, idx) => `
               <tr class="repair-row">
                 <td>${(idx + 2).toLocaleString('fa-IR')}</td>
-                <td colspan="2">تعمیر داربست</td>
-                <td colspan="2">${repair.description || '-'}</td>
+                <td>تعمیر داربست${repair.description ? ` - ${repair.description}` : ''}</td>
                 <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>${formatPersianDate(repair.created_at)}</td>
                 <td>-</td>
                 <td>-</td>
                 <td>${(repair.final_cost || repair.estimated_cost || 0).toLocaleString('fa-IR')}</td>
               </tr>
             `).join('')}
             <tr class="total-row">
-              <td colspan="11" style="text-align:left; padding-left:15px;">جمع کل قیمت:</td>
-              <td>${grandTotal.toLocaleString('fa-IR')} تومان</td>
+              <td colspan="5" style="text-align:left; padding-left:15px; font-size:12px;">جمع کل:</td>
+              <td style="font-size:13px;">${grandTotal.toLocaleString('fa-IR')} تومان</td>
             </tr>
           </tbody>
         </table>
-
-        ${conditions ? `
-          <div class="conditions-section">
-            <div class="conditions-title">📋 شرایط اجرا</div>
-            <div class="conditions-grid">
-              ${conditions.rentalMonthsPlan ? `<div class="condition-item"><strong>پلان اجاره:</strong> ${conditions.rentalMonthsPlan === '1' ? 'به شرط یک ماه' : conditions.rentalMonthsPlan === '2' ? 'به شرط دو ماه' : 'سه ماه و بیشتر'}</div>` : ''}
-              ${conditions.totalMonths ? `<div class="condition-item"><strong>مدت قرارداد:</strong> ${conditions.totalMonths} ماه</div>` : ''}
-              ${conditions.distanceRange ? `<div class="condition-item"><strong>فاصله از قم:</strong> ${conditions.distanceRange} کیلومتر</div>` : ''}
-              ${parsedNotes?.onGround !== undefined ? `<div class="condition-item"><strong>محل نصب:</strong> ${parsedNotes.onGround ? 'روی زمین' : 'روی سکو/پشت‌بام'}</div>` : ''}
-              ${parsedNotes?.vehicleReachesSite !== undefined ? `<div class="condition-item"><strong>دسترسی خودرو:</strong> ${parsedNotes.vehicleReachesSite ? 'می‌رسد' : 'نمی‌رسد'}</div>` : ''}
-              ${parsedNotes?.facadeWidth ? `<div class="condition-item"><strong>عرض داربست نما:</strong> ${parsedNotes.facadeWidth} متر</div>` : ''}
-            </div>
-          </div>
-        ` : ''}
 
         ${messages.length > 0 ? `
           <div class="messages-section">
@@ -621,13 +687,17 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
 
         <!-- Bank Info -->
         <div class="bank-section">
-          <div class="bank-title">اطلاعات حساب بانکی</div>
+          <div class="bank-title">💳 اطلاعات حساب بانکی</div>
           <table class="bank-info-table">
             <tr>
-              <td><strong>شبا ملت محمدی:</strong></td>
-              <td>IR 280120000000009812328696</td>
-              <td><strong>کارت ملت رضا محمدی:</strong></td>
-              <td>6104338621521349</td>
+              <td class="label-cell">شماره شبا ملت:</td>
+              <td class="value-cell">IR 280120000000009812328696</td>
+              <td class="label-cell">شماره کارت ملت:</td>
+              <td class="value-cell">6104-3386-2152-1349</td>
+            </tr>
+            <tr>
+              <td class="label-cell">به نام:</td>
+              <td class="value-cell" colspan="3">رضا محمدی</td>
             </tr>
           </table>
         </div>
