@@ -599,41 +599,17 @@ export default function ExecutivePendingOrders() {
               جزئیات کامل
             </Button>
             
-            {order.status === 'pending' && (
-              <Button
-                size="sm"
-                onClick={() => {
-                  setSelectedOrder(order);
-                  setActionType('approve');
-                }}
-                className="gap-2 bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle className="h-4 w-4" />
-                تایید سفارش
-              </Button>
-            )}
-            
-            {order.status === 'approved' && (
-              <Button
-                size="sm"
-                onClick={() => handleStartExecution(order.id, order.code)}
-                className="gap-2 bg-blue-600 hover:bg-blue-700"
-              >
-                <CheckCircle className="h-4 w-4" />
-                شروع اجرا
-              </Button>
-            )}
-            
-            {order.status === 'in_progress' && (
-              <Button
-                size="sm"
-                onClick={() => handleCompleteExecution(order.id, order.code)}
-                className="gap-2 bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle className="h-4 w-4" />
-                اتمام اجرا
-              </Button>
-            )}
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedOrder(order);
+                setActionType('approve');
+              }}
+              className="gap-2 bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="h-4 w-4" />
+              تایید سفارش
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -645,8 +621,8 @@ export default function ExecutivePendingOrders() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
-        title="کارتابل مدیر اجرایی"
-        description={`${orders.length} سفارش در انتظار تایید، در حال اجرا و آماده تحویل`}
+        title="در انتظار تایید مدیران"
+        description={`${orders.length} سفارش در انتظار تایید مدیران`}
         showBackButton={true}
         backTo="/executive"
       />
