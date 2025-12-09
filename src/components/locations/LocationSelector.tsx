@@ -230,33 +230,39 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
                       </div>
                     )}
                   </div>
+                  
+                  {/* دکمه تایید داخل کارت انتخاب‌شده */}
+                  {isSelected && (
+                    <div className="mt-3 pt-3 border-t border-primary/20">
+                      <Button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleConfirm();
+                        }} 
+                        size="default" 
+                        disabled={isConfirming}
+                        className={`w-full transition-colors ${
+                          isConfirming 
+                            ? 'bg-orange-500 hover:bg-orange-500 text-white' 
+                            : ''
+                        }`}
+                      >
+                        {isConfirming ? (
+                          <>
+                            <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                            در حال بارگذاری...
+                          </>
+                        ) : (
+                          'تایید و ادامه'
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          {/* دکمه تایید - داخل کادر با خط جداکننده */}
-          <div className="border-t bg-muted/30 p-4 rounded-b-xl">
-            <Button 
-              onClick={handleConfirm} 
-              size="lg" 
-              disabled={!selectedLocationId || isConfirming}
-              className={`w-full transition-colors ${
-                isConfirming 
-                  ? 'bg-orange-500 hover:bg-orange-500 text-white' 
-                  : ''
-              }`}
-            >
-              {isConfirming ? (
-                <>
-                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                  در حال بارگذاری...
-                </>
-              ) : (
-                'تایید و ادامه'
-              )}
-            </Button>
-          </div>
         </div>
       )}
     </div>
