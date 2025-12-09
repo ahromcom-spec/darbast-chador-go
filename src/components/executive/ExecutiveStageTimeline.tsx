@@ -13,12 +13,15 @@ interface ExecutiveStage {
   statusMapping: string; // وضعیت متناظر در projects_v3.status
 }
 
-// مراحل اجرایی با mapping به status
-const executiveStages: ExecutiveStage[] = [
-  { key: 'awaiting_payment', label: 'در انتظار پرداخت', order: 1, statusMapping: 'completed' },
-  { key: 'order_executed', label: 'سفارش اجرا شده', order: 2, statusMapping: 'completed' },
-  { key: 'awaiting_collection', label: 'سفارش در انتظار جمع‌آوری', order: 3, statusMapping: 'completed' },
-  { key: 'in_collection', label: 'سفارش در حال جمع‌آوری', order: 4, statusMapping: 'completed' },
+// مراحل اجرایی با mapping به status - یکسان با سربرگ‌های ExecutiveLayout
+export const executiveStages: ExecutiveStage[] = [
+  { key: 'approved', label: 'آماده اجرا', order: 1, statusMapping: 'approved' },
+  { key: 'in_progress', label: 'در حال اجرا', order: 2, statusMapping: 'in_progress' },
+  { key: 'awaiting_payment', label: 'در انتظار پرداخت', order: 3, statusMapping: 'completed' },
+  { key: 'order_executed', label: 'سفارش اجرا شده', order: 4, statusMapping: 'completed' },
+  { key: 'awaiting_collection', label: 'سفارش در انتظار جمع‌آوری', order: 5, statusMapping: 'completed' },
+  { key: 'in_collection', label: 'سفارش در حال جمع‌آوری', order: 6, statusMapping: 'completed' },
+  { key: 'closed', label: 'تکمیل شده', order: 7, statusMapping: 'closed' },
 ];
 
 interface ExecutiveStageTimelineProps {
@@ -61,11 +64,11 @@ export const ExecutiveStageTimeline = ({
         .eq('id', projectId)
         .single();
 
-      // به‌روزرسانی هم execution_stage و هم status
-      const updateData: any = {
-        execution_stage: stage.key as 'awaiting_payment' | 'order_executed' | 'awaiting_collection' | 'in_collection',
+      // به‌روزرسانی هم execution_stage و هم status بر اساس مرحله
+      const updateData: Record<string, any> = {
+        execution_stage: stage.key,
         execution_stage_updated_at: new Date().toISOString(),
-        status: stage.statusMapping as 'completed'
+        status: stage.statusMapping
       };
 
       const { error } = await supabase
@@ -85,6 +88,14 @@ export const ExecutiveStageTimeline = ({
 
         if (customerData?.user_id) {
           const stageMessages: Record<string, { title: string; body: string }> = {
+            approved: {
+              title: '✅ سفارش آماده اجرا',
+              body: `سفارش ${orderData.code} تایید شد و آماده اجراست.`
+            },
+            in_progress: {
+              title: '🚧 سفارش در حال اجرا',
+              body: `اجرای سفارش ${orderData.code} آغاز شده است.`
+            },
             awaiting_payment: {
               title: '💰 سفارش در انتظار پرداخت',
               body: `سفارش ${orderData.code} اجرا شده و منتظر پرداخت شماست.`
@@ -100,6 +111,10 @@ export const ExecutiveStageTimeline = ({
             in_collection: {
               title: '🚚 جمع‌آوری در حال انجام',
               body: `جمع‌آوری سفارش ${orderData.code} آغاز شده است.`
+            },
+            closed: {
+              title: '🎉 سفارش تکمیل شد',
+              body: `سفارش ${orderData.code} با موفقیت تکمیل شده است.`
             }
           };
 
