@@ -1082,43 +1082,6 @@ export default function OrderDetail() {
                       </div>
                     )}
 
-                    {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime) && (
-                      <div className="space-y-2">
-                        <h4 className="font-medium">تاریخ‌های مهم سفارش</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {parsedNotes.installDate && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">تاریخ نصب پیشنهادی</span>
-                              <span className="font-medium text-sm">
-                                {parsedNotes.installDate.includes('T') || parsedNotes.installDate.includes('-')
-                                  ? formatPersianDateTime(parsedNotes.installDate)
-                                  : parsedNotes.installDate}
-                              </span>
-                            </div>
-                          )}
-                          {parsedNotes.installationDateTime && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">زمان نصب درخواستی</span>
-                              <span className="font-medium text-sm">
-                                {parsedNotes.installationDateTime.includes('T') || parsedNotes.installationDateTime.includes('-')
-                                  ? formatPersianDateTime(parsedNotes.installationDateTime)
-                                  : parsedNotes.installationDateTime}
-                              </span>
-                            </div>
-                          )}
-                          {parsedNotes.dueDate && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">سررسید قرارداد</span>
-                              <span className="font-medium text-sm">
-                                {parsedNotes.dueDate.includes('T') || parsedNotes.dueDate.includes('-')
-                                  ? formatPersianDate(parsedNotes.dueDate)
-                                  : parsedNotes.dueDate}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
 
                     {notesParseError && (
                       <p className="text-xs text-muted-foreground">
@@ -1230,6 +1193,48 @@ export default function OrderDetail() {
                         </div>
                       </div>
                     )}
+                  </section>
+                )}
+
+                {/* بلوک تاریخ‌های مهم - کادر جداگانه */}
+                {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime) && (
+                  <section className="rounded-2xl border-2 border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 p-4 space-y-3">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-blue-600" />
+                      تاریخ‌های مهم سفارش
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {parsedNotes.installDate && (
+                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ نصب پیشنهادی</span>
+                          <span className="font-bold text-base text-foreground">
+                            {parsedNotes.installDate.includes('T') || parsedNotes.installDate.includes('-')
+                              ? formatPersianDateTime(parsedNotes.installDate)
+                              : parsedNotes.installDate}
+                          </span>
+                        </div>
+                      )}
+                      {parsedNotes.installationDateTime && (
+                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">زمان نصب درخواستی</span>
+                          <span className="font-bold text-base text-foreground">
+                            {parsedNotes.installationDateTime.includes('T') || parsedNotes.installationDateTime.includes('-')
+                              ? formatPersianDateTime(parsedNotes.installationDateTime)
+                              : parsedNotes.installationDateTime}
+                          </span>
+                        </div>
+                      )}
+                      {parsedNotes.dueDate && (
+                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">سررسید قرارداد</span>
+                          <span className="font-bold text-base text-foreground">
+                            {parsedNotes.dueDate.includes('T') || parsedNotes.dueDate.includes('-')
+                              ? formatPersianDate(parsedNotes.dueDate)
+                              : parsedNotes.dueDate}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </section>
                 )}
 
