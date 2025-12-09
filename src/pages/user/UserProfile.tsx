@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -69,6 +69,8 @@ export default function UserProfile() {
   usePageTitle('پروفایل کاربری');
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab') || 'info';
   const { isContractor } = useContractorRole();
   const { isCEO } = useCEORole();
   const { isAdmin } = useAdminRole();
@@ -263,7 +265,7 @@ const fetchOrders = async () => {
         <ProfileHeader user={user} fullName={fullName} roles={roles} />
 
         {/* Tabs */}
-        <Tabs defaultValue="info" className="w-full">
+        <Tabs defaultValue={tabFromUrl} className="w-full">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto gap-2 bg-muted/50 p-1">
             <TabsTrigger 
               value="info" 
