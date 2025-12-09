@@ -388,7 +388,17 @@ export default function ExecutivePendingOrders() {
     }
 
     try {
-      // تغییر وضعیت سفارش به approved و ثبت تاریخ‌های اجرا
+      // Parse existing notes and update with new dates
+      const existingNotes = parseOrderNotes(selectedOrder.notes) || {};
+      const updatedNotes = {
+        ...existingNotes,
+        installationDateTime: executionStartDate,
+        installation_date: executionStartDate,
+        dueDateTime: executionEndDate,
+        due_date: executionEndDate
+      };
+
+      // تغییر وضعیت سفارش به approved و ثبت تاریخ‌های اجرا + آپدیت notes
       const { error: updateError } = await supabase
         .from('projects_v3')
         .update({
@@ -397,7 +407,8 @@ export default function ExecutivePendingOrders() {
           approved_at: new Date().toISOString(),
           executed_by: user.id,
           execution_start_date: executionStartDate,
-          execution_end_date: executionEndDate
+          execution_end_date: executionEndDate,
+          notes: updatedNotes
         })
         .eq('id', selectedOrder.id);
 
@@ -576,6 +587,12 @@ export default function ExecutivePendingOrders() {
               onClick={() => {
                 setSelectedOrder(order);
                 setActionType('approve');
+                // Pre-fill execution dates from customer's requested dates
+                const orderNotes = parseOrderNotes(order.notes);
+                const customerRequestedDate = orderNotes?.installationDateTime || orderNotes?.installation_date || '';
+                const customerDueDate = orderNotes?.dueDateTime || orderNotes?.due_date || '';
+                setExecutionStartDate(customerRequestedDate);
+                setExecutionEndDate(customerDueDate);
               }}
               className="gap-2 bg-green-600 hover:bg-green-700"
             >
@@ -658,6 +675,25 @@ export default function ExecutivePendingOrders() {
           
           {selectedOrder && (
             <div className="space-y-4 py-4">
+              {/* نمایش تاریخ درخواستی مشتری */}
+              {(() => {
+                const orderNotes = parseOrderNotes(selectedOrder.notes);
+                const customerRequestedDate = orderNotes?.installationDateTime || orderNotes?.installation_date;
+                if (customerRequestedDate) {
+                  return (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">تاریخ درخواستی مشتری</Label>
+                      <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                          {formatPersianDate(customerRequestedDate)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">شماره تماس مشتری</Label>
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
