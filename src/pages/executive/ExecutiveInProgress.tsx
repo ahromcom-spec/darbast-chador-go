@@ -415,7 +415,7 @@ export default function ExecutiveInProgress() {
                     className="gap-2 bg-green-600 hover:bg-green-700"
                   >
                     <CheckCircle2 className="h-4 w-4" />
-                    جمع‌آوری و اتمام
+                    اجرا شد
                   </Button>
                 </div>
               </CardContent>
