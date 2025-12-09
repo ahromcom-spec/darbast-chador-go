@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Printer, X } from 'lucide-react';
+import { Printer, X, Download, Share2 } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { parseOrderNotes } from './OrderDetailsView';
+import { useToast } from '@/hooks/use-toast';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -65,7 +66,9 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
   const [provinceName, setProvinceName] = useState('');
   const [subcategoryName, setSubcategoryName] = useState('');
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
+  const [isDownloading, setIsDownloading] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
 
@@ -143,237 +146,487 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
     fetchData();
   }, [open, order.id, order.province_id, order.subcategory_id]);
 
-  const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
+  const getInvoiceStyles = () => `
+    <style>
+      @page { 
+        size: A4; 
+        margin: 10mm; 
+      }
+      * {
+        box-sizing: border-box;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+      }
+      body { 
+        direction: rtl; 
+        padding: 0;
+        margin: 0;
+        font-size: 11px;
+        line-height: 1.5;
+        color: #1a1a1a;
+        background: white;
+      }
+      .invoice-container {
+        max-width: 100%;
+        padding: 15px;
+      }
+      
+      /* Header Section */
+      .header-section {
+        text-align: center;
+        margin-bottom: 15px;
+        border-bottom: 3px solid #1e3a5f;
+        padding-bottom: 15px;
+      }
+      .logo-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 10px;
+      }
+      .logo-container img {
+        height: 80px;
+      }
+      .company-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #1e3a5f;
+        margin-bottom: 5px;
+      }
+      .company-website {
+        font-size: 14px;
+        color: #3b82f6;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .company-contacts {
+        font-size: 11px;
+        color: #555;
+      }
+      
+      /* Order Code Badge */
+      .order-code-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #1e3a5f, #3b82f6);
+        color: white;
+        padding: 8px 25px;
+        border-radius: 25px;
+        font-size: 16px;
+        font-weight: bold;
+        margin: 15px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      }
+      
+      /* Info Table */
+      .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      .info-table td {
+        border: 1px solid #d1d5db;
+        padding: 8px 12px;
+        font-size: 11px;
+      }
+      .info-table .label-cell {
+        background: #1e3a5f;
+        color: white;
+        font-weight: bold;
+        width: 160px;
+        text-align: right;
+      }
+      .info-table .value-cell {
+        background: #f8fafc;
+      }
+      
+      /* Main Order Table */
+      .order-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+        font-size: 10px;
+      }
+      .order-table thead tr {
+        background: linear-gradient(135deg, #1e3a5f, #2563eb);
+      }
+      .order-table th {
+        color: white;
+        padding: 10px 6px;
+        border: 1px solid #1e3a5f;
+        text-align: center;
+        font-weight: bold;
+        font-size: 9px;
+      }
+      .order-table td {
+        border: 1px solid #d1d5db;
+        padding: 8px 6px;
+        text-align: center;
+        background: white;
+      }
+      .order-table tbody tr:nth-child(even) td {
+        background: #f1f5f9;
+      }
+      .repair-row td {
+        background: #fef3c7 !important;
+        border-color: #f59e0b;
+      }
+      .total-row td {
+        background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+        font-weight: bold;
+        font-size: 12px;
+        border: 2px solid #f59e0b;
+      }
+      
+      /* Section Cards */
+      .section-card {
+        margin: 15px 0;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .section-header {
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        padding: 10px 15px;
+        font-weight: bold;
+        font-size: 12px;
+        color: #1e3a5f;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .section-content {
+        padding: 12px 15px;
+        background: white;
+      }
+      
+      /* Conditions Grid */
+      .conditions-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .condition-item {
+        background: #f8fafc;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        font-size: 10px;
+      }
+      .condition-item strong {
+        color: #1e3a5f;
+      }
+      
+      /* Images Grid */
+      .images-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+      .image-thumb {
+        width: 100%;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 2px solid #e2e8f0;
+      }
+      
+      /* Messages */
+      .message-item {
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        border-radius: 8px;
+        font-size: 10px;
+      }
+      .message-customer {
+        background: #e2e8f0;
+        margin-left: 20%;
+      }
+      .message-staff {
+        background: #dbeafe;
+        margin-right: 20%;
+      }
+      .message-time {
+        font-size: 8px;
+        color: #64748b;
+        margin-top: 4px;
+      }
+      
+      /* Bank Info */
+      .bank-section {
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        border: 2px solid #1e3a5f;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .bank-title {
+        font-weight: bold;
+        color: #1e3a5f;
+        margin-bottom: 10px;
+        font-size: 12px;
+      }
+      .bank-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        font-size: 11px;
+      }
+      
+      /* Signatures */
+      .signatures-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: 30px;
+        padding: 20px 0;
+      }
+      .signature-box {
+        text-align: center;
+      }
+      .signature-label {
+        font-size: 11px;
+        font-weight: bold;
+        margin-bottom: 40px;
+        color: #1e3a5f;
+      }
+      .signature-line {
+        border-top: 2px solid #1e3a5f;
+        width: 180px;
+        margin: 0 auto;
+      }
+      
+      /* Print Date */
+      .print-date {
+        text-align: center;
+        font-size: 9px;
+        color: #64748b;
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px dashed #d1d5db;
+      }
+      
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .no-print { display: none !important; }
+      }
+    </style>
+  `;
 
+  const getInvoiceHTML = () => {
+    const dimensions = parsedNotes?.dimensions;
+    const totalArea = parsedNotes?.totalArea || parsedNotes?.total_area;
+    const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
+    const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
+    const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || parsedNotes?.locationPurpose;
+    const installDate = parsedNotes?.installationDateTime || parsedNotes?.installation_date || parsedNotes?.installDate || parsedNotes?.install_date;
+    const dueDate = parsedNotes?.dueDateTime || parsedNotes?.due_date || parsedNotes?.dueDate;
+    const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
+    
+    const orderPrice = order.payment_amount ? Number(order.payment_amount) : (parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0);
+    const repairTotal = repairRequests.reduce((sum, r) => sum + (r.final_cost || r.estimated_cost || 0), 0);
+    const grandTotal = orderPrice + repairTotal;
+
+    const getLength = () => {
+      if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
+        return dimensions[0].length || dimensions[0].l || '-';
+      }
+      if (dimensions && !Array.isArray(dimensions)) {
+        return dimensions.length || '-';
+      }
+      return '-';
+    };
+
+    const getWidth = () => {
+      if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
+        return dimensions[0].width || dimensions[0].w || '-';
+      }
+      if (dimensions && !Array.isArray(dimensions)) {
+        return dimensions.width || '-';
+      }
+      return '-';
+    };
+
+    const getHeight = () => {
+      if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
+        return dimensions[0].height || dimensions[0].h || '-';
+      }
+      if (dimensions && !Array.isArray(dimensions)) {
+        return dimensions.height || '-';
+      }
+      return '-';
+    };
+
+    return `
+      <div class="invoice-container">
+        <!-- Header -->
+        <div class="header-section">
+          <div class="logo-container">
+            <img src="/ahrom-logo.png" alt="اهرم" />
+          </div>
+          <div class="company-title">فاکتور نصب و کرایه داربست فلزی اهرُم</div>
+          <div class="company-website">www.ahrom.ir</div>
+          <div class="company-contacts">
+            دفتر: ۰۲۵ ۳۸۸۶ ۵۰۴۰ &nbsp;|&nbsp; همراه محمدی: ۰۹۱۲ ۵۵۱ ۱۴۹۴ &nbsp;|&nbsp; تلفن گویا: ۹۰۰۰۰۰۳۱۹
+          </div>
+          <div class="order-code-badge">شماره فاکتور: ${order.code}</div>
+        </div>
+
+        <!-- Customer Info Table -->
+        <table class="info-table">
+          <tr>
+            <td class="label-cell">نام و شماره تماس هماهنگ کننده:</td>
+            <td class="value-cell">${order.customer_name || '-'} ${order.customer_phone ? `- ${order.customer_phone}` : ''}</td>
+            <td class="label-cell">فاکتور سری:</td>
+            <td class="value-cell">اول</td>
+          </tr>
+          <tr>
+            <td class="label-cell">آدرس کارفرما/شرکت:</td>
+            <td class="value-cell">${provinceName ? `${provinceName}، ` : ''}${order.address || '-'}</td>
+            <td class="label-cell">تاریخ تنظیم:</td>
+            <td class="value-cell">${order.created_at ? formatPersianDate(order.created_at) : '-'}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">آدرس محل نصب:</td>
+            <td class="value-cell" colspan="3">${provinceName ? `${provinceName}، ` : ''}${order.address || '-'}${order.detailed_address ? ` - ${order.detailed_address}` : ''}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">صورت حساب آقای/خانم/شرکت:</td>
+            <td class="value-cell">${order.customer_name || '-'}</td>
+            <td class="label-cell">پیوست:</td>
+            <td class="value-cell">${media.length > 0 ? 'دارد' : 'ندارد'}</td>
+          </tr>
+        </table>
+
+        <!-- Orders Table -->
+        <table class="order-table">
+          <thead>
+            <tr>
+              <th style="width:30px">ردیف</th>
+              <th>محل داربست در پروژه</th>
+              <th>فعالیت مورد نظر</th>
+              <th>نوع داربست</th>
+              <th style="width:45px">طول (م)</th>
+              <th style="width:45px">عرض (م)</th>
+              <th style="width:50px">ارتفاع (م)</th>
+              <th style="width:55px">متراژ کل</th>
+              <th style="width:70px">تاریخ شروع</th>
+              <th style="width:70px">تاریخ پایان</th>
+              <th style="width:55px">تعداد ماه</th>
+              <th style="width:90px">قیمت کل (تومان)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>۱</td>
+              <td>${description || order.detailed_address || '-'}</td>
+              <td>${scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || subcategoryName || '-'}</td>
+              <td>${ceilingSubtype ? ceilingSubtypeLabels[ceilingSubtype] || ceilingSubtype : (scaffoldingTypeLabels[scaffoldingType] || 'سطحی')}</td>
+              <td>${getLength()}</td>
+              <td>${getWidth()}</td>
+              <td>${getHeight()}</td>
+              <td>${totalArea || '-'}</td>
+              <td>${installDate ? formatPersianDate(installDate) : '-'}</td>
+              <td>${dueDate ? formatPersianDate(dueDate) : '-'}</td>
+              <td>${conditions?.totalMonths || '۱'}</td>
+              <td>${orderPrice > 0 ? orderPrice.toLocaleString('fa-IR') : '-'}</td>
+            </tr>
+            ${repairRequests.map((repair, idx) => `
+              <tr class="repair-row">
+                <td>${(idx + 2).toLocaleString('fa-IR')}</td>
+                <td>${order.detailed_address || order.address || '-'}</td>
+                <td>تعمیر داربست</td>
+                <td>${repair.description || '-'}</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>${formatPersianDate(repair.created_at)}</td>
+                <td>-</td>
+                <td>-</td>
+                <td>${(repair.final_cost || repair.estimated_cost || 0).toLocaleString('fa-IR')}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td colspan="11" style="text-align:left; padding-left:15px;">جمع کل قیمت:</td>
+              <td>${grandTotal.toLocaleString('fa-IR')} تومان</td>
+            </tr>
+          </tbody>
+        </table>
+
+        ${conditions ? `
+          <div class="section-card">
+            <div class="section-header">📋 شرایط اجرا</div>
+            <div class="section-content">
+              <div class="conditions-grid">
+                ${conditions.rentalMonthsPlan ? `<div class="condition-item"><strong>پلان اجاره:</strong> ${conditions.rentalMonthsPlan === '1' ? 'به شرط یک ماه' : conditions.rentalMonthsPlan === '2' ? 'به شرط دو ماه' : 'سه ماه و بیشتر'}</div>` : ''}
+                ${conditions.totalMonths ? `<div class="condition-item"><strong>مدت قرارداد:</strong> ${conditions.totalMonths} ماه</div>` : ''}
+                ${conditions.distanceRange ? `<div class="condition-item"><strong>فاصله از قم:</strong> ${conditions.distanceRange} کیلومتر</div>` : ''}
+                ${parsedNotes?.onGround !== undefined ? `<div class="condition-item"><strong>محل نصب:</strong> ${parsedNotes.onGround ? 'روی زمین' : 'روی سکو/پشت‌بام'}</div>` : ''}
+                ${parsedNotes?.vehicleReachesSite !== undefined ? `<div class="condition-item"><strong>دسترسی خودرو:</strong> ${parsedNotes.vehicleReachesSite ? 'می‌رسد' : 'نمی‌رسد'}</div>` : ''}
+                ${parsedNotes?.facadeWidth ? `<div class="condition-item"><strong>عرض داربست نما:</strong> ${parsedNotes.facadeWidth} متر</div>` : ''}
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        ${media.length > 0 ? `
+          <div class="section-card">
+            <div class="section-header">🖼️ تصاویر پیوست (${media.length} تصویر)</div>
+            <div class="section-content">
+              <div class="images-grid">
+                ${media.slice(0, 8).map(item => `
+                  <img src="${mediaUrls[item.id] || ''}" alt="تصویر" class="image-thumb" crossorigin="anonymous" />
+                `).join('')}
+              </div>
+              ${media.length > 8 ? `<p style="font-size:9px;color:#64748b;margin-top:8px;">و ${media.length - 8} تصویر دیگر...</p>` : ''}
+            </div>
+          </div>
+        ` : ''}
+
+        ${messages.length > 0 ? `
+          <div class="section-card">
+            <div class="section-header">💬 گفتگوها (${messages.length} پیام)</div>
+            <div class="section-content" style="max-height:150px;overflow:hidden;">
+              ${messages.slice(0, 5).map(msg => `
+                <div class="message-item ${msg.is_staff ? 'message-staff' : 'message-customer'}">
+                  <strong>${msg.is_staff ? 'مدیر: ' : 'مشتری: '}</strong>${msg.message}
+                  <div class="message-time">${formatPersianDate(msg.created_at)}</div>
+                </div>
+              `).join('')}
+              ${messages.length > 5 ? `<p style="font-size:9px;color:#64748b;text-align:center;">و ${messages.length - 5} پیام دیگر...</p>` : ''}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Bank Info -->
+        <div class="bank-section">
+          <div class="bank-title">اطلاعات حساب بانکی</div>
+          <div class="bank-info-grid">
+            <div><strong>شبا ملت محمدی:</strong> IR 280120000000009812328696</div>
+            <div><strong>کارت ملت رضا محمدی:</strong> 6104338621521349</div>
+          </div>
+        </div>
+
+        <!-- Signatures -->
+        <div class="signatures-section">
+          <div class="signature-box">
+            <div class="signature-label">امضای کارفرما:</div>
+            <div class="signature-line"></div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-label">امضای پیمانکار:</div>
+            <div class="signature-line"></div>
+          </div>
+        </div>
+
+        <!-- Print Date -->
+        <div class="print-date">
+          تاریخ صدور فاکتور: ${formatPersianDate(new Date().toISOString())}
+        </div>
+      </div>
+    `;
+  };
+
+  const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-
-    const styles = `
-      <style>
-        @page { 
-          size: A4 landscape; 
-          margin: 10mm; 
-        }
-        * {
-          box-sizing: border-box;
-          font-family: 'Vazirmatn', 'Tahoma', sans-serif;
-        }
-        body { 
-          direction: rtl; 
-          padding: 0;
-          margin: 0;
-          font-size: 10px;
-          line-height: 1.4;
-          color: #333;
-        }
-        .invoice-container {
-          max-width: 100%;
-        }
-        
-        /* Header Section */
-        .header-box {
-          border: 2px solid #f97316;
-          border-radius: 8px;
-          padding: 10px;
-          margin-bottom: 10px;
-          background: linear-gradient(to bottom, #fff, #fef3e2);
-        }
-        .header-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid #f97316;
-          padding-bottom: 8px;
-          margin-bottom: 8px;
-        }
-        .logo-left, .logo-right {
-          width: 80px;
-        }
-        .logo-left img, .logo-right img {
-          height: 50px;
-        }
-        .header-center {
-          text-align: center;
-          flex: 1;
-        }
-        .header-title {
-          font-size: 16px;
-          font-weight: bold;
-          color: #f97316;
-        }
-        .header-subtitle {
-          font-size: 11px;
-          color: #333;
-        }
-        .header-website {
-          font-size: 12px;
-          color: #3b82f6;
-          font-weight: bold;
-        }
-        
-        /* Info Grid */
-        .info-section {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-          margin-bottom: 10px;
-        }
-        .info-box {
-          display: flex;
-          border: 1px solid #ddd;
-        }
-        .info-label {
-          background: #1e3a5f;
-          color: white;
-          padding: 5px 10px;
-          min-width: 140px;
-          font-weight: bold;
-          font-size: 9px;
-        }
-        .info-value {
-          padding: 5px 10px;
-          flex: 1;
-          background: white;
-          font-size: 10px;
-        }
-        
-        /* Order Table */
-        .order-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 10px;
-          font-size: 9px;
-        }
-        .order-table th {
-          background: #3b82f6;
-          color: white;
-          padding: 6px 4px;
-          border: 1px solid #2563eb;
-          text-align: center;
-          font-weight: bold;
-        }
-        .order-table td {
-          border: 1px solid #ddd;
-          padding: 5px 4px;
-          text-align: center;
-          background: white;
-        }
-        .order-table tr:nth-child(even) td {
-          background: #f8fafc;
-        }
-        .repair-row td {
-          background: #fef3c7 !important;
-        }
-        
-        /* Total Row */
-        .total-row {
-          background: #fef3c7 !important;
-          font-weight: bold;
-        }
-        .total-row td {
-          background: #fef3c7 !important;
-        }
-        
-        /* Images Section */
-        .images-section {
-          margin-top: 10px;
-          padding: 10px;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 4px;
-        }
-        .section-title {
-          font-weight: bold;
-          font-size: 11px;
-          color: #1e3a5f;
-          margin-bottom: 8px;
-          border-bottom: 1px solid #ddd;
-          padding-bottom: 4px;
-        }
-        .images-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 8px;
-        }
-        .image-thumb {
-          width: 100%;
-          height: 80px;
-          object-fit: cover;
-          border-radius: 4px;
-          border: 1px solid #ddd;
-        }
-        
-        /* Messages Section */
-        .messages-section {
-          margin-top: 10px;
-          padding: 10px;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 4px;
-        }
-        .message-item {
-          padding: 5px 8px;
-          margin-bottom: 4px;
-          border-radius: 4px;
-          font-size: 9px;
-        }
-        .message-customer {
-          background: #e2e8f0;
-          margin-left: 30%;
-        }
-        .message-staff {
-          background: #dbeafe;
-          margin-right: 30%;
-        }
-        .message-time {
-          font-size: 8px;
-          color: #64748b;
-          margin-top: 2px;
-        }
-        
-        /* Footer */
-        .footer-section {
-          margin-top: 15px;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-        }
-        .signature-box {
-          text-align: center;
-          padding: 10px;
-        }
-        .signature-label {
-          font-size: 10px;
-          font-weight: bold;
-          margin-bottom: 30px;
-        }
-        .signature-line {
-          border-top: 1px solid #333;
-          width: 150px;
-          margin: 0 auto;
-        }
-        .bank-info {
-          text-align: center;
-          font-size: 9px;
-          margin-top: 10px;
-          padding: 8px;
-          background: #f1f5f9;
-          border-radius: 4px;
-        }
-        .print-date {
-          text-align: center;
-          font-size: 8px;
-          color: #64748b;
-          margin-top: 10px;
-        }
-        
-        @media print {
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        }
-      </style>
-    `;
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -382,10 +635,10 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         <meta charset="UTF-8">
         <title>فاکتور سفارش ${order.code}</title>
         <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
-        ${styles}
+        ${getInvoiceStyles()}
       </head>
       <body>
-        ${printContent.innerHTML}
+        ${getInvoiceHTML()}
       </body>
       </html>
     `);
@@ -397,63 +650,95 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
     }, 1000);
   };
 
-  const dimensions = parsedNotes?.dimensions;
-  const totalArea = parsedNotes?.totalArea || parsedNotes?.total_area;
-  const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
-  const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
-  const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || parsedNotes?.locationPurpose;
-  // تاریخ‌ها - از هر دو فرمت جدید و قدیم
-  const installDate = parsedNotes?.installationDateTime || parsedNotes?.installation_date || parsedNotes?.installDate || parsedNotes?.install_date;
-  const dueDate = parsedNotes?.dueDateTime || parsedNotes?.due_date || parsedNotes?.dueDate;
-  
-  // شرایط اجرا
-  const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true);
+    try {
+      // Dynamic import for html2pdf
+      const html2pdf = (await import('html2pdf.js')).default;
+      
+      // Create a temporary container
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <style>
+          ${getInvoiceStyles().replace(/<\/?style>/g, '')}
+        </style>
+        ${getInvoiceHTML()}
+      `;
+      container.style.direction = 'rtl';
+      container.style.fontFamily = 'Tahoma, Arial, sans-serif';
+      document.body.appendChild(container);
+      
+      const options = {
+        margin: 10,
+        filename: `فاکتور-سفارش-${order.code}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          letterRendering: true,
+        },
+        jsPDF: { 
+          unit: 'mm' as const, 
+          format: 'a4' as const, 
+          orientation: 'portrait' as const 
+        }
+      };
 
-  // Calculate total price including repairs
-  const orderPrice = order.payment_amount ? Number(order.payment_amount) : (parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0);
-  const repairTotal = repairRequests.reduce((sum, r) => sum + (r.final_cost || r.estimated_cost || 0), 0);
-  const grandTotal = orderPrice + repairTotal;
-
-  // Get dimension info
-  const getDimensionText = () => {
-    if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
-      const dim = dimensions[0];
-      return `طول${dim.length || dim.l || '-'}در${dim.width || dim.w || '-'}ارتفاع${dim.height || dim.h || '-'}`;
+      await html2pdf().set(options).from(container).save();
+      
+      document.body.removeChild(container);
+      
+      toast({
+        title: 'موفق',
+        description: 'فایل PDF با موفقیت دانلود شد',
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در ایجاد فایل PDF',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloading(false);
     }
-    if (dimensions && !Array.isArray(dimensions)) {
-      return `طول${dimensions.length || '-'}در${dimensions.width || '-'}ارتفاع${dimensions.height || '-'}`;
-    }
-    return '-';
   };
 
-  const getLength = () => {
-    if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
-      return dimensions[0].length || dimensions[0].l || '-';
-    }
-    if (dimensions && !Array.isArray(dimensions)) {
-      return dimensions.length || '-';
-    }
-    return '-';
-  };
+  const handleShare = async () => {
+    const shareData = {
+      title: `فاکتور سفارش ${order.code}`,
+      text: `فاکتور سفارش شماره ${order.code} - مشتری: ${order.customer_name || '-'} - قیمت کل: ${(order.payment_amount || parsedNotes?.estimated_price || 0).toLocaleString('fa-IR')} تومان`,
+      url: window.location.href,
+    };
 
-  const getWidth = () => {
-    if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
-      return dimensions[0].width || dimensions[0].w || '-';
+    if (navigator.share && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        toast({
+          title: 'موفق',
+          description: 'فاکتور با موفقیت به اشتراک گذاشته شد',
+        });
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('Error sharing:', error);
+        }
+      }
+    } else {
+      // Fallback: Copy link to clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: 'کپی شد',
+          description: 'لینک فاکتور در کلیپ‌بورد کپی شد',
+        });
+      } catch (error) {
+        toast({
+          title: 'خطا',
+          description: 'امکان اشتراک‌گذاری وجود ندارد',
+          variant: 'destructive',
+        });
+      }
     }
-    if (dimensions && !Array.isArray(dimensions)) {
-      return dimensions.width || '-';
-    }
-    return '-';
-  };
-
-  const getHeight = () => {
-    if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
-      return dimensions[0].height || dimensions[0].h || '-';
-    }
-    if (dimensions && !Array.isArray(dimensions)) {
-      return dimensions.height || '-';
-    }
-    return '-';
   };
 
   return (
@@ -464,261 +749,35 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
           پرینت فاکتور
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>پیش‌نمایش فاکتور سفارش</span>
-            <div className="flex gap-2">
-              <Button onClick={handlePrint}>
+          <DialogTitle className="flex items-center justify-between flex-wrap gap-2">
+            <span>پیش‌نمایش فاکتور سفارش {order.code}</span>
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={handleShare} variant="outline" size="sm">
+                <Share2 className="h-4 w-4 ml-1" />
+                اشتراک‌گذاری
+              </Button>
+              <Button onClick={handleDownloadPDF} variant="outline" size="sm" disabled={isDownloading}>
+                <Download className="h-4 w-4 ml-1" />
+                {isDownloading ? 'در حال دانلود...' : 'دانلود PDF'}
+              </Button>
+              <Button onClick={handlePrint} size="sm">
                 <Printer className="h-4 w-4 ml-1" />
                 پرینت
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
-                <X className="h-4 w-4" />
               </Button>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        {/* Print Content */}
-        <div ref={printRef} className="bg-white p-4" dir="rtl">
-          <div className="invoice-container">
-            
-            {/* Top Service Name Row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '10px' }}>
-              <div style={{ border: '1px solid #ddd', padding: '4px 8px' }}>
-                نام خدمات: {subcategoryName || 'داربست، اجرا از مبدا با اجناس، قم'}
-              </div>
-              <div style={{ border: '1px solid #ddd', padding: '4px 8px', fontWeight: 'bold', fontSize: '12px' }}>
-                {order.code}
-              </div>
-            </div>
-
-            {/* Header Box */}
-            <div className="header-box">
-              <div className="header-top">
-                <div className="logo-left">
-                  <img src="/ahrom-logo.png" alt="اهرم" />
-                </div>
-                <div className="header-center">
-                  <div className="header-title">فاکتور نصب و کرایه داربست فلزی اهرُم</div>
-                  <div className="header-website">www.ahrom.ir</div>
-                  <div className="header-subtitle">
-                    دفتر: ۰۲۵ ۳۸۸۶ ۵۰۴۰ &nbsp;&nbsp;&nbsp; همراه محمدی: ۰۹۱۲ ۵۵۱ ۱۴۹۴
-                  </div>
-                  <div className="header-subtitle">تلفن گویا ۹۰۰۰۰۰۳۱۹</div>
-                </div>
-                <div className="logo-right">
-                  <img src="/ahrom-logo.png" alt="اهرم" />
-                </div>
-              </div>
-
-              {/* Info Grid */}
-              <div className="info-section">
-                <div className="info-box">
-                  <div className="info-label">نام و شماره تماس هماهنگ کننده:</div>
-                  <div className="info-value">{order.customer_name || '-'} {order.customer_phone || ''}</div>
-                </div>
-                <div className="info-box">
-                  <div className="info-label">فاکتور سری:</div>
-                  <div className="info-value">اول</div>
-                </div>
-                <div className="info-box">
-                  <div className="info-label">آدرس کارفرما/شرکت:</div>
-                  <div className="info-value">{provinceName && `${provinceName}، `}{order.address || '-'}</div>
-                </div>
-                <div className="info-box">
-                  <div className="info-label">شماره فاکتور:</div>
-                  <div className="info-value">{order.code}</div>
-                </div>
-                <div className="info-box">
-                  <div className="info-label">آدرس محل نصب:</div>
-                  <div className="info-value">{provinceName && `${provinceName}، `}{order.address || '-'}{order.detailed_address ? ` - ${order.detailed_address}` : ''}</div>
-                </div>
-                <div className="info-box">
-                  <div className="info-label">تاریخ تنظیم:</div>
-                  <div className="info-value">{order.created_at ? formatPersianDate(order.created_at) : '-'}</div>
-                </div>
-                <div className="info-box">
-                  <div className="info-label">صورت حساب آقای/خانم/شرکت:</div>
-                  <div className="info-value">{order.customer_name || '-'}</div>
-                </div>
-                <div className="info-box">
-                  <div className="info-label">پیوست:</div>
-                  <div className="info-value">{media.length > 0 ? 'دارد' : 'ندارد'}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Orders Table */}
-            <table className="order-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '30px' }}>ردیف</th>
-                  <th style={{ width: '50px' }}>پیوست</th>
-                  <th>محل داربست در پروژه</th>
-                  <th>فعالیت مورد نظر با داربست</th>
-                  <th>شرح ابعاد</th>
-                  <th style={{ width: '50px' }}>شماره خدما</th>
-                  <th style={{ width: '40px' }}>طول</th>
-                  <th style={{ width: '40px' }}>عرض</th>
-                  <th style={{ width: '45px' }}>ارتفاع</th>
-                  <th style={{ width: '45px' }}>متراژ</th>
-                  <th style={{ width: '45px' }}>تعداد</th>
-                  <th style={{ width: '70px' }}>تاریخ شروع</th>
-                  <th style={{ width: '70px' }}>تاریخ پایان</th>
-                  <th style={{ width: '70px' }}>تاریخ فک</th>
-                  <th style={{ width: '50px' }}>تعداد ماه</th>
-                  <th style={{ width: '60px' }}>چندمین ماه</th>
-                  <th style={{ width: '70px' }}>فی قیمت</th>
-                  <th style={{ width: '90px' }}>قیمت کل</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Main Order Row */}
-                <tr>
-                  <td>۱</td>
-                  <td>{media.length > 0 ? 'دارد' : 'ندارد'}</td>
-                  <td>{description || order.detailed_address || order.address || '-'}</td>
-                  <td>{scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || '-'}</td>
-                  <td>{getDimensionText()}</td>
-                  <td>۱</td>
-                  <td>{getLength()}</td>
-                  <td>{getWidth()}</td>
-                  <td>{getHeight()}</td>
-                  <td>{totalArea || '-'}</td>
-                  <td>۱ عدد</td>
-                  <td>{installDate ? formatPersianDate(installDate) : '-'}</td>
-                  <td>{dueDate ? formatPersianDate(dueDate) : '-'}</td>
-                  <td>نصب مانده</td>
-                  <td>-</td>
-                  <td>ماه اول</td>
-                  <td>-</td>
-                  <td>{orderPrice > 0 ? `${orderPrice.toLocaleString('fa-IR')} تومان` : '-'}</td>
-                </tr>
-
-                {/* Repair Request Rows */}
-                {repairRequests.map((repair, idx) => (
-                  <tr key={repair.id} className="repair-row">
-                    <td>{(idx + 2).toLocaleString('fa-IR')}</td>
-                    <td>ندارد</td>
-                    <td>{order.detailed_address || order.address || '-'}</td>
-                    <td>تعمیر داربست - {repair.description || 'بدون توضیحات'}</td>
-                    <td>-</td>
-                    <td>{(idx + 2).toLocaleString('fa-IR')}</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>۱ عدد</td>
-                    <td>{formatPersianDate(repair.created_at)}</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>{(repair.final_cost || repair.estimated_cost || 0).toLocaleString('fa-IR')} تومان</td>
-                  </tr>
-                ))}
-
-                {/* Total Row */}
-                <tr className="total-row">
-                  <td colSpan={17} style={{ textAlign: 'left', paddingLeft: '10px', fontWeight: 'bold' }}>
-                    جمع قیمت کل:
-                  </td>
-                  <td style={{ fontWeight: 'bold', fontSize: '11px' }}>
-                    {grandTotal.toLocaleString('fa-IR')} تومان
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* Conditions Section */}
-            {conditions && (
-              <div className="images-section" style={{ marginTop: '10px' }}>
-                <div className="section-title">📋 شرایط اجرا</div>
-                <div style={{ fontSize: '10px', lineHeight: '1.6' }}>
-                  {conditions.rentalMonthsPlan && (
-                    <div>پلان اجاره: {conditions.rentalMonthsPlan === '1' ? 'به شرط یک ماه' : conditions.rentalMonthsPlan === '2' ? 'به شرط دو ماه' : 'به شرط سه ماه و بیشتر'}</div>
-                  )}
-                  {conditions.totalMonths && <div>مدت قرارداد: {conditions.totalMonths} ماه</div>}
-                  {conditions.distanceRange && <div>فاصله از قم: {conditions.distanceRange} کیلومتر</div>}
-                  {parsedNotes?.onGround !== undefined && <div>محل نصب: {parsedNotes.onGround ? 'روی زمین' : 'روی سکو/پشت‌بام'}</div>}
-                  {parsedNotes?.vehicleReachesSite !== undefined && <div>دسترسی خودرو: {parsedNotes.vehicleReachesSite ? 'خودرو به محل می‌رسد' : 'خودرو به محل نمی‌رسد'}</div>}
-                  {conditions.platformHeight && <div>ارتفاع پای کار: {conditions.platformHeight} متر</div>}
-                  {conditions.scaffoldHeightFromPlatform && <div>ارتفاع داربست از پای کار: {conditions.scaffoldHeightFromPlatform} متر</div>}
-                </div>
-              </div>
-            )}
-
-            {/* Images Section */}
-            {media.length > 0 && (
-              <div className="images-section">
-                <div className="section-title">🖼️ تصاویر پیوست سفارش ({media.length} تصویر)</div>
-                <div className="images-grid">
-                  {media.slice(0, 8).map((item) => (
-                    <img 
-                      key={item.id} 
-                      src={mediaUrls[item.id] || ''} 
-                      alt="تصویر سفارش"
-                      className="image-thumb"
-                      crossOrigin="anonymous"
-                    />
-                  ))}
-                </div>
-                {media.length > 8 && (
-                  <p style={{ fontSize: '9px', color: '#64748b', marginTop: '5px' }}>
-                    و {media.length - 8} تصویر دیگر...
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Messages Section */}
-            {messages.length > 0 && (
-              <div className="messages-section">
-                <div className="section-title">💬 گفتگوها ({messages.length} پیام)</div>
-                <div style={{ maxHeight: '120px', overflow: 'hidden' }}>
-                  {messages.slice(0, 6).map((msg, idx) => (
-                    <div key={idx} className={`message-item ${msg.is_staff ? 'message-staff' : 'message-customer'}`}>
-                      <strong>{msg.is_staff ? 'مدیر: ' : 'مشتری: '}</strong>
-                      {msg.message}
-                      <div className="message-time">{formatPersianDate(msg.created_at)}</div>
-                    </div>
-                  ))}
-                  {messages.length > 6 && (
-                    <p style={{ fontSize: '9px', color: '#64748b', textAlign: 'center' }}>
-                      و {messages.length - 6} پیام دیگر...
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Bank Info */}
-            <div className="bank-info">
-              <div><strong>شبا ملت محمدی:</strong> IR 280120000000009812328696</div>
-              <div><strong>کارت ملت رضا محمدی:</strong> 6104338621521349</div>
-            </div>
-
-            {/* Footer Signatures */}
-            <div className="footer-section">
-              <div className="signature-box">
-                <div className="signature-label">امضای کارفرما:</div>
-                <div className="signature-line"></div>
-              </div>
-              <div className="signature-box">
-                <div className="signature-label">امضای پیمانکار:</div>
-                <div className="signature-line"></div>
-              </div>
-            </div>
-
-            {/* Print Date */}
-            <div className="print-date">
-              تاریخ چاپ: {formatPersianDate(new Date().toISOString())}
-            </div>
-          </div>
-        </div>
+        {/* Preview Content */}
+        <div 
+          ref={printRef} 
+          className="bg-white p-6 rounded-lg border" 
+          dir="rtl"
+          dangerouslySetInnerHTML={{ __html: getInvoiceHTML() }}
+          style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif' }}
+        />
       </DialogContent>
     </Dialog>
   );
