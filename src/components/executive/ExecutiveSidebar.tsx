@@ -91,18 +91,6 @@ export function ExecutiveSidebar() {
     refetchInterval: 30000
   });
 
-  // تعداد سفارشات اجرا شده
-  const { data: orderExecutedCount = 0 } = useQuery({
-    queryKey: ['executive-order-executed-count'],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('projects_v3')
-        .select('*', { count: 'exact', head: true })
-        .eq('execution_stage', 'order_executed');
-      return count || 0;
-    },
-    refetchInterval: 30000
-  });
 
   // تعداد سفارشات در انتظار جمع‌آوری
   const { data: awaitingCollectionCount = 0 } = useQuery({
@@ -157,12 +145,6 @@ export function ExecutiveSidebar() {
       badge: workbenchCount
     },
     {
-      title: 'در انتظار تایید',
-      href: '/executive/pending',
-      icon: ClipboardList,
-      badge: pendingCount
-    },
-    {
       title: 'در انتظار اجرا',
       href: '/executive/ready',
       icon: Package,
@@ -181,19 +163,13 @@ export function ExecutiveSidebar() {
       badge: awaitingPaymentCount
     },
     {
-      title: 'سفارش اجرا شده',
-      href: '/executive/stage-order-executed',
-      icon: CheckSquare,
-      badge: orderExecutedCount
-    },
-    {
       title: 'در انتظار جمع‌آوری',
       href: '/executive/stage-awaiting-collection',
       icon: PackageOpen,
       badge: awaitingCollectionCount
     },
     {
-      title: 'تسویه شده',
+      title: 'تکمیل سفارش',
       href: '/executive/completed',
       icon: DollarSign,
       badge: completedCount

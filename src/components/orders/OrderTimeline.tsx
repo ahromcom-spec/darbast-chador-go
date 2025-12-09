@@ -87,13 +87,11 @@ export const OrderTimeline = ({
 
   // تعیین وضعیت هر مرحله بر اساس execution_stage - یکسان با سربرگ‌های مدیر اجرایی
   const stageOrder: Record<string, number> = {
-    approved: 1,        // آماده اجرا
-    in_progress: 2,     // در حال اجرا
-    awaiting_payment: 3, // در انتظار پرداخت
-    order_executed: 4,   // سفارش اجرا شده
-    awaiting_collection: 5, // سفارش در انتظار جمع‌آوری
-    in_collection: 6,    // سفارش در حال جمع‌آوری
-    closed: 7,           // تکمیل شده
+    approved: 1,            // در انتظار اجرا
+    in_progress: 2,         // در حال اجرا
+    awaiting_payment: 3,    // در انتظار پرداخت
+    awaiting_collection: 4, // در انتظار جمع‌آوری
+    closed: 5,              // تکمیل سفارش
   };
 
   const isStageCompleted = (stageKey: string): boolean => {
@@ -143,10 +141,10 @@ export const OrderTimeline = ({
     },
     {
       status: 'approved',
-      label: 'آماده اجرا',
+      label: 'در انتظار اجرا',
       icon: Clock,
       date: finalApprovalDate,
-      completed: isStageCompleted('approved') || ['in_progress', 'awaiting_payment', 'awaiting_collection', 'collecting', 'completed', 'paid', 'closed'].includes(orderStatus) || (!!executionStage && stageOrder[executionStage] > 1),
+      completed: isStageCompleted('approved') || ['in_progress', 'awaiting_payment', 'awaiting_collection', 'completed', 'paid', 'closed'].includes(orderStatus) || (!!executionStage && stageOrder[executionStage] > 1),
       active: isCurrentStage('approved') || orderStatus === 'approved',
       details: executionStartDate 
         ? `زمان شروع اجرا: ${formatDate(executionStartDate)?.date} - ${formatDate(executionStartDate)?.time}`
@@ -168,45 +166,27 @@ export const OrderTimeline = ({
       label: 'در انتظار پرداخت',
       icon: DollarSign,
       date: isCurrentStage('awaiting_payment') ? executionStageUpdatedAt : undefined,
-      completed: isStageCompleted('awaiting_payment'),
+      completed: isStageCompleted('awaiting_payment') || (!!executionStage && stageOrder[executionStage] > 3),
       active: isCurrentStage('awaiting_payment'),
-      details: isCurrentStage('awaiting_payment') ? 'سفارش اجرا شده و منتظر پرداخت است' : undefined,
-    },
-    {
-      status: 'order_executed',
-      label: 'سفارش اجرا شده',
-      icon: CheckCircle2,
-      date: isCurrentStage('order_executed') ? executionStageUpdatedAt : undefined,
-      completed: isStageCompleted('order_executed'),
-      active: isCurrentStage('order_executed'),
-      details: undefined,
+      details: isCurrentStage('awaiting_payment') ? 'سفارش انجام شد و منتظر پرداخت است' : undefined,
     },
     {
       status: 'awaiting_collection',
-      label: 'سفارش در انتظار جمع‌آوری',
+      label: 'در انتظار جمع‌آوری',
       icon: PackageX,
       date: isCurrentStage('awaiting_collection') ? executionStageUpdatedAt : undefined,
-      completed: isStageCompleted('awaiting_collection'),
+      completed: isStageCompleted('awaiting_collection') || (!!executionStage && stageOrder[executionStage] > 4),
       active: isCurrentStage('awaiting_collection'),
-      details: undefined,
-    },
-    {
-      status: 'in_collection',
-      label: 'سفارش در حال جمع‌آوری',
-      icon: PackageCheck,
-      date: isCurrentStage('in_collection') ? executionStageUpdatedAt : undefined,
-      completed: isStageCompleted('in_collection'),
-      active: isCurrentStage('in_collection'),
-      details: undefined,
+      details: isCurrentStage('awaiting_collection') ? 'لطفاً تاریخ فک داربست را تعیین کنید' : undefined,
     },
     {
       status: 'closed',
-      label: 'اتمام سفارش',
+      label: 'تکمیل سفارش',
       icon: CheckCircle2,
       date: customerCompletionDate,
-      completed: orderStatus === 'closed',
+      completed: orderStatus === 'closed' || isCurrentStage('closed'),
       active: isCurrentStage('closed'),
-      details: undefined,
+      details: orderStatus === 'closed' ? 'سفارش با موفقیت تکمیل شد' : undefined,
     },
   ];
 

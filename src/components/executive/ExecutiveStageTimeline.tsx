@@ -13,15 +13,13 @@ interface ExecutiveStage {
   statusMapping: string; // وضعیت متناظر در projects_v3.status
 }
 
-// مراحل اجرایی با mapping به status - یکسان با سربرگ‌های ExecutiveLayout
+// مراحل اجرایی با mapping به status - یکسان با سربرگ‌های مدیر اجرایی
 export const executiveStages: ExecutiveStage[] = [
-  { key: 'approved', label: 'آماده اجرا', order: 1, statusMapping: 'approved' },
+  { key: 'approved', label: 'در انتظار اجرا', order: 1, statusMapping: 'approved' },
   { key: 'in_progress', label: 'در حال اجرا', order: 2, statusMapping: 'in_progress' },
   { key: 'awaiting_payment', label: 'در انتظار پرداخت', order: 3, statusMapping: 'completed' },
-  { key: 'order_executed', label: 'سفارش اجرا شده', order: 4, statusMapping: 'completed' },
-  { key: 'awaiting_collection', label: 'سفارش در انتظار جمع‌آوری', order: 5, statusMapping: 'completed' },
-  { key: 'in_collection', label: 'سفارش در حال جمع‌آوری', order: 6, statusMapping: 'completed' },
-  { key: 'closed', label: 'تکمیل شده', order: 7, statusMapping: 'closed' },
+  { key: 'awaiting_collection', label: 'در انتظار جمع‌آوری', order: 4, statusMapping: 'completed' },
+  { key: 'closed', label: 'تکمیل سفارش', order: 5, statusMapping: 'closed' },
 ];
 
 interface ExecutiveStageTimelineProps {
@@ -89,28 +87,20 @@ export const ExecutiveStageTimeline = ({
         if (customerData?.user_id) {
           const stageMessages: Record<string, { title: string; body: string }> = {
             approved: {
-              title: '✅ سفارش آماده اجرا',
-              body: `سفارش ${orderData.code} تایید شد و آماده اجراست.`
+              title: '✅ سفارش در انتظار اجرا',
+              body: `سفارش ${orderData.code} تایید شد و در انتظار اجرا است.`
             },
             in_progress: {
               title: '🚧 سفارش در حال اجرا',
               body: `اجرای سفارش ${orderData.code} آغاز شده است.`
             },
             awaiting_payment: {
-              title: '💰 سفارش در انتظار پرداخت',
-              body: `سفارش ${orderData.code} اجرا شده و منتظر پرداخت شماست.`
-            },
-            order_executed: {
-              title: '✅ سفارش اجرا شد',
-              body: `سفارش ${orderData.code} با موفقیت اجرا شد.`
+              title: '💰 سفارش انجام شد - در انتظار پرداخت',
+              body: `سفارش ${orderData.code} انجام شد و منتظر پرداخت شماست.`
             },
             awaiting_collection: {
               title: '📦 سفارش در انتظار جمع‌آوری',
-              body: `سفارش ${orderData.code} آماده جمع‌آوری است.`
-            },
-            in_collection: {
-              title: '🚚 جمع‌آوری در حال انجام',
-              body: `جمع‌آوری سفارش ${orderData.code} آغاز شده است.`
+              body: `سفارش ${orderData.code} آماده جمع‌آوری است. لطفاً تاریخ فک داربست را تعیین کنید.`
             },
             closed: {
               title: '🎉 سفارش تکمیل شد',

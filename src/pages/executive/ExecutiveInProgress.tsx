@@ -34,10 +34,11 @@ interface Order {
 }
 
 const stageLabels: Record<string, string> = {
+  approved: 'در انتظار اجرا',
+  in_progress: 'در حال اجرا',
   awaiting_payment: 'در انتظار پرداخت',
-  order_executed: 'سفارش اجرا شده',
-  awaiting_collection: 'سفارش در انتظار جمع‌آوری',
-  in_collection: 'سفارش در حال جمع‌آوری'
+  awaiting_collection: 'در انتظار جمع‌آوری',
+  closed: 'تکمیل سفارش'
 };
 
 export default function ExecutiveInProgress() {
@@ -413,7 +414,7 @@ export default function ExecutiveInProgress() {
                     className="gap-2 bg-green-600 hover:bg-green-700"
                   >
                     <CheckCircle2 className="h-4 w-4" />
-                    اتمام اجرا
+                    سفارش انجام شد
                   </Button>
                 </div>
               </CardContent>
