@@ -150,7 +150,7 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
     <style>
       @page { 
         size: A4; 
-        margin: 10mm; 
+        margin: 8mm; 
       }
       * {
         box-sizing: border-box;
@@ -161,107 +161,113 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         padding: 0;
         margin: 0;
         font-size: 11px;
-        line-height: 1.5;
+        line-height: 1.6;
         color: #1a1a1a;
         background: white;
       }
       .invoice-container {
         max-width: 100%;
-        padding: 15px;
+        padding: 12px;
+        border: 2px solid #1e3a5f;
+        border-radius: 8px;
+        margin: 5px;
       }
       
       /* Header Section */
       .header-section {
         text-align: center;
-        margin-bottom: 15px;
-        border-bottom: 3px solid #1e3a5f;
-        padding-bottom: 15px;
+        margin-bottom: 12px;
+        border-bottom: 2px solid #1e3a5f;
+        padding-bottom: 12px;
       }
       .logo-container {
         display: flex;
         justify-content: center;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
       }
       .logo-container img {
-        height: 80px;
+        height: 70px;
       }
       .company-title {
-        font-size: 18px;
+        font-size: 16px;
         font-weight: bold;
         color: #1e3a5f;
-        margin-bottom: 5px;
+        margin-bottom: 4px;
       }
       .company-website {
-        font-size: 14px;
-        color: #3b82f6;
+        font-size: 13px;
+        color: #2563eb;
         font-weight: bold;
-        margin-bottom: 5px;
+        margin-bottom: 4px;
       }
       .company-contacts {
-        font-size: 11px;
-        color: #555;
+        font-size: 10px;
+        color: #374151;
       }
       
       /* Order Code Badge */
       .order-code-badge {
         display: inline-block;
-        background: linear-gradient(135deg, #1e3a5f, #3b82f6);
+        background: #1e3a5f;
         color: white;
-        padding: 8px 25px;
-        border-radius: 25px;
-        font-size: 16px;
+        padding: 6px 20px;
+        border-radius: 20px;
+        font-size: 14px;
         font-weight: bold;
-        margin: 15px 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        margin: 10px 0;
       }
       
-      /* Info Table */
-      .info-table {
+      /* Main Info Table - Professional Style */
+      .main-info-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 20px;
+        margin-bottom: 12px;
+        font-size: 10px;
       }
-      .info-table td {
-        border: 1px solid #d1d5db;
-        padding: 8px 12px;
-        font-size: 11px;
+      .main-info-table td {
+        border: 1px solid #374151;
+        padding: 6px 10px;
+        vertical-align: middle;
       }
-      .info-table .label-cell {
+      .main-info-table .label-cell {
         background: #1e3a5f;
         color: white;
         font-weight: bold;
-        width: 160px;
+        width: 140px;
         text-align: right;
       }
-      .info-table .value-cell {
+      .main-info-table .value-cell {
         background: #f8fafc;
+        text-align: right;
       }
       
-      /* Main Order Table */
-      .order-table {
+      /* Order Details Table - Main Professional Table */
+      .order-details-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 15px;
-        font-size: 10px;
+        margin: 15px 0;
+        font-size: 9px;
       }
-      .order-table thead tr {
-        background: linear-gradient(135deg, #1e3a5f, #2563eb);
+      .order-details-table thead tr {
+        background: #1e3a5f;
       }
-      .order-table th {
+      .order-details-table th {
         color: white;
-        padding: 10px 6px;
+        padding: 8px 4px;
         border: 1px solid #1e3a5f;
         text-align: center;
         font-weight: bold;
-        font-size: 9px;
+        font-size: 8px;
+        white-space: nowrap;
       }
-      .order-table td {
+      .order-details-table td {
         border: 1px solid #d1d5db;
-        padding: 8px 6px;
+        padding: 7px 4px;
         text-align: center;
         background: white;
+        font-size: 9px;
       }
-      .order-table tbody tr:nth-child(even) td {
+      .order-details-table tbody tr:nth-child(even) td {
         background: #f1f5f9;
       }
       .repair-row td {
@@ -269,126 +275,114 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         border-color: #f59e0b;
       }
       .total-row td {
-        background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+        background: #fef3c7 !important;
         font-weight: bold;
-        font-size: 12px;
-        border: 2px solid #f59e0b;
+        font-size: 11px;
+        border: 2px solid #1e3a5f;
       }
       
-      /* Section Cards */
-      .section-card {
-        margin: 15px 0;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        overflow: hidden;
+      /* Conditions Section */
+      .conditions-section {
+        margin: 12px 0;
+        padding: 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: #f8fafc;
       }
-      .section-header {
-        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-        padding: 10px 15px;
+      .conditions-title {
         font-weight: bold;
-        font-size: 12px;
         color: #1e3a5f;
-        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 8px;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
       }
-      .section-content {
-        padding: 12px 15px;
-        background: white;
-      }
-      
-      /* Conditions Grid */
       .conditions-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        font-size: 10px;
       }
       .condition-item {
-        background: #f8fafc;
-        padding: 8px 12px;
-        border-radius: 6px;
-        border: 1px solid #e2e8f0;
-        font-size: 10px;
+        display: flex;
+        gap: 5px;
       }
       .condition-item strong {
-        color: #1e3a5f;
+        color: #374151;
       }
       
-      /* Images Grid */
-      .images-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 10px;
-      }
-      .image-thumb {
-        width: 100%;
-        height: 100px;
-        object-fit: cover;
+      /* Messages Section */
+      .messages-section {
+        margin: 12px 0;
+        padding: 10px;
+        border: 1px solid #d1d5db;
         border-radius: 6px;
-        border: 2px solid #e2e8f0;
+        background: #f0f9ff;
       }
-      
-      /* Messages */
+      .messages-title {
+        font-weight: bold;
+        color: #1e3a5f;
+        margin-bottom: 8px;
+        font-size: 11px;
+      }
       .message-item {
-        padding: 8px 12px;
-        margin-bottom: 6px;
-        border-radius: 8px;
-        font-size: 10px;
-      }
-      .message-customer {
-        background: #e2e8f0;
-        margin-left: 20%;
-      }
-      .message-staff {
-        background: #dbeafe;
-        margin-right: 20%;
+        padding: 6px 10px;
+        margin-bottom: 5px;
+        border-radius: 6px;
+        font-size: 9px;
+        background: white;
+        border: 1px solid #e2e8f0;
       }
       .message-time {
         font-size: 8px;
         color: #64748b;
-        margin-top: 4px;
+        margin-top: 3px;
       }
       
       /* Bank Info */
       .bank-section {
-        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        margin: 15px 0;
+        padding: 12px;
         border: 2px solid #1e3a5f;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 20px 0;
-        text-align: center;
+        border-radius: 6px;
+        background: #f1f5f9;
       }
       .bank-title {
         font-weight: bold;
         color: #1e3a5f;
-        margin-bottom: 10px;
-        font-size: 12px;
-      }
-      .bank-info-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
+        margin-bottom: 8px;
         font-size: 11px;
+        text-align: center;
+      }
+      .bank-info-table {
+        width: 100%;
+        font-size: 10px;
+      }
+      .bank-info-table td {
+        padding: 4px 8px;
       }
       
       /* Signatures */
       .signatures-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 40px;
-        margin-top: 30px;
-        padding: 20px 0;
+        gap: 30px;
+        margin-top: 25px;
+        padding: 15px 0;
       }
       .signature-box {
         text-align: center;
       }
       .signature-label {
-        font-size: 11px;
+        font-size: 10px;
         font-weight: bold;
-        margin-bottom: 40px;
+        margin-bottom: 35px;
         color: #1e3a5f;
       }
       .signature-line {
-        border-top: 2px solid #1e3a5f;
-        width: 180px;
+        border-top: 1px solid #1e3a5f;
+        width: 150px;
         margin: 0 auto;
       }
       
@@ -397,14 +391,41 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         text-align: center;
         font-size: 9px;
         color: #64748b;
-        margin-top: 15px;
-        padding-top: 10px;
+        margin-top: 12px;
+        padding-top: 8px;
         border-top: 1px dashed #d1d5db;
+      }
+      
+      /* Images */
+      .images-section {
+        margin: 12px 0;
+        padding: 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+      }
+      .images-title {
+        font-weight: bold;
+        color: #1e3a5f;
+        margin-bottom: 8px;
+        font-size: 11px;
+      }
+      .images-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .image-thumb {
+        width: 100%;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
       }
       
       @media print {
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .no-print { display: none !important; }
+        .invoice-container { border: none; margin: 0; }
       }
     </style>
   `;
@@ -453,6 +474,9 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
       return '-';
     };
 
+    const scaffoldTypeName = scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || subcategoryName || '-';
+    const subtypeName = ceilingSubtype ? ceilingSubtypeLabels[ceilingSubtype] || ceilingSubtype : scaffoldTypeName;
+
     return `
       <div class="invoice-container">
         <!-- Header -->
@@ -469,10 +493,10 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         </div>
 
         <!-- Customer Info Table -->
-        <table class="info-table">
+        <table class="main-info-table">
           <tr>
             <td class="label-cell">نام و شماره تماس هماهنگ کننده:</td>
-            <td class="value-cell">${order.customer_name || '-'} ${order.customer_phone ? `- ${order.customer_phone}` : ''}</td>
+            <td class="value-cell">${order.customer_name || '-'} - ${order.customer_phone || '۰۹۰۰۰۰۰۰۰۰۰'}</td>
             <td class="label-cell">فاکتور سری:</td>
             <td class="value-cell">اول</td>
           </tr>
@@ -495,29 +519,29 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         </table>
 
         <!-- Orders Table -->
-        <table class="order-table">
+        <table class="order-details-table">
           <thead>
             <tr>
-              <th style="width:30px">ردیف</th>
+              <th>ردیف</th>
               <th>محل داربست در پروژه</th>
               <th>فعالیت مورد نظر</th>
               <th>نوع داربست</th>
-              <th style="width:45px">طول (م)</th>
-              <th style="width:45px">عرض (م)</th>
-              <th style="width:50px">ارتفاع (م)</th>
-              <th style="width:55px">متراژ کل</th>
-              <th style="width:70px">تاریخ شروع</th>
-              <th style="width:70px">تاریخ پایان</th>
-              <th style="width:55px">تعداد ماه</th>
-              <th style="width:90px">قیمت کل (تومان)</th>
+              <th>طول (م)</th>
+              <th>عرض (م)</th>
+              <th>ارتفاع (م)</th>
+              <th>متراژ کل</th>
+              <th>تاریخ شروع</th>
+              <th>تاریخ پایان</th>
+              <th>تعداد ماه</th>
+              <th>قیمت کل (تومان)</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>۱</td>
               <td>${description || order.detailed_address || '-'}</td>
-              <td>${scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || subcategoryName || '-'}</td>
-              <td>${ceilingSubtype ? ceilingSubtypeLabels[ceilingSubtype] || ceilingSubtype : (scaffoldingTypeLabels[scaffoldingType] || 'سطحی')}</td>
+              <td>${scaffoldTypeName}</td>
+              <td>${subtypeName}</td>
               <td>${getLength()}</td>
               <td>${getWidth()}</td>
               <td>${getHeight()}</td>
@@ -530,10 +554,8 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
             ${repairRequests.map((repair, idx) => `
               <tr class="repair-row">
                 <td>${(idx + 2).toLocaleString('fa-IR')}</td>
-                <td>${order.detailed_address || order.address || '-'}</td>
-                <td>تعمیر داربست</td>
-                <td>${repair.description || '-'}</td>
-                <td>-</td>
+                <td colspan="2">تعمیر داربست</td>
+                <td colspan="2">${repair.description || '-'}</td>
                 <td>-</td>
                 <td>-</td>
                 <td>-</td>
@@ -551,57 +573,55 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         </table>
 
         ${conditions ? `
-          <div class="section-card">
-            <div class="section-header">📋 شرایط اجرا</div>
-            <div class="section-content">
-              <div class="conditions-grid">
-                ${conditions.rentalMonthsPlan ? `<div class="condition-item"><strong>پلان اجاره:</strong> ${conditions.rentalMonthsPlan === '1' ? 'به شرط یک ماه' : conditions.rentalMonthsPlan === '2' ? 'به شرط دو ماه' : 'سه ماه و بیشتر'}</div>` : ''}
-                ${conditions.totalMonths ? `<div class="condition-item"><strong>مدت قرارداد:</strong> ${conditions.totalMonths} ماه</div>` : ''}
-                ${conditions.distanceRange ? `<div class="condition-item"><strong>فاصله از قم:</strong> ${conditions.distanceRange} کیلومتر</div>` : ''}
-                ${parsedNotes?.onGround !== undefined ? `<div class="condition-item"><strong>محل نصب:</strong> ${parsedNotes.onGround ? 'روی زمین' : 'روی سکو/پشت‌بام'}</div>` : ''}
-                ${parsedNotes?.vehicleReachesSite !== undefined ? `<div class="condition-item"><strong>دسترسی خودرو:</strong> ${parsedNotes.vehicleReachesSite ? 'می‌رسد' : 'نمی‌رسد'}</div>` : ''}
-                ${parsedNotes?.facadeWidth ? `<div class="condition-item"><strong>عرض داربست نما:</strong> ${parsedNotes.facadeWidth} متر</div>` : ''}
-              </div>
-            </div>
-          </div>
-        ` : ''}
-
-        ${media.length > 0 ? `
-          <div class="section-card">
-            <div class="section-header">🖼️ تصاویر پیوست (${media.length} تصویر)</div>
-            <div class="section-content">
-              <div class="images-grid">
-                ${media.slice(0, 8).map(item => `
-                  <img src="${mediaUrls[item.id] || ''}" alt="تصویر" class="image-thumb" crossorigin="anonymous" />
-                `).join('')}
-              </div>
-              ${media.length > 8 ? `<p style="font-size:9px;color:#64748b;margin-top:8px;">و ${media.length - 8} تصویر دیگر...</p>` : ''}
+          <div class="conditions-section">
+            <div class="conditions-title">📋 شرایط اجرا</div>
+            <div class="conditions-grid">
+              ${conditions.rentalMonthsPlan ? `<div class="condition-item"><strong>پلان اجاره:</strong> ${conditions.rentalMonthsPlan === '1' ? 'به شرط یک ماه' : conditions.rentalMonthsPlan === '2' ? 'به شرط دو ماه' : 'سه ماه و بیشتر'}</div>` : ''}
+              ${conditions.totalMonths ? `<div class="condition-item"><strong>مدت قرارداد:</strong> ${conditions.totalMonths} ماه</div>` : ''}
+              ${conditions.distanceRange ? `<div class="condition-item"><strong>فاصله از قم:</strong> ${conditions.distanceRange} کیلومتر</div>` : ''}
+              ${parsedNotes?.onGround !== undefined ? `<div class="condition-item"><strong>محل نصب:</strong> ${parsedNotes.onGround ? 'روی زمین' : 'روی سکو/پشت‌بام'}</div>` : ''}
+              ${parsedNotes?.vehicleReachesSite !== undefined ? `<div class="condition-item"><strong>دسترسی خودرو:</strong> ${parsedNotes.vehicleReachesSite ? 'می‌رسد' : 'نمی‌رسد'}</div>` : ''}
+              ${parsedNotes?.facadeWidth ? `<div class="condition-item"><strong>عرض داربست نما:</strong> ${parsedNotes.facadeWidth} متر</div>` : ''}
             </div>
           </div>
         ` : ''}
 
         ${messages.length > 0 ? `
-          <div class="section-card">
-            <div class="section-header">💬 گفتگوها (${messages.length} پیام)</div>
-            <div class="section-content" style="max-height:150px;overflow:hidden;">
-              ${messages.slice(0, 5).map(msg => `
-                <div class="message-item ${msg.is_staff ? 'message-staff' : 'message-customer'}">
-                  <strong>${msg.is_staff ? 'مدیر: ' : 'مشتری: '}</strong>${msg.message}
-                  <div class="message-time">${formatPersianDate(msg.created_at)}</div>
-                </div>
+          <div class="messages-section">
+            <div class="messages-title">💬 گفتگوها (${messages.length} پیام)</div>
+            ${messages.slice(0, 5).map(msg => `
+              <div class="message-item">
+                <strong>${msg.is_staff ? '🔹 مدیر: ' : '🔸 مشتری: '}</strong>${msg.message}
+                <div class="message-time">${formatPersianDate(msg.created_at)}</div>
+              </div>
+            `).join('')}
+            ${messages.length > 5 ? `<p style="font-size:8px;color:#64748b;text-align:center;">و ${messages.length - 5} پیام دیگر...</p>` : ''}
+          </div>
+        ` : ''}
+
+        ${media.length > 0 ? `
+          <div class="images-section">
+            <div class="images-title">🖼️ تصاویر پیوست (${media.length} تصویر)</div>
+            <div class="images-grid">
+              ${media.slice(0, 8).map(item => `
+                <img src="${mediaUrls[item.id] || ''}" alt="تصویر" class="image-thumb" crossorigin="anonymous" />
               `).join('')}
-              ${messages.length > 5 ? `<p style="font-size:9px;color:#64748b;text-align:center;">و ${messages.length - 5} پیام دیگر...</p>` : ''}
             </div>
+            ${media.length > 8 ? `<p style="font-size:8px;color:#64748b;margin-top:6px;">و ${media.length - 8} تصویر دیگر...</p>` : ''}
           </div>
         ` : ''}
 
         <!-- Bank Info -->
         <div class="bank-section">
           <div class="bank-title">اطلاعات حساب بانکی</div>
-          <div class="bank-info-grid">
-            <div><strong>شبا ملت محمدی:</strong> IR 280120000000009812328696</div>
-            <div><strong>کارت ملت رضا محمدی:</strong> 6104338621521349</div>
-          </div>
+          <table class="bank-info-table">
+            <tr>
+              <td><strong>شبا ملت محمدی:</strong></td>
+              <td>IR 280120000000009812328696</td>
+              <td><strong>کارت ملت رضا محمدی:</strong></td>
+              <td>6104338621521349</td>
+            </tr>
+          </table>
         </div>
 
         <!-- Signatures -->
