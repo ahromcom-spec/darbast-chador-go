@@ -69,6 +69,7 @@ export default function ExecutiveStageAwaitingCollection() {
 
   const fetchOrders = async () => {
     try {
+      // نمایش سفارشات با مرحله awaiting_payment یا awaiting_collection در این پوشه
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
@@ -84,7 +85,7 @@ export default function ExecutiveStageAwaitingCollection() {
           notes,
           customer_id
         `)
-        .eq('execution_stage', 'awaiting_collection')
+        .in('execution_stage', ['awaiting_collection', 'awaiting_payment'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
