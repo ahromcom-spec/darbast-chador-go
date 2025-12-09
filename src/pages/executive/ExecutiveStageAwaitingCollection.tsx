@@ -31,10 +31,11 @@ interface Order {
 }
 
 const stageLabels: Record<string, string> = {
+  approved: 'در انتظار اجرا',
+  in_progress: 'در حال اجرا',
   awaiting_payment: 'در انتظار پرداخت',
-  order_executed: 'سفارش اجرا شده',
   awaiting_collection: 'در انتظار جمع‌آوری',
-  in_collection: 'در حال جمع‌آوری'
+  closed: 'تکمیل سفارش'
 };
 
 export default function ExecutiveStageAwaitingCollection() {
@@ -171,6 +172,70 @@ export default function ExecutiveStageAwaitingCollection() {
     }
   };
 
+  const handleCompleteCollection = async (orderId: string, orderCode: string) => {
+    setUpdatingStage(true);
+    try {
+      // دریافت اطلاعات مشتری
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('customer_id')
+        .eq('id', orderId)
+        .single();
+
+      // به‌روزرسانی وضعیت سفارش به تکمیل شده
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({ 
+          status: 'closed' as any,
+          execution_stage: 'closed' as any,
+          execution_stage_updated_at: new Date().toISOString(),
+          closed_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // ارسال اعلان به مشتری
+      if (orderData?.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', orderData.customer_id)
+          .single();
+
+        if (customerData?.user_id) {
+          try {
+            await supabase.rpc('send_notification', {
+              _user_id: customerData.user_id,
+              _title: '🎉 سفارش تکمیل شد',
+              _body: `سفارش ${orderCode} با موفقیت تکمیل و جمع‌آوری شد. از اعتماد شما سپاسگزاریم.`,
+              _link: '/user/my-orders',
+              _type: 'success'
+            });
+          } catch (e) {
+            console.error('Error sending notification:', e);
+          }
+        }
+      }
+
+      toast({
+        title: '🎉 سفارش تکمیل شد',
+        description: `سفارش ${orderCode} با موفقیت تکمیل و بسته شد.`
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error completing collection:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در تکمیل سفارش'
+      });
+    } finally {
+      setUpdatingStage(false);
+    }
+  };
+
   if (loading) return <LoadingSpinner />;
 
   return (
@@ -289,6 +354,15 @@ export default function ExecutiveStageAwaitingCollection() {
                   >
                     <Eye className="h-4 w-4" />
                     جزئیات
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    onClick={() => handleCompleteCollection(order.id, order.code)}
+                    className="gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <PackageOpen className="h-4 w-4" />
+                    جمع‌آوری شد
                   </Button>
                 </div>
               </CardContent>

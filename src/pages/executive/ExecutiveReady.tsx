@@ -34,10 +34,11 @@ interface Order {
 }
 
 const stageLabels: Record<string, string> = {
+  approved: 'در انتظار اجرا',
+  in_progress: 'در حال اجرا',
   awaiting_payment: 'در انتظار پرداخت',
-  order_executed: 'سفارش اجرا شده',
-  awaiting_collection: 'سفارش در انتظار جمع‌آوری',
-  in_collection: 'سفارش در حال جمع‌آوری'
+  awaiting_collection: 'در انتظار جمع‌آوری',
+  closed: 'تکمیل سفارش'
 };
 
 export default function ExecutiveReady() {
@@ -392,7 +393,7 @@ export default function ExecutiveReady() {
                     className="gap-2 bg-blue-600 hover:bg-blue-700"
                   >
                     <PlayCircle className="h-4 w-4" />
-                    شروع اجرا
+                    اجرا شد
                   </Button>
                 </div>
               </CardContent>

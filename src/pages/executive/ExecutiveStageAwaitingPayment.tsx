@@ -31,10 +31,11 @@ interface Order {
 }
 
 const stageLabels: Record<string, string> = {
+  approved: 'در انتظار اجرا',
+  in_progress: 'در حال اجرا',
   awaiting_payment: 'در انتظار پرداخت',
-  order_executed: 'سفارش اجرا شده',
   awaiting_collection: 'در انتظار جمع‌آوری',
-  in_collection: 'در حال جمع‌آوری'
+  closed: 'تکمیل سفارش'
 };
 
 export default function ExecutiveStageAwaitingPayment() {
