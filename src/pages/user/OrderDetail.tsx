@@ -1526,26 +1526,25 @@ export default function OrderDetail() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>تصاویر و ویدیوهای پروژه</CardTitle>
-                {!order.approved_at && (
-                  <Button
-                    variant="default"
-                    onClick={() => document.getElementById('media-upload-input')?.click()}
-                    disabled={uploadingMedia}
-                    className="gap-2"
-                  >
-                    {uploadingMedia ? (
-                      <>
-                        <Clock className="h-4 w-4 animate-spin" />
-                        در حال آپلود...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4" />
-                        افزودن عکس/ویدیو
-                      </>
-                    )}
-                  </Button>
-                )}
+                {/* امکان آپلود عکس برای همه سفارشات - برای مشتری و مدیر */}
+                <Button
+                  variant="default"
+                  onClick={() => document.getElementById('media-upload-input')?.click()}
+                  disabled={uploadingMedia}
+                  className="gap-2"
+                >
+                  {uploadingMedia ? (
+                    <>
+                      <Clock className="h-4 w-4 animate-spin" />
+                      در حال آپلود...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      افزودن عکس/ویدیو
+                    </>
+                  )}
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -1563,9 +1562,7 @@ export default function OrderDetail() {
                 <div className="text-center py-12 text-muted-foreground">
                   <Upload className="h-12 w-12 mx-auto mb-3 opacity-50" />
                   <p>هنوز عکس یا ویدیویی اضافه نشده است</p>
-                  {!order.approved_at && (
-                    <p className="text-sm mt-2">برای افزودن، روی دکمه بالا کلیک کنید</p>
-                  )}
+                  <p className="text-sm mt-2">برای افزودن، روی دکمه بالا کلیک کنید</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -1587,8 +1584,8 @@ export default function OrderDetail() {
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                         
-                        {/* دکمه حذف - فقط برای سفارش‌های تایید نشده */}
-                        {!order.approved_at && (
+                        {/* دکمه حذف - فقط برای سفارش‌های تایید نشده توسط مدیر */}
+                        {(!order.approved_at) && (
                           <Button
                             variant="destructive"
                             size="icon"
