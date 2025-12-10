@@ -292,9 +292,27 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
   const [saving, setSaving] = useState(false);
   const [repairDialogOpen, setRepairDialogOpen] = useState(false);
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
+  const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const { toast } = useToast();
   
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
+
+  // Fetch approved/completed repair costs
+  useEffect(() => {
+    const fetchRepairCosts = async () => {
+      const { data: repairData } = await supabase
+        .from('repair_requests')
+        .select('final_cost, status')
+        .eq('order_id', order.id)
+        .in('status', ['approved', 'completed']);
+
+      if (repairData) {
+        const totalRepairCost = repairData.reduce((sum, r) => sum + (r.final_cost || 0), 0);
+        setApprovedRepairCost(totalRepairCost);
+      }
+    };
+    fetchRepairCosts();
+  }, [order.id]);
   
   // Editable fields
   const [address, setAddress] = useState(order.address || '');
@@ -697,9 +715,28 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         ) : (
           <>
             {(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) && (
-              <p className="font-bold text-xl text-green-700 dark:text-green-300">
-                {Number(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice).toLocaleString('fa-IR')} تومان
-              </p>
+              <>
+                <p className="font-bold text-xl text-green-700 dark:text-green-300">
+                  {Number(
+                    (order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0) + approvedRepairCost
+                  ).toLocaleString('fa-IR')} تومان
+                </p>
+                <div className="mt-2 space-y-1 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>هزینه قرارداد:</span>
+                    <span>{Number(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice).toLocaleString('fa-IR')} تومان</span>
+                  </div>
+                  {approvedRepairCost > 0 && (
+                    <div className="flex justify-between text-orange-600 dark:text-orange-400">
+                      <span className="flex items-center gap-1">
+                        <Wrench className="h-3 w-3" />
+                        هزینه تعمیر:
+                      </span>
+                      <span>{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
             {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
               <div className="mt-3 space-y-1">
