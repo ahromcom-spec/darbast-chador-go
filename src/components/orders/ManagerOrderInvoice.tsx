@@ -803,39 +803,82 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
   };
 
   const handleShare = async () => {
-    const shareData = {
-      title: `فاکتور سفارش ${order.code}`,
-      text: `فاکتور سفارش شماره ${order.code} - مشتری: ${order.customer_name || '-'} - قیمت کل: ${(order.payment_amount || parsedNotes?.estimated_price || 0).toLocaleString('fa-IR')} تومان`,
-      url: window.location.href,
-    };
+    setIsDownloading(true);
+    try {
+      // Dynamic import for html2pdf
+      const html2pdf = (await import('html2pdf.js')).default;
+      
+      // Create a temporary container
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <style>
+          ${getInvoiceStyles().replace(/<\/?style>/g, '')}
+        </style>
+        ${getInvoiceHTML()}
+      `;
+      container.style.direction = 'rtl';
+      container.style.fontFamily = 'Tahoma, Arial, sans-serif';
+      document.body.appendChild(container);
+      
+      const options = {
+        margin: 10,
+        filename: `فاکتور-سفارش-${order.code}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          letterRendering: true,
+        },
+        jsPDF: { 
+          unit: 'mm' as const, 
+          format: 'a4' as const, 
+          orientation: 'portrait' as const 
+        }
+      };
 
-    if (navigator.share && navigator.canShare(shareData)) {
-      try {
-        await navigator.share(shareData);
+      // Generate PDF as Blob
+      const pdfBlob = await html2pdf().set(options).from(container).outputPdf('blob');
+      
+      document.body.removeChild(container);
+      
+      // Create a File from Blob for sharing
+      const pdfFile = new File([pdfBlob], `فاکتور-سفارش-${order.code}.pdf`, { type: 'application/pdf' });
+      
+      // Check if Web Share API supports file sharing
+      if (navigator.share && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          files: [pdfFile],
+          title: `فاکتور سفارش ${order.code}`,
+          text: `فاکتور سفارش شماره ${order.code}`,
+        });
         toast({
           title: 'موفق',
           description: 'فاکتور با موفقیت به اشتراک گذاشته شد',
         });
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          console.error('Error sharing:', error);
-        }
-      }
-    } else {
-      // Fallback: Copy link to clipboard
-      try {
-        await navigator.clipboard.writeText(window.location.href);
+      } else {
+        // Fallback: Download PDF if sharing not supported
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `فاکتور-سفارش-${order.code}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
         toast({
-          title: 'کپی شد',
-          description: 'لینک فاکتور در کلیپ‌بورد کپی شد',
+          title: 'دانلود شد',
+          description: 'فایل PDF دانلود شد (اشتراک‌گذاری در این مرورگر پشتیبانی نمی‌شود)',
         });
-      } catch (error) {
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Error sharing PDF:', error);
         toast({
           title: 'خطا',
-          description: 'امکان اشتراک‌گذاری وجود ندارد',
+          description: 'خطا در اشتراک‌گذاری فاکتور',
           variant: 'destructive',
         });
       }
+    } finally {
+      setIsDownloading(false);
     }
   };
 
