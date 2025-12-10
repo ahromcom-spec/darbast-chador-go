@@ -911,12 +911,12 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
           </DialogTitle>
         </DialogHeader>
 
-        {/* Preview Content */}
+        {/* Preview Content - با استایل‌های PDF */}
         <div 
           ref={printRef} 
-          className="bg-white p-6 rounded-lg border" 
+          className="bg-white rounded-lg border" 
           dir="rtl"
-          dangerouslySetInnerHTML={{ __html: getInvoiceHTML() }}
+          dangerouslySetInnerHTML={{ __html: `${getInvoiceStyles()}${getInvoiceHTML()}` }}
           style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif' }}
         />
       </DialogContent>
