@@ -608,9 +608,13 @@ export function InteractiveLocationMap({
       <div className="relative h-[500px] w-full rounded-xl overflow-hidden border-2 shadow-lg">
         {useFallback ? (
           <SimpleLeafletMap
-            onLocationSelect={(lat, lng) => {
+            onLocationSelect={(lat, lng, distance) => {
+              console.log('📍 SimpleLeafletMap callback - lat:', lat, 'lng:', lng, 'distance:', distance);
               setSelectedPosition({ lat, lng });
-              onLocationSelect(lat, lng);
+              if (distance !== undefined) {
+                setRoadDistance(distance);
+              }
+              onLocationSelect(lat, lng, distance);
             }}
             initialLat={initialLat}
             initialLng={initialLng}
