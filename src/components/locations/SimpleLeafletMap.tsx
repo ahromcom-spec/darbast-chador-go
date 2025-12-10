@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
 interface SimpleLeafletMapProps {
-  onLocationSelect: (lat: number, lng: number) => void;
+  onLocationSelect: (lat: number, lng: number, distance?: number) => void;
   initialLat?: number;
   initialLng?: number;
 }
@@ -192,7 +192,8 @@ export default function SimpleLeafletMap({
       const distance = calculateDistance(QOM_CENTER.lat, QOM_CENTER.lng, lat, lng);
       // ذخیره موقعیت و فاصله هوایی
       setSelectedPos({ lat, lng, distance });
-      onLocationSelect(lat, lng);
+      // ابتدا بدون فاصله جاده‌ای فراخوانی می‌کنیم (فاصله هوایی)
+      onLocationSelect(lat, lng, distance);
 
       setLoadingRoute(true);
       try {
@@ -207,6 +208,8 @@ export default function SimpleLeafletMap({
         if (!error && data?.geometry?.coordinates?.length) {
           const roadDistanceKm = data.distanceKm as number;
           setSelectedPos({ lat, lng, distance, roadDistance: roadDistanceKm });
+          // فاصله جاده‌ای را به callback ارسال کن
+          onLocationSelect(lat, lng, roadDistanceKm);
 
           // حذف مسیر قبلی
           if (routeLineRef.current) {
