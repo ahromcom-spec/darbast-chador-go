@@ -172,6 +172,8 @@ export default function ComprehensiveScaffoldingForm({
   // دریافت فاصله از state ناوبری
   const distanceFromCenter = navState?.distanceFromCenter;
   const initialDistanceRange = getDistanceRangeFromKm(distanceFromCenter);
+  
+  console.log('📍 ComprehensiveScaffoldingForm - distanceFromCenter:', distanceFromCenter, 'initialDistanceRange:', initialDistanceRange, 'navState:', navState);
 
   const [conditions, setConditions] = useState<ServiceConditions>({
     totalMonths: 1,
@@ -182,6 +184,15 @@ export default function ComprehensiveScaffoldingForm({
     vehicleDistance: null,
     rentalMonthsPlan: '1',
   });
+  
+  // به‌روزرسانی distanceRange اگر distanceFromCenter تغییر کرد
+  useEffect(() => {
+    if (distanceFromCenter !== undefined && distanceFromCenter !== null) {
+      const newRange = getDistanceRangeFromKm(distanceFromCenter);
+      console.log('📍 Updating distanceRange to:', newRange, 'from distanceFromCenter:', distanceFromCenter);
+      setConditions(prev => ({ ...prev, distanceRange: newRange }));
+    }
+  }, [distanceFromCenter]);
 
   const [onGround, setOnGround] = useState(true);
   const [vehicleReachesSite, setVehicleReachesSite] = useState(true);
