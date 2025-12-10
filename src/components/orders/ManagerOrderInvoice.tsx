@@ -150,7 +150,7 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
     <style>
       @page { 
         size: A4; 
-        margin: 8mm; 
+        margin: 5mm; 
       }
       * {
         box-sizing: border-box;
@@ -160,48 +160,51 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         direction: rtl; 
         padding: 0;
         margin: 0;
-        font-size: 11px;
-        line-height: 1.6;
+        font-size: 9px;
+        line-height: 1.4;
         color: #1a1a1a;
         background: white;
       }
       .invoice-container {
         max-width: 100%;
-        padding: 12px;
+        padding: 8px;
         border: 2px solid #1e3a5f;
-        border-radius: 8px;
-        margin: 5px;
+        border-radius: 6px;
+        margin: 3px;
+        min-height: 277mm;
+        max-height: 277mm;
+        overflow: hidden;
       }
       
       /* Header Section */
       .header-section {
         text-align: center;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
         border-bottom: 2px solid #1e3a5f;
-        padding-bottom: 12px;
+        padding-bottom: 8px;
       }
       .logo-container {
         display: flex;
         justify-content: center;
-        margin-bottom: 8px;
+        margin-bottom: 5px;
       }
       .logo-container img {
-        height: 70px;
+        height: 50px;
       }
       .company-title {
-        font-size: 16px;
+        font-size: 13px;
         font-weight: bold;
         color: #1e3a5f;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
       }
       .company-website {
-        font-size: 13px;
+        font-size: 11px;
         color: #2563eb;
         font-weight: bold;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
       }
       .company-contacts {
-        font-size: 10px;
+        font-size: 9px;
         color: #374151;
       }
       
@@ -210,33 +213,34 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         display: inline-block;
         background: #1e3a5f;
         color: white;
-        padding: 6px 20px;
-        border-radius: 20px;
-        font-size: 14px;
+        padding: 4px 15px;
+        border-radius: 15px;
+        font-size: 11px;
         font-weight: bold;
-        margin: 10px 0;
+        margin: 6px 0;
       }
       
       /* Main Info Table - Professional Style */
       .main-info-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 12px;
-        font-size: 10px;
-        border: 2px solid #1e3a5f;
+        margin-bottom: 6px;
+        font-size: 8px;
+        border: 1.5px solid #1e3a5f;
       }
       .main-info-table td {
         border: 1px solid #1e3a5f;
-        padding: 6px 10px;
+        padding: 4px 6px;
         vertical-align: middle;
       }
       .main-info-table .label-cell {
         background: #1e3a5f;
         color: white;
         font-weight: bold;
-        width: 140px;
+        width: 100px;
         text-align: right;
         border: 1px solid #0f2744;
+        font-size: 8px;
       }
       .main-info-table .value-cell {
         background: #f8fafc;
@@ -248,28 +252,28 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
       .order-details-table {
         width: 100%;
         border-collapse: collapse;
-        margin: 15px 0;
-        font-size: 9px;
-        border: 2px solid #1e3a5f;
+        margin: 8px 0;
+        font-size: 8px;
+        border: 1.5px solid #1e3a5f;
       }
       .order-details-table thead tr {
         background: #1e3a5f;
       }
       .order-details-table th {
         color: white;
-        padding: 8px 4px;
+        padding: 5px 3px;
         border: 1px solid #0f2744;
         text-align: center;
         font-weight: bold;
-        font-size: 8px;
+        font-size: 7px;
         white-space: nowrap;
       }
       .order-details-table td {
         border: 1px solid #1e3a5f;
-        padding: 7px 4px;
+        padding: 5px 3px;
         text-align: center;
         background: white;
-        font-size: 9px;
+        font-size: 8px;
       }
       .order-details-table tbody tr:nth-child(even) td {
         background: #f1f5f9;
@@ -282,99 +286,40 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
       .total-row td {
         background: #fef3c7 !important;
         font-weight: bold;
-        font-size: 11px;
-        border: 2px solid #1e3a5f !important;
-      }
-      
-      /* Conditions Section */
-      .conditions-section {
-        margin: 12px 0;
-        padding: 10px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        background: #f8fafc;
-      }
-      .conditions-title {
-        font-weight: bold;
-        color: #1e3a5f;
-        margin-bottom: 8px;
-        font-size: 11px;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-      }
-      .conditions-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
         font-size: 10px;
-      }
-      .condition-item {
-        display: flex;
-        gap: 5px;
-      }
-      .condition-item strong {
-        color: #374151;
-      }
-      
-      /* Messages Section */
-      .messages-section {
-        margin: 12px 0;
-        padding: 10px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        background: #f0f9ff;
-      }
-      .messages-title {
-        font-weight: bold;
-        color: #1e3a5f;
-        margin-bottom: 8px;
-        font-size: 11px;
-      }
-      .message-item {
-        padding: 6px 10px;
-        margin-bottom: 5px;
-        border-radius: 6px;
-        font-size: 9px;
-        background: white;
-        border: 1px solid #e2e8f0;
-      }
-      .message-time {
-        font-size: 8px;
-        color: #64748b;
-        margin-top: 3px;
+        border: 1.5px solid #1e3a5f !important;
       }
       
       /* Bank Info */
       .bank-section {
-        margin: 15px 0;
-        padding: 12px;
-        border: 2px solid #1e3a5f;
-        border-radius: 6px;
+        margin: 8px 0;
+        padding: 8px;
+        border: 1.5px solid #1e3a5f;
+        border-radius: 4px;
         background: #f1f5f9;
       }
       .bank-title {
         font-weight: bold;
         color: #1e3a5f;
-        margin-bottom: 8px;
-        font-size: 11px;
+        margin-bottom: 5px;
+        font-size: 9px;
         text-align: center;
       }
       .bank-info-table {
         width: 100%;
-        font-size: 10px;
+        font-size: 8px;
         border-collapse: collapse;
         border: 1px solid #1e3a5f;
       }
       .bank-info-table td {
-        padding: 6px 10px;
+        padding: 4px 6px;
         border: 1px solid #1e3a5f;
       }
       .bank-info-table .label-cell {
         background: #1e3a5f;
         color: white;
         font-weight: bold;
-        width: 120px;
+        width: 100px;
       }
       .bank-info-table .value-cell {
         background: #f8fafc;
@@ -384,58 +329,58 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
       .signatures-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 30px;
-        margin-top: 25px;
-        padding: 15px 0;
+        gap: 20px;
+        margin-top: 15px;
+        padding: 10px 0;
       }
       .signature-box {
         text-align: center;
       }
       .signature-label {
-        font-size: 10px;
+        font-size: 9px;
         font-weight: bold;
-        margin-bottom: 35px;
+        margin-bottom: 25px;
         color: #1e3a5f;
       }
       .signature-line {
         border-top: 1px solid #1e3a5f;
-        width: 150px;
+        width: 120px;
         margin: 0 auto;
       }
       
       /* Print Date */
       .print-date {
         text-align: center;
-        font-size: 9px;
+        font-size: 8px;
         color: #64748b;
-        margin-top: 12px;
-        padding-top: 8px;
+        margin-top: 8px;
+        padding-top: 6px;
         border-top: 1px dashed #d1d5db;
       }
       
       /* Images */
       .images-section {
-        margin: 12px 0;
-        padding: 10px;
+        margin: 8px 0;
+        padding: 6px;
         border: 1px solid #d1d5db;
-        border-radius: 6px;
+        border-radius: 4px;
       }
       .images-title {
         font-weight: bold;
         color: #1e3a5f;
-        margin-bottom: 8px;
-        font-size: 11px;
+        margin-bottom: 5px;
+        font-size: 9px;
       }
       .images-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 4px;
       }
       .image-thumb {
         width: 100%;
-        height: 80px;
+        height: 50px;
         object-fit: cover;
-        border-radius: 4px;
+        border-radius: 3px;
         border: 1px solid #e2e8f0;
       }
       
@@ -660,28 +605,15 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
           </tbody>
         </table>
 
-        ${messages.length > 0 ? `
-          <div class="messages-section">
-            <div class="messages-title">💬 گفتگوها (${messages.length} پیام)</div>
-            ${messages.slice(0, 5).map(msg => `
-              <div class="message-item">
-                <strong>${msg.is_staff ? '🔹 مدیر: ' : '🔸 مشتری: '}</strong>${msg.message}
-                <div class="message-time">${formatPersianDate(msg.created_at)}</div>
-              </div>
-            `).join('')}
-            ${messages.length > 5 ? `<p style="font-size:8px;color:#64748b;text-align:center;">و ${messages.length - 5} پیام دیگر...</p>` : ''}
-          </div>
-        ` : ''}
-
         ${media.length > 0 ? `
           <div class="images-section">
             <div class="images-title">🖼️ تصاویر پیوست (${media.length} تصویر)</div>
             <div class="images-grid">
-              ${media.slice(0, 8).map(item => `
+              ${media.slice(0, 12).map(item => `
                 <img src="${mediaUrls[item.id] || ''}" alt="تصویر" class="image-thumb" crossorigin="anonymous" />
               `).join('')}
             </div>
-            ${media.length > 8 ? `<p style="font-size:8px;color:#64748b;margin-top:6px;">و ${media.length - 8} تصویر دیگر...</p>` : ''}
+            ${media.length > 12 ? `<p style="font-size:7px;color:#64748b;margin-top:4px;">و ${media.length - 12} تصویر دیگر...</p>` : ''}
           </div>
         ` : ''}
 
