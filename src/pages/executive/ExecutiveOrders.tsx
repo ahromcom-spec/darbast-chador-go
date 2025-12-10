@@ -76,13 +76,14 @@ interface Order {
   created_at: string;
   customer_name: string;
   customer_phone: string;
-  project_lat?: number | null;
-  project_lng?: number | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
   notes?: string | null;
   payment_amount?: number | null;
   customer_id?: string;
   executed_by?: string | null;
   approved_by?: string | null;
+  subcategory_id?: string | null;
 }
 
 export default function ExecutiveOrders() {
@@ -149,7 +150,10 @@ export default function ExecutiveOrders() {
           notes,
           payment_amount,
           executed_by,
-          approved_by
+          approved_by,
+          subcategory_id,
+          location_lat,
+          location_lng
         `)
         .in('status', ['approved', 'in_progress', 'completed', 'paid'])
         .order('code', { ascending: false });
@@ -182,11 +186,11 @@ export default function ExecutiveOrders() {
             }
           }
 
-          // Fetch location data
-          let projectLat = null;
-          let projectLng = null;
+          // Fetch location data - use order's direct lat/lng or from hierarchy
+          let projectLat = order.location_lat;
+          let projectLng = order.location_lng;
 
-          if (order.hierarchy_project_id) {
+          if (!projectLat && !projectLng && order.hierarchy_project_id) {
             const { data: hierarchyData } = await supabase
               .from('projects_hierarchy')
               .select(`
@@ -217,13 +221,14 @@ export default function ExecutiveOrders() {
             created_at: order.created_at,
             customer_name: customerName,
             customer_phone: customerPhone,
-            project_lat: projectLat,
-            project_lng: projectLng,
+            location_lat: projectLat,
+            location_lng: projectLng,
             notes: order.notes,
             payment_amount: order.payment_amount,
             customer_id: order.customer_id,
             executed_by: order.executed_by,
             approved_by: order.approved_by,
+            subcategory_id: order.subcategory_id,
           } as Order;
         })
       );
@@ -541,9 +546,9 @@ export default function ExecutiveOrders() {
                         <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <div className="space-y-0.5">
                           <div className="line-clamp-1">{order.address}</div>
-                          {order.project_lat && order.project_lng && (
+                          {order.location_lat && order.location_lng && (
                             <div className="text-xs opacity-70">
-                              موقعیت: {order.project_lat.toFixed(6)}, {order.project_lng.toFixed(6)}
+                              موقعیت: {order.location_lat.toFixed(6)}, {order.location_lng.toFixed(6)}
                             </div>
                           )}
                         </div>
