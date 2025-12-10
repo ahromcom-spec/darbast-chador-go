@@ -10,16 +10,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ImageIcon, ChevronLeft, ChevronRight, Ruler, FileText, Layers, User, Phone, MapPin, 
-  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench
+  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench, Truck, Home
 } from 'lucide-react';
 import { ManagerOrderInvoice } from './ManagerOrderInvoice';
-import { formatPersianDate } from '@/lib/dateUtils';
+import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { parseOrderNotes } from './OrderDetailsView';
 import VoiceCall from './VoiceCall';
 import CallHistory from '@/components/calls/CallHistory';
 import OrderChat from './OrderChat';
 import { RepairRequestDialog } from './RepairRequestDialog';
+import { CollectionRequestDialog } from './CollectionRequestDialog';
+import StaticLocationMap from '@/components/locations/StaticLocationMap';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -264,6 +266,7 @@ interface EditableOrderDetailsProps {
   order: {
     id: string;
     code: string;
+    status?: string;
     customer_name?: string;
     customer_phone?: string;
     customer_id?: string;
@@ -276,6 +279,10 @@ interface EditableOrderDetailsProps {
     location_lng?: number | null;
     executed_by?: string | null;
     approved_by?: string | null;
+    execution_start_date?: string | null;
+    execution_end_date?: string | null;
+    subcategory_id?: string | null;
+    subcategory?: { code?: string; name?: string } | null;
   };
   onUpdate?: () => void;
 }
@@ -284,6 +291,7 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [repairDialogOpen, setRepairDialogOpen] = useState(false);
+  const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const { toast } = useToast();
   
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
@@ -540,23 +548,143 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         )}
       </div>
 
-      {/* Conditions */}
-      {conditions && Array.isArray(conditions) && conditions.length > 0 && (
-        <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">شرایط خدمات</Label>
-          <div className="flex flex-wrap gap-1">
-            {conditions.map((cond: string, i: number) => (
-              <Badge key={i} variant="secondary" className="text-xs">{cond}</Badge>
-            ))}
+      {/* Conditions - Detailed */}
+      {parsedNotes?.conditions && (
+        <div className="bg-muted/30 p-4 rounded-lg space-y-3">
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            شرایط اجرا و محل پروژه
+          </Label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {parsedNotes.conditions.rentalMonthsPlan && (
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-xs text-muted-foreground block mb-1">پلان اجاره</span>
+                <span className="font-medium text-sm">
+                  {parsedNotes.conditions.rentalMonthsPlan === '1' && 'به شرط یک ماه'}
+                  {parsedNotes.conditions.rentalMonthsPlan === '2' && 'به شرط دو ماه'}
+                  {parsedNotes.conditions.rentalMonthsPlan === '3+' && 'به شرط سه ماه و بیشتر'}
+                </span>
+              </div>
+            )}
+            {parsedNotes.conditions.totalMonths && (
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-xs text-muted-foreground block mb-1">مدت قرارداد</span>
+                <span className="font-medium text-sm">{parsedNotes.conditions.totalMonths} ماه</span>
+              </div>
+            )}
+            {parsedNotes.conditions.distanceRange && (
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-xs text-muted-foreground block mb-1">فاصله از قم</span>
+                <span className="font-medium text-sm">{parsedNotes.conditions.distanceRange} کیلومتر</span>
+              </div>
+            )}
+            {parsedNotes.onGround !== undefined && (
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-xs text-muted-foreground block mb-1">محل نصب داربست</span>
+                <span className="font-medium text-sm flex items-center gap-1">
+                  <Home className="h-3 w-3" />
+                  {parsedNotes.onGround ? 'روی زمین' : 'روی سکو / پشت‌بام / بالکن'}
+                </span>
+              </div>
+            )}
+            {!parsedNotes.onGround && parsedNotes.conditions?.platformHeight && (
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-xs text-muted-foreground block mb-1">ارتفاع پای کار</span>
+                <span className="font-medium text-sm">{parsedNotes.conditions.platformHeight} متر</span>
+              </div>
+            )}
+            {parsedNotes.vehicleReachesSite !== undefined && (
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-xs text-muted-foreground block mb-1">دسترسی خودرو</span>
+                <span className="font-medium text-sm flex items-center gap-1">
+                  <Truck className="h-3 w-3" />
+                  {parsedNotes.vehicleReachesSite ? 'خودرو به محل می‌رسد' : 'خودرو به محل نمی‌رسد'}
+                </span>
+              </div>
+            )}
+            {!parsedNotes.vehicleReachesSite && parsedNotes.conditions?.vehicleDistance && (
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-xs text-muted-foreground block mb-1">فاصله خودرو تا محل</span>
+                <span className="font-medium text-sm">{parsedNotes.conditions.vehicleDistance} متر</span>
+              </div>
+            )}
+            {parsedNotes.isFacadeWidth2m !== undefined && (
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-xs text-muted-foreground block mb-1">عرض داربست نما</span>
+                <span className="font-medium text-sm">{parsedNotes.isFacadeWidth2m ? '2 متر' : '1 متر'}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Location Purpose */}
+      {parsedNotes?.locationPurpose && (
+        <div className="bg-muted/30 p-4 rounded-lg">
+          <Label className="text-xs text-muted-foreground mb-2 block">شرح محل نصب و فعالیت</Label>
+          <p className="text-sm leading-relaxed">{parsedNotes.locationPurpose}</p>
+        </div>
+      )}
+
+      {/* Important Dates */}
+      {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime || order.execution_start_date) && (
+        <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800 space-y-3">
+          <Label className="text-sm font-medium flex items-center gap-2 text-blue-700 dark:text-blue-300">
+            <Calendar className="h-4 w-4" />
+            تاریخ‌های مهم سفارش
+          </Label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {parsedNotes?.installDate && (
+              <div className="p-3 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ نصب پیشنهادی</span>
+                <span className="font-bold text-sm">
+                  {parsedNotes.installDate.includes('T') || parsedNotes.installDate.includes('-')
+                    ? formatPersianDateTime(parsedNotes.installDate)
+                    : parsedNotes.installDate}
+                </span>
+              </div>
+            )}
+            {parsedNotes?.installationDateTime && (
+              <div className="p-3 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">زمان نصب درخواستی</span>
+                <span className="font-bold text-sm">
+                  {parsedNotes.installationDateTime.includes('T') || parsedNotes.installationDateTime.includes('-')
+                    ? formatPersianDateTime(parsedNotes.installationDateTime)
+                    : parsedNotes.installationDateTime}
+                </span>
+              </div>
+            )}
+            {parsedNotes?.dueDate && (
+              <div className="p-3 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">سررسید قرارداد</span>
+                <span className="font-bold text-sm">
+                  {parsedNotes.dueDate.includes('T') || parsedNotes.dueDate.includes('-')
+                    ? formatPersianDate(parsedNotes.dueDate)
+                    : parsedNotes.dueDate}
+                </span>
+              </div>
+            )}
+            {order.execution_start_date && (
+              <div className="p-3 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ شروع اجرا</span>
+                <span className="font-bold text-sm">{formatPersianDate(order.execution_start_date)}</span>
+              </div>
+            )}
+            {order.execution_end_date && (
+              <div className="p-3 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ پایان اجرا</span>
+                <span className="font-bold text-sm">{formatPersianDate(order.execution_end_date)}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Price */}
-      <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg">
-        <div className="flex items-center gap-2 mb-1">
+      <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg border border-green-200 dark:border-green-800">
+        <div className="flex items-center gap-2 mb-2">
           <Banknote className="h-4 w-4 text-green-600" />
-          <Label className="text-xs text-muted-foreground">مبلغ سفارش</Label>
+          <Label className="text-sm font-medium">مبلغ سفارش</Label>
         </div>
         {isEditing ? (
           <Input 
@@ -567,13 +695,43 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
             className="mt-1"
           />
         ) : (
-          order.payment_amount && (
-            <p className="font-bold text-lg text-green-700 dark:text-green-300">
-              {Number(order.payment_amount).toLocaleString('fa-IR')} تومان
-            </p>
-          )
+          <>
+            {(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) && (
+              <p className="font-bold text-xl text-green-700 dark:text-green-300">
+                {Number(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice).toLocaleString('fa-IR')} تومان
+              </p>
+            )}
+            {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
+              <div className="mt-3 space-y-1">
+                <Label className="text-xs text-muted-foreground">جزئیات محاسبه قیمت</Label>
+                {parsedNotes.price_breakdown.map((item: string, idx: number) => (
+                  <div key={idx} className="text-xs text-muted-foreground p-2 bg-background rounded border">{item}</div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
+
+      <Separator />
+
+      {/* Map Location */}
+      {order.location_lat && order.location_lng && (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            موقعیت پروژه بر روی نقشه
+          </Label>
+          <div className="h-[300px] rounded-lg overflow-hidden border-2 border-border">
+            <StaticLocationMap
+              lat={order.location_lat}
+              lng={order.location_lng}
+              address={order.address}
+              detailedAddress={order.detailed_address}
+            />
+          </div>
+        </div>
+      )}
 
       <Separator />
 
@@ -593,19 +751,29 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
 
       {/* Chat with customer */}
       <Separator />
-      <OrderChat orderId={order.id} orderStatus="pending" />
+      <OrderChat orderId={order.id} orderStatus={order.status || 'pending'} />
 
-      {/* Repair Request Section for Managers */}
+      {/* Repair & Collection Requests Section for Managers */}
       <Separator />
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Button 
           variant="outline" 
-          className="w-full gap-2"
+          className="gap-2"
           onClick={() => setRepairDialogOpen(true)}
         >
           <Wrench className="h-4 w-4" />
           نیاز به تعمیر داربست
         </Button>
+        {['completed', 'paid'].includes(order.status || '') && (
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => setCollectionDialogOpen(true)}
+          >
+            <Calendar className="h-4 w-4" />
+            درخواست جمع‌آوری
+          </Button>
+        )}
       </div>
 
       {/* Repair Request Dialog - Manager Mode */}
@@ -617,6 +785,15 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         customerId={order.customer_id || ''}
         isManager={true}
         onRepairCostChange={onUpdate}
+      />
+
+      {/* Collection Request Dialog */}
+      <CollectionRequestDialog
+        open={collectionDialogOpen}
+        onOpenChange={setCollectionDialogOpen}
+        orderId={order.id}
+        orderCode={order.code}
+        customerId={order.customer_id || ''}
       />
     </div>
   );
