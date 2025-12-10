@@ -187,8 +187,8 @@ export default function ExecutiveStageAwaitingCollection() {
       const { error } = await supabase
         .from('projects_v3')
         .update({ 
-          status: 'closed' as any,
-          execution_stage: 'closed' as any,
+          status: 'completed' as any,
+          execution_stage: 'completed' as any,
           execution_stage_updated_at: new Date().toISOString(),
           closed_at: new Date().toISOString()
         })
