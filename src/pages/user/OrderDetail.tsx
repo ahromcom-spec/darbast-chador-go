@@ -1260,37 +1260,34 @@ export default function OrderDetail() {
                     </div>
                   </section>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* دکمه درخواست تعمیر - فقط برای سفارش‌های تایید شده خدمات اجرای داربست به همراه اجناس */}
-          {order.subcategory?.code === '10' && 
-           ['approved', 'in_progress', 'completed', 'paid', 'closed'].includes(order.status) && (
-            <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
-                      <Edit className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              {/* دکمه درخواست تعمیر - فقط برای سفارش‌های تایید شده خدمات اجرای داربست به همراه اجناس */}
+              {order.subcategory?.code === '10' && 
+               ['approved', 'in_progress', 'completed', 'paid', 'closed'].includes(order.status) && (
+                <section className="rounded-2xl border-2 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
+                        <Edit className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
+                          آیا نیاز به تعمیر داربست دارید؟
+                        </p>
+                        <p className="text-sm text-amber-700 dark:text-amber-300">
+                          در صورت آسیب‌دیدگی یا نیاز به تعمیر داربست، درخواست خود را ثبت کنید.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
-                        آیا نیاز به تعمیر داربست دارید؟
-                      </p>
-                      <p className="text-sm text-amber-700 dark:text-amber-300">
-                        در صورت آسیب‌دیدگی یا نیاز به تعمیر داربست، درخواست خود را ثبت کنید.
-                      </p>
-                    </div>
+                    <Button 
+                      onClick={() => setShowRepairDialog(true)}
+                      className="gap-2 bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
+                    >
+                      <Edit className="h-4 w-4" />
+                      نیاز به تعمیر سفارش انجام شده داریم
+                    </Button>
                   </div>
-                  <Button 
-                    onClick={() => setShowRepairDialog(true)}
-                    className="gap-2 bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
-                  >
-                    <Edit className="h-4 w-4" />
-                    نیاز به تعمیر سفارش انجام شده داریم
-                  </Button>
-                </div>
+                </section>
+              )}
               </CardContent>
             </Card>
           )}
