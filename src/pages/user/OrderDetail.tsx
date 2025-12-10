@@ -1288,37 +1288,35 @@ export default function OrderDetail() {
                   </div>
                 </section>
               )}
-              </CardContent>
-            </Card>
-          )}
 
-          {/* دکمه درخواست جمع‌آوری - فقط برای سفارش‌های اجرا شده خدمات اجرای داربست به همراه اجناس */}
-          {order.subcategory?.code === '10' && 
-           ['completed', 'paid'].includes(order.status) && (
-            <Card className="border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center flex-shrink-0">
-                      <Calendar className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+              {/* دکمه درخواست جمع‌آوری - فقط برای سفارش‌های اجرا شده خدمات اجرای داربست به همراه اجناس */}
+              {order.subcategory?.code === '10' && 
+               ['completed', 'paid'].includes(order.status) && (
+                <section className="rounded-2xl border-2 border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center flex-shrink-0">
+                        <Calendar className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-teal-900 dark:text-teal-100 mb-1">
+                          درخواست جمع‌آوری داربست
+                        </p>
+                        <p className="text-sm text-teal-700 dark:text-teal-300">
+                          برای اعلام تاریخ جمع‌آوری داربست و هماهنگی با تیم اجرایی، درخواست خود را ثبت کنید.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-teal-900 dark:text-teal-100 mb-1">
-                        درخواست جمع‌آوری داربست
-                      </p>
-                      <p className="text-sm text-teal-700 dark:text-teal-300">
-                        برای اعلام تاریخ جمع‌آوری داربست و هماهنگی با تیم اجرایی، درخواست خود را ثبت کنید.
-                      </p>
-                    </div>
+                    <Button 
+                      onClick={() => setShowCollectionDialog(true)}
+                      className="gap-2 bg-teal-600 hover:bg-teal-700 text-white whitespace-nowrap"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      درخواست جمع‌آوری
+                    </Button>
                   </div>
-                  <Button 
-                    onClick={() => setShowCollectionDialog(true)}
-                    className="gap-2 bg-teal-600 hover:bg-teal-700 text-white whitespace-nowrap"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    درخواست جمع‌آوری
-                  </Button>
-                </div>
+                </section>
+              )}
               </CardContent>
             </Card>
           )}
