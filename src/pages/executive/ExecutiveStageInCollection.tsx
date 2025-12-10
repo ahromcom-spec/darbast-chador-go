@@ -84,7 +84,7 @@ export default function ExecutiveStageInCollection() {
           customer_id
         `)
         .eq('execution_stage', 'in_collection')
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 

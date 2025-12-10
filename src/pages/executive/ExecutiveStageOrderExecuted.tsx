@@ -84,7 +84,7 @@ export default function ExecutiveStageOrderExecuted() {
           customer_id
         `)
         .eq('execution_stage', 'order_executed')
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 

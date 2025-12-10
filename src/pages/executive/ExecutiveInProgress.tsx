@@ -90,7 +90,7 @@ export default function ExecutiveInProgress() {
           customer_id
         `)
         .eq('status', 'in_progress')
-        .order('execution_confirmed_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 

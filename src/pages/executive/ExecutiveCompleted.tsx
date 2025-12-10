@@ -95,7 +95,7 @@ export default function ExecutiveCompleted() {
           approved_by
         `)
         .eq('status', 'completed')
-        .order('executive_completion_date', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 
