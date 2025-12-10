@@ -402,12 +402,12 @@ export default function OrderDetail() {
         setApprovals(approvalsData as Approval[]);
       }
 
-      // Fetch approved repair costs
+      // Fetch approved/completed repair costs
       const { data: repairData } = await supabase
         .from('repair_requests')
         .select('final_cost, status')
         .eq('order_id', id)
-        .eq('status', 'approved');
+        .in('status', ['approved', 'completed']);
 
       if (repairData && repairData.length > 0) {
         const totalRepairCost = repairData.reduce((sum, r) => sum + (r.final_cost || 0), 0);
