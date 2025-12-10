@@ -494,6 +494,7 @@ export function CollectionRequestDialog({
                 value={requestedDate}
                 onChange={setRequestedDate}
                 placeholder="انتخاب تاریخ جمع‌آوری"
+                timeMode="ampm"
               />
             </div>
 
