@@ -91,6 +91,11 @@ export function RepairRequestDialog({
   const [updatingCost, setUpdatingCost] = useState(false);
   const [approvingRepair, setApprovingRepair] = useState(false);
   const [completingRepair, setCompletingRepair] = useState(false);
+  
+  // New form state for single-step submission
+  const [pendingMediaFiles, setPendingMediaFiles] = useState<File[]>([]);
+  const [pendingMediaPreviews, setPendingMediaPreviews] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -118,7 +123,6 @@ export function RepairRequestDialog({
         (payload) => {
           const newMsg = payload.new as RepairMessage;
           setMessages((prev) => {
-            // Avoid duplicates
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
@@ -134,13 +138,16 @@ export function RepairRequestDialog({
   useEffect(() => {
     if (open) {
       fetchRepairRequest();
+    } else {
+      // Reset pending files when dialog closes
+      setPendingMediaFiles([]);
+      setPendingMediaPreviews([]);
     }
   }, [open, orderId]);
 
   const fetchRepairRequest = async () => {
     setLoading(true);
     try {
-      // Check for existing repair request
       const { data: request, error: requestError } = await supabase
         .from('repair_requests')
         .select('*')
@@ -155,7 +162,6 @@ export function RepairRequestDialog({
         setExistingRequest(request);
         setDescription(request.description || '');
 
-        // Fetch media
         const { data: mediaData } = await supabase
           .from('repair_request_media')
           .select('*')
@@ -166,7 +172,6 @@ export function RepairRequestDialog({
           setMedia(mediaData as RepairMedia[]);
         }
 
-        // Fetch messages
         const { data: messagesData } = await supabase
           .from('repair_request_messages')
           .select('*')
@@ -194,6 +199,35 @@ export function RepairRequestDialog({
     }
   };
 
+  // Handle pending media selection (before submission)
+  const handlePendingMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles: File[] = [];
+    const newPreviews: { url: string; type: 'image' | 'video' }[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      newFiles.push(file);
+      const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+      const previewUrl = URL.createObjectURL(file);
+      newPreviews.push({ url: previewUrl, type: fileType });
+    }
+
+    setPendingMediaFiles([...pendingMediaFiles, ...newFiles]);
+    setPendingMediaPreviews([...pendingMediaPreviews, ...newPreviews]);
+    e.target.value = '';
+  };
+
+  // Remove pending media
+  const handleRemovePendingMedia = (index: number) => {
+    URL.revokeObjectURL(pendingMediaPreviews[index].url);
+    setPendingMediaFiles(pendingMediaFiles.filter((_, i) => i !== index));
+    setPendingMediaPreviews(pendingMediaPreviews.filter((_, i) => i !== index));
+  };
+
+  // Submit request with all data at once
   const handleSubmitRequest = async () => {
     if (!description.trim()) {
       toast({
@@ -206,6 +240,10 @@ export function RepairRequestDialog({
 
     setSubmitting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Create repair request
       const { data: request, error } = await supabase
         .from('repair_requests')
         .insert({
@@ -220,13 +258,50 @@ export function RepairRequestDialog({
 
       if (error) throw error;
 
+      // Upload all pending media files
+      if (pendingMediaFiles.length > 0) {
+        for (let i = 0; i < pendingMediaFiles.length; i++) {
+          const file = pendingMediaFiles[i];
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+          const filePath = `repair-requests/${request.id}/${fileName}`;
+          const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+
+          const { error: uploadError } = await supabase.storage
+            .from('order-media')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            continue;
+          }
+
+          await supabase
+            .from('repair_request_media')
+            .insert({
+              repair_request_id: request.id,
+              file_path: filePath,
+              file_type: fileType,
+              file_size: file.size,
+              mime_type: file.type,
+              user_id: user.id,
+            });
+        }
+      }
+
       toast({
         title: '✓ موفق',
         description: 'درخواست تعمیر با موفقیت ثبت شد',
       });
 
+      // Clean up preview URLs
+      pendingMediaPreviews.forEach(p => URL.revokeObjectURL(p.url));
+      setPendingMediaFiles([]);
+      setPendingMediaPreviews([]);
+
       setExistingRequest(request);
       onRepairCostChange?.(1500000);
+      fetchRepairRequest();
     } catch (error: any) {
       console.error('Error submitting repair request:', error);
       toast({
@@ -239,6 +314,7 @@ export function RepairRequestDialog({
     }
   };
 
+  // Upload media after request exists
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !existingRequest) return;
@@ -255,14 +331,12 @@ export function RepairRequestDialog({
         const filePath = `repair-requests/${existingRequest.id}/${fileName}`;
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
-        // Upload to storage
         const { error: uploadError } = await supabase.storage
           .from('order-media')
           .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
-        // Save to database
         const { error: dbError } = await supabase
           .from('repair_request_media')
           .insert({
@@ -298,10 +372,8 @@ export function RepairRequestDialog({
 
   const handleDeleteMedia = async (mediaId: string, filePath: string) => {
     try {
-      // Delete from storage
       await supabase.storage.from('order-media').remove([filePath]);
 
-      // Delete from database
       const { error } = await supabase
         .from('repair_request_media')
         .delete()
@@ -359,7 +431,6 @@ export function RepairRequestDialog({
     }
   };
 
-  // Manager can update repair cost
   const handleUpdateRepairCost = async () => {
     if (!existingRequest || !isManager) return;
     const costValue = parseInt(repairCostInput.replace(/,/g, ''), 10);
@@ -399,7 +470,6 @@ export function RepairRequestDialog({
     }
   };
 
-  // Manager approves repair and sets it to approved status
   const handleApproveRepair = async () => {
     if (!existingRequest || !isManager) return;
 
@@ -446,7 +516,6 @@ export function RepairRequestDialog({
     }
   };
 
-  // Manager marks repair as completed
   const handleCompleteRepair = async () => {
     if (!existingRequest || !isManager) return;
 
@@ -518,6 +587,7 @@ export function RepairRequestDialog({
             <LoadingSpinner size="md" />
           </div>
         ) : existingRequest ? (
+          // Show existing request details
           <div className="space-y-4">
             {/* Status */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
@@ -572,7 +642,7 @@ export function RepairRequestDialog({
                 </div>
               )}
               
-              {/* Manager approve/complete repair button */}
+              {/* Manager approve repair button */}
               {isManager && existingRequest.status === 'pending' && (
                 <div className="pt-3 mt-3 border-t border-primary/20">
                   <Button
@@ -588,11 +658,12 @@ export function RepairRequestDialog({
                     تایید و ثبت هزینه تعمیر در سفارش
                   </Button>
                   <p className="text-xs text-muted-foreground mt-2 text-center">
-                    با تایید، هزینه تعمیر به حساب مشتری اضافه می‌شود و مشتری می‌تواند پرداخت کند.
+                    با تایید، هزینه تعمیر به حساب مشتری اضافه می‌شود.
                   </p>
                 </div>
               )}
               
+              {/* Manager complete repair button */}
               {isManager && existingRequest.status === 'approved' && (
                 <div className="pt-3 mt-3 border-t border-primary/20">
                   <Button
@@ -605,7 +676,7 @@ export function RepairRequestDialog({
                     ) : (
                       <CheckCircle className="h-4 w-4" />
                     )}
-                    تکمیل تعمیر
+                    تعمیر انجام شد
                   </Button>
                 </div>
               )}
@@ -623,7 +694,6 @@ export function RepairRequestDialog({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">تصاویر و ویدیوها:</label>
-                {/* Both customer and manager can upload media */}
                 <Button
                   variant="outline"
                   size="sm"
@@ -752,7 +822,7 @@ export function RepairRequestDialog({
               </p>
             </div>
 
-            {/* Payment Button for approved/completed repairs */}
+            {/* Payment Button for completed repairs */}
             {existingRequest.status === 'completed' && !existingRequest.paid_at && (
               <Button className="w-full gap-2" size="lg">
                 <CreditCard className="h-5 w-5" />
@@ -765,9 +835,11 @@ export function RepairRequestDialog({
             </p>
           </div>
         ) : (
+          // Single-step form for new request
           <div className="space-y-4">
+            {/* Description */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">توضیحات مشکل و نیاز به تعمیر:</label>
+              <Label className="text-sm font-medium">توضیحات مشکل و نیاز به تعمیر: *</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -776,12 +848,64 @@ export function RepairRequestDialog({
               />
             </div>
 
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                پس از ثبت درخواست، می‌توانید تصاویر و ویدیوهای مربوط به مشکل را آپلود کنید و با پشتیبانی گفتگو کنید.
-              </p>
+            {/* Media Upload Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">تصاویر و ویدیوها (اختیاری):</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('pending-media-upload')?.click()}
+                  className="gap-1"
+                >
+                  <Upload className="h-4 w-4" />
+                  افزودن تصویر/ویدیو
+                </Button>
+              </div>
+              <input
+                id="pending-media-upload"
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                className="hidden"
+                onChange={handlePendingMediaSelect}
+              />
+
+              {pendingMediaPreviews.length === 0 ? (
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                  <Image className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">
+                    می‌توانید تصاویر یا ویدیوهای مربوط به مشکل را اینجا اضافه کنید
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {pendingMediaPreviews.map((preview, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden border group">
+                      {preview.type === 'image' ? (
+                        <img src={preview.url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <Film className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 left-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleRemovePendingMedia(index)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
+            <Separator />
+
+            {/* Submit Button */}
             <Button
               onClick={handleSubmitRequest}
               disabled={submitting || !description.trim()}
@@ -800,6 +924,10 @@ export function RepairRequestDialog({
                 </>
               )}
             </Button>
+
+            <p className="text-xs text-muted-foreground text-center">
+              پس از ثبت درخواست، مدیریت هزینه تعمیر را تعیین کرده و به سفارش شما اضافه می‌کند.
+            </p>
           </div>
         )}
       </DialogContent>
