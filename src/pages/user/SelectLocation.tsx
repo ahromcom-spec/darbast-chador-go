@@ -10,6 +10,22 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
+// مرکز استان قم
+const QOM_CENTER = { lat: 34.6416, lng: 50.8746 };
+
+// محاسبه فاصله با فرمول Haversine (بر حسب کیلومتر)
+const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 export default function SelectLocation() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -59,6 +75,16 @@ export default function SelectLocation() {
 
       if (locationError) throw locationError;
 
+      // محاسبه فاصله از مرکز استان قم
+      const distanceFromCenter = calculateDistance(
+        location.lat,
+        location.lng,
+        QOM_CENTER.lat,
+        QOM_CENTER.lng
+      );
+
+      console.log('📍 SelectLocation - Distance from center:', distanceFromCenter, 'km');
+
       // Get or create project
       const projectId = await getOrCreateProject(
         locationId,
@@ -83,7 +109,10 @@ export default function SelectLocation() {
           locationAddress: location.address_line,
           locationTitle: location.title || '',
           provinceName: location.provinces?.name || '',
-          districtName: location.districts?.name || ''
+          districtName: location.districts?.name || '',
+          lat: location.lat,
+          lng: location.lng,
+          distanceFromCenter, // ✅ فاصله از مرکز استان
         } 
       });
     } catch (error) {
