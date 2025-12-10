@@ -26,7 +26,7 @@ const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: numbe
 };
 
 interface NewLocationFormProps {
-  onSuccess: (locationId: string) => void;
+  onSuccess: (locationId: string, distanceFromCenter?: number) => void;
   initialData?: Location;
 }
 
@@ -49,6 +49,7 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
 
   const [hasMapPin, setHasMapPin] = useState(!!initialData?.lat && !!initialData?.lng);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [distanceFromCenter, setDistanceFromCenter] = useState<number | null>(null);
 
   // شناسایی استان قم
   const qomProvince = provinces.find(p => p.code === '10');
@@ -87,13 +88,16 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
     }
   };
 
-  const handleLocationSelect = (lat: number, lng: number) => {
-    console.log('📍 Location selected from map:', { lat, lng, types: { lat: typeof lat, lng: typeof lng } });
+  const handleLocationSelect = (lat: number, lng: number, distance?: number) => {
+    console.log('📍 Location selected from map:', { lat, lng, distance, types: { lat: typeof lat, lng: typeof lng } });
     setFormData(prev => ({ ...prev, lat, lng }));
     setHasMapPin(true);
+    if (distance !== undefined) {
+      setDistanceFromCenter(distance);
+    }
     toast({
       title: 'نقطه روی نقشه انتخاب شد',
-      description: 'موقعیت دقیق پروژه ثبت شد'
+      description: distance ? `فاصله از مرکز استان: ${distance.toFixed(1)} کیلومتر` : 'موقعیت دقیق پروژه ثبت شد'
     });
   };
 
@@ -152,7 +156,7 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
           title: 'موفق',
           description: 'آدرس با موفقیت ویرایش شد'
         });
-        onSuccess(initialData.id);
+        onSuccess(initialData.id, distanceFromCenter || undefined);
       } else {
         // Create new location - convert empty district_id to null
         const location = await createLocation({
@@ -168,7 +172,7 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
           title: 'موفق',
           description: 'آدرس با موفقیت ثبت شد'
         });
-        onSuccess(location.id);
+        onSuccess(location.id, distanceFromCenter || undefined);
       }
     } catch (error) {
       console.error('❌ Error submitting location:', error);
