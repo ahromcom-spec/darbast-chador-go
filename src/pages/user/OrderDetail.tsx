@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { OrderTransfer } from "@/components/orders/OrderTransfer";
 import { RepairRequestDialog } from "@/components/orders/RepairRequestDialog";
+import { CollectionRequestDialog } from "@/components/orders/CollectionRequestDialog";
 import { ManagerOrderInvoice } from "@/components/orders/ManagerOrderInvoice";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { useProjectRatings, RatingCriteria } from "@/hooks/useRatings";
@@ -182,6 +183,7 @@ export default function OrderDetail() {
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [showRepairDialog, setShowRepairDialog] = useState(false);
   const [repairCost, setRepairCost] = useState(0);
+  const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -1293,6 +1295,37 @@ export default function OrderDetail() {
             </Card>
           )}
 
+          {/* دکمه درخواست جمع‌آوری - فقط برای سفارش‌های اجرا شده خدمات اجرای داربست به همراه اجناس */}
+          {order.subcategory?.code === '10' && 
+           ['completed', 'paid'].includes(order.status) && (
+            <Card className="border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center flex-shrink-0">
+                      <Calendar className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-teal-900 dark:text-teal-100 mb-1">
+                        درخواست جمع‌آوری داربست
+                      </p>
+                      <p className="text-sm text-teal-700 dark:text-teal-300">
+                        برای اعلام تاریخ جمع‌آوری داربست و هماهنگی با تیم اجرایی، درخواست خود را ثبت کنید.
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => setShowCollectionDialog(true)}
+                    className="gap-2 bg-teal-600 hover:bg-teal-700 text-white whitespace-nowrap"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    درخواست جمع‌آوری
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* نقشه موقعیت پروژه */}
           {order.location_lat && order.location_lng && (
             <Card>
@@ -1986,6 +2019,15 @@ export default function OrderDetail() {
             orderCode={order.code}
             customerId={(order as any).customer_id || ''}
             onRepairCostChange={(cost) => setRepairCost(cost)}
+          />
+
+          {/* Collection Request Dialog */}
+          <CollectionRequestDialog
+            open={showCollectionDialog}
+            onOpenChange={setShowCollectionDialog}
+            orderId={order.id}
+            orderCode={order.code}
+            customerId={(order as any).customer_id || ''}
           />
 
         </div>

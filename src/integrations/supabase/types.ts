@@ -219,6 +219,98 @@ export type Database = {
           },
         ]
       }
+      collection_request_messages: {
+        Row: {
+          collection_request_id: string
+          created_at: string
+          id: string
+          is_staff: boolean | null
+          message: string
+          user_id: string
+        }
+        Insert: {
+          collection_request_id: string
+          created_at?: string
+          id?: string
+          is_staff?: boolean | null
+          message: string
+          user_id: string
+        }
+        Update: {
+          collection_request_id?: string
+          created_at?: string
+          id?: string
+          is_staff?: boolean | null
+          message?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_request_messages_collection_request_id_fkey"
+            columns: ["collection_request_id"]
+            isOneToOne: false
+            referencedRelation: "collection_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collection_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          created_at: string
+          customer_id: string
+          description: string | null
+          id: string
+          order_id: string
+          requested_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          id?: string
+          order_id: string
+          requested_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          id?: string
+          order_id?: string
+          requested_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractor_profiles: {
         Row: {
           activity_type_id: string | null
