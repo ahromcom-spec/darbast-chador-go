@@ -834,6 +834,29 @@ export default function OrderDetail() {
               
               <Separator />
 
+              {/* اطلاعات تماس مشتری */}
+              {(order.customer_name || order.customer_phone || parsedNotes?.customerName || parsedNotes?.phoneNumber) && (
+                <div className="rounded-2xl border border-border bg-card/60 p-4 space-y-3">
+                  <h3 className="font-semibold">اطلاعات تماس مشتری</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {(order.customer_name || parsedNotes?.customerName) && (
+                      <div className="p-3 bg-muted/40 rounded-lg">
+                        <span className="text-xs text-muted-foreground block mb-1">نام</span>
+                        <span className="font-medium text-sm">{order.customer_name || parsedNotes?.customerName}</span>
+                      </div>
+                    )}
+                    {(order.customer_phone || parsedNotes?.phoneNumber) && (
+                      <div className="p-3 bg-muted/40 rounded-lg" dir="ltr">
+                        <span className="text-xs text-muted-foreground block mb-1" dir="rtl">شماره تماس</span>
+                        <span className="font-medium text-sm">{order.customer_phone || parsedNotes?.phoneNumber}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Calendar className="h-4 w-4" />
@@ -1234,27 +1257,6 @@ export default function OrderDetail() {
                               ? formatPersianDate(parsedNotes.dueDate)
                               : parsedNotes.dueDate}
                           </span>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                )}
-
-                {/* بلوک ۴: اطلاعات تماس */}
-                {(order.customer_name || order.customer_phone || parsedNotes?.customerName || parsedNotes?.phoneNumber) && (
-                  <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-3">
-                    <h3 className="font-semibold">اطلاعات تماس مشتری</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {(order.customer_name || parsedNotes?.customerName) && (
-                        <div className="p-3 bg-muted/40 rounded-lg">
-                          <span className="text-xs text-muted-foreground block mb-1">نام</span>
-                          <span className="font-medium text-sm">{order.customer_name || parsedNotes?.customerName}</span>
-                        </div>
-                      )}
-                      {(order.customer_phone || parsedNotes?.phoneNumber) && (
-                        <div className="p-3 bg-muted/40 rounded-lg" dir="ltr">
-                          <span className="text-xs text-muted-foreground block mb-1" dir="rtl">شماره تماس</span>
-                          <span className="font-medium text-sm">{order.customer_phone || parsedNotes?.phoneNumber}</span>
                         </div>
                       )}
                     </div>
