@@ -24,7 +24,7 @@ export default function NewLocation() {
   console.log('🗺️ NewLocation - Mode:', isEditMode ? 'Edit' : 'Create');
   console.log('🗺️ NewLocation - Initial coordinates:', { initialLat, initialLng, editInitialData, state: location.state });
 
-  const handleSuccess = async (locationId: string) => {
+  const handleSuccess = async (locationId: string, distanceFromCenter?: number) => {
     // If coming from globe map, go back to home (which shows the globe)
     if (location.state?.fromGlobeMap) {
       navigate('/', { replace: true });
@@ -51,7 +51,7 @@ export default function NewLocation() {
 
       if (error) throw error;
 
-      // Navigate to service selection with full location data
+      // Navigate to service selection with full location data including distance
       navigate('/user/select-service', {
         state: { 
           locationId,
@@ -65,14 +65,15 @@ export default function NewLocation() {
             district_id: locationData.district_id,
             province_name: locationData.provinces?.name,
             district_name: locationData.districts?.name
-          }
+          },
+          distanceFromCenter
         }
       });
     } catch (error) {
       console.error('Error fetching location:', error);
       // Fallback: navigate with just locationId
       navigate('/user/select-service', {
-        state: { locationId }
+        state: { locationId, distanceFromCenter }
       });
     }
   };

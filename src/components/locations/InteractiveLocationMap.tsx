@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import SimpleLeafletMap from './SimpleLeafletMap';
 
 interface InteractiveLocationMapProps {
-  onLocationSelect: (lat: number, lng: number) => void;
+  onLocationSelect: (lat: number, lng: number, distance?: number) => void;
   initialLat?: number;
   initialLng?: number;
   provinceCode?: string;
@@ -394,6 +394,9 @@ export function InteractiveLocationMap({
           if (routeData?.routes?.length) {
             const roadDistanceKm = routeData.routes[0].distance / 1000;
             setRoadDistance(roadDistanceKm);
+            
+            // ارسال فاصله به callback
+            onLocationSelect(lat, lng, roadDistanceKm);
             
             // حذف مسیر قبلی اگر وجود دارد (ایمن)
             if (map.current!.getLayer(ROUTE_LAYER_ID)) {

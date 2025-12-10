@@ -160,10 +160,23 @@ export default function ComprehensiveScaffoldingForm({
   const [detailedAddress, setDetailedAddress] = useState(navState?.detailedAddress || address);
   const { districts } = useDistricts(selectedProvinceId || '');
 
+  // تبدیل فاصله از مرکز استان به بازه مناسب
+  const getDistanceRangeFromKm = (distanceKm: number | undefined): '0-15' | '15-25' | '25-50' | '50-85' => {
+    if (!distanceKm) return '0-15';
+    if (distanceKm <= 15) return '0-15';
+    if (distanceKm <= 25) return '15-25';
+    if (distanceKm <= 50) return '25-50';
+    return '50-85';
+  };
+
+  // دریافت فاصله از state ناوبری
+  const distanceFromCenter = navState?.distanceFromCenter;
+  const initialDistanceRange = getDistanceRangeFromKm(distanceFromCenter);
+
   const [conditions, setConditions] = useState<ServiceConditions>({
     totalMonths: 1,
     currentMonth: 1,
-    distanceRange: '0-15',
+    distanceRange: initialDistanceRange,
     platformHeight: null,
     scaffoldHeightFromPlatform: null,
     vehicleDistance: null,

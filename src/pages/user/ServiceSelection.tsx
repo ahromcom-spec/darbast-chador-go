@@ -20,6 +20,7 @@ export default function ServiceSelection() {
   // Get location data from navigation state
   const locationId = location.state?.locationId;
   const locationData = location.state?.locationData;
+  const distanceFromCenter = location.state?.distanceFromCenter;
 
   useEffect(() => {
     if (!locationId) {
@@ -87,6 +88,7 @@ export default function ServiceSelection() {
         districtName: locationData?.district_name,
         lat: locationData?.lat,
         lng: locationData?.lng,
+        distanceFromCenter,
       }
     });
   };
