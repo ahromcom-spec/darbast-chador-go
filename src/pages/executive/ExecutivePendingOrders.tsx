@@ -264,7 +264,7 @@ export default function ExecutivePendingOrders() {
           approved_by
         `)
         .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 

@@ -86,7 +86,7 @@ export default function ExecutiveStageAwaitingCollection() {
           customer_id
         `)
         .in('execution_stage', ['awaiting_collection', 'awaiting_payment'])
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 

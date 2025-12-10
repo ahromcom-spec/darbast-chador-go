@@ -78,7 +78,7 @@ export default function SalesPendingOrders() {
         .from('projects_v3')
         .select('id, code, status, address, detailed_address, created_at, notes, customer_id, executed_by, approved_by')
         .in('id', orderIds)
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (selectError) throw selectError;
 

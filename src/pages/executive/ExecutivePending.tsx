@@ -84,7 +84,7 @@ export default function ExecutivePending() {
           customer_id
         `)
         .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 

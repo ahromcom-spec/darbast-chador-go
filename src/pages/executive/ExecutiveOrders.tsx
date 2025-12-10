@@ -152,7 +152,7 @@ export default function ExecutiveOrders() {
           approved_by
         `)
         .in('status', ['approved', 'in_progress', 'completed', 'paid'])
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 
