@@ -1078,6 +1078,64 @@ export default function OrderDetail() {
                   </div>
                 )}
 
+                {/* دکمه درخواست تعمیر - فقط برای سفارش‌های تایید شده خدمات اجرای داربست به همراه اجناس */}
+                {order.subcategory?.code === '10' && 
+                 ['approved', 'in_progress', 'completed', 'paid', 'closed'].includes(order.status) && (
+                  <section className="rounded-2xl border-2 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
+                          <Edit className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
+                            آیا نیاز به تعمیر داربست دارید؟
+                          </p>
+                          <p className="text-sm text-amber-700 dark:text-amber-300">
+                            در صورت آسیب‌دیدگی یا نیاز به تعمیر داربست، درخواست خود را ثبت کنید.
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => setShowRepairDialog(true)}
+                        className="gap-2 bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
+                      >
+                        <Edit className="h-4 w-4" />
+                        نیاز به تعمیر سفارش انجام شده داریم
+                      </Button>
+                    </div>
+                  </section>
+                )}
+
+                {/* دکمه درخواست جمع‌آوری - فقط برای سفارش‌های اجرا شده خدمات اجرای داربست به همراه اجناس */}
+                {order.subcategory?.code === '10' && 
+                 ['completed', 'paid'].includes(order.status) && (
+                  <section className="rounded-2xl border-2 border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 p-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center flex-shrink-0">
+                          <Calendar className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-teal-900 dark:text-teal-100 mb-1">
+                            درخواست جمع‌آوری داربست
+                          </p>
+                          <p className="text-sm text-teal-700 dark:text-teal-300">
+                            برای اعلام تاریخ جمع‌آوری داربست و هماهنگی با تیم اجرایی، درخواست خود را ثبت کنید.
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => setShowCollectionDialog(true)}
+                        className="gap-2 bg-teal-600 hover:bg-teal-700 text-white whitespace-nowrap"
+                      >
+                        <Calendar className="h-4 w-4" />
+                        درخواست جمع‌آوری
+                      </Button>
+                    </div>
+                  </section>
+                )}
+
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
                 {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount) && (
                   <section className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-4">
@@ -1262,63 +1320,6 @@ export default function OrderDetail() {
                     </div>
                   </section>
                 )}
-              {/* دکمه درخواست تعمیر - فقط برای سفارش‌های تایید شده خدمات اجرای داربست به همراه اجناس */}
-              {order.subcategory?.code === '10' && 
-               ['approved', 'in_progress', 'completed', 'paid', 'closed'].includes(order.status) && (
-                <section className="rounded-2xl border-2 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
-                        <Edit className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
-                          آیا نیاز به تعمیر داربست دارید؟
-                        </p>
-                        <p className="text-sm text-amber-700 dark:text-amber-300">
-                          در صورت آسیب‌دیدگی یا نیاز به تعمیر داربست، درخواست خود را ثبت کنید.
-                        </p>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={() => setShowRepairDialog(true)}
-                      className="gap-2 bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
-                    >
-                      <Edit className="h-4 w-4" />
-                      نیاز به تعمیر سفارش انجام شده داریم
-                    </Button>
-                  </div>
-                </section>
-              )}
-
-              {/* دکمه درخواست جمع‌آوری - فقط برای سفارش‌های اجرا شده خدمات اجرای داربست به همراه اجناس */}
-              {order.subcategory?.code === '10' && 
-               ['completed', 'paid'].includes(order.status) && (
-                <section className="rounded-2xl border-2 border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 p-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center flex-shrink-0">
-                        <Calendar className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-teal-900 dark:text-teal-100 mb-1">
-                          درخواست جمع‌آوری داربست
-                        </p>
-                        <p className="text-sm text-teal-700 dark:text-teal-300">
-                          برای اعلام تاریخ جمع‌آوری داربست و هماهنگی با تیم اجرایی، درخواست خود را ثبت کنید.
-                        </p>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={() => setShowCollectionDialog(true)}
-                      className="gap-2 bg-teal-600 hover:bg-teal-700 text-white whitespace-nowrap"
-                    >
-                      <Calendar className="h-4 w-4" />
-                      درخواست جمع‌آوری
-                    </Button>
-                  </div>
-                </section>
-              )}
               </CardContent>
             </Card>
           )}
