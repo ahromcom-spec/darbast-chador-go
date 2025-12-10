@@ -183,6 +183,7 @@ export default function OrderDetail() {
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [showRepairDialog, setShowRepairDialog] = useState(false);
   const [repairCost, setRepairCost] = useState(0);
+  const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -399,6 +400,20 @@ export default function OrderDetail() {
 
       if (approvalsData) {
         setApprovals(approvalsData as Approval[]);
+      }
+
+      // Fetch approved repair costs
+      const { data: repairData } = await supabase
+        .from('repair_requests')
+        .select('final_cost, status')
+        .eq('order_id', id)
+        .eq('status', 'approved');
+
+      if (repairData && repairData.length > 0) {
+        const totalRepairCost = repairData.reduce((sum, r) => sum + (r.final_cost || 0), 0);
+        setApprovedRepairCost(totalRepairCost);
+      } else {
+        setApprovedRepairCost(0);
       }
 
     } catch (error: any) {
@@ -1137,14 +1152,14 @@ export default function OrderDetail() {
                 )}
 
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
-                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount) && (
+                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || approvedRepairCost > 0) && (
                   <section className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-4">
                     <div className="flex flex-wrap items-center gap-3 justify-between">
                       <h3 className="font-semibold">هزینه قرارداد</h3>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">قیمت تخمینی</span>
                         <span className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300">
-                          {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount)?.toLocaleString('fa-IR')} تومان
+                          {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || 0)?.toLocaleString('fa-IR')} تومان
                         </span>
                       </div>
                     </div>
@@ -1165,6 +1180,32 @@ export default function OrderDetail() {
                       </div>
                     )}
 
+                    {/* نمایش هزینه تعمیر تایید شده */}
+                    {approvedRepairCost > 0 && (
+                      <div className="pt-3 border-t border-emerald-200 dark:border-emerald-800">
+                        <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <div className="flex items-center gap-2">
+                            <Edit className="h-4 w-4 text-amber-600" />
+                            <span className="text-sm font-medium text-amber-700 dark:text-amber-300">هزینه تعمیر</span>
+                          </div>
+                          <span className="font-bold text-amber-700 dark:text-amber-300">
+                            {approvedRepairCost.toLocaleString('fa-IR')} تومان
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* جمع کل */}
+                    {approvedRepairCost > 0 && (
+                      <div className="pt-3 border-t border-emerald-200 dark:border-emerald-800">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold">جمع کل</span>
+                          <span className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300">
+                            {(((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || 0) + approvedRepairCost).toLocaleString('fa-IR')} تومان
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     {notesParseError && (
                       <p className="text-xs text-muted-foreground">
@@ -1174,15 +1215,16 @@ export default function OrderDetail() {
 
                     {/* دکمه پرداخت - فقط بعد از تایید سفارش */}
                     {['approved', 'completed', 'in_progress', 'pending_execution'].includes(order.status) && 
-                     ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount) && 
+                     ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || approvedRepairCost > 0) && 
                      !order.payment_confirmed_at && (
                       <div className="pt-4 border-t border-emerald-200 dark:border-emerald-800">
                         <Button 
                           className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                           size="lg"
                           onClick={async () => {
-                            const paymentAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice;
-                            if (!paymentAmount) {
+                            const baseAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0;
+                            const paymentAmount = baseAmount + approvedRepairCost;
+                            if (!paymentAmount || paymentAmount <= 0) {
                               toast({
                                 title: 'خطا',
                                 description: 'مبلغ پرداخت مشخص نیست',
@@ -1201,7 +1243,7 @@ export default function OrderDetail() {
                                 body: {
                                   order_id: order.id,
                                   amount: paymentAmount,
-                                  description: `پرداخت سفارش ${order.code}`
+                                  description: `پرداخت سفارش ${order.code}${approvedRepairCost > 0 ? ' (شامل هزینه تعمیر)' : ''}`
                                 }
                               });
                               
@@ -1254,7 +1296,7 @@ export default function OrderDetail() {
                           }}
                         >
                           <CreditCard className="h-5 w-5" />
-                          پرداخت آنلاین - {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount)?.toLocaleString('fa-IR')} تومان
+                          پرداخت آنلاین - {(((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || 0) + approvedRepairCost).toLocaleString('fa-IR')} تومان
                         </Button>
                         <p className="text-xs text-center text-muted-foreground mt-2">
                           پرداخت از طریق درگاه امن زرین‌پال انجام می‌شود
