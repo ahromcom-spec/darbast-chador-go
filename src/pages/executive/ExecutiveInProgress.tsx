@@ -187,6 +187,17 @@ export default function ExecutiveInProgress() {
                 _type: 'info'
               });
               await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+              
+              // ارسال Push Notification به گوشی کاربر
+              await supabase.functions.invoke('send-push-notification', {
+                body: {
+                  user_id: customerData.user_id,
+                  title: message.title,
+                  body: message.body,
+                  link: '/user/my-orders',
+                  type: 'info'
+                }
+              });
             } catch (e) {
               console.error('Error sending notification:', e);
             }
@@ -246,14 +257,32 @@ export default function ExecutiveInProgress() {
 
       // ارسال اعلان به مشتری
       if (customerData?.user_id) {
+        const notificationTitle = '💰 سفارش در انتظار پرداخت و جمع‌آوری';
+        const notificationBody = `سفارش با کد ${orderCode} اجرا شد و منتظر پرداخت و جمع‌آوری است. لطفاً برای پرداخت اقدام کنید.`;
+        
         const validated = sendNotificationSchema.parse({
           _user_id: customerData.user_id,
-          _title: '💰 سفارش در انتظار پرداخت و جمع‌آوری',
-          _body: `سفارش با کد ${orderCode} اجرا شد و منتظر پرداخت و جمع‌آوری است. لطفاً برای پرداخت اقدام کنید.`,
+          _title: notificationTitle,
+          _body: notificationBody,
           _link: '/user/my-orders',
           _type: 'success'
         });
         await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+        
+        // ارسال Push Notification به گوشی کاربر
+        try {
+          await supabase.functions.invoke('send-push-notification', {
+            body: {
+              user_id: customerData.user_id,
+              title: notificationTitle,
+              body: notificationBody,
+              link: '/user/my-orders',
+              type: 'success'
+            }
+          });
+        } catch (pushError) {
+          console.log('Push notification skipped');
+        }
       }
 
       toast({

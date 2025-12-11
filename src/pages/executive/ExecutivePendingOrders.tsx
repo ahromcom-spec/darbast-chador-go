@@ -310,6 +310,13 @@ export default function ExecutivePendingOrders() {
 
   const handleStartExecution = async (orderId: string, orderCode: string) => {
     try {
+      // Get customer info first
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('customer_id')
+        .eq('id', orderId)
+        .single();
+
       const { error } = await supabase
         .from('projects_v3')
         .update({ 
@@ -320,6 +327,31 @@ export default function ExecutivePendingOrders() {
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Send push notification to customer
+      if (orderData?.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', orderData.customer_id)
+          .single();
+
+        if (customerData?.user_id) {
+          try {
+            await supabase.functions.invoke('send-push-notification', {
+              body: {
+                user_id: customerData.user_id,
+                title: '🔧 اجرای سفارش شروع شد',
+                body: `سفارش شما با کد ${orderCode} وارد مرحله اجرا شد.`,
+                link: '/user/my-orders',
+                type: 'info'
+              }
+            });
+          } catch (pushError) {
+            console.log('Push notification skipped');
+          }
+        }
+      }
 
       toast({
         title: '✓ اجرا آغاز شد',
@@ -339,6 +371,13 @@ export default function ExecutivePendingOrders() {
 
   const handleCompleteExecution = async (orderId: string, orderCode: string) => {
     try {
+      // Get customer info first
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('customer_id')
+        .eq('id', orderId)
+        .single();
+
       const { error } = await supabase
         .from('projects_v3')
         .update({ 
@@ -348,6 +387,31 @@ export default function ExecutivePendingOrders() {
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Send push notification to customer
+      if (orderData?.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', orderData.customer_id)
+          .single();
+
+        if (customerData?.user_id) {
+          try {
+            await supabase.functions.invoke('send-push-notification', {
+              body: {
+                user_id: customerData.user_id,
+                title: '✅ اجرای سفارش تکمیل شد',
+                body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد و در انتظار پرداخت است.`,
+                link: '/user/my-orders',
+                type: 'success'
+              }
+            });
+          } catch (pushError) {
+            console.log('Push notification skipped');
+          }
+        }
+      }
 
       toast({
         title: '✓ اجرا تکمیل شد',

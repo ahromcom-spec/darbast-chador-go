@@ -145,6 +145,13 @@ export default function ExecutiveStageAwaitingCollection() {
   const handleStageUpdate = async (orderId: string, newStage: string, orderCode: string) => {
     setUpdatingStage(true);
     try {
+      // دریافت اطلاعات مشتری
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('customer_id')
+        .eq('id', orderId)
+        .single();
+
       const { error } = await supabase
         .from('projects_v3')
         .update({ 
@@ -154,6 +161,40 @@ export default function ExecutiveStageAwaitingCollection() {
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // ارسال Push Notification به مشتری
+      if (orderData?.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', orderData.customer_id)
+          .single();
+
+        if (customerData?.user_id) {
+          const stageMessages: Record<string, { title: string; body: string }> = {
+            awaiting_payment: { title: '💰 در انتظار پرداخت', body: `سفارش ${orderCode} منتظر پرداخت شماست.` },
+            order_executed: { title: '✅ سفارش اجرا شد', body: `سفارش ${orderCode} با موفقیت اجرا شد.` },
+            awaiting_collection: { title: '📦 در انتظار جمع‌آوری', body: `سفارش ${orderCode} آماده جمع‌آوری است.` },
+            in_collection: { title: '🚚 در حال جمع‌آوری', body: `جمع‌آوری سفارش ${orderCode} آغاز شد.` }
+          };
+          const message = stageMessages[newStage];
+          if (message) {
+            try {
+              await supabase.functions.invoke('send-push-notification', {
+                body: {
+                  user_id: customerData.user_id,
+                  title: message.title,
+                  body: message.body,
+                  link: '/user/my-orders',
+                  type: 'info'
+                }
+              });
+            } catch (e) {
+              console.log('Push notification skipped');
+            }
+          }
+        }
+      }
 
       toast({
         title: '✓ مرحله به‌روزرسانی شد',
@@ -205,13 +246,27 @@ export default function ExecutiveStageAwaitingCollection() {
           .single();
 
         if (customerData?.user_id) {
+          const notificationTitle = '🎉 سفارش تکمیل شد';
+          const notificationBody = `سفارش ${orderCode} با موفقیت تکمیل و جمع‌آوری شد. از اعتماد شما سپاسگزاریم.`;
+          
           try {
             await supabase.rpc('send_notification', {
               _user_id: customerData.user_id,
-              _title: '🎉 سفارش تکمیل شد',
-              _body: `سفارش ${orderCode} با موفقیت تکمیل و جمع‌آوری شد. از اعتماد شما سپاسگزاریم.`,
+              _title: notificationTitle,
+              _body: notificationBody,
               _link: '/user/my-orders',
               _type: 'success'
+            });
+            
+            // ارسال Push Notification به گوشی کاربر
+            await supabase.functions.invoke('send-push-notification', {
+              body: {
+                user_id: customerData.user_id,
+                title: notificationTitle,
+                body: notificationBody,
+                link: '/user/my-orders',
+                type: 'success'
+              }
             });
           } catch (e) {
             console.error('Error sending notification:', e);
