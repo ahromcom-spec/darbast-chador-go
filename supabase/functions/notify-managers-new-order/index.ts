@@ -14,8 +14,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const oneSignalAppId = Deno.env.get('ONESIGNAL_APP_ID');
-    const oneSignalApiKey = Deno.env.get('ONESIGNAL_REST_API_KEY');
+    const najvaApiToken = Deno.env.get('NAJVA_API_TOKEN');
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -81,52 +80,41 @@ serve(async (req) => {
       console.log('[NotifyManagers] ✓ In-app notifications created for', uniqueManagerIds.length, 'managers');
     }
 
-    // ارسال Push Notification به همه مدیران
-    let pushSentCount = 0;
-    if (oneSignalAppId && oneSignalApiKey) {
+    // ارسال Push Notification با Najva
+    let pushSent = false;
+    if (najvaApiToken) {
       try {
-        console.log('[NotifyManagers] Sending OneSignal push to', uniqueManagerIds.length, 'managers');
-        console.log('[NotifyManagers] Manager IDs:', uniqueManagerIds);
+        console.log('[NotifyManagers] Sending Najva push notification');
         
-        // استفاده از include_aliases به جای include_external_user_ids (deprecated)
         const notificationData = {
-          app_id: oneSignalAppId,
-          include_aliases: {
-            external_id: uniqueManagerIds
-          },
-          target_channel: "push",
-          headings: { fa: title, en: title },
-          contents: { fa: body, en: body },
+          title: title,
+          body: body,
           url: `https://ahrom.org${link}`,
-          ttl: 86400, // 24 hours
-          priority: 10,
-          android_channel_id: 'new_orders',
+          icon: 'https://ahrom.org/icon-512.png',
         };
 
-        console.log('[NotifyManagers] Notification payload:', JSON.stringify(notificationData));
-
-        const response = await fetch('https://onesignal.com/api/v1/notifications', {
+        const response = await fetch('https://app.najva.com/api/v1/notifications/', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-            'Authorization': `Basic ${oneSignalApiKey}`
+            'Content-Type': 'application/json',
+            'Authorization': `Token ${najvaApiToken}`
           },
           body: JSON.stringify(notificationData)
         });
 
         const result = await response.json();
         
-        if (response.ok && result.id) {
-          console.log('[NotifyManagers] ✓ OneSignal push sent successfully:', result.id, 'recipients:', result.recipients);
-          pushSentCount = result.recipients || uniqueManagerIds.length;
+        if (response.ok) {
+          console.log('[NotifyManagers] ✓ Najva push sent successfully:', result);
+          pushSent = true;
         } else {
-          console.error('[NotifyManagers] OneSignal error response:', JSON.stringify(result));
+          console.error('[NotifyManagers] Najva error response:', JSON.stringify(result));
         }
-      } catch (oneSignalError) {
-        console.error('[NotifyManagers] OneSignal request failed:', oneSignalError);
+      } catch (najvaError) {
+        console.error('[NotifyManagers] Najva request failed:', najvaError);
       }
     } else {
-      console.log('[NotifyManagers] OneSignal not configured - AppId:', !!oneSignalAppId, 'ApiKey:', !!oneSignalApiKey);
+      console.log('[NotifyManagers] Najva not configured');
     }
 
     return new Response(
@@ -135,7 +123,7 @@ serve(async (req) => {
         message: 'Managers notified',
         managersNotified: uniqueManagerIds.length,
         inAppCreated: !notifError,
-        pushSent: pushSentCount > 0
+        pushSent
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
