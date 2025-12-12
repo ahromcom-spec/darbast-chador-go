@@ -50,6 +50,7 @@ import {
 } from "lucide-react";
 import { OrderTransfer } from "@/components/orders/OrderTransfer";
 import { AddCollaborator } from "@/components/orders/AddCollaborator";
+import { OrderCollaboratorsList } from "@/components/orders/OrderCollaboratorsList";
 import { RepairRequestDialog } from "@/components/orders/RepairRequestDialog";
 import { CollectionRequestDialog } from "@/components/orders/CollectionRequestDialog";
 import { ManagerOrderInvoice } from "@/components/orders/ManagerOrderInvoice";
@@ -1842,6 +1843,9 @@ export default function OrderDetail() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* لیست همکاران سفارش */}
+          <OrderCollaboratorsList orderId={order.id} />
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
