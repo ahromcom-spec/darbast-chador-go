@@ -64,50 +64,45 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
 
   const fetchOrders = async () => {
     try {
-      // Get customer ID first
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      // Fetch own orders
+      // Fetch own orders (RLS ensures only current user's orders are returned)
       let ownOrders: Order[] = [];
-      if (customer) {
-        const { data: ordersData, error } = await supabase
-          .from('projects_v3')
-          .select(`
-            id,
-            code,
-            created_at,
-            status,
-            address,
-            execution_stage,
-            payment_confirmed_at,
-            subcategory_id,
-            notes,
-            subcategories:subcategory_id (name),
-            provinces:province_id (name)
-          `)
-          .eq('customer_id', customer.id)
-          .order('created_at', { ascending: false });
 
-        if (!error && ordersData) {
-          ownOrders = ordersData.map((order: any) => ({
-            id: order.id,
-            code: order.code,
-            created_at: order.created_at,
-            status: order.status,
-            address: order.address,
-            execution_stage: order.execution_stage,
-            payment_confirmed_at: order.payment_confirmed_at,
-            subcategory_id: order.subcategory_id,
-            subcategory_name: order.subcategories?.name || '',
-            province_name: order.provinces?.name || '',
-            notes: order.notes,
-            isCollaborated: false,
-          }));
-        }
+      const { data: ordersData, error } = await supabase
+        .from('projects_v3')
+        .select(`
+          id,
+          code,
+          created_at,
+          status,
+          address,
+          execution_stage,
+          payment_confirmed_at,
+          subcategory_id,
+          notes,
+          subcategories:subcategory_id (name),
+          provinces:province_id (name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (ordersData) {
+        ownOrders = ordersData.map((order: any) => ({
+          id: order.id,
+          code: order.code,
+          created_at: order.created_at,
+          status: order.status,
+          address: order.address,
+          execution_stage: order.execution_stage,
+          payment_confirmed_at: order.payment_confirmed_at,
+          subcategory_id: order.subcategory_id,
+          subcategory_name: order.subcategories?.name || '',
+          province_name: order.provinces?.name || '',
+          notes: order.notes,
+          isCollaborated: false,
+        }));
       }
 
       // Fetch collaborated orders (orders where user is an accepted/approved collaborator)
