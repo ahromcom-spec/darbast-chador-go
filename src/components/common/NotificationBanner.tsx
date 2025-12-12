@@ -1,18 +1,14 @@
-import { Bell, X, Loader2, Phone, AlertTriangle, Settings } from 'lucide-react';
+import { Bell, X, Loader2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useOneSignal } from '@/hooks/useOneSignal';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
 
 const DISMISSAL_KEY = 'notification-banner-dismissed';
@@ -43,17 +39,14 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
     }
   });
   const [enabling, setEnabling] = useState(false);
-  const [showBanner, setShowBanner] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [showDeniedHelp, setShowDeniedHelp] = useState(false);
-  const location = useLocation();
-  const { permission, isSupported, isSubscribed, subscribe, isInitialized } = useOneSignal();
+  const { permission, isSupported, isSubscribed, subscribe } = useOneSignal();
   const { toast } = useToast();
 
-  // بررسی اگر کاربر هنوز اعلان ندارد - نمایش دیالوگ
+  // نمایش دیالوگ سفارشی به جای پاپ‌آپ نجوا
   useEffect(() => {
-    if (!user || !isSupported || isSubscribed) {
-      setShowBanner(false);
+    if (!user || !isSupported || isSubscribed || dismissed) {
       setShowDialog(false);
       return;
     }
@@ -63,22 +56,18 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
       setShowDeniedHelp(true);
     }
 
-    // فقط بنر نشان می‌دهیم، دیالوگ را غیرفعال می‌کنیم تا پیام تکراری نباشد
-    if (permission !== 'granted' && !dismissed) {
+    // نمایش دیالوگ سفارشی با تأخیر
+    if (permission !== 'granted') {
       const timer = setTimeout(() => {
-        setShowBanner(true);
-      }, 2000);
+        setShowDialog(true);
+      }, 2500);
       return () => clearTimeout(timer);
     }
-
-    // نمایش بنر پایین صفحه - فقط اگر دیالوگ نمایش داده نشده باشد
-    // برای جلوگیری از نمایش دوگانه پیام
-    // دیالوگ را غیرفعال می‌کنیم چون بنر inline و floating کافی هستند
   }, [user, isSupported, permission, dismissed, isSubscribed]);
 
   const handleDismiss = () => {
     setDismissed(true);
-    setShowBanner(false);
+    setShowDialog(false);
     localStorage.setItem(DISMISSAL_KEY, JSON.stringify({
       timestamp: Date.now()
     }));
@@ -87,11 +76,10 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
   const handleEnable = async () => {
     setEnabling(true);
     
-    // Timeout کوتاه‌تر چون حالا از Native API استفاده می‌کنیم
     const timeoutId = setTimeout(() => {
       setEnabling(false);
       toast({
-        title: '❌ خطا',
+        title: 'خطا',
         description: 'لطفاً صفحه را رفرش کرده و دوباره تلاش کنید.',
         variant: 'destructive'
       });
@@ -111,11 +99,10 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
       
       if (result) {
         toast({
-          title: '✅ اعلان‌ها فعال شد',
-          description: 'از این پس تماس‌های ورودی و به‌روزرسانی سفارشات را دریافت خواهید کرد',
+          title: 'اعلان‌ها فعال شد',
+          description: 'از این پس پیام‌ها و به‌روزرسانی سفارشات را دریافت خواهید کرد',
         });
         setDismissed(true);
-        setShowBanner(false);
         setShowDialog(false);
         setShowDeniedHelp(false);
       } else {
@@ -147,207 +134,112 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
     navigate('/settings/notifications');
   };
 
-  // نمایش inline بنر در بالای صفحه
-  const showInline = variant === 'inline' && user && isSupported && !isSubscribed && permission !== 'granted' && !dismissed;
+  // اگر شرایط نمایش وجود نداشت، چیزی نمایش نده
+  if (!user || !isSupported || isSubscribed || dismissed) {
+    return null;
+  }
 
   return (
-    <>
-      {/* بنر inline در بالای صفحه اصلی */}
-      {showInline && (
-        <div className="w-full px-4 sm:px-6 pt-4 relative z-20">
-          <Card className="border-primary/40 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 shadow-lg max-w-2xl mx-auto">
-            <div className="p-4 flex flex-col sm:flex-row items-center gap-3">
-              <div className="flex-shrink-0 p-3 rounded-full bg-primary/20 animate-pulse">
-                <Phone className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1 text-center sm:text-right">
-                <h3 className="font-bold text-base text-foreground flex items-center justify-center sm:justify-start gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-500" />
-                  اعلان‌ها را فعال کنید!
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  بدون فعال‌سازی، تماس‌های مدیران و وضعیت سفارشات را دریافت نخواهید کرد
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-              <Button
-                  onClick={handleEnable}
-                  size="sm"
-                  className="whitespace-nowrap"
-                  disabled={enabling}
-                >
-                  {enabling ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin ml-1" />
-                      در حال فعال‌سازی...
-                    </>
-                  ) : (
-                    <>
-                      <Bell className="h-4 w-4 ml-1" />
-                      فعال‌سازی
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={handleDismiss}
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  disabled={enabling}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
+    <Dialog open={showDialog} onOpenChange={(open) => {
+      if (!open) handleDismiss();
+    }}>
+      <DialogContent className="max-w-sm sm:max-w-md border-0 bg-card/95 backdrop-blur-xl shadow-2xl rounded-2xl p-0 overflow-hidden">
+        {/* دکمه بستن */}
+        <button
+          onClick={handleDismiss}
+          className="absolute left-4 top-4 p-1.5 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors z-10"
+          aria-label="بستن"
+        >
+          <X className="h-4 w-4" />
+        </button>
 
-      {/* دیالوگ اصلی برای فعال‌سازی - طراحی متناسب با سایت */}
-      <Dialog open={showDialog} onOpenChange={(open) => {
-        setShowDialog(open);
-        if (!open) setShowDeniedHelp(false);
-      }}>
-        <DialogContent className="max-w-sm sm:max-w-md border-2 border-construction-gold/40 bg-gradient-to-br from-card via-card to-construction-gold/5 shadow-2xl rounded-2xl p-0 overflow-hidden">
-          {/* هدر با گرادیان طلایی */}
-          <div className="bg-gradient-to-r from-construction-gold/20 via-construction-gold/10 to-construction-gold/20 py-6 px-4 border-b border-construction-gold/20">
-            <div className="flex items-center justify-center mb-3">
-              <div className={`p-4 rounded-2xl shadow-lg ${showDeniedHelp ? 'bg-destructive/15 border-2 border-destructive/30' : 'bg-gradient-to-br from-construction-gold/30 to-construction-gold/10 border-2 border-construction-gold/40'}`}>
-                {showDeniedHelp ? (
-                  <Settings className="h-8 w-8 text-destructive" />
-                ) : (
-                  <Bell className="h-8 w-8 text-construction-gold" />
-                )}
+        {showDeniedHelp ? (
+          /* حالت رد شدن دسترسی */
+          <div className="p-6 pt-10 space-y-5">
+            <div className="flex items-center justify-center">
+              <div className="p-4 rounded-2xl bg-destructive/10 border-2 border-destructive/30">
+                <Settings className="h-10 w-10 text-destructive" />
               </div>
             </div>
-            <h2 className="text-center text-xl font-bold text-foreground">
-              {showDeniedHelp ? 'دسترسی رد شده است' : 'پیام های سایت'}
-            </h2>
-          </div>
-          
-          {/* محتوای اصلی */}
-          <div className="p-5 space-y-4">
-            {showDeniedHelp ? (
-              <>
-                <div className="flex items-center gap-3 p-3 bg-destructive/10 rounded-xl border border-destructive/30">
-                  <X className="h-5 w-5 text-destructive flex-shrink-0" />
-                  <p className="text-sm text-destructive font-medium">
-                    دسترسی اعلان در مرورگر مسدود شده است
-                  </p>
-                </div>
-                <div className="text-right space-y-3 bg-muted/50 p-4 rounded-xl border border-border/50">
-                  <p className="font-semibold text-foreground text-sm">برای فعال‌سازی:</p>
-                  <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                    <li>روی آیکون قفل کنار آدرس سایت کلیک کنید</li>
-                    <li>گزینه "اعلان‌ها" یا "Notifications" را پیدا کنید</li>
-                    <li>آن را از "مسدود" به "اجازه" تغییر دهید</li>
-                    <li>صفحه را رفرش کنید</li>
-                  </ol>
-                </div>
-                <p className="text-muted-foreground text-sm text-center">
-                  یا می‌توانید به صفحه تنظیمات اعلان‌ها بروید:
-                </p>
-              </>
-            ) : (
-              <p className="text-muted-foreground text-base text-center leading-relaxed py-2">
-                می‌خواهید از مراحل سفارش و پیام ها آگاه باشید؟
-              </p>
-            )}
             
-            {/* دکمه‌ها */}
-            <div className="flex flex-col gap-3 pt-2">
-              {showDeniedHelp ? (
+            <h2 className="text-center text-xl font-bold text-foreground">
+              دسترسی رد شده است
+            </h2>
+            
+            <div className="flex items-center gap-3 p-3 bg-destructive/10 rounded-xl border border-destructive/30">
+              <X className="h-5 w-5 text-destructive flex-shrink-0" />
+              <p className="text-sm text-destructive font-medium">
+                دسترسی اعلان در مرورگر مسدود شده است
+              </p>
+            </div>
+            
+            <div className="text-right space-y-3 bg-muted/50 p-4 rounded-xl border border-border/50">
+              <p className="font-semibold text-foreground text-sm">برای فعال‌سازی:</p>
+              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                <li>روی آیکون قفل کنار آدرس سایت کلیک کنید</li>
+                <li>گزینه اعلان‌ها یا Notifications را پیدا کنید</li>
+                <li>آن را از مسدود به اجازه تغییر دهید</li>
+                <li>صفحه را رفرش کنید</li>
+              </ol>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={handleGoToSettings}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg py-5"
+                size="lg"
+              >
+                <Settings className="h-5 w-5 ml-2" />
+                رفتن به تنظیمات اعلان‌ها
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDeniedHelp(false)}
+                className="w-full border-border hover:bg-muted text-foreground"
+              >
+                تلاش مجدد
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* حالت عادی درخواست اعلان - طراحی همسو با سایت */
+          <div className="p-6 pt-10 space-y-5">
+            {/* آیکون زنگ با استایل طلایی */}
+            <div className="flex items-center justify-center">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-2 border-amber-500/30 shadow-lg">
+                <Bell className="h-10 w-10 text-amber-500" />
+              </div>
+            </div>
+            
+            {/* عنوان */}
+            <h2 className="text-center text-xl font-bold text-foreground">
+              پیام های سایت
+            </h2>
+            
+            {/* توضیحات */}
+            <p className="text-muted-foreground text-base text-center leading-relaxed">
+              می‌خواهید از مراحل سفارش و پیام ها آگاه باشید؟
+            </p>
+            
+            {/* دکمه بله - آبی مطابق استایل سایت */}
+            <Button 
+              onClick={handleEnable} 
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg py-6 text-base rounded-xl"
+              size="lg"
+              disabled={enabling}
+            >
+              {enabling ? (
                 <>
-                  <Button 
-                    onClick={handleGoToSettings}
-                    className="w-full bg-gradient-to-r from-construction-gold to-construction-gold/80 hover:from-construction-gold/90 hover:to-construction-gold/70 text-construction-dark font-bold shadow-lg transition-all duration-300 hover:shadow-xl py-5"
-                    size="lg"
-                  >
-                    <Settings className="h-5 w-5 ml-2" />
-                    رفتن به تنظیمات اعلان‌ها
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowDeniedHelp(false)}
-                    className="w-full border-construction-gold/30 hover:bg-construction-gold/10 text-foreground"
-                  >
-                    تلاش مجدد
-                  </Button>
+                  <Loader2 className="h-5 w-5 animate-spin ml-2" />
+                  در حال فعال‌سازی...
                 </>
               ) : (
-                <>
-                  <Button 
-                    onClick={handleEnable} 
-                    className="w-full bg-gradient-to-r from-construction-gold to-construction-gold/80 hover:from-construction-gold/90 hover:to-construction-gold/70 text-construction-dark font-bold shadow-lg transition-all duration-300 hover:shadow-xl py-6 text-base"
-                    size="lg"
-                    disabled={enabling}
-                  >
-                    {enabling ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin ml-2" />
-                        در حال فعال‌سازی...
-                      </>
-                    ) : (
-                      'بله'
-                    )}
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => setShowDialog(false)}
-                    className="w-full text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    disabled={enabling}
-                  >
-                    بعداً یادآوری کن
-                  </Button>
-                </>
+                'بله'
               )}
-            </div>
+            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* بنر floating پایین صفحه */}
-      {variant === 'floating' && showBanner && !showDialog && (
-        <div className="w-full animate-in slide-in-from-bottom-4" data-notification-banner>
-          <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-xl">
-            <div className="p-4 flex items-center gap-3">
-              <div className="flex-shrink-0 p-2 rounded-lg bg-primary/10 animate-pulse">
-                <Phone className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm">دریافت تماس‌های مدیران</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  بدون فعال‌سازی، تماس‌ها را دریافت نمی‌کنید!
-                </p>
-              </div>
-              <Button
-                onClick={handleEnable}
-                size="sm"
-                className="whitespace-nowrap"
-                disabled={enabling}
-              >
-                {enabling ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin ml-1" />
-                    ...
-                  </>
-                ) : (
-                  'فعال‌سازی'
-                )}
-              </Button>
-              <Button
-                onClick={handleDismiss}
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 flex-shrink-0"
-                disabled={enabling}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-    </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

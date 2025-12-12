@@ -341,4 +341,19 @@
     background: hsl(var(--card));
     border-color: hsl(var(--primary) / 0.3);
   }
+
+  /* Hide Najva default push notification popup - we use custom UI */
+  #najva-web-push-wrapper,
+  .najva-web-push-wrapper,
+  [id^="najva-"],
+  [class^="najva-"],
+  .najva-modal,
+  .najva-popup,
+  .najva-prompt,
+  div[style*="najva"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 }
