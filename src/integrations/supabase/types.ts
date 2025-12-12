@@ -1299,53 +1299,6 @@ export type Database = {
           },
         ]
       }
-      project_collaborators: {
-        Row: {
-          created_at: string
-          id: string
-          invited_at: string
-          invitee_phone_number: string
-          invitee_user_id: string | null
-          inviter_user_id: string
-          project_id: string
-          responded_at: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          invited_at?: string
-          invitee_phone_number: string
-          invitee_user_id?: string | null
-          inviter_user_id: string
-          project_id: string
-          responded_at?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          invited_at?: string
-          invitee_phone_number?: string
-          invitee_user_id?: string | null
-          inviter_user_id?: string
-          project_id?: string
-          responded_at?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_collaborators_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects_hierarchy"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       project_hierarchy_media: {
         Row: {
           created_at: string
