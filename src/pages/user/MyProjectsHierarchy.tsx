@@ -27,8 +27,11 @@ import {
   Building2,
   ArrowRight,
   XCircle,
-  Edit2
+  Edit2,
+  Users,
+  UserPlus
 } from 'lucide-react';
+import { AddProjectCollaborator } from '@/components/projects/AddProjectCollaborator';
 
 interface Address {
   id: string;
@@ -61,6 +64,7 @@ interface Order {
   district_id?: string;
   subcategory_id?: string;
   payment_amount?: number;
+  isCollaborated?: boolean;
 }
 
 interface HierarchyData {
@@ -89,6 +93,8 @@ export default function MyProjectsHierarchy() {
   const [isDeletingProject, setIsDeletingProject] = useState(false);
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [isDeletingLocation, setIsDeletingLocation] = useState(false);
+  const [shareProjectId, setShareProjectId] = useState<string | null>(null);
+  const [shareProjectTitle, setShareProjectTitle] = useState<string>('');
   const orderRefs = useRef<Record<string, HTMLDivElement | null>>({});
   useEffect(() => {
     fetchHierarchyData();
@@ -127,7 +133,7 @@ export default function MyProjectsHierarchy() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch user's addresses
+      // Fetch user's addresses (including shared locations from collaborations)
       const { data: locations, error: locError } = await supabase
         .from('locations')
         .select(`
@@ -162,40 +168,63 @@ export default function MyProjectsHierarchy() {
 
       if (projError) throw projError;
 
-      // دریافت customer_id برای دریافت سفارشات
-      const { data: customer, error: custErr } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Fetch orders from projects_v3 using security definer function
+      const { data: projectsV3, error: ordErr } = await supabase.rpc('get_my_projects_v3');
 
-      if (custErr) throw custErr;
+      if (ordErr) throw ordErr;
 
-      let orders: Order[] = [];
-      
-      // Fetch orders from projects_v3 (سفارشات) با لینک به hierarchy
-      if (customer) {
-        const { data: projectsV3, error: ordErr } = await supabase
+      // تبدیل projects_v3 به فرمت Order
+      let orders: Order[] = (projectsV3 || []).map((pv3: any) => ({
+        id: pv3.id,
+        project_id: pv3.hierarchy_project_id || pv3.id,
+        code: pv3.code,
+        status: pv3.status,
+        created_at: pv3.created_at,
+        notes: pv3.notes,
+        province_id: pv3.province_id,
+        district_id: pv3.district_id,
+        subcategory_id: pv3.subcategory_id,
+        payment_amount: pv3.payment_amount,
+        isCollaborated: false
+      }));
+
+      // Fetch collaborated orders (orders where user is an accepted collaborator)
+      const { data: collaborations } = await supabase
+        .from('order_collaborators')
+        .select('order_id')
+        .eq('invitee_user_id', user.id)
+        .eq('status', 'accepted');
+
+      if (collaborations && collaborations.length > 0) {
+        const orderIds = collaborations.map(c => c.order_id);
+        
+        const { data: collabOrdersData } = await supabase
           .from('projects_v3')
           .select('id, code, status, created_at, notes, province_id, district_id, subcategory_id, hierarchy_project_id, payment_amount')
-          .eq('customer_id', customer.id)
-          .order('created_at', { ascending: false });
+          .in('id', orderIds);
 
-        if (ordErr) throw ordErr;
-
-        // تبدیل projects_v3 به فرمت Order
-        orders = (projectsV3 || []).map(pv3 => ({
-          id: pv3.id,
-          project_id: pv3.hierarchy_project_id || pv3.id, // استفاده از hierarchy_project_id برای لینک
-          code: pv3.code,
-          status: pv3.status,
-          created_at: pv3.created_at,
-          notes: pv3.notes,
-          province_id: pv3.province_id,
-          district_id: pv3.district_id,
-          subcategory_id: pv3.subcategory_id,
-          payment_amount: pv3.payment_amount
-        }));
+        if (collabOrdersData) {
+          const collabOrders = collabOrdersData.map(pv3 => ({
+            id: pv3.id,
+            project_id: pv3.hierarchy_project_id || pv3.id,
+            code: pv3.code,
+            status: pv3.status,
+            created_at: pv3.created_at,
+            notes: pv3.notes,
+            province_id: pv3.province_id,
+            district_id: pv3.district_id,
+            subcategory_id: pv3.subcategory_id,
+            payment_amount: pv3.payment_amount,
+            isCollaborated: true
+          }));
+          
+          // Add collaborated orders that aren't already in the list
+          collabOrders.forEach(co => {
+            if (!orders.find(o => o.id === co.id)) {
+              orders.push(co);
+            }
+          });
+        }
       }
 
       // Group projects by location
@@ -677,6 +706,19 @@ export default function MyProjectsHierarchy() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  className="h-7 gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShareProjectTitle(`${project.service_types_v3?.name} - ${project.subcategories?.name}`);
+                                    setShareProjectId(project.id);
+                                  }}
+                                >
+                                  <UserPlus className="h-3.5 w-3.5" />
+                                  <span className="text-xs">اشتراک</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -791,6 +833,12 @@ export default function MyProjectsHierarchy() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                               {getStatusBadge(order.status)}
+                                              {order.isCollaborated && (
+                                                <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
+                                                  <Users className="h-3 w-3" />
+                                                  همکار
+                                                </Badge>
+                                              )}
                                               {order.status === 'pending' && (
                                                 <Button
                                                   variant="ghost"
@@ -968,6 +1016,20 @@ export default function MyProjectsHierarchy() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Share Project Dialog */}
+      <AddProjectCollaborator
+        projectId={shareProjectId || ''}
+        projectTitle={shareProjectTitle}
+        open={!!shareProjectId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShareProjectId(null);
+            setShareProjectTitle('');
+          }
+        }}
+        onCollaboratorAdded={fetchHierarchyData}
+      />
     </div>
   );
 }
