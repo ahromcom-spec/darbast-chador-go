@@ -659,12 +659,17 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         });
       });
 
-      // دریافت سفارشات
-      const { data: v3Orders } = await supabase
-        .from('projects_v3')
-        .select('id, code, status, address, created_at, approved_at, hierarchy_project_id, subcategory:subcategories(name, code)')
-        .in('hierarchy_project_id', projectIds)
-        .limit(200);
+      // دریافت سفارشات با استفاده از تابع امنیتی تا RLS جلوی نمایش را نگیرد
+      const { data: v3RpcData, error: v3Err } = await supabase
+        .rpc('get_my_projects_v3');
+      
+      if (v3Err) {
+        console.error('[HybridGlobe] Error fetching orders via RPC:', v3Err);
+      }
+      
+      const v3Orders = (v3RpcData as any[] | null)?.filter(o =>
+        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id)
+      ) ?? [];
 
       const orderMediaMap = new Map<string, HierarchyMedia[]>();
       
