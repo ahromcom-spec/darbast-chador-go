@@ -35,7 +35,6 @@ import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { RecentActivityFeed } from '@/components/profile/RecentActivityFeed';
 import { IncomingTransferRequests } from '@/components/orders/IncomingTransferRequest';
 import { PendingCollaborationInvites } from '@/components/orders/PendingCollaborationInvites';
-import { PendingProjectInvites } from '@/components/projects/PendingProjectInvites';
 
 interface UserOrder {
   id: string;
@@ -142,29 +141,41 @@ const fetchOrders = async () => {
       setOrders(legacyOrders || []);
     }
 
-    // New projects-based orders (projects_v3) using security definer function
-    const { data: projects, error: projectsError } = await supabase.rpc('get_my_projects_v3');
+    // New projects-based orders (projects_v3)
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     let normalizedProjects: ProjectOrder[] = [];
     
-    if (!projectsError && projects) {
-      normalizedProjects = (projects || []).map((p: any) => {
-        let estimated_price: number | null = null;
-        try {
-          const n = typeof p.notes === 'string' ? JSON.parse(p.notes) : p.notes;
-          estimated_price = n?.estimated_price ?? null;
-        } catch {}
-        return {
-          id: p.id,
-          created_at: p.created_at,
-          code: p.code,
-          status: p.status ?? null,
-          address: p.address ?? null,
-          estimated_price,
-        } as ProjectOrder;
-      });
-    } else if (projectsError) {
-      console.error('Error fetching projects_v3:', projectsError);
+    if (!customerError && customer) {
+      const { data: projects, error: projectsError } = await supabase
+        .from('projects_v3')
+        .select('id, created_at, code, status, address, notes')
+        .eq('customer_id', customer.id)
+        .order('created_at', { ascending: false });
+
+      if (projectsError) {
+        console.error('Error fetching projects_v3:', projectsError);
+      } else {
+        normalizedProjects = (projects || []).map((p: any) => {
+          let estimated_price: number | null = null;
+          try {
+            const n = typeof p.notes === 'string' ? JSON.parse(p.notes) : p.notes;
+            estimated_price = n?.estimated_price ?? null;
+          } catch {}
+          return {
+            id: p.id,
+            created_at: p.created_at,
+            code: p.code,
+            status: p.status ?? null,
+            address: p.address ?? null,
+            estimated_price,
+          } as ProjectOrder;
+        });
+      }
     }
 
     // New simple scaffolding requests (form reset)
@@ -253,9 +264,6 @@ const fetchOrders = async () => {
 
         {/* Pending Collaboration Invites */}
         <PendingCollaborationInvites />
-
-        {/* Pending Project Invites */}
-        <PendingProjectInvites />
 
         {/* Profile Header */}
         <ProfileHeader user={user} fullName={fullName} roles={roles} />

@@ -64,60 +64,58 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
 
   const fetchOrders = async () => {
     try {
-      // Fetch own orders using security definer function that bypasses RLS
+      // Get customer ID first
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Fetch own orders
       let ownOrders: Order[] = [];
+      if (customer) {
+        const { data: ordersData, error } = await supabase
+          .from('projects_v3')
+          .select(`
+            id,
+            code,
+            created_at,
+            status,
+            address,
+            execution_stage,
+            payment_confirmed_at,
+            subcategory_id,
+            notes,
+            subcategories:subcategory_id (name),
+            provinces:province_id (name)
+          `)
+          .eq('customer_id', customer.id)
+          .order('created_at', { ascending: false });
 
-      const { data: ordersData, error } = await supabase
-        .rpc('get_my_projects_v3');
-
-      if (error) {
-        console.error('Error fetching orders via RPC:', error);
-        throw error;
+        if (!error && ordersData) {
+          ownOrders = ordersData.map((order: any) => ({
+            id: order.id,
+            code: order.code,
+            created_at: order.created_at,
+            status: order.status,
+            address: order.address,
+            execution_stage: order.execution_stage,
+            payment_confirmed_at: order.payment_confirmed_at,
+            subcategory_id: order.subcategory_id,
+            subcategory_name: order.subcategories?.name || '',
+            province_name: order.provinces?.name || '',
+            notes: order.notes,
+            isCollaborated: false,
+          }));
+        }
       }
 
-      if (ordersData && ordersData.length > 0) {
-        // Need to fetch subcategory and province names separately
-        const orderIds = ordersData.map((o: any) => o.id);
-        const subcategoryIds = [...new Set(ordersData.map((o: any) => o.subcategory_id).filter(Boolean))];
-        const provinceIds = [...new Set(ordersData.map((o: any) => o.province_id).filter(Boolean))];
-        
-        // Fetch subcategories
-        const { data: subcategories } = await supabase
-          .from('subcategories')
-          .select('id, name')
-          .in('id', subcategoryIds);
-        
-        // Fetch provinces
-        const { data: provinces } = await supabase
-          .from('provinces')
-          .select('id, name')
-          .in('id', provinceIds);
-        
-        const subcategoryMap = new Map((subcategories || []).map((s: any) => [s.id, s.name]));
-        const provinceMap = new Map((provinces || []).map((p: any) => [p.id, p.name]));
-
-        ownOrders = ordersData.map((order: any) => ({
-          id: order.id,
-          code: order.code,
-          created_at: order.created_at,
-          status: order.status,
-          address: order.address,
-          execution_stage: order.execution_stage,
-          payment_confirmed_at: order.payment_confirmed_at,
-          subcategory_id: order.subcategory_id,
-          subcategory_name: subcategoryMap.get(order.subcategory_id) || '',
-          province_name: provinceMap.get(order.province_id) || '',
-          notes: order.notes,
-          isCollaborated: false,
-        }));
-      }
-
-      // Fetch collaborated orders (orders where user is an accepted/approved collaborator)
+      // Fetch collaborated orders (orders where user is an accepted collaborator)
       const { data: collaborations } = await supabase
         .from('order_collaborators')
         .select('order_id')
         .eq('invitee_user_id', userId)
-        .in('status', ['accepted', 'approved']);
+        .eq('status', 'accepted');
 
       let collaboratedOrders: Order[] = [];
       if (collaborations && collaborations.length > 0) {

@@ -143,44 +143,40 @@ export default function MyOrders() {
     if (!user) return;
     
     try {
-      // Use security definer function that bypasses RLS
-      const { data, error } = await supabase.rpc('get_my_projects_v3');
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!customerData) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('projects_v3')
+        .select(`
+          id,
+          code,
+          status,
+          address,
+          created_at,
+          notes,
+          hierarchy_project_id,
+          payment_amount,
+          subcategories(name),
+          provinces(name),
+          districts(name),
+          hierarchy_project:projects_hierarchy!hierarchy_project_id(
+            location:locations(title, address_line)
+          )
+        `)
+        .eq('customer_id', customerData.id)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Fetch related data for display
-      if (data && data.length > 0) {
-        const subcategoryIds = [...new Set(data.map((o: any) => o.subcategory_id).filter(Boolean))];
-        const provinceIds = [...new Set(data.map((o: any) => o.province_id).filter(Boolean))];
-        const districtIds = [...new Set(data.map((o: any) => o.district_id).filter(Boolean))];
-        const hierarchyIds = [...new Set(data.map((o: any) => o.hierarchy_project_id).filter(Boolean))];
-        
-        const [subcatRes, provRes, distRes, hierRes] = await Promise.all([
-          supabase.from('subcategories').select('id, name').in('id', subcategoryIds),
-          supabase.from('provinces').select('id, name').in('id', provinceIds),
-          districtIds.length > 0 ? supabase.from('districts').select('id, name').in('id', districtIds) : Promise.resolve({ data: [] }),
-          hierarchyIds.length > 0 ? supabase.from('projects_hierarchy').select('id, location_id, locations(title, address_line)').in('id', hierarchyIds) : Promise.resolve({ data: [] })
-        ]);
-        
-        const subcatMap = new Map((subcatRes.data || []).map((s: any) => [s.id, s]));
-        const provMap = new Map((provRes.data || []).map((p: any) => [p.id, p]));
-        const distMap = new Map((distRes.data || []).map((d: any) => [d.id, d]));
-        const hierMap = new Map((hierRes.data || []).map((h: any) => [h.id, h]));
-        
-        const enrichedOrders = data.map((order: any) => ({
-          ...order,
-          subcategories: subcatMap.get(order.subcategory_id),
-          provinces: provMap.get(order.province_id),
-          districts: distMap.get(order.district_id),
-          hierarchy_project: hierMap.get(order.hierarchy_project_id)
-        }));
-        
-        setOrders(enrichedOrders.sort((a: any, b: any) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ));
-      } else {
-        setOrders([]);
-      }
+      setOrders(data || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
