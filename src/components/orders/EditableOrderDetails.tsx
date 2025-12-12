@@ -69,7 +69,7 @@ const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMe
 
   // For public bucket, use public URL directly
   const getMediaUrl = (mediaItem: { file_path: string }) => {
-    const { data } = supabase.storage.from('project-media').getPublicUrl(mediaItem.file_path);
+    const { data } = supabase.storage.from('order-media').getPublicUrl(mediaItem.file_path);
     return data.publicUrl;
   };
 
@@ -89,7 +89,7 @@ const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMe
 
         // Upload to storage
         const { error: uploadError } = await supabase.storage
-          .from('project-media')
+          .from('order-media')
           .upload(filePath, file, { contentType: file.type });
 
         if (uploadError) throw uploadError;
@@ -125,7 +125,7 @@ const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMe
   const handleDelete = async (mediaId: string, filePath: string) => {
     try {
       // Delete from storage
-      await supabase.storage.from('project-media').remove([filePath]);
+      await supabase.storage.from('order-media').remove([filePath]);
       
       // Delete record
       const { error } = await supabase

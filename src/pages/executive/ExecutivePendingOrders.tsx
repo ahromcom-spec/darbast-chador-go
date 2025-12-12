@@ -83,18 +83,18 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
       for (const item of media) {
         try {
           const { data: signedData, error: signedError } = await supabase.storage
-            .from('project-media')
+            .from('order-media')
             .createSignedUrl(item.file_path, 3600);
           
           if (signedData?.signedUrl && !signedError) {
             urls[item.id] = signedData.signedUrl;
           } else {
-            const { data } = supabase.storage.from('project-media').getPublicUrl(item.file_path);
+            const { data } = supabase.storage.from('order-media').getPublicUrl(item.file_path);
             urls[item.id] = data.publicUrl;
           }
         } catch (err) {
           console.error('Error getting URL for', item.file_path, err);
-          const { data } = supabase.storage.from('project-media').getPublicUrl(item.file_path);
+          const { data } = supabase.storage.from('order-media').getPublicUrl(item.file_path);
           urls[item.id] = data.publicUrl;
         }
       }
