@@ -27,8 +27,7 @@ import {
   Building2,
   ArrowRight,
   XCircle,
-  Edit2,
-  Users
+  Edit2
 } from 'lucide-react';
 
 interface Address {
@@ -62,7 +61,6 @@ interface Order {
   district_id?: string;
   subcategory_id?: string;
   payment_amount?: number;
-  isCollaborated?: boolean;
 }
 
 interface HierarchyData {
@@ -129,7 +127,7 @@ export default function MyProjectsHierarchy() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch user's addresses (including shared locations from collaborations)
+      // Fetch user's addresses
       const { data: locations, error: locError } = await supabase
         .from('locations')
         .select(`
@@ -196,48 +194,8 @@ export default function MyProjectsHierarchy() {
           province_id: pv3.province_id,
           district_id: pv3.district_id,
           subcategory_id: pv3.subcategory_id,
-          payment_amount: pv3.payment_amount,
-          isCollaborated: false
+          payment_amount: pv3.payment_amount
         }));
-      }
-
-      // Fetch collaborated orders (orders where user is an accepted collaborator)
-      const { data: collaborations } = await supabase
-        .from('order_collaborators')
-        .select('order_id')
-        .eq('invitee_user_id', user.id)
-        .eq('status', 'accepted');
-
-      if (collaborations && collaborations.length > 0) {
-        const orderIds = collaborations.map(c => c.order_id);
-        
-        const { data: collabOrdersData } = await supabase
-          .from('projects_v3')
-          .select('id, code, status, created_at, notes, province_id, district_id, subcategory_id, hierarchy_project_id, payment_amount')
-          .in('id', orderIds);
-
-        if (collabOrdersData) {
-          const collabOrders = collabOrdersData.map(pv3 => ({
-            id: pv3.id,
-            project_id: pv3.hierarchy_project_id || pv3.id,
-            code: pv3.code,
-            status: pv3.status,
-            created_at: pv3.created_at,
-            notes: pv3.notes,
-            province_id: pv3.province_id,
-            district_id: pv3.district_id,
-            subcategory_id: pv3.subcategory_id,
-            payment_amount: pv3.payment_amount,
-            isCollaborated: true
-          }));
-          
-          // Add collaborated orders that aren't already in the list
-          collabOrders.forEach(co => {
-            if (!orders.find(o => o.id === co.id)) {
-              orders.push(co);
-            }
-          });
-        }
       }
 
       // Group projects by location
@@ -833,12 +791,6 @@ export default function MyProjectsHierarchy() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                               {getStatusBadge(order.status)}
-                                              {order.isCollaborated && (
-                                                <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
-                                                  <Users className="h-3 w-3" />
-                                                  همکار
-                                                </Badge>
-                                              )}
                                               {order.status === 'pending' && (
                                                 <Button
                                                   variant="ghost"
