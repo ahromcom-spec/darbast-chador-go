@@ -168,16 +168,13 @@ export default function MyProjectsHierarchy() {
 
       if (projError) throw projError;
 
-      // Fetch orders from projects_v3 - RLS ensures only user's orders are returned
-      const { data: projectsV3, error: ordErr } = await supabase
-        .from('projects_v3')
-        .select('id, code, status, created_at, notes, province_id, district_id, subcategory_id, hierarchy_project_id, payment_amount')
-        .order('created_at', { ascending: false });
+      // Fetch orders from projects_v3 using security definer function
+      const { data: projectsV3, error: ordErr } = await supabase.rpc('get_my_projects_v3');
 
       if (ordErr) throw ordErr;
 
       // تبدیل projects_v3 به فرمت Order
-      let orders: Order[] = (projectsV3 || []).map(pv3 => ({
+      let orders: Order[] = (projectsV3 || []).map((pv3: any) => ({
         id: pv3.id,
         project_id: pv3.hierarchy_project_id || pv3.id,
         code: pv3.code,

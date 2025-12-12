@@ -3388,6 +3388,58 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_my_projects_v3: {
+        Args: never
+        Returns: {
+          address: string
+          approved_at: string | null
+          approved_by: string | null
+          closed_at: string | null
+          code: string
+          contractor_id: string | null
+          created_at: string | null
+          customer_completion_date: string | null
+          customer_id: string
+          customer_name: string | null
+          customer_phone: string | null
+          detailed_address: string | null
+          district_id: string | null
+          executed_by: string | null
+          execution_confirmed_at: string | null
+          execution_end_date: string | null
+          execution_stage: Database["public"]["Enums"]["execution_stage"] | null
+          execution_stage_updated_at: string | null
+          execution_start_date: string | null
+          executive_completion_date: string | null
+          financial_confirmed_at: string | null
+          financial_confirmed_by: string | null
+          hierarchy_project_id: string | null
+          id: string
+          is_renewal: boolean | null
+          location_lat: number | null
+          location_lng: number | null
+          notes: string | null
+          original_order_id: string | null
+          payment_amount: number | null
+          payment_confirmed_at: string | null
+          payment_confirmed_by: string | null
+          payment_method: string | null
+          province_id: string
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["project_status_v3"] | null
+          subcategory_id: string
+          transaction_reference: string | null
+          transferred_from_phone: string | null
+          transferred_from_user_id: string | null
+          updated_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "projects_v3"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_or_create_project: {
         Args: {
           _location_id: string
