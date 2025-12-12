@@ -64,9 +64,7 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
 
   const fetchOrders = async () => {
     try {
-      // Fetch own orders using security definer function that bypasses RLS
-      let ownOrders: Order[] = [];
-
+      // Fetch all orders (own + collaborated) using security definer function
       const { data: ordersData, error } = await supabase
         .rpc('get_my_projects_v3');
 
@@ -75,94 +73,49 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
         throw error;
       }
 
-      if (ordersData && ordersData.length > 0) {
-        // Need to fetch subcategory and province names separately
-        const orderIds = ordersData.map((o: any) => o.id);
-        const subcategoryIds = [...new Set(ordersData.map((o: any) => o.subcategory_id).filter(Boolean))];
-        const provinceIds = [...new Set(ordersData.map((o: any) => o.province_id).filter(Boolean))];
-        
-        // Fetch subcategories
-        const { data: subcategories } = await supabase
-          .from('subcategories')
-          .select('id, name')
-          .in('id', subcategoryIds);
-        
-        // Fetch provinces
-        const { data: provinces } = await supabase
-          .from('provinces')
-          .select('id, name')
-          .in('id', provinceIds);
-        
-        const subcategoryMap = new Map((subcategories || []).map((s: any) => [s.id, s.name]));
-        const provinceMap = new Map((provinces || []).map((p: any) => [p.id, p.name]));
-
-        ownOrders = ordersData.map((order: any) => ({
-          id: order.id,
-          code: order.code,
-          created_at: order.created_at,
-          status: order.status,
-          address: order.address,
-          execution_stage: order.execution_stage,
-          payment_confirmed_at: order.payment_confirmed_at,
-          subcategory_id: order.subcategory_id,
-          subcategory_name: subcategoryMap.get(order.subcategory_id) || '',
-          province_name: provinceMap.get(order.province_id) || '',
-          notes: order.notes,
-          isCollaborated: false,
-        }));
+      if (!ordersData || ordersData.length === 0) {
+        setOrders([]);
+        setLoading(false);
+        return;
       }
 
-      // Fetch collaborated orders (orders where user is an accepted/approved collaborator)
-      const { data: collaborations } = await supabase
-        .from('order_collaborators')
-        .select('order_id')
-        .eq('invitee_user_id', userId)
-        .in('status', ['accepted', 'approved']);
+      // Get order IDs to check which are collaborated
+      const orderIds = ordersData.map((o: any) => o.id);
+      const subcategoryIds = [...new Set(ordersData.map((o: any) => o.subcategory_id).filter(Boolean))];
+      const provinceIds = [...new Set(ordersData.map((o: any) => o.province_id).filter(Boolean))];
+      
+      // Fetch additional data in parallel
+      const [subcatRes, provRes, collabRes] = await Promise.all([
+        supabase.from('subcategories').select('id, name').in('id', subcategoryIds),
+        supabase.from('provinces').select('id, name').in('id', provinceIds),
+        supabase.from('order_collaborators')
+          .select('order_id')
+          .eq('invitee_user_id', userId)
+          .in('status', ['accepted', 'approved'])
+          .in('order_id', orderIds)
+      ]);
+      
+      const subcategoryMap = new Map((subcatRes.data || []).map((s: any) => [s.id, s.name]));
+      const provinceMap = new Map((provRes.data || []).map((p: any) => [p.id, p.name]));
+      const collaboratedOrderIds = new Set((collabRes.data || []).map((c: any) => c.order_id));
 
-      let collaboratedOrders: Order[] = [];
-      if (collaborations && collaborations.length > 0) {
-        const orderIds = collaborations.map(c => c.order_id);
-        
-        const { data: collabOrdersData } = await supabase
-          .from('projects_v3')
-          .select(`
-            id,
-            code,
-            created_at,
-            status,
-            address,
-            execution_stage,
-            payment_confirmed_at,
-            subcategory_id,
-            notes,
-            subcategories:subcategory_id (name),
-            provinces:province_id (name)
-          `)
-          .in('id', orderIds)
-          .order('created_at', { ascending: false });
+      const allOrders: Order[] = ordersData.map((order: any) => ({
+        id: order.id,
+        code: order.code,
+        created_at: order.created_at,
+        status: order.status,
+        address: order.address,
+        execution_stage: order.execution_stage,
+        payment_confirmed_at: order.payment_confirmed_at,
+        subcategory_id: order.subcategory_id,
+        subcategory_name: subcategoryMap.get(order.subcategory_id) || '',
+        province_name: provinceMap.get(order.province_id) || '',
+        notes: order.notes,
+        isCollaborated: collaboratedOrderIds.has(order.id),
+      }));
 
-        if (collabOrdersData) {
-          collaboratedOrders = collabOrdersData.map((order: any) => ({
-            id: order.id,
-            code: order.code,
-            created_at: order.created_at,
-            status: order.status,
-            address: order.address,
-            execution_stage: order.execution_stage,
-            payment_confirmed_at: order.payment_confirmed_at,
-            subcategory_id: order.subcategory_id,
-            subcategory_name: order.subcategories?.name || '',
-            province_name: order.provinces?.name || '',
-            notes: order.notes,
-            isCollaborated: true,
-          }));
-        }
-      }
-
-      // Combine and sort by created_at
-      const allOrders = [...ownOrders, ...collaboratedOrders].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      // Sort by created_at descending
+      allOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       setOrders(allOrders);
 
