@@ -63,27 +63,17 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
       setShowDeniedHelp(true);
     }
 
-    // اگر اولین بار است یا مدت زیادی گذشته، دیالوگ نشان بده
-    const hasSeenDialog = localStorage.getItem('notification-dialog-seen');
-    const dialogTimestamp = hasSeenDialog ? parseInt(hasSeenDialog) : 0;
-    const hoursSinceDialog = (Date.now() - dialogTimestamp) / (1000 * 60 * 60);
-
-    // نمایش دیالوگ هر 12 ساعت تا کاربر فعال کند
-    if (!isSubscribed && hoursSinceDialog > 12) {
-      const timer = setTimeout(() => {
-        setShowDialog(true);
-        localStorage.setItem('notification-dialog-seen', Date.now().toString());
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-
-    // نمایش بنر پایین صفحه
+    // فقط بنر نشان می‌دهیم، دیالوگ را غیرفعال می‌کنیم تا پیام تکراری نباشد
     if (permission !== 'granted' && !dismissed) {
       const timer = setTimeout(() => {
         setShowBanner(true);
       }, 2000);
       return () => clearTimeout(timer);
     }
+
+    // نمایش بنر پایین صفحه - فقط اگر دیالوگ نمایش داده نشده باشد
+    // برای جلوگیری از نمایش دوگانه پیام
+    // دیالوگ را غیرفعال می‌کنیم چون بنر inline و floating کافی هستند
   }, [user, isSupported, permission, dismissed, isSubscribed]);
 
   const handleDismiss = () => {
