@@ -34,6 +34,7 @@ import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySumm
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { RecentActivityFeed } from '@/components/profile/RecentActivityFeed';
 import { IncomingTransferRequests } from '@/components/orders/IncomingTransferRequest';
+import { PendingCollaborationInvites } from '@/components/orders/PendingCollaborationInvites';
 
 interface UserOrder {
   id: string;
@@ -260,6 +261,9 @@ const fetchOrders = async () => {
 
         {/* Incoming Transfer Requests */}
         <IncomingTransferRequests />
+
+        {/* Pending Collaboration Invites */}
+        <PendingCollaborationInvites />
 
         {/* Profile Header */}
         <ProfileHeader user={user} fullName={fullName} roles={roles} />
