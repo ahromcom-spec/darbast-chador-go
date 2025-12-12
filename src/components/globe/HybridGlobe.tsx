@@ -613,6 +613,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const allOrderIds = v3OrdersAll.map(o => o.id);
       
       // دریافت موازی داده‌ها برای سرعت بیشتر
+      console.debug('[HybridGlobe] Querying project_media for order IDs:', allOrderIds.slice(0, 5), '... total:', allOrderIds.length);
+      
       const [phMediaResult, pmMediaResult] = await Promise.all([
         supabase
           .from('project_hierarchy_media')
@@ -630,16 +632,24 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               .in('file_type', ['image', 'video'])
               .order('created_at', { ascending: false })
               .limit(2000)
-          : Promise.resolve({ data: [] as any[] })
+          : Promise.resolve({ data: [] as any[], error: null })
       ]);
 
-      const phMedia = phMediaResult.data;
+      // Log any errors from queries
+      if (phMediaResult.error) {
+        console.error('[HybridGlobe] Error fetching hierarchy media:', phMediaResult.error);
+      }
+      if ((pmMediaResult as any).error) {
+        console.error('[HybridGlobe] Error fetching project media:', (pmMediaResult as any).error);
+      }
+
+      const phMedia = phMediaResult.data || [];
       const pmMedia = (pmMediaResult as any).data || [];
 
       console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
       console.debug('[HybridGlobe] Project media fetched:', pmMedia.length);
-
-      console.debug('[HybridGlobe] Project media fetched:', pmMedia.length);
+      console.debug('[HybridGlobe] All order IDs for media query:', allOrderIds.length);
+      console.debug('[HybridGlobe] Sample pmMedia:', pmMedia.slice(0, 3));
 
       // استفاده از Map برای بهینه‌سازی جستجو
       const mediaByProject = new Map<string, HierarchyMedia[]>();
@@ -1478,31 +1488,34 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         }
 
         let iconToUse: any = projectIcon;
-        // استفاده از قدیمی‌ترین تصویر از قدیمی‌ترین سفارش برای مارکر
+        // پیدا کردن اولین تصویر از همه سفارشات پروژه
         let firstOrderImage: HierarchyMedia | undefined;
         let totalOrderImages = 0;
         
-        // سفارشات به ترتیب جدید به قدیم هستند، پس آخرین سفارش قدیمی‌ترین است
         if (project.orders && project.orders.length > 0) {
-          const oldestOrder = project.orders[project.orders.length - 1]; // قدیمی‌ترین سفارش
+          // جستجو در تمام سفارشات برای پیدا کردن اولین تصویر
+          for (const order of project.orders) {
+            const orderImages = (order.media || []).filter(m => m.file_type === 'image');
+            totalOrderImages += orderImages.length;
+            
+            // اگر هنوز تصویری پیدا نشده، اولین تصویر را بگیر
+            if (!firstOrderImage && orderImages.length > 0) {
+              firstOrderImage = orderImages[0];
+            }
+          }
           
-          // مرتب‌سازی media از قدیمی به جدید و انتخاب اولین تصویر
-          const orderImages = (oldestOrder.media || [])
-            .filter(m => m.file_type === 'image')
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()); // قدیمی‌ترین اول
-          
-          firstOrderImage = orderImages[0]; // قدیمی‌ترین عکس
-          
-          // شمارش کل تصاویر تمام سفارشات
-          project.orders.forEach(order => {
-            totalOrderImages += (order.media || []).filter(m => m.file_type === 'image').length;
-          });
+          console.debug('[HybridGlobe] Project marker:', project.id, 
+            'orders:', project.orders.length, 
+            'totalImages:', totalOrderImages, 
+            'hasFirstImage:', !!firstOrderImage);
         }
         
         if (firstOrderImage) {
           const url1 = supabase.storage
             .from('order-media')
             .getPublicUrl(firstOrderImage.file_path).data.publicUrl;
+          
+          console.debug('[HybridGlobe] Marker thumbnail URL:', url1);
           
           const html = `
             <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#f0f0f0;position:relative;">
@@ -1518,6 +1531,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             iconAnchor: [28, 56],
             popupAnchor: [0, -56],
           });
+        } else {
+          console.debug('[HybridGlobe] No image found for project, using default icon:', project.id);
         }
 
         const marker = L.marker([lat, lng], { 
