@@ -203,101 +203,106 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         </div>
       )}
 
-      {/* دیالوگ اصلی برای فعال‌سازی */}
+      {/* دیالوگ اصلی برای فعال‌سازی - طراحی متناسب با سایت */}
       <Dialog open={showDialog} onOpenChange={(open) => {
         setShowDialog(open);
         if (!open) setShowDeniedHelp(false);
       }}>
-        <DialogContent className="max-w-md border-primary/30 bg-gradient-to-br from-background via-background to-primary/5 shadow-2xl">
-          <DialogHeader>
-            <div className="flex items-center justify-center mb-4">
-              <div className={`p-4 rounded-full shadow-lg ${showDeniedHelp ? 'bg-destructive/20 border border-destructive/30' : 'bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/30 animate-pulse'}`}>
+        <DialogContent className="max-w-sm sm:max-w-md border-2 border-construction-gold/40 bg-gradient-to-br from-card via-card to-construction-gold/5 shadow-2xl rounded-2xl p-0 overflow-hidden">
+          {/* هدر با گرادیان طلایی */}
+          <div className="bg-gradient-to-r from-construction-gold/20 via-construction-gold/10 to-construction-gold/20 py-6 px-4 border-b border-construction-gold/20">
+            <div className="flex items-center justify-center mb-3">
+              <div className={`p-4 rounded-2xl shadow-lg ${showDeniedHelp ? 'bg-destructive/15 border-2 border-destructive/30' : 'bg-gradient-to-br from-construction-gold/30 to-construction-gold/10 border-2 border-construction-gold/40'}`}>
                 {showDeniedHelp ? (
-                  <Settings className="h-10 w-10 text-destructive" />
+                  <Settings className="h-8 w-8 text-destructive" />
                 ) : (
-                  <Bell className="h-10 w-10 text-primary" />
+                  <Bell className="h-8 w-8 text-construction-gold" />
                 )}
               </div>
             </div>
-            <DialogTitle className="text-center text-xl font-bold text-foreground">
+            <h2 className="text-center text-xl font-bold text-foreground">
               {showDeniedHelp ? 'دسترسی رد شده است' : 'پیام های سایت'}
-            </DialogTitle>
-            <DialogDescription className="text-center space-y-4 pt-3">
-              {showDeniedHelp ? (
-                <>
-                  <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-xl border border-destructive/30">
-                    <X className="h-5 w-5 text-destructive flex-shrink-0" />
-                    <p className="text-sm text-destructive">
-                      دسترسی اعلان در مرورگر مسدود شده است
-                    </p>
-                  </div>
-                  <div className="text-right space-y-2 bg-muted/30 p-4 rounded-xl border border-border/50">
-                    <p className="font-medium text-foreground text-sm">برای فعال‌سازی:</p>
-                    <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                      <li>روی آیکون قفل کنار آدرس سایت کلیک کنید</li>
-                      <li>گزینه "اعلان‌ها" یا "Notifications" را پیدا کنید</li>
-                      <li>آن را از "مسدود" به "اجازه" تغییر دهید</li>
-                      <li>صفحه را رفرش کنید</li>
-                    </ol>
-                  </div>
-                  <p className="text-muted-foreground text-sm">
-                    یا می‌توانید به صفحه تنظیمات اعلان‌ها بروید:
-                  </p>
-                </>
-              ) : (
-                <p className="text-muted-foreground text-base">
-                  می‌خواهید از مراحل سفارش و پیام ها آگاه باشید؟
-                </p>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-3 sm:flex-col pt-2">
+            </h2>
+          </div>
+          
+          {/* محتوای اصلی */}
+          <div className="p-5 space-y-4">
             {showDeniedHelp ? (
               <>
-                <Button 
-                  onClick={handleGoToSettings}
-                  className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
-                  size="lg"
-                >
-                  <Settings className="h-5 w-5 ml-2" />
-                  رفتن به تنظیمات اعلان‌ها
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowDeniedHelp(false)}
-                  className="w-full border-primary/30 hover:bg-primary/5"
-                >
-                  تلاش مجدد
-                </Button>
+                <div className="flex items-center gap-3 p-3 bg-destructive/10 rounded-xl border border-destructive/30">
+                  <X className="h-5 w-5 text-destructive flex-shrink-0" />
+                  <p className="text-sm text-destructive font-medium">
+                    دسترسی اعلان در مرورگر مسدود شده است
+                  </p>
+                </div>
+                <div className="text-right space-y-3 bg-muted/50 p-4 rounded-xl border border-border/50">
+                  <p className="font-semibold text-foreground text-sm">برای فعال‌سازی:</p>
+                  <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                    <li>روی آیکون قفل کنار آدرس سایت کلیک کنید</li>
+                    <li>گزینه "اعلان‌ها" یا "Notifications" را پیدا کنید</li>
+                    <li>آن را از "مسدود" به "اجازه" تغییر دهید</li>
+                    <li>صفحه را رفرش کنید</li>
+                  </ol>
+                </div>
+                <p className="text-muted-foreground text-sm text-center">
+                  یا می‌توانید به صفحه تنظیمات اعلان‌ها بروید:
+                </p>
               </>
             ) : (
-              <>
-                <Button 
-                  onClick={handleEnable} 
-                  className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg text-primary-foreground font-bold py-6"
-                  size="lg"
-                  disabled={enabling}
-                >
-                  {enabling ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin ml-2" />
-                      در حال فعال‌سازی...
-                    </>
-                  ) : (
-                    'بله'
-                  )}
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setShowDialog(false)}
-                  className="w-full text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  disabled={enabling}
-                >
-                  بعداً یادآوری کن
-                </Button>
-              </>
+              <p className="text-muted-foreground text-base text-center leading-relaxed py-2">
+                می‌خواهید از مراحل سفارش و پیام ها آگاه باشید؟
+              </p>
             )}
-          </DialogFooter>
+            
+            {/* دکمه‌ها */}
+            <div className="flex flex-col gap-3 pt-2">
+              {showDeniedHelp ? (
+                <>
+                  <Button 
+                    onClick={handleGoToSettings}
+                    className="w-full bg-gradient-to-r from-construction-gold to-construction-gold/80 hover:from-construction-gold/90 hover:to-construction-gold/70 text-construction-dark font-bold shadow-lg transition-all duration-300 hover:shadow-xl py-5"
+                    size="lg"
+                  >
+                    <Settings className="h-5 w-5 ml-2" />
+                    رفتن به تنظیمات اعلان‌ها
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowDeniedHelp(false)}
+                    className="w-full border-construction-gold/30 hover:bg-construction-gold/10 text-foreground"
+                  >
+                    تلاش مجدد
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    onClick={handleEnable} 
+                    className="w-full bg-gradient-to-r from-construction-gold to-construction-gold/80 hover:from-construction-gold/90 hover:to-construction-gold/70 text-construction-dark font-bold shadow-lg transition-all duration-300 hover:shadow-xl py-6 text-base"
+                    size="lg"
+                    disabled={enabling}
+                  >
+                    {enabling ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin ml-2" />
+                        در حال فعال‌سازی...
+                      </>
+                    ) : (
+                      'بله'
+                    )}
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setShowDialog(false)}
+                    className="w-full text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    disabled={enabling}
+                  >
+                    بعداً یادآوری کن
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
