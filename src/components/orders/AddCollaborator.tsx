@@ -287,58 +287,75 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
           </DialogDescription>
         </DialogHeader>
 
-        {/* Existing Collaborators */}
-        {loadingCollaborators ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        {/* Existing Collaborators - Always show this section */}
+        <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
+          <div className="flex items-center gap-2 mb-3">
+            <Users className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">همکاران این سفارش</span>
           </div>
-        ) : collaborators.length > 0 ? (
-          <Card className="mb-4">
-            <CardHeader className="py-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                همکاران فعلی ({collaborators.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-2">
+          
+          {loadingCollaborators ? (
+            <div className="flex justify-center py-3">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : collaborators.length > 0 ? (
+            <div className="space-y-2">
               {collaborators.map((collab) => (
                 <div
                   key={collab.id}
-                  className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                  className="flex items-center justify-between p-2 bg-background rounded-md border border-border/30"
                 >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">
-                      {collab.invitee_profile?.full_name || 'بدون نام'}
-                    </p>
-                    <p className="text-xs text-muted-foreground" dir="ltr">
-                      {collab.invitee_phone_number}
-                    </p>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-medium text-primary">
+                        {(collab.invitee_profile?.full_name || 'ب')[0]}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {collab.invitee_profile?.full_name || 'بدون نام'}
+                      </p>
+                      <p className="text-xs text-muted-foreground" dir="ltr">
+                        {collab.invitee_phone_number}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={statusLabels[collab.status]?.variant || 'outline'}>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge 
+                      variant={statusLabels[collab.status]?.variant || 'outline'}
+                      className="text-xs"
+                    >
+                      {collab.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                      {collab.status === 'accepted' && <CheckCircle className="h-3 w-3 mr-1" />}
                       {statusLabels[collab.status]?.label || collab.status}
                     </Badge>
                     {collab.status === 'pending' && collab.inviter_user_id === user?.id && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => deleteCollaborator(collab.id)}
                         disabled={deletingId === collab.id}
                       >
                         {deletingId === collab.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         )}
                       </Button>
                     )}
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
-        ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-2">
+              هنوز همکاری به این سفارش اضافه نشده است
+            </p>
+          )}
+        </div>
+
+        <Separator />
 
         {/* Add New Collaborator Form */}
         <div className="space-y-4">
