@@ -143,17 +143,7 @@ export default function MyOrders() {
     if (!user) return;
     
     try {
-      const { data: customerData } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!customerData) {
-        setLoading(false);
-        return;
-      }
-
+      // RLS ensures only current user's orders are returned
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
@@ -172,7 +162,6 @@ export default function MyOrders() {
             location:locations(title, address_line)
           )
         `)
-        .eq('customer_id', customerData.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
