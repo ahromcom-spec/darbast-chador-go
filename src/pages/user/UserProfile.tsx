@@ -35,6 +35,7 @@ import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { RecentActivityFeed } from '@/components/profile/RecentActivityFeed';
 import { IncomingTransferRequests } from '@/components/orders/IncomingTransferRequest';
 import { PendingCollaborationInvites } from '@/components/orders/PendingCollaborationInvites';
+import { PendingProjectInvites } from '@/components/projects/PendingProjectInvites';
 
 interface UserOrder {
   id: string;
@@ -264,6 +265,9 @@ const fetchOrders = async () => {
 
         {/* Pending Collaboration Invites */}
         <PendingCollaborationInvites />
+
+        {/* Pending Project Invites */}
+        <PendingProjectInvites />
 
         {/* Profile Header */}
         <ProfileHeader user={user} fullName={fullName} roles={roles} />

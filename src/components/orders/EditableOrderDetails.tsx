@@ -22,6 +22,7 @@ import OrderChat from './OrderChat';
 import { RepairRequestDialog } from './RepairRequestDialog';
 import { CollectionRequestDialog } from './CollectionRequestDialog';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
+import { OrderCollaboratorsList } from './OrderCollaboratorsList';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -771,6 +772,9 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
       )}
 
       <Separator />
+
+      {/* لیست همکاران سفارش - قابل مشاهده برای مدیران */}
+      <OrderCollaboratorsList orderId={order.id} showForManagers={true} />
 
       {/* Media Gallery with upload/delete for managers */}
       <ManagerMediaGallery orderId={order.id} onMediaChange={onUpdate} />
