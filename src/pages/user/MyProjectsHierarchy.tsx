@@ -28,8 +28,10 @@ import {
   ArrowRight,
   XCircle,
   Edit2,
-  Users
+  Users,
+  UserPlus
 } from 'lucide-react';
+import { AddProjectCollaborator } from '@/components/projects/AddProjectCollaborator';
 
 interface Address {
   id: string;
@@ -91,6 +93,8 @@ export default function MyProjectsHierarchy() {
   const [isDeletingProject, setIsDeletingProject] = useState(false);
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [isDeletingLocation, setIsDeletingLocation] = useState(false);
+  const [shareProjectId, setShareProjectId] = useState<string | null>(null);
+  const [shareProjectTitle, setShareProjectTitle] = useState<string>('');
   const orderRefs = useRef<Record<string, HTMLDivElement | null>>({});
   useEffect(() => {
     fetchHierarchyData();
@@ -719,6 +723,19 @@ export default function MyProjectsHierarchy() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  className="h-7 gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShareProjectTitle(`${project.service_types_v3?.name} - ${project.subcategories?.name}`);
+                                    setShareProjectId(project.id);
+                                  }}
+                                >
+                                  <UserPlus className="h-3.5 w-3.5" />
+                                  <span className="text-xs">اشتراک</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1016,6 +1033,20 @@ export default function MyProjectsHierarchy() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Share Project Dialog */}
+      <AddProjectCollaborator
+        projectId={shareProjectId || ''}
+        projectTitle={shareProjectTitle}
+        open={!!shareProjectId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShareProjectId(null);
+            setShareProjectTitle('');
+          }
+        }}
+        onCollaboratorAdded={fetchHierarchyData}
+      />
     </div>
   );
 }
