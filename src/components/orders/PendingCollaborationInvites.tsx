@@ -20,6 +20,14 @@ interface CollaborationInvite {
   order_address?: string;
   order_status?: string;
   subcategory_name?: string;
+  // Additional order details for hierarchy creation
+  hierarchy_project_id?: string;
+  province_id?: string;
+  district_id?: string;
+  subcategory_id?: string;
+  service_type_id?: string;
+  location_lat?: number;
+  location_lng?: number;
 }
 
 export function PendingCollaborationInvites() {
@@ -84,14 +92,20 @@ export function PendingCollaborationInvites() {
             .eq('user_id', collab.inviter_user_id)
             .maybeSingle();
 
-          // Get order details
+          // Get order details with hierarchy info
           const { data: order } = await supabase
             .from('projects_v3')
             .select(`
               code,
               address,
               status,
-              subcategories:subcategory_id (name)
+              hierarchy_project_id,
+              province_id,
+              district_id,
+              subcategory_id,
+              location_lat,
+              location_lng,
+              subcategories:subcategory_id (name, service_type_id)
             `)
             .eq('id', collab.order_id)
             .maybeSingle();
@@ -104,6 +118,13 @@ export function PendingCollaborationInvites() {
             order_address: order?.address || '',
             order_status: order?.status || '',
             subcategory_name: (order?.subcategories as any)?.name || '',
+            hierarchy_project_id: order?.hierarchy_project_id || '',
+            province_id: order?.province_id || '',
+            district_id: order?.district_id || '',
+            subcategory_id: order?.subcategory_id || '',
+            service_type_id: (order?.subcategories as any)?.service_type_id || '',
+            location_lat: order?.location_lat || null,
+            location_lng: order?.location_lng || null,
           } as CollaborationInvite;
         })
       );
@@ -122,6 +143,58 @@ export function PendingCollaborationInvites() {
 
     setProcessingId(invite.id);
     try {
+      // Step 1: Create a location for the collaborator user
+      let locationId: string | null = null;
+      
+      if (invite.location_lat && invite.location_lng && invite.order_address) {
+        // Create location for collaborator
+        const { data: newLocation, error: locationError } = await supabase
+          .from('locations')
+          .insert({
+            user_id: user.id,
+            address_line: invite.order_address,
+            lat: invite.location_lat,
+            lng: invite.location_lng,
+            province_id: invite.province_id || null,
+            district_id: invite.district_id || null,
+            title: `آدرس مشترک - سفارش #${invite.order_code}`,
+            is_active: true,
+          })
+          .select('id')
+          .single();
+
+        if (locationError) {
+          console.error('Error creating location for collaborator:', locationError);
+        } else {
+          locationId = newLocation?.id;
+        }
+      }
+
+      // Step 2: Create projects_hierarchy for the collaborator if we have location
+      let hierarchyId: string | null = null;
+      
+      if (locationId && invite.service_type_id && invite.subcategory_id) {
+        const { data: newHierarchy, error: hierarchyError } = await supabase
+          .from('projects_hierarchy')
+          .insert({
+            user_id: user.id,
+            location_id: locationId,
+            service_type_id: invite.service_type_id,
+            subcategory_id: invite.subcategory_id,
+            title: `پروژه مشترک - سفارش #${invite.order_code}`,
+            status: 'active',
+          })
+          .select('id')
+          .single();
+
+        if (hierarchyError) {
+          console.error('Error creating hierarchy for collaborator:', hierarchyError);
+        } else {
+          hierarchyId = newHierarchy?.id;
+        }
+      }
+
+      // Step 3: Update collaboration status to accepted
       const { error } = await supabase
         .from('order_collaborators')
         .update({
@@ -133,7 +206,7 @@ export function PendingCollaborationInvites() {
 
       if (error) throw error;
 
-      // Send notification to inviter
+      // Step 4: Send notification to inviter
       await supabase.from('notifications').insert({
         user_id: invite.inviter_user_id,
         title: 'دعوت همکاری پذیرفته شد',
@@ -142,7 +215,7 @@ export function PendingCollaborationInvites() {
         link: `/user/orders/${invite.order_id}`,
       });
 
-      toast.success('دعوت همکاری با موفقیت پذیرفته شد');
+      toast.success('دعوت همکاری با موفقیت پذیرفته شد. سفارش به لیست سفارشات شما اضافه شد.');
       
       // Remove from list
       setInvites(prev => prev.filter(i => i.id !== invite.id));
