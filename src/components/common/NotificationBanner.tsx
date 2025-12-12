@@ -218,30 +218,30 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         setShowDialog(open);
         if (!open) setShowDeniedHelp(false);
       }}>
-        <DialogContent className="max-w-md border-primary/30 bg-gradient-to-br from-background via-background to-primary/5 shadow-2xl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <div className="flex items-center justify-center mb-4">
-              <div className={`p-4 rounded-full shadow-lg ${showDeniedHelp ? 'bg-destructive/20 border border-destructive/30' : 'bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/30 animate-pulse'}`}>
+              <div className={`p-4 rounded-full ${showDeniedHelp ? 'bg-destructive/10' : 'bg-primary/10 animate-pulse'}`}>
                 {showDeniedHelp ? (
                   <Settings className="h-10 w-10 text-destructive" />
                 ) : (
-                  <Bell className="h-10 w-10 text-primary" />
+                  <Phone className="h-10 w-10 text-primary" />
                 )}
               </div>
             </div>
-            <DialogTitle className="text-center text-xl font-bold text-foreground">
-              {showDeniedHelp ? 'دسترسی رد شده است' : 'پیام های سایت'}
+            <DialogTitle className="text-center text-xl">
+              {showDeniedHelp ? 'دسترسی رد شده است' : 'فعال‌سازی اعلان تماس‌ها'}
             </DialogTitle>
-            <DialogDescription className="text-center space-y-4 pt-3">
+            <DialogDescription className="text-center space-y-3 pt-2">
               {showDeniedHelp ? (
                 <>
-                  <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-xl border border-destructive/30">
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/30">
                     <X className="h-5 w-5 text-destructive flex-shrink-0" />
                     <p className="text-sm text-destructive">
                       دسترسی اعلان در مرورگر مسدود شده است
                     </p>
                   </div>
-                  <div className="text-right space-y-2 bg-muted/30 p-4 rounded-xl border border-border/50">
+                  <div className="text-right space-y-2 bg-muted/50 p-4 rounded-lg">
                     <p className="font-medium text-foreground text-sm">برای فعال‌سازی:</p>
                     <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
                       <li>روی آیکون قفل کنار آدرس سایت کلیک کنید</li>
@@ -255,18 +255,26 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
                   </p>
                 </>
               ) : (
-                <p className="text-muted-foreground text-base">
-                  می‌خواهید از مراحل سفارش و پیام ها آگاه باشید؟
-                </p>
+                <>
+                  <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      بدون فعال‌سازی اعلان‌ها، تماس‌های مدیران را دریافت نمی‌کنید!
+                    </p>
+                  </div>
+                  <p className="text-muted-foreground">
+                    با فعال‌سازی اعلان‌ها، حتی زمانی که سایت بسته است از تماس‌های مدیران و وضعیت سفارشات مطلع می‌شوید.
+                  </p>
+                </>
               )}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col gap-3 sm:flex-col pt-2">
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
             {showDeniedHelp ? (
               <>
                 <Button 
                   onClick={handleGoToSettings}
-                  className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+                  className="w-full"
                   size="lg"
                 >
                   <Settings className="h-5 w-5 ml-2" />
@@ -275,7 +283,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
                 <Button 
                   variant="outline" 
                   onClick={() => setShowDeniedHelp(false)}
-                  className="w-full border-primary/30 hover:bg-primary/5"
+                  className="w-full"
                 >
                   تلاش مجدد
                 </Button>
@@ -284,7 +292,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
               <>
                 <Button 
                   onClick={handleEnable} 
-                  className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg text-primary-foreground font-bold py-6"
+                  className="w-full"
                   size="lg"
                   disabled={enabling}
                 >
@@ -294,13 +302,16 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
                       در حال فعال‌سازی...
                     </>
                   ) : (
-                    'بله'
+                    <>
+                      <Bell className="h-5 w-5 ml-2" />
+                      فعال‌سازی اعلان‌ها
+                    </>
                   )}
                 </Button>
                 <Button 
                   variant="ghost" 
                   onClick={() => setShowDialog(false)}
-                  className="w-full text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  className="w-full text-muted-foreground"
                   disabled={enabling}
                 >
                   بعداً یادآوری کن

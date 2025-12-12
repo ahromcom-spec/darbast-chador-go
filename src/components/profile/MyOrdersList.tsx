@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Package, MapPin, Calendar, Eye, Filter, X, Users } from 'lucide-react';
+import { Package, MapPin, Calendar, Eye, Filter, X } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -21,7 +21,6 @@ interface Order {
   subcategory_name?: string;
   province_name?: string;
   notes?: any;
-  isCollaborated?: boolean;
 }
 
 interface MyOrdersListProps {
@@ -71,104 +70,54 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
         .eq('user_id', userId)
         .maybeSingle();
 
-      // Fetch own orders
-      let ownOrders: Order[] = [];
-      if (customer) {
-        const { data: ordersData, error } = await supabase
-          .from('projects_v3')
-          .select(`
-            id,
-            code,
-            created_at,
-            status,
-            address,
-            execution_stage,
-            payment_confirmed_at,
-            subcategory_id,
-            notes,
-            subcategories:subcategory_id (name),
-            provinces:province_id (name)
-          `)
-          .eq('customer_id', customer.id)
-          .order('created_at', { ascending: false });
-
-        if (!error && ordersData) {
-          ownOrders = ordersData.map((order: any) => ({
-            id: order.id,
-            code: order.code,
-            created_at: order.created_at,
-            status: order.status,
-            address: order.address,
-            execution_stage: order.execution_stage,
-            payment_confirmed_at: order.payment_confirmed_at,
-            subcategory_id: order.subcategory_id,
-            subcategory_name: order.subcategories?.name || '',
-            province_name: order.provinces?.name || '',
-            notes: order.notes,
-            isCollaborated: false,
-          }));
-        }
+      if (!customer) {
+        setOrders([]);
+        setLoading(false);
+        return;
       }
 
-      // Fetch collaborated orders (orders where user is an accepted collaborator)
-      const { data: collaborations } = await supabase
-        .from('order_collaborators')
-        .select('order_id')
-        .eq('invitee_user_id', userId)
-        .eq('status', 'accepted');
+      // Fetch all orders with related data
+      const { data: ordersData, error } = await supabase
+        .from('projects_v3')
+        .select(`
+          id,
+          code,
+          created_at,
+          status,
+          address,
+          execution_stage,
+          payment_confirmed_at,
+          subcategory_id,
+          notes,
+          subcategories:subcategory_id (name),
+          provinces:province_id (name)
+        `)
+        .eq('customer_id', customer.id)
+        .order('created_at', { ascending: false });
 
-      let collaboratedOrders: Order[] = [];
-      if (collaborations && collaborations.length > 0) {
-        const orderIds = collaborations.map(c => c.order_id);
-        
-        const { data: collabOrdersData } = await supabase
-          .from('projects_v3')
-          .select(`
-            id,
-            code,
-            created_at,
-            status,
-            address,
-            execution_stage,
-            payment_confirmed_at,
-            subcategory_id,
-            notes,
-            subcategories:subcategory_id (name),
-            provinces:province_id (name)
-          `)
-          .in('id', orderIds)
-          .order('created_at', { ascending: false });
+      if (error) throw error;
 
-        if (collabOrdersData) {
-          collaboratedOrders = collabOrdersData.map((order: any) => ({
-            id: order.id,
-            code: order.code,
-            created_at: order.created_at,
-            status: order.status,
-            address: order.address,
-            execution_stage: order.execution_stage,
-            payment_confirmed_at: order.payment_confirmed_at,
-            subcategory_id: order.subcategory_id,
-            subcategory_name: order.subcategories?.name || '',
-            province_name: order.provinces?.name || '',
-            notes: order.notes,
-            isCollaborated: true,
-          }));
-        }
-      }
+      const formattedOrders: Order[] = (ordersData || []).map((order: any) => ({
+        id: order.id,
+        code: order.code,
+        created_at: order.created_at,
+        status: order.status,
+        address: order.address,
+        execution_stage: order.execution_stage,
+        payment_confirmed_at: order.payment_confirmed_at,
+        subcategory_id: order.subcategory_id,
+        subcategory_name: order.subcategories?.name || '',
+        province_name: order.provinces?.name || '',
+        notes: order.notes,
+      }));
 
-      // Combine and sort by created_at
-      const allOrders = [...ownOrders, ...collaboratedOrders].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-
-      setOrders(allOrders);
+      setOrders(formattedOrders);
 
       // Extract unique addresses and service types for filters
-      const uniqueAddresses = [...new Set(allOrders.map(o => o.address).filter(Boolean))] as string[];
+      const uniqueAddresses = [...new Set(formattedOrders.map(o => o.address).filter(Boolean))] as string[];
       setAddresses(uniqueAddresses);
 
-      const uniqueServices = allOrders
+      const uniqueServices = formattedOrders
         .filter(o => o.subcategory_name)
         .reduce((acc: { id: string; name: string }[], o) => {
           if (!acc.find(s => s.id === o.subcategory_id)) {
@@ -353,12 +302,6 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
                         <Badge variant={displayStatus.variant}>
                           {displayStatus.label}
                         </Badge>
-                        {order.isCollaborated && (
-                          <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
-                            <Users className="h-3 w-3" />
-                            همکار
-                          </Badge>
-                        )}
                       </div>
 
                       {/* Service Type */}

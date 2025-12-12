@@ -897,53 +897,6 @@ export type Database = {
           },
         ]
       }
-      order_collaborators: {
-        Row: {
-          created_at: string
-          id: string
-          invited_at: string
-          invitee_phone_number: string
-          invitee_user_id: string | null
-          inviter_user_id: string
-          order_id: string
-          responded_at: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          invited_at?: string
-          invitee_phone_number: string
-          invitee_user_id?: string | null
-          inviter_user_id: string
-          order_id: string
-          responded_at?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          invited_at?: string
-          invitee_phone_number?: string
-          invitee_user_id?: string | null
-          inviter_user_id?: string
-          order_id?: string
-          responded_at?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "order_collaborators_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "projects_v3"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       order_messages: {
         Row: {
           audio_path: string | null
