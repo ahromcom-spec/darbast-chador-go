@@ -593,39 +593,48 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     try {
       const projectIds = projects.map(p => p.id);
       
+      // دریافت سفارشات با استفاده از تابع امنیتی تا RLS جلوی نمایش را نگیرد - اول از همه
+      const { data: v3RpcDataFirst, error: v3ErrFirst } = await supabase
+        .rpc('get_my_projects_v3');
+      
+      if (v3ErrFirst) {
+        console.error('[HybridGlobe] Error fetching orders via RPC:', v3ErrFirst);
+      }
+
+      // فیلتر سفارشاتی که به پروژه‌های فعلی تعلق دارند
+      const v3OrdersFiltered = (v3RpcDataFirst as any[] | null)?.filter(o =>
+        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id)
+      ) ?? [];
+
+      // دریافت تمام order_id ها برای خواندن media
+      const allOrderIds = v3OrdersFiltered.map(o => o.id);
+      
       // دریافت موازی داده‌ها برای سرعت بیشتر
-      const [phMediaResult, v3Result] = await Promise.all([
+      const [phMediaResult, pmMediaResult] = await Promise.all([
         supabase
           .from('project_hierarchy_media')
           .select('id, hierarchy_project_id, file_path, file_type, created_at, mime_type')
           .in('hierarchy_project_id', projectIds)
           .in('file_type', ['image', 'video'])
           .order('created_at', { ascending: false })
-          .limit(100), // محدودیت برای بهینه‌سازی
+          .limit(100),
         
-        supabase
-          .from('projects_v3')
-          .select('id, hierarchy_project_id')
-          .in('hierarchy_project_id', projectIds)
+        allOrderIds.length > 0
+          ? supabase
+              .from('project_media')
+              .select('id, project_id, file_path, file_type, created_at, mime_type')
+              .in('project_id', allOrderIds)
+              .in('file_type', ['image', 'video'])
+              .order('created_at', { ascending: false })
+              .limit(200)
+          : Promise.resolve({ data: [] })
       ]);
 
       const phMedia = phMediaResult.data;
-      const v3 = v3Result.data;
+      const pmMedia = (pmMediaResult as any).data || [];
 
       console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
-
-      let pmMedia: { id: string; project_id: string; file_path: string; file_type: string; created_at: string; mime_type?: string }[] = [];
-      if (v3 && v3.length > 0) {
-        const v3Ids = v3.map(x => x.id);
-        const { data } = await supabase
-          .from('project_media')
-          .select('id, project_id, file_path, file_type, created_at, mime_type')
-          .in('project_id', v3Ids)
-          .in('file_type', ['image', 'video'])
-          .order('created_at', { ascending: false })
-          .limit(100);
-        pmMedia = data || [];
-      }
+      console.debug('[HybridGlobe] Project media fetched:', pmMedia.length);
 
       console.debug('[HybridGlobe] Project media fetched:', pmMedia.length);
 
@@ -646,8 +655,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         });
       }
 
-      pmMedia.forEach(m => {
-        const pid = v3?.find(v => v.id === m.project_id)?.hierarchy_project_id;
+      pmMedia.forEach((m: any) => {
+        const order = v3OrdersFiltered.find((v: any) => v.id === m.project_id);
+        if (!order) return;
+        const pid = order.hierarchy_project_id;
         if (!pid) return;
         if (!mediaByProject.has(pid)) mediaByProject.set(pid, []);
         mediaByProject.get(pid)!.push({ 
@@ -659,22 +670,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         });
       });
 
-      // دریافت سفارشات با استفاده از تابع امنیتی تا RLS جلوی نمایش را نگیرد
-      const { data: v3RpcData, error: v3Err } = await supabase
-        .rpc('get_my_projects_v3');
-      
-      if (v3Err) {
-        console.error('[HybridGlobe] Error fetching orders via RPC:', v3Err);
-      }
-      
-      const v3Orders = (v3RpcData as any[] | null)?.filter(o =>
-        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id)
-      ) ?? [];
-
       const orderMediaMap = new Map<string, HierarchyMedia[]>();
       
       // اضافه کردن media از project_media با بهینه‌سازی thumbnail
-      pmMedia.forEach(m => {
+      pmMedia.forEach((m: any) => {
         if (!orderMediaMap.has(m.project_id)) orderMediaMap.set(m.project_id, []);
         orderMediaMap.get(m.project_id)!.push({ 
           id: m.id, 
@@ -686,8 +685,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       });
       
       // اضافه کردن media از project_hierarchy_media برای سفارشات
-      if (phMedia && v3Orders) {
-        v3Orders.forEach(order => {
+      if (phMedia && v3OrdersFiltered) {
+        v3OrdersFiltered.forEach((order: any) => {
           const hierarchyProjectId = order.hierarchy_project_id;
           if (!hierarchyProjectId) return;
           
@@ -710,8 +709,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       }
 
       const ordersByProject = new Map<string, ProjectOrder[]>();
-      if (v3Orders) {
-        v3Orders.forEach(order => {
+      if (v3OrdersFiltered) {
+        v3OrdersFiltered.forEach((order: any) => {
           if (!order.hierarchy_project_id) return;
           if (!ordersByProject.has(order.hierarchy_project_id)) {
             ordersByProject.set(order.hierarchy_project_id, []);
