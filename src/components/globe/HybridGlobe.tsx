@@ -593,7 +593,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     try {
       const projectIds = projects.map(p => p.id);
       
-      // دریافت سفارشات با استفاده از تابع امنیتی تا RLS جلوی نمایش را نگیرد - اول از همه
+      // دریافت سفارشات با استفاده از تابع امنیتی تا RLS جلوی نمایش را نگیرد
       const { data: v3RpcDataFirst, error: v3ErrFirst } = await supabase
         .rpc('get_my_projects_v3');
       
@@ -601,13 +601,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         console.error('[HybridGlobe] Error fetching orders via RPC:', v3ErrFirst);
       }
 
-      // فیلتر سفارشاتی که به پروژه‌های فعلی تعلق دارند
-      const v3OrdersFiltered = (v3RpcDataFirst as any[] | null)?.filter(o =>
-        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id)
-      ) ?? [];
+      // همه سفارش‌های کاربر
+      const v3OrdersAll = (v3RpcDataFirst as any[] | null) ?? [];
 
-      // دریافت تمام order_id ها برای خواندن media
-      const allOrderIds = v3OrdersFiltered.map(o => o.id);
+      // فقط سفارش‌هایی که به پروژه‌های فعلی روی نقشه تعلق دارند
+      const v3OrdersFiltered = v3OrdersAll.filter(o =>
+        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id)
+      );
+
+      // دریافت تمام order_id ها برای خواندن media (بدون فیلتر اضافه تا حتماً همه رسانه‌ها را بگیریم)
+      const allOrderIds = v3OrdersAll.map(o => o.id);
       
       // دریافت موازی داده‌ها برای سرعت بیشتر
       const [phMediaResult, pmMediaResult] = await Promise.all([
@@ -617,7 +620,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           .in('hierarchy_project_id', projectIds)
           .in('file_type', ['image', 'video'])
           .order('created_at', { ascending: false })
-          .limit(100),
+          .limit(1000),
         
         allOrderIds.length > 0
           ? supabase
@@ -626,8 +629,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               .in('project_id', allOrderIds)
               .in('file_type', ['image', 'video'])
               .order('created_at', { ascending: false })
-              .limit(200)
-          : Promise.resolve({ data: [] })
+              .limit(2000)
+          : Promise.resolve({ data: [] as any[] })
       ]);
 
       const phMedia = phMediaResult.data;
