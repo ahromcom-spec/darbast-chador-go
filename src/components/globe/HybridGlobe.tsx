@@ -162,17 +162,28 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   // State برای ذخیره پروژه‌هایی که حداقل یک سفارش دارند
   const [projectsWithOrders, setProjectsWithOrders] = useState<Set<string>>(new Set());
 
-  // دریافت لیست پروژه‌هایی که حداقل یک سفارش دارند
   useEffect(() => {
     const fetchProjectsWithOrders = async () => {
-      const { data: ordersData } = await supabase
-        .from('projects_v3')
-        .select('hierarchy_project_id')
-        .not('hierarchy_project_id', 'is', null);
-      
-      if (ordersData) {
-        const uniqueProjectIds = new Set(ordersData.map(o => o.hierarchy_project_id).filter(Boolean) as string[]);
-        setProjectsWithOrders(uniqueProjectIds);
+      try {
+        // استفاده از تابع امنیتی برای اطمینان از دیده‌شدن همه سفارش‌های کاربر
+        const { data, error } = await supabase
+          .rpc('get_my_projects_v3');
+
+        if (error) {
+          console.error('[HybridGlobe] Error fetching projects with orders via RPC:', error);
+          return;
+        }
+
+        if (data) {
+          const uniqueProjectIds = new Set(
+            (data as any[])
+              .map(o => o.hierarchy_project_id)
+              .filter(Boolean) as string[]
+          );
+          setProjectsWithOrders(uniqueProjectIds);
+        }
+      } catch (err) {
+        console.error('[HybridGlobe] Exception while fetching projects with orders:', err);
       }
     };
     
