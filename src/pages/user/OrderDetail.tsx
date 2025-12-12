@@ -334,7 +334,50 @@ export default function OrderDetail() {
         return;
       }
 
-      setOrder(orderData);
+      // Fetch subcategory info separately since RPC doesn't join it
+      let enrichedOrder: any = { ...orderData };
+      if (orderData.subcategory_id) {
+        const { data: subcategoryData } = await supabase
+          .from('subcategories')
+          .select('name, code, service_types_v3:service_type_id(name, code)')
+          .eq('id', orderData.subcategory_id)
+          .maybeSingle();
+        
+        if (subcategoryData) {
+          enrichedOrder.subcategory = {
+            name: subcategoryData.name,
+            code: subcategoryData.code,
+            service_type: subcategoryData.service_types_v3 as any
+          };
+        }
+      }
+
+      // Fetch province/district info
+      if (orderData.province_id) {
+        const { data: provinceData } = await supabase
+          .from('provinces')
+          .select('name, code')
+          .eq('id', orderData.province_id)
+          .maybeSingle();
+        
+        if (provinceData) {
+          enrichedOrder.province = provinceData;
+        }
+      }
+
+      if (orderData.district_id) {
+        const { data: districtData } = await supabase
+          .from('districts')
+          .select('name')
+          .eq('id', orderData.district_id)
+          .maybeSingle();
+        
+        if (districtData) {
+          enrichedOrder.district = districtData;
+        }
+      }
+
+      setOrder(enrichedOrder as Order);
 
       // Parse notes if exists
       setNotesParseError(false);
