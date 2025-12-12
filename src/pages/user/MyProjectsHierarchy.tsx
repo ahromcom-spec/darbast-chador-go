@@ -168,42 +168,28 @@ export default function MyProjectsHierarchy() {
 
       if (projError) throw projError;
 
-      // دریافت customer_id برای دریافت سفارشات
-      const { data: customer, error: custErr } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Fetch orders from projects_v3 - RLS ensures only user's orders are returned
+      const { data: projectsV3, error: ordErr } = await supabase
+        .from('projects_v3')
+        .select('id, code, status, created_at, notes, province_id, district_id, subcategory_id, hierarchy_project_id, payment_amount')
+        .order('created_at', { ascending: false });
 
-      if (custErr) throw custErr;
+      if (ordErr) throw ordErr;
 
-      let orders: Order[] = [];
-      
-      // Fetch orders from projects_v3 (سفارشات) با لینک به hierarchy
-      if (customer) {
-        const { data: projectsV3, error: ordErr } = await supabase
-          .from('projects_v3')
-          .select('id, code, status, created_at, notes, province_id, district_id, subcategory_id, hierarchy_project_id, payment_amount')
-          .eq('customer_id', customer.id)
-          .order('created_at', { ascending: false });
-
-        if (ordErr) throw ordErr;
-
-        // تبدیل projects_v3 به فرمت Order
-        orders = (projectsV3 || []).map(pv3 => ({
-          id: pv3.id,
-          project_id: pv3.hierarchy_project_id || pv3.id, // استفاده از hierarchy_project_id برای لینک
-          code: pv3.code,
-          status: pv3.status,
-          created_at: pv3.created_at,
-          notes: pv3.notes,
-          province_id: pv3.province_id,
-          district_id: pv3.district_id,
-          subcategory_id: pv3.subcategory_id,
-          payment_amount: pv3.payment_amount,
-          isCollaborated: false
-        }));
-      }
+      // تبدیل projects_v3 به فرمت Order
+      let orders: Order[] = (projectsV3 || []).map(pv3 => ({
+        id: pv3.id,
+        project_id: pv3.hierarchy_project_id || pv3.id,
+        code: pv3.code,
+        status: pv3.status,
+        created_at: pv3.created_at,
+        notes: pv3.notes,
+        province_id: pv3.province_id,
+        district_id: pv3.district_id,
+        subcategory_id: pv3.subcategory_id,
+        payment_amount: pv3.payment_amount,
+        isCollaborated: false
+      }));
 
       // Fetch collaborated orders (orders where user is an accepted collaborator)
       const { data: collaborations } = await supabase
