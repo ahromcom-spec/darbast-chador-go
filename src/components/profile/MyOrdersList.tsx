@@ -110,12 +110,12 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
         }
       }
 
-      // Fetch collaborated orders (orders where user is an accepted collaborator)
+      // Fetch collaborated orders (orders where user is an accepted/approved collaborator)
       const { data: collaborations } = await supabase
         .from('order_collaborators')
         .select('order_id')
         .eq('invitee_user_id', userId)
-        .eq('status', 'accepted');
+        .in('status', ['accepted', 'approved']);
 
       let collaboratedOrders: Order[] = [];
       if (collaborations && collaborations.length > 0) {
