@@ -45,9 +45,11 @@ import {
   X,
   CreditCard,
   Printer,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Users
 } from "lucide-react";
 import { OrderTransfer } from "@/components/orders/OrderTransfer";
+import { AddCollaborator } from "@/components/orders/AddCollaborator";
 import { RepairRequestDialog } from "@/components/orders/RepairRequestDialog";
 import { CollectionRequestDialog } from "@/components/orders/CollectionRequestDialog";
 import { ManagerOrderInvoice } from "@/components/orders/ManagerOrderInvoice";
@@ -185,6 +187,7 @@ export default function OrderDetail() {
   const [repairCost, setRepairCost] = useState(0);
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
+  const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -784,6 +787,17 @@ export default function OrderDetail() {
               >
                 <ArrowLeftRight className="h-4 w-4" />
                 انتقال سفارش
+              </Button>
+            )}
+            {order.status !== 'rejected' && order.status !== 'closed' && (
+              <Button
+                variant="outline"
+                onClick={() => setShowCollaboratorDialog(true)}
+                size="sm"
+                className="gap-2"
+              >
+                <Users className="h-4 w-4" />
+                افزودن همکار
               </Button>
             )}
             {/* دکمه پرینت فاکتور - برای همه سفارشات */}
@@ -2068,6 +2082,15 @@ export default function OrderDetail() {
             orderId={order.id}
             orderCode={order.code}
             customerId={(order as any).customer_id || ''}
+          />
+
+          {/* Add Collaborator Dialog */}
+          <AddCollaborator
+            orderId={order.id}
+            orderCode={order.code}
+            open={showCollaboratorDialog}
+            onOpenChange={setShowCollaboratorDialog}
+            onCollaboratorAdded={fetchOrderDetails}
           />
 
         </div>
