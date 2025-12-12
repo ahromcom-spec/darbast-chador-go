@@ -64,31 +64,38 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
 
   const fetchOrders = async () => {
     try {
-      // Fetch own orders (RLS ensures only current user's orders are returned)
+      // Fetch own orders using security definer function that bypasses RLS
       let ownOrders: Order[] = [];
 
       const { data: ordersData, error } = await supabase
-        .from('projects_v3')
-        .select(`
-          id,
-          code,
-          created_at,
-          status,
-          address,
-          execution_stage,
-          payment_confirmed_at,
-          subcategory_id,
-          notes,
-          subcategories:subcategory_id (name),
-          provinces:province_id (name)
-        `)
-        .order('created_at', { ascending: false });
+        .rpc('get_my_projects_v3');
 
       if (error) {
+        console.error('Error fetching orders via RPC:', error);
         throw error;
       }
 
-      if (ordersData) {
+      if (ordersData && ordersData.length > 0) {
+        // Need to fetch subcategory and province names separately
+        const orderIds = ordersData.map((o: any) => o.id);
+        const subcategoryIds = [...new Set(ordersData.map((o: any) => o.subcategory_id).filter(Boolean))];
+        const provinceIds = [...new Set(ordersData.map((o: any) => o.province_id).filter(Boolean))];
+        
+        // Fetch subcategories
+        const { data: subcategories } = await supabase
+          .from('subcategories')
+          .select('id, name')
+          .in('id', subcategoryIds);
+        
+        // Fetch provinces
+        const { data: provinces } = await supabase
+          .from('provinces')
+          .select('id, name')
+          .in('id', provinceIds);
+        
+        const subcategoryMap = new Map((subcategories || []).map((s: any) => [s.id, s.name]));
+        const provinceMap = new Map((provinces || []).map((p: any) => [p.id, p.name]));
+
         ownOrders = ordersData.map((order: any) => ({
           id: order.id,
           code: order.code,
@@ -98,8 +105,8 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
           execution_stage: order.execution_stage,
           payment_confirmed_at: order.payment_confirmed_at,
           subcategory_id: order.subcategory_id,
-          subcategory_name: order.subcategories?.name || '',
-          province_name: order.provinces?.name || '',
+          subcategory_name: subcategoryMap.get(order.subcategory_id) || '',
+          province_name: provinceMap.get(order.province_id) || '',
           notes: order.notes,
           isCollaborated: false,
         }));
