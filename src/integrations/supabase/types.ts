@@ -3276,6 +3276,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      check_order_ownership: {
+        Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
       check_otp_rate_limit: {
         Args: { _phone_number: string }
         Returns: boolean
