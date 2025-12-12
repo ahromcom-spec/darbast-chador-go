@@ -316,24 +316,10 @@ export default function OrderDetail() {
         return;
       }
 
-      // Fetch order
+      // Fetch order using security definer function to ensure visibility
       const { data: orderData, error: orderError } = await supabase
-        .from("projects_v3")
-        .select(`
-          *,
-          subcategory:subcategories(
-            name,
-            code,
-            service_type:service_types_v3(name, code)
-          ),
-          province:provinces(name, code),
-          district:districts(name),
-          hierarchy_project:projects_hierarchy!hierarchy_project_id(
-            location:locations(title, address_line)
-          )
-        `)
-        .eq("id", id)
-        .eq("customer_id", customer.id)
+        .rpc('get_my_projects_v3')
+        .eq('id', id)
         .maybeSingle();
 
       if (orderError) throw orderError;
