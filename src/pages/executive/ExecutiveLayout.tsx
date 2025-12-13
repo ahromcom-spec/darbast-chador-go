@@ -124,15 +124,15 @@ export function ExecutiveLayout() {
                   <ChevronDown className="h-3 w-3 mr-1" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-popover">
+              <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg z-50">
                 {orderStagesItems.map((item) => (
                   <DropdownMenuItem key={item.href} asChild>
                     <NavLink
                       to={item.href}
                       className={({ isActive }) =>
                         cn(
-                          'flex items-center gap-2 w-full cursor-pointer text-popover-foreground',
-                          isActive && 'bg-accent text-accent-foreground font-medium'
+                          'flex items-center gap-2 w-full cursor-pointer text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700',
+                          isActive && 'bg-primary/10 text-primary font-medium'
                         )
                       }
                     >
