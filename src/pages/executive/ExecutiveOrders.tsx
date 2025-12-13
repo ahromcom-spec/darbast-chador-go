@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -17,6 +17,8 @@ import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
 import { setOrderScheduleSchema } from '@/lib/rpcValidation';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
+import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
+import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 
 // Component to display order technical details with edit capability
 const OrderDetailsContent = ({ order, getStatusBadge, onUpdate }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void }) => {
@@ -103,6 +105,8 @@ export default function ExecutiveOrders() {
   const [showEditScheduleDialog, setShowEditScheduleDialog] = useState(false);
   const [editStartDate, setEditStartDate] = useState('');
   const [editEndDate, setEditEndDate] = useState('');
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Auto-open order from URL param
@@ -648,20 +652,46 @@ export default function ExecutiveOrders() {
                     </div>
                   )}
 
-                   <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setShowDetailsDialog(true);
-                      }}
-                      className="gap-2"
-                    >
-                      <AlertCircle className="h-4 w-4" />
-                      جزئیات کامل
-                    </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setShowDetailsDialog(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    جزئیات کامل
+                  </Button>
 
-                   {order.status === 'paid' && !order.executive_completion_date && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setTransferDialogOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <ArrowLeftRight className="h-4 w-4" />
+                    انتقال
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setCollaboratorDialogOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    همکار
+                  </Button>
+
+                  {order.status === 'paid' && !order.executive_completion_date && (
                     <Button
                       onClick={() => {
                         setSelectedOrder(order);
@@ -876,6 +906,27 @@ export default function ExecutiveOrders() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedOrder && (
+        <ManagerOrderTransfer
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          onTransferComplete={fetchOrders}
+        />
+      )}
+
+      {selectedOrder && (
+        <ManagerAddStaffCollaborator
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={collaboratorDialogOpen}
+          onOpenChange={setCollaboratorDialogOpen}
+          onCollaboratorAdded={fetchOrders}
+        />
+      )}
     </div>
   );
 }
+
