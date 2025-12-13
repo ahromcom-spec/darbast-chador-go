@@ -50,15 +50,17 @@ serve(async (req) => {
     if (najvaApiToken && najvaApiKey) {
       try {
         console.log('[Push] Sending Najva notification...');
+        console.log('[Push] Using API Key:', najvaApiKey.substring(0, 8) + '...');
         
         // Prepare notification data for Najva API
-        // Based on Najva API documentation: https://app.najva.com/api/v1/notifications/
+        // Based on Najva PHP library: https://github.com/MrApr/Najva-api2
         const notificationData: Record<string, unknown> = {
+          api_key: najvaApiKey,
           title,
           body,
           onclick_action: 0, // open-link
-          url: link ? `https://ahrom.org${link}` : 'https://ahrom.org/',
-          icon: 'https://ahrom.org/icon-512.png',
+          url: link ? `https://ahrom.ir${link}` : 'https://ahrom.ir/',
+          icon: 'https://ahrom.ir/icon-512.png',
         };
 
         // Add special handling for incoming calls
@@ -73,12 +75,11 @@ serve(async (req) => {
 
         console.log('[Push] Najva request data:', JSON.stringify(notificationData));
 
-        const response = await fetch('https://app.najva.com/api/v1/notifications', {
+        const response = await fetch('https://app.najva.com/api/v1/notifications/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Token ${najvaApiToken}`,
-            'X-api-key': najvaApiKey,
           },
           body: JSON.stringify(notificationData),
         });
