@@ -28,6 +28,10 @@ interface Order {
   execution_end_date: string | null;
   execution_stage: string | null;
   notes: any;
+  collection_request?: {
+    requested_date: string | null;
+    status: string;
+  } | null;
 }
 
 const stageLabels: Record<string, string> = {
@@ -112,6 +116,15 @@ export default function ExecutiveStageAwaitingCollection() {
             customerPhone = profileData?.phone_number || '';
           }
 
+          // دریافت درخواست جمع‌آوری مشتری
+          const { data: collectionRequestData } = await supabase
+            .from('collection_requests')
+            .select('requested_date, status')
+            .eq('order_id', order.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
           return {
             id: order.id,
             code: order.code,
@@ -124,7 +137,8 @@ export default function ExecutiveStageAwaitingCollection() {
             execution_stage: order.execution_stage,
             notes: order.notes,
             customer_name: customerName,
-            customer_phone: customerPhone
+            customer_phone: customerPhone,
+            collection_request: collectionRequestData || null
           };
         })
       );
@@ -364,6 +378,25 @@ export default function ExecutiveStageAwaitingCollection() {
                       <span>
                         {new Date(order.execution_start_date).toLocaleDateString('fa-IR')}
                         {order.execution_end_date && ' تا ' + new Date(order.execution_end_date).toLocaleDateString('fa-IR')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* نمایش تاریخ درخواست جمع‌آوری از طرف مشتری */}
+                {order.collection_request?.requested_date && (
+                  <div className="bg-orange-50 dark:bg-orange-950 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <div className="flex items-center gap-2 text-sm">
+                      <PackageOpen className="h-4 w-4 text-orange-600" />
+                      <span className="font-medium text-orange-700 dark:text-orange-300">تاریخ درخواست جمع‌آوری مشتری:</span>
+                      <span className="font-medium text-orange-800 dark:text-orange-200">
+                        {new Date(order.collection_request.requested_date).toLocaleDateString('fa-IR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </span>
                     </div>
                   </div>

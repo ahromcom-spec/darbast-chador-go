@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Banknote, Eye, Search, MapPin, Phone, User, Calendar, RefreshCw } from 'lucide-react';
+import { Banknote, Eye, Search, MapPin, Phone, User, Calendar, RefreshCw, PackageOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -28,6 +28,10 @@ interface Order {
   execution_end_date: string | null;
   execution_stage: string | null;
   notes: any;
+  collection_request?: {
+    requested_date: string | null;
+    status: string;
+  } | null;
 }
 
 const stageLabels: Record<string, string> = {
@@ -111,6 +115,15 @@ export default function ExecutiveStageAwaitingPayment() {
             customerPhone = profileData?.phone_number || '';
           }
 
+          // دریافت درخواست جمع‌آوری مشتری
+          const { data: collectionRequestData } = await supabase
+            .from('collection_requests')
+            .select('requested_date, status')
+            .eq('order_id', order.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
           return {
             id: order.id,
             code: order.code,
@@ -123,7 +136,8 @@ export default function ExecutiveStageAwaitingPayment() {
             execution_stage: order.execution_stage,
             notes: order.notes,
             customer_name: customerName,
-            customer_phone: customerPhone
+            customer_phone: customerPhone,
+            collection_request: collectionRequestData || null
           };
         })
       );
@@ -275,6 +289,25 @@ export default function ExecutiveStageAwaitingPayment() {
                       <span>
                         {new Date(order.execution_start_date).toLocaleDateString('fa-IR')}
                         {order.execution_end_date && ' تا ' + new Date(order.execution_end_date).toLocaleDateString('fa-IR')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* نمایش تاریخ درخواست جمع‌آوری از طرف مشتری */}
+                {order.collection_request?.requested_date && (
+                  <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-2 text-sm">
+                      <PackageOpen className="h-4 w-4 text-green-600" />
+                      <span className="font-medium text-green-700 dark:text-green-300">تاریخ درخواست جمع‌آوری مشتری:</span>
+                      <span className="font-medium text-green-800 dark:text-green-200">
+                        {new Date(order.collection_request.requested_date).toLocaleDateString('fa-IR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </span>
                     </div>
                   </div>
