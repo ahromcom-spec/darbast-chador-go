@@ -34,10 +34,11 @@ interface ManagerOrderTransferProps {
 }
 
 interface StaffMember {
-  user_id: string;
+  user_id: string | null;
   full_name: string;
   phone_number: string;
   role: string;
+  is_registered: boolean;
 }
 
 const roleLabels: Record<string, string> = {
@@ -48,6 +49,8 @@ const roleLabels: Record<string, string> = {
   finance_manager: 'مدیر مالی',
   scaffold_executive_manager: 'مدیر اجرایی داربست',
   executive_manager_scaffold_execution_with_materials: 'مدیر اجرایی داربست با اجناس',
+  warehouse_manager: 'مدیر انبارداری',
+  operations_manager: 'مدیر عملیات',
 };
 
 export function ManagerOrderTransfer({ 
@@ -91,7 +94,15 @@ export function ManagerOrderTransfer({
   const fetchStaffMembers = async () => {
     setLoading(true);
     try {
-      // Get all users with manager/staff roles
+      // 1. Get whitelisted staff from phone_whitelist
+      const { data: whitelistData, error: whitelistError } = await supabase
+        .from('phone_whitelist')
+        .select('phone_number, allowed_roles, notes')
+        .not('allowed_roles', 'cs', '{"customer"}');
+
+      if (whitelistError) throw whitelistError;
+
+      // 2. Get all registered users with manager/staff roles
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role')
@@ -102,49 +113,79 @@ export function ManagerOrderTransfer({
           'sales_manager',
           'finance_manager',
           'scaffold_executive_manager',
-          'executive_manager_scaffold_execution_with_materials'
+          'executive_manager_scaffold_execution_with_materials',
+          'warehouse_manager',
+          'operations_manager'
         ]);
 
       if (rolesError) throw rolesError;
 
+      // 3. Fetch profiles for registered users
+      let profilesData: any[] = [];
       if (rolesData && rolesData.length > 0) {
-        // Fetch profiles for these users
         const userIds = [...new Set(rolesData.map(r => r.user_id))];
-        const { data: profilesData, error: profilesError } = await supabase
+        const { data, error: profilesError } = await supabase
           .from('profiles')
           .select('user_id, full_name, phone_number')
           .in('user_id', userIds);
 
         if (profilesError) throw profilesError;
-
-        // Combine roles with profiles, excluding current user
-        const staffList: StaffMember[] = rolesData
-          .filter(r => r.user_id !== user?.id)
-          .map(role => {
-            const profile = profilesData?.find(p => p.user_id === role.user_id);
-            return {
-              user_id: role.user_id,
-              full_name: profile?.full_name || 'نامشخص',
-              phone_number: profile?.phone_number || '',
-              role: role.role,
-            };
-          });
-
-        // Remove duplicates (a user might have multiple roles)
-        const uniqueStaff = staffList.reduce((acc: StaffMember[], current) => {
-          const exists = acc.find(item => item.user_id === current.user_id);
-          if (!exists) {
-            acc.push(current);
-          }
-          return acc;
-        }, []);
-
-        setStaffMembers(uniqueStaff);
-        setFilteredStaff(uniqueStaff);
-      } else {
-        setStaffMembers([]);
-        setFilteredStaff([]);
+        profilesData = data || [];
       }
+
+      // Build staff list from whitelist
+      const staffList: StaffMember[] = [];
+      const processedPhones = new Set<string>();
+
+      // First add registered users
+      if (rolesData) {
+        for (const role of rolesData) {
+          if (role.user_id === user?.id) continue;
+          
+          const profile = profilesData.find(p => p.user_id === role.user_id);
+          if (profile?.phone_number) {
+            processedPhones.add(profile.phone_number);
+          }
+          
+          staffList.push({
+            user_id: role.user_id,
+            full_name: profile?.full_name || 'نامشخص',
+            phone_number: profile?.phone_number || '',
+            role: role.role,
+            is_registered: true,
+          });
+        }
+      }
+
+      // Then add whitelisted staff who haven't registered yet
+      if (whitelistData) {
+        for (const entry of whitelistData) {
+          if (processedPhones.has(entry.phone_number)) continue;
+          
+          const roles = entry.allowed_roles as string[];
+          const primaryRole = roles[0] || 'staff';
+          
+          staffList.push({
+            user_id: null,
+            full_name: entry.notes || 'پرسنل اهرم',
+            phone_number: entry.phone_number,
+            role: primaryRole,
+            is_registered: false,
+          });
+        }
+      }
+
+      // Remove duplicates by phone number
+      const uniqueStaff = staffList.reduce((acc: StaffMember[], current) => {
+        const exists = acc.find(item => item.phone_number === current.phone_number);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      setStaffMembers(uniqueStaff);
+      setFilteredStaff(uniqueStaff);
     } catch (error) {
       console.error('Error fetching staff members:', error);
       toast({
@@ -159,6 +200,16 @@ export function ManagerOrderTransfer({
 
   const handleTransfer = async () => {
     if (!selectedStaff || !user) return;
+
+    // Check if staff is registered
+    if (!selectedStaff.is_registered || !selectedStaff.user_id) {
+      toast({
+        variant: 'destructive',
+        title: 'پرسنل ثبت‌نام نکرده',
+        description: `${selectedStaff.full_name} هنوز در سیستم ثبت‌نام نکرده است. لطفاً ابتدا از وی بخواهید ثبت‌نام کند.`,
+      });
+      return;
+    }
 
     setTransferring(true);
     try {
@@ -259,19 +310,21 @@ export function ManagerOrderTransfer({
                 <div className="space-y-2">
                   {filteredStaff.map((staff) => (
                     <Card 
-                      key={staff.user_id}
+                      key={staff.user_id || staff.phone_number}
                       className={`cursor-pointer transition-all hover:border-primary/50 ${
-                        selectedStaff?.user_id === staff.user_id 
+                        selectedStaff?.phone_number === staff.phone_number 
                           ? 'border-primary bg-primary/5' 
                           : ''
-                      }`}
+                      } ${!staff.is_registered ? 'opacity-70' : ''}`}
                       onClick={() => setSelectedStaff(staff)}
                     >
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                              <User className="h-4 w-4 text-primary" />
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                              staff.is_registered ? 'bg-primary/10' : 'bg-muted'
+                            }`}>
+                              <User className={`h-4 w-4 ${staff.is_registered ? 'text-primary' : 'text-muted-foreground'}`} />
                             </div>
                             <div>
                               <p className="text-sm font-medium">{staff.full_name}</p>
@@ -280,12 +333,17 @@ export function ManagerOrderTransfer({
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap justify-end">
                             <Badge variant="outline" className="text-xs">
                               <Briefcase className="h-3 w-3 ml-1" />
                               {roleLabels[staff.role] || staff.role}
                             </Badge>
-                            {selectedStaff?.user_id === staff.user_id && (
+                            {!staff.is_registered && (
+                              <Badge variant="secondary" className="text-xs text-amber-600">
+                                ثبت‌نام نشده
+                              </Badge>
+                            )}
+                            {selectedStaff?.phone_number === staff.phone_number && (
                               <CheckCircle className="h-4 w-4 text-primary" />
                             )}
                           </div>
