@@ -15,6 +15,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const najvaApiToken = Deno.env.get('NAJVA_API_TOKEN');
+    const najvaApiKey = Deno.env.get('NAJVA_API_KEY');
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -82,16 +83,20 @@ serve(async (req) => {
 
     // ارسال Push Notification با Najva
     let pushSent = false;
-    if (najvaApiToken) {
+    if (najvaApiToken && najvaApiKey) {
       try {
         console.log('[NotifyManagers] Sending Najva push notification');
         
-        const notificationData = {
+        // Based on Najva API documentation - api_key is required
+        const notificationData: Record<string, unknown> = {
+          api_key: najvaApiKey,
           title: title,
           body: body,
           url: `https://ahrom.org${link}`,
           icon: 'https://ahrom.org/icon-512.png',
         };
+
+        console.log('[NotifyManagers] Najva request data:', JSON.stringify(notificationData));
 
         const response = await fetch('https://app.najva.com/api/v1/notifications/', {
           method: 'POST',
@@ -102,19 +107,27 @@ serve(async (req) => {
           body: JSON.stringify(notificationData)
         });
 
-        const result = await response.json();
+        const responseText = await response.text();
+        console.log('[NotifyManagers] Najva response status:', response.status);
+        console.log('[NotifyManagers] Najva response:', responseText);
         
         if (response.ok) {
-          console.log('[NotifyManagers] ✓ Najva push sent successfully:', result);
-          pushSent = true;
+          try {
+            const result = JSON.parse(responseText);
+            console.log('[NotifyManagers] ✓ Najva push sent successfully:', result);
+            pushSent = true;
+          } catch {
+            console.log('[NotifyManagers] ✓ Najva push sent (non-JSON response)');
+            pushSent = true;
+          }
         } else {
-          console.error('[NotifyManagers] Najva error response:', JSON.stringify(result));
+          console.error('[NotifyManagers] Najva error - Status:', response.status, 'Response:', responseText);
         }
       } catch (najvaError) {
         console.error('[NotifyManagers] Najva request failed:', najvaError);
       }
     } else {
-      console.log('[NotifyManagers] Najva not configured');
+      console.log('[NotifyManagers] Najva not fully configured - Token:', !!najvaApiToken, 'ApiKey:', !!najvaApiKey);
     }
 
     return new Response(
