@@ -43,13 +43,8 @@ export const ExecutiveStageTimeline = ({
   const handleStageClick = async (stage: ExecutiveStage) => {
     if (readOnly) return;
     
-    // فقط می‌توان به مرحله بعدی یا همان مرحله فعلی رفت
-    if (stage.order > currentStageOrder + 1) {
-      toast({
-        variant: 'destructive',
-        title: 'خطا',
-        description: 'باید مراحل را به ترتیب تکمیل کنید'
-      });
+    // اگر مرحله فعلی است، نیازی به تغییر نیست
+    if (stage.key === currentStage) {
       return;
     }
 
@@ -149,8 +144,7 @@ export const ExecutiveStageTimeline = ({
       {executiveStages.map((stage, index) => {
         const isCompleted = stage.order < currentStageOrder;
         const isCurrent = stage.key === currentStage;
-        const isNext = stage.order === currentStageOrder + 1;
-        const isClickable = !readOnly && (isCurrent || isNext);
+        const isClickable = !readOnly && !isCurrent;
 
         return (
           <div key={stage.key} className="relative">
@@ -173,7 +167,7 @@ export const ExecutiveStageTimeline = ({
                 isCurrent && 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900',
                 !isCompleted && !isCurrent && 'bg-muted/30 border-border',
                 isClickable && 'cursor-pointer hover:bg-accent hover:shadow-md',
-                !isClickable && !readOnly && 'opacity-50'
+                isCurrent && 'ring-2 ring-blue-500'
               )}
             >
               <div className="flex-shrink-0">
@@ -203,7 +197,7 @@ export const ExecutiveStageTimeline = ({
                 </p>
               </div>
 
-              {isNext && !readOnly && (
+              {isClickable && !readOnly && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -214,7 +208,7 @@ export const ExecutiveStageTimeline = ({
                   disabled={updating}
                   className="text-xs"
                 >
-                  تکمیل
+                  {stage.order < currentStageOrder ? 'برگشت' : 'انتقال'}
                 </Button>
               )}
             </div>
