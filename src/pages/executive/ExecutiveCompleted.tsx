@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -49,6 +50,7 @@ interface Order {
 }
 
 export default function ExecutiveCompleted() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,9 +59,24 @@ export default function ExecutiveCompleted() {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
+  // Auto-open order from URL param
+  const urlOrderId = searchParams.get('orderId');
+
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  // Auto-open order details when orderId is in URL and orders are loaded
+  useEffect(() => {
+    if (urlOrderId && orders.length > 0 && !loading) {
+      const order = orders.find(o => o.id === urlOrderId);
+      if (order) {
+        setSelectedOrder(order);
+        setDetailsOpen(true);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [urlOrderId, orders, loading]);
 
   useEffect(() => {
     if (searchTerm.trim() === '') {

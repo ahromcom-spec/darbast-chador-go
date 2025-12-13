@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDateTime } from '@/lib/dateUtils';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -28,13 +29,91 @@ interface NotificationListProps {
 export const NotificationList = ({ onClose }: NotificationListProps) => {
   const { notifications, loading, markAsRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
+  const { isAdmin, isCEO, isGeneralManager, isSalesManager, isExecutiveManager, isFinanceManager } = useUserRoles();
+
+  // تشخیص نقش مدیریتی
+  const isManager = isAdmin || isCEO || isGeneralManager || isSalesManager || isExecutiveManager || isFinanceManager;
+
+  // تعیین مسیر مدیریت سفارشات بر اساس وضعیت سفارش
+  const getManagerOrderRoute = (orderStatus: string | null, orderId: string): string => {
+    switch (orderStatus) {
+      case 'pending':
+        if (isExecutiveManager) return `/executive/pending-orders?orderId=${orderId}`;
+        if (isSalesManager) return `/sales/pending-orders?orderId=${orderId}`;
+        if (isGeneralManager) return `/general-manager/pending-orders?orderId=${orderId}`;
+        return `/executive/orders?orderId=${orderId}`;
+      case 'approved':
+      case 'pending_execution':
+        return `/executive/pending?orderId=${orderId}`;
+      case 'in_progress':
+        return `/executive/in-progress?orderId=${orderId}`;
+      case 'scheduled':
+        return `/executive/in-progress?orderId=${orderId}`;
+      case 'awaiting_payment':
+        return `/executive/awaiting-payment?orderId=${orderId}`;
+      case 'awaiting_collection':
+        return `/executive/awaiting-collection?orderId=${orderId}`;
+      case 'completed':
+        return `/executive/completed?orderId=${orderId}`;
+      default:
+        return `/executive/orders?orderId=${orderId}`;
+    }
+  };
 
   const handleNotificationClick = async (notification: any) => {
     if (!notification.read_at) {
       markAsRead(notification.id);
     }
     
-    // اگر لینک به سفارش است، اطلاعات پروژه را بگیر و به پروژه‌های من هدایت کن
+    // اگر مدیر است، بررسی کن که آیا اعلان مربوط به سفارش است
+    if (isManager) {
+      let orderId: string | null = null;
+      let orderStatus: string | null = null;
+
+      // تلاش برای استخراج order_id از لینک
+      if (notification.link && (notification.link.includes('/orders/') || notification.link.includes('/order/'))) {
+        orderId = notification.link.split(/\/orders?\//).pop()?.split(/[?#]/)[0] || null;
+      }
+
+      // تلاش برای استخراج کد سفارش از متن
+      if (!orderId) {
+        const mergedText = `${notification.title ?? ''} ${notification.body ?? ''}`;
+        const match = mergedText.match(/\b(\d{6,8})\b/);
+        if (match) {
+          const orderCode = match[1];
+          const { data: orderByCode } = await supabase
+            .from('projects_v3')
+            .select('id, status')
+            .eq('code', orderCode)
+            .maybeSingle();
+          
+          if (orderByCode) {
+            orderId = orderByCode.id;
+            orderStatus = orderByCode.status;
+          }
+        }
+      }
+
+      // اگر order_id پیدا شد، اطلاعات سفارش را بگیر و به صفحه مدیریت هدایت کن
+      if (orderId) {
+        // اگر status ندریم، fetch کن
+        if (!orderStatus) {
+          const { data: order } = await supabase
+            .from('projects_v3')
+            .select('status')
+            .eq('id', orderId)
+            .maybeSingle();
+          orderStatus = order?.status || null;
+        }
+
+        const managerRoute = getManagerOrderRoute(orderStatus, orderId);
+        onClose?.();
+        setTimeout(() => navigate(managerRoute), 200);
+        return;
+      }
+    }
+    
+    // اگر لینک به سفارش است، اطلاعات پروژه را بگیر و به پروژه‌های من هدایت کن (برای مشتریان)
     if (notification.link && notification.link.startsWith('/orders/')) {
       const orderId = notification.link.split('/orders/')[1]?.split(/[?#]/)[0];
       

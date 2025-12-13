@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ interface Order {
 
 export default function SalesPendingOrders() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -49,9 +51,25 @@ export default function SalesPendingOrders() {
   const [rejectionReason, setRejectionReason] = useState('');
   const { toast } = useToast();
 
+  // Auto-open order from URL param
+  const urlOrderId = searchParams.get('orderId');
+
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  // Auto-open order details when orderId is in URL and orders are loaded
+  useEffect(() => {
+    if (urlOrderId && orders.length > 0 && !loading) {
+      const order = orders.find(o => o.id === urlOrderId);
+      if (order) {
+        setSelectedOrder(order);
+        setDetailsOpen(true);
+        // Remove orderId from URL to prevent re-opening on refresh
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [urlOrderId, orders, loading]);
 
   const fetchOrders = async () => {
     try {
