@@ -378,7 +378,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   }, [user, orderId, isStaff, toast]);
 
-  // Play audio message - use public URL since bucket is public
+  // Play audio message - always use blob download for better compatibility
   const playAudio = useCallback(async (messageId: string, audioPath: string) => {
     console.log('Play audio requested:', messageId, audioPath);
     
@@ -402,93 +402,74 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     setPlayingAudioId(null);
 
     try {
-      // Since bucket is public, try public URL first (faster)
-      const { data: publicUrlData } = supabase.storage
+      // Download file as blob for better browser compatibility
+      console.log('Downloading audio blob:', audioPath);
+      const { data: blobData, error: downloadError } = await supabase.storage
         .from('voice-messages')
-        .getPublicUrl(audioPath);
-      
-      console.log('Public URL:', publicUrlData.publicUrl);
-      
-      // Create and configure audio element
+        .download(audioPath);
+
+      if (downloadError || !blobData) {
+        console.error('Download error:', downloadError);
+        throw new Error('فایل صوتی دانلود نشد');
+      }
+
+      console.log('Blob downloaded, size:', blobData.size, 'type:', blobData.type);
+
+      // Determine correct mime type from file extension if blob type is empty
+      let mimeType = blobData.type;
+      if (!mimeType || mimeType === 'application/octet-stream') {
+        const ext = audioPath.split('.').pop()?.toLowerCase();
+        switch (ext) {
+          case 'ogg': mimeType = 'audio/ogg'; break;
+          case 'webm': mimeType = 'audio/webm'; break;
+          case 'mp4': mimeType = 'audio/mp4'; break;
+          case 'mp3': mimeType = 'audio/mpeg'; break;
+          case 'aac': mimeType = 'audio/aac'; break;
+          default: mimeType = 'audio/webm';
+        }
+      }
+
+      // Create blob with proper mime type
+      const typedBlob = new Blob([blobData], { type: mimeType });
+      const objectUrl = URL.createObjectURL(typedBlob);
+      console.log('Created object URL with type:', mimeType);
+
       const audio = new Audio();
       audioElementRef.current = audio;
-      
+
       // Set up event handlers
-      const playPromise = new Promise<boolean>((resolve) => {
-        const timeout = setTimeout(() => {
-          console.log('Audio load timeout');
-          resolve(false);
-        }, 10000);
-        
-        audio.oncanplaythrough = () => {
-          clearTimeout(timeout);
-          console.log('Audio ready, playing...');
-          audio.play()
-            .then(() => {
-              console.log('Playback started');
-              setPlayingAudioId(messageId);
-              setLoadingAudioId(null);
-              resolve(true);
-            })
-            .catch((e) => {
-              console.error('Play failed:', e);
-              resolve(false);
-            });
-        };
-        
-        audio.onerror = () => {
-          clearTimeout(timeout);
-          console.error('Audio error:', audio.error?.code, audio.error?.message);
-          resolve(false);
-        };
-      });
-      
       audio.onended = () => {
         console.log('Audio ended');
         setPlayingAudioId(null);
+        URL.revokeObjectURL(objectUrl);
         audioElementRef.current = null;
       };
-      
-      // Set source and load
-      audio.src = publicUrlData.publicUrl;
-      audio.load();
-      
-      const success = await playPromise;
-      
-      if (!success) {
-        // Fallback: try downloading blob
-        console.log('Public URL failed, trying blob download...');
-        audioElementRef.current = null;
-        
-        const { data: blobData, error: downloadError } = await supabase.storage
-          .from('voice-messages')
-          .download(audioPath);
 
-        if (downloadError || !blobData) {
-          console.error('Download error:', downloadError);
-          throw new Error('فایل صوتی دانلود نشد');
-        }
+      audio.onerror = (e) => {
+        console.error('Audio error:', audio.error?.code, audio.error?.message);
+        setLoadingAudioId(null);
+        setPlayingAudioId(null);
+        URL.revokeObjectURL(objectUrl);
+        toast({
+          title: 'خطا در پخش صدا',
+          description: 'فرمت صوتی توسط مرورگر پشتیبانی نمی‌شود',
+          variant: 'destructive'
+        });
+      };
 
-        const objectUrl = URL.createObjectURL(blobData);
-        const fallbackAudio = new Audio(objectUrl);
-        audioElementRef.current = fallbackAudio;
-        
-        fallbackAudio.onended = () => {
-          setPlayingAudioId(null);
-          URL.revokeObjectURL(objectUrl);
-          audioElementRef.current = null;
-        };
-        
-        try {
-          await fallbackAudio.play();
-          setPlayingAudioId(messageId);
-          setLoadingAudioId(null);
-        } catch (playError) {
-          URL.revokeObjectURL(objectUrl);
-          throw new Error('فایل صوتی قابل پخش نیست');
-        }
+      audio.src = objectUrl;
+      
+      try {
+        await audio.play();
+        console.log('Playback started successfully');
+        setPlayingAudioId(messageId);
+        setLoadingAudioId(null);
+      } catch (playError: any) {
+        console.error('Play error:', playError);
+        URL.revokeObjectURL(objectUrl);
+        throw new Error('پخش صدا امکان‌پذیر نیست');
       }
-      
+
     } catch (error: any) {
       console.error('Audio playback error:', error);
       setLoadingAudioId(null);
