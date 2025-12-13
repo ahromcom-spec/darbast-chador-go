@@ -124,14 +124,14 @@ export function ExecutiveLayout() {
                   <ChevronDown className="h-3 w-3 mr-1" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-56 bg-popover">
                 {orderStagesItems.map((item) => (
                   <DropdownMenuItem key={item.href} asChild>
                     <NavLink
                       to={item.href}
                       className={({ isActive }) =>
                         cn(
-                          'flex items-center gap-2 w-full cursor-pointer',
+                          'flex items-center gap-2 w-full cursor-pointer text-popover-foreground',
                           isActive && 'bg-accent text-accent-foreground font-medium'
                         )
                       }
