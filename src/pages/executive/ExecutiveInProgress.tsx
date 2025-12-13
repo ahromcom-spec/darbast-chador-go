@@ -13,8 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ProgressMediaUploader } from '@/components/executive/ProgressMediaUploader';
 import { ExecutiveStageTimeline } from '@/components/executive/ExecutiveStageTimeline';
 import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { OrderDetailsView } from '@/components/orders/OrderDetailsView';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
 
 interface Order {
@@ -454,38 +454,30 @@ export default function ExecutiveInProgress() {
       </div>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground">نام مشتری</Label>
-                  <p className="font-medium">{selectedOrder.customer_name}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">شماره تماس</Label>
-                  <p className="font-medium" dir="ltr">{selectedOrder.customer_phone}</p>
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">آدرس</Label>
-                <p className="font-medium">{selectedOrder.address}</p>
-              </div>
-              {selectedOrder.detailed_address && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">آدرس تفصیلی</Label>
-                  <p className="font-medium">{selectedOrder.detailed_address}</p>
-                </div>
-              )}
+              <OrderDetailsView 
+                order={{
+                  id: selectedOrder.id,
+                  code: selectedOrder.code,
+                  customer_name: selectedOrder.customer_name,
+                  customer_phone: selectedOrder.customer_phone,
+                  address: selectedOrder.address,
+                  detailed_address: selectedOrder.detailed_address,
+                  created_at: selectedOrder.created_at,
+                  notes: selectedOrder.notes
+                }}
+                showMedia={true}
+              />
 
-              
               <Separator className="my-4" />
               
               <div>
-                <Label className="text-sm font-medium mb-2 block">مراحل اجرایی</Label>
+                <span className="text-sm font-medium mb-2 block">مراحل اجرایی</span>
                 <ExecutiveStageTimeline
                   projectId={selectedOrder.id}
                   currentStage={selectedOrder.execution_stage}
@@ -498,7 +490,6 @@ export default function ExecutiveInProgress() {
 
               <Separator className="my-4" />
 
-              {/* آپلود تصاویر - مرحله در حال اجرا */}
               <ProgressMediaUploader
                 projectId={selectedOrder.id}
                 stage="in_progress"
