@@ -4,10 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Package, MapPin, Calendar, Eye, Filter, X, Users } from 'lucide-react';
+import { Package, MapPin, Calendar, Eye, Filter, X, Users, Search } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -57,6 +58,7 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
   const [selectedAddress, setSelectedAddress] = useState<string>('all');
   const [selectedServiceType, setSelectedServiceType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
     fetchOrders();
@@ -160,6 +162,18 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
 
   const getFilteredOrders = () => {
     return orders.filter(order => {
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.trim().toLowerCase();
+        const matchesCode = order.code?.toLowerCase().includes(query);
+        const matchesAddress = order.address?.toLowerCase().includes(query);
+        const matchesServiceType = order.subcategory_name?.toLowerCase().includes(query);
+        
+        if (!matchesCode && !matchesAddress && !matchesServiceType) {
+          return false;
+        }
+      }
+
       // Address filter
       if (selectedAddress !== 'all' && order.address !== selectedAddress) {
         return false;
@@ -189,9 +203,10 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
     setSelectedAddress('all');
     setSelectedServiceType('all');
     setSelectedStatus('all');
+    setSearchQuery('');
   };
 
-  const hasActiveFilters = selectedAddress !== 'all' || selectedServiceType !== 'all' || selectedStatus !== 'all';
+  const hasActiveFilters = selectedAddress !== 'all' || selectedServiceType !== 'all' || selectedStatus !== 'all' || searchQuery.trim() !== '';
   const filteredOrders = getFilteredOrders();
 
   if (loading) {
@@ -223,6 +238,17 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
             )}
           </div>
           
+          {/* Search Box */}
+          <div className="relative mb-3">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="جستجو با کد سفارش، نوع خدمات یا آدرس..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-10 text-right"
+            />
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Address Filter */}
             <Select value={selectedAddress} onValueChange={setSelectedAddress}>
