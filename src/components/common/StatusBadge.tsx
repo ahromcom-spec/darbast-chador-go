@@ -12,7 +12,7 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
   pending: { label: 'در انتظار تایید', variant: 'outline' },
   approved: { label: 'تایید شده', variant: 'default' },
   in_progress: { label: 'در حال اجرا', variant: 'default' },
-  completed: { label: 'اجرا شده', variant: 'secondary' },
+  completed: { label: 'تکمیل شده', variant: 'secondary' },
   paid: { label: 'پرداخت شده', variant: 'secondary' },
   closed: { label: 'به اتمام رسیده', variant: 'secondary' },
   rejected: { label: 'رد شده', variant: 'destructive' },
