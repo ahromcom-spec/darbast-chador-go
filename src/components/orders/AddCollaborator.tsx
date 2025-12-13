@@ -56,6 +56,8 @@ const statusLabels: Record<string, { label: string; variant: 'default' | 'second
   rejected: { label: 'رد شده', variant: 'destructive' },
 };
 
+const MAX_COLLABORATORS = 5;
+
 export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onCollaboratorAdded, ownerName, ownerPhone }: AddCollaboratorProps) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [searching, setSearching] = useState(false);
@@ -198,8 +200,21 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
     }
   }, [user?.id, collaborators, toast]);
 
+  // Count active (non-rejected) collaborators
+  const activeCollaboratorsCount = collaborators.filter(c => c.status !== 'rejected').length;
+  const canAddMoreCollaborators = activeCollaboratorsCount < MAX_COLLABORATORS;
+
   const addCollaborator = async () => {
     if (!targetUser || !user) return;
+
+    if (!canAddMoreCollaborators) {
+      toast({
+        title: 'محدودیت تعداد همکاران',
+        description: `حداکثر ${MAX_COLLABORATORS} همکار می‌توانید به هر سفارش اضافه کنید.`,
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -440,9 +455,15 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
             <p>• می‌توانید در هر زمان همکار را حذف کنید.</p>
           </div>
 
+          {!canAddMoreCollaborators && (
+            <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3 text-center">
+              شما به حداکثر تعداد همکاران ({MAX_COLLABORATORS} نفر) رسیده‌اید.
+            </div>
+          )}
+
           <Button
             onClick={addCollaborator}
-            disabled={!targetUser || submitting}
+            disabled={!targetUser || submitting || !canAddMoreCollaborators}
             className="w-full gap-2"
           >
             {submitting ? (
