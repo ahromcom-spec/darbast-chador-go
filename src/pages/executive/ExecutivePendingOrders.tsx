@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, PhoneCall } from 'lucide-react';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, PhoneCall, ArrowLeftRight, Users } from 'lucide-react';
 import VoiceCall from '@/components/orders/VoiceCall';
 import OrderChat from '@/components/orders/OrderChat';
 import { OrderDetailsView as OrderDetailsViewComponent } from '@/components/orders/OrderDetailsView';
@@ -29,6 +29,8 @@ import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { Separator } from '@/components/ui/separator';
 import { ProjectLocationMap } from '@/components/locations/ProjectLocationMap';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
+import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
+import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 
 // Helper to parse order notes safely - handles double-stringified JSON
 const parseOrderNotes = (notes: any): any => {
@@ -220,6 +222,8 @@ export default function ExecutivePendingOrders() {
   const [searchTerm, setSearchTerm] = useState('');
   const [executionStartDate, setExecutionStartDate] = useState('');
   const [executionEndDate, setExecutionEndDate] = useState('');
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Auto-open order from URL param
@@ -665,6 +669,32 @@ export default function ExecutivePendingOrders() {
             </Button>
             
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedOrder(order);
+                setTransferDialogOpen(true);
+              }}
+              className="gap-2"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              انتقال
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedOrder(order);
+                setCollaboratorDialogOpen(true);
+              }}
+              className="gap-2"
+            >
+              <Users className="h-4 w-4" />
+              همکار
+            </Button>
+            
+            <Button
               size="sm"
               onClick={() => {
                 setSelectedOrder(order);
@@ -888,6 +918,27 @@ export default function ExecutivePendingOrders() {
           )}
         </DialogContent>
       </Dialog>
+
+      {selectedOrder && (
+        <ManagerOrderTransfer
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          onTransferComplete={fetchOrders}
+        />
+      )}
+
+      {selectedOrder && (
+        <ManagerAddStaffCollaborator
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={collaboratorDialogOpen}
+          onOpenChange={setCollaboratorDialogOpen}
+          onCollaboratorAdded={fetchOrders}
+        />
+      )}
     </div>
   );
 }
+

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlayCircle, Eye, Search, MapPin, Phone, User, Calendar, RefreshCw } from 'lucide-react';
+import { PlayCircle, Eye, Search, MapPin, Phone, User, Calendar, RefreshCw, ArrowLeftRight, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -17,6 +17,8 @@ import { Separator } from '@/components/ui/separator';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { OrderDetailsView } from '@/components/orders/OrderDetailsView';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
+import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
+import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 
 interface Order {
   id: string;
@@ -50,6 +52,8 @@ export default function ExecutiveReady() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [updatingStage, setUpdatingStage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -388,6 +392,32 @@ export default function ExecutiveReady() {
                   </Button>
                   
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setTransferDialogOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <ArrowLeftRight className="h-4 w-4" />
+                    انتقال
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setCollaboratorDialogOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    همکار
+                  </Button>
+                  
+                  <Button
                     size="sm"
                     onClick={() => handleStartExecution(order.id, order.code)}
                     className="gap-2 bg-blue-600 hover:bg-blue-700"
@@ -448,6 +478,27 @@ export default function ExecutiveReady() {
           )}
         </DialogContent>
       </Dialog>
+
+      {selectedOrder && (
+        <ManagerOrderTransfer
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          onTransferComplete={fetchOrders}
+        />
+      )}
+
+      {selectedOrder && (
+        <ManagerAddStaffCollaborator
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={collaboratorDialogOpen}
+          onOpenChange={setCollaboratorDialogOpen}
+          onCollaboratorAdded={fetchOrders}
+        />
+      )}
     </div>
   );
 }
+
