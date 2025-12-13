@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PackageOpen, Eye, Search, MapPin, Phone, User, Calendar, RefreshCw } from 'lucide-react';
+import { PackageOpen, Eye, Search, MapPin, Phone, User, Calendar, RefreshCw, ArrowLeftRight, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -14,6 +14,8 @@ import { ExecutiveStageTimeline } from '@/components/executive/ExecutiveStageTim
 import { Separator } from '@/components/ui/separator';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { OrderDetailsView } from '@/components/orders/OrderDetailsView';
+import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
+import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 
 interface Order {
   id: string;
@@ -50,6 +52,8 @@ export default function ExecutiveStageAwaitingCollection() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [updatingStage, setUpdatingStage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -444,6 +448,32 @@ export default function ExecutiveStageAwaitingCollection() {
                     <Eye className="h-4 w-4" />
                     جزئیات
                   </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setTransferDialogOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <ArrowLeftRight className="h-4 w-4" />
+                    انتقال
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setCollaboratorDialogOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    همکار
+                  </Button>
                   
                   <Button
                     size="sm"
@@ -506,6 +536,28 @@ export default function ExecutiveStageAwaitingCollection() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Transfer Dialog */}
+      {selectedOrder && (
+        <ManagerOrderTransfer
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          onTransferComplete={fetchOrders}
+        />
+      )}
+
+      {/* Staff Collaborator Dialog */}
+      {selectedOrder && (
+        <ManagerAddStaffCollaborator
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={collaboratorDialogOpen}
+          onOpenChange={setCollaboratorDialogOpen}
+          onCollaboratorAdded={fetchOrders}
+        />
+      )}
     </div>
   );
 }
