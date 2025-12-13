@@ -1874,7 +1874,12 @@ export default function OrderDetail() {
           </Dialog>
 
           {/* لیست همکاران سفارش */}
-          <OrderCollaboratorsList orderId={order.id} isOwner={true} />
+          <OrderCollaboratorsList 
+            orderId={order.id} 
+            isOwner={true} 
+            ownerName={order.customer_name || ''} 
+            ownerPhone={order.customer_phone || ''} 
+          />
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
@@ -2124,6 +2129,8 @@ export default function OrderDetail() {
             open={showCollaboratorDialog}
             onOpenChange={setShowCollaboratorDialog}
             onCollaboratorAdded={fetchOrderDetails}
+            ownerName={order.customer_name || ''}
+            ownerPhone={order.customer_phone || ''}
           />
 
         </div>

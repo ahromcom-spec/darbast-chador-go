@@ -22,6 +22,8 @@ interface OrderCollaboratorsListProps {
   showForManagers?: boolean;
   isOwner?: boolean;
   onCollaboratorRemoved?: () => void;
+  ownerName?: string;
+  ownerPhone?: string;
 }
 
 const statusLabels: Record<string, { label: string; icon: React.ReactNode; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
@@ -30,11 +32,10 @@ const statusLabels: Record<string, { label: string; icon: React.ReactNode; varia
   rejected: { label: 'رد شده', icon: <X className="h-3 w-3" />, variant: 'destructive' },
 };
 
-export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwner = false, onCollaboratorRemoved }: OrderCollaboratorsListProps) {
+export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwner = false, onCollaboratorRemoved, ownerName, ownerPhone }: OrderCollaboratorsListProps) {
   const { user } = useAuth();
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
-  const [ownerInfo, setOwnerInfo] = useState<{ name: string; phone: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,21 +90,6 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwn
 
       setCollaborators(enrichedCollabs);
 
-      // Fetch order owner info if showing for managers
-      if (showForManagers) {
-        const { data: order } = await supabase
-          .from('projects_v3')
-          .select('customer_name, customer_phone')
-          .eq('id', orderId)
-          .maybeSingle();
-
-        if (order) {
-          setOwnerInfo({
-            name: order.customer_name || 'نامشخص',
-            phone: order.customer_phone || '',
-          });
-        }
-      }
     } catch (error) {
       console.error('Error fetching collaborators:', error);
     } finally {
@@ -146,26 +132,38 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwn
 
   return (
     <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
-      <div className="flex items-center gap-2 text-primary">
-        <Users className="h-5 w-5" />
-        <span className="font-semibold">همکاران این سفارش</span>
-        <Badge variant="secondary" className="mr-auto">
-          {acceptedCollaborators.length} همکار فعال
-        </Badge>
-      </div>
+      {/* Order owner section */}
+      {(ownerName || ownerPhone) && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-primary">
+            <User className="h-5 w-5" />
+            <span className="font-semibold">مالک سفارش</span>
+          </div>
+          <div className="flex items-center gap-3 p-3 bg-background rounded-md border border-border">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <User className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">{ownerName || 'نامشخص'}</span>
+              {ownerPhone && (
+                <span className="text-xs text-muted-foreground" dir="ltr">{ownerPhone}</span>
+              )}
+            </div>
+            <Badge variant="outline" className="mr-auto text-xs">ثبت‌کننده</Badge>
+          </div>
+        </div>
+      )}
 
-      {/* Owner info (for managers) */}
-      {showForManagers && ownerInfo && (
-        <div className="flex items-center gap-2 p-2 bg-background rounded-md">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">مالک اصلی:</span>
-          <span className="text-sm">{ownerInfo.name}</span>
-          {ownerInfo.phone && (
-            <>
-              <Phone className="h-3 w-3 text-muted-foreground mr-2" />
-              <span className="text-xs text-muted-foreground" dir="ltr">{ownerInfo.phone}</span>
-            </>
-          )}
+      {/* Collaborators section */}
+      {(acceptedCollaborators.length > 0 || pendingCollaborators.length > 0) && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-primary">
+            <Users className="h-5 w-5" />
+            <span className="font-semibold">همکاران این سفارش</span>
+            <Badge variant="secondary" className="mr-auto">
+              {acceptedCollaborators.length} همکار فعال
+            </Badge>
+          </div>
         </div>
       )}
 
