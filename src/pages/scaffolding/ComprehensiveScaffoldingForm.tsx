@@ -492,14 +492,79 @@ export default function ComprehensiveScaffoldingForm({
       return { total: Math.round(basePrice), pricePerMeter: null, breakdown };
     }
 
+    // محاسبه ضریب شرایط سرویس برای متراژ بالای 100
+    const getConditionsMultiplier = (): { multiplier: number; conditionBreakdown: string[] } => {
+      let multiplier = 1;
+      const conditionBreakdown: string[] = [];
+      
+      if (conditions.distanceRange === '15-25') {
+        multiplier *= 1.2;
+        conditionBreakdown.push('فاصله 15-25 کیلومتر: +20%');
+      } else if (conditions.distanceRange === '25-50') {
+        multiplier *= 1.4;
+        conditionBreakdown.push('فاصله 25-50 کیلومتر: +40%');
+      } else if (conditions.distanceRange === '50-85') {
+        multiplier *= 1.7;
+        conditionBreakdown.push('فاصله 50-85 کیلومتر: +70%');
+      }
+
+      if (!onGround && conditions.platformHeight) {
+        if (conditions.platformHeight <= 3) {
+          multiplier *= 1.2;
+          conditionBreakdown.push('ارتفاع پای کار تا 3 متر: +20%');
+        } else if (conditions.platformHeight <= 6) {
+          multiplier *= 1.4;
+          conditionBreakdown.push('ارتفاع پای کار 3-6 متر: +40%');
+        } else {
+          multiplier *= 1.6;
+          conditionBreakdown.push('ارتفاع پای کار بیش از 6 متر: +60%');
+        }
+      }
+
+      if (!onGround && conditions.scaffoldHeightFromPlatform) {
+        if (conditions.scaffoldHeightFromPlatform > 15) {
+          multiplier *= 1.2;
+          conditionBreakdown.push('ارتفاع داربست بیش از 15 متر: +20%');
+        }
+      }
+
+      if (!vehicleReachesSite && conditions.vehicleDistance) {
+        if (conditions.vehicleDistance <= 50) {
+          multiplier *= 1.1;
+          conditionBreakdown.push('فاصله خودرو تا 50 متر: +10%');
+        } else if (conditions.vehicleDistance <= 100) {
+          multiplier *= 1.15;
+          conditionBreakdown.push('فاصله خودرو 50-100 متر: +15%');
+        } else {
+          multiplier *= 1.25;
+          conditionBreakdown.push('فاصله خودرو بیش از 100 متر: +25%');
+        }
+      }
+      
+      return { multiplier, conditionBreakdown };
+    };
+
+    // متغیر برای تشخیص اینکه آیا شرایط روی فی اعمال شده یا نه
+    let conditionsAppliedToUnitPrice = false;
+
     if (activeService === 'facade') {
       if (area <= 50) {
         basePrice = 3200000;
       } else if (area <= 100) {
         basePrice = 4200000;
       } else {
-        pricePerMeter = 45000;
+        // بالای 100 متر: اعمال شرایط روی فی
+        const basePricePerMeter = 45000;
+        const { multiplier, conditionBreakdown } = getConditionsMultiplier();
+        pricePerMeter = Math.round(basePricePerMeter * multiplier);
         basePrice = area * pricePerMeter;
+        conditionsAppliedToUnitPrice = true;
+        
+        if (multiplier > 1) {
+          breakdown.push(`فی پایه: ${basePricePerMeter.toLocaleString('fa-IR')} تومان`);
+          conditionBreakdown.forEach(cb => breakdown.push(cb));
+          breakdown.push(`فی نهایی: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
+        }
       }
     } else if (activeService === 'formwork') {
       if (area <= 100) {
@@ -507,8 +572,18 @@ export default function ComprehensiveScaffoldingForm({
       } else if (area <= 200) {
         basePrice = 4000000;
       } else {
-        pricePerMeter = 20000;
+        // بالای 200 متر: اعمال شرایط روی فی
+        const basePricePerMeter = 20000;
+        const { multiplier, conditionBreakdown } = getConditionsMultiplier();
+        pricePerMeter = Math.round(basePricePerMeter * multiplier);
         basePrice = area * pricePerMeter;
+        conditionsAppliedToUnitPrice = true;
+        
+        if (multiplier > 1) {
+          breakdown.push(`فی پایه: ${basePricePerMeter.toLocaleString('fa-IR')} تومان`);
+          conditionBreakdown.forEach(cb => breakdown.push(cb));
+          breakdown.push(`فی نهایی: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
+        }
       }
     } else if (activeService === 'ceiling-beam-yonolit' || activeService === 'ceiling-beam-ceramic') {
       // زیربتن تیرچه یونولیت و سفال - قیمت یکسان
@@ -517,8 +592,18 @@ export default function ComprehensiveScaffoldingForm({
       } else if (area <= 200) {
         basePrice = 11000000;
       } else {
-        pricePerMeter = 45000;
+        // بالای 200 متر: اعمال شرایط روی فی
+        const basePricePerMeter = 45000;
+        const { multiplier, conditionBreakdown } = getConditionsMultiplier();
+        pricePerMeter = Math.round(basePricePerMeter * multiplier);
         basePrice = area * pricePerMeter;
+        conditionsAppliedToUnitPrice = true;
+        
+        if (multiplier > 1) {
+          breakdown.push(`فی پایه: ${basePricePerMeter.toLocaleString('fa-IR')} تومان`);
+          conditionBreakdown.forEach(cb => breakdown.push(cb));
+          breakdown.push(`فی نهایی: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
+        }
       }
     } else if (activeService === 'ceiling-slab') {
       // زیربتن دال و وافل
@@ -527,14 +612,25 @@ export default function ComprehensiveScaffoldingForm({
       } else if (area <= 200) {
         basePrice = 15000000;
       } else {
-        pricePerMeter = 70000;
+        // بالای 200 متر: اعمال شرایط روی فی
+        const basePricePerMeter = 70000;
+        const { multiplier, conditionBreakdown } = getConditionsMultiplier();
+        pricePerMeter = Math.round(basePricePerMeter * multiplier);
         basePrice = area * pricePerMeter;
+        conditionsAppliedToUnitPrice = true;
+        
+        if (multiplier > 1) {
+          breakdown.push(`فی پایه: ${basePricePerMeter.toLocaleString('fa-IR')} تومان`);
+          conditionBreakdown.forEach(cb => breakdown.push(cb));
+          breakdown.push(`فی نهایی: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
+        }
       }
     }
 
     breakdown.push(`قیمت پایه: ${basePrice.toLocaleString('fa-IR')} تومان`);
 
-    if (conditions.currentMonth === 1) {
+    // اگر شرایط قبلاً روی فی اعمال شده، دوباره اعمال نشود
+    if (conditions.currentMonth === 1 && !conditionsAppliedToUnitPrice) {
       let monthMultiplier = 1;
 
       if (conditions.distanceRange === '15-25') {
