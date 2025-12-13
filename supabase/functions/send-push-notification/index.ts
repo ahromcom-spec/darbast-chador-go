@@ -54,32 +54,33 @@ serve(async (req) => {
         // Prepare notification data for Najva API
         // Based on Najva API documentation: https://app.najva.com/api/v1/notifications/
         const notificationData: Record<string, unknown> = {
-          api_key: najvaApiKey,
-          title: title,
-          body: body,
+          title,
+          body,
+          onclick_action: 0, // open-link
           url: link ? `https://ahrom.org${link}` : 'https://ahrom.org/',
           icon: 'https://ahrom.org/icon-512.png',
         };
 
         // Add special handling for incoming calls
         if (type === 'incoming-call' && callData) {
-          notificationData.data = {
+          notificationData.json = JSON.stringify({
             type: 'incoming-call',
             orderId: callData.orderId,
             callerName: callData.callerName,
-            callerId: callData.callerId
-          };
+            callerId: callData.callerId,
+          });
         }
 
         console.log('[Push] Najva request data:', JSON.stringify(notificationData));
 
-        const response = await fetch('https://app.najva.com/api/v1/notifications/', {
+        const response = await fetch('https://app.najva.com/api/v2/notification/management/send-campaign/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Token ${najvaApiToken}`
+            'Authorization': `Token ${najvaApiToken}`,
+            'X-api-key': najvaApiKey,
           },
-          body: JSON.stringify(notificationData)
+          body: JSON.stringify(notificationData),
         });
 
         const responseText = await response.text();
