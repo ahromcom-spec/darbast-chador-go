@@ -33,6 +33,8 @@ interface AddCollaboratorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCollaboratorAdded?: () => void;
+  ownerName?: string;
+  ownerPhone?: string;
 }
 
 interface Collaborator {
@@ -54,7 +56,7 @@ const statusLabels: Record<string, { label: string; variant: 'default' | 'second
   rejected: { label: 'رد شده', variant: 'destructive' },
 };
 
-export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onCollaboratorAdded }: AddCollaboratorProps) {
+export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onCollaboratorAdded, ownerName, ownerPhone }: AddCollaboratorProps) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -286,6 +288,29 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
             همکارانی را به سفارش {orderCode} اضافه کنید تا با شما روی این سفارش کار کنند
           </DialogDescription>
         </DialogHeader>
+
+        {/* Order Owner Section */}
+        {(ownerName || ownerPhone) && (
+          <div className="bg-primary/5 rounded-lg p-3 border border-primary/20">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-medium text-primary">مالک سفارش (ثبت‌کننده)</span>
+            </div>
+            <div className="flex items-center gap-3 p-2 bg-background rounded-md">
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-medium text-primary">
+                  {(ownerName || 'م')[0]}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{ownerName || 'نامشخص'}</p>
+                {ownerPhone && (
+                  <p className="text-xs text-muted-foreground" dir="ltr">{ownerPhone}</p>
+                )}
+              </div>
+              <Badge variant="outline" className="text-xs flex-shrink-0">ثبت‌کننده</Badge>
+            </div>
+          </div>
+        )}
 
         {/* Existing Collaborators - Always show this section */}
         <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
