@@ -75,7 +75,7 @@ export default function SalesCompletedOrders() {
         `)
         .eq('status', 'completed')
         .eq('subcategory_id', '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d')
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 

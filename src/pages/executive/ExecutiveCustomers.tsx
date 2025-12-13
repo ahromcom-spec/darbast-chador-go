@@ -76,7 +76,7 @@ export default function ExecutiveCustomers() {
             .from('projects_v3')
             .select('id, code, status, execution_stage, address, created_at')
             .eq('customer_id', customer.id)
-            .order('created_at', { ascending: false });
+            .order('code', { ascending: false });
 
           return {
             id: customer.id,

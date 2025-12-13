@@ -52,7 +52,7 @@ export default function SalesOrders() {
           created_at
         `)
         .eq('status', 'completed')
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 
