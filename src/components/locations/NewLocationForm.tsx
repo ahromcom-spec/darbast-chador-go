@@ -114,6 +114,16 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
       return;
     }
 
+    // بررسی انتخاب موقعیت روی نقشه
+    if (!hasMapPin) {
+      toast({
+        title: 'موقعیت الزامی است',
+        description: 'لطفاً موقعیت آدرس را روی نقشه مشخص کنید',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -208,6 +218,15 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
         </Alert>
       )}
       
+      {!hasMapPin && (
+        <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900">
+          <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <AlertDescription className="text-amber-800 dark:text-amber-300">
+            لطفاً موقعیت آدرس را روی نقشه مشخص کنید
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div>
         <Label htmlFor="title">عنوان آدرس (اختیاری)</Label>
         <Input
@@ -289,7 +308,7 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
         />
       </div>
 
-      <Button type="submit" className="w-full" disabled={!isQomSelected || isSubmitting}>
+      <Button type="submit" className="w-full" disabled={!isQomSelected || !hasMapPin || isSubmitting}>
         {isSubmitting ? (
           <>
             <Loader2 className="w-4 h-4 ml-2 animate-spin" />
