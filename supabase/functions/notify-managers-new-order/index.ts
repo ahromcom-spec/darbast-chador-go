@@ -97,7 +97,7 @@ serve(async (req) => {
 
         console.log('[NotifyManagers] Najva request data:', JSON.stringify(notificationData));
 
-        const response = await fetch('https://app.najva.com/api/v2/notification/management/send-campaign/', {
+        const response = await fetch('https://app.najva.com/api/v1/notifications', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
