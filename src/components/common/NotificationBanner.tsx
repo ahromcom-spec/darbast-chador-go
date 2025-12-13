@@ -143,7 +143,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
     <Dialog open={showDialog} onOpenChange={(open) => {
       if (!open) handleDismiss();
     }}>
-      <DialogContent className="max-w-sm sm:max-w-md border-0 bg-card/95 backdrop-blur-xl shadow-2xl rounded-2xl p-0 overflow-hidden">
+      <DialogContent className="max-w-[420px] w-[90vw] border-0 bg-card/95 backdrop-blur-xl shadow-2xl rounded-3xl p-0 overflow-hidden">
         {/* دکمه بستن */}
         <button
           onClick={handleDismiss}
@@ -203,16 +203,16 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
           </div>
         ) : (
           /* حالت عادی درخواست اعلان - طراحی همسو با سایت */
-          <div className="p-6 pt-10 space-y-5">
+          <div className="px-8 py-8 pt-12 space-y-6">
             {/* آیکون زنگ با استایل طلایی */}
             <div className="flex items-center justify-center">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-2 border-amber-500/30 shadow-lg">
-                <Bell className="h-10 w-10 text-amber-500" />
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-400/25 to-amber-500/15 border border-amber-400/40">
+                <Bell className="h-12 w-12 text-amber-500" />
               </div>
             </div>
             
             {/* عنوان */}
-            <h2 className="text-center text-xl font-bold text-foreground">
+            <h2 className="text-center text-2xl font-bold text-foreground">
               پیام های سایت
             </h2>
             
@@ -224,7 +224,7 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
             {/* دکمه بله - آبی مطابق استایل سایت */}
             <Button 
               onClick={handleEnable} 
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg py-6 text-base rounded-xl"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg py-7 text-lg rounded-2xl mt-4"
               size="lg"
               disabled={enabling}
             >
