@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { DollarSign, Eye, Search, MapPin, Phone, User, CheckCircle2, Calendar } from 'lucide-react';
+import { DollarSign, Eye, Search, MapPin, Phone, User, CheckCircle2, Calendar, ArrowRightLeft, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -14,6 +14,8 @@ import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
+import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
+import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 
 // Helper function to parse order notes (handles double-stringified JSON)
 const parseOrderNotes = (notes: string | null | undefined): any => {
@@ -56,6 +58,8 @@ export default function ExecutiveCompleted() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [collaboratorOpen, setCollaboratorOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
@@ -252,6 +256,32 @@ export default function ExecutiveCompleted() {
                     جزئیات
                   </Button>
                   
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setTransferOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                    انتقال
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setCollaboratorOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    همکار
+                  </Button>
+                  
                   <div className="bg-yellow-50 dark:bg-yellow-950 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-yellow-600" />
                     <span>در انتظار پرداخت توسط مشتری</span>
@@ -283,6 +313,28 @@ export default function ExecutiveCompleted() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Transfer Dialog */}
+      {selectedOrder && (
+        <ManagerOrderTransfer
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={transferOpen}
+          onOpenChange={setTransferOpen}
+          onTransferComplete={fetchOrders}
+        />
+      )}
+
+      {/* Collaborator Dialog */}
+      {selectedOrder && (
+        <ManagerAddStaffCollaborator
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={collaboratorOpen}
+          onOpenChange={setCollaboratorOpen}
+          onCollaboratorAdded={fetchOrders}
+        />
+      )}
     </div>
   );
 }
