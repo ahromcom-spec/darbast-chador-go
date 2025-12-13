@@ -37,10 +37,11 @@ interface ManagerAddStaffCollaboratorProps {
 }
 
 interface StaffMember {
-  user_id: string;
+  user_id: string | null;
   full_name: string;
   phone_number: string;
   role: string;
+  is_registered: boolean;
 }
 
 interface StaffCollaborator {
@@ -61,6 +62,8 @@ const roleLabels: Record<string, string> = {
   finance_manager: 'مدیر مالی',
   scaffold_executive_manager: 'مدیر اجرایی داربست',
   executive_manager_scaffold_execution_with_materials: 'مدیر اجرایی داربست با اجناس',
+  warehouse_manager: 'مدیر انبارداری',
+  operations_manager: 'مدیر عملیات',
 };
 
 const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -120,7 +123,15 @@ export function ManagerAddStaffCollaborator({
 
       if (collabError) throw collabError;
 
-      // Get all users with manager/staff roles
+      // 1. Get whitelisted staff from phone_whitelist
+      const { data: whitelistData, error: whitelistError } = await supabase
+        .from('phone_whitelist')
+        .select('phone_number, allowed_roles, notes')
+        .not('allowed_roles', 'cs', '{"customer"}');
+
+      if (whitelistError) throw whitelistError;
+
+      // 2. Get all registered users with manager/staff roles
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role')
@@ -131,68 +142,104 @@ export function ManagerAddStaffCollaborator({
           'sales_manager',
           'finance_manager',
           'scaffold_executive_manager',
-          'executive_manager_scaffold_execution_with_materials'
+          'executive_manager_scaffold_execution_with_materials',
+          'warehouse_manager',
+          'operations_manager'
         ]);
 
       if (rolesError) throw rolesError;
 
+      // 3. Fetch profiles for registered users
+      let profilesData: any[] = [];
       if (rolesData && rolesData.length > 0) {
         const userIds = [...new Set(rolesData.map(r => r.user_id))];
-        const { data: profilesData, error: profilesError } = await supabase
+        const { data, error: profilesError } = await supabase
           .from('profiles')
           .select('user_id, full_name, phone_number')
           .in('user_id', userIds);
 
         if (profilesError) throw profilesError;
-
-        // Build staff list excluding current user and already added collaborators
-        const existingCollabUserIds = new Set(
-          collabData?.filter(c => c.status !== 'rejected').map(c => c.invitee_user_id) || []
-        );
-
-        const staffList: StaffMember[] = rolesData
-          .filter(r => r.user_id !== user?.id && !existingCollabUserIds.has(r.user_id))
-          .map(role => {
-            const profile = profilesData?.find(p => p.user_id === role.user_id);
-            return {
-              user_id: role.user_id,
-              full_name: profile?.full_name || 'نامشخص',
-              phone_number: profile?.phone_number || '',
-              role: role.role,
-            };
-          });
-
-        // Remove duplicates
-        const uniqueStaff = staffList.reduce((acc: StaffMember[], current) => {
-          const exists = acc.find(item => item.user_id === current.user_id);
-          if (!exists) {
-            acc.push(current);
-          }
-          return acc;
-        }, []);
-
-        setStaffMembers(uniqueStaff);
-        setFilteredStaff(uniqueStaff);
-
-        // Enrich existing collaborators with profile and role info
-        const enrichedCollabs: StaffCollaborator[] = await Promise.all(
-          (collabData || []).map(async (collab) => {
-            const profile = profilesData?.find(p => p.user_id === collab.invitee_user_id);
-            const roleInfo = rolesData.find(r => r.user_id === collab.invitee_user_id);
-            return {
-              ...collab,
-              full_name: profile?.full_name || 'نامشخص',
-              phone_number: profile?.phone_number || collab.invitee_phone_number,
-              role: roleInfo?.role,
-            };
-          })
-        );
-        setExistingCollaborators(enrichedCollabs.filter(c => c.status !== 'rejected'));
-      } else {
-        setStaffMembers([]);
-        setFilteredStaff([]);
-        setExistingCollaborators([]);
+        profilesData = data || [];
       }
+
+      // Build staff list excluding current user and already added collaborators
+      const existingCollabUserIds = new Set(
+        collabData?.filter(c => c.status !== 'rejected').map(c => c.invitee_user_id) || []
+      );
+      const existingCollabPhones = new Set(
+        collabData?.filter(c => c.status !== 'rejected').map(c => c.invitee_phone_number) || []
+      );
+
+      const staffList: StaffMember[] = [];
+      const processedPhones = new Set<string>();
+
+      // First add registered users
+      if (rolesData) {
+        for (const role of rolesData) {
+          if (role.user_id === user?.id) continue;
+          if (existingCollabUserIds.has(role.user_id)) continue;
+          
+          const profile = profilesData.find(p => p.user_id === role.user_id);
+          if (profile?.phone_number) {
+            if (existingCollabPhones.has(profile.phone_number)) continue;
+            processedPhones.add(profile.phone_number);
+          }
+          
+          staffList.push({
+            user_id: role.user_id,
+            full_name: profile?.full_name || 'نامشخص',
+            phone_number: profile?.phone_number || '',
+            role: role.role,
+            is_registered: true,
+          });
+        }
+      }
+
+      // Then add whitelisted staff who haven't registered yet
+      if (whitelistData) {
+        for (const entry of whitelistData) {
+          if (processedPhones.has(entry.phone_number)) continue;
+          if (existingCollabPhones.has(entry.phone_number)) continue;
+          
+          const roles = entry.allowed_roles as string[];
+          const primaryRole = roles[0] || 'staff';
+          
+          staffList.push({
+            user_id: null,
+            full_name: entry.notes || 'پرسنل اهرم',
+            phone_number: entry.phone_number,
+            role: primaryRole,
+            is_registered: false,
+          });
+        }
+      }
+
+      // Remove duplicates by phone number
+      const uniqueStaff = staffList.reduce((acc: StaffMember[], current) => {
+        const exists = acc.find(item => item.phone_number === current.phone_number);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      setStaffMembers(uniqueStaff);
+      setFilteredStaff(uniqueStaff);
+
+      // Enrich existing collaborators with profile and role info
+      const enrichedCollabs: StaffCollaborator[] = await Promise.all(
+        (collabData || []).map(async (collab) => {
+          const profile = profilesData?.find(p => p.user_id === collab.invitee_user_id);
+          const roleInfo = rolesData?.find(r => r.user_id === collab.invitee_user_id);
+          return {
+            ...collab,
+            full_name: profile?.full_name || 'نامشخص',
+            phone_number: profile?.phone_number || collab.invitee_phone_number,
+            role: roleInfo?.role,
+          };
+        })
+      );
+      setExistingCollaborators(enrichedCollabs.filter(c => c.status !== 'rejected'));
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -207,6 +254,16 @@ export function ManagerAddStaffCollaborator({
 
   const handleAddCollaborator = async () => {
     if (!selectedStaff || !user) return;
+
+    // Check if staff is registered
+    if (!selectedStaff.is_registered || !selectedStaff.user_id) {
+      toast({
+        variant: 'destructive',
+        title: 'پرسنل ثبت‌نام نکرده',
+        description: `${selectedStaff.full_name} هنوز در سیستم ثبت‌نام نکرده است. لطفاً ابتدا از وی بخواهید ثبت‌نام کند.`,
+      });
+      return;
+    }
 
     setAdding(true);
     try {
@@ -402,19 +459,21 @@ export function ManagerAddStaffCollaborator({
                 <div className="space-y-2">
                   {filteredStaff.map((staff) => (
                     <Card 
-                      key={staff.user_id}
+                      key={staff.user_id || staff.phone_number}
                       className={`cursor-pointer transition-all hover:border-primary/50 ${
-                        selectedStaff?.user_id === staff.user_id 
+                        selectedStaff?.phone_number === staff.phone_number 
                           ? 'border-primary bg-primary/5' 
                           : ''
-                      }`}
+                      } ${!staff.is_registered ? 'opacity-70' : ''}`}
                       onClick={() => setSelectedStaff(staff)}
                     >
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                              <User className="h-4 w-4 text-primary" />
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                              staff.is_registered ? 'bg-primary/10' : 'bg-muted'
+                            }`}>
+                              <User className={`h-4 w-4 ${staff.is_registered ? 'text-primary' : 'text-muted-foreground'}`} />
                             </div>
                             <div>
                               <p className="text-sm font-medium">{staff.full_name}</p>
@@ -423,12 +482,17 @@ export function ManagerAddStaffCollaborator({
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap justify-end">
                             <Badge variant="outline" className="text-xs">
                               <Briefcase className="h-3 w-3 ml-1" />
                               {roleLabels[staff.role] || staff.role}
                             </Badge>
-                            {selectedStaff?.user_id === staff.user_id && (
+                            {!staff.is_registered && (
+                              <Badge variant="secondary" className="text-xs text-amber-600">
+                                ثبت‌نام نشده
+                              </Badge>
+                            )}
+                            {selectedStaff?.phone_number === staff.phone_number && (
                               <CheckCircle className="h-4 w-4 text-primary" />
                             )}
                           </div>
