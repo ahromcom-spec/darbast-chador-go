@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
-import { Users, User, Phone, Check, Clock, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, User, Phone, Check, Clock, X, Trash2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface Collaborator {
   id: string;
@@ -17,6 +20,8 @@ interface Collaborator {
 interface OrderCollaboratorsListProps {
   orderId: string;
   showForManagers?: boolean;
+  isOwner?: boolean;
+  onCollaboratorRemoved?: () => void;
 }
 
 const statusLabels: Record<string, { label: string; icon: React.ReactNode; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
@@ -25,10 +30,12 @@ const statusLabels: Record<string, { label: string; icon: React.ReactNode; varia
   rejected: { label: 'رد شده', icon: <X className="h-3 w-3" />, variant: 'destructive' },
 };
 
-export function OrderCollaboratorsList({ orderId, showForManagers = false }: OrderCollaboratorsListProps) {
+export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwner = false, onCollaboratorRemoved }: OrderCollaboratorsListProps) {
+  const { user } = useAuth();
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
   const [ownerInfo, setOwnerInfo] = useState<{ name: string; phone: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCollaborators();
@@ -104,6 +111,27 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false }: Ord
     }
   };
 
+  const deleteCollaborator = async (collaboratorId: string) => {
+    try {
+      setDeletingId(collaboratorId);
+      const { error } = await supabase
+        .from('order_collaborators')
+        .delete()
+        .eq('id', collaboratorId);
+
+      if (error) throw error;
+
+      setCollaborators(prev => prev.filter(c => c.id !== collaboratorId));
+      toast.success('همکار با موفقیت حذف شد');
+      onCollaboratorRemoved?.();
+    } catch (error) {
+      console.error('Error deleting collaborator:', error);
+      toast.error('خطا در حذف همکار');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (loading) {
     return null;
   }
@@ -151,17 +179,30 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false }: Ord
                 <span className="text-sm font-medium">{collab.invitee_name || 'کاربر'}</span>
                 <span className="text-xs text-muted-foreground" dir="ltr">({collab.invitee_phone_number})</span>
               </div>
-              <Badge variant={statusLabels.accepted.variant} className="gap-1 text-xs">
-                {statusLabels.accepted.icon}
-                {statusLabels.accepted.label}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={statusLabels.accepted.variant} className="gap-1 text-xs">
+                  {statusLabels.accepted.icon}
+                  {statusLabels.accepted.label}
+                </Badge>
+                {isOwner && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => deleteCollaborator(collab.id)}
+                    disabled={deletingId === collab.id}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Pending invitations (for managers) */}
-      {showForManagers && pendingCollaborators.length > 0 && (
+      {/* Pending invitations (for managers or owner) */}
+      {(showForManagers || isOwner) && pendingCollaborators.length > 0 && (
         <div className="space-y-2 pt-2 border-t">
           <span className="text-xs text-muted-foreground">دعوت‌های در انتظار:</span>
           {pendingCollaborators.map((collab) => (
@@ -170,10 +211,23 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false }: Ord
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm" dir="ltr">{collab.invitee_phone_number}</span>
               </div>
-              <Badge variant={statusLabels.pending.variant} className="gap-1 text-xs">
-                {statusLabels.pending.icon}
-                {statusLabels.pending.label}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={statusLabels.pending.variant} className="gap-1 text-xs">
+                  {statusLabels.pending.icon}
+                  {statusLabels.pending.label}
+                </Badge>
+                {isOwner && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => deleteCollaborator(collab.id)}
+                    disabled={deletingId === collab.id}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </div>

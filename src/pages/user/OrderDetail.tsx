@@ -1874,7 +1874,7 @@ export default function OrderDetail() {
           </Dialog>
 
           {/* لیست همکاران سفارش */}
-          <OrderCollaboratorsList orderId={order.id} />
+          <OrderCollaboratorsList orderId={order.id} isOwner={true} />
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
