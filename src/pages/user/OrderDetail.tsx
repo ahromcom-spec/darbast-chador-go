@@ -1884,6 +1884,8 @@ export default function OrderDetail() {
             ownerPhone={order.customer_phone || ''}
             transferredFromUserId={order.transferred_from_user_id}
             transferredFromPhone={order.transferred_from_phone}
+            executedBy={order.executed_by}
+            approvedBy={order.approved_by}
           />
 
           {/* لیست همکاران سفارش */}
