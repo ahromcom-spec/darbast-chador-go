@@ -13,13 +13,14 @@ import {
   UserPlus,
   Check,
   Clock,
-  X
+  X,
+  Briefcase
 } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 
 interface ChainItem {
   id: string;
-  type: 'owner' | 'transfer' | 'collaborator';
+  type: 'owner' | 'transfer' | 'collaborator' | 'manager';
   from_user_id?: string;
   from_name?: string;
   from_phone?: string;
@@ -29,6 +30,7 @@ interface ChainItem {
   status?: string;
   created_at: string;
   is_current_owner?: boolean;
+  role?: string;
 }
 
 interface OrderOwnershipChainProps {
@@ -38,6 +40,8 @@ interface OrderOwnershipChainProps {
   ownerPhone?: string;
   transferredFromUserId?: string;
   transferredFromPhone?: string;
+  executedBy?: string;
+  approvedBy?: string;
 }
 
 export function OrderOwnershipChain({ 
@@ -46,14 +50,16 @@ export function OrderOwnershipChain({
   ownerName, 
   ownerPhone,
   transferredFromUserId,
-  transferredFromPhone 
+  transferredFromPhone,
+  executedBy,
+  approvedBy
 }: OrderOwnershipChainProps) {
   const [chainItems, setChainItems] = useState<ChainItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchOwnershipChain();
-  }, [orderId, currentOwnerId]);
+  }, [orderId, currentOwnerId, executedBy, approvedBy]);
 
   const fetchOwnershipChain = async () => {
     try {
@@ -189,6 +195,44 @@ export function OrderOwnershipChain({
         }
       }
 
+      // 6. Add executed_by manager if exists
+      if (executedBy) {
+        const { data: executorProfile } = await supabase
+          .from('profiles')
+          .select('full_name, phone_number')
+          .eq('user_id', executedBy)
+          .maybeSingle();
+
+        // Get role from user_roles
+        const { data: executorRoles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', executedBy);
+
+        const roleName = executorRoles?.map(r => {
+          const roleLabels: Record<string, string> = {
+            'scaffold_executive_manager': 'مدیر اجرایی داربست',
+            'executive_manager_scaffold_execution_with_materials': 'مدیر اجرایی داربست با اجناس',
+            'sales_manager': 'مدیر فروش',
+            'general_manager': 'مدیر کل',
+            'ceo': 'مدیرعامل',
+            'admin': 'مدیر سیستم'
+          };
+          return roleLabels[r.role] || r.role;
+        }).join(', ') || 'مدیر اجرایی';
+
+        items.push({
+          id: 'executed-by-' + executedBy,
+          type: 'manager',
+          to_user_id: executedBy,
+          to_name: executorProfile?.full_name || 'مدیر اجرایی',
+          to_phone: executorProfile?.phone_number || '',
+          created_at: new Date().toISOString(),
+          is_current_owner: false,
+          role: roleName
+        });
+      }
+
       // Sort by date
       items.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
@@ -232,9 +276,9 @@ export function OrderOwnershipChain({
     );
   }
 
-  // If no transfers or collaborators, just show simple owner
-  if (chainItems.length <= 1 && !chainItems.some(item => item.type === 'transfer' || item.type === 'collaborator')) {
-    return null; // Don't show the chain if there's only the owner with no transfers/collaborators
+  // If no transfers, collaborators, or managers, just show simple owner
+  if (chainItems.length <= 1 && !chainItems.some(item => item.type === 'transfer' || item.type === 'collaborator' || item.type === 'manager')) {
+    return null; // Don't show the chain if there's only the owner with no transfers/collaborators/managers
   }
 
   return (
@@ -259,11 +303,14 @@ export function OrderOwnershipChain({
                     ? 'bg-primary/10 border-primary text-primary' 
                     : item.type === 'transfer'
                       ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-600 dark:text-green-400'
+                      : item.type === 'manager'
+                        ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-500 text-purple-600 dark:text-purple-400'
+                        : 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-600 dark:text-green-400'
                 }`}>
                   {item.type === 'owner' && <Crown className="h-4 w-4" />}
                   {item.type === 'transfer' && <ArrowLeftRight className="h-4 w-4" />}
                   {item.type === 'collaborator' && <UserPlus className="h-4 w-4" />}
+                  {item.type === 'manager' && <Briefcase className="h-4 w-4" />}
                 </div>
 
                 {/* Content */}
@@ -275,6 +322,7 @@ export function OrderOwnershipChain({
                         {item.type === 'owner' && 'ثبت‌کننده اصلی سفارش'}
                         {item.type === 'transfer' && 'انتقال سفارش'}
                         {item.type === 'collaborator' && 'افزودن همکار'}
+                        {item.type === 'manager' && 'مدیر مسئول سفارش'}
                       </span>
                       {item.status && getStatusBadge(item.status)}
                     </div>
@@ -332,8 +380,23 @@ export function OrderOwnershipChain({
                       </div>
                     )}
 
+                    {item.type === 'manager' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Briefcase className="h-4 w-4 text-muted-foreground" />
+                          <span>{item.to_name}</span>
+                          {item.to_phone && (
+                            <span className="text-muted-foreground" dir="ltr">({item.to_phone})</span>
+                          )}
+                        </div>
+                        {item.role && (
+                          <Badge variant="secondary" className="text-xs">{item.role}</Badge>
+                        )}
+                      </div>
+                    )}
+
                     {/* Date */}
-                    {item.type !== 'owner' && (
+                    {item.type !== 'owner' && item.type !== 'manager' && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
                         <Calendar className="h-3 w-3" />
                         <span>{formatPersianDate(item.created_at, { showDayOfWeek: true })}</span>
