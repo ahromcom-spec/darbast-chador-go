@@ -51,6 +51,7 @@ import {
 import { OrderTransfer } from "@/components/orders/OrderTransfer";
 import { AddCollaborator } from "@/components/orders/AddCollaborator";
 import { OrderCollaboratorsList } from "@/components/orders/OrderCollaboratorsList";
+import { OrderOwnershipChain } from "@/components/orders/OrderOwnershipChain";
 import { RepairRequestDialog } from "@/components/orders/RepairRequestDialog";
 import { CollectionRequestDialog } from "@/components/orders/CollectionRequestDialog";
 import { ManagerOrderInvoice } from "@/components/orders/ManagerOrderInvoice";
@@ -94,6 +95,8 @@ interface Order {
   district_id?: string;
   customer_name?: string;
   customer_phone?: string;
+  transferred_from_user_id?: string;
+  transferred_from_phone?: string;
   subcategory?: {
     name: string;
     code: string;
@@ -1872,6 +1875,16 @@ export default function OrderDetail() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* زنجیره مالکیت سفارش */}
+          <OrderOwnershipChain
+            orderId={order.id}
+            currentOwnerId={order.customer_id}
+            ownerName={order.customer_name || ''}
+            ownerPhone={order.customer_phone || ''}
+            transferredFromUserId={order.transferred_from_user_id}
+            transferredFromPhone={order.transferred_from_phone}
+          />
 
           {/* لیست همکاران سفارش */}
           <OrderCollaboratorsList 
