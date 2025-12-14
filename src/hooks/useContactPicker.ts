@@ -22,13 +22,18 @@ export function useContactPicker() {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const { toast } = useToast();
 
-  const isSupported = typeof navigator !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in window;
+  const isSupported =
+    typeof navigator !== 'undefined' &&
+    typeof window !== 'undefined' &&
+    'contacts' in navigator &&
+    typeof navigator.contacts?.select === 'function';
 
   const pickContact = async (): Promise<ContactPickerResult | null> => {
     if (!isSupported) {
       toast({
         title: 'پشتیبانی نمی‌شود',
-        description: 'مرورگر شما از دسترسی به مخاطبین پشتیبانی نمی‌کند. لطفاً از مرورگر Chrome در اندروید استفاده کنید.',
+        description:
+          'مرورگر شما از دسترسی به مخاطبین پشتیبانی نمی‌کند. لطفاً از مرورگر Chrome در اندروید استفاده کنید.',
         variant: 'destructive',
       });
       return null;
@@ -37,12 +42,12 @@ export function useContactPicker() {
     try {
       setIsPickerOpen(true);
       const contacts = await navigator.contacts!.select(['name', 'tel'], { multiple: false });
-      
+
       if (contacts && contacts.length > 0) {
         const contact = contacts[0];
         const name = contact.name?.[0] || '';
         let phone = contact.tel?.[0] || '';
-        
+
         // Format phone number
         phone = phone.replace(/\D/g, '');
         if (phone.startsWith('98')) {
@@ -55,20 +60,36 @@ export function useContactPicker() {
 
         return { name, phone };
       }
-      
+
+      toast({
+        title: 'مخاطبی نمایش داده نشد',
+        description:
+          'هیچ مخاطبی از طرف مرورگر برنگشت. اگر روی گوشی خود مخاطب دارید، لطفاً در تنظیمات مرورگر، دسترسی به مخاطبین (Contacts) را روی اجازه (Allow) قرار دهید.',
+        variant: 'destructive',
+      });
+
       return null;
     } catch (error: any) {
       // User cancelled the picker
-      if (error.name === 'InvalidStateError' || error.name === 'AbortError') {
+      if (error?.name === 'InvalidStateError' || error?.name === 'AbortError') {
         return null;
       }
-      
-      console.error('Contact picker error:', error);
-      toast({
-        title: 'خطا',
-        description: 'دسترسی به مخاطبین با خطا مواجه شد',
-        variant: 'destructive',
-      });
+
+      if (error?.name === 'NotAllowedError' || error?.name === 'SecurityError') {
+        toast({
+          title: 'دسترسی به مخاطبین مسدود است',
+          description:
+            'برای استفاده از این امکان، در تنظیمات مرورگر (Site settings) دسترسی Contacts را برای ahrom.ir روی Allow قرار دهید.',
+          variant: 'destructive',
+        });
+      } else {
+        console.error('Contact picker error:', error);
+        toast({
+          title: 'خطا',
+          description: 'دسترسی به مخاطبین با خطا مواجه شد',
+          variant: 'destructive',
+        });
+      }
       return null;
     } finally {
       setIsPickerOpen(false);
