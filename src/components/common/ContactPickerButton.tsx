@@ -1,6 +1,12 @@
 import { Button } from '@/components/ui/button';
 import { Contact, Loader2 } from 'lucide-react';
 import { useContactPicker } from '@/hooks/useContactPicker';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ContactPickerButtonProps {
   onContactSelected: (phone: string, name?: string) => void;
@@ -9,7 +15,7 @@ interface ContactPickerButtonProps {
 }
 
 export function ContactPickerButton({ onContactSelected, disabled, className }: ContactPickerButtonProps) {
-  const { pickContact, isPickerOpen } = useContactPicker();
+  const { pickContact, isPickerOpen, isSupported } = useContactPicker();
 
   const handleClick = async () => {
     const contact = await pickContact();
@@ -19,20 +25,33 @@ export function ContactPickerButton({ onContactSelected, disabled, className }: 
   };
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="icon"
-      onClick={handleClick}
-      disabled={disabled || isPickerOpen}
-      className={className}
-      title="انتخاب از مخاطبین"
-    >
-      {isPickerOpen ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Contact className="h-4 w-4" />
-      )}
-    </Button>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={handleClick}
+            disabled={disabled || isPickerOpen}
+            className={className}
+            title="انتخاب از مخاطبین"
+          >
+            {isPickerOpen ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Contact className="h-4 w-4" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-center">
+          {isSupported ? (
+            <p>انتخاب شماره از مخاطبین گوشی</p>
+          ) : (
+            <p>این قابلیت فقط در مرورگر Chrome روی گوشی اندروید کار می‌کند</p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
