@@ -160,7 +160,7 @@ export default function SalesDashboard() {
             onClick={() => navigate('/sales/orders')}
           >
             <DollarSign className="h-4 w-4" />
-            مدیریت تسویه سفارشات
+            مشتریان
           </Button>
         </CardContent>
       </Card>
