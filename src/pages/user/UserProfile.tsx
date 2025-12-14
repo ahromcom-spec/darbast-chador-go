@@ -414,8 +414,197 @@ const fetchOrders = async () => {
                 <LoadingSpinner size="md" text="در حال بارگذاری..." />
               </div>
             }>
+              {/* Manager Quick Access Section */}
+              {isManager && (
+                <div className="space-y-4">
+                  <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                    <span>دسترسی سریع مدیریتی</span>
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Sales Manager Quick Links */}
+                    {isSalesManager && (
+                      <>
+                        <button
+                          onClick={() => navigate('/sales')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                              <ClipboardList className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">داشبورد فروش</div>
+                              <div className="text-xs text-muted-foreground">مدیریت سفارشات فروش</div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => navigate('/sales/pending-orders')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-orange-100 group-hover:bg-orange-200 transition-colors">
+                              <ClipboardList className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">سفارشات در انتظار تایید</div>
+                              <div className="text-xs text-muted-foreground">بررسی و تایید سفارشات</div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => navigate('/sales/customers')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                              <Users className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">مدیریت مشتریان</div>
+                              <div className="text-xs text-muted-foreground">لیست و اطلاعات مشتریان</div>
+                            </div>
+                          </div>
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* Executive Manager Quick Links */}
+                    {isExecutiveManager && (
+                      <>
+                        <button
+                          onClick={() => navigate('/executive')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                              <ClipboardList className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">داشبورد اجرایی</div>
+                              <div className="text-xs text-muted-foreground">مدیریت سفارشات اجرایی</div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => navigate('/executive/pending-orders')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-orange-100 group-hover:bg-orange-200 transition-colors">
+                              <ClipboardList className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">سفارشات در انتظار تایید</div>
+                              <div className="text-xs text-muted-foreground">بررسی و تایید سفارشات</div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => navigate('/executive/customers')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                              <Users className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">مدیریت مشتریان</div>
+                              <div className="text-xs text-muted-foreground">لیست و اطلاعات مشتریان</div>
+                            </div>
+                          </div>
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* CEO Quick Links */}
+                    {isCEO && (
+                      <>
+                        <button
+                          onClick={() => navigate('/ceo')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                              <ClipboardList className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">داشبورد مدیرعامل</div>
+                              <div className="text-xs text-muted-foreground">نظارت بر کل سیستم</div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => navigate('/ceo/orders')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-orange-100 group-hover:bg-orange-200 transition-colors">
+                              <ClipboardList className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">همه سفارشات</div>
+                              <div className="text-xs text-muted-foreground">مشاهده تمام سفارشات</div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => navigate('/ceo/whitelist')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-green-100 group-hover:bg-green-200 transition-colors">
+                              <Users className="h-5 w-5 text-green-600" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">مدیریت لیست سفید</div>
+                              <div className="text-xs text-muted-foreground">پرسنل و شماره‌ها</div>
+                            </div>
+                          </div>
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* General Manager Quick Links */}
+                    {isGeneralManager && (
+                      <>
+                        <button
+                          onClick={() => navigate('/admin')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                              <ClipboardList className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">داشبورد مدیریت</div>
+                              <div className="text-xs text-muted-foreground">مدیریت کلی سیستم</div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => navigate('/admin/orders')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-orange-100 group-hover:bg-orange-200 transition-colors">
+                              <ClipboardList className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">سفارشات</div>
+                              <div className="text-xs text-muted-foreground">مدیریت همه سفارشات</div>
+                            </div>
+                          </div>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Support Ticket Section */}
-              <div className="space-y-4">
+              <div className="space-y-4 pt-6 border-t">
                 <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
                   <span>ثبت تیکت پشتیبانی</span>
