@@ -17,6 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { UserPlus, Search, CheckCircle, XCircle, ArrowLeftRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
+import { ContactPickerButton } from '@/components/common/ContactPickerButton';
 
 interface OrderTransferProps {
   orderId: string;
@@ -314,6 +315,10 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   className="flex-1"
                   dir="ltr"
+                />
+                <ContactPickerButton
+                  onContactSelected={(phone) => setPhoneNumber(phone)}
+                  disabled={searching}
                 />
                 <Button variant="secondary" disabled className="cursor-default">
                   {searching ? (
