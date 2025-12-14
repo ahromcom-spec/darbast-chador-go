@@ -265,7 +265,7 @@ const fetchOrders = async () => {
 
         {/* Tabs */}
         <Tabs defaultValue={tabFromUrl} className="w-full">
-          <TabsList className={`grid w-full h-auto gap-2 bg-muted/50 p-1 ${isManager ? 'grid-cols-2 sm:grid-cols-6' : 'grid-cols-2 sm:grid-cols-5'}`}>
+          <TabsList className="grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 sm:grid-cols-5">
             <TabsTrigger 
               value="info" 
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
@@ -291,15 +291,6 @@ const fetchOrders = async () => {
               <Receipt className="h-4 w-4 ml-1 hidden sm:inline" />
               صورتحساب
             </TabsTrigger>
-            {isManager && (
-              <TabsTrigger 
-                value="customers" 
-                className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
-              >
-                <Users className="h-4 w-4 ml-1 hidden sm:inline" />
-                مشتریان
-              </TabsTrigger>
-            )}
             <TabsTrigger 
               value="actions" 
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
@@ -398,14 +389,6 @@ const fetchOrders = async () => {
   <CustomerInvoice />
 </TabsContent>
 
-{/* Customers Tab for All Managers */}
-{isManager && (
-  <TabsContent value="customers" className="mt-4">
-    <Suspense fallback={<LoadingSpinner size="md" text="در حال بارگذاری مشتریان..." />}>
-      <SalesCustomers embedded={true} />
-    </Suspense>
-  </TabsContent>
-)}
 
           {/* Quick Actions Tab */}
           <TabsContent value="actions" className="space-y-6 mt-4">
