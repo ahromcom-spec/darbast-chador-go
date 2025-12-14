@@ -97,7 +97,7 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwn
     }
   };
 
-  const deleteCollaborator = async (collaboratorId: string) => {
+  const deleteCollaborator = async (collaboratorId: string, isSelf: boolean = false) => {
     try {
       setDeletingId(collaboratorId);
       const { error } = await supabase
@@ -108,7 +108,13 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwn
       if (error) throw error;
 
       setCollaborators(prev => prev.filter(c => c.id !== collaboratorId));
-      toast.success('همکار با موفقیت حذف شد');
+      
+      if (isSelf) {
+        toast.success('شما از همکاری این سفارش خارج شدید');
+      } else {
+        toast.success('همکار با موفقیت حذف شد');
+      }
+      
       onCollaboratorRemoved?.();
     } catch (error) {
       console.error('Error deleting collaborator:', error);
@@ -170,32 +176,41 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwn
       {/* Accepted collaborators */}
       {acceptedCollaborators.length > 0 && (
         <div className="space-y-2">
-          {acceptedCollaborators.map((collab) => (
-            <div key={collab.id} className="flex items-center justify-between p-2 bg-background rounded-md">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">{collab.invitee_name || 'کاربر'}</span>
-                <span className="text-xs text-muted-foreground" dir="ltr">({collab.invitee_phone_number})</span>
+          {acceptedCollaborators.map((collab) => {
+            // Allow owner to remove any collaborator, or collaborator to remove themselves
+            const canRemove = isOwner || collab.invitee_user_id === user?.id;
+            
+            return (
+              <div key={collab.id} className="flex items-center justify-between p-2 bg-background rounded-md">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">{collab.invitee_name || 'کاربر'}</span>
+                  <span className="text-xs text-muted-foreground" dir="ltr">({collab.invitee_phone_number})</span>
+                  {collab.invitee_user_id === user?.id && (
+                    <Badge variant="outline" className="text-xs">شما</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={statusLabels.accepted.variant} className="gap-1 text-xs">
+                    {statusLabels.accepted.icon}
+                    {statusLabels.accepted.label}
+                  </Badge>
+                  {canRemove && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => deleteCollaborator(collab.id, collab.invitee_user_id === user?.id)}
+                      disabled={deletingId === collab.id}
+                      title={collab.invitee_user_id === user?.id ? 'لغو همکاری' : 'حذف همکار'}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={statusLabels.accepted.variant} className="gap-1 text-xs">
-                  {statusLabels.accepted.icon}
-                  {statusLabels.accepted.label}
-                </Badge>
-                {isOwner && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => deleteCollaborator(collab.id)}
-                    disabled={deletingId === collab.id}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
