@@ -302,7 +302,7 @@ export default function ExecutiveStageInCollection() {
 
                   <Button variant="outline" size="sm" onClick={() => { setSelectedOrder(order); setCollaboratorDialogOpen(true); }} className="gap-2">
                     <Users className="h-4 w-4" />
-                    همکار
+                    افزودن پرسنل
                   </Button>
                 </div>
               </CardContent>

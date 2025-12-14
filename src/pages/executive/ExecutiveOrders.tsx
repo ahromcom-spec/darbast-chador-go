@@ -688,7 +688,7 @@ export default function ExecutiveOrders() {
                     className="gap-2"
                   >
                     <Users className="h-4 w-4" />
-                    همکار
+                    افزودن پرسنل
                   </Button>
 
                   {order.status === 'paid' && !order.executive_completion_date && (

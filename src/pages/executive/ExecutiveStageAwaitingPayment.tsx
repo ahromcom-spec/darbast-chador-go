@@ -383,7 +383,7 @@ export default function ExecutiveStageAwaitingPayment() {
                     className="gap-2"
                   >
                     <Users className="h-4 w-4" />
-                    همکار
+                    افزودن پرسنل
                   </Button>
                 </div>
               </CardContent>
