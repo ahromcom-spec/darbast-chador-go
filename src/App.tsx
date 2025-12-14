@@ -68,6 +68,7 @@ const ExecutiveStageAwaitingPayment = lazy(() => import("./pages/executive/Execu
 const ExecutiveStageOrderExecuted = lazy(() => import("./pages/executive/ExecutiveStageOrderExecuted"));
 const ExecutiveStageAwaitingCollection = lazy(() => import("./pages/executive/ExecutiveStageAwaitingCollection"));
 const ExecutiveStageInCollection = lazy(() => import("./pages/executive/ExecutiveStageInCollection"));
+const SalesLayout = lazy(() => import("./pages/sales/SalesLayout"));
 const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
 const SalesPendingOrders = lazy(() => import("./pages/sales/SalesPendingOrders"));
 const SalesCompletedOrders = lazy(() => import("./pages/sales/SalesCompletedOrders"));
@@ -296,29 +297,20 @@ const App = () => {
               </Route>
               <Route path="/sales" element={
                 <ProtectedRoute>
-                  <SalesDashboard />
+                  <SalesLayout />
                 </ProtectedRoute>
-              } />
-              <Route path="/sales/orders" element={
-                <ProtectedRoute>
-                  <SalesOrders />
-                </ProtectedRoute>
-              } />
-              <Route path="/sales/pending-orders" element={
-                <ProtectedRoute>
-                  <SalesPendingOrders />
-                </ProtectedRoute>
-              } />
-              <Route path="/sales/completed-orders" element={
-                <ProtectedRoute>
-                  <SalesCompletedOrders />
-                </ProtectedRoute>
-              } />
-              <Route path="/sales/customers" element={
-                <ProtectedRoute>
-                  <SalesCustomers />
-                </ProtectedRoute>
-              } />
+              }>
+                <Route index element={<SalesDashboard />} />
+                <Route path="pending-orders" element={<SalesPendingOrders />} />
+                <Route path="ready" element={<ExecutiveReady />} />
+                <Route path="in-progress" element={<ExecutiveInProgress />} />
+                <Route path="stage-awaiting-payment" element={<ExecutiveStageAwaitingPayment />} />
+                <Route path="stage-awaiting-collection" element={<ExecutiveStageAwaitingCollection />} />
+                <Route path="completed" element={<ExecutiveCompleted />} />
+                <Route path="orders" element={<SalesOrders />} />
+                <Route path="customers" element={<SalesCustomers />} />
+                <Route path="order-transfers" element={<OrderTransferManagement />} />
+              </Route>
               <Route path="/finance/orders" element={
                 <ProtectedRoute>
                   <FinanceOrders />
