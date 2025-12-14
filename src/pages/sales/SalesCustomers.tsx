@@ -37,7 +37,11 @@ interface Customer {
   orders: Order[];
 }
 
-export default function SalesCustomers() {
+interface SalesCustomersProps {
+  embedded?: boolean;
+}
+
+export default function SalesCustomers({ embedded = false }: SalesCustomersProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
@@ -129,17 +133,24 @@ export default function SalesCustomers() {
     }
   };
 
-  if (isLoading) return <MainLayout><LoadingSpinner /></MainLayout>;
+  if (isLoading) {
+    return embedded ? (
+      <LoadingSpinner />
+    ) : (
+      <MainLayout><LoadingSpinner /></MainLayout>
+    );
+  }
 
-  return (
-    <MainLayout>
-      <div className="container mx-auto p-6 space-y-6">
+  const content = (
+    <div className={embedded ? "space-y-6" : "container mx-auto p-6 space-y-6"}>
+      {!embedded && (
         <PageHeader
           title="مدیریت مشتریان"
           description="مشاهده و مدیریت اطلاعات مشتریان"
           showBackButton={true}
           backTo="/sales"
         />
+      )}
 
         <Card>
           <CardHeader>
@@ -272,6 +283,7 @@ export default function SalesCustomers() {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
-  );
+    );
+
+  return embedded ? content : <MainLayout>{content}</MainLayout>;
 }
