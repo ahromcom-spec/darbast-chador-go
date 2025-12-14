@@ -122,8 +122,8 @@ export default function SalesLayout() {
                       : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
-                  <ListOrdered className="h-4 w-4" />
-                  {activeStage ? activeStage.title : 'مراحل سفارشات مشتری'}
+            <ListOrdered className="h-4 w-4" />
+                  {activeStage ? activeStage.title : 'مشتریان'}
                   {pendingCount > 0 && !activeStage && (
                     <Badge variant="destructive" className="mr-1 text-xs">
                       {pendingCount}
