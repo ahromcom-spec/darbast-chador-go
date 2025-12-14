@@ -3,7 +3,7 @@ import { MainLayout } from '@/components/layouts/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Home, AlertCircle, DollarSign } from 'lucide-react';
+import { Home, AlertCircle, DollarSign, Users } from 'lucide-react';
 import { useSalesPendingCount } from '@/hooks/useSalesPendingCount';
 
 export default function SalesLayout() {
@@ -47,6 +47,15 @@ export default function SalesLayout() {
               >
                 <DollarSign className="h-4 w-4" />
                 مدیریت تسویه
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/sales/customers')}
+                className="gap-2"
+              >
+                <Users className="h-4 w-4" />
+                مشتریان
               </Button>
             </div>
           </CardContent>
