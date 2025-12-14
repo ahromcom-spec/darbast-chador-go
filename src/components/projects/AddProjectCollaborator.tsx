@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Loader2, Search, UserPlus, User, Phone, Check, Clock, X, Trash2 } from 'lucide-react';
+import { ContactPickerButton } from '@/components/common/ContactPickerButton';
 
 interface AddProjectCollaboratorProps {
   projectId: string;
@@ -290,7 +291,7 @@ export function AddProjectCollaborator({ projectId, projectTitle, open, onOpenCh
 
           <div className="space-y-2">
             <Label htmlFor="phone">شماره موبایل همکار جدید</Label>
-            <div className="relative">
+            <div className="flex gap-2">
               <Input
                 id="phone"
                 type="tel"
@@ -298,10 +299,14 @@ export function AddProjectCollaborator({ projectId, projectTitle, open, onOpenCh
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 dir="ltr"
-                className="pl-10"
+                className="flex-1"
+              />
+              <ContactPickerButton
+                onContactSelected={(phone) => setPhoneNumber(phone)}
+                disabled={isSearching}
               />
               {isSearching && (
-                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground self-center" />
               )}
             </div>
           </div>

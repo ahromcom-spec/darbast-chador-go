@@ -27,6 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { ContactPickerButton } from '@/components/common/ContactPickerButton';
 
 interface ManagerAddStaffCollaboratorProps {
   orderId: string;
@@ -438,13 +439,18 @@ export function ManagerAddStaffCollaborator({
             {/* Add New Collaborator */}
             <div className="space-y-2">
               <Label>جستجو در پرسنل</Label>
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="نام، شماره تلفن یا سمت..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-10"
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="نام، شماره تلفن یا سمت..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pr-10"
+                  />
+                </div>
+                <ContactPickerButton
+                  onContactSelected={(phone) => setSearchTerm(phone)}
                 />
               </div>
             </div>

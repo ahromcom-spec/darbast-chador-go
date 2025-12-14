@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
+import { ContactPickerButton } from '@/components/common/ContactPickerButton';
 
 interface AddCollaboratorProps {
   orderId: string;
@@ -409,6 +410,10 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 className="flex-1"
                 dir="ltr"
+              />
+              <ContactPickerButton
+                onContactSelected={(phone) => setPhoneNumber(phone)}
+                disabled={searching}
               />
               <Button variant="secondary" disabled className="cursor-default">
                 {searching ? (
