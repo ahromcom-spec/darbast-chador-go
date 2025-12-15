@@ -308,7 +308,9 @@ export default function SalesOrders() {
           status: 'closed',
           closed_at: new Date().toISOString(),
           financial_confirmed_by: auth.user?.id,
-          financial_confirmed_at: new Date().toISOString()
+          financial_confirmed_at: new Date().toISOString(),
+          execution_stage: 'completed',
+          execution_stage_updated_at: new Date().toISOString()
         })
         .eq('id', selectedOrder.id);
 
