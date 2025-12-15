@@ -374,10 +374,15 @@ export default function ExecutiveOrders() {
     }
 
     try {
+      const { data: auth } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('projects_v3')
         .update({
-          executive_completion_date: new Date(completionDate).toISOString()
+          status: 'closed',
+          closed_at: new Date().toISOString(),
+          executive_completion_date: new Date(completionDate).toISOString(),
+          financial_confirmed_by: auth.user?.id,
+          financial_confirmed_at: new Date().toISOString()
         })
         .eq('id', selectedOrder.id);
 
@@ -385,7 +390,7 @@ export default function ExecutiveOrders() {
 
       toast({
         title: '✓ موفق',
-        description: 'تاریخ اتمام شما ثبت شد'
+        description: 'سفارش با موفقیت به اتمام رسید و بسته شد'
       });
 
       setSelectedOrder(null);
@@ -833,7 +838,40 @@ export default function ExecutiveOrders() {
           {selectedOrder && (
             <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={fetchOrders} />
           )}
-          <DialogFooter>
+          <Separator />
+          <DialogFooter className="gap-2 flex-wrap">
+            {selectedOrder?.status === 'paid' && (
+              <Button
+                onClick={() => {
+                  setShowDetailsDialog(false);
+                  setShowCompletionDialog(true);
+                }}
+                className="gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4" />
+                تایید اتمام سفارش
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTransferDialogOpen(true);
+              }}
+              className="gap-2"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              انتقال سفارش
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCollaboratorDialogOpen(true);
+              }}
+              className="gap-2"
+            >
+              <Users className="h-4 w-4" />
+              افزودن همکار
+            </Button>
             <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
               بستن
             </Button>
