@@ -13,6 +13,28 @@ const EXCLUDED_PHONES = [
   "09013131313",
 ];
 
+// Normalize to Iranian mobile format: 09XXXXXXXXX
+const normalizeIranPhone = (input: string) => {
+  if (!input) return "";
+  if (input.length > 32) return "";
+  const limited = input.slice(0, 32);
+
+  const persian = "۰۱۲۳۴۵۶۷۸۹";
+  const arabic = "٠١٢٣٤٥٦٧٨٩";
+  const toAscii = (s: string) =>
+    s
+      .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
+      .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)));
+
+  let raw = toAscii(limited).replace(/[^0-9+]/g, "");
+  if (raw.startsWith("0098")) raw = "0" + raw.slice(4);
+  else if (raw.startsWith("098")) raw = "0" + raw.slice(3);
+  else if (raw.startsWith("98")) raw = "0" + raw.slice(2);
+  else if (raw.startsWith("+98")) raw = "0" + raw.slice(3);
+  if (raw.length === 10 && raw.startsWith("9")) raw = "0" + raw;
+  return raw;
+};
+
 // تابع برای تبدیل تاریخ میلادی به شمسی
 function toJalali(date: Date): string {
   const gyear = date.getFullYear();
@@ -107,8 +129,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const normalizedPhone = normalizeIranPhone(phone);
+
+    if (!/^09[0-9]{9}$/.test(normalizedPhone)) {
+      console.error(`[send-order-sms] Invalid phone format: ${phone}`);
+      return new Response(
+        JSON.stringify({ error: "شماره تلفن نامعتبر است" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Check if phone is in excluded list
-    const normalizedPhone = phone.replace(/\s+/g, "").trim();
     if (EXCLUDED_PHONES.includes(normalizedPhone)) {
       console.log(`[send-order-sms] Phone ${normalizedPhone} is in excluded list, skipping SMS`);
       return new Response(
@@ -184,66 +215,68 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Get ParsGreen credentials
     const apiKey = Deno.env.get("PARSGREEN_API_KEY");
-    const sender = Deno.env.get("PARSGREEN_SENDER");
+    const rawSender = Deno.env.get("PARSGREEN_SENDER") || "";
 
-    if (!apiKey || !sender) {
-      console.error("[send-order-sms] ParsGreen credentials not configured");
+    if (!apiKey) {
+      console.error("[send-order-sms] PARSGREEN_API_KEY not configured");
       return new Response(
         JSON.stringify({ error: "تنظیمات پنل پیامکی انجام نشده است" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Format phone number for ParsGreen (should be 98xxxxxxxxxx format)
-    let formattedPhone = normalizedPhone;
-    if (formattedPhone.startsWith("0")) {
-      formattedPhone = "98" + formattedPhone.substring(1);
-    } else if (!formattedPhone.startsWith("98")) {
-      formattedPhone = "98" + formattedPhone;
+    const senderNumber = /^[0-9]+$/.test(rawSender) ? rawSender : "90000319";
+    if (rawSender && !/^[0-9]+$/.test(rawSender)) {
+      console.warn("[send-order-sms] PARSGREEN_SENDER is not numeric; falling back to 90000319");
     }
 
-    // Send SMS via ParsGreen API
-    const parsGreenUrl = "https://sms.parsgreen.ir/Api/SendSMS.asmx/SendMessage";
-    
-    const params = new URLSearchParams();
-    params.append("Ession", apiKey);
-    params.append("Mession", message);
-    params.append("Ession2", formattedPhone);
-    params.append("Originator", sender);
-    params.append("ReturnUDH", "0");
-    params.append("ReturnBinary", "0");
-    params.append("SmsClass", "1");
-    params.append("UDH", "");
-
-    console.log(`[send-order-sms] Calling ParsGreen API for phone: ${formattedPhone}`);
-
-    const smsResponse = await fetch(parsGreenUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
+    // Send SMS via ParsGreen URLService (same endpoint as OTP)
+    const apiUrl = "https://sms.parsgreen.ir/UrlService/sendSMS.ashx";
+    const params = new URLSearchParams({
+      from: senderNumber,
+      to: normalizedPhone,
+      text: message,
+      signature: apiKey,
     });
 
-    const responseText = await smsResponse.text();
-    console.log(`[send-order-sms] ParsGreen response: ${responseText}`);
+    console.log(`[send-order-sms] Calling ParsGreen URLService for phone: ${normalizedPhone}`);
 
-    // Parse response - ParsGreen returns XML
-    const isSuccess = responseText.includes("1") || smsResponse.ok;
+    const smsResponse = await fetch(`${apiUrl}?${params.toString()}`, { method: "GET" });
+    const responseText = (await smsResponse.text()).trim();
+
+    // ParsGreen success formats: numeric id OR semicolon numeric triplet (e.g. "123;0;0")
+    const parts = responseText.split(";");
+    const pureNumeric = /^[0-9]+$/.test(responseText);
+    const hasSemicolonNumeric = parts.length === 3 && parts.every((p) => /^[0-9]+$/.test(p));
+
+    const lower = responseText.toLowerCase();
+    const looksError =
+      lower.includes("error") ||
+      lower.includes("request not valid") ||
+      lower.includes("filteration") ||
+      responseText.includes("خطا") ||
+      responseText.includes("<html") ||
+      responseText.includes("<!DOCTYPE");
+
+    const isSuccess = smsResponse.ok && (pureNumeric || hasSemicolonNumeric) && !looksError;
+
+    console.log(
+      `[send-order-sms] ParsGreen response (status ${smsResponse.status}): ${responseText.slice(0, 300)}`
+    );
 
     if (isSuccess) {
-      console.log(`[send-order-sms] SMS sent successfully to ${formattedPhone}`);
+      console.log(`[send-order-sms] SMS sent successfully to ${normalizedPhone}`);
       return new Response(
         JSON.stringify({ success: true, message: "پیامک با موفقیت ارسال شد" }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
-    } else {
-      console.error(`[send-order-sms] Failed to send SMS: ${responseText}`);
-      return new Response(
-        JSON.stringify({ success: false, error: "خطا در ارسال پیامک", details: responseText }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
     }
+
+    console.error(`[send-order-sms] Failed to send SMS: ${responseText.slice(0, 300)}`);
+    return new Response(
+      JSON.stringify({ success: false, error: "خطا در ارسال پیامک", details: responseText.slice(0, 300) }),
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
 
   } catch (error: any) {
     console.error("[send-order-sms] Error:", error);
