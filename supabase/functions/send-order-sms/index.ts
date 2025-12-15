@@ -73,7 +73,7 @@ const SMS_TEMPLATES: Record<string, string> = {
   awaiting_payment: "سفارش {serviceType} با کد {code} در آدرس {address} در انتظار پرداخت است. مبلغ: {amount} تومان. تاریخ: {dateTime} مشاهده سفارش: {orderLink}",
   paid: "پرداخت سفارش {serviceType} با کد {code} در تاریخ {dateTime} ثبت شد. آدرس: {address} مشاهده سفارش: {orderLink}",
   in_collection: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در حال جمع‌آوری است. مشاهده سفارش: {orderLink}",
-  completed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} تکمیل شد. از اعتماد شما سپاسگزاریم. مشاهده سفارش: {orderLink}",
+  completed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} به پایان رسید. از اعتماد شما سپاسگزاریم. مشاهده سفارش: {orderLink}",
 };
 
 interface SmsRequest {
