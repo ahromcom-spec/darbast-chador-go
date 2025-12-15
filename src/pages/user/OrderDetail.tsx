@@ -971,7 +971,7 @@ export default function OrderDetail() {
                         </div>
                       )}
 
-                      {/* جزئیات کرایه اجناس داربست */}
+                      {/* جزئیات کرایه اجناس داربست - خلاصه */}
                       {parsedNotes.service_type === 'کرایه اجناس داربست' && (
                         <div className="space-y-3">
                           {parsedNotes.item_type && (
@@ -980,39 +980,15 @@ export default function OrderDetail() {
                               <span className="font-semibold">{parsedNotes.item_type}</span>
                             </div>
                           )}
-                          {parsedNotes.item_sub_type && (
-                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">زیرمجموعه</span>
-                              <span className="font-semibold">{parsedNotes.item_sub_type}</span>
-                            </div>
-                          )}
                           {parsedNotes.quantity && (
                             <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">تعداد</span>
+                              <span className="text-sm text-muted-foreground">تعداد سفارش</span>
                               <span className="font-bold text-lg">{parsedNotes.quantity.toLocaleString('fa-IR')} عدد</span>
-                            </div>
-                          )}
-                          {parsedNotes.rental_start_date && (
-                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">تاریخ شروع اجاره</span>
-                              <span className="font-semibold">{formatPersianDate(parsedNotes.rental_start_date)}</span>
-                            </div>
-                          )}
-                          {parsedNotes.rental_end_date && (
-                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">تاریخ پایان اجاره</span>
-                              <span className="font-semibold">{formatPersianDate(parsedNotes.rental_end_date)}</span>
-                            </div>
-                          )}
-                          {parsedNotes.total_price && (
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">قیمت کل</span>
-                              <span className="font-bold text-lg text-green-700 dark:text-green-400">{parsedNotes.total_price.toLocaleString('fa-IR')} تومان</span>
                             </div>
                           )}
                           {parsedNotes.additional_notes && (
                             <div className="p-3 bg-muted/30 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">توضیحات اضافی</span>
+                              <span className="text-xs text-muted-foreground block mb-1">توضیحات</span>
                               <p className="text-sm leading-relaxed">{parsedNotes.additional_notes}</p>
                             </div>
                           )}
@@ -1059,7 +1035,7 @@ export default function OrderDetail() {
 
                   {/* Expanded Details */}
                   <CollapsibleContent className="space-y-6">
-                    {/* بلوک کرایه اجناس داربست */}
+                    {/* بلوک کرایه اجناس داربست - جزئیات بیشتر */}
                     {parsedNotes && parsedNotes.service_type === 'کرایه اجناس داربست' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-4">
@@ -1083,31 +1059,6 @@ export default function OrderDetail() {
                             <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between">
                               <span className="text-sm text-muted-foreground">تعداد سفارش</span>
                               <span className="font-bold text-lg">{parsedNotes.quantity.toLocaleString('fa-IR')} عدد</span>
-                            </div>
-                          )}
-                        </section>
-
-                        <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-4">
-                          <h3 className="font-semibold mb-1">مدت اجاره و هزینه</h3>
-                          
-                          {parsedNotes.rental_start_date && (
-                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">تاریخ شروع اجاره</span>
-                              <span className="font-semibold">{formatPersianDate(parsedNotes.rental_start_date)}</span>
-                            </div>
-                          )}
-                          
-                          {parsedNotes.rental_end_date && (
-                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">تاریخ پایان اجاره</span>
-                              <span className="font-semibold">{formatPersianDate(parsedNotes.rental_end_date)}</span>
-                            </div>
-                          )}
-                          
-                          {parsedNotes.total_price && (
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-800 flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">قیمت کل کرایه</span>
-                              <span className="font-bold text-lg text-green-700 dark:text-green-400">{parsedNotes.total_price.toLocaleString('fa-IR')} تومان</span>
                             </div>
                           )}
                           
@@ -1382,7 +1333,7 @@ export default function OrderDetail() {
                 )}
 
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
-                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || approvedRepairCost > 0) && (
+                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0) && (
                   <Collapsible open={isPriceDetailsExpanded} onOpenChange={setIsPriceDetailsExpanded}>
                     <section className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-4">
                       {/* Summary View */}
@@ -1391,8 +1342,8 @@ export default function OrderDetail() {
                         <div className="flex items-center gap-3">
                           <span className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300">
                             {(approvedRepairCost > 0 
-                              ? (((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || 0) + approvedRepairCost)
-                              : ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || 0)
+                              ? (((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || 0) + approvedRepairCost)
+                              : ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || 0)
                             )?.toLocaleString('fa-IR')} تومان
                           </span>
                           {order.payment_confirmed_at ? (
@@ -1470,14 +1421,14 @@ export default function OrderDetail() {
 
                     {/* دکمه پرداخت - فقط بعد از تایید سفارش */}
                     {['approved', 'completed', 'in_progress', 'pending_execution'].includes(order.status) && 
-                     ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || approvedRepairCost > 0) && 
+                     ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0) && 
                      !order.payment_confirmed_at && (
                       <div className="pt-4 border-t border-emerald-200 dark:border-emerald-800">
                         <Button 
                           className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                           size="lg"
                           onClick={async () => {
-                            const baseAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0;
+                            const baseAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0;
                             const paymentAmount = baseAmount + approvedRepairCost;
                             if (!paymentAmount || paymentAmount <= 0) {
                               toast({
@@ -1551,7 +1502,7 @@ export default function OrderDetail() {
                           }}
                         >
                           <CreditCard className="h-5 w-5" />
-                          پرداخت آنلاین - {(((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || 0) + approvedRepairCost).toLocaleString('fa-IR')} تومان
+                          پرداخت آنلاین - {(((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || 0) + approvedRepairCost).toLocaleString('fa-IR')} تومان
                         </Button>
                         <p className="text-xs text-center text-muted-foreground mt-2">
                           پرداخت از طریق درگاه امن زرین‌پال انجام می‌شود
@@ -1578,13 +1529,14 @@ export default function OrderDetail() {
                 )}
 
                 {/* بلوک تاریخ‌های مهم - کادر جداگانه */}
-                {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime) && (
+                {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime || parsedNotes?.rental_start_date || parsedNotes?.rental_end_date) && (
                   <section className="rounded-2xl border-2 border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 p-4 space-y-3">
                     <h3 className="font-semibold flex items-center gap-2">
                       <Calendar className="h-5 w-5 text-blue-600" />
                       تاریخ‌های مهم سفارش
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* تاریخ‌های داربست */}
                       {parsedNotes.installDate && (
                         <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
                           <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ نصب پیشنهادی</span>
@@ -1612,6 +1564,23 @@ export default function OrderDetail() {
                             {parsedNotes.dueDate.includes('T') || parsedNotes.dueDate.includes('-')
                               ? formatPersianDate(parsedNotes.dueDate)
                               : parsedNotes.dueDate}
+                          </span>
+                        </div>
+                      )}
+                      {/* تاریخ‌های کرایه */}
+                      {parsedNotes.rental_start_date && (
+                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ شروع اجاره</span>
+                          <span className="font-bold text-base text-foreground">
+                            {formatPersianDate(parsedNotes.rental_start_date)}
+                          </span>
+                        </div>
+                      )}
+                      {parsedNotes.rental_end_date && (
+                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ پایان اجاره</span>
+                          <span className="font-bold text-base text-foreground">
+                            {formatPersianDate(parsedNotes.rental_end_date)}
                           </span>
                         </div>
                       )}
