@@ -16,7 +16,7 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { OrderDetailsView } from '@/components/orders/OrderDetailsView';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
-import { sendOrderSms } from '@/lib/orderSms';
+import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 
 interface Order {
   id: string;
@@ -226,7 +226,10 @@ export default function ExecutiveStageAwaitingCollection() {
         };
         const smsStatus = smsStatusMap[newStage];
         if (smsStatus) {
-          sendOrderSms(selectedOrder.customer_phone, orderCode, smsStatus).catch(err => {
+          sendOrderSms(selectedOrder.customer_phone, orderCode, smsStatus, {
+            orderId: selectedOrder.id,
+            address: buildOrderSmsAddress(selectedOrder.address, selectedOrder.detailed_address),
+          }).catch(err => {
             console.error('SMS notification error:', err);
           });
         }
@@ -311,7 +314,10 @@ export default function ExecutiveStageAwaitingCollection() {
       // ارسال پیامک به مشتری (در پس‌زمینه)
       const selectedOrder = orders.find(o => o.id === orderId);
       if (selectedOrder?.customer_phone) {
-        sendOrderSms(selectedOrder.customer_phone, orderCode, 'completed').catch(err => {
+        sendOrderSms(selectedOrder.customer_phone, orderCode, 'completed', {
+          orderId: selectedOrder.id,
+          address: buildOrderSmsAddress(selectedOrder.address, selectedOrder.detailed_address),
+        }).catch(err => {
           console.error('SMS notification error:', err);
         });
       }

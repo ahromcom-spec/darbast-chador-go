@@ -19,7 +19,7 @@ import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
-import { sendOrderSms } from '@/lib/orderSms';
+import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 
 // Component to display order technical details with edit capability
 const OrderDetailsContent = ({ order, getStatusBadge, onUpdate }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void }) => {
@@ -323,7 +323,10 @@ export default function ExecutiveOrders() {
       // ارسال پیامک به مشتری (در پس‌زمینه)
       const order = orders.find(o => o.id === orderId);
       if (order?.customer_phone) {
-        sendOrderSms(order.customer_phone, order.code, 'in_progress').catch(err => {
+        sendOrderSms(order.customer_phone, order.code, 'in_progress', {
+          orderId: order.id,
+          address: buildOrderSmsAddress(order.address, order.detailed_address),
+        }).catch(err => {
           console.error('SMS notification error:', err);
         });
       }
@@ -359,7 +362,10 @@ export default function ExecutiveOrders() {
       // ارسال پیامک به مشتری (در پس‌زمینه)
       const order = orders.find(o => o.id === orderId);
       if (order?.customer_phone) {
-        sendOrderSms(order.customer_phone, order.code, 'executed').catch(err => {
+        sendOrderSms(order.customer_phone, order.code, 'executed', {
+          orderId: order.id,
+          address: buildOrderSmsAddress(order.address, order.detailed_address),
+        }).catch(err => {
           console.error('SMS notification error:', err);
         });
       }
@@ -407,7 +413,10 @@ export default function ExecutiveOrders() {
 
       // ارسال پیامک به مشتری (در پس‌زمینه)
       if (selectedOrder.customer_phone) {
-        sendOrderSms(selectedOrder.customer_phone, selectedOrder.code, 'completed').catch(err => {
+        sendOrderSms(selectedOrder.customer_phone, selectedOrder.code, 'completed', {
+          orderId: selectedOrder.id,
+          address: buildOrderSmsAddress(selectedOrder.address, selectedOrder.detailed_address),
+        }).catch(err => {
           console.error('SMS notification error:', err);
         });
       }

@@ -31,7 +31,7 @@ import { ProjectLocationMap } from '@/components/locations/ProjectLocationMap';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
-import { sendOrderSms } from '@/lib/orderSms';
+import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 
 // Helper to parse order notes safely - handles double-stringified JSON
 const parseOrderNotes = (notes: any): any => {
@@ -560,7 +560,10 @@ export default function ExecutivePendingOrders() {
 
       // ارسال پیامک به مشتری (در پس‌زمینه)
       if (selectedOrder.customer_phone) {
-        sendOrderSms(selectedOrder.customer_phone, selectedOrder.code, 'approved').catch(err => {
+        sendOrderSms(selectedOrder.customer_phone, selectedOrder.code, 'approved', {
+          orderId: selectedOrder.id,
+          address: buildOrderSmsAddress(selectedOrder.address, selectedOrder.detailed_address),
+        }).catch(err => {
           console.error('SMS notification error:', err);
         });
       }
