@@ -16,6 +16,7 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { OrderDetailsView } from '@/components/orders/OrderDetailsView';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
+import { sendOrderSms } from '@/lib/orderSms';
 
 interface Order {
   id: string;

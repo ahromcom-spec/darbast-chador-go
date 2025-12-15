@@ -31,6 +31,7 @@ import { ProjectLocationMap } from '@/components/locations/ProjectLocationMap';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
+import { sendOrderSms } from '@/lib/orderSms';
 
 // Helper to parse order notes safely - handles double-stringified JSON
 const parseOrderNotes = (notes: any): any => {
@@ -555,6 +556,13 @@ export default function ExecutivePendingOrders() {
             console.log('Push notification skipped (user may not have enabled)');
           }
         }
+      }
+
+      // ارسال پیامک به مشتری (در پس‌زمینه)
+      if (selectedOrder.customer_phone) {
+        sendOrderSms(selectedOrder.customer_phone, selectedOrder.code, 'approved').catch(err => {
+          console.error('SMS notification error:', err);
+        });
       }
 
       toast({

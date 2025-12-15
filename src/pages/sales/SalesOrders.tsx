@@ -17,6 +17,7 @@ import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
+import { sendOrderSms } from '@/lib/orderSms';
 
 interface Order {
   id: string;
@@ -265,6 +266,13 @@ export default function SalesOrders() {
         .eq('id', selectedOrder.id);
 
       if (error) throw error;
+
+      // ارسال پیامک به مشتری (در پس‌زمینه)
+      if (selectedOrder.customer_phone) {
+        sendOrderSms(selectedOrder.customer_phone, selectedOrder.code, 'paid').catch(err => {
+          console.error('SMS notification error:', err);
+        });
+      }
 
       toast({
         title: 'موفق',
