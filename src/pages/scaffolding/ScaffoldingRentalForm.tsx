@@ -571,7 +571,7 @@ export default function ScaffoldingRentalForm() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <MediaUploader />
+                        <MediaUploader projectId={createdOrderId} />
                       </CardContent>
                     </Card>
                   )}
