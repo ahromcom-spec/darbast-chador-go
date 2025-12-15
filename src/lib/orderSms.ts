@@ -11,9 +11,11 @@ type SmsStatus =
   | 'completed';     // تکمیل شد
 
 interface OrderSmsDetails {
+  orderId?: string;       // شناسه سفارش برای لینک
   serviceType?: string;   // نوع خدمات
   address?: string;       // آدرس
   dateTime?: string;      // تاریخ و زمان شمسی
+  amount?: number;        // مبلغ سفارش
 }
 
 export const sendOrderSms = async (
@@ -29,10 +31,12 @@ export const sendOrderSms = async (
       body: { 
         phone, 
         orderCode, 
+        orderId: details?.orderId,
         status,
         serviceType: details?.serviceType,
         address: details?.address,
-        dateTime: details?.dateTime
+        dateTime: details?.dateTime,
+        amount: details?.amount
       }
     });
 

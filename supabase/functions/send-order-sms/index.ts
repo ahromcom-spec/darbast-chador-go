@@ -70,7 +70,7 @@ const SMS_TEMPLATES: Record<string, string> = {
   approved: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} توسط مدیر تایید شد. آدرس: {address}",
   in_progress: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در حال اجرا است. آدرس: {address}",
   executed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} اجرا شد. آدرس: {address}",
-  awaiting_payment: "سفارش {serviceType} با کد {code} در انتظار پرداخت است. آدرس: {address}",
+  awaiting_payment: "سفارش {serviceType} با کد {code} در آدرس {address} در انتظار پرداخت است. مبلغ: {amount} تومان. تاریخ: {dateTime} مشاهده سفارش: {orderLink}",
   paid: "پرداخت سفارش {serviceType} با کد {code} در تاریخ {dateTime} ثبت شد.",
   in_collection: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در حال جمع‌آوری است. آدرس: {address}",
   completed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} تکمیل شد. از اعتماد شما سپاسگزاریم.",
@@ -79,10 +79,12 @@ const SMS_TEMPLATES: Record<string, string> = {
 interface SmsRequest {
   phone: string;
   orderCode: string;
+  orderId?: string;
   status: string;
   serviceType?: string;
   address?: string;
   dateTime?: string;
+  amount?: number;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -92,9 +94,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, orderCode, status, serviceType, address, dateTime }: SmsRequest = await req.json();
+    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount }: SmsRequest = await req.json();
     
-    console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Service: ${serviceType}, Address: ${address}`);
+    console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Service: ${serviceType}, Address: ${address}, Amount: ${amount}`);
 
     // Validate inputs
     if (!phone || !orderCode || !status) {
@@ -163,12 +165,20 @@ const handler = async (req: Request): Promise<Response> => {
     // تاریخ و زمان شمسی
     const persianDateTime = dateTime || formatPersianDateTime();
     
+    // لینک سفارش
+    const orderLink = orderId ? `https://ahrom.ir/orders/${orderId}` : "https://ahrom.ir/my-orders";
+    
+    // فرمت مبلغ
+    const formattedAmount = amount ? amount.toLocaleString('fa-IR') : "تعیین نشده";
+    
     // Replace placeholders in template
     let message = template
       .replace("{code}", orderCode)
       .replace("{serviceType}", serviceType || "خدمات")
       .replace("{address}", address || "ثبت نشده")
-      .replace("{dateTime}", persianDateTime);
+      .replace("{dateTime}", persianDateTime)
+      .replace("{amount}", formattedAmount)
+      .replace("{orderLink}", orderLink);
     
     console.log(`[send-order-sms] Sending message: ${message}`);
 
