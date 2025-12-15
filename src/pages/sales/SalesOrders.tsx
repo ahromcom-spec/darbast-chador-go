@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,39 +7,103 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Search, MapPin, Phone, User, Calendar, CheckCircle, Clock, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
+import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
+import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
+import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
+import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 
 interface Order {
   id: string;
   code: string;
   status: string;
   address: string;
-  payment_amount: number | null;
-  payment_method: string | null;
-  transaction_reference: string | null;
+  detailed_address: string | null;
+  execution_start_date: string | null;
+  execution_end_date: string | null;
+  customer_completion_date: string | null;
+  executive_completion_date: string | null;
   created_at: string;
   customer_name: string;
   customer_phone: string;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  notes?: string | null;
+  payment_amount?: number | null;
+  payment_method?: string | null;
+  transaction_reference?: string | null;
+  customer_id?: string;
+  executed_by?: string | null;
+  approved_by?: string | null;
+  subcategory_id?: string | null;
 }
 
 export default function SalesOrders() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [transactionRef, setTransactionRef] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Auto-open order from URL param
+  const urlOrderId = searchParams.get('orderId');
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
+  // Auto-open order details when orderId is in URL and orders are loaded
+  useEffect(() => {
+    if (urlOrderId && orders.length > 0 && !loading) {
+      const order = orders.find(o => o.id === urlOrderId);
+      if (order) {
+        setSelectedOrder(order);
+        setShowDetailsDialog(true);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [urlOrderId, orders, loading]);
+
+  useEffect(() => {
+    let filtered = orders;
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    // Filter by search term
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(order => 
+        order.code.toLowerCase().includes(term) ||
+        order.customer_name.toLowerCase().includes(term) ||
+        order.customer_phone.includes(term) ||
+        order.address.toLowerCase().includes(term)
+      );
+    }
+
+    setFilteredOrders(filtered);
+  }, [searchTerm, statusFilter, orders]);
+
   const fetchOrders = async () => {
     try {
+      // Fetch all orders (not just completed)
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
@@ -46,30 +111,104 @@ export default function SalesOrders() {
           code,
           status,
           address,
+          detailed_address,
+          execution_start_date,
+          execution_end_date,
+          customer_completion_date,
+          executive_completion_date,
+          created_at,
+          customer_id,
+          hierarchy_project_id,
+          notes,
           payment_amount,
           payment_method,
           transaction_reference,
-          created_at
+          executed_by,
+          approved_by,
+          subcategory_id,
+          location_lat,
+          location_lng
         `)
-        .eq('status', 'completed')
         .order('code', { ascending: false });
 
       if (error) throw error;
 
-      const formattedOrders = data?.map((order: any) => ({
-        id: order.id,
-        code: order.code,
-        status: order.status,
-        address: order.address,
-        payment_amount: order.payment_amount,
-        payment_method: order.payment_method,
-        transaction_reference: order.transaction_reference,
-        created_at: order.created_at,
-        customer_name: order.profiles?.[0]?.profiles?.full_name || 'نامشخص',
-        customer_phone: order.profiles?.[0]?.profiles?.phone_number || ''
-      })) || [];
+      // Enrich each order with customer profile safely
+      const ordersWithCustomer = await Promise.all(
+        (data || []).map(async (order: any) => {
+          let customerName = 'نامشخص';
+          let customerPhone = '';
 
-      setOrders(formattedOrders);
+          if (order.customer_id) {
+            const { data: customerData } = await supabase
+              .from('customers')
+              .select('user_id')
+              .eq('id', order.customer_id)
+              .maybeSingle();
+
+            const userId = customerData?.user_id;
+            if (userId) {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('full_name, phone_number')
+                .eq('user_id', userId)
+                .maybeSingle();
+
+              customerName = profileData?.full_name || 'نامشخص';
+              customerPhone = profileData?.phone_number || '';
+            }
+          }
+
+          // Fetch location data - use order's direct lat/lng or from hierarchy
+          let projectLat = order.location_lat;
+          let projectLng = order.location_lng;
+
+          if (!projectLat && !projectLng && order.hierarchy_project_id) {
+            const { data: hierarchyData } = await supabase
+              .from('projects_hierarchy')
+              .select(`
+                locations (
+                  lat,
+                  lng
+                )
+              `)
+              .eq('id', order.hierarchy_project_id)
+              .maybeSingle();
+
+            if (hierarchyData?.locations) {
+              projectLat = hierarchyData.locations.lat;
+              projectLng = hierarchyData.locations.lng;
+            }
+          }
+
+          return {
+            id: order.id,
+            code: order.code,
+            status: order.status,
+            address: order.address,
+            detailed_address: order.detailed_address,
+            execution_start_date: order.execution_start_date,
+            execution_end_date: order.execution_end_date,
+            customer_completion_date: order.customer_completion_date,
+            executive_completion_date: order.executive_completion_date,
+            created_at: order.created_at,
+            customer_name: customerName,
+            customer_phone: customerPhone,
+            location_lat: projectLat,
+            location_lng: projectLng,
+            notes: order.notes,
+            payment_amount: order.payment_amount,
+            payment_method: order.payment_method,
+            transaction_reference: order.transaction_reference,
+            customer_id: order.customer_id,
+            executed_by: order.executed_by,
+            approved_by: order.approved_by,
+            subcategory_id: order.subcategory_id,
+          } as Order;
+        })
+      );
+
+      setOrders(ordersWithCustomer);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -116,6 +255,7 @@ export default function SalesOrders() {
       setPaymentAmount('');
       setPaymentMethod('');
       setTransactionRef('');
+      setShowPaymentDialog(false);
       fetchOrders();
     } catch (error) {
       console.error('Error recording payment:', error);
@@ -128,49 +268,145 @@ export default function SalesOrders() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' }> = {
-      completed: { label: 'آماده تسویه', variant: 'default' },
-      paid: { label: 'پرداخت شده', variant: 'secondary' }
+    const statusMap: Record<string, { label: string; className: string }> = {
+      pending: { label: 'در انتظار تایید', className: 'bg-orange-500/10 text-orange-600' },
+      approved: { label: 'تایید شده', className: 'bg-yellow-500/10 text-yellow-600' },
+      in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
+      completed: { label: 'آماده تسویه', className: 'bg-purple-500/10 text-purple-600' },
+      paid: { label: 'پرداخت شده', className: 'bg-green-500/10 text-green-600' },
+      rejected: { label: 'رد شده', className: 'bg-red-500/10 text-red-600' },
+      cancelled: { label: 'لغو شده', className: 'bg-gray-500/10 text-gray-600' },
+      closed: { label: 'بسته شده', className: 'bg-gray-500/10 text-gray-600' }
     };
 
-    const { label, variant } = statusMap[status] || { label: status, variant: 'default' };
-    return <Badge variant={variant}>{label}</Badge>;
+    const { label, className } = statusMap[status] || { label: status, className: '' };
+    return <Badge className={className}>{label}</Badge>;
   };
+
+  const getStatusCounts = () => {
+    const counts: Record<string, number> = {};
+    orders.forEach(order => {
+      counts[order.status] = (counts[order.status] || 0) + 1;
+    });
+    return counts;
+  };
+
+  const statusCounts = getStatusCounts();
 
   if (loading) return <LoadingSpinner />;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
-        title="مدیریت فروش و تسویه"
-        description="ثبت پرداخت و تسویه مالی سفارشات"
+        title="همه سفارشات"
+        description={`${orders.length} سفارش • ${filteredOrders.length} نمایش داده شده`}
       />
 
+      {/* Filters and Search */}
+      {orders.length > 0 && (
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="جستجو بر اساس کد سفارش، نام مشتری، شماره تلفن یا آدرس..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-10"
+              />
+            </div>
+            
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('all')}
+              >
+                همه ({orders.length})
+              </Button>
+              <Button
+                variant={statusFilter === 'pending' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('pending')}
+              >
+                در انتظار تایید ({statusCounts['pending'] || 0})
+              </Button>
+              <Button
+                variant={statusFilter === 'approved' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('approved')}
+              >
+                تایید شده ({statusCounts['approved'] || 0})
+              </Button>
+              <Button
+                variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('in_progress')}
+              >
+                در حال اجرا ({statusCounts['in_progress'] || 0})
+              </Button>
+              <Button
+                variant={statusFilter === 'completed' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('completed')}
+              >
+                آماده تسویه ({statusCounts['completed'] || 0})
+              </Button>
+              <Button
+                variant={statusFilter === 'paid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('paid')}
+              >
+                پرداخت شده ({statusCounts['paid'] || 0})
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4">
-        {orders.length === 0 ? (
+        {filteredOrders.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center text-muted-foreground">
-              سفارشی برای تسویه وجود ندارد
+              سفارشی یافت نشد
             </CardContent>
           </Card>
         ) : (
-          orders.map((order) => (
-            <Card key={order.id}>
+          filteredOrders.map((order) => (
+            <Card 
+              key={order.id} 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => {
+                setSelectedOrder(order);
+                setShowDetailsDialog(true);
+              }}
+            >
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
-                    <CardDescription>
-                      مشتری: {order.customer_name} • {order.customer_phone}
+                    <CardDescription className="flex items-center gap-2 mt-1">
+                      <User className="h-3 w-3" />
+                      مشتری: {order.customer_name}
+                      {order.customer_phone && (
+                        <>
+                          <span>•</span>
+                          <Phone className="h-3 w-3" />
+                          {order.customer_phone}
+                        </>
+                      )}
                     </CardDescription>
                   </div>
                   {getStatusBadge(order.status)}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground">آدرس</Label>
-                  <p className="text-sm">{order.address}</p>
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <Label className="text-sm text-muted-foreground">آدرس</Label>
+                    <p className="text-sm">{order.address}</p>
+                  </div>
                 </div>
 
                 {order.payment_amount && (
@@ -181,16 +417,22 @@ export default function SalesOrders() {
                         {order.payment_amount.toLocaleString('fa-IR')} تومان
                       </p>
                     </div>
-                    <div>
-                      <Label className="text-sm text-muted-foreground">روش پرداخت</Label>
-                      <p className="text-sm">{order.payment_method}</p>
-                    </div>
+                    {order.payment_method && (
+                      <div>
+                        <Label className="text-sm text-muted-foreground">روش پرداخت</Label>
+                        <p className="text-sm">{order.payment_method}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {order.status === 'completed' && (
                   <Button
-                    onClick={() => setSelectedOrder(order)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedOrder(order);
+                      setShowPaymentDialog(true);
+                    }}
                     size="sm"
                     className="gap-2"
                   >
@@ -204,12 +446,103 @@ export default function SalesOrders() {
         )}
       </div>
 
-      {selectedOrder && (
-        <Card className="border-primary">
-          <CardHeader>
-            <CardTitle>ثبت پرداخت برای سفارش {selectedOrder.code}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* Order Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>جزئیات سفارش {selectedOrder?.code}</span>
+              {selectedOrder && getStatusBadge(selectedOrder.status)}
+            </DialogTitle>
+            <DialogDescription>
+              مشتری: {selectedOrder?.customer_name} • {selectedOrder?.customer_phone}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrder && (
+            <div className="space-y-4">
+              <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} />
+              
+              {/* Additional execution-specific info */}
+              {selectedOrder.execution_start_date && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">تاریخ شروع اجرا</Label>
+                    <p className="text-sm flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      {formatPersianDateTimeFull(selectedOrder.execution_start_date)}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Completion Confirmations */}
+              {(selectedOrder.customer_completion_date || selectedOrder.executive_completion_date) && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <Label className="text-xs text-muted-foreground">تاییدات اتمام کار</Label>
+                    {selectedOrder.customer_completion_date && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span>تایید مشتری: {formatPersianDate(selectedOrder.customer_completion_date, { showDayOfWeek: true })}</span>
+                      </div>
+                    )}
+                    {selectedOrder.executive_completion_date && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span>تایید مدیر اجرایی: {formatPersianDate(selectedOrder.executive_completion_date, { showDayOfWeek: true })}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Action Buttons */}
+              <Separator />
+              <div className="flex gap-2 flex-wrap">
+                {selectedOrder.status === 'completed' && (
+                  <Button
+                    onClick={() => {
+                      setShowDetailsDialog(false);
+                      setShowPaymentDialog(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <DollarSign className="h-4 w-4" />
+                    ثبت پرداخت
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setTransferDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <ArrowLeftRight className="h-4 w-4" />
+                  انتقال سفارش
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setCollaboratorDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  افزودن همکار
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ثبت پرداخت برای سفارش {selectedOrder?.code}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
             <div>
               <Label htmlFor="payment-amount">مبلغ پرداخت (تومان)</Label>
               <Input
@@ -245,18 +578,39 @@ export default function SalesOrders() {
                 placeholder="شماره پیگیری تراکنش"
               />
             </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>
+              انصراف
+            </Button>
+            <Button onClick={handleRecordPayment} className="gap-2">
+              <DollarSign className="h-4 w-4" />
+              ثبت پرداخت
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-            <div className="flex gap-2">
-              <Button onClick={handleRecordPayment} className="gap-2">
-                <DollarSign className="h-4 w-4" />
-                ثبت پرداخت
-              </Button>
-              <Button variant="outline" onClick={() => setSelectedOrder(null)}>
-                انصراف
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Transfer Dialog */}
+      {selectedOrder && (
+        <ManagerOrderTransfer
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          onTransferComplete={fetchOrders}
+        />
+      )}
+
+      {/* Collaborator Dialog */}
+      {selectedOrder && (
+        <ManagerAddStaffCollaborator
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          open={collaboratorDialogOpen}
+          onOpenChange={setCollaboratorDialogOpen}
+          onCollaboratorAdded={fetchOrders}
+        />
       )}
     </div>
   );
