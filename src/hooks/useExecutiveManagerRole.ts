@@ -20,7 +20,11 @@ export const useExecutiveManagerRole = () => {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .in('role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
+        .in('role', [
+          'scaffold_executive_manager',
+          'executive_manager_scaffold_execution_with_materials',
+          'rental_executive_manager',
+        ])
         .maybeSingle();
 
         if (error) {
