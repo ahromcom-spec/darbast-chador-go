@@ -244,7 +244,7 @@ serve(async (req) => {
     const bindings = Array.from(new Set([`@${apexHost} #${code}`, `@${wwwHost} #${code}`])).join('\n');
     const webOtpBinding = bindings;
     // Format with Web OTP binding for auto-fill
-    const message = `کد تایید شما: ${code} برای ورود به اهرم\n@${apexHost} #${code}\nلغو11`;
+    const message = `کد تایید: ${code} ورود به سایت اهرم @${apexHost} #${code}`;
     const rawSender = Deno.env.get('PARSGREEN_SENDER') || '';
     const senderNumber = /^[0-9]+$/.test(rawSender) ? rawSender : '90000319';
     if (rawSender && !/^[0-9]+$/.test(rawSender)) {
@@ -293,7 +293,7 @@ serve(async (req) => {
         console.log('SMS sent successfully via Parsgreen');
       } else if (result.containsFilteration) {
         // 2) Fallback: send with Web OTP binding
-        const fallbackMessage = `کد تایید شما: ${code} برای ورود به اهرم\n@${apexHost} #${code}\nلغو11`;
+        const fallbackMessage = `کد تایید: ${code} ورود به سایت اهرم @${apexHost} #${code}`;
         const result2 = await sendOnce(fallbackMessage);
         if (result2.okFormat) {
           smsSent = true;
