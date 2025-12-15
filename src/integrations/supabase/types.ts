@@ -3616,6 +3616,7 @@ export type Database = {
         | "ceo"
         | "scaffold_executive_manager"
         | "executive_manager_scaffold_execution_with_materials"
+        | "rental_executive_manager"
       execution_stage:
         | "awaiting_payment"
         | "order_executed"
@@ -3838,6 +3839,7 @@ export const Constants = {
         "ceo",
         "scaffold_executive_manager",
         "executive_manager_scaffold_execution_with_materials",
+        "rental_executive_manager",
       ],
       execution_stage: [
         "awaiting_payment",
