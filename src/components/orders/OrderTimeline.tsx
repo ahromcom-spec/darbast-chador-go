@@ -1,6 +1,9 @@
-import { Check, Clock, Package, PlayCircle, CheckCircle2, XCircle, DollarSign, PackageX, PackageCheck } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Clock, Package, PlayCircle, CheckCircle2, XCircle, DollarSign, PackageX, PackageCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 
 interface TimelineStep {
@@ -65,6 +68,7 @@ export const OrderTimeline = ({
   executionStageUpdatedAt,
   approvals = [],
 }: OrderTimelineProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const isRejected = orderStatus === 'rejected';
 
   // محاسبه تاریخ تایید کامل (زمانی که همه مدیران تایید کردند)
@@ -86,33 +90,22 @@ export const OrderTimeline = ({
   };
 
   // تعیین وضعیت هر مرحله بر اساس execution_stage - یکسان با سربرگ‌های مدیر اجرایی
-  // مقادیر واقعی execution_stage در دیتابیس:
-  // pending_execution -> in_progress -> order_executed -> awaiting_payment/awaiting_collection -> in_collection -> completed/closed
   const stageOrder: Record<string, number> = {
-    // مراحل اولیه (قبل از شروع اجرا)
-    approved: 1,               // در انتظار اجرا - سفارش تایید شده
-    pending_execution: 1,      // در انتظار اجرا
-    // مرحله اجرا
-    in_progress: 2,            // در حال اجرا
-    // مرحله اتمام اجرا
-    order_executed: 3,         // اجرا شده
-    // مراحل پرداخت و جمع‌آوری (همزمان فعال می‌شوند)
-    awaiting_payment: 4,       // در انتظار پرداخت
-    awaiting_collection: 4,    // در انتظار جمع‌آوری
-    // مرحله جمع‌آوری
-    in_collection: 5,          // در حال جمع‌آوری
-    // مرحله پایانی
-    completed: 6,              // تکمیل شده
-    closed: 6,                 // بسته شده
+    approved: 1,
+    pending_execution: 1,
+    in_progress: 2,
+    order_executed: 3,
+    awaiting_payment: 4,
+    awaiting_collection: 4,
+    in_collection: 5,
+    completed: 6,
+    closed: 6,
   };
 
-  // تبدیل execution_stage به شماره مرحله برای مقایسه
   const getCurrentStageNumber = (): number => {
-    // اگر status برابر closed یا completed است، مرحله پایانی
     if (orderStatus === 'closed' || orderStatus === 'completed') {
       return 6;
     }
-    // اگر پرداخت شده، یعنی مرحله پایانی
     if (orderStatus === 'paid') {
       return 6;
     }
@@ -124,12 +117,10 @@ export const OrderTimeline = ({
 
   const currentStageNumber = getCurrentStageNumber();
 
-  // بررسی اینکه آیا مرحله تکمیل شده
   const isStageCompletedByNumber = (stageNum: number): boolean => {
     return currentStageNumber > stageNum;
   };
 
-  // بررسی اینکه آیا مرحله فعلی است
   const isCurrentStageByNumber = (stageNum: number): boolean => {
     return currentStageNumber === stageNum;
   };
@@ -227,132 +218,191 @@ export const OrderTimeline = ({
     },
   ];
 
+  // Find current active step
+  const currentStep = steps.find(s => s.active) || steps.find(s => !s.completed) || steps[steps.length - 1];
+  const currentStepLabel = isRejected ? 'رد شده' : currentStep?.label || statusMap[orderStatus] || orderStatus;
+
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">مراحل پیشرفت سفارش</CardTitle>
-          <Badge variant={isRejected ? 'destructive' : 'default'}>
-            {statusMap[orderStatus] || orderStatus}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            const dateInfo = formatDate(step.date);
-            const isLast = index === steps.length - 1;
+      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">مراحل پیشرفت سفارش</CardTitle>
+            <Badge variant={isRejected ? 'destructive' : 'default'}>
+              {statusMap[orderStatus] || orderStatus}
+            </Badge>
+          </div>
+        </CardHeader>
 
-            return (
-              <div key={step.status} className="relative">
-                {/* خط اتصال */}
-                {!isLast && (
-                  <div
-                    className={cn(
-                      'absolute right-4 top-10 h-full w-0.5',
-                      step.completed && !step.rejected
-                        ? 'bg-primary'
-                        : step.rejected
-                        ? 'bg-destructive'
-                        : 'bg-border'
-                    )}
-                  />
+        {/* Collapsed View - Current Stage Only */}
+        {!isExpanded && (
+          <CardContent className="pt-0">
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <div className={cn(
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2',
+                isRejected
+                  ? 'border-destructive bg-destructive text-destructive-foreground'
+                  : currentStep?.completed
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-primary bg-background text-primary'
+              )}>
+                {isRejected ? (
+                  <XCircle className="h-5 w-5" />
+                ) : currentStep?.completed ? (
+                  <Check className="h-5 w-5" />
+                ) : currentStep ? (
+                  <currentStep.icon className="h-5 w-5" />
+                ) : (
+                  <Clock className="h-5 w-5" />
                 )}
+              </div>
+              <div className="flex-1">
+                <p className={cn(
+                  'font-semibold',
+                  isRejected ? 'text-destructive' : 'text-foreground'
+                )}>
+                  {currentStepLabel}
+                </p>
+                {currentStep?.details && (
+                  <p className="text-sm text-muted-foreground mt-0.5">{currentStep.details}</p>
+                )}
+              </div>
+            </div>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full mt-3 gap-2">
+                <ChevronDown className="h-4 w-4" />
+                مشاهده جزئیات مراحل
+              </Button>
+            </CollapsibleTrigger>
+          </CardContent>
+        )}
 
-                <div className="flex items-start gap-4">
-                  {/* آیکون */}
-                  <div
-                    className={cn(
-                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
-                      step.completed && !step.rejected
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : step.rejected
-                        ? 'border-destructive bg-destructive text-destructive-foreground'
-                        : step.active
-                        ? 'border-primary bg-background text-primary'
-                        : 'border-border bg-background text-muted-foreground'
-                    )}
-                  >
-                    {step.rejected ? (
-                      <XCircle className="h-4 w-4" />
-                    ) : step.completed ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Icon className="h-4 w-4" />
-                    )}
-                  </div>
+        {/* Expanded View - Full Timeline */}
+        <CollapsibleContent>
+          <CardContent>
+            <div className="space-y-6">
+              {steps.map((step, index) => {
+                const Icon = step.icon;
+                const dateInfo = formatDate(step.date);
+                const isLast = index === steps.length - 1;
 
-                  {/* محتوا */}
-                  <div className="flex-1 pb-6">
-                    <div className="flex items-center justify-between gap-4">
-                      <h4
+                return (
+                  <div key={step.status} className="relative">
+                    {/* خط اتصال */}
+                    {!isLast && (
+                      <div
                         className={cn(
-                          'font-semibold',
+                          'absolute right-4 top-10 h-full w-0.5',
                           step.completed && !step.rejected
-                            ? 'text-foreground'
+                            ? 'bg-primary'
                             : step.rejected
-                            ? 'text-destructive'
+                            ? 'bg-destructive'
+                            : 'bg-border'
+                        )}
+                      />
+                    )}
+
+                    <div className="flex items-start gap-4">
+                      {/* آیکون */}
+                      <div
+                        className={cn(
+                          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                          step.completed && !step.rejected
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : step.rejected
+                            ? 'border-destructive bg-destructive text-destructive-foreground'
                             : step.active
-                            ? 'text-primary'
-                            : 'text-muted-foreground'
+                            ? 'border-primary bg-background text-primary'
+                            : 'border-border bg-background text-muted-foreground'
                         )}
                       >
-                        {step.label}
-                      </h4>
-                      {dateInfo && (
-                        <div className="text-left text-sm text-muted-foreground">
-                          <div>{dateInfo.date}</div>
-                          <div className="text-xs">{dateInfo.time}</div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* جزئیات */}
-                    {step.details && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {step.details}
-                      </p>
-                    )}
-
-                    {/* نمایش جزئیات تاییدات */}
-                    {step.status === 'pending' && approvals.length > 0 && !isRejected && (
-                      <div className="mt-3 space-y-2">
-                        {approvals.map((approval) => {
-                          const approvalDate = formatDate(approval.approved_at || undefined);
-                          return (
-                            <div
-                              key={approval.approver_role}
-                              className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2 text-sm"
-                            >
-                              <div className="flex items-center gap-2">
-                                {approval.approved_at ? (
-                                  <Check className="h-4 w-4 text-primary" />
-                                ) : (
-                                  <Clock className="h-4 w-4 text-muted-foreground" />
-                                )}
-                                <span>
-                                  {roleNameMap[approval.approver_role] || approval.approver_role}
-                                </span>
-                              </div>
-                              {approvalDate && (
-                                <div className="text-left text-xs text-muted-foreground">
-                                  <div>{approvalDate.date}</div>
-                                  <div>{approvalDate.time}</div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                        {step.rejected ? (
+                          <XCircle className="h-4 w-4" />
+                        ) : step.completed ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Icon className="h-4 w-4" />
+                        )}
                       </div>
-                    )}
+
+                      {/* محتوا */}
+                      <div className="flex-1 pb-6">
+                        <div className="flex items-center justify-between gap-4">
+                          <h4
+                            className={cn(
+                              'font-semibold',
+                              step.completed && !step.rejected
+                                ? 'text-foreground'
+                                : step.rejected
+                                ? 'text-destructive'
+                                : step.active
+                                ? 'text-primary'
+                                : 'text-muted-foreground'
+                            )}
+                          >
+                            {step.label}
+                          </h4>
+                          {dateInfo && (
+                            <div className="text-left text-sm text-muted-foreground">
+                              <div>{dateInfo.date}</div>
+                              <div className="text-xs">{dateInfo.time}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* جزئیات */}
+                        {step.details && (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {step.details}
+                          </p>
+                        )}
+
+                        {/* نمایش جزئیات تاییدات */}
+                        {step.status === 'pending' && approvals.length > 0 && !isRejected && (
+                          <div className="mt-3 space-y-2">
+                            {approvals.map((approval) => {
+                              const approvalDate = formatDate(approval.approved_at || undefined);
+                              return (
+                                <div
+                                  key={approval.approver_role}
+                                  className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2 text-sm"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {approval.approved_at ? (
+                                      <Check className="h-4 w-4 text-primary" />
+                                    ) : (
+                                      <Clock className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                    <span>
+                                      {roleNameMap[approval.approver_role] || approval.approver_role}
+                                    </span>
+                                  </div>
+                                  {approvalDate && (
+                                    <div className="text-left text-xs text-muted-foreground">
+                                      <div>{approvalDate.date}</div>
+                                      <div>{approvalDate.time}</div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
+                );
+              })}
+            </div>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full mt-3 gap-2">
+                <ChevronUp className="h-4 w-4" />
+                بستن جزئیات
+              </Button>
+            </CollapsibleTrigger>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 };
