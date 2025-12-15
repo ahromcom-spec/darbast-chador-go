@@ -19,6 +19,7 @@ import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
+import { sendOrderSms } from '@/lib/orderSms';
 
 // Component to display order technical details with edit capability
 const OrderDetailsContent = ({ order, getStatusBadge, onUpdate }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void }) => {
@@ -319,6 +320,14 @@ export default function ExecutiveOrders() {
 
       if (error) throw error;
 
+      // ارسال پیامک به مشتری (در پس‌زمینه)
+      const order = orders.find(o => o.id === orderId);
+      if (order?.customer_phone) {
+        sendOrderSms(order.customer_phone, order.code, 'in_progress').catch(err => {
+          console.error('SMS notification error:', err);
+        });
+      }
+
       toast({
         title: '✓ موفق',
         description: 'سفارش به مرحله در حال اجرا منتقل شد'
@@ -346,6 +355,14 @@ export default function ExecutiveOrders() {
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // ارسال پیامک به مشتری (در پس‌زمینه)
+      const order = orders.find(o => o.id === orderId);
+      if (order?.customer_phone) {
+        sendOrderSms(order.customer_phone, order.code, 'executed').catch(err => {
+          console.error('SMS notification error:', err);
+        });
+      }
 
       toast({
         title: '✓ موفق',
@@ -387,6 +404,13 @@ export default function ExecutiveOrders() {
         .eq('id', selectedOrder.id);
 
       if (error) throw error;
+
+      // ارسال پیامک به مشتری (در پس‌زمینه)
+      if (selectedOrder.customer_phone) {
+        sendOrderSms(selectedOrder.customer_phone, selectedOrder.code, 'completed').catch(err => {
+          console.error('SMS notification error:', err);
+        });
+      }
 
       toast({
         title: '✓ موفق',

@@ -28,6 +28,7 @@ import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValida
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NewLocationForm } from '@/components/locations/NewLocationForm';
 import { OrderForOthers, RecipientData } from '@/components/orders/OrderForOthers';
+import { sendOrderSms } from '@/lib/orderSms';
 
 interface Dimension {
   id: string;
@@ -1312,6 +1313,13 @@ export default function ComprehensiveScaffoldingForm({
         }).catch(err => {
           console.error('Notify managers error:', err);
         });
+
+        // ارسال پیامک به مشتری (در پس‌زمینه)
+        if (user?.phone) {
+          sendOrderSms(user.phone, createdProject.code, 'submitted').catch(err => {
+            console.error('SMS notification error:', err);
+          });
+        }
 
         // هدایت کاربر به صفحه جزئیات سفارش بلافاصله
         navigate(`/user/orders/${createdProject.id}`);

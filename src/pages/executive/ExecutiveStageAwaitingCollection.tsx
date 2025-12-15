@@ -16,6 +16,7 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { OrderDetailsView } from '@/components/orders/OrderDetailsView';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
+import { sendOrderSms } from '@/lib/orderSms';
 
 interface Order {
   id: string;
@@ -214,6 +215,23 @@ export default function ExecutiveStageAwaitingCollection() {
         }
       }
 
+      // ارسال پیامک به مشتری (در پس‌زمینه)
+      const selectedOrder = orders.find(o => o.id === orderId);
+      if (selectedOrder?.customer_phone) {
+        const smsStatusMap: Record<string, any> = {
+          awaiting_payment: 'awaiting_payment',
+          order_executed: 'executed',
+          awaiting_collection: 'in_collection',
+          in_collection: 'in_collection'
+        };
+        const smsStatus = smsStatusMap[newStage];
+        if (smsStatus) {
+          sendOrderSms(selectedOrder.customer_phone, orderCode, smsStatus).catch(err => {
+            console.error('SMS notification error:', err);
+          });
+        }
+      }
+
       toast({
         title: '✓ مرحله به‌روزرسانی شد',
         description: `مرحله سفارش ${orderCode} به "${stageLabels[newStage]}" تغییر یافت.`
@@ -290,6 +308,14 @@ export default function ExecutiveStageAwaitingCollection() {
             console.error('Error sending notification:', e);
           }
         }
+      }
+
+      // ارسال پیامک به مشتری (در پس‌زمینه)
+      const selectedOrder = orders.find(o => o.id === orderId);
+      if (selectedOrder?.customer_phone) {
+        sendOrderSms(selectedOrder.customer_phone, orderCode, 'completed').catch(err => {
+          console.error('SMS notification error:', err);
+        });
       }
 
       toast({
