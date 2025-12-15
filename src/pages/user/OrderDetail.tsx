@@ -1593,32 +1593,6 @@ export default function OrderDetail() {
                 </CardContent>
               </Card>
 
-              {!order.customer_completion_date && (
-                <Card className="border-2 border-primary">
-                  <CardHeader>
-                    <CardTitle className="text-lg">تایید اتمام پروژه</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      با ثبت تاریخ اتمام، تایید می‌کنید که پروژه به درستی انجام شده است.
-                    </p>
-                    <div>
-                      <Label htmlFor="completion-date">تاریخ اتمام پروژه</Label>
-                      <Input
-                        id="completion-date"
-                        type="date"
-                        value={completionDate}
-                        onChange={(e) => setCompletionDate(e.target.value)}
-                        className="mt-2"
-                      />
-                    </div>
-                    <Button onClick={handleSetCompletionDate} className="gap-2 w-full">
-                      <CheckCircle className="h-4 w-4" />
-                      تایید اتمام پروژه
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
             </>
           )}
 
