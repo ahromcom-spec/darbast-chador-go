@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { 
   Users, 
   User, 
@@ -14,7 +15,8 @@ import {
   Check,
   Clock,
   X,
-  Briefcase
+  Briefcase,
+  ChevronDown
 } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 
@@ -56,6 +58,8 @@ export function OrderOwnershipChain({
 }: OrderOwnershipChainProps) {
   const [chainItems, setChainItems] = useState<ChainItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+  const INITIAL_ITEMS_COUNT = 2;
 
   useEffect(() => {
     fetchOwnershipChain();
@@ -281,6 +285,9 @@ export function OrderOwnershipChain({
     return null; // Don't show the chain if there's only the owner with no transfers/collaborators/managers
   }
 
+  const displayedItems = showAll ? chainItems : chainItems.slice(0, INITIAL_ITEMS_COUNT);
+  const hasMoreItems = chainItems.length > INITIAL_ITEMS_COUNT;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -295,7 +302,7 @@ export function OrderOwnershipChain({
           <div className="absolute right-5 top-6 bottom-6 w-0.5 bg-border" />
           
           <div className="space-y-4">
-            {chainItems.map((item, index) => (
+            {displayedItems.map((item, index) => (
               <div key={item.id} className="relative flex items-start gap-4">
                 {/* Icon circle */}
                 <div className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 ${
@@ -407,6 +414,21 @@ export function OrderOwnershipChain({
               </div>
             ))}
           </div>
+
+          {/* Show More Button */}
+          {hasMoreItems && !showAll && (
+            <div className="mt-4 text-center">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowAll(true)}
+                className="gap-2 text-primary"
+              >
+                <ChevronDown className="h-4 w-4" />
+                نمایش بیشتر ({chainItems.length - INITIAL_ITEMS_COUNT} مورد دیگر)
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

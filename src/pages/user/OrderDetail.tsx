@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -46,7 +47,9 @@ import {
   CreditCard,
   Printer,
   ArrowLeftRight,
-  Users
+  Users,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { OrderTransfer } from "@/components/orders/OrderTransfer";
 import { AddCollaborator } from "@/components/orders/AddCollaborator";
@@ -192,6 +195,8 @@ export default function OrderDetail() {
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
+  const [isOrderDetailsExpanded, setIsOrderDetailsExpanded] = useState(false);
+  const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -1200,65 +1205,90 @@ export default function OrderDetail() {
 
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
                 {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || approvedRepairCost > 0) && (
-                  <section className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-4">
-                    <div className="flex flex-wrap items-center gap-3 justify-between">
-                      <h3 className="font-semibold">هزینه قرارداد</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">قیمت تخمینی</span>
-                        <span className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300">
-                          {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || 0)?.toLocaleString('fa-IR')} تومان
-                        </span>
-                      </div>
-                    </div>
-
-                    {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="font-medium">جزئیات محاسبه قیمت</h4>
-                        <div className="space-y-1">
-                          {parsedNotes.price_breakdown.map((item: string, index: number) => (
-                            <div
-                              key={index}
-                              className="text-xs sm:text-sm text-muted-foreground p-2 bg-muted/40 rounded-md border border-muted/60"
-                            >
-                              {item}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* نمایش هزینه تعمیر تایید شده */}
-                    {approvedRepairCost > 0 && (
-                      <div className="pt-3 border-t border-emerald-200 dark:border-emerald-800">
-                        <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                          <div className="flex items-center gap-2">
-                            <Edit className="h-4 w-4 text-amber-600" />
-                            <span className="text-sm font-medium text-amber-700 dark:text-amber-300">هزینه تعمیر</span>
-                          </div>
-                          <span className="font-bold text-amber-700 dark:text-amber-300">
-                            {approvedRepairCost.toLocaleString('fa-IR')} تومان
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* جمع کل */}
-                    {approvedRepairCost > 0 && (
-                      <div className="pt-3 border-t border-emerald-200 dark:border-emerald-800">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold">جمع کل</span>
+                  <Collapsible open={isPriceDetailsExpanded} onOpenChange={setIsPriceDetailsExpanded}>
+                    <section className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-4">
+                      {/* Summary View */}
+                      <div className="flex flex-wrap items-center gap-3 justify-between">
+                        <h3 className="font-semibold">هزینه قرارداد</h3>
+                        <div className="flex items-center gap-3">
                           <span className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300">
-                            {(((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || 0) + approvedRepairCost).toLocaleString('fa-IR')} تومان
+                            {(approvedRepairCost > 0 
+                              ? (((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || 0) + approvedRepairCost)
+                              : ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) || order.payment_amount || 0)
+                            )?.toLocaleString('fa-IR')} تومان
                           </span>
+                          {order.payment_confirmed_at ? (
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              پرداخت شده
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="gap-1">
+                              <Clock className="h-3 w-3" />
+                              پرداخت نشده
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                    )}
 
-                    {notesParseError && (
-                      <p className="text-xs text-muted-foreground">
-                        جزئیات فنی این سفارش در دسترس نیست.
-                      </p>
-                    )}
+                      {/* Collapsible Price Details */}
+                      <CollapsibleContent className="space-y-4">
+                        {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="font-medium">جزئیات محاسبه قیمت</h4>
+                            <div className="space-y-1">
+                              {parsedNotes.price_breakdown.map((item: string, index: number) => (
+                                <div
+                                  key={index}
+                                  className="text-xs sm:text-sm text-muted-foreground p-2 bg-muted/40 rounded-md border border-muted/60"
+                                >
+                                  {item}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* نمایش هزینه تعمیر تایید شده */}
+                        {approvedRepairCost > 0 && (
+                          <div className="pt-3 border-t border-emerald-200 dark:border-emerald-800">
+                            <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                              <div className="flex items-center gap-2">
+                                <Edit className="h-4 w-4 text-amber-600" />
+                                <span className="text-sm font-medium text-amber-700 dark:text-amber-300">هزینه تعمیر</span>
+                              </div>
+                              <span className="font-bold text-amber-700 dark:text-amber-300">
+                                {approvedRepairCost.toLocaleString('fa-IR')} تومان
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </CollapsibleContent>
+
+                      {/* Toggle Button */}
+                      {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm" className="w-full gap-2">
+                            {isPriceDetailsExpanded ? (
+                              <>
+                                <ChevronUp className="h-4 w-4" />
+                                بستن جزئیات
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="h-4 w-4" />
+                                جزئیات محاسبه قیمت
+                              </>
+                            )}
+                          </Button>
+                        </CollapsibleTrigger>
+                      )}
+
+                      {notesParseError && (
+                        <p className="text-xs text-muted-foreground">
+                          جزئیات فنی این سفارش در دسترس نیست.
+                        </p>
+                      )}
 
                     {/* دکمه پرداخت - فقط بعد از تایید سفارش */}
                     {['approved', 'completed', 'in_progress', 'pending_execution'].includes(order.status) && 
@@ -1365,7 +1395,8 @@ export default function OrderDetail() {
                         </div>
                       </div>
                     )}
-                  </section>
+                    </section>
+                  </Collapsible>
                 )}
 
                 {/* بلوک تاریخ‌های مهم - کادر جداگانه */}
