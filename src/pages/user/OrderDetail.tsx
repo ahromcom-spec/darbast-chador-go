@@ -955,7 +955,7 @@ export default function OrderDetail() {
                   {/* Summary View - Always Visible */}
                   {parsedNotes && (
                     <div className="space-y-3">
-                      {/* نوع داربست */}
+                      {/* نوع داربست یا کرایه اجناس */}
                       {parsedNotes.service_type && (
                         <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">نوع داربست</span>
@@ -965,13 +965,62 @@ export default function OrderDetail() {
                             {parsedNotes.service_type === 'ceiling-tiered' && 'داربست زیر بتن - تیرچه'}
                             {parsedNotes.service_type === 'ceiling-slab' && 'داربست زیر بتن - دال بتنی'}
                             {parsedNotes.service_type === 'column' && 'داربست ستونی'}
-                            {!['facade', 'formwork', 'ceiling-tiered', 'ceiling-slab', 'column'].includes(parsedNotes.service_type) && parsedNotes.service_type}
+                            {parsedNotes.service_type === 'کرایه اجناس داربست' && 'کرایه اجناس داربست'}
+                            {!['facade', 'formwork', 'ceiling-tiered', 'ceiling-slab', 'column', 'کرایه اجناس داربست'].includes(parsedNotes.service_type) && parsedNotes.service_type}
                           </span>
                         </div>
                       )}
 
-                      {/* متراژ کل */}
-                      {parsedNotes.totalArea && (
+                      {/* جزئیات کرایه اجناس داربست */}
+                      {parsedNotes.service_type === 'کرایه اجناس داربست' && (
+                        <div className="space-y-3">
+                          {parsedNotes.item_type && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">نوع جنس</span>
+                              <span className="font-semibold">{parsedNotes.item_type}</span>
+                            </div>
+                          )}
+                          {parsedNotes.item_sub_type && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">زیرمجموعه</span>
+                              <span className="font-semibold">{parsedNotes.item_sub_type}</span>
+                            </div>
+                          )}
+                          {parsedNotes.quantity && (
+                            <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">تعداد</span>
+                              <span className="font-bold text-lg">{parsedNotes.quantity.toLocaleString('fa-IR')} عدد</span>
+                            </div>
+                          )}
+                          {parsedNotes.rental_start_date && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">تاریخ شروع اجاره</span>
+                              <span className="font-semibold">{formatPersianDate(parsedNotes.rental_start_date)}</span>
+                            </div>
+                          )}
+                          {parsedNotes.rental_end_date && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">تاریخ پایان اجاره</span>
+                              <span className="font-semibold">{formatPersianDate(parsedNotes.rental_end_date)}</span>
+                            </div>
+                          )}
+                          {parsedNotes.total_price && (
+                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">قیمت کل</span>
+                              <span className="font-bold text-lg text-green-700 dark:text-green-400">{parsedNotes.total_price.toLocaleString('fa-IR')} تومان</span>
+                            </div>
+                          )}
+                          {parsedNotes.additional_notes && (
+                            <div className="p-3 bg-muted/30 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">توضیحات اضافی</span>
+                              <p className="text-sm leading-relaxed">{parsedNotes.additional_notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* متراژ کل - فقط برای داربست */}
+                      {parsedNotes.totalArea && parsedNotes.service_type !== 'کرایه اجناس داربست' && (
                         <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">متراژ کل داربست</span>
                           <span className="font-bold text-lg">
@@ -1010,8 +1059,70 @@ export default function OrderDetail() {
 
                   {/* Expanded Details */}
                   <CollapsibleContent className="space-y-6">
-                    {/* بلوک ۱: مشخصات فنی داربست */}
-                    {parsedNotes && (
+                    {/* بلوک کرایه اجناس داربست */}
+                    {parsedNotes && parsedNotes.service_type === 'کرایه اجناس داربست' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-4">
+                          <h3 className="font-semibold mb-1">مشخصات کرایه</h3>
+                          
+                          {parsedNotes.item_type && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">نوع جنس</span>
+                              <span className="font-semibold text-base">{parsedNotes.item_type}</span>
+                            </div>
+                          )}
+                          
+                          {parsedNotes.item_sub_type && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">زیرمجموعه</span>
+                              <span className="font-semibold text-base">{parsedNotes.item_sub_type}</span>
+                            </div>
+                          )}
+                          
+                          {parsedNotes.quantity && (
+                            <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">تعداد سفارش</span>
+                              <span className="font-bold text-lg">{parsedNotes.quantity.toLocaleString('fa-IR')} عدد</span>
+                            </div>
+                          )}
+                        </section>
+
+                        <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-4">
+                          <h3 className="font-semibold mb-1">مدت اجاره و هزینه</h3>
+                          
+                          {parsedNotes.rental_start_date && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">تاریخ شروع اجاره</span>
+                              <span className="font-semibold">{formatPersianDate(parsedNotes.rental_start_date)}</span>
+                            </div>
+                          )}
+                          
+                          {parsedNotes.rental_end_date && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">تاریخ پایان اجاره</span>
+                              <span className="font-semibold">{formatPersianDate(parsedNotes.rental_end_date)}</span>
+                            </div>
+                          )}
+                          
+                          {parsedNotes.total_price && (
+                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-800 flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">قیمت کل کرایه</span>
+                              <span className="font-bold text-lg text-green-700 dark:text-green-400">{parsedNotes.total_price.toLocaleString('fa-IR')} تومان</span>
+                            </div>
+                          )}
+                          
+                          {parsedNotes.additional_notes && (
+                            <div className="p-3 bg-muted/30 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">توضیحات اضافی</span>
+                              <p className="text-sm leading-relaxed">{parsedNotes.additional_notes}</p>
+                            </div>
+                          )}
+                        </section>
+                      </div>
+                    )}
+
+                    {/* بلوک ۱: مشخصات فنی داربست - فقط برای داربست معمولی */}
+                    {parsedNotes && parsedNotes.service_type !== 'کرایه اجناس داربست' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-4">
                           <h3 className="font-semibold mb-1">مشخصات داربست</h3>
