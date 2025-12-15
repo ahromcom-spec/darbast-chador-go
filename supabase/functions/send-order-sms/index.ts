@@ -66,14 +66,14 @@ function formatPersianDateTime(): string {
 
 // SMS templates for each order status with placeholders
 const SMS_TEMPLATES: Record<string, string> = {
-  submitted: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در اهرم ثبت شد و در انتظار تایید است.",
-  approved: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} توسط مدیر تایید شد. آدرس: {address}",
-  in_progress: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در حال اجرا است. آدرس: {address}",
-  executed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} اجرا شد. آدرس: {address}",
+  submitted: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در اهرم ثبت شد و در انتظار تایید است. مشاهده سفارش: {orderLink}",
+  approved: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} توسط مدیر تایید شد. آدرس: {address} مشاهده سفارش: {orderLink}",
+  in_progress: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در حال اجرا است. مشاهده سفارش: {orderLink}",
+  executed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} اجرا شد. مشاهده سفارش: {orderLink}",
   awaiting_payment: "سفارش {serviceType} با کد {code} در آدرس {address} در انتظار پرداخت است. مبلغ: {amount} تومان. تاریخ: {dateTime} مشاهده سفارش: {orderLink}",
-  paid: "پرداخت سفارش {serviceType} با کد {code} در تاریخ {dateTime} ثبت شد.",
-  in_collection: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در حال جمع‌آوری است. آدرس: {address}",
-  completed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} تکمیل شد. از اعتماد شما سپاسگزاریم.",
+  paid: "پرداخت سفارش {serviceType} با کد {code} در تاریخ {dateTime} ثبت شد. آدرس: {address} مشاهده سفارش: {orderLink}",
+  in_collection: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در حال جمع‌آوری است. مشاهده سفارش: {orderLink}",
+  completed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} تکمیل شد. از اعتماد شما سپاسگزاریم. مشاهده سفارش: {orderLink}",
 };
 
 interface SmsRequest {
