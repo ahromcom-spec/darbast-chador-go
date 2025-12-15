@@ -17,7 +17,7 @@ import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
-import { sendOrderSms } from '@/lib/orderSms';
+import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 
 interface Order {
   id: string;
@@ -269,7 +269,10 @@ export default function SalesOrders() {
 
       // ارسال پیامک به مشتری (در پس‌زمینه)
       if (selectedOrder.customer_phone) {
-        sendOrderSms(selectedOrder.customer_phone, selectedOrder.code, 'paid').catch(err => {
+        sendOrderSms(selectedOrder.customer_phone, selectedOrder.code, 'paid', {
+          orderId: selectedOrder.id,
+          address: buildOrderSmsAddress(selectedOrder.address, selectedOrder.detailed_address),
+        }).catch(err => {
           console.error('SMS notification error:', err);
         });
       }

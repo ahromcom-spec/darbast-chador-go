@@ -53,6 +53,19 @@ export const sendOrderSms = async (
   }
 };
 
+
+// Helper to build a consistent address string for SMS
+export const buildOrderSmsAddress = (
+  address?: string | null,
+  detailedAddress?: string | null
+): string => {
+  const base = (address || '').trim();
+  const detail = (detailedAddress || '').trim();
+
+  if (base && detail) return `${base} - ${detail}`;
+  return base || detail || 'ثبت نشده';
+};
+
 // Helper to map execution stages to SMS status
 export const getSmStatusFromExecutionStage = (stage: string): SmsStatus | null => {
   const stageMap: Record<string, SmsStatus> = {
@@ -78,3 +91,4 @@ export const getSmsStatusFromOrderStatus = (status: string): SmsStatus | null =>
   };
   return statusMap[status] || null;
 };
+
