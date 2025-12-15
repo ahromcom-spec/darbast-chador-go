@@ -36,6 +36,7 @@ const PhoneWhitelistManagement = lazy(() => import("@/pages/ceo/PhoneWhitelistMa
 const ContractorVerifications = lazy(() => import("@/pages/ceo/ContractorVerifications").then(m => ({ default: m.ContractorVerifications })));
 const StaffVerifications = lazy(() => import("@/pages/ceo/StaffVerifications").then(m => ({ default: m.StaffVerifications })));
 const CEOOrders = lazy(() => import("@/pages/ceo/CEOOrders").then(m => ({ default: m.CEOOrders })));
+const CEOCustomers = lazy(() => import("@/pages/ceo/CEOCustomers").then(m => ({ default: m.CEOCustomers })));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -273,6 +274,7 @@ const App = () => {
                 <Route path="contractor-verifications" element={<ContractorVerifications />} />
                 <Route path="staff-verifications" element={<StaffVerifications />} />
                 <Route path="orders" element={<CEOOrders />} />
+                <Route path="customers" element={<CEOCustomers />} />
                 <Route path="test-order" element={<TestOrderCreator />} />
               </Route>
               <Route path="/executive" element={

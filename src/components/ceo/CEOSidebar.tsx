@@ -4,6 +4,7 @@ import {
   Shield,
   UserCheck,
   Users,
+  UsersRound,
   ChevronRight,
   ShoppingCart,
 } from 'lucide-react';
@@ -21,6 +22,11 @@ const menuItems = [
     title: 'سفارشات',
     icon: ShoppingCart,
     href: '/ceo/orders',
+  },
+  {
+    title: 'مشتریان',
+    icon: UsersRound,
+    href: '/ceo/customers',
   },
   {
     title: 'مدیریت دسترسی',
