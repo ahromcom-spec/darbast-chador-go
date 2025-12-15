@@ -946,205 +946,272 @@ export default function OrderDetail() {
 
           {/* Order Details from Notes or Payment Amount */}
           {(parsedNotes || order.payment_amount || notesParseError) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>جزئیات سفارش</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* بلوک ۱: مشخصات فنی داربست */}
-                {parsedNotes && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-4">
-                      <h3 className="font-semibold mb-1">مشخصات داربست</h3>
-
-                      {/* نوع خدمت */}
+            <Collapsible open={isOrderDetailsExpanded} onOpenChange={setIsOrderDetailsExpanded}>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle>جزئیات سفارش</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Summary View - Always Visible */}
+                  {parsedNotes && (
+                    <div className="space-y-3">
+                      {/* نوع داربست */}
                       {parsedNotes.service_type && (
-                        <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                        <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">نوع داربست</span>
-                          <span className="font-semibold text-base">
+                          <span className="font-semibold">
                             {parsedNotes.service_type === 'facade' && 'داربست سطحی نما'}
                             {parsedNotes.service_type === 'formwork' && 'داربست حجمی کفراژ'}
                             {parsedNotes.service_type === 'ceiling-tiered' && 'داربست زیر بتن - تیرچه'}
                             {parsedNotes.service_type === 'ceiling-slab' && 'داربست زیر بتن - دال بتنی'}
-                            {parsedNotes.service_type === 'column' && 'داربست ستونی، نورگیر، چاله آسانسور و ...'}
+                            {parsedNotes.service_type === 'column' && 'داربست ستونی'}
                             {!['facade', 'formwork', 'ceiling-tiered', 'ceiling-slab', 'column'].includes(parsedNotes.service_type) && parsedNotes.service_type}
                           </span>
                         </div>
                       )}
 
-                      {/* ابعاد */}
-                      {parsedNotes.dimensions && parsedNotes.dimensions.length > 0 && (
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium">ابعاد ثبت‌شده</h4>
-                            <span className="text-xs text-muted-foreground">به متر</span>
-                          </div>
-                          <div className="space-y-2">
-                            {parsedNotes.dimensions.map((dim: any, index: number) => {
-                              const length = typeof dim.length === 'number' ? dim.length : parseFloat(dim.length);
-                              const width = dim.width ? (typeof dim.width === 'number' ? dim.width : parseFloat(dim.width)) : 1;
-                              const height = typeof dim.height === 'number' ? dim.height : parseFloat(dim.height);
-
-                              const actualHeight = parsedNotes.columnHeight || height;
-                              const volume = length * width * actualHeight;
-
-                              return (
-                                <div
-                                  key={index}
-                                  className="flex flex-wrap items-center gap-2 md:gap-3 p-3 bg-muted/40 rounded-xl"
-                                >
-                                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-background text-xs font-medium border border-border/60">
-                                    {parsedNotes.service_type === 'column'
-                                      ? 'ابعاد'
-                                      : `بعد ${index + 1}`}
-                                  </span>
-                                  <span className="text-sm">طول: <span className="font-medium">{length}</span> متر</span>
-                                  <span className="text-sm">عرض: <span className="font-medium">{width}</span> متر</span>
-                                  <span className="text-sm">ارتفاع: <span className="font-medium">{actualHeight}</span> متر</span>
-                                  {parsedNotes.service_type !== 'column' && (
-                                    <span className="text-xs text-muted-foreground ms-auto">
-                                      حجم تقریبی: {volume % 1 === 0 ? volume : volume.toFixed(2)} متر مکعب
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
                       {/* متراژ کل */}
                       {parsedNotes.totalArea && (
-                        <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between">
+                        <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">متراژ کل داربست</span>
                           <span className="font-bold text-lg">
-                            {parsedNotes.totalArea % 1 === 0
-                              ? parsedNotes.totalArea
-                              : parsedNotes.totalArea.toFixed(2)}
-                            
+                            {parsedNotes.totalArea % 1 === 0 ? parsedNotes.totalArea : parsedNotes.totalArea.toFixed(2)}
                             <span className="text-sm font-normal ms-1">متر مکعب</span>
                           </span>
                         </div>
                       )}
 
-                      {/* واحدهای داربست ستونی */}
-                      {parsedNotes.column_units && (
-                        <div className="space-y-2">
-                          <h4 className="font-medium">جزئیات واحدهای داربست ستونی</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {parsedNotes.column_units.length_units && (
-                              <div className="p-3 bg-muted/40 rounded-lg">
-                                <span className="text-xs text-muted-foreground block mb-1">واحد طول</span>
-                                <span className="font-medium text-sm">{parsedNotes.column_units.length_units}</span>
-                              </div>
-                            )}
-                            {parsedNotes.column_units.width_units && (
-                              <div className="p-3 bg-muted/40 rounded-lg">
-                                <span className="text-xs text-muted-foreground block mb-1">واحد عرض</span>
-                                <span className="font-medium text-sm">{parsedNotes.column_units.width_units}</span>
-                              </div>
-                            )}
-                            {parsedNotes.column_units.height_units && (
-                              <div className="p-3 bg-muted/40 rounded-lg">
-                                <span className="text-xs text-muted-foreground block mb-1">واحد ارتفاع</span>
-                                <span className="font-medium text-sm">{parsedNotes.column_units.height_units}</span>
-                              </div>
-                            )}
-                            {parsedNotes.column_units.total_units && (
-                              <div className="p-3 bg-primary/10 rounded-lg border border-primary/30">
-                                <span className="text-xs text-muted-foreground block mb-1">مجموع واحدها</span>
-                                <span className="font-bold text-base">{parsedNotes.column_units.total_units}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </section>
-
-                    {/* بلوک ۲: شرایط اجرا و محل */}
-                    <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-4">
-                      <h3 className="font-semibold mb-1">شرایط اجرا و محل پروژه</h3>
-
-                      {parsedNotes.conditions && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {parsedNotes.conditions.rentalMonthsPlan && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">پلان اجاره</span>
-                              <span className="font-medium text-sm">
-                                {parsedNotes.conditions.rentalMonthsPlan === '1' && 'به شرط یک ماه'}
-                                {parsedNotes.conditions.rentalMonthsPlan === '2' && 'به شرط دو ماه'}
-                                {parsedNotes.conditions.rentalMonthsPlan === '3+' && 'به شرط سه ماه و بیشتر'}
-                              </span>
-                            </div>
-                          )}
-                          {parsedNotes.conditions.totalMonths && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">مدت قرارداد</span>
-                              <span className="font-medium text-sm">{parsedNotes.conditions.totalMonths} ماه</span>
-                            </div>
-                          )}
-                          {parsedNotes.conditions.distanceRange && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">فاصله از قم</span>
-                              <span className="font-medium text-sm">{parsedNotes.conditions.distanceRange} کیلومتر</span>
-                            </div>
-                          )}
-                          {parsedNotes.onGround !== undefined && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">محل نصب داربست</span>
-                              <span className="font-medium text-sm">
-                                {parsedNotes.onGround ? 'روی زمین' : 'روی سکو / پشت‌بام / بالکن'}
-                              </span>
-                            </div>
-                          )}
-                          {!parsedNotes.onGround && parsedNotes.conditions.platformHeight && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">ارتفاع پای کار</span>
-                              <span className="font-medium text-sm">{parsedNotes.conditions.platformHeight} متر</span>
-                            </div>
-                          )}
-                          {!parsedNotes.onGround && parsedNotes.conditions.scaffoldHeightFromPlatform && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">ارتفاع داربست از پای کار</span>
-                              <span className="font-medium text-sm">{parsedNotes.conditions.scaffoldHeightFromPlatform} متر</span>
-                            </div>
-                          )}
-                          {parsedNotes.vehicleReachesSite !== undefined && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">دسترسی خودرو</span>
-                              <span className="font-medium text-sm">
-                                {parsedNotes.vehicleReachesSite ? 'خودرو به محل می‌رسد' : 'خودرو به محل نمی‌رسد'}
-                              </span>
-                            </div>
-                          )}
-                          {!parsedNotes.vehicleReachesSite && parsedNotes.conditions.vehicleDistance && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">فاصله خودرو تا محل</span>
-                              <span className="font-medium text-sm">{parsedNotes.conditions.vehicleDistance} متر</span>
-                            </div>
-                          )}
-                          {parsedNotes.isFacadeWidth2m !== undefined && (
-                            <div className="p-3 bg-muted/40 rounded-lg">
-                              <span className="text-xs text-muted-foreground block mb-1">عرض داربست نما</span>
-                              <span className="font-medium text-sm">{parsedNotes.isFacadeWidth2m ? '2 متر' : '1 متر'}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* شرح محل نصب */}
+                      {/* شرح محل نصب - خلاصه */}
                       {parsedNotes.locationPurpose && (
-                        <div className="space-y-2">
-                          <h4 className="font-medium">شرح محل نصب و فعالیت</h4>
-                          <div className="p-3 bg-muted/30 rounded-lg">
-                            <p className="text-sm leading-relaxed">{parsedNotes.locationPurpose}</p>
-                          </div>
+                        <div className="p-3 bg-muted/30 rounded-lg">
+                          <span className="text-xs text-muted-foreground block mb-1">شرح محل نصب و فعالیت</span>
+                          <p className="text-sm leading-relaxed">{parsedNotes.locationPurpose}</p>
                         </div>
                       )}
-                    </section>
-                  </div>
-                )}
+                    </div>
+                  )}
 
+                  {/* Toggle Button */}
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full gap-2">
+                      {isOrderDetailsExpanded ? (
+                        <>
+                          <ChevronUp className="h-4 w-4" />
+                          بستن جزئیات
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4" />
+                          دیگر جزئیات سفارش
+                        </>
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+
+                  {/* Expanded Details */}
+                  <CollapsibleContent className="space-y-6">
+                    {/* بلوک ۱: مشخصات فنی داربست */}
+                    {parsedNotes && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-4">
+                          <h3 className="font-semibold mb-1">مشخصات داربست</h3>
+
+                          {/* نوع خدمت */}
+                          {parsedNotes.service_type && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">نوع داربست</span>
+                              <span className="font-semibold text-base">
+                                {parsedNotes.service_type === 'facade' && 'داربست سطحی نما'}
+                                {parsedNotes.service_type === 'formwork' && 'داربست حجمی کفراژ'}
+                                {parsedNotes.service_type === 'ceiling-tiered' && 'داربست زیر بتن - تیرچه'}
+                                {parsedNotes.service_type === 'ceiling-slab' && 'داربست زیر بتن - دال بتنی'}
+                                {parsedNotes.service_type === 'column' && 'داربست ستونی، نورگیر، چاله آسانسور و ...'}
+                                {!['facade', 'formwork', 'ceiling-tiered', 'ceiling-slab', 'column'].includes(parsedNotes.service_type) && parsedNotes.service_type}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* ابعاد */}
+                          {parsedNotes.dimensions && parsedNotes.dimensions.length > 0 && (
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium">ابعاد ثبت‌شده</h4>
+                                <span className="text-xs text-muted-foreground">به متر</span>
+                              </div>
+                              <div className="space-y-2">
+                                {parsedNotes.dimensions.map((dim: any, index: number) => {
+                                  const length = typeof dim.length === 'number' ? dim.length : parseFloat(dim.length);
+                                  const width = dim.width ? (typeof dim.width === 'number' ? dim.width : parseFloat(dim.width)) : 1;
+                                  const height = typeof dim.height === 'number' ? dim.height : parseFloat(dim.height);
+
+                                  const actualHeight = parsedNotes.columnHeight || height;
+                                  const volume = length * width * actualHeight;
+
+                                  return (
+                                    <div
+                                      key={index}
+                                      className="flex flex-wrap items-center gap-2 md:gap-3 p-3 bg-muted/40 rounded-xl"
+                                    >
+                                      <span className="inline-flex items-center px-2 py-1 rounded-full bg-background text-xs font-medium border border-border/60">
+                                        {parsedNotes.service_type === 'column'
+                                          ? 'ابعاد'
+                                          : `بعد ${index + 1}`}
+                                      </span>
+                                      <span className="text-sm">طول: <span className="font-medium">{length}</span> متر</span>
+                                      <span className="text-sm">عرض: <span className="font-medium">{width}</span> متر</span>
+                                      <span className="text-sm">ارتفاع: <span className="font-medium">{actualHeight}</span> متر</span>
+                                      {parsedNotes.service_type !== 'column' && (
+                                        <span className="text-xs text-muted-foreground ms-auto">
+                                          حجم تقریبی: {volume % 1 === 0 ? volume : volume.toFixed(2)} متر مکعب
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* متراژ کل */}
+                          {parsedNotes.totalArea && (
+                            <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">متراژ کل داربست</span>
+                              <span className="font-bold text-lg">
+                                {parsedNotes.totalArea % 1 === 0
+                                  ? parsedNotes.totalArea
+                                  : parsedNotes.totalArea.toFixed(2)}
+                                
+                                <span className="text-sm font-normal ms-1">متر مکعب</span>
+                              </span>
+                            </div>
+                          )}
+
+                          {/* واحدهای داربست ستونی */}
+                          {parsedNotes.column_units && (
+                            <div className="space-y-2">
+                              <h4 className="font-medium">جزئیات واحدهای داربست ستونی</h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {parsedNotes.column_units.length_units && (
+                                  <div className="p-3 bg-muted/40 rounded-lg">
+                                    <span className="text-xs text-muted-foreground block mb-1">واحد طول</span>
+                                    <span className="font-medium text-sm">{parsedNotes.column_units.length_units}</span>
+                                  </div>
+                                )}
+                                {parsedNotes.column_units.width_units && (
+                                  <div className="p-3 bg-muted/40 rounded-lg">
+                                    <span className="text-xs text-muted-foreground block mb-1">واحد عرض</span>
+                                    <span className="font-medium text-sm">{parsedNotes.column_units.width_units}</span>
+                                  </div>
+                                )}
+                                {parsedNotes.column_units.height_units && (
+                                  <div className="p-3 bg-muted/40 rounded-lg">
+                                    <span className="text-xs text-muted-foreground block mb-1">واحد ارتفاع</span>
+                                    <span className="font-medium text-sm">{parsedNotes.column_units.height_units}</span>
+                                  </div>
+                                )}
+                                {parsedNotes.column_units.total_units && (
+                                  <div className="p-3 bg-primary/10 rounded-lg border border-primary/30">
+                                    <span className="text-xs text-muted-foreground block mb-1">مجموع واحدها</span>
+                                    <span className="font-bold text-base">{parsedNotes.column_units.total_units}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </section>
+
+                        {/* بلوک ۲: شرایط اجرا و محل */}
+                        <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-4">
+                          <h3 className="font-semibold mb-1">شرایط اجرا و محل پروژه</h3>
+
+                          {parsedNotes.conditions && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {parsedNotes.conditions.rentalMonthsPlan && (
+                                <div className="p-3 bg-muted/40 rounded-lg">
+                                  <span className="text-xs text-muted-foreground block mb-1">پلان اجاره</span>
+                                  <span className="font-medium text-sm">
+                                    {parsedNotes.conditions.rentalMonthsPlan === '1' && 'به شرط یک ماه'}
+                                    {parsedNotes.conditions.rentalMonthsPlan === '2' && 'به شرط دو ماه'}
+                                    {parsedNotes.conditions.rentalMonthsPlan === '3+' && 'به شرط سه ماه و بیشتر'}
+                                  </span>
+                                </div>
+                              )}
+                              {parsedNotes.conditions.totalMonths && (
+                                <div className="p-3 bg-muted/40 rounded-lg">
+                                  <span className="text-xs text-muted-foreground block mb-1">مدت قرارداد</span>
+                                  <span className="font-medium text-sm">{parsedNotes.conditions.totalMonths} ماه</span>
+                                </div>
+                              )}
+                              {parsedNotes.conditions.distanceRange && (
+                                <div className="p-3 bg-muted/40 rounded-lg">
+                                  <span className="text-xs text-muted-foreground block mb-1">فاصله از قم</span>
+                                  <span className="font-medium text-sm">{parsedNotes.conditions.distanceRange} کیلومتر</span>
+                                </div>
+                              )}
+                              {parsedNotes.onGround !== undefined && (
+                                <div className="p-3 bg-muted/40 rounded-lg">
+                                  <span className="text-xs text-muted-foreground block mb-1">محل نصب داربست</span>
+                                  <span className="font-medium text-sm">
+                                    {parsedNotes.onGround ? 'روی زمین' : 'روی سکو / پشت‌بام / بالکن'}
+                                  </span>
+                                </div>
+                              )}
+                              {!parsedNotes.onGround && parsedNotes.conditions.platformHeight && (
+                                <div className="p-3 bg-muted/40 rounded-lg">
+                                  <span className="text-xs text-muted-foreground block mb-1">ارتفاع پای کار</span>
+                                  <span className="font-medium text-sm">{parsedNotes.conditions.platformHeight} متر</span>
+                                </div>
+                              )}
+                              {!parsedNotes.onGround && parsedNotes.conditions.scaffoldHeightFromPlatform && (
+                                <div className="p-3 bg-muted/40 rounded-lg">
+                                  <span className="text-xs text-muted-foreground block mb-1">ارتفاع داربست از پای کار</span>
+                                  <span className="font-medium text-sm">{parsedNotes.conditions.scaffoldHeightFromPlatform} متر</span>
+                                </div>
+                              )}
+                              {parsedNotes.vehicleReachesSite !== undefined && (
+                                <div className="p-3 bg-muted/40 rounded-lg">
+                                  <span className="text-xs text-muted-foreground block mb-1">دسترسی خودرو</span>
+                                  <span className="font-medium text-sm">
+                                    {parsedNotes.vehicleReachesSite ? 'خودرو به محل می‌رسد' : 'خودرو به محل نمی‌رسد'}
+                                  </span>
+                                </div>
+                              )}
+                              {!parsedNotes.vehicleReachesSite && parsedNotes.conditions.vehicleDistance && (
+                                <div className="p-3 bg-muted/40 rounded-lg">
+                                  <span className="text-xs text-muted-foreground block mb-1">فاصله خودرو تا محل</span>
+                                  <span className="font-medium text-sm">{parsedNotes.conditions.vehicleDistance} متر</span>
+                                </div>
+                              )}
+                              {parsedNotes.isFacadeWidth2m !== undefined && (
+                                <div className="p-3 bg-muted/40 rounded-lg">
+                                  <span className="text-xs text-muted-foreground block mb-1">عرض داربست نما</span>
+                                  <span className="font-medium text-sm">{parsedNotes.isFacadeWidth2m ? '2 متر' : '1 متر'}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* شرح محل نصب */}
+                          {parsedNotes.locationPurpose && (
+                            <div className="space-y-2">
+                              <h4 className="font-medium">شرح محل نصب و فعالیت</h4>
+                              <div className="p-3 bg-muted/30 rounded-lg">
+                                <p className="text-sm leading-relaxed">{parsedNotes.locationPurpose}</p>
+                              </div>
+                            </div>
+                          )}
+                        </section>
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </CardContent>
+              </Card>
+            </Collapsible>
+          )}
+
+          {/* Repair and Collection Request Buttons - Outside the collapsible order details card */}
+          {(parsedNotes || order.payment_amount || notesParseError) && (
+            <>
                 {/* دکمه درخواست تعمیر - فقط برای سفارش‌های تایید شده خدمات اجرای داربست به همراه اجناس */}
                 {order.subcategory?.code === '10' && 
                  ['approved', 'in_progress', 'completed', 'paid', 'closed'].includes(order.status) && (
@@ -1440,8 +1507,7 @@ export default function OrderDetail() {
                     </div>
                   </section>
                 )}
-              </CardContent>
-            </Card>
+            </>
           )}
 
           {/* نقشه موقعیت پروژه */}
