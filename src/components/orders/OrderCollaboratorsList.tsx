@@ -128,13 +128,16 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwn
     return null;
   }
 
-  // Don't show anything if no collaborators
-  if (collaborators.length === 0) {
-    return null;
-  }
+  // Always show owner section even if no collaborators
+  const showOwnerSection = ownerName || ownerPhone;
 
   const acceptedCollaborators = collaborators.filter(c => c.status === 'accepted');
   const pendingCollaborators = collaborators.filter(c => c.status === 'pending');
+
+  // Don't show anything if no owner info and no collaborators
+  if (!showOwnerSection && collaborators.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">

@@ -280,10 +280,9 @@ export function OrderOwnershipChain({
     );
   }
 
-  // If no transfers, collaborators, or managers, just show simple owner
-  if (chainItems.length <= 1 && !chainItems.some(item => item.type === 'transfer' || item.type === 'collaborator' || item.type === 'manager')) {
-    return null; // Don't show the chain if there's only the owner with no transfers/collaborators/managers
-  }
+  // Always show at least the owner section
+  // If there's only the owner with no transfers/collaborators/managers, show a minimal view
+  const showMinimalView = chainItems.length <= 1 && !chainItems.some(item => item.type === 'transfer' || item.type === 'collaborator' || item.type === 'manager');
 
   const displayedItems = showAll ? chainItems : chainItems.slice(0, INITIAL_ITEMS_COUNT);
   const hasMoreItems = chainItems.length > INITIAL_ITEMS_COUNT;
@@ -298,8 +297,10 @@ export function OrderOwnershipChain({
       </CardHeader>
       <CardContent>
         <div className="relative">
-          {/* Vertical line connecting items */}
-          <div className="absolute right-5 top-6 bottom-6 w-0.5 bg-border" />
+          {/* Vertical line connecting items - hide if only one item */}
+          {!showMinimalView && chainItems.length > 1 && (
+            <div className="absolute right-5 top-6 bottom-6 w-0.5 bg-border" />
+          )}
           
           <div className="space-y-4">
             {displayedItems.map((item, index) => (
