@@ -265,7 +265,7 @@ export default function ExecutiveStageAwaitingCollection() {
         .from('projects_v3')
         .update({ 
           status: 'completed',
-          execution_stage: 'in_collection',
+          execution_stage: 'completed',
           execution_stage_updated_at: new Date().toISOString(),
           closed_at: new Date().toISOString()
         })
