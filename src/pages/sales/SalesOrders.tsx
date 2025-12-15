@@ -40,7 +40,13 @@ interface Order {
   customer_id?: string;
   executed_by?: string | null;
   approved_by?: string | null;
+  approved_at?: string | null;
   subcategory_id?: string | null;
+  execution_stage?: string | null;
+  execution_stage_updated_at?: string | null;
+  rejection_reason?: string | null;
+  transferred_from_user_id?: string | null;
+  transferred_from_phone?: string | null;
 }
 
 export default function SalesOrders() {
@@ -56,6 +62,8 @@ export default function SalesOrders() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [completingOrder, setCompletingOrder] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -125,9 +133,15 @@ export default function SalesOrders() {
           transaction_reference,
           executed_by,
           approved_by,
+          approved_at,
           subcategory_id,
           location_lat,
-          location_lng
+          location_lng,
+          execution_stage,
+          execution_stage_updated_at,
+          rejection_reason,
+          transferred_from_user_id,
+          transferred_from_phone
         `)
         .order('code', { ascending: false });
 
@@ -203,7 +217,13 @@ export default function SalesOrders() {
             customer_id: order.customer_id,
             executed_by: order.executed_by,
             approved_by: order.approved_by,
+            approved_at: order.approved_at,
             subcategory_id: order.subcategory_id,
+            execution_stage: order.execution_stage,
+            execution_stage_updated_at: order.execution_stage_updated_at,
+            rejection_reason: order.rejection_reason,
+            transferred_from_user_id: order.transferred_from_user_id,
+            transferred_from_phone: order.transferred_from_phone,
           } as Order;
         })
       );
@@ -264,6 +284,46 @@ export default function SalesOrders() {
         title: 'خطا',
         description: 'ثبت پرداخت با خطا مواجه شد'
       });
+    }
+  };
+
+  // Handler for marking order as completed by sales manager
+  const handleMarkComplete = async () => {
+    if (!selectedOrder) return;
+
+    setCompletingOrder(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          status: 'closed',
+          closed_at: new Date().toISOString(),
+          financial_confirmed_by: auth.user?.id,
+          financial_confirmed_at: new Date().toISOString()
+        })
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'موفق',
+        description: 'سفارش با موفقیت به اتمام رسید'
+      });
+
+      setShowCompleteDialog(false);
+      setShowDetailsDialog(false);
+      setSelectedOrder(null);
+      fetchOrders();
+    } catch (error) {
+      console.error('Error completing order:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در تایید اتمام سفارش'
+      });
+    } finally {
+      setCompletingOrder(false);
     }
   };
 
@@ -502,6 +562,16 @@ export default function SalesOrders() {
               {/* Action Buttons */}
               <Separator />
               <div className="flex gap-2 flex-wrap">
+                {/* دکمه تایید اتمام سفارش برای سفارشاتی که پرداخت شده ولی هنوز بسته نشده‌اند */}
+                {selectedOrder.status === 'paid' && (
+                  <Button
+                    onClick={() => setShowCompleteDialog(true)}
+                    className="gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    تایید اتمام سفارش
+                  </Button>
+                )}
                 {selectedOrder.status === 'completed' && (
                   <Button
                     onClick={() => {
@@ -612,6 +682,46 @@ export default function SalesOrders() {
           onCollaboratorAdded={fetchOrders}
         />
       )}
+
+      {/* Complete Order Confirmation Dialog */}
+      <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تایید اتمام سفارش</DialogTitle>
+            <DialogDescription>
+              آیا مطمئن هستید که می‌خواهید سفارش {selectedOrder?.code} را به عنوان "تکمیل شده" ثبت کنید؟
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              با تایید این گزینه، سفارش به مرحله نهایی (بسته شده) منتقل می‌شود.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCompleteDialog(false)}
+              disabled={completingOrder}
+            >
+              انصراف
+            </Button>
+            <Button 
+              onClick={handleMarkComplete} 
+              className="gap-2 bg-green-600 hover:bg-green-700"
+              disabled={completingOrder}
+            >
+              {completingOrder ? (
+                <>در حال ثبت...</>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  تایید اتمام
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

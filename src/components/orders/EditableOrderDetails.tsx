@@ -23,6 +23,8 @@ import { RepairRequestDialog } from './RepairRequestDialog';
 import { CollectionRequestDialog } from './CollectionRequestDialog';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { OrderCollaboratorsList } from './OrderCollaboratorsList';
+import { OrderTimeline } from './OrderTimeline';
+import { OrderOwnershipChain } from './OrderOwnershipChain';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -280,10 +282,17 @@ interface EditableOrderDetailsProps {
     location_lng?: number | null;
     executed_by?: string | null;
     approved_by?: string | null;
+    approved_at?: string | null;
     execution_start_date?: string | null;
     execution_end_date?: string | null;
+    execution_stage?: string | null;
+    execution_stage_updated_at?: string | null;
+    customer_completion_date?: string | null;
+    rejection_reason?: string | null;
     subcategory_id?: string | null;
     subcategory?: { code?: string; name?: string } | null;
+    transferred_from_user_id?: string | null;
+    transferred_from_phone?: string | null;
   };
   onUpdate?: () => void;
 }
@@ -294,13 +303,15 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
   const [repairDialogOpen, setRepairDialogOpen] = useState(false);
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
+  const [orderApprovals, setOrderApprovals] = useState<Array<{ approver_role: string; approved_at: string | null; approver_user_id: string | null }>>([]);
   const { toast } = useToast();
   
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
 
-  // Fetch approved/completed repair costs
+  // Fetch approved/completed repair costs and approvals
   useEffect(() => {
-    const fetchRepairCosts = async () => {
+    const fetchData = async () => {
+      // Fetch repair costs
       const { data: repairData } = await supabase
         .from('repair_requests')
         .select('final_cost, status')
@@ -311,8 +322,18 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         const totalRepairCost = repairData.reduce((sum, r) => sum + (r.final_cost || 0), 0);
         setApprovedRepairCost(totalRepairCost);
       }
+
+      // Fetch order approvals
+      const { data: approvalsData } = await supabase
+        .from('order_approvals')
+        .select('approver_role, approved_at, approver_user_id')
+        .eq('order_id', order.id);
+
+      if (approvalsData) {
+        setOrderApprovals(approvalsData);
+      }
     };
-    fetchRepairCosts();
+    fetchData();
   }, [order.id]);
   
   // Editable fields
@@ -772,6 +793,32 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
       )}
 
       <Separator />
+
+      {/* مراحل پیشرفت سفارش */}
+      <OrderTimeline
+        orderStatus={order.status || 'pending'}
+        createdAt={order.created_at || new Date().toISOString()}
+        approvedAt={order.approved_at || undefined}
+        executionStartDate={order.execution_start_date || undefined}
+        executionEndDate={order.execution_end_date || undefined}
+        customerCompletionDate={order.customer_completion_date || undefined}
+        rejectionReason={order.rejection_reason || undefined}
+        executionStage={order.execution_stage}
+        executionStageUpdatedAt={order.execution_stage_updated_at}
+        approvals={orderApprovals}
+      />
+
+      {/* زنجیره مالکیت و انتقالات سفارش */}
+      <OrderOwnershipChain
+        orderId={order.id}
+        currentOwnerId={order.customer_id || ''}
+        ownerName={order.customer_name}
+        ownerPhone={order.customer_phone}
+        transferredFromUserId={order.transferred_from_user_id || undefined}
+        transferredFromPhone={order.transferred_from_phone || undefined}
+        executedBy={order.executed_by || undefined}
+        approvedBy={order.approved_by || undefined}
+      />
 
       {/* لیست همکاران سفارش - قابل مشاهده برای مدیران */}
       <OrderCollaboratorsList orderId={order.id} showForManagers={true} />
