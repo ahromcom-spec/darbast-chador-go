@@ -25,6 +25,7 @@ interface MediaFile {
 }
 
 interface MediaUploaderProps {
+  projectId?: string; // Order/project ID to link media to
   onFilesChange?: (files: File[]) => void;
   maxImages?: number;
   maxVideos?: number;
@@ -34,6 +35,7 @@ interface MediaUploaderProps {
 }
 
 export function MediaUploader({
+  projectId,
   onFilesChange,
   maxImages = 4,
   maxVideos = 2,
@@ -154,6 +156,28 @@ export function MediaUploader({
       console.log('آپلود موفق:', uploadData);
 
       const { data: publicData } = supabase.storage.from('order-media').getPublicUrl(storagePath);
+      
+      // If projectId is provided, save record to project_media table
+      if (projectId) {
+        const { error: dbError } = await supabase
+          .from('project_media')
+          .insert({
+            project_id: projectId,
+            user_id: user.id,
+            file_path: storagePath,
+            file_type: media.type,
+            file_size: media.file.size,
+            mime_type: media.file.type,
+          });
+        
+        if (dbError) {
+          console.error('خطا در ذخیره اطلاعات مدیا:', dbError);
+          // Don't fail the upload, just log the error
+        } else {
+          console.log('رکورد مدیا در دیتابیس ذخیره شد');
+        }
+      }
+      
       setFilePartial(media.id, { status: 'done', storagePath, remoteUrl: publicData.publicUrl, uploadProgress: 100 });
       
       toast({ title: 'موفق', description: 'فایل با موفقیت آپلود شد', variant: 'default' });
