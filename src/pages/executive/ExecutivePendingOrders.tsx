@@ -504,12 +504,28 @@ export default function ExecutivePendingOrders() {
         throw updateError;
       }
 
+      // تعیین نقش تاییدکننده بر اساس نوع خدمات
+      let approverRole = 'scaffold_executive_manager';
+      if (selectedOrder.subcategory_id) {
+        const { data: subcat } = await supabase
+          .from('subcategories')
+          .select('code')
+          .eq('id', selectedOrder.subcategory_id)
+          .single();
+        
+        if (subcat?.code === '30') {
+          approverRole = 'rental_executive_manager';
+        } else if (subcat?.code === '10') {
+          approverRole = 'executive_manager_scaffold_execution_with_materials';
+        }
+      }
+
       // ثبت تایید در جدول order_approvals (اختیاری - برای سوابق)
       await supabase
         .from('order_approvals')
         .upsert({
           order_id: selectedOrder.id,
-          approver_role: 'scaffold_executive_manager',
+          approver_role: approverRole,
           approver_user_id: user.id,
           approved_at: new Date().toISOString()
         }, { onConflict: 'order_id,approver_role' })

@@ -10,7 +10,8 @@ export type UserRole =
   | 'sales_manager'
   | 'finance_manager'
   | 'scaffold_executive_manager'
-  | 'executive_manager_scaffold_execution_with_materials';
+  | 'executive_manager_scaffold_execution_with_materials'
+  | 'rental_executive_manager';
 
 interface UseUserRolesReturn {
   roles: UserRole[];
@@ -21,6 +22,7 @@ interface UseUserRolesReturn {
   isSalesManager: boolean;
   isFinanceManager: boolean;
   isExecutiveManager: boolean;
+  isRentalExecutiveManager: boolean;
   loading: boolean;
   hasRole: (role: UserRole) => boolean;
   hasAnyRole: (roles: UserRole[]) => boolean;
@@ -73,7 +75,8 @@ export const useUserRoles = (): UseUserRolesReturn => {
     isGeneralManager: hasRole('general_manager'),
     isSalesManager: hasRole('sales_manager'),
     isFinanceManager: hasRole('finance_manager'),
-    isExecutiveManager: hasRole('scaffold_executive_manager') || hasRole('executive_manager_scaffold_execution_with_materials'),
+    isExecutiveManager: hasRole('scaffold_executive_manager') || hasRole('executive_manager_scaffold_execution_with_materials') || hasRole('rental_executive_manager'),
+    isRentalExecutiveManager: hasRole('rental_executive_manager'),
     loading,
     hasRole,
     hasAnyRole,
