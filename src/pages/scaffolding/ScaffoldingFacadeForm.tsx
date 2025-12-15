@@ -353,9 +353,12 @@ export default function ScaffoldingFacadeForm() {
         duration: 5000,
       });
 
-      // ارسال پیامک تایید ثبت سفارش به مشتری (در پسزمینه)
+      // ارسال پیامک تایید ثبت سفارش به مشتری (در پس‌زمینه)
       if (user?.phone) {
-        sendOrderSms(user.phone, createdProject.code, 'submitted').catch(err => {
+        sendOrderSms(user.phone, createdProject.code, 'submitted', {
+          serviceType: 'داربست نما',
+          address: projectAddress || 'ثبت نشده'
+        }).catch(err => {
           console.error('SMS notification error:', err);
         });
       }

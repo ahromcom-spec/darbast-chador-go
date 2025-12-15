@@ -357,7 +357,11 @@ export default function NewServiceRequestForm() {
 
       // ارسال پیامک تایید ثبت سفارش به مشتری (در پس‌زمینه)
       if (profileData?.phone_number) {
-        sendOrderSms(profileData.phone_number, createdProject.code, 'submitted').catch(err => {
+        const subcategoryData = subcategories.find(s => s.id === selectedSubcategory);
+        sendOrderSms(profileData.phone_number, createdProject.code, 'submitted', {
+          serviceType: subcategoryData?.name || 'خدمات',
+          address: address || 'ثبت نشده'
+        }).catch(err => {
           console.error('SMS notification error:', err);
         });
       }

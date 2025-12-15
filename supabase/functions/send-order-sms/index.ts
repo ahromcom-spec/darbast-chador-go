@@ -13,22 +13,76 @@ const EXCLUDED_PHONES = [
   "09013131313",
 ];
 
-// SMS templates for each order status
+// تابع برای تبدیل تاریخ میلادی به شمسی
+function toJalali(date: Date): string {
+  const gyear = date.getFullYear();
+  const gm = date.getMonth() + 1;
+  const gd = date.getDate();
+  
+  const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  let jy = gyear <= 1600 ? 0 : 979;
+  if (gyear <= 1600) {
+    jy = 0;
+  } else {
+    jy = 979 + 33;
+  }
+  
+  const gy2 = gyear <= 1600 ? gyear - 621 : gyear - 1600;
+  let days = (365 * gy2) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
+  
+  if (gm > 2) {
+    days += ((gyear % 4 === 0 && gyear % 100 !== 0) || gyear % 400 === 0) ? 1 : 0;
+  }
+  
+  jy += 33 * Math.floor(days / 12053);
+  days %= 12053;
+  jy += 4 * Math.floor(days / 1461);
+  days %= 1461;
+  
+  if (days > 365) {
+    jy += Math.floor((days - 1) / 365);
+    days = (days - 1) % 365;
+  }
+  
+  let jm, jd;
+  if (days < 186) {
+    jm = 1 + Math.floor(days / 31);
+    jd = 1 + (days % 31);
+  } else {
+    jm = 7 + Math.floor((days - 186) / 30);
+    jd = 1 + ((days - 186) % 30);
+  }
+  
+  return `${jy}/${jm.toString().padStart(2, '0')}/${jd.toString().padStart(2, '0')}`;
+}
+
+function formatPersianDateTime(): string {
+  const now = new Date();
+  const jalaliDate = toJalali(now);
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  return `${jalaliDate} ساعت ${hours}:${minutes}`;
+}
+
+// SMS templates for each order status with placeholders
 const SMS_TEMPLATES: Record<string, string> = {
-  submitted: "سفارش شما با کد {code} در اهرم ثبت شد و در انتظار تایید است.",
-  approved: "سفارش شما با کد {code} توسط مدیر تایید شد.",
-  in_progress: "سفارش شما با کد {code} در حال اجرا است.",
-  executed: "سفارش شما با کد {code} اجرا شد.",
-  awaiting_payment: "سفارش شما با کد {code} در انتظار پرداخت است.",
-  paid: "پرداخت سفارش شما با کد {code} ثبت شد.",
-  in_collection: "سفارش شما با کد {code} در حال جمع‌آوری است.",
-  completed: "سفارش شما با کد {code} تکمیل شد. از اعتماد شما سپاسگزاریم.",
+  submitted: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در اهرم ثبت شد و در انتظار تایید است.",
+  approved: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} توسط مدیر تایید شد. آدرس: {address}",
+  in_progress: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در حال اجرا است. آدرس: {address}",
+  executed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} اجرا شد. آدرس: {address}",
+  awaiting_payment: "سفارش {serviceType} با کد {code} در انتظار پرداخت است. آدرس: {address}",
+  paid: "پرداخت سفارش {serviceType} با کد {code} در تاریخ {dateTime} ثبت شد.",
+  in_collection: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در حال جمع‌آوری است. آدرس: {address}",
+  completed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} تکمیل شد. از اعتماد شما سپاسگزاریم.",
 };
 
 interface SmsRequest {
   phone: string;
   orderCode: string;
   status: string;
+  serviceType?: string;
+  address?: string;
+  dateTime?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -38,9 +92,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, orderCode, status }: SmsRequest = await req.json();
+    const { phone, orderCode, status, serviceType, address, dateTime }: SmsRequest = await req.json();
     
-    console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}`);
+    console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Service: ${serviceType}, Address: ${address}`);
 
     // Validate inputs
     if (!phone || !orderCode || !status) {
@@ -106,8 +160,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // تاریخ و زمان شمسی
+    const persianDateTime = dateTime || formatPersianDateTime();
+    
     // Replace placeholders in template
-    const message = template.replace("{code}", orderCode);
+    let message = template
+      .replace("{code}", orderCode)
+      .replace("{serviceType}", serviceType || "خدمات")
+      .replace("{address}", address || "ثبت نشده")
+      .replace("{dateTime}", persianDateTime);
+    
     console.log(`[send-order-sms] Sending message: ${message}`);
 
     // Get ParsGreen credentials
