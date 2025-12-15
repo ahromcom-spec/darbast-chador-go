@@ -108,6 +108,14 @@ export const OrderTimeline = ({
 
   // تبدیل execution_stage به شماره مرحله برای مقایسه
   const getCurrentStageNumber = (): number => {
+    // اگر status برابر closed یا completed است، مرحله پایانی
+    if (orderStatus === 'closed' || orderStatus === 'completed') {
+      return 6;
+    }
+    // اگر پرداخت شده، یعنی مرحله پایانی
+    if (orderStatus === 'paid') {
+      return 6;
+    }
     if (executionStage) {
       return stageOrder[executionStage] || 0;
     }
