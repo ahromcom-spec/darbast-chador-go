@@ -24,7 +24,8 @@ import { CollectionRequestDialog } from './CollectionRequestDialog';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { OrderCollaboratorsList } from './OrderCollaboratorsList';
 import { OrderTimeline } from './OrderTimeline';
-import { OrderOwnershipChain } from './OrderOwnershipChain';
+import { ManagerOwnershipChain } from './ManagerOwnershipChain';
+import { CustomerOwnershipChain } from './CustomerOwnershipChain';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -808,16 +809,21 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         approvals={orderApprovals}
       />
 
-      {/* زنجیره مالکیت و انتقالات سفارش */}
-      <OrderOwnershipChain
+      {/* زنجیره انتقال و همکاری بین مدیران */}
+      <ManagerOwnershipChain
+        orderId={order.id}
+        executedBy={order.executed_by || undefined}
+        approvedBy={order.approved_by || undefined}
+      />
+
+      {/* زنجیره مالکیت و همکاری مشتریان */}
+      <CustomerOwnershipChain
         orderId={order.id}
         currentOwnerId={order.customer_id || ''}
         ownerName={order.customer_name}
         ownerPhone={order.customer_phone}
         transferredFromUserId={order.transferred_from_user_id || undefined}
         transferredFromPhone={order.transferred_from_phone || undefined}
-        executedBy={order.executed_by || undefined}
-        approvedBy={order.approved_by || undefined}
       />
 
       {/* لیست همکاران سفارش - قابل مشاهده برای مدیران */}
