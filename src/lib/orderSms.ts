@@ -10,16 +10,30 @@ type SmsStatus =
   | 'in_collection'  // در حال جمع‌آوری
   | 'completed';     // تکمیل شد
 
+interface OrderSmsDetails {
+  serviceType?: string;   // نوع خدمات
+  address?: string;       // آدرس
+  dateTime?: string;      // تاریخ و زمان شمسی
+}
+
 export const sendOrderSms = async (
   phone: string,
   orderCode: string,
-  status: SmsStatus
+  status: SmsStatus,
+  details?: OrderSmsDetails
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log(`[sendOrderSms] Sending SMS - Phone: ${phone}, Order: ${orderCode}, Status: ${status}`);
+    console.log(`[sendOrderSms] Sending SMS - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Details:`, details);
     
     const { data, error } = await supabase.functions.invoke('send-order-sms', {
-      body: { phone, orderCode, status }
+      body: { 
+        phone, 
+        orderCode, 
+        status,
+        serviceType: details?.serviceType,
+        address: details?.address,
+        dateTime: details?.dateTime
+      }
     });
 
     if (error) {
