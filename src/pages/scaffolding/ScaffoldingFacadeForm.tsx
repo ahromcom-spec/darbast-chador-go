@@ -13,6 +13,7 @@ import { ArrowRight, Plus, Trash2, AlertCircle } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { sendOrderSms } from '@/lib/orderSms';
 
 // Import comprehensive validation schemas
 import { orderDimensionSchema, orderFormSchema } from '@/lib/validations';
@@ -351,6 +352,13 @@ export default function ScaffoldingFacadeForm() {
         description: `کد پروژه: ${createdProject.code}\nسفارش شما در انتظار تایید مدیرعامل است.`,
         duration: 5000,
       });
+
+      // ارسال پیامک تایید ثبت سفارش به مشتری (در پسزمینه)
+      if (user?.phone) {
+        sendOrderSms(user.phone, createdProject.code, 'submitted').catch(err => {
+          console.error('SMS notification error:', err);
+        });
+      }
 
       // ارسال نوتیفیکیشن به مدیران (در پس‌زمینه)
       supabase.functions.invoke('notify-managers-new-order', {
