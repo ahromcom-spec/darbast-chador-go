@@ -116,7 +116,7 @@ export function ExecutiveSidebar() {
       const { data: pendingApprovals } = await supabase
         .from('order_approvals')
         .select('order_id')
-        .in('approver_role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'])
+        .in('approver_role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials', 'rental_executive_manager'])
         .is('approved_at', null);
 
       const pendingApprovalCount = pendingApprovals?.length || 0;
