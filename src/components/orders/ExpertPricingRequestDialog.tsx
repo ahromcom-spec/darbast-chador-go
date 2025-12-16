@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon } from 'lucide-react';
 import { MediaUploader } from './MediaUploader';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 
 interface ExpertPricingRequestDialogProps {
   subcategoryId: string;
@@ -239,10 +240,11 @@ export const ExpertPricingRequestDialog = ({
               <CalendarDays className="h-4 w-4" />
               تاریخ درخواست اجرا
             </Label>
-            <Input
-              type="datetime-local"
+            <PersianDatePicker
               value={requestedDate}
-              onChange={(e) => setRequestedDate(e.target.value)}
+              onChange={setRequestedDate}
+              placeholder="انتخاب تاریخ و زمان"
+              timeMode="ampm"
             />
           </div>
 
