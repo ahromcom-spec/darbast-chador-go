@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { MediaUploader } from '@/components/orders/MediaUploader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { sendOrderSms } from '@/lib/orderSms';
 
 const rentalFormSchema = z.object({
   itemType: z.string().min(1, 'لطفا نوع جنس را انتخاب کنید'),
@@ -274,12 +275,24 @@ export default function ScaffoldingRentalForm() {
           order_code: orderCode || orderId,
           order_id: orderId,
           customer_name: user?.user_metadata?.full_name || '',
-          customer_phone: user?.phone || '',
+          customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
           service_type: 'کرایه اجناس داربست'
         }
       }).catch(err => {
         console.error('Notify managers error:', err);
       });
+
+      // ارسال پیامک به مشتری (در پس‌زمینه)
+      const customerPhone = user?.user_metadata?.phone_number || user?.phone;
+      if (customerPhone && orderCode) {
+        sendOrderSms(customerPhone, orderCode, 'submitted', {
+          orderId: orderId,
+          serviceType: 'کرایه اجناس داربست',
+          address: locationAddress || 'ثبت نشده'
+        }).catch(err => {
+          console.error('SMS notification error:', err);
+        });
+      }
 
       toast({
         title: '✅ سفارش ثبت شد',
