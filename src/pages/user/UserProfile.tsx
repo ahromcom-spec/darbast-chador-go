@@ -546,6 +546,20 @@ const fetchOrders = async () => {
                             </div>
                           </div>
                         </button>
+                        <button
+                          onClick={() => navigate('/ceo/customers')}
+                          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                              <Users className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-foreground">مدیریت مشتریان</div>
+                              <div className="text-xs text-muted-foreground">لیست و اطلاعات مشتریان</div>
+                            </div>
+                          </div>
+                        </button>
                       </>
                     )}
                     
