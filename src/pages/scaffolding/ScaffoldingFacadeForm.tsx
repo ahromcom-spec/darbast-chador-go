@@ -13,7 +13,7 @@ import { ArrowRight, Plus, Trash2, AlertCircle } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
-import { sendOrderSms } from '@/lib/orderSms';
+import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 
 // Import comprehensive validation schemas
 import { orderDimensionSchema, orderFormSchema } from '@/lib/validations';
@@ -356,12 +356,18 @@ export default function ScaffoldingFacadeForm() {
       // ارسال پیامک تایید ثبت سفارش به مشتری (در پس‌زمینه)
       const customerPhone = user?.user_metadata?.phone_number || user?.phone;
       if (customerPhone) {
+        console.log('[ScaffoldingFacadeForm] Sending SMS to:', customerPhone);
         sendOrderSms(customerPhone, createdProject.code, 'submitted', {
+          orderId: createdProject.id,
           serviceType: 'داربست نما',
-          address: projectAddress || 'ثبت نشده'
+          address: buildOrderSmsAddress(projectAddress, projectLocation?.address)
+        }).then(result => {
+          console.log('[ScaffoldingFacadeForm] SMS result:', result);
         }).catch(err => {
-          console.error('SMS notification error:', err);
+          console.error('[ScaffoldingFacadeForm] SMS notification error:', err);
         });
+      } else {
+        console.warn('[ScaffoldingFacadeForm] No customer phone found to send SMS');
       }
 
       // ارسال نوتیفیکیشن به مدیران (در پس‌زمینه)
