@@ -42,9 +42,11 @@ const executionStageLabels: Record<string, string> = {
   pending_execution: 'در انتظار اجرا',
   in_progress: 'در حال اجرا',
   awaiting_collection: 'در انتظار جمع‌آوری',
+  in_collection: 'در حال جمع‌آوری',
   order_executed: 'اجرا شده',
   awaiting_payment: 'در انتظار پرداخت',
   completed: 'تکمیل شده',
+  closed: 'پایان یافته',
 };
 
 export function MyOrdersList({ userId }: MyOrdersListProps) {
@@ -142,10 +144,12 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
     }
   };
 
-  const getOrderDisplayStatus = (order: Order): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } => {
-    // Check payment status first
+  const getOrderDisplayStatus = (order: Order): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; stageLabel?: string } => {
+    // Check payment status
     if (order.payment_confirmed_at) {
-      return { label: 'پرداخت شده', variant: 'default' };
+      // Show both payment status AND execution stage
+      const stageLabel = order.execution_stage ? executionStageLabels[order.execution_stage] : undefined;
+      return { label: 'پرداخت شده', variant: 'default', stageLabel };
     }
 
     // Check execution stage
@@ -334,6 +338,12 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
                         <Badge variant={displayStatus.variant}>
                           {displayStatus.label}
                         </Badge>
+                        {/* Show execution stage separately when order is paid */}
+                        {displayStatus.stageLabel && (
+                          <Badge variant="secondary">
+                            {displayStatus.stageLabel}
+                          </Badge>
+                        )}
                         {order.isCollaborated && (
                           <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
                             <Users className="h-3 w-3" />
