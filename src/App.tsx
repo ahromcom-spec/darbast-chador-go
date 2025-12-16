@@ -276,6 +276,13 @@ const App = () => {
                 <Route path="orders" element={<CEOOrders />} />
                 <Route path="customers" element={<CEOCustomers />} />
                 <Route path="test-order" element={<TestOrderCreator />} />
+                <Route path="pending-orders" element={<ExecutivePendingOrders />} />
+                <Route path="ready" element={<ExecutiveReady />} />
+                <Route path="in-progress" element={<ExecutiveInProgress />} />
+                <Route path="stage-awaiting-payment" element={<ExecutiveStageAwaitingPayment />} />
+                <Route path="stage-awaiting-collection" element={<ExecutiveStageAwaitingCollection />} />
+                <Route path="completed" element={<ExecutiveCompleted />} />
+                <Route path="order-transfers" element={<OrderTransferManagement />} />
               </Route>
               <Route path="/executive" element={
                 <ProtectedRoute>
