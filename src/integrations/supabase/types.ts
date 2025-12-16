@@ -581,6 +581,148 @@ export type Database = {
           },
         ]
       }
+      expert_pricing_request_media: {
+        Row: {
+          created_at: string | null
+          file_path: string
+          file_size: number | null
+          file_type: string
+          id: string
+          mime_type: string | null
+          request_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_path: string
+          file_size?: number | null
+          file_type?: string
+          id?: string
+          mime_type?: string | null
+          request_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_path?: string
+          file_size?: number | null
+          file_type?: string
+          id?: string
+          mime_type?: string | null
+          request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_pricing_request_media_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "expert_pricing_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expert_pricing_requests: {
+        Row: {
+          address: string
+          assigned_expert_id: string | null
+          created_at: string | null
+          customer_id: string
+          description: string | null
+          detailed_address: string | null
+          dimensions: Json | null
+          district_id: string | null
+          end_date: string | null
+          expert_notes: string | null
+          id: string
+          location_lat: number | null
+          location_lng: number | null
+          province_id: string
+          requested_date: string | null
+          start_date: string | null
+          status: string
+          subcategory_id: string
+          total_price: number | null
+          unit_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          address: string
+          assigned_expert_id?: string | null
+          created_at?: string | null
+          customer_id: string
+          description?: string | null
+          detailed_address?: string | null
+          dimensions?: Json | null
+          district_id?: string | null
+          end_date?: string | null
+          expert_notes?: string | null
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          province_id: string
+          requested_date?: string | null
+          start_date?: string | null
+          status?: string
+          subcategory_id: string
+          total_price?: number | null
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string
+          assigned_expert_id?: string | null
+          created_at?: string | null
+          customer_id?: string
+          description?: string | null
+          detailed_address?: string | null
+          dimensions?: Json | null
+          district_id?: string | null
+          end_date?: string | null
+          expert_notes?: string | null
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          province_id?: string
+          requested_date?: string | null
+          start_date?: string | null
+          status?: string
+          subcategory_id?: string
+          total_price?: number | null
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_pricing_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_pricing_requests_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_pricing_requests_province_id_fkey"
+            columns: ["province_id"]
+            isOneToOne: false
+            referencedRelation: "provinces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_pricing_requests_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internal_staff_profiles: {
         Row: {
           created_at: string | null
