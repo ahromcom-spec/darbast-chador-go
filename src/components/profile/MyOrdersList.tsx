@@ -144,24 +144,57 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
     }
   };
 
-  const getOrderDisplayStatus = (order: Order): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; stageLabel?: string } => {
-    // Check payment status
-    if (order.payment_confirmed_at) {
-      // Show both payment status AND execution stage
-      const stageLabel = order.execution_stage ? executionStageLabels[order.execution_stage] : undefined;
-      return { label: 'پرداخت شده', variant: 'default', stageLabel };
-    }
+  const getOrderDisplayStatus = (order: Order): { 
+    paymentLabel: string; 
+    paymentVariant: 'default' | 'secondary' | 'destructive' | 'outline'; 
+    stageLabel: string; 
+    stageVariant: 'default' | 'secondary' | 'destructive' | 'outline' 
+  } => {
+    // Payment status - always show
+    const isPaid = !!order.payment_confirmed_at;
+    const paymentLabel = isPaid ? 'پرداخت شده' : 'پرداخت نشده';
+    const paymentVariant: 'default' | 'secondary' | 'destructive' | 'outline' = isPaid ? 'default' : 'outline';
 
-    // Check execution stage
+    // Execution stage - always show
+    let stageLabel = '';
+    let stageVariant: 'default' | 'secondary' | 'destructive' | 'outline' = 'secondary';
+
     if (order.execution_stage) {
-      const stageLabel = executionStageLabels[order.execution_stage];
-      if (stageLabel) {
-        return { label: stageLabel, variant: 'default' };
+      stageLabel = executionStageLabels[order.execution_stage] || order.execution_stage;
+    } else {
+      // Fallback to order status
+      switch (order.status) {
+        case 'pending':
+          stageLabel = 'در انتظار تایید';
+          stageVariant = 'outline';
+          break;
+        case 'approved':
+          stageLabel = 'تایید شده';
+          break;
+        case 'rejected':
+          stageLabel = 'رد شده';
+          stageVariant = 'destructive';
+          break;
+        case 'in_progress':
+          stageLabel = 'در حال اجرا';
+          break;
+        case 'completed':
+          stageLabel = 'تکمیل شده';
+          break;
+        case 'closed':
+          stageLabel = 'پایان یافته';
+          break;
+        case 'cancelled':
+          stageLabel = 'لغو شده';
+          stageVariant = 'destructive';
+          break;
+        default:
+          stageLabel = 'نامشخص';
+          stageVariant = 'outline';
       }
     }
 
-    // Fall back to main status
-    return statusLabels[order.status || 'pending'] || { label: 'نامشخص', variant: 'outline' };
+    return { paymentLabel, paymentVariant, stageLabel, stageVariant };
   };
 
   const getFilteredOrders = () => {
@@ -335,15 +368,14 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
                       {/* Order Code & Status */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-foreground">#{order.code}</span>
-                        <Badge variant={displayStatus.variant}>
-                          {displayStatus.label}
+                        {/* Stage badge */}
+                        <Badge variant={displayStatus.stageVariant}>
+                          {displayStatus.stageLabel}
                         </Badge>
-                        {/* Show execution stage separately when order is paid */}
-                        {displayStatus.stageLabel && (
-                          <Badge variant="secondary">
-                            {displayStatus.stageLabel}
-                          </Badge>
-                        )}
+                        {/* Payment badge */}
+                        <Badge variant={displayStatus.paymentVariant}>
+                          {displayStatus.paymentLabel}
+                        </Badge>
                         {order.isCollaborated && (
                           <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
                             <Users className="h-3 w-3" />
