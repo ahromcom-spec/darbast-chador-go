@@ -784,11 +784,11 @@ export default function OrderDetail() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Button
           variant="ghost"
-          onClick={() => navigate("/")}
+          onClick={() => navigate(-1)}
           className="mb-6 gap-2"
         >
           <ArrowRight className="h-4 w-4" />
-          بازگشت به صفحه نخست
+          بازگشت
         </Button>
 
         <div className="space-y-6">
