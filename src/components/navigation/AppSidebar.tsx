@@ -34,6 +34,7 @@ import { useContractorRole } from '@/hooks/useContractorRole';
 import { useExecutiveManagerRole } from '@/hooks/useExecutiveManagerRole';
 import { useSalesManagerRole } from '@/hooks/useSalesManagerRole';
 import { useFinanceManagerRole } from '@/hooks/useFinanceManagerRole';
+import { useCEORole } from '@/hooks/useCEORole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSalesPendingCount } from '@/hooks/useSalesPendingCount';
 import { useCEOPendingCount } from '@/hooks/useCEOPendingCount';
@@ -52,6 +53,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
   const { isExecutiveManager } = useExecutiveManagerRole();
   const { isSalesManager } = useSalesManagerRole();
   const { isFinanceManager } = useFinanceManagerRole();
+  const { isCEO } = useCEORole();
   const { data: pendingCount = 0 } = useSalesPendingCount();
 
   const publicItems = [
@@ -93,6 +95,12 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
 
   const financeItems = isFinanceManager ? [
     { title: 'مدیریت مالی', url: '/finance/orders', icon: FileText },
+  ] : [];
+
+  const ceoItems = isCEO ? [
+    { title: 'داشبورد مدیرعامل', url: '/ceo', icon: Shield },
+    { title: 'سفارشات', url: '/ceo/orders', icon: ClipboardList },
+    { title: 'مشتریان', url: '/ceo/customers', icon: Users },
   ] : [];
 
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
@@ -281,6 +289,27 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {financeItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
+                      <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
+                        <item.icon className="ml-2 h-4 w-4" />
+                        <span className={!open ? "md:hidden" : ""}>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* مدیرعامل */}
+        {ceoItems.length > 0 && (
+          <SidebarGroup>
+            {open && <SidebarGroupLabel className="font-bold text-foreground">مدیرعامل</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {ceoItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
                       <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
