@@ -29,6 +29,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NewLocationForm } from '@/components/locations/NewLocationForm';
 import { OrderForOthers, RecipientData } from '@/components/orders/OrderForOthers';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
+import { ExpertPricingRequestDialog } from '@/components/orders/ExpertPricingRequestDialog';
 
 interface Dimension {
   id: string;
@@ -1372,12 +1373,20 @@ export default function ComprehensiveScaffoldingForm({
         </Card>
       )}
 
-      {/* دکمه ثبت سفارش برای دیگری - فقط برای سفارش جدید */}
-      {!editOrderId && (selectedLocationId || initialLocationId) && (
-        <div className="flex justify-center">
+      {/* دکمه‌های ثبت سفارش برای دیگری و درخواست قیمت‌گذاری - فقط برای سفارش جدید */}
+      {!editOrderId && (selectedLocationId || initialLocationId) && subcategoryId && selectedProvinceId && (
+        <div className="flex flex-wrap justify-center gap-3">
           <OrderForOthers 
             onRecipientSelected={setRecipientData}
             disabled={loading}
+          />
+          <ExpertPricingRequestDialog
+            subcategoryId={subcategoryId}
+            provinceId={selectedProvinceId}
+            districtId={selectedDistrictId || undefined}
+            address={address || detailedAddress}
+            detailedAddress={detailedAddress}
+            serviceTypeName="داربست فلزی"
           />
         </div>
       )}
