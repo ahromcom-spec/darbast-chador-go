@@ -273,7 +273,7 @@ const App = () => {
                 <Route path="whitelist" element={<PhoneWhitelistManagement />} />
                 <Route path="contractor-verifications" element={<ContractorVerifications />} />
                 <Route path="staff-verifications" element={<StaffVerifications />} />
-                <Route path="orders" element={<CEOOrders />} />
+                <Route path="orders" element={<ExecutiveOrders />} />
                 <Route path="customers" element={<CEOCustomers />} />
                 <Route path="test-order" element={<TestOrderCreator />} />
                 <Route path="pending-orders" element={<ExecutivePendingOrders />} />
