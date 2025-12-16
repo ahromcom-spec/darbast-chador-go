@@ -1307,7 +1307,7 @@ export default function ComprehensiveScaffoldingForm({
             order_code: createdProject.code,
             order_id: createdProject.id,
             customer_name: user?.user_metadata?.full_name || '',
-            customer_phone: user?.phone || '',
+            customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
             service_type: serviceTypeName
           }
         }).catch(err => {
@@ -1315,8 +1315,9 @@ export default function ComprehensiveScaffoldingForm({
         });
 
         // ارسال پیامک به مشتری (در پس‌زمینه)
-        if (user?.phone) {
-          sendOrderSms(user.phone, createdProject.code, 'submitted', {
+        const customerPhone = user?.user_metadata?.phone_number || user?.phone;
+        if (customerPhone) {
+          sendOrderSms(customerPhone, createdProject.code, 'submitted', {
             orderId: createdProject.id,
             address: buildOrderSmsAddress(createdProject.address, createdProject.detailed_address),
           }).catch(err => {

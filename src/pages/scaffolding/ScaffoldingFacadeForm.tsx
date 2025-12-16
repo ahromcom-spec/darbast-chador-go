@@ -354,8 +354,9 @@ export default function ScaffoldingFacadeForm() {
       });
 
       // ارسال پیامک تایید ثبت سفارش به مشتری (در پس‌زمینه)
-      if (user?.phone) {
-        sendOrderSms(user.phone, createdProject.code, 'submitted', {
+      const customerPhone = user?.user_metadata?.phone_number || user?.phone;
+      if (customerPhone) {
+        sendOrderSms(customerPhone, createdProject.code, 'submitted', {
           serviceType: 'داربست نما',
           address: projectAddress || 'ثبت نشده'
         }).catch(err => {
@@ -369,7 +370,7 @@ export default function ScaffoldingFacadeForm() {
           order_code: createdProject.code,
           order_id: createdProject.id,
           customer_name: user?.user_metadata?.full_name || '',
-          customer_phone: user?.phone || '',
+          customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
           service_type: 'داربست نما'
         }
       }).catch(err => {
