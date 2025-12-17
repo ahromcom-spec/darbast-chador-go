@@ -3546,6 +3546,15 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_incoming_transfer_request_media: {
+        Args: { p_request_id: string }
+        Returns: {
+          created_at: string
+          file_path: string
+          file_type: string
+          id: string
+        }[]
+      }
       get_incoming_transfer_requests: {
         Args: never
         Returns: {
