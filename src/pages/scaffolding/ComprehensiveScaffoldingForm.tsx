@@ -1375,20 +1375,39 @@ export default function ComprehensiveScaffoldingForm({
 
       {/* دکمه‌های ثبت سفارش برای دیگری و درخواست قیمت‌گذاری - فقط برای سفارش جدید */}
       {!editOrderId && (selectedLocationId || initialLocationId) && subcategoryId && selectedProvinceId && (
-        <div className="flex flex-wrap justify-center gap-3">
-          <OrderForOthers 
-            onRecipientSelected={setRecipientData}
-            disabled={loading}
-          />
-          <ExpertPricingRequestDialog
-            subcategoryId={subcategoryId}
-            provinceId={selectedProvinceId}
-            districtId={selectedDistrictId || undefined}
-            address={address || detailedAddress}
-            detailedAddress={detailedAddress}
-            serviceTypeName="داربست فلزی"
-            hierarchyProjectId={hierarchyProjectId || undefined}
-          />
+        <div className="flex flex-col gap-3">
+          {/* نمایش کارت گیرنده انتخاب شده یا دکمه‌ها */}
+          <div className={`${recipientData ? 'w-full' : 'flex flex-wrap justify-center gap-3'}`}>
+            <OrderForOthers 
+              onRecipientSelected={setRecipientData}
+              disabled={loading}
+            />
+            {!recipientData && (
+              <ExpertPricingRequestDialog
+                subcategoryId={subcategoryId}
+                provinceId={selectedProvinceId}
+                districtId={selectedDistrictId || undefined}
+                address={address || detailedAddress}
+                detailedAddress={detailedAddress}
+                serviceTypeName="داربست فلزی"
+                hierarchyProjectId={hierarchyProjectId || undefined}
+              />
+            )}
+          </div>
+          {/* نمایش دکمه درخواست قیمت‌گذاری جداگانه اگر گیرنده انتخاب شده */}
+          {recipientData && (
+            <div className="flex justify-center">
+              <ExpertPricingRequestDialog
+                subcategoryId={subcategoryId}
+                provinceId={selectedProvinceId}
+                districtId={selectedDistrictId || undefined}
+                address={address || detailedAddress}
+                detailedAddress={detailedAddress}
+                serviceTypeName="داربست فلزی"
+                hierarchyProjectId={hierarchyProjectId || undefined}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -2013,10 +2032,15 @@ export default function ComprehensiveScaffoldingForm({
                 : dimensions.some(d => !d.length || !d.width || !d.height)
             )
           }
-          className="w-full" 
+          className={`w-full ${recipientData ? 'bg-green-600 hover:bg-green-700' : ''}`}
           size="lg"
         >
-          {loading ? 'در حال ثبت...' : 'ثبت درخواست'}
+          {loading 
+            ? 'در حال ثبت...' 
+            : recipientData 
+              ? `ثبت سفارش برای ${recipientData.fullName || recipientData.phoneNumber}`
+              : 'ثبت درخواست'
+          }
         </Button>
       </>
       )}
