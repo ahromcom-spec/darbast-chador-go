@@ -6,7 +6,21 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeftRight, CheckCircle, XCircle, User, Hash, MapPin, Calendar } from 'lucide-react';
+import { 
+  ArrowLeftRight, 
+  CheckCircle, 
+  XCircle, 
+  User, 
+  Hash, 
+  MapPin, 
+  Calendar, 
+  ChevronDown, 
+  ChevronUp,
+  Ruler,
+  DollarSign,
+  FileText,
+  Layers
+} from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 import {
   AlertDialog,
@@ -19,30 +33,57 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface TransferRequest {
   id: string;
   order_id: string;
   from_user_id: string;
-  to_user_id: string;
+  to_user_id: string | null;
   to_phone_number: string;
   status: string;
   created_at: string;
-  from_profile?: {
-    full_name: string;
-    phone_number: string;
-  };
-  order?: {
-    code: string;
-    address: string;
-    status: string;
-    subcategory?: {
-      name: string;
-      service_type?: {
-        name: string;
-      };
-    };
-  };
+  from_full_name: string | null;
+  from_phone_number: string | null;
+  order_code: string | null;
+  order_status: string | null;
+  order_address: string | null;
+  order_detailed_address: string | null;
+  order_notes: string | null;
+  order_subcategory_id: string | null;
+  subcategory_name: string | null;
+  service_type_name: string | null;
+  province_id: string | null;
+  district_id: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  payment_amount: number | null;
+  execution_stage: string | null;
+}
+
+interface ParsedNotes {
+  length?: number;
+  width?: number;
+  height?: number;
+  totalArea?: number;
+  estimated_price?: number;
+  estimatedPrice?: number;
+  installationDate?: string;
+  installationDateTime?: string;
+  dueDate?: string;
+  dueDateTime?: string;
+  additional_notes?: string;
+  description?: string;
+  activityDescription?: string;
+  service_type?: string;
+  scaffold_type?: string;
+  dimensions?: Array<{ length?: number; width?: number; height?: number }>;
+  conditions?: string[];
+  [key: string]: any;
 }
 
 export function IncomingTransferRequests() {
@@ -52,6 +93,7 @@ export function IncomingTransferRequests() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectingRequest, setRejectingRequest] = useState<TransferRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -64,75 +106,38 @@ export function IncomingTransferRequests() {
   const fetchIncomingRequests = async () => {
     setLoading(true);
     try {
-      // Fetch transfer requests where status = 'pending_recipient' and to_user_id = current user
-      const { data, error } = await supabase
-        .from('order_transfer_requests')
-        .select('*')
-        .eq('to_user_id', user?.id)
-        .eq('status', 'pending_recipient')
-        .order('created_at', { ascending: false });
+      // استفاده از RPC جدید که جزئیات کامل سفارش را برمی‌گرداند
+      const { data, error } = await supabase.rpc('get_incoming_transfer_requests');
 
       if (error) throw error;
 
-      // Fetch order and profile details for each request
-      const requestsWithDetails: TransferRequest[] = [];
-      for (const req of (data || [])) {
-        // Fetch order details separately - no nested queries
-        const { data: orderData } = await supabase
-          .from('projects_v3')
-          .select('code, address, status, subcategory_id')
-          .eq('id', req.order_id)
-          .maybeSingle();
-
-        // Fetch subcategory separately
-        let subcategoryData = null;
-        let serviceTypeData = null;
-        if (orderData?.subcategory_id) {
-          const { data: subcat } = await supabase
-            .from('subcategories')
-            .select('name, service_type_id')
-            .eq('id', orderData.subcategory_id)
-            .maybeSingle();
-          subcategoryData = subcat;
-          
-          if (subcat?.service_type_id) {
-            const { data: svcType } = await supabase
-              .from('service_types_v3')
-              .select('name')
-              .eq('id', subcat.service_type_id)
-              .maybeSingle();
-            serviceTypeData = svcType;
-          }
-        }
-
-        // Fetch sender profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name, phone_number')
-          .eq('user_id', req.from_user_id)
-          .maybeSingle();
-
-        requestsWithDetails.push({
-          ...req,
-          order: orderData ? {
-            code: orderData.code,
-            address: orderData.address,
-            status: orderData.status,
-            subcategory: subcategoryData ? {
-              name: subcategoryData.name,
-              service_type: serviceTypeData ? { name: serviceTypeData.name } : undefined,
-            } : undefined,
-          } : undefined,
-          from_profile: profile || undefined,
-        } as TransferRequest);
-      }
-
-      setRequests(requestsWithDetails);
+      setRequests(data || []);
     } catch (error) {
       console.error('Error fetching incoming requests:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const parseNotes = (notesStr: string | null): ParsedNotes | null => {
+    if (!notesStr) return null;
+    try {
+      return typeof notesStr === 'string' ? JSON.parse(notesStr) : notesStr;
+    } catch {
+      return null;
+    }
+  };
+
+  const toggleExpand = (requestId: string) => {
+    setExpandedRequests(prev => {
+      const next = new Set(prev);
+      if (next.has(requestId)) {
+        next.delete(requestId);
+      } else {
+        next.add(requestId);
+      }
+      return next;
+    });
   };
 
   const handleAccept = async (request: TransferRequest) => {
@@ -326,77 +331,220 @@ export function IncomingTransferRequests() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {requests.map((request) => (
-            <Card key={request.id}>
-              <CardContent className="pt-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Hash className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{request.order?.code || 'سفارش'}</span>
+          {requests.map((request) => {
+            const notes = parseNotes(request.order_notes);
+            const isExpanded = expandedRequests.has(request.id);
+            
+            // محاسبه ابعاد
+            let dimensionsDisplay = '';
+            if (notes?.dimensions && Array.isArray(notes.dimensions)) {
+              dimensionsDisplay = notes.dimensions
+                .map(d => `${d.length || '?'}×${d.width || '?'}×${d.height || '?'}`)
+                .join(' | ');
+            } else if (notes?.length || notes?.width || notes?.height) {
+              dimensionsDisplay = `${notes.length || '?'}×${notes.width || '?'}×${notes.height || '?'}`;
+            }
+            
+            const totalArea = notes?.totalArea;
+            const price = notes?.estimated_price || notes?.estimatedPrice || request.payment_amount;
+            const installDate = notes?.installationDate || notes?.installationDateTime;
+            const dueDate = notes?.dueDate || notes?.dueDateTime;
+            const description = notes?.additional_notes || notes?.description || notes?.activityDescription;
+            const conditions = notes?.conditions;
+            const scaffoldType = notes?.scaffold_type || notes?.service_type;
+
+            return (
+              <Card key={request.id} className="overflow-hidden">
+                <CardContent className="pt-4 space-y-3">
+                  {/* هدر اصلی */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-bold text-lg">{request.order_code || 'سفارش'}</span>
+                    </div>
+                    <Badge variant="secondary">
+                      {request.service_type_name || request.subcategory_name}
+                    </Badge>
                   </div>
-                  <Badge variant="secondary">
-                    {request.order?.subcategory?.service_type?.name}
-                  </Badge>
-                </div>
 
-                <Separator />
+                  <Separator />
 
-                <div className="grid grid-cols-1 gap-2 text-sm">
-                  <div className="flex items-start gap-2">
-                    <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <span className="text-muted-foreground">فرستنده: </span>
-                      <span className="font-medium">
-                        {request.from_profile?.full_name || 'بدون نام'} ({request.from_profile?.phone_number})
+                  {/* اطلاعات اصلی */}
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <div className="flex items-start gap-2">
+                      <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <span className="text-muted-foreground">فرستنده: </span>
+                        <span className="font-medium">
+                          {request.from_full_name || 'بدون نام'} ({request.from_phone_number})
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <span className="text-muted-foreground">آدرس: </span>
+                        <span>{request.order_address}</span>
+                        {request.order_detailed_address && (
+                          <span className="text-muted-foreground"> - {request.order_detailed_address}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        تاریخ درخواست: {formatPersianDate(request.created_at)}
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <span className="text-muted-foreground">آدرس: </span>
-                      <span>{request.order?.address}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      تاریخ درخواست: {formatPersianDate(request.created_at)}
-                    </span>
-                  </div>
-                </div>
 
-                <Separator />
+                  {/* دکمه نمایش جزئیات */}
+                  <Collapsible open={isExpanded} onOpenChange={() => toggleExpand(request.id)}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-full justify-between">
+                        <span>جزئیات کامل سفارش</span>
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
+                    
+                    <CollapsibleContent className="space-y-4 pt-3">
+                      <Separator />
+                      
+                      {/* نوع خدمت */}
+                      {(scaffoldType || request.subcategory_name) && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <Layers className="h-4 w-4 text-blue-600 mt-0.5" />
+                          <div>
+                            <span className="text-muted-foreground">نوع خدمت: </span>
+                            <span className="font-medium">{scaffoldType || request.subcategory_name}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* ابعاد */}
+                      {dimensionsDisplay && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <Ruler className="h-4 w-4 text-green-600 mt-0.5" />
+                          <div>
+                            <span className="text-muted-foreground">ابعاد (متر): </span>
+                            <span className="font-medium font-mono">{dimensionsDisplay}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* متراژ کل */}
+                      {totalArea && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <Ruler className="h-4 w-4 text-green-600 mt-0.5" />
+                          <div>
+                            <span className="text-muted-foreground">متراژ کل: </span>
+                            <span className="font-medium">{totalArea.toLocaleString('fa-IR')} متر مربع</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* قیمت */}
+                      {price && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <DollarSign className="h-4 w-4 text-emerald-600 mt-0.5" />
+                          <div>
+                            <span className="text-muted-foreground">مبلغ: </span>
+                            <span className="font-bold text-emerald-600">
+                              {price.toLocaleString('fa-IR')} تومان
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* تاریخ نصب */}
+                      {installDate && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <Calendar className="h-4 w-4 text-purple-600 mt-0.5" />
+                          <div>
+                            <span className="text-muted-foreground">تاریخ نصب: </span>
+                            <span className="font-medium">{installDate}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* تاریخ پایان */}
+                      {dueDate && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <Calendar className="h-4 w-4 text-orange-600 mt-0.5" />
+                          <div>
+                            <span className="text-muted-foreground">تاریخ پایان: </span>
+                            <span className="font-medium">{dueDate}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* شرایط خدمت */}
+                      {conditions && conditions.length > 0 && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <FileText className="h-4 w-4 text-indigo-600 mt-0.5" />
+                          <div>
+                            <span className="text-muted-foreground">شرایط: </span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {conditions.map((c, i) => (
+                                <Badge key={i} variant="outline" className="text-xs">
+                                  {c}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* توضیحات */}
+                      {description && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <FileText className="h-4 w-4 text-gray-600 mt-0.5" />
+                          <div>
+                            <span className="text-muted-foreground">توضیحات: </span>
+                            <p className="text-foreground mt-1 leading-relaxed">{description}</p>
+                          </div>
+                        </div>
+                      )}
+                    </CollapsibleContent>
+                  </Collapsible>
 
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleAccept(request)}
-                    disabled={processingId === request.id}
-                    className="flex-1 gap-2"
-                  >
-                    {processingId === request.id ? (
-                      <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4" />
-                    )}
-                    پذیرش سفارش
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setRejectingRequest(request);
-                      setShowRejectDialog(true);
-                    }}
-                    disabled={processingId === request.id}
-                    className="flex-1 gap-2"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    رد درخواست
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <Separator />
+
+                  {/* دکمه‌های عمل */}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleAccept(request)}
+                      disabled={processingId === request.id}
+                      className="flex-1 gap-2"
+                    >
+                      {processingId === request.id ? (
+                        <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4" />
+                      )}
+                      پذیرش سفارش
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setRejectingRequest(request);
+                        setShowRejectDialog(true);
+                      }}
+                      disabled={processingId === request.id}
+                      className="flex-1 gap-2"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      رد درخواست
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </CardContent>
       </Card>
 

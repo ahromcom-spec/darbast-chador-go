@@ -3546,6 +3546,34 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_incoming_transfer_requests: {
+        Args: never
+        Returns: {
+          created_at: string
+          district_id: string
+          execution_stage: string
+          from_full_name: string
+          from_phone_number: string
+          from_user_id: string
+          id: string
+          location_lat: number
+          location_lng: number
+          order_address: string
+          order_code: string
+          order_detailed_address: string
+          order_id: string
+          order_notes: string
+          order_status: string
+          order_subcategory_id: string
+          payment_amount: number
+          province_id: string
+          service_type_name: string
+          status: string
+          subcategory_name: string
+          to_phone_number: string
+          to_user_id: string
+        }[]
+      }
       get_my_projects_v3: {
         Args: never
         Returns: {
