@@ -18,7 +18,7 @@ import { formatPersianDate } from '@/lib/dateUtils';
 
 interface ChainItem {
   id: string;
-  type: 'owner' | 'transfer' | 'collaborator';
+  type: 'owner' | 'transfer' | 'collaborator' | 'order_for_others';
   from_user_id?: string;
   from_name?: string;
   from_phone?: string;
@@ -28,6 +28,7 @@ interface ChainItem {
   status?: string;
   created_at: string;
   is_current_owner?: boolean;
+  is_order_for_others?: boolean;
 }
 
 interface CustomerOwnershipChainProps {
@@ -141,9 +142,12 @@ export function CustomerOwnershipChain({
               toName = toProfile?.full_name || 'کاربر';
             }
 
+            // Check if this is "order for others" (pending_recipient or pending_registration)
+            const isOrderForOthers = transfer.status === 'pending_recipient' || transfer.status === 'pending_registration';
+
             items.push({
               id: transfer.id,
-              type: 'transfer',
+              type: isOrderForOthers ? 'order_for_others' : 'transfer',
               from_user_id: transfer.from_user_id,
               from_name: fromProfile?.full_name || 'کاربر',
               from_phone: '',
@@ -152,7 +156,8 @@ export function CustomerOwnershipChain({
               to_phone: transfer.to_phone_number,
               status: transfer.status,
               created_at: transfer.created_at,
-              is_current_owner: transfer.status === 'accepted' || transfer.status === 'completed'
+              is_current_owner: transfer.status === 'accepted' || transfer.status === 'completed',
+              is_order_for_others: isOrderForOthers
             });
           }
         }
@@ -222,7 +227,15 @@ export function CustomerOwnershipChain({
     }
   };
 
-  const getStatusBadge = (status?: string) => {
+  const getStatusBadge = (status?: string, isOrderForOthers?: boolean) => {
+    if (isOrderForOthers && (status === 'pending_recipient' || status === 'pending_registration')) {
+      return (
+        <Badge variant="secondary" className="gap-1 text-xs bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+          <Clock className="h-3 w-3" />
+          {status === 'pending_registration' ? 'در انتظار ثبت‌نام گیرنده' : 'در انتظار تایید گیرنده'}
+        </Badge>
+      );
+    }
     switch (status) {
       case 'accepted':
       case 'completed':
@@ -254,8 +267,9 @@ export function CustomerOwnershipChain({
     );
   }
 
-  // If only owner with no transfers/collaborators, don't show
-  if (chainItems.length <= 1 && !chainItems.some(item => item.type === 'transfer' || item.type === 'collaborator')) {
+  // If only owner with no transfers/collaborators/order_for_others, don't show
+  const hasOrderForOthers = chainItems.some(item => item.type === 'order_for_others');
+  if (chainItems.length <= 1 && !chainItems.some(item => item.type === 'transfer' || item.type === 'collaborator' || item.type === 'order_for_others')) {
     return null;
   }
 
@@ -281,10 +295,13 @@ export function CustomerOwnershipChain({
                     ? 'bg-primary/10 border-primary text-primary' 
                     : item.type === 'transfer'
                       ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-600 dark:text-green-400'
+                      : item.type === 'order_for_others'
+                        ? 'bg-orange-100 dark:bg-orange-900/30 border-orange-500 text-orange-600 dark:text-orange-400'
+                        : 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-600 dark:text-green-400'
                 }`}>
                   {item.type === 'owner' && <Crown className="h-4 w-4" />}
                   {item.type === 'transfer' && <ArrowLeftRight className="h-4 w-4" />}
+                  {item.type === 'order_for_others' && <Users className="h-4 w-4" />}
                   {item.type === 'collaborator' && <UserPlus className="h-4 w-4" />}
                 </div>
 
@@ -294,9 +311,10 @@ export function CustomerOwnershipChain({
                       <span className="font-medium text-sm">
                         {item.type === 'owner' && 'ثبت‌کننده اصلی سفارش'}
                         {item.type === 'transfer' && 'انتقال سفارش بین مشتریان'}
+                        {item.type === 'order_for_others' && '📦 سفارش برای شخص دیگر'}
                         {item.type === 'collaborator' && 'افزودن همکار مشتری'}
                       </span>
-                      {item.status && getStatusBadge(item.status)}
+                      {item.status && getStatusBadge(item.status, item.is_order_for_others)}
                     </div>
 
                     {item.type === 'owner' && (
@@ -326,6 +344,28 @@ export function CustomerOwnershipChain({
                           <User className="h-4 w-4 text-muted-foreground" />
                           <span className="text-muted-foreground">به:</span>
                           <span>{item.to_name || 'کاربر'}</span>
+                          {item.to_phone && (
+                            <span className="text-muted-foreground" dir="ltr">({item.to_phone})</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {item.type === 'order_for_others' && (
+                      <div className="space-y-2 bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
+                        <div className="flex items-center gap-2 text-sm">
+                          <User className="h-4 w-4 text-orange-600" />
+                          <span className="text-muted-foreground">ثبت‌کننده:</span>
+                          <span className="font-medium">{item.from_name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-orange-600 mr-4">
+                          <ArrowDown className="h-3 w-3" />
+                          <span className="text-xs">برای</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <User className="h-4 w-4 text-orange-600" />
+                          <span className="text-muted-foreground">گیرنده سفارش:</span>
+                          <span className="font-medium">{item.to_name || 'کاربر'}</span>
                           {item.to_phone && (
                             <span className="text-muted-foreground" dir="ltr">({item.to_phone})</span>
                           )}
