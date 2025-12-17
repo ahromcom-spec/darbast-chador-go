@@ -14,8 +14,6 @@ import {
   Hash, 
   MapPin, 
   Calendar, 
-  ChevronDown, 
-  ChevronUp,
   Ruler,
   DollarSign,
   FileText,
@@ -23,7 +21,9 @@ import {
   ImageIcon,
   ChevronLeft,
   ChevronRight,
-  Map
+  Map,
+  X,
+  Eye
 } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 import {
@@ -75,8 +75,10 @@ interface ParsedNotes {
   estimatedPrice?: number;
   installationDate?: string;
   installationDateTime?: string;
+  installation_date?: string;
   dueDate?: string;
   dueDateTime?: string;
+  due_date?: string;
   additional_notes?: string;
   description?: string;
   activityDescription?: string;
@@ -84,6 +86,9 @@ interface ParsedNotes {
   scaffold_type?: string;
   dimensions?: Array<{ length?: number; width?: number; height?: number }>;
   conditions?: string[];
+  customerName?: string;
+  phoneNumber?: string;
+  distanceRange?: string;
   [key: string]: any;
 }
 
@@ -161,23 +166,23 @@ const TransferRequestMediaGallery = ({ requestId }: { requestId: string }) => {
   const isVideo = currentMedia?.file_type?.includes('video');
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2 text-sm">
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-sm font-medium">
         <ImageIcon className="h-4 w-4 text-blue-600" />
-        <span className="text-muted-foreground">تصاویر سفارش ({media.length})</span>
+        <span>تصاویر و ویدیوهای سفارش ({media.length})</span>
       </div>
       <div className="relative bg-black/5 rounded-lg overflow-hidden">
         {isVideo ? (
           <video
             src={mediaUrls[currentMedia.id] || ''}
             controls
-            className="w-full max-h-48 object-contain"
+            className="w-full max-h-64 object-contain"
           />
         ) : (
           <img
             src={mediaUrls[currentMedia.id] || ''}
             alt={`تصویر ${currentIndex + 1}`}
-            className="w-full max-h-48 object-contain"
+            className="w-full max-h-64 object-contain"
           />
         )}
         
@@ -205,8 +210,356 @@ const TransferRequestMediaGallery = ({ requestId }: { requestId: string }) => {
           </>
         )}
       </div>
+      
+      {/* Thumbnails */}
+      {media.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {media.map((item, idx) => (
+            <button
+              key={item.id}
+              onClick={() => setCurrentIndex(idx)}
+              className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                idx === currentIndex ? 'border-primary' : 'border-transparent opacity-60'
+              }`}
+            >
+              {item.file_type?.includes('video') ? (
+                <div className="w-full h-full bg-muted flex items-center justify-center">
+                  <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                </div>
+              ) : (
+                <img
+                  src={mediaUrls[item.id] || ''}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
+};
+
+// Full Order Details Dialog Component
+const OrderDetailsDialog = ({
+  request,
+  open,
+  onOpenChange,
+  onAccept,
+  onReject,
+  processingId
+}: {
+  request: TransferRequest;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAccept: (request: TransferRequest) => void;
+  onReject: (request: TransferRequest) => void;
+  processingId: string | null;
+}) => {
+  const notes = parseNotes(request.order_notes);
+  
+  // محاسبه ابعاد
+  let dimensionsDisplay = '';
+  if (notes?.dimensions && Array.isArray(notes.dimensions)) {
+    dimensionsDisplay = notes.dimensions
+      .map(d => `${d.length || '?'}×${d.width || '?'}×${d.height || '?'}`)
+      .join(' | ');
+  } else if (notes?.length || notes?.width || notes?.height) {
+    dimensionsDisplay = `${notes.length || '?'}×${notes.width || '?'}×${notes.height || '?'}`;
+  }
+  
+  const totalArea = notes?.totalArea;
+  const price = notes?.estimated_price || notes?.estimatedPrice || request.payment_amount;
+  const installDate = notes?.installationDate || notes?.installationDateTime || notes?.installation_date;
+  const dueDate = notes?.dueDate || notes?.dueDateTime || notes?.due_date;
+  const description = notes?.additional_notes || notes?.description || notes?.activityDescription;
+  const conditions = notes?.conditions;
+  const scaffoldType = notes?.scaffold_type || notes?.service_type;
+  const distanceRange = notes?.distanceRange;
+
+  // نوع داربست را ترجمه کن
+  const getScaffoldTypeLabel = (type: string) => {
+    const types: Record<string, string> = {
+      'facade': 'داربست سطحی نما',
+      'formwork': 'داربست حجمی کفراژ',
+      'ceiling-tiered': 'داربست زیر بتن - تیرچه',
+      'ceiling-slab': 'داربست زیر بتن - دال بتنی',
+      'column': 'داربست ستونی',
+      'کرایه اجناس داربست': 'کرایه اجناس داربست'
+    };
+    return types[type] || type;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto p-0">
+        <DialogHeader className="sticky top-0 bg-background z-10 p-4 border-b">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Hash className="h-5 w-5" />
+              سفارش {request.order_code}
+            </DialogTitle>
+            <Badge variant="secondary" className="text-sm">
+              {request.service_type_name || request.subcategory_name}
+            </Badge>
+          </div>
+        </DialogHeader>
+
+        <div className="p-4 space-y-6">
+          {/* اطلاعات فرستنده */}
+          <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <User className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">فرستنده سفارش</p>
+                  <p className="font-semibold">{request.from_full_name || 'بدون نام'}</p>
+                  <p className="text-sm text-muted-foreground" dir="ltr">{request.from_phone_number}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* نوع خدمت */}
+          {(scaffoldType || request.subcategory_name) && (
+            <div className="p-4 bg-primary/10 rounded-xl">
+              <div className="flex items-center gap-3">
+                <Layers className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">نوع خدمت</p>
+                  <p className="font-bold text-lg">{scaffoldType ? getScaffoldTypeLabel(scaffoldType) : request.subcategory_name}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* آدرس */}
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground mb-1">آدرس پروژه</p>
+                  <p className="font-medium">{request.order_address}</p>
+                  {request.order_detailed_address && (
+                    <p className="text-sm text-muted-foreground mt-1">{request.order_detailed_address}</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ابعاد و متراژ */}
+          {(dimensionsDisplay || totalArea) && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Ruler className="h-4 w-4" />
+                  ابعاد و متراژ
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {notes?.dimensions && Array.isArray(notes.dimensions) && notes.dimensions.length > 0 && (
+                  <div className="space-y-2">
+                    {notes.dimensions.map((dim: any, index: number) => {
+                      const length = typeof dim.length === 'number' ? dim.length : parseFloat(dim.length) || 0;
+                      const width = dim.width ? (typeof dim.width === 'number' ? dim.width : parseFloat(dim.width)) : 1;
+                      const height = typeof dim.height === 'number' ? dim.height : parseFloat(dim.height) || 0;
+                      const area = length * width * height;
+                      
+                      return (
+                        <div key={index} className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                          <span className="text-sm">بعد {index + 1}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-medium">
+                              {length}×{width}×{height}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              = {area.toFixed(2)} م³
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {totalArea && (
+                  <div className="p-4 bg-primary/10 rounded-xl flex items-center justify-between">
+                    <span className="font-medium">متراژ کل</span>
+                    <span className="font-bold text-xl">
+                      {totalArea % 1 === 0 ? totalArea : totalArea.toFixed(2)} متر مکعب
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* قیمت */}
+          {price && (
+            <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <DollarSign className="h-6 w-6 text-green-600" />
+                    <span className="font-medium">مبلغ سفارش</span>
+                  </div>
+                  <span className="font-bold text-2xl text-green-600">
+                    {price.toLocaleString('fa-IR')} تومان
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* تاریخ‌ها */}
+          {(installDate || dueDate) && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  تاریخ‌ها
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-3">
+                {installDate && (
+                  <div className="p-3 bg-muted/40 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">تاریخ نصب</p>
+                    <p className="font-medium">{installDate}</p>
+                  </div>
+                )}
+                {dueDate && (
+                  <div className="p-3 bg-muted/40 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">تاریخ پایان</p>
+                    <p className="font-medium">{dueDate}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* شرایط خدمت */}
+          {conditions && conditions.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">شرایط خدمت</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {conditions.map((c: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="text-sm">
+                      {c}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* فاصله از مرکز استان */}
+          {distanceRange && (
+            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">فاصله از مرکز استان</span>
+              <span className="font-medium">{distanceRange}</span>
+            </div>
+          )}
+
+          {/* توضیحات */}
+          {description && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  توضیحات
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{description}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* تاریخ ثبت درخواست */}
+          <div className="p-3 bg-muted/30 rounded-lg flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>تاریخ درخواست انتقال: {formatPersianDate(request.created_at)}</span>
+          </div>
+
+          {/* تصاویر سفارش */}
+          <TransferRequestMediaGallery requestId={request.id} />
+
+          {/* نقشه موقعیت */}
+          {request.location_lat && request.location_lng && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Map className="h-4 w-4" />
+                  موقعیت پروژه
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-56 rounded-lg overflow-hidden border">
+                  <StaticLocationMap
+                    lat={request.location_lat}
+                    lng={request.location_lng}
+                    address={request.order_address || ''}
+                    detailedAddress={request.order_detailed_address || ''}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* دکمه‌های عمل - ثابت پایین */}
+        <div className="sticky bottom-0 bg-background border-t p-4">
+          <div className="flex gap-3">
+            <Button
+              onClick={() => onAccept(request)}
+              disabled={processingId === request.id}
+              className="flex-1 gap-2 h-12 text-base"
+              size="lg"
+            >
+              {processingId === request.id ? (
+                <div className="animate-spin h-5 w-5 border-2 border-current border-t-transparent rounded-full" />
+              ) : (
+                <CheckCircle className="h-5 w-5" />
+              )}
+              پذیرش سفارش
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => onReject(request)}
+              disabled={processingId === request.id}
+              className="flex-1 gap-2 h-12 text-base"
+              size="lg"
+            >
+              <XCircle className="h-5 w-5" />
+              رد درخواست
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const parseNotes = (notesStr: string | null): ParsedNotes | null => {
+  if (!notesStr) return null;
+  try {
+    let parsed = typeof notesStr === 'string' ? JSON.parse(notesStr) : notesStr;
+    // Handle double-stringified
+    if (typeof parsed === 'string') {
+      parsed = JSON.parse(parsed);
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
 };
 
 export function IncomingTransferRequests() {
@@ -216,7 +569,7 @@ export function IncomingTransferRequests() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectingRequest, setRejectingRequest] = useState<TransferRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
+  const [selectedRequest, setSelectedRequest] = useState<TransferRequest | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -229,11 +582,8 @@ export function IncomingTransferRequests() {
   const fetchIncomingRequests = async () => {
     setLoading(true);
     try {
-      // استفاده از RPC جدید که جزئیات کامل سفارش را برمی‌گرداند
       const { data, error } = await supabase.rpc('get_incoming_transfer_requests');
-
       if (error) throw error;
-
       setRequests(data || []);
     } catch (error) {
       console.error('Error fetching incoming requests:', error);
@@ -242,31 +592,9 @@ export function IncomingTransferRequests() {
     }
   };
 
-  const parseNotes = (notesStr: string | null): ParsedNotes | null => {
-    if (!notesStr) return null;
-    try {
-      return typeof notesStr === 'string' ? JSON.parse(notesStr) : notesStr;
-    } catch {
-      return null;
-    }
-  };
-
-  const toggleExpand = (requestId: string) => {
-    setExpandedRequests(prev => {
-      const next = new Set(prev);
-      if (next.has(requestId)) {
-        next.delete(requestId);
-      } else {
-        next.add(requestId);
-      }
-      return next;
-    });
-  };
-
   const handleAccept = async (request: TransferRequest) => {
     setProcessingId(request.id);
     try {
-      // Get the order details first - use separate queries to avoid coercion issues
       const { data: order, error: orderFetchError } = await supabase
         .from('projects_v3')
         .select('*')
@@ -276,14 +604,12 @@ export function IncomingTransferRequests() {
       if (orderFetchError) throw orderFetchError;
       if (!order) throw new Error('سفارش یافت نشد');
 
-      // Fetch subcategory separately
       const { data: subcategory } = await supabase
         .from('subcategories')
         .select('id, name, service_type_id')
         .eq('id', order.subcategory_id)
         .maybeSingle();
 
-      // Get or create customer record for the recipient
       let { data: recipientCustomer } = await supabase
         .from('customers')
         .select('id')
@@ -302,19 +628,14 @@ export function IncomingTransferRequests() {
       }
 
       const customerId = recipientCustomer?.id;
-      
-      if (!customerId) {
-        throw new Error('خطا در ایجاد پروفایل مشتری');
-      }
+      if (!customerId) throw new Error('خطا در ایجاد پروفایل مشتری');
 
-      // Get original owner's phone
       const { data: fromProfile } = await supabase
         .from('profiles')
         .select('phone_number')
         .eq('user_id', request.from_user_id)
         .maybeSingle();
 
-      // Create a location for the recipient user with the order address
       const { data: newLocation, error: locationError } = await supabase
         .from('locations')
         .insert({
@@ -331,13 +652,9 @@ export function IncomingTransferRequests() {
 
       if (locationError) throw locationError;
 
-      // Get service_type_id from subcategory
       const serviceTypeId = subcategory?.service_type_id;
-      if (!serviceTypeId) {
-        throw new Error('خطا در دریافت نوع خدمات');
-      }
+      if (!serviceTypeId) throw new Error('خطا در دریافت نوع خدمات');
 
-      // Create a projects_hierarchy entry for the recipient
       const { data: newHierarchy, error: hierarchyError } = await supabase
         .from('projects_hierarchy')
         .insert({
@@ -353,7 +670,6 @@ export function IncomingTransferRequests() {
 
       if (hierarchyError) throw hierarchyError;
 
-      // Update transfer request status to 'completed' first
       const { error: transferError } = await supabase
         .from('order_transfer_requests')
         .update({
@@ -364,7 +680,6 @@ export function IncomingTransferRequests() {
 
       if (transferError) throw transferError;
 
-      // Use RPC function to update order ownership (bypasses RLS)
       const { error: orderError } = await supabase.rpc('transfer_order_ownership' as any, {
         p_order_id: request.order_id,
         p_new_customer_id: customerId,
@@ -380,6 +695,7 @@ export function IncomingTransferRequests() {
         description: 'سفارش با موفقیت به شما منتقل شد و در پروژه‌های شما قرار گرفت',
       });
 
+      setSelectedRequest(null);
       fetchIncomingRequests();
     } catch (error: any) {
       console.error('Error accepting transfer:', error);
@@ -391,6 +707,12 @@ export function IncomingTransferRequests() {
     } finally {
       setProcessingId(null);
     }
+  };
+
+  const handleRejectClick = (request: TransferRequest) => {
+    setRejectingRequest(request);
+    setShowRejectDialog(true);
+    setSelectedRequest(null);
   };
 
   const handleReject = async () => {
@@ -456,30 +778,12 @@ export function IncomingTransferRequests() {
         <CardContent className="space-y-4">
           {requests.map((request) => {
             const notes = parseNotes(request.order_notes);
-            const isExpanded = expandedRequests.has(request.id);
-            
-            // محاسبه ابعاد
-            let dimensionsDisplay = '';
-            if (notes?.dimensions && Array.isArray(notes.dimensions)) {
-              dimensionsDisplay = notes.dimensions
-                .map(d => `${d.length || '?'}×${d.width || '?'}×${d.height || '?'}`)
-                .join(' | ');
-            } else if (notes?.length || notes?.width || notes?.height) {
-              dimensionsDisplay = `${notes.length || '?'}×${notes.width || '?'}×${notes.height || '?'}`;
-            }
-            
-            const totalArea = notes?.totalArea;
             const price = notes?.estimated_price || notes?.estimatedPrice || request.payment_amount;
-            const installDate = notes?.installationDate || notes?.installationDateTime;
-            const dueDate = notes?.dueDate || notes?.dueDateTime;
-            const description = notes?.additional_notes || notes?.description || notes?.activityDescription;
-            const conditions = notes?.conditions;
-            const scaffoldType = notes?.scaffold_type || notes?.service_type;
 
             return (
               <Card key={request.id} className="overflow-hidden">
                 <CardContent className="pt-4 space-y-3">
-                  {/* هدر اصلی */}
+                  {/* هدر */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Hash className="h-4 w-4 text-muted-foreground" />
@@ -492,7 +796,7 @@ export function IncomingTransferRequests() {
 
                   <Separator />
 
-                  {/* اطلاعات اصلی */}
+                  {/* خلاصه اطلاعات */}
                   <div className="grid grid-cols-1 gap-2 text-sm">
                     <div className="flex items-start gap-2">
                       <User className="h-4 w-4 text-muted-foreground mt-0.5" />
@@ -508,11 +812,16 @@ export function IncomingTransferRequests() {
                       <div>
                         <span className="text-muted-foreground">آدرس: </span>
                         <span>{request.order_address}</span>
-                        {request.order_detailed_address && (
-                          <span className="text-muted-foreground"> - {request.order_detailed_address}</span>
-                        )}
                       </div>
                     </div>
+                    {price && (
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                        <span className="font-bold text-green-600">
+                          {price.toLocaleString('fa-IR')} تومان
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">
@@ -521,189 +830,17 @@ export function IncomingTransferRequests() {
                     </div>
                   </div>
 
-                  {/* دکمه نمایش جزئیات */}
-                  <Collapsible open={isExpanded} onOpenChange={() => toggleExpand(request.id)}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="sm" className="w-full justify-between">
-                        <span>جزئیات کامل سفارش</span>
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                    
-                    <CollapsibleContent className="space-y-4 pt-3">
-                      <Separator />
-                      
-                      {/* نوع خدمت */}
-                      {(scaffoldType || request.subcategory_name) && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <Layers className="h-4 w-4 text-blue-600 mt-0.5" />
-                          <div>
-                            <span className="text-muted-foreground">نوع خدمت: </span>
-                            <span className="font-medium">{scaffoldType || request.subcategory_name}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* ابعاد */}
-                      {dimensionsDisplay && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <Ruler className="h-4 w-4 text-green-600 mt-0.5" />
-                          <div>
-                            <span className="text-muted-foreground">ابعاد (متر): </span>
-                            <span className="font-medium font-mono">{dimensionsDisplay}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* متراژ کل */}
-                      {totalArea && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <Ruler className="h-4 w-4 text-green-600 mt-0.5" />
-                          <div>
-                            <span className="text-muted-foreground">متراژ کل: </span>
-                            <span className="font-medium">{totalArea.toLocaleString('fa-IR')} متر مربع</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* قیمت */}
-                      {price && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <DollarSign className="h-4 w-4 text-emerald-600 mt-0.5" />
-                          <div>
-                            <span className="text-muted-foreground">مبلغ: </span>
-                            <span className="font-bold text-emerald-600">
-                              {price.toLocaleString('fa-IR')} تومان
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* تاریخ نصب */}
-                      {installDate && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <Calendar className="h-4 w-4 text-purple-600 mt-0.5" />
-                          <div>
-                            <span className="text-muted-foreground">تاریخ نصب: </span>
-                            <span className="font-medium">{installDate}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* تاریخ پایان */}
-                      {dueDate && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <Calendar className="h-4 w-4 text-orange-600 mt-0.5" />
-                          <div>
-                            <span className="text-muted-foreground">تاریخ پایان: </span>
-                            <span className="font-medium">{dueDate}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* شرایط خدمت */}
-                      {conditions && conditions.length > 0 && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <FileText className="h-4 w-4 text-indigo-600 mt-0.5" />
-                          <div>
-                            <span className="text-muted-foreground">شرایط: </span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {conditions.map((c, i) => (
-                                <Badge key={i} variant="outline" className="text-xs">
-                                  {c}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* توضیحات */}
-                      {description && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <FileText className="h-4 w-4 text-gray-600 mt-0.5" />
-                          <div>
-                            <span className="text-muted-foreground">توضیحات: </span>
-                            <p className="text-foreground mt-1 leading-relaxed">{description}</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* قیمت - نمایش بیرون از شروط */}
-                      {!price && request.payment_amount && (
-                        <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-lg">
-                          <div className="flex items-start gap-2 text-sm">
-                            <DollarSign className="h-4 w-4 text-emerald-600 mt-0.5" />
-                            <div>
-                              <span className="text-muted-foreground">مبلغ سفارش: </span>
-                              <span className="font-bold text-lg text-emerald-600">
-                                {request.payment_amount.toLocaleString('fa-IR')} تومان
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* تصاویر سفارش */}
-                      <Separator />
-                      <TransferRequestMediaGallery requestId={request.id} />
-                      
-                      {/* نقشه موقعیت */}
-                      {request.location_lat && request.location_lng && (
-                        <>
-                          <Separator />
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Map className="h-4 w-4 text-blue-600" />
-                              <span className="text-muted-foreground">موقعیت پروژه</span>
-                            </div>
-                            <div className="h-48 rounded-lg overflow-hidden border">
-                              <StaticLocationMap
-                                lat={request.location_lat}
-                                lng={request.location_lng}
-                                address={request.order_address || ''}
-                                detailedAddress={request.order_detailed_address || ''}
-                              />
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
-
                   <Separator />
 
-                  {/* دکمه‌های عمل */}
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleAccept(request)}
-                      disabled={processingId === request.id}
-                      className="flex-1 gap-2"
-                    >
-                      {processingId === request.id ? (
-                        <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                      ) : (
-                        <CheckCircle className="h-4 w-4" />
-                      )}
-                      پذیرش سفارش
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setRejectingRequest(request);
-                        setShowRejectDialog(true);
-                      }}
-                      disabled={processingId === request.id}
-                      className="flex-1 gap-2"
-                    >
-                      <XCircle className="h-4 w-4" />
-                      رد درخواست
-                    </Button>
-                  </div>
+                  {/* دکمه مشاهده جزئیات کامل */}
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => setSelectedRequest(request)}
+                  >
+                    <Eye className="h-4 w-4" />
+                    مشاهده جزئیات کامل و پذیرش سفارش
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -711,6 +848,19 @@ export function IncomingTransferRequests() {
         </CardContent>
       </Card>
 
+      {/* Full Order Details Dialog */}
+      {selectedRequest && (
+        <OrderDetailsDialog
+          request={selectedRequest}
+          open={!!selectedRequest}
+          onOpenChange={(open) => !open && setSelectedRequest(null)}
+          onAccept={handleAccept}
+          onReject={handleRejectClick}
+          processingId={processingId}
+        />
+      )}
+
+      {/* Reject Confirmation Dialog */}
       <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
