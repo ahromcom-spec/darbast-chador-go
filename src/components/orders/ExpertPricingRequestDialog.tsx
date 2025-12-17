@@ -77,21 +77,28 @@ export const ExpertPricingRequestDialog = ({
     for (const file of files) {
       const fileType = file.type.startsWith('video/') ? 'video' : 'image';
       const fileExt = file.name.split('.').pop();
-      const fileName = `${orderId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileName = `${user!.id}/${orderId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('project-media')
+        .from('order-media')
         .upload(fileName, file);
 
-      if (!uploadError) {
-        await supabase.from('project_media').insert({
-          project_id: orderId,
-          user_id: user!.id,
-          file_path: fileName,
-          file_type: fileType,
-          file_size: file.size,
-          mime_type: file.type
-        });
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        continue;
+      }
+
+      const { error: dbError } = await supabase.from('project_media').insert({
+        project_id: orderId,
+        user_id: user!.id,
+        file_path: fileName,
+        file_type: fileType,
+        file_size: file.size,
+        mime_type: file.type
+      });
+
+      if (dbError) {
+        console.error('DB error saving media:', dbError);
       }
     }
   };
@@ -301,7 +308,7 @@ export const ExpertPricingRequestDialog = ({
               <ImageIcon className="h-4 w-4" />
               عکس و فیلم از محل کار
             </Label>
-            <MediaUploader onFilesChange={handleFilesChange} />
+            <MediaUploader onFilesChange={handleFilesChange} disableAutoUpload={true} />
           </div>
 
           {/* Submit Button */}

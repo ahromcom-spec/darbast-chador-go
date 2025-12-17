@@ -1941,6 +1941,7 @@ export default function ComprehensiveScaffoldingForm({
         maxImageSize={10}
         maxVideoSize={50}
         maxVideoDuration={180}
+        disableAutoUpload={true}
       />
 
       {/* Installation Date & Time */}

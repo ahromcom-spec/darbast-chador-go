@@ -32,6 +32,7 @@ interface MediaUploaderProps {
   maxImageSize?: number; // in MB
   maxVideoSize?: number; // in MB
   maxVideoDuration?: number; // in seconds (kept for description only)
+  disableAutoUpload?: boolean; // If true, only collect files without uploading
 }
 
 export function MediaUploader({
@@ -42,6 +43,7 @@ export function MediaUploader({
   maxImageSize = 10,
   maxVideoSize = 50,
   maxVideoDuration = 600, // 10 minutes
+  disableAutoUpload = false,
 }: MediaUploaderProps) {
   const { toast } = useToast();
   const [files, setFiles] = useState<MediaFile[]>([]);
@@ -287,10 +289,17 @@ export function MediaUploader({
         return updated;
       });
 
-      // Start uploads (sequential to avoid rate spikes)
-      for (const m of newMedia) {
-        toast({ title: 'در حال آپلود', description: `${m.type === 'video' ? 'ویدیو' : 'عکس'} شما در حال آپلود است...` });
-        await uploadToStorage(m);
+      // Start uploads (sequential to avoid rate spikes) - only if auto upload is enabled
+      if (!disableAutoUpload) {
+        for (const m of newMedia) {
+          toast({ title: 'در حال آپلود', description: `${m.type === 'video' ? 'ویدیو' : 'عکس'} شما در حال آپلود است...` });
+          await uploadToStorage(m);
+        }
+      } else {
+        // Mark files as ready (no upload)
+        for (const m of newMedia) {
+          setFilePartial(m.id, { status: 'done' });
+        }
       }
     }
 
