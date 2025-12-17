@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon } from 'lucide-react';
 import { MediaUploader } from './MediaUploader';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { useNavigate } from 'react-router-dom';
+import { sendOrderSms, buildOrderSmsAddress } from '@/lib/orderSms';
 
 interface ExpertPricingRequestDialogProps {
   subcategoryId: string;
@@ -20,6 +22,7 @@ interface ExpertPricingRequestDialogProps {
   locationLat?: number;
   locationLng?: number;
   serviceTypeName?: string;
+  hierarchyProjectId?: string;
 }
 
 interface Dimension {
@@ -36,7 +39,8 @@ export const ExpertPricingRequestDialog = ({
   detailedAddress,
   locationLat,
   locationLng,
-  serviceTypeName
+  serviceTypeName,
+  hierarchyProjectId
 }: ExpertPricingRequestDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -47,6 +51,7 @@ export const ExpertPricingRequestDialog = ({
   
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const addDimension = () => {
     setDimensions([...dimensions, { length: '', width: '', height: '' }]);
@@ -68,6 +73,29 @@ export const ExpertPricingRequestDialog = ({
     setUploadedFiles(files);
   };
 
+  const uploadMedia = async (orderId: string, files: File[]) => {
+    for (const file of files) {
+      const fileType = file.type.startsWith('video/') ? 'video' : 'image';
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${orderId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('project-media')
+        .upload(fileName, file);
+
+      if (!uploadError) {
+        await supabase.from('project_media').insert({
+          project_id: orderId,
+          user_id: user!.id,
+          file_path: fileName,
+          file_type: fileType,
+          file_size: file.size,
+          mime_type: file.type
+        });
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user) {
       toast({ title: 'خطا', description: 'لطفاً وارد حساب کاربری شوید', variant: 'destructive' });
@@ -87,45 +115,59 @@ export const ExpertPricingRequestDialog = ({
         throw new Error('مشتری یافت نشد');
       }
 
-      // Insert using raw SQL query via postgrest
-      const insertData = {
-        customer_id: customer.id,
-        subcategory_id: subcategoryId,
-        province_id: provinceId,
-        district_id: districtId || null,
-        address: address,
-        detailed_address: detailedAddress || null,
-        location_lat: locationLat || null,
-        location_lng: locationLng || null,
+      // Build notes object for the order
+      const notes = JSON.stringify({
+        is_expert_pricing_request: true, // Flag to identify this as expert pricing request
         description: description,
         dimensions: dimensions.filter(d => d.length || d.width || d.height),
-        requested_date: requestedDate ? new Date(requestedDate).toISOString() : null,
-        status: 'pending'
-      };
+        requested_date: requestedDate || null,
+        service_type: serviceTypeName || 'داربست فلزی'
+      });
 
-      // Use fetch directly to avoid TypeScript issues with new table
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/expert_pricing_requests`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify(insertData)
-        }
-      );
+      // Create order using create_project_v3 RPC function
+      const { data: createdOrder, error: createError } = await supabase.rpc('create_project_v3', {
+        _customer_id: customer.id,
+        _province_id: provinceId,
+        _district_id: districtId || null,
+        _subcategory_id: subcategoryId,
+        _hierarchy_project_id: hierarchyProjectId || null,
+        _address: address,
+        _detailed_address: detailedAddress || null,
+        _notes: JSON.parse(notes)
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'خطا در ثبت درخواست');
+      if (createError) {
+        throw createError;
+      }
+
+      const orderData = createdOrder as any;
+      const orderId = Array.isArray(orderData) ? orderData[0]?.id : orderData?.id;
+      const orderCode = Array.isArray(orderData) ? orderData[0]?.code : orderData?.code;
+
+      if (!orderId) {
+        throw new Error('خطا در ایجاد سفارش');
+      }
+
+      // Upload media files if any
+      if (uploadedFiles.length > 0) {
+        await uploadMedia(orderId, uploadedFiles);
+      }
+
+      // Send SMS notification to customer
+      const customerPhone = user?.user_metadata?.phone_number || user?.phone;
+      if (customerPhone && orderCode) {
+        sendOrderSms(customerPhone, orderCode, 'submitted', {
+          orderId: orderId,
+          serviceType: serviceTypeName || 'درخواست قیمت‌گذاری کارشناس',
+          address: buildOrderSmsAddress(address, detailedAddress)
+        }).catch(err => {
+          console.error('SMS notification error:', err);
+        });
       }
 
       toast({
         title: '✅ درخواست ثبت شد',
-        description: 'درخواست قیمت‌گذاری شما ثبت شد و کارشناسان به زودی بررسی خواهند کرد.'
+        description: `سفارش با کد ${orderCode} ثبت شد. کارشناسان قیمت‌گذاری را انجام خواهند داد.`
       });
 
       setOpen(false);
@@ -134,6 +176,9 @@ export const ExpertPricingRequestDialog = ({
       setDimensions([{ length: '', width: '', height: '' }]);
       setRequestedDate('');
       setUploadedFiles([]);
+
+      // Navigate to order detail
+      navigate(`/user/orders/${orderId}`);
 
     } catch (error: any) {
       console.error('Error submitting request:', error);
