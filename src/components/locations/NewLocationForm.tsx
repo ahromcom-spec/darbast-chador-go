@@ -38,14 +38,19 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
   const isEditMode = !!initialData?.id;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // استفاده از undefined برای lat/lng وقتی آدرس جدید می‌سازیم
+  // تا مارکر پیش‌فرض روی نقشه نمایش داده نشود
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     province_id: initialData?.province_id || '',
     district_id: initialData?.district_id || '',
     address_line: initialData?.address_line || '',
-    lat: initialData?.lat || 0,
-    lng: initialData?.lng || 0
+    lat: initialData?.lat ?? 0,
+    lng: initialData?.lng ?? 0
   });
+
+  // آیا lat/lng معتبر است (برای تعیین نمایش مارکر اولیه)
+  const hasValidInitialCoords = !!(initialData?.lat && initialData?.lng && initialData.lat !== 0 && initialData.lng !== 0);
 
   const [hasMapPin, setHasMapPin] = useState(!!initialData?.lat && !!initialData?.lng);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -301,8 +306,8 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
         </p>
         <InteractiveLocationMap
           onLocationSelect={handleLocationSelect}
-          initialLat={formData.lat}
-          initialLng={formData.lng}
+          initialLat={hasValidInitialCoords ? formData.lat : undefined}
+          initialLng={hasValidInitialCoords ? formData.lng : undefined}
           provinceCode={provinces.find(p => p.id === formData.province_id)?.code}
           districtId={formData.district_id}
         />
