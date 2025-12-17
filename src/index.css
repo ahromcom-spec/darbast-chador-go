@@ -356,4 +356,22 @@
     opacity: 0 !important;
     pointer-events: none !important;
   }
+
+  /* Ensure Leaflet map doesn't overlap the sticky header */
+  .leaflet-container {
+    z-index: 0 !important;
+  }
+  
+  .leaflet-pane {
+    z-index: 1 !important;
+  }
+  
+  .leaflet-top,
+  .leaflet-bottom {
+    z-index: 5 !important;
+  }
+  
+  .leaflet-control {
+    z-index: 5 !important;
+  }
 }

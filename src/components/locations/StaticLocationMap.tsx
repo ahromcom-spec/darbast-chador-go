@@ -99,7 +99,7 @@ export default function StaticLocationMap({
   return (
     <div 
       ref={mapContainer} 
-      className="w-full h-full"
+      className="w-full h-full relative z-0"
       style={{ minHeight: '400px' }}
     />
   );
