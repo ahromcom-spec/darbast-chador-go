@@ -19,7 +19,11 @@ import {
   Ruler,
   DollarSign,
   FileText,
-  Layers
+  Layers,
+  ImageIcon,
+  ChevronLeft,
+  ChevronRight,
+  Map
 } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 import {
@@ -38,6 +42,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import StaticLocationMap from '@/components/locations/StaticLocationMap';
 
 interface TransferRequest {
   id: string;
@@ -85,6 +90,128 @@ interface ParsedNotes {
   conditions?: string[];
   [key: string]: any;
 }
+
+// Media Gallery component for transfer request preview
+const TransferRequestMediaGallery = ({ requestId }: { requestId: string }) => {
+  const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string }>>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchMedia = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_incoming_transfer_request_media', {
+          p_request_id: requestId
+        });
+        
+        if (error) throw error;
+        setMedia((data as any) || []);
+      } catch (err) {
+        console.error('Error fetching media:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMedia();
+  }, [requestId]);
+
+  useEffect(() => {
+    const fetchUrls = async () => {
+      const urls: Record<string, string> = {};
+      for (const item of media) {
+        try {
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from('order-media')
+            .createSignedUrl(item.file_path, 3600);
+          
+          if (signedData?.signedUrl && !signedError) {
+            urls[item.id] = signedData.signedUrl;
+          } else {
+            const { data } = supabase.storage.from('order-media').getPublicUrl(item.file_path);
+            urls[item.id] = data.publicUrl;
+          }
+        } catch (err) {
+          const { data } = supabase.storage.from('order-media').getPublicUrl(item.file_path);
+          urls[item.id] = data.publicUrl;
+        }
+      }
+      setMediaUrls(urls);
+    };
+    
+    if (media.length > 0) {
+      fetchUrls();
+    }
+  }, [media]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center p-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (media.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground text-sm p-4 bg-muted/50 rounded-lg">
+        <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        هنوز تصویری برای این سفارش ثبت نشده است
+      </div>
+    );
+  }
+
+  const currentMedia = media[currentIndex];
+  const isVideo = currentMedia?.file_type?.includes('video');
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-sm">
+        <ImageIcon className="h-4 w-4 text-blue-600" />
+        <span className="text-muted-foreground">تصاویر سفارش ({media.length})</span>
+      </div>
+      <div className="relative bg-black/5 rounded-lg overflow-hidden">
+        {isVideo ? (
+          <video
+            src={mediaUrls[currentMedia.id] || ''}
+            controls
+            className="w-full max-h-48 object-contain"
+          />
+        ) : (
+          <img
+            src={mediaUrls[currentMedia.id] || ''}
+            alt={`تصویر ${currentIndex + 1}`}
+            className="w-full max-h-48 object-contain"
+          />
+        )}
+        
+        {media.length > 1 && (
+          <>
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
+              onClick={() => setCurrentIndex(i => (i + 1) % media.length)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
+              onClick={() => setCurrentIndex(i => (i - 1 + media.length) % media.length)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/80 px-2 py-1 rounded text-xs">
+              {currentIndex + 1} / {media.length}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export function IncomingTransferRequests() {
   const [requests, setRequests] = useState<TransferRequest[]>([]);
@@ -508,6 +635,46 @@ export function IncomingTransferRequests() {
                             <p className="text-foreground mt-1 leading-relaxed">{description}</p>
                           </div>
                         </div>
+                      )}
+                      
+                      {/* قیمت - نمایش بیرون از شروط */}
+                      {!price && request.payment_amount && (
+                        <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-lg">
+                          <div className="flex items-start gap-2 text-sm">
+                            <DollarSign className="h-4 w-4 text-emerald-600 mt-0.5" />
+                            <div>
+                              <span className="text-muted-foreground">مبلغ سفارش: </span>
+                              <span className="font-bold text-lg text-emerald-600">
+                                {request.payment_amount.toLocaleString('fa-IR')} تومان
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* تصاویر سفارش */}
+                      <Separator />
+                      <TransferRequestMediaGallery requestId={request.id} />
+                      
+                      {/* نقشه موقعیت */}
+                      {request.location_lat && request.location_lng && (
+                        <>
+                          <Separator />
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Map className="h-4 w-4 text-blue-600" />
+                              <span className="text-muted-foreground">موقعیت پروژه</span>
+                            </div>
+                            <div className="h-48 rounded-lg overflow-hidden border">
+                              <StaticLocationMap
+                                lat={request.location_lat}
+                                lng={request.location_lng}
+                                address={request.order_address || ''}
+                                detailedAddress={request.order_detailed_address || ''}
+                              />
+                            </div>
+                          </div>
+                        </>
                       )}
                     </CollapsibleContent>
                   </Collapsible>
