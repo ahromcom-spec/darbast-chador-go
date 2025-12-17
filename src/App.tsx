@@ -69,6 +69,7 @@ const ExecutiveStageAwaitingPayment = lazy(() => import("./pages/executive/Execu
 const ExecutiveStageOrderExecuted = lazy(() => import("./pages/executive/ExecutiveStageOrderExecuted"));
 const ExecutiveStageAwaitingCollection = lazy(() => import("./pages/executive/ExecutiveStageAwaitingCollection"));
 const ExecutiveStageInCollection = lazy(() => import("./pages/executive/ExecutiveStageInCollection"));
+const ArchivedOrders = lazy(() => import("./pages/executive/ArchivedOrders"));
 const SalesLayout = lazy(() => import("./pages/sales/SalesLayout"));
 const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
 const SalesPendingOrders = lazy(() => import("./pages/sales/SalesPendingOrders"));
@@ -302,6 +303,7 @@ const App = () => {
                 <Route path="orders" element={<ExecutiveOrders />} />
                 <Route path="pending-orders" element={<ExecutivePendingOrders />} />
                 <Route path="customers" element={<ExecutiveCustomers />} />
+                <Route path="archived" element={<ArchivedOrders />} />
                 <Route path="order-transfers" element={<OrderTransferManagement />} />
               </Route>
               <Route path="/sales" element={

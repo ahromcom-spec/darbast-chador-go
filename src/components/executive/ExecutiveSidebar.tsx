@@ -12,7 +12,8 @@ import {
   Banknote,
   CheckSquare,
   PackageOpen,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Archive
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
@@ -178,6 +179,11 @@ export function ExecutiveSidebar() {
       title: 'همه سفارشات',
       href: '/executive/all-orders',
       icon: CheckCircle2
+    },
+    {
+      title: 'بایگانی سفارشات',
+      href: '/executive/archived',
+      icon: Archive
     },
     {
       title: 'مشتریان',
