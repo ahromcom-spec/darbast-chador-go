@@ -414,9 +414,9 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
 
   return (
     <div className="space-y-4">
-      {/* Expert Pricing Request Badge */}
+      {/* Expert Pricing Request Badge with Price Input */}
       {isExpertPricingRequest && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4">
+        <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-3">
             <div className="bg-amber-100 dark:bg-amber-900/50 p-2 rounded-full">
               <Banknote className="h-5 w-5 text-amber-600 dark:text-amber-400" />
@@ -432,6 +432,36 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
                 }
               </p>
             </div>
+          </div>
+          
+          {/* Prominent Price Input for Expert Pricing */}
+          <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600">
+            <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
+              تعیین قیمت (تومان)
+            </Label>
+            <div className="flex gap-2">
+              <Input 
+                type="number"
+                value={paymentAmount} 
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="مبلغ را به تومان وارد کنید"
+                className="flex-1 text-lg font-bold"
+                dir="ltr"
+              />
+              <Button 
+                onClick={handleSave} 
+                disabled={saving || !paymentAmount}
+                className="bg-amber-600 hover:bg-amber-700 text-white px-6"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
+                ذخیره قیمت
+              </Button>
+            </div>
+            {parsedNotes?.price_set_by_manager && parsedNotes?.manager_set_price && (
+              <p className="mt-2 text-sm text-green-700 dark:text-green-400">
+                قیمت تعیین شده: {Number(parsedNotes.manager_set_price).toLocaleString('fa-IR')} تومان
+              </p>
+            )}
           </div>
         </div>
       )}
