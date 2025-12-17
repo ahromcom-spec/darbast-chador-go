@@ -206,6 +206,12 @@ interface Order {
   customer_id?: string;
   executed_by?: string | null;
   approved_by?: string | null;
+  // اطلاعات سفارش برای دیگران
+  transferred_from_user_id?: string | null;
+  transferred_from_phone?: string | null;
+  transfer_request?: any;
+  registrant_name?: string | null;
+  registrant_phone?: string | null;
 }
 
 export default function ExecutivePendingOrders() {
@@ -285,7 +291,9 @@ export default function ExecutivePendingOrders() {
           payment_amount,
           customer_id,
           executed_by,
-          approved_by
+          approved_by,
+          transferred_from_user_id,
+          transferred_from_phone
         `)
         .eq('status', 'pending')
         .or('is_archived.is.null,is_archived.eq.false')
@@ -293,10 +301,36 @@ export default function ExecutivePendingOrders() {
 
       if (error) throw error;
 
+      // Fetch transfer requests for these orders to check "order for others"
+      const orderIds = (data || []).map((o: any) => o.id);
+      const { data: transferRequests } = await supabase
+        .from('order_transfer_requests')
+        .select('order_id, from_user_id, to_phone_number, to_user_id, status')
+        .in('order_id', orderIds);
+
+      const transferMap = new Map<string, any>();
+      (transferRequests || []).forEach((tr: any) => {
+        transferMap.set(tr.order_id, tr);
+      });
+
+      // Fetch registrant names for orders placed for others
+      const fromUserIds = (transferRequests || []).map((tr: any) => tr.from_user_id).filter(Boolean);
+      const { data: registrantProfiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, phone_number')
+        .in('user_id', fromUserIds);
+
+      const registrantMap = new Map<string, any>();
+      (registrantProfiles || []).forEach((p: any) => {
+        registrantMap.set(p.user_id, p);
+      });
+
       // Map orders with denormalized data
       const rows = (data || []).map((order: any) => {
         // Parse notes using robust parser that handles double-stringified JSON
         const notesObj = parseOrderNotes(order.notes) || {};
+        const transferRequest = transferMap.get(order.id);
+        const registrant = transferRequest ? registrantMap.get(transferRequest.from_user_id) : null;
 
         return {
           id: order.id,
@@ -317,6 +351,12 @@ export default function ExecutivePendingOrders() {
           customer_id: order.customer_id,
           executed_by: order.executed_by,
           approved_by: order.approved_by,
+          // اطلاعات سفارش برای دیگران
+          transferred_from_user_id: order.transferred_from_user_id,
+          transferred_from_phone: order.transferred_from_phone,
+          transfer_request: transferRequest,
+          registrant_name: registrant?.full_name,
+          registrant_phone: registrant?.phone_number,
         };
       });
 
@@ -759,6 +799,12 @@ export default function ExecutivePendingOrders() {
                     درخواست قیمت‌گذاری
                   </Badge>
                 )}
+                {order.transfer_request && (
+                  <Badge variant="outline" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                    <Users className="h-3 w-3 ml-1" />
+                    سفارش برای دیگری
+                  </Badge>
+                )}
               </div>
               
               <div className="space-y-1 text-sm">
@@ -778,6 +824,17 @@ export default function ExecutivePendingOrders() {
                     <div className="line-clamp-1">{order.address}</div>
                   </div>
                 </div>
+                {/* نمایش اطلاعات ثبت‌کننده سفارش برای دیگران */}
+                {order.transfer_request && (
+                  <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
+                    <Users className="h-4 w-4" />
+                    <span className="text-xs">
+                      ثبت‌کننده: {order.registrant_name || 'نامشخص'} ({order.registrant_phone || order.transfer_request.to_phone_number})
+                      {order.transfer_request.status === 'pending_recipient' && ' - در انتظار تایید گیرنده'}
+                      {order.transfer_request.status === 'pending_registration' && ' - در انتظار ثبت‌نام گیرنده'}
+                    </span>
+                  </div>
+                )}
               </div>
               </div>
             </div>
