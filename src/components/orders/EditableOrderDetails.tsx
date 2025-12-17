@@ -457,12 +457,22 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
                 ذخیره قیمت
               </Button>
             </div>
-            {parsedNotes?.price_set_by_manager && parsedNotes?.manager_set_price && (
-              <p className="mt-2 text-sm text-green-700 dark:text-green-400">
-                قیمت تعیین شده: {Number(parsedNotes.manager_set_price).toLocaleString('fa-IR')} تومان
-              </p>
-            )}
           </div>
+
+          {/* Price Status Card */}
+          {paymentAmount && Number(paymentAmount) > 0 ? (
+            <div className="bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-700 rounded-lg p-3">
+              <p className="text-sm font-bold text-green-700 dark:text-green-400 text-center">
+                قیمت تعیین شده: {Number(paymentAmount).toLocaleString('fa-IR')} تومان
+              </p>
+            </div>
+          ) : (
+            <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-300 dark:border-orange-700 rounded-lg p-3">
+              <p className="text-sm font-bold text-orange-700 dark:text-orange-400 text-center">
+                در انتظار تعیین قیمت توسط مدیر
+              </p>
+            </div>
+          )}
         </div>
       )}
 
