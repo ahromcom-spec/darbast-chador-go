@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeftRight, Users, Clock, Archive } from 'lucide-react';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeftRight, Users, Clock, Archive, CheckSquare, Square } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -222,6 +223,9 @@ export default function ExecutivePendingOrders() {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [bulkArchiveDialogOpen, setBulkArchiveDialogOpen] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [bulkArchiving, setBulkArchiving] = useState(false);
   const { toast } = useToast();
 
   // Auto-open order from URL param
@@ -483,6 +487,64 @@ export default function ExecutivePendingOrders() {
     }
   };
 
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.size === filteredOrders.length) {
+      setSelectedOrderIds(new Set());
+    } else {
+      setSelectedOrderIds(new Set(filteredOrders.map(o => o.id)));
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedOrderIds.size === 0 || !user) return;
+
+    setBulkArchiving(true);
+    try {
+      const orderIdsArray = Array.from(selectedOrderIds);
+      
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          is_archived: true,
+          archived_at: new Date().toISOString(),
+          archived_by: user.id
+        })
+        .in('id', orderIdsArray);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سفارشات بایگانی شدند',
+        description: `${selectedOrderIds.size} سفارش به بایگانی منتقل شد.`
+      });
+
+      setBulkArchiveDialogOpen(false);
+      setSelectedOrderIds(new Set());
+      fetchOrders();
+    } catch (error) {
+      console.error('Error bulk archiving orders:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در بایگانی سفارشات'
+      });
+    } finally {
+      setBulkArchiving(false);
+    }
+  };
+
   const handleApprove = async () => {
     if (!selectedOrder || !user) return;
 
@@ -664,11 +726,19 @@ export default function ExecutivePendingOrders() {
       }
     };
 
+    const isSelected = selectedOrderIds.has(order.id);
+
     return (
-      <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-orange-500">
+      <Card className={`hover:shadow-lg transition-all duration-200 border-l-4 border-l-orange-500 ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 space-y-2">
+            <div className="flex items-start gap-3 flex-1">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => toggleOrderSelection(order.id)}
+                className="mt-1"
+              />
+              <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
                 <Badge variant={
@@ -708,6 +778,7 @@ export default function ExecutivePendingOrders() {
                     <div className="line-clamp-1">{order.address}</div>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>
@@ -871,6 +942,39 @@ export default function ExecutivePendingOrders() {
                 {filteredOrders.length} سفارش یافت شد
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bulk Action Bar */}
+      {filteredOrders.length > 0 && (
+        <Card className="sticky top-0 z-10 border-primary/30">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={selectedOrderIds.size === filteredOrders.length && filteredOrders.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {selectedOrderIds.size > 0 
+                    ? `${selectedOrderIds.size} سفارش انتخاب شده`
+                    : 'انتخاب همه'}
+                </span>
+              </div>
+              
+              {selectedOrderIds.size > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBulkArchiveDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Archive className="h-4 w-4" />
+                  بایگانی {selectedOrderIds.size} سفارش
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -1040,6 +1144,32 @@ export default function ExecutivePendingOrders() {
             </Button>
             <Button onClick={handleArchiveOrder}>
               بایگانی سفارش
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Archive Dialog */}
+      <Dialog open={bulkArchiveDialogOpen} onOpenChange={setBulkArchiveDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5" />
+              بایگانی دسته‌جمعی سفارشات
+            </DialogTitle>
+            <DialogDescription>
+              آیا مطمئن هستید که می‌خواهید {selectedOrderIds.size} سفارش را بایگانی کنید؟
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            تمام سفارشات انتخاب شده از دسترس مشتریان و مدیران خارج می‌شوند. می‌توانید بعداً از قسمت بایگانی آن‌ها را بازگردانید.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setBulkArchiveDialogOpen(false)} disabled={bulkArchiving}>
+              انصراف
+            </Button>
+            <Button onClick={handleBulkArchive} disabled={bulkArchiving}>
+              {bulkArchiving ? 'در حال بایگانی...' : `بایگانی ${selectedOrderIds.size} سفارش`}
             </Button>
           </DialogFooter>
         </DialogContent>
