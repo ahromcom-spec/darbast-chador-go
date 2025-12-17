@@ -1272,6 +1272,39 @@ export default function ComprehensiveScaffoldingForm({
               console.error('Transfer request error:', transferError);
               // خطای انتقال مانع از ادامه نمی‌شود - سفارش ثبت شده
             } else {
+              // ارسال نوتیفیکیشن به کاربر مقصد (اگر ثبت‌نام کرده باشد)
+              if (recipientData.isRegistered && recipientData.userId) {
+                const senderName = user?.user_metadata?.full_name || 'یک کاربر';
+                const serviceTypeName = activeService === 'facade' ? 'داربست نما' :
+                                        activeService === 'column' ? 'داربست ستون' :
+                                        activeService === 'formwork' ? 'داربست حجمی کفراژ' :
+                                        activeService === 'pipe-length' ? 'داربست متراژ' :
+                                        activeService.includes('ceiling') ? 'داربست سقف' : 'داربست';
+                
+                // ارسال نوتیفیکیشن درون‌سایتی
+                await supabase.rpc('send_notification', {
+                  _user_id: recipientData.userId,
+                  _title: '📦 سفارش جدید برای شما ثبت شد',
+                  _body: `${senderName} یک سفارش ${serviceTypeName} با کد ${createdProject.code} برای شما ثبت کرده است. لطفاً آن را بررسی و تایید کنید.`,
+                  _link: '/user/profile',
+                  _type: 'info'
+                });
+
+                // ارسال Push Notification
+                try {
+                  await supabase.functions.invoke('send-push-notification', {
+                    body: {
+                      user_id: recipientData.userId,
+                      title: '📦 سفارش جدید برای شما ثبت شد',
+                      body: `${senderName} یک سفارش ${serviceTypeName} با کد ${createdProject.code} برای شما ثبت کرده است.`,
+                      url: '/user/profile'
+                    }
+                  });
+                } catch (pushErr) {
+                  console.log('Push notification skipped');
+                }
+              }
+
               toast({
                 title: 'سفارش ثبت شد',
                 description: recipientData.isRegistered 
