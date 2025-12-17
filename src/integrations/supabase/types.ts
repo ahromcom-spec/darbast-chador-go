@@ -1826,6 +1826,8 @@ export type Database = {
           address: string
           approved_at: string | null
           approved_by: string | null
+          archived_at: string | null
+          archived_by: string | null
           closed_at: string | null
           code: string
           contractor_id: string | null
@@ -1847,6 +1849,7 @@ export type Database = {
           financial_confirmed_by: string | null
           hierarchy_project_id: string | null
           id: string
+          is_archived: boolean | null
           is_renewal: boolean | null
           location_lat: number | null
           location_lng: number | null
@@ -1869,6 +1872,8 @@ export type Database = {
           address: string
           approved_at?: string | null
           approved_by?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           closed_at?: string | null
           code: string
           contractor_id?: string | null
@@ -1892,6 +1897,7 @@ export type Database = {
           financial_confirmed_by?: string | null
           hierarchy_project_id?: string | null
           id?: string
+          is_archived?: boolean | null
           is_renewal?: boolean | null
           location_lat?: number | null
           location_lng?: number | null
@@ -1914,6 +1920,8 @@ export type Database = {
           address?: string
           approved_at?: string | null
           approved_by?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           closed_at?: string | null
           code?: string
           contractor_id?: string | null
@@ -1937,6 +1945,7 @@ export type Database = {
           financial_confirmed_by?: string | null
           hierarchy_project_id?: string | null
           id?: string
+          is_archived?: boolean | null
           is_renewal?: boolean | null
           location_lat?: number | null
           location_lng?: number | null
@@ -3469,6 +3478,8 @@ export type Database = {
           address: string
           approved_at: string | null
           approved_by: string | null
+          archived_at: string | null
+          archived_by: string | null
           closed_at: string | null
           code: string
           contractor_id: string | null
@@ -3490,6 +3501,7 @@ export type Database = {
           financial_confirmed_by: string | null
           hierarchy_project_id: string | null
           id: string
+          is_archived: boolean | null
           is_renewal: boolean | null
           location_lat: number | null
           location_lng: number | null
@@ -3540,6 +3552,8 @@ export type Database = {
           address: string
           approved_at: string | null
           approved_by: string | null
+          archived_at: string | null
+          archived_by: string | null
           closed_at: string | null
           code: string
           contractor_id: string | null
@@ -3561,6 +3575,7 @@ export type Database = {
           financial_confirmed_by: string | null
           hierarchy_project_id: string | null
           id: string
+          is_archived: boolean | null
           is_renewal: boolean | null
           location_lat: number | null
           location_lng: number | null

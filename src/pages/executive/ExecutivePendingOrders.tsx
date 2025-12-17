@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeftRight, Users, Clock } from 'lucide-react';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeftRight, Users, Clock, Archive } from 'lucide-react';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -221,6 +221,7 @@ export default function ExecutivePendingOrders() {
   const [executionEndDate, setExecutionEndDate] = useState('');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Auto-open order from URL param
@@ -283,6 +284,7 @@ export default function ExecutivePendingOrders() {
           approved_by
         `)
         .eq('status', 'pending')
+        .or('is_archived.is.null,is_archived.eq.false')
         .order('code', { ascending: false });
 
       if (error) throw error;
@@ -444,6 +446,39 @@ export default function ExecutivePendingOrders() {
         variant: 'destructive',
         title: 'خطا',
         description: 'خطا در تکمیل اجرا'
+      });
+    }
+  };
+
+  const handleArchiveOrder = async () => {
+    if (!selectedOrder || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          is_archived: true,
+          archived_at: new Date().toISOString(),
+          archived_by: user.id
+        })
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سفارش بایگانی شد',
+        description: `سفارش ${selectedOrder.code} به بایگانی منتقل شد.`
+      });
+
+      setArchiveDialogOpen(false);
+      setSelectedOrder(null);
+      fetchOrders();
+    } catch (error) {
+      console.error('Error archiving order:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در بایگانی سفارش'
       });
     }
   };
@@ -788,6 +823,19 @@ export default function ExecutivePendingOrders() {
               <CheckCircle className="h-4 w-4" />
               تایید سفارش
             </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedOrder(order);
+                setArchiveDialogOpen(true);
+              }}
+              className="gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <Archive className="h-4 w-4" />
+              بایگانی
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -970,7 +1018,32 @@ export default function ExecutivePendingOrders() {
           onCollaboratorAdded={fetchOrders}
         />
       )}
+
+      {/* Archive Dialog */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5" />
+              بایگانی سفارش
+            </DialogTitle>
+            <DialogDescription>
+              آیا مطمئن هستید که می‌خواهید سفارش {selectedOrder?.code} را بایگانی کنید؟
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            سفارش از دسترس مشتری و مدیران خارج می‌شود. می‌توانید بعداً از قسمت بایگانی آن را بازگردانید.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)}>
+              انصراف
+            </Button>
+            <Button onClick={handleArchiveOrder}>
+              بایگانی سفارش
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
