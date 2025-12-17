@@ -58,6 +58,7 @@ import { OrderOwnershipChain } from "@/components/orders/OrderOwnershipChain";
 import { RepairRequestDialog } from "@/components/orders/RepairRequestDialog";
 import { CollectionRequestDialog } from "@/components/orders/CollectionRequestDialog";
 import { ManagerOrderInvoice } from "@/components/orders/ManagerOrderInvoice";
+import { OrderForOthersInfo } from "@/components/orders/OrderForOthersInfo";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { useProjectRatings, RatingCriteria } from "@/hooks/useRatings";
 import { useAuth } from "@/contexts/AuthContext";
@@ -987,6 +988,12 @@ export default function OrderDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Order For Others Info - نمایش اطلاعات سفارش برای دیگران */}
+          <OrderForOthersInfo 
+            orderId={order.id}
+            onStatusChange={fetchOrderDetails}
+          />
 
           {/* Expert Pricing Request Section */}
           {isExpertPricingRequest && (
