@@ -162,111 +162,150 @@ export function OrderForOthers({ onRecipientSelected, disabled }: OrderForOthers
     }
   };
 
-  return (
-    <div className="flex items-center gap-2">
-      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogTrigger asChild>
-          <Button
-            variant={isActive ? "default" : "outline"}
-            size="sm"
-            className={`gap-2 ${isActive ? 'bg-primary text-primary-foreground' : ''}`}
-            disabled={disabled}
-          >
-            <Users className="h-4 w-4" />
-            {isActive ? 'ثبت برای دیگری (فعال)' : 'ثبت سفارش برای دیگری'}
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-right">ثبت سفارش برای شخص دیگر</DialogTitle>
-            <DialogDescription className="text-right">
-              شماره موبایل شخصی که می‌خواهید سفارش برای او ثبت شود را وارد کنید
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="recipient-phone" className="text-right block">شماره موبایل مقصد</Label>
-              <div className="relative">
-                <Input
-                  id="recipient-phone"
-                  type="tel"
-                  placeholder="09xxxxxxxxx"
-                  value={phoneNumber}
-                  onChange={(e) => {
-                    setPhoneNumber(e.target.value);
-                  }}
-                  className="text-left pr-10"
-                  dir="ltr"
-                />
-                {searching && (
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                )}
+  // اگر گیرنده انتخاب شده، کارت اطلاعات گیرنده را نشان بده
+  if (isActive && recipientInfo) {
+    return (
+      <div className="w-full">
+        <Alert className="border-2 border-primary bg-primary/5">
+          <Users className="h-5 w-5 text-primary" />
+          <AlertDescription>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-primary text-base">
+                  ثبت سفارش برای شخص دیگر
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleCancel}
+                  disabled={disabled}
+                >
+                  لغو انتخاب
+                </Button>
               </div>
-              {phoneNumber && !searching && !searchCompleted && phoneNumber.length < 11 && (
-                <p className="text-xs text-muted-foreground">شماره باید 11 رقم باشد ({phoneNumber.length}/11)</p>
-              )}
-            </div>
-
-            {/* نتیجه جستجو */}
-            {searchCompleted && recipientInfo && (
-              <div className="space-y-3">
-                {recipientInfo.isRegistered ? (
-                  <Alert className="border-green-500 bg-green-50 dark:bg-green-950/20">
-                    <Check className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-700 dark:text-green-300">
-                      <span className="font-bold">کاربر پیدا شد:</span>
-                      <br />
-                      {recipientInfo.fullName || 'بدون نام'}
-                      <br />
-                      <span className="text-sm text-muted-foreground" dir="ltr">{recipientInfo.phoneNumber}</span>
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950/20">
-                    <Clock className="h-4 w-4 text-orange-600" />
-                    <AlertDescription className="text-orange-700 dark:text-orange-300">
-                      <span className="font-bold">کاربر هنوز ثبت‌نام نکرده</span>
-                      <br />
-                      <span className="text-sm">
-                        سفارش ثبت می‌شود و پس از ثبت‌نام کاربر با این شماره، سفارش به او منتقل خواهد شد.
-                      </span>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => handleOpenChange(false)}>
-                    انصراف
-                  </Button>
-                  <Button onClick={handleConfirm}>
-                    تایید و انتخاب
-                  </Button>
+              <div className="flex items-center gap-4 bg-background/80 rounded-lg p-3 border">
+                <div className="flex-1">
+                  <div className="text-sm text-muted-foreground">گیرنده سفارش:</div>
+                  <div className="font-semibold text-foreground">
+                    {recipientInfo.fullName || 'بدون نام'}
+                  </div>
+                  <div className="text-sm text-muted-foreground" dir="ltr">
+                    {recipientInfo.phoneNumber}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {recipientInfo.isRegistered ? (
+                    <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded-full flex items-center gap-1">
+                      <Check className="h-3 w-3" />
+                      کاربر ثبت‌نام شده
+                    </span>
+                  ) : (
+                    <span className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded-full flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      در انتظار ثبت‌نام
+                    </span>
+                  )}
                 </div>
               </div>
+              {!recipientInfo.isRegistered && (
+                <p className="text-xs text-muted-foreground">
+                  سفارش ثبت می‌شود و پس از ثبت‌نام کاربر با این شماره، سفارش به او منتقل خواهد شد.
+                </p>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          disabled={disabled}
+        >
+          <Users className="h-4 w-4" />
+          ثبت سفارش برای دیگری
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="text-right">ثبت سفارش برای شخص دیگر</DialogTitle>
+          <DialogDescription className="text-right">
+            شماره موبایل شخصی که می‌خواهید سفارش برای او ثبت شود را وارد کنید
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="recipient-phone" className="text-right block">شماره موبایل مقصد</Label>
+            <div className="relative">
+              <Input
+                id="recipient-phone"
+                type="tel"
+                placeholder="09xxxxxxxxx"
+                value={phoneNumber}
+                onChange={(e) => {
+                  setPhoneNumber(e.target.value);
+                }}
+                className="text-left pr-10"
+                dir="ltr"
+              />
+              {searching && (
+                <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </div>
+            {phoneNumber && !searching && !searchCompleted && phoneNumber.length < 11 && (
+              <p className="text-xs text-muted-foreground">شماره باید 11 رقم باشد ({phoneNumber.length}/11)</p>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* نمایش وضعیت فعال بودن */}
-      {isActive && recipientInfo && (
-        <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-lg border border-primary/20">
-          <span className="text-sm text-primary">
-            برای: {recipientInfo.fullName || recipientInfo.phoneNumber}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-destructive hover:text-destructive"
-            onClick={handleCancel}
-          >
-            لغو
-          </Button>
+          {/* نتیجه جستجو */}
+          {searchCompleted && recipientInfo && (
+            <div className="space-y-3">
+              {recipientInfo.isRegistered ? (
+                <Alert className="border-green-500 bg-green-50 dark:bg-green-950/20">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-700 dark:text-green-300">
+                    <span className="font-bold">کاربر پیدا شد:</span>
+                    <br />
+                    {recipientInfo.fullName || 'بدون نام'}
+                    <br />
+                    <span className="text-sm text-muted-foreground" dir="ltr">{recipientInfo.phoneNumber}</span>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950/20">
+                  <Clock className="h-4 w-4 text-orange-600" />
+                  <AlertDescription className="text-orange-700 dark:text-orange-300">
+                    <span className="font-bold">کاربر هنوز ثبت‌نام نکرده</span>
+                    <br />
+                    <span className="text-sm">
+                      سفارش ثبت می‌شود و پس از ثبت‌نام کاربر با این شماره، سفارش به او منتقل خواهد شد.
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => handleOpenChange(false)}>
+                  انصراف
+                </Button>
+                <Button onClick={handleConfirm}>
+                  تایید و انتخاب
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
