@@ -197,6 +197,7 @@ export default function OrderDetail() {
   const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
   const [isOrderDetailsExpanded, setIsOrderDetailsExpanded] = useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
+  const [isConfirmingPrice, setIsConfirmingPrice] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -762,6 +763,49 @@ export default function OrderDetail() {
     }
   };
 
+  // Handler for customer confirming expert pricing
+  const handleConfirmExpertPrice = async () => {
+    if (!order || !parsedNotes) return;
+    
+    setIsConfirmingPrice(true);
+    try {
+      const updatedNotes = {
+        ...parsedNotes,
+        customer_price_confirmed: true,
+        customer_price_confirmed_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({ notes: updatedNotes })
+        .eq('id', order.id);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ قیمت تایید شد',
+        description: 'سفارش شما وارد روال عادی شد و در انتظار بررسی مدیران قرار گرفت.',
+      });
+
+      // Refresh order details
+      await fetchOrderDetails();
+    } catch (error: any) {
+      console.error('Error confirming price:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در تایید قیمت',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsConfirmingPrice(false);
+    }
+  };
+
+  // Check if this is an expert pricing request
+  const isExpertPricingRequest = parsedNotes?.is_expert_pricing_request === true;
+  const managerHasSetPrice = parsedNotes?.price_set_by_manager === true && (order?.payment_amount || parsedNotes?.manager_set_price);
+  const customerHasConfirmedPrice = parsedNotes?.customer_price_confirmed === true;
+
   if (loading) {
     return (
       <MainLayout>
@@ -943,6 +987,87 @@ export default function OrderDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Expert Pricing Request Section */}
+          {isExpertPricingRequest && (
+            <Card className="border-2 border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-amber-800 dark:text-amber-200">
+                  <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                    <Star className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  درخواست قیمت‌گذاری کارشناسی
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!managerHasSetPrice ? (
+                  // Manager hasn't set price yet
+                  <div className="flex items-center gap-3 p-4 bg-amber-100/50 dark:bg-amber-900/30 rounded-xl">
+                    <Clock className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <p className="font-medium text-amber-800 dark:text-amber-200">
+                        در انتظار تعیین قیمت توسط کارشناس
+                      </p>
+                      <p className="text-sm text-amber-700 dark:text-amber-300">
+                        کارشناس ما در حال بررسی درخواست شما هستند و به زودی قیمت مشخص خواهد شد.
+                      </p>
+                    </div>
+                  </div>
+                ) : !customerHasConfirmedPrice ? (
+                  // Manager has set price, waiting for customer confirmation
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-xl border-2 border-green-200 dark:border-green-800">
+                      <div className="text-center space-y-2">
+                        <p className="text-sm text-green-700 dark:text-green-300">
+                          قیمت تعیین شده توسط کارشناس
+                        </p>
+                        <p className="text-3xl font-extrabold text-green-700 dark:text-green-300">
+                          {(order.payment_amount || parsedNotes?.manager_set_price)?.toLocaleString('fa-IR')} تومان
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                        آیا قیمت تعیین شده را تایید می‌کنید؟ با تایید قیمت، سفارش شما وارد روال عادی بررسی و اجرا خواهد شد.
+                      </p>
+                      <Button
+                        onClick={handleConfirmExpertPrice}
+                        disabled={isConfirmingPrice}
+                        className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+                        size="lg"
+                      >
+                        {isConfirmingPrice ? (
+                          <>
+                            <Clock className="h-5 w-5 animate-spin" />
+                            در حال ثبت...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-5 w-5" />
+                            تایید قیمت و ادامه سفارش
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  // Customer has confirmed price
+                  <div className="flex items-center gap-3 p-4 bg-green-100/50 dark:bg-green-900/30 rounded-xl">
+                    <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+                    <div>
+                      <p className="font-medium text-green-800 dark:text-green-200">
+                        قیمت تایید شده
+                      </p>
+                      <p className="text-sm text-green-700 dark:text-green-300">
+                        سفارش شما با قیمت {(order.payment_amount || parsedNotes?.manager_set_price)?.toLocaleString('fa-IR')} تومان تایید شده و در روال عادی قرار گرفته است.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Order Details from Notes or Payment Amount */}
           {(parsedNotes || order.payment_amount || notesParseError) && (
@@ -1419,10 +1544,11 @@ export default function OrderDetail() {
                         </p>
                       )}
 
-                    {/* دکمه پرداخت - فقط بعد از تایید سفارش */}
+                    {/* دکمه پرداخت - فقط بعد از تایید سفارش و برای درخواست کارشناسی فقط بعد از تایید قیمت توسط مشتری */}
                     {['approved', 'completed', 'in_progress', 'pending_execution'].includes(order.status) && 
                      ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0) && 
-                     !order.payment_confirmed_at && (
+                     !order.payment_confirmed_at &&
+                     (!isExpertPricingRequest || customerHasConfirmedPrice) && (
                       <div className="pt-4 border-t border-emerald-200 dark:border-emerald-800">
                         <Button 
                           className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
