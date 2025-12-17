@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeftRight, Users } from 'lucide-react';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeftRight, Users, Clock } from 'lucide-react';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -608,9 +608,10 @@ export default function ExecutivePendingOrders() {
     const isExpertPricingRequest = orderNotes?.is_expert_pricing_request === true;
     const priceSetByManager = orderNotes?.price_set_by_manager === true;
     const hasPaymentAmount = order.payment_amount && order.payment_amount > 0;
+    const customerPriceConfirmed = orderNotes?.customer_price_confirmed === true;
     
-    // For expert pricing requests, approval is disabled until price is set
-    const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount);
+    // For expert pricing requests, approval is disabled until price is set AND customer confirms price
+    const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount && customerPriceConfirmed);
     
     const getServiceInfo = () => {
       try {
@@ -690,14 +691,26 @@ export default function ExecutivePendingOrders() {
           )}
 
           {/* Expert pricing status indicator */}
-          {isExpertPricingRequest && !canApprove && (
+          {isExpertPricingRequest && !priceSetByManager && !hasPaymentAmount && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3">
               <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 text-sm">
                 <Banknote className="h-4 w-4" />
                 <span className="font-medium">ابتدا قیمت را برای این سفارش تعیین کنید</span>
               </div>
               <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">
-                از طریق "جزئیات کامل" قیمت را وارد و ذخیره کنید، سپس می‌توانید سفارش را تایید کنید.
+                از طریق "جزئیات کامل" قیمت را وارد و ذخیره کنید.
+              </p>
+            </div>
+          )}
+
+          {isExpertPricingRequest && priceSetByManager && hasPaymentAmount && !customerPriceConfirmed && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 text-sm">
+                <Clock className="h-4 w-4" />
+                <span className="font-medium">قیمت تعیین شده: {Number(order.payment_amount).toLocaleString('fa-IR')} تومان</span>
+              </div>
+              <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">
+                در انتظار تایید قیمت توسط مشتری. پس از تایید مشتری می‌توانید سفارش را تایید کنید.
               </p>
             </div>
           )}
@@ -706,10 +719,10 @@ export default function ExecutivePendingOrders() {
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3">
               <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
                 <CheckCircle className="h-4 w-4" />
-                <span className="font-medium">قیمت تعیین شده: {Number(order.payment_amount).toLocaleString('fa-IR')} تومان</span>
+                <span className="font-medium">قیمت تعیین شده: {Number(order.payment_amount).toLocaleString('fa-IR')} تومان - مشتری تایید کرده</span>
               </div>
               <p className="text-xs text-green-600 dark:text-green-500 mt-1">
-                قیمت سفارش تعیین شده و می‌توانید سفارش را تایید کنید.
+                قیمت سفارش تعیین شده و مشتری تایید کرده است. می‌توانید سفارش را تایید کنید.
               </p>
             </div>
           )}
