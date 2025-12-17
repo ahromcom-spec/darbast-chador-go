@@ -782,80 +782,60 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         </div>
       )}
 
-      {/* Price */}
-      <div className={`p-4 rounded-lg border ${isExpertPricingRequest && !parsedNotes?.price_set_by_manager 
-        ? 'bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700 border-2' 
-        : 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800'}`}>
-        <div className="flex items-center gap-2 mb-2">
-          <Banknote className={`h-4 w-4 ${isExpertPricingRequest && !parsedNotes?.price_set_by_manager ? 'text-amber-600' : 'text-green-600'}`} />
-          <Label className="text-sm font-medium">
-            {isExpertPricingRequest && !parsedNotes?.price_set_by_manager 
-              ? 'تعیین قیمت برای درخواست کارشناسی' 
-              : 'مبلغ سفارش'}
-          </Label>
-        </div>
-        
-        {/* Show prominent edit for expert pricing requests without price */}
-        {isExpertPricingRequest && !parsedNotes?.price_set_by_manager && !isEditing && (
-          <div className="space-y-3">
-            <p className="text-sm text-amber-700 dark:text-amber-300">
-              این سفارش درخواست قیمت‌گذاری کارشناسی است. لطفاً قیمت را تعیین کنید.
-            </p>
-            <Button 
-              onClick={() => setIsEditing(true)} 
-              className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              <Edit className="h-4 w-4" />
-              تعیین قیمت
-            </Button>
+      {/* Price - Only show for non-expert pricing requests, as expert pricing has input at top */}
+      {!isExpertPricingRequest && (
+        <div className="p-4 rounded-lg border bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+          <div className="flex items-center gap-2 mb-2">
+            <Banknote className="h-4 w-4 text-green-600" />
+            <Label className="text-sm font-medium">مبلغ سفارش</Label>
           </div>
-        )}
-        
-        {isEditing ? (
-          <Input 
-            type="number"
-            value={paymentAmount} 
-            onChange={(e) => setPaymentAmount(e.target.value)}
-            placeholder="مبلغ به تومان"
-            className="mt-1"
-          />
-        ) : (
-          <>
-            {(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) && (
-              <>
-                <p className="font-bold text-xl text-green-700 dark:text-green-300">
-                  {Number(
-                    (order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0) + approvedRepairCost
-                  ).toLocaleString('fa-IR')} تومان
-                </p>
-                <div className="mt-2 space-y-1 text-sm">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>هزینه قرارداد:</span>
-                    <span>{Number(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice).toLocaleString('fa-IR')} تومان</span>
-                  </div>
-                  {approvedRepairCost > 0 && (
-                    <div className="flex justify-between text-orange-600 dark:text-orange-400">
-                      <span className="flex items-center gap-1">
-                        <Wrench className="h-3 w-3" />
-                        هزینه تعمیر:
-                      </span>
-                      <span>{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+          
+          {isEditing ? (
+            <Input 
+              type="number"
+              value={paymentAmount} 
+              onChange={(e) => setPaymentAmount(e.target.value)}
+              placeholder="مبلغ به تومان"
+              className="mt-1"
+            />
+          ) : (
+            <>
+              {(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) && (
+                <>
+                  <p className="font-bold text-xl text-green-700 dark:text-green-300">
+                    {Number(
+                      (order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0) + approvedRepairCost
+                    ).toLocaleString('fa-IR')} تومان
+                  </p>
+                  <div className="mt-2 space-y-1 text-sm">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>هزینه قرارداد:</span>
+                      <span>{Number(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice).toLocaleString('fa-IR')} تومان</span>
                     </div>
-                  )}
+                    {approvedRepairCost > 0 && (
+                      <div className="flex justify-between text-orange-600 dark:text-orange-400">
+                        <span className="flex items-center gap-1">
+                          <Wrench className="h-3 w-3" />
+                          هزینه تعمیر:
+                        </span>
+                        <span>{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+              {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  <Label className="text-xs text-muted-foreground">جزئیات محاسبه قیمت</Label>
+                  {parsedNotes.price_breakdown.map((item: string, idx: number) => (
+                    <div key={idx} className="text-xs text-muted-foreground p-2 bg-background rounded border">{item}</div>
+                  ))}
                 </div>
-              </>
-            )}
-            {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
-              <div className="mt-3 space-y-1">
-                <Label className="text-xs text-muted-foreground">جزئیات محاسبه قیمت</Label>
-                {parsedNotes.price_breakdown.map((item: string, idx: number) => (
-                  <div key={idx} className="text-xs text-muted-foreground p-2 bg-background rounded border">{item}</div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <Separator />
 
