@@ -200,7 +200,7 @@ export const ExpertPricingRequestDialog = ({
           درخواست قیمت‌گذاری توسط کارشناس
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-primary" />
@@ -209,13 +209,15 @@ export const ExpertPricingRequestDialog = ({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Service Info */}
-          {serviceTypeName && (
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">نوع خدمات: <span className="font-medium text-foreground">{serviceTypeName}</span></p>
-              <p className="text-sm text-muted-foreground mt-1">آدرس: <span className="font-medium text-foreground">{address}</span></p>
-            </div>
-          )}
+          {/* Service Info - Always show */}
+          <div className="p-4 bg-muted rounded-lg space-y-2">
+            <p className="text-sm text-muted-foreground">
+              نوع خدمات: <span className="font-medium text-foreground">{serviceTypeName || 'داربست فلزی'}</span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              آدرس: <span className="font-medium text-foreground">{address}{detailedAddress ? ` - ${detailedAddress}` : ''}</span>
+            </p>
+          </div>
 
           {/* Description */}
           <div className="space-y-2">
