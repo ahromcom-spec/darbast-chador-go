@@ -603,6 +603,15 @@ export default function ExecutivePendingOrders() {
   const OrderCardWithApprovals = ({ order }: { order: Order }) => {
     const { approvals, loading: approvalsLoading } = useOrderApprovals(order.id);
     
+    // Check if this is an expert pricing request and if price has been set
+    const orderNotes = parseOrderNotes(order.notes);
+    const isExpertPricingRequest = orderNotes?.is_expert_pricing_request === true;
+    const priceSetByManager = orderNotes?.price_set_by_manager === true;
+    const hasPaymentAmount = order.payment_amount && order.payment_amount > 0;
+    
+    // For expert pricing requests, approval is disabled until price is set
+    const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount);
+    
     const getServiceInfo = () => {
       try {
         const n = order.notes || {};
@@ -639,6 +648,11 @@ export default function ExecutivePendingOrders() {
                    order.status === 'approved' ? 'آماده اجرا' : 
                    'در حال اجرا'}
                 </Badge>
+                {isExpertPricingRequest && (
+                  <Badge variant="outline" className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                    درخواست قیمت‌گذاری
+                  </Badge>
+                )}
               </div>
               
               <div className="space-y-1 text-sm">
@@ -672,6 +686,31 @@ export default function ExecutivePendingOrders() {
           {order.detailed_address && (
             <div className="text-xs text-muted-foreground">
               <span className="font-medium">آدرس تفصیلی:</span> {order.detailed_address}
+            </div>
+          )}
+
+          {/* Expert pricing status indicator */}
+          {isExpertPricingRequest && !canApprove && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 text-sm">
+                <Banknote className="h-4 w-4" />
+                <span className="font-medium">ابتدا قیمت را برای این سفارش تعیین کنید</span>
+              </div>
+              <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">
+                از طریق "جزئیات کامل" قیمت را وارد و ذخیره کنید، سپس می‌توانید سفارش را تایید کنید.
+              </p>
+            </div>
+          )}
+
+          {isExpertPricingRequest && canApprove && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
+                <CheckCircle className="h-4 w-4" />
+                <span className="font-medium">قیمت تعیین شده: {Number(order.payment_amount).toLocaleString('fa-IR')} تومان</span>
+              </div>
+              <p className="text-xs text-green-600 dark:text-green-500 mt-1">
+                قیمت سفارش تعیین شده و می‌توانید سفارش را تایید کنید.
+              </p>
             </div>
           )}
 
@@ -723,13 +762,15 @@ export default function ExecutivePendingOrders() {
                 setSelectedOrder(order);
                 setActionType('approve');
                 // Pre-fill execution dates from customer's requested dates
-                const orderNotes = parseOrderNotes(order.notes);
-                const customerRequestedDate = orderNotes?.installationDateTime || orderNotes?.installation_date || '';
-                const customerDueDate = orderNotes?.dueDateTime || orderNotes?.due_date || '';
+                const notes = parseOrderNotes(order.notes);
+                const customerRequestedDate = notes?.installationDateTime || notes?.installation_date || '';
+                const customerDueDate = notes?.dueDateTime || notes?.due_date || '';
                 setExecutionStartDate(customerRequestedDate);
                 setExecutionEndDate(customerDueDate);
               }}
-              className="gap-2 bg-green-600 hover:bg-green-700"
+              className={`gap-2 ${canApprove ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}
+              disabled={!canApprove}
+              title={!canApprove ? 'ابتدا باید قیمت سفارش را تعیین کنید' : 'تایید سفارش'}
             >
               <CheckCircle className="h-4 w-4" />
               تایید سفارش
