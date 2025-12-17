@@ -6,10 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Map, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, PhoneCall, ArrowLeftRight, Users } from 'lucide-react';
-import VoiceCall from '@/components/orders/VoiceCall';
-import OrderChat from '@/components/orders/OrderChat';
-import { OrderDetailsView as OrderDetailsViewComponent } from '@/components/orders/OrderDetailsView';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeftRight, Users } from 'lucide-react';
+import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -26,8 +24,6 @@ import {
 } from '@/components/ui/dialog';
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
-import { Separator } from '@/components/ui/separator';
-import { ProjectLocationMap } from '@/components/locations/ProjectLocationMap';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
@@ -894,54 +890,9 @@ export default function ExecutivePendingOrders() {
             </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-6">
-              {/* استفاده از کامپوننت OrderDetailsView برای نمایش جزئیات کامل */}
-              <OrderDetailsViewComponent order={selectedOrder} showMedia={true} />
-              
-              {/* نقشه موقعیت پروژه */}
-              {selectedOrder.location_lat && selectedOrder.location_lng && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Map className="h-4 w-4 text-primary" />
-                      <Label className="text-sm font-semibold">موقعیت پروژه روی نقشه</Label>
-                    </div>
-                    <ProjectLocationMap
-                      key={`map-selected-${selectedOrder.id}`}
-                      projectLat={selectedOrder.location_lat}
-                      projectLng={selectedOrder.location_lng}
-                      projectAddress={selectedOrder.detailed_address || selectedOrder.address}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* تماس صوتی با مشتری */}
-              {selectedOrder.customer_id && (
-                <>
-                  <Separator />
-                  <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
-                    <div className="flex items-center gap-2 mb-3">
-                      <PhoneCall className="h-4 w-4 text-primary" />
-                      <Label className="text-sm font-semibold">تماس صوتی با مشتری</Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      برای هماهنگی زمان‌بندی و جزئیات سفارش با مشتری تماس بگیرید
-                    </p>
-                    <VoiceCall 
-                      orderId={selectedOrder.id}
-                      customerId={selectedOrder.customer_id}
-                      isManager={true}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* چت سفارش */}
-              <Separator />
-              <OrderChat orderId={selectedOrder.id} orderStatus={selectedOrder.status} />
-            </div>
+            <EditableOrderDetails order={selectedOrder} onUpdate={() => {
+              fetchOrders();
+            }} />
           )}
         </DialogContent>
       </Dialog>
