@@ -7,6 +7,7 @@ import {
   UsersRound,
   ChevronRight,
   ShoppingCart,
+  Archive,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,11 @@ const menuItems = [
     title: 'مشتریان',
     icon: UsersRound,
     href: '/ceo/customers',
+  },
+  {
+    title: 'سفارشات بایگانی شده',
+    icon: Archive,
+    href: '/executive/archived-orders',
   },
   {
     title: 'مدیریت دسترسی',
