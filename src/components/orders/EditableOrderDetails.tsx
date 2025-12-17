@@ -350,6 +350,9 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
     parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type || ''
   );
 
+  // Check if this is an expert pricing request
+  const isExpertPricingRequest = parsedNotes?.is_expert_pricing_request === true;
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -359,6 +362,12 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         description,
         service_type: scaffoldingType
       };
+
+      // If manager is setting price on expert pricing request, mark it
+      if (isExpertPricingRequest && paymentAmount && parseFloat(paymentAmount) > 0) {
+        updatedNotes.price_set_by_manager = true;
+        updatedNotes.manager_set_price = parseFloat(paymentAmount);
+      }
 
       const { error } = await supabase
         .from('projects_v3')
@@ -405,6 +414,28 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
 
   return (
     <div className="space-y-4">
+      {/* Expert Pricing Request Badge */}
+      {isExpertPricingRequest && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-amber-100 dark:bg-amber-900/50 p-2 rounded-full">
+              <Banknote className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-amber-800 dark:text-amber-200">درخواست قیمت‌گذاری کارشناسی</h4>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                {parsedNotes?.price_set_by_manager 
+                  ? parsedNotes?.customer_price_confirmed 
+                    ? '✓ قیمت توسط مشتری تایید شده است'
+                    : '⏳ قیمت تعیین شده - در انتظار تایید مشتری'
+                  : 'لطفاً قیمت را تعیین کنید تا برای تایید به مشتری نمایش داده شود'
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Toggle Button & Print */}
       <div className="flex justify-end gap-2">
         <ManagerOrderInvoice order={order} />
@@ -722,11 +753,34 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
       )}
 
       {/* Price */}
-      <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg border border-green-200 dark:border-green-800">
+      <div className={`p-4 rounded-lg border ${isExpertPricingRequest && !parsedNotes?.price_set_by_manager 
+        ? 'bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700 border-2' 
+        : 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800'}`}>
         <div className="flex items-center gap-2 mb-2">
-          <Banknote className="h-4 w-4 text-green-600" />
-          <Label className="text-sm font-medium">مبلغ سفارش</Label>
+          <Banknote className={`h-4 w-4 ${isExpertPricingRequest && !parsedNotes?.price_set_by_manager ? 'text-amber-600' : 'text-green-600'}`} />
+          <Label className="text-sm font-medium">
+            {isExpertPricingRequest && !parsedNotes?.price_set_by_manager 
+              ? 'تعیین قیمت برای درخواست کارشناسی' 
+              : 'مبلغ سفارش'}
+          </Label>
         </div>
+        
+        {/* Show prominent edit for expert pricing requests without price */}
+        {isExpertPricingRequest && !parsedNotes?.price_set_by_manager && !isEditing && (
+          <div className="space-y-3">
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              این سفارش درخواست قیمت‌گذاری کارشناسی است. لطفاً قیمت را تعیین کنید.
+            </p>
+            <Button 
+              onClick={() => setIsEditing(true)} 
+              className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              <Edit className="h-4 w-4" />
+              تعیین قیمت
+            </Button>
+          </div>
+        )}
+        
         {isEditing ? (
           <Input 
             type="number"
