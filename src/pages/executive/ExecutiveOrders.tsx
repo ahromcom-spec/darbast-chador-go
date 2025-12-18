@@ -24,15 +24,15 @@ import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaff
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { useAuth } from '@/contexts/AuthContext';
 
-// مراحل اجرایی سفارش
+// مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 const executionStages = [
-  { key: 'pending', label: 'در انتظار تایید', statusMapping: 'pending' },
-  { key: 'approved', label: 'در انتظار اجرا', statusMapping: 'approved' },
-  { key: 'in_progress', label: 'اجرا شد', statusMapping: 'in_progress' },
-  { key: 'awaiting_collection', label: 'در انتظار جمع‌آوری', statusMapping: 'completed' },
-  { key: 'in_collection', label: 'در حال جمع‌آوری', statusMapping: 'completed' },
-  { key: 'collected', label: 'جمع‌آوری شد', statusMapping: 'completed' },
-  { key: 'closed', label: 'اتمام سفارش', statusMapping: 'closed' },
+  { key: 'pending', label: 'در انتظار تایید', statusMapping: 'pending', executionStageMapping: null },
+  { key: 'approved', label: 'در انتظار اجرا', statusMapping: 'approved', executionStageMapping: null },
+  { key: 'in_progress', label: 'اجرا شد', statusMapping: 'in_progress', executionStageMapping: 'order_executed' },
+  { key: 'awaiting_collection', label: 'در انتظار جمع‌آوری', statusMapping: 'completed', executionStageMapping: 'awaiting_collection' },
+  { key: 'in_collection', label: 'در حال جمع‌آوری', statusMapping: 'completed', executionStageMapping: 'in_collection' },
+  { key: 'collected', label: 'جمع‌آوری شد', statusMapping: 'completed', executionStageMapping: 'in_collection' },
+  { key: 'closed', label: 'اتمام سفارش', statusMapping: 'closed', executionStageMapping: null },
 ];
 
 // Component to display order technical details with edit capability
@@ -197,7 +197,7 @@ export default function ExecutiveOrders() {
           location_lat,
           location_lng
         `)
-        .in('status', ['approved', 'in_progress', 'completed', 'closed'])
+        .in('status', ['pending', 'approved', 'in_progress', 'completed', 'closed'])
         .order('code', { ascending: false });
 
       if (error) throw error;
@@ -419,12 +419,16 @@ export default function ExecutiveOrders() {
         .eq('id', orderId)
         .single();
 
-      // به‌روزرسانی هم execution_stage و هم status
+      // به‌روزرسانی status و execution_stage با مقادیر صحیح
       const updateData: Record<string, any> = {
-        execution_stage: newStage,
         execution_stage_updated_at: new Date().toISOString(),
         status: stage.statusMapping
       };
+
+      // فقط اگر executionStageMapping وجود داشت، آن را به‌روزرسانی کن
+      if (stage.executionStageMapping) {
+        updateData.execution_stage = stage.executionStageMapping;
+      }
 
       // اگر به مرحله closed رسید، closed_at را هم ثبت کن
       if (newStage === 'closed') {
@@ -448,13 +452,17 @@ export default function ExecutiveOrders() {
 
         if (customerData?.user_id) {
           const stageMessages: Record<string, { title: string; body: string }> = {
+            pending: {
+              title: '⏳ سفارش در انتظار تایید',
+              body: `سفارش ${orderData.code} به مرحله انتظار تایید بازگشت.`
+            },
             approved: {
               title: '✅ سفارش در انتظار اجرا',
               body: `سفارش ${orderData.code} در مرحله انتظار اجرا قرار گرفت.`
             },
             in_progress: {
-              title: '🚧 سفارش در حال اجرا',
-              body: `اجرای سفارش ${orderData.code} آغاز شده است.`
+              title: '🚧 سفارش اجرا شد',
+              body: `اجرای سفارش ${orderData.code} انجام شده است.`
             },
             awaiting_collection: {
               title: '📦 سفارش در انتظار جمع‌آوری',
@@ -463,6 +471,10 @@ export default function ExecutiveOrders() {
             in_collection: {
               title: '🔧 داربست در حال جمع‌آوری',
               body: `جمع‌آوری داربست سفارش ${orderData.code} آغاز شده است.`
+            },
+            collected: {
+              title: '✓ داربست جمع‌آوری شد',
+              body: `جمع‌آوری داربست سفارش ${orderData.code} تکمیل شد.`
             },
             closed: {
               title: '🎉 سفارش تکمیل شد',
@@ -880,7 +892,14 @@ export default function ExecutiveOrders() {
                   <RefreshCw className="h-4 w-4 text-primary" />
                   <Label className="text-sm font-medium whitespace-nowrap">تغییر مرحله:</Label>
                   <Select
-                    value={order.status === 'closed' ? 'closed' : (order.status === 'completed' ? 'awaiting_collection' : order.status)}
+                    value={
+                      order.status === 'closed' ? 'closed' : 
+                      order.status === 'pending' ? 'pending' :
+                      order.status === 'approved' ? 'approved' :
+                      order.status === 'in_progress' ? 'in_progress' :
+                      order.status === 'completed' ? 'awaiting_collection' : 
+                      order.status
+                    }
                     onValueChange={(value) => handleStageChange(order.id, value)}
                   >
                     <SelectTrigger className="flex-1 h-9">
