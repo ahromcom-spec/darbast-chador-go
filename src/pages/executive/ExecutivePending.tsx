@@ -13,6 +13,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { formatPersianDate } from '@/lib/dateUtils';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,24 @@ import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { Separator } from '@/components/ui/separator';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
+
+// Helper to parse order notes safely - handles double-stringified JSON
+const parseOrderNotes = (notes: any): any => {
+  if (!notes) return null;
+  try {
+    let parsed = notes;
+    if (typeof parsed === 'string') {
+      parsed = JSON.parse(parsed);
+    }
+    if (typeof parsed === 'string') {
+      parsed = JSON.parse(parsed);
+    }
+    return parsed;
+  } catch (e) {
+    console.error('Error parsing notes:', e);
+    return null;
+  }
+};
 
 interface Order {
   id: string;
@@ -362,6 +381,12 @@ export default function ExecutivePending() {
                 onClick={() => {
                   setSelectedOrder(order);
                   setActionType('approve');
+                  // Pre-fill execution dates from customer's requested dates
+                  const notes = parseOrderNotes(order.notes);
+                  const customerRequestedDate = notes?.installationDateTime || notes?.installation_date || notes?.requested_date || '';
+                  const customerDueDate = notes?.dueDateTime || notes?.due_date || '';
+                  setExecutionStartDate(customerRequestedDate);
+                  setExecutionEndDate(customerDueDate);
                 }}
                 className="bg-green-600 hover:bg-green-700"
               >
@@ -442,21 +467,42 @@ export default function ExecutivePending() {
           
           {selectedOrder && (
             <div className="space-y-4 py-4">
+              {/* نمایش تاریخ درخواستی مشتری */}
+              {(() => {
+                const orderNotes = parseOrderNotes(selectedOrder.notes);
+                const customerRequestedDate = orderNotes?.installationDateTime || orderNotes?.installation_date || orderNotes?.requested_date;
+                if (customerRequestedDate) {
+                  return (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">تاریخ درخواستی مشتری</Label>
+                      <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                          {formatPersianDate(customerRequestedDate)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               <div className="space-y-2">
                 <Label>تاریخ شروع اجرا</Label>
                 <PersianDatePicker
                   value={executionStartDate}
                   onChange={setExecutionStartDate}
                   placeholder="انتخاب تاریخ شروع"
+                  timeMode="ampm"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>تاریخ پایان اجرا</Label>
+                <Label>تاریخ پایان اجرا (تخمینی)</Label>
                 <PersianDatePicker
                   value={executionEndDate}
                   onChange={setExecutionEndDate}
                   placeholder="انتخاب تاریخ پایان"
+                  timeMode="none"
                 />
               </div>
 

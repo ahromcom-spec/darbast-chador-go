@@ -950,7 +950,8 @@ export default function ExecutivePendingOrders() {
                 setActionType('approve');
                 // Pre-fill execution dates from customer's requested dates
                 const notes = parseOrderNotes(order.notes);
-                const customerRequestedDate = notes?.installationDateTime || notes?.installation_date || '';
+                // بررسی همه فیلدهای ممکن برای تاریخ درخواستی
+                const customerRequestedDate = notes?.installationDateTime || notes?.installation_date || notes?.requested_date || '';
                 const customerDueDate = notes?.dueDateTime || notes?.due_date || '';
                 setExecutionStartDate(customerRequestedDate);
                 setExecutionEndDate(customerDueDate);
@@ -1075,7 +1076,8 @@ export default function ExecutivePendingOrders() {
               {/* نمایش تاریخ درخواستی مشتری */}
               {(() => {
                 const orderNotes = parseOrderNotes(selectedOrder.notes);
-                const customerRequestedDate = orderNotes?.installationDateTime || orderNotes?.installation_date;
+                // بررسی همه فیلدهای ممکن برای تاریخ درخواستی مشتری
+                const customerRequestedDate = orderNotes?.installationDateTime || orderNotes?.installation_date || orderNotes?.requested_date;
                 if (customerRequestedDate) {
                   return (
                     <div className="space-y-2">
