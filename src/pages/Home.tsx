@@ -29,7 +29,10 @@ const Home = () => {
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
   const [pendingServiceTypeId, setPendingServiceTypeId] = useState<string>('');
-  const [showGlobe, setShowGlobe] = useState(false);
+  const [showGlobe, setShowGlobe] = useState(() => {
+    // خواندن وضعیت نقشه از localStorage برای حفظ بعد از رفرش
+    return localStorage.getItem('showGlobeMap') === 'true';
+  });
   
   const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
   const { toast } = useToast();
@@ -44,6 +47,10 @@ const Home = () => {
   // Auto-assign projects to contractors
   useAutoAssignProjects();
 
+  // ذخیره وضعیت نقشه در localStorage برای حفظ بعد از رفرش
+  useEffect(() => {
+    localStorage.setItem('showGlobeMap', showGlobe ? 'true' : 'false');
+  }, [showGlobe]);
   // Reset selections when component mounts
   useEffect(() => {
     setSelectedServiceType('');
