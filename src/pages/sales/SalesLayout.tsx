@@ -69,7 +69,7 @@ const mainNavItems = [
   },
   {
     title: 'سفارشات بایگانی شده',
-    href: '/executive/archived-orders',
+    href: '/executive/archived',
     icon: Archive
   }
 ];

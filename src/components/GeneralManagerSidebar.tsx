@@ -25,7 +25,7 @@ const menuItems = [
   { title: 'درخواست‌های پرسنل', url: '/admin/staff-requests', icon: UserPlus },
   { title: 'درخواست‌های انتقال سفارش', url: '/admin/order-transfers', icon: ArrowLeftRight },
   { title: 'مدیریت لیست مجاز', url: '/admin/whitelist', icon: Users },
-  { title: 'سفارشات بایگانی شده', url: '/executive/archived-orders', icon: Archive },
+  { title: 'سفارشات بایگانی شده', url: '/executive/archived', icon: Archive },
 ];
 
 export function GeneralManagerSidebar() {
