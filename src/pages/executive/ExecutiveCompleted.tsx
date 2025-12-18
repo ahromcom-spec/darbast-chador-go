@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { DollarSign, Eye, Search, MapPin, Phone, User, CheckCircle2, Calendar, ArrowRightLeft, Users } from 'lucide-react';
+import { DollarSign, Eye, Search, MapPin, Phone, User, CheckCircle2, Calendar, ArrowRightLeft, Users, Archive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -16,6 +16,8 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
+import { useOrderArchive } from '@/hooks/useOrderArchive';
+import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
 
 // Helper function to parse order notes (handles double-stringified JSON)
 const parseOrderNotes = (notes: string | null | undefined): any => {
@@ -62,6 +64,9 @@ export default function ExecutiveCompleted() {
   const [collaboratorOpen, setCollaboratorOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  
+  // Archive functionality
+  const archive = useOrderArchive(() => fetchOrders());
 
   // Auto-open order from URL param
   const urlOrderId = searchParams.get('orderId');
@@ -189,6 +194,23 @@ export default function ExecutiveCompleted() {
         </Card>
       )}
 
+      {/* Bulk Selection Bar */}
+      <OrderArchiveControls
+        showBulkBar={true}
+        selectedCount={archive.selectedOrderIds.size}
+        totalCount={filteredOrders.length}
+        onToggleSelectAll={() => archive.toggleSelectAll(filteredOrders.map(o => o.id))}
+        onBulkArchive={() => archive.setBulkArchiveDialogOpen(true)}
+        archiveDialogOpen={archive.archiveDialogOpen}
+        onArchiveDialogChange={archive.setArchiveDialogOpen}
+        orderToArchive={archive.orderToArchive}
+        onConfirmArchive={archive.handleArchiveOrder}
+        bulkArchiveDialogOpen={archive.bulkArchiveDialogOpen}
+        onBulkArchiveDialogChange={archive.setBulkArchiveDialogOpen}
+        onConfirmBulkArchive={archive.handleBulkArchive}
+        archiving={archive.archiving}
+      />
+
       <div className="grid gap-4">
         {filteredOrders.length === 0 ? (
           <Card>
@@ -202,6 +224,12 @@ export default function ExecutiveCompleted() {
             <Card key={order.id} className="hover:shadow-lg transition-all border-l-4 border-l-yellow-500">
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
+                  <OrderCardArchiveButton
+                    orderId={order.id}
+                    isSelected={archive.selectedOrderIds.has(order.id)}
+                    onToggleSelection={() => archive.toggleOrderSelection(order.id)}
+                    onArchive={() => archive.openArchiveDialog({ id: order.id, code: order.code })}
+                  />
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
