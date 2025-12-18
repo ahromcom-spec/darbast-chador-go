@@ -49,7 +49,8 @@ import {
   ArrowLeftRight,
   Users,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  CalendarDays
 } from "lucide-react";
 import { OrderTransfer } from "@/components/orders/OrderTransfer";
 import { AddCollaborator } from "@/components/orders/AddCollaborator";
@@ -1070,6 +1071,49 @@ export default function OrderDetail() {
                         سفارش شما با قیمت {(order.payment_amount || parsedNotes?.manager_set_price)?.toLocaleString('fa-IR')} تومان تایید شده و در روال عادی قرار گرفته است.
                       </p>
                     </div>
+                  </div>
+                )}
+
+                {/* نمایش تاریخ درخواست اجرا */}
+                {parsedNotes?.requested_date && (
+                  <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800 mt-4">
+                    <CalendarDays className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    <div>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">تاریخ درخواست اجرا</p>
+                      <p className="font-medium text-blue-800 dark:text-blue-200">
+                        {new Date(parsedNotes.requested_date).toLocaleDateString('fa-IR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* نمایش ابعاد درخواستی */}
+                {parsedNotes?.dimensions && parsedNotes.dimensions.length > 0 && parsedNotes.dimensions.some((d: any) => d.length || d.width || d.height) && (
+                  <div className="p-4 bg-muted/30 rounded-xl mt-4">
+                    <p className="text-sm text-muted-foreground mb-2">ابعاد درخواستی (متر)</p>
+                    <div className="space-y-2">
+                      {parsedNotes.dimensions.filter((d: any) => d.length || d.width || d.height).map((dim: any, index: number) => (
+                        <div key={index} className="flex gap-4 text-sm">
+                          {dim.length && <span>طول: {dim.length}</span>}
+                          {dim.width && <span>عرض: {dim.width}</span>}
+                          {dim.height && <span>ارتفاع: {dim.height}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* نمایش توضیحات */}
+                {parsedNotes?.description && (
+                  <div className="p-4 bg-muted/30 rounded-xl mt-4">
+                    <p className="text-sm text-muted-foreground mb-2">توضیحات مشتری</p>
+                    <p className="text-sm">{parsedNotes.description}</p>
                   </div>
                 )}
               </CardContent>
