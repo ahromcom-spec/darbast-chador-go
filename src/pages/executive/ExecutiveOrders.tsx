@@ -31,7 +31,7 @@ const executionStages = [
   { key: 'in_progress', label: 'اجرا شد', statusMapping: 'in_progress', executionStageMapping: 'order_executed' },
   { key: 'awaiting_collection', label: 'در انتظار جمع‌آوری', statusMapping: 'completed', executionStageMapping: 'awaiting_collection' },
   { key: 'in_collection', label: 'در حال جمع‌آوری', statusMapping: 'completed', executionStageMapping: 'in_collection' },
-  { key: 'collected', label: 'جمع‌آوری شد', statusMapping: 'completed', executionStageMapping: 'in_collection' },
+  { key: 'collected', label: 'جمع‌آوری شد', statusMapping: 'completed', executionStageMapping: 'collected' },
   { key: 'closed', label: 'اتمام سفارش', statusMapping: 'closed', executionStageMapping: null },
 ];
 
