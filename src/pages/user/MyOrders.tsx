@@ -137,6 +137,28 @@ export default function MyOrders() {
 
   useEffect(() => {
     fetchOrders();
+
+    // Subscribe to realtime changes on projects_v3
+    const channel = supabase
+      .channel('my-orders-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects_v3'
+        },
+        (payload) => {
+          console.log('Realtime order update:', payload);
+          // Refetch orders when any change happens
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const fetchOrders = async () => {
