@@ -41,9 +41,10 @@ const statusLabels: Record<string, { label: string; variant: 'default' | 'second
 const executionStageLabels: Record<string, string> = {
   pending_execution: 'در انتظار اجرا',
   in_progress: 'در حال اجرا',
+  order_executed: 'اجرا شده',
   awaiting_collection: 'در انتظار جمع‌آوری',
   in_collection: 'در حال جمع‌آوری',
-  order_executed: 'اجرا شده',
+  collected: 'جمع‌آوری شد',
   awaiting_payment: 'در انتظار پرداخت',
   completed: 'تکمیل شده',
   closed: 'پایان یافته',
@@ -248,9 +249,11 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
         if (selectedStatus === 'paid' && !order.payment_confirmed_at) return false;
         if (selectedStatus === 'awaiting_payment' && order.execution_stage !== 'awaiting_payment') return false;
         if (selectedStatus === 'awaiting_collection' && order.execution_stage !== 'awaiting_collection') return false;
-        if (selectedStatus === 'in_progress' && order.execution_stage !== 'in_progress' && order.status !== 'in_progress') return false;
+        if (selectedStatus === 'collected' && order.execution_stage !== 'collected') return false;
+        if (selectedStatus === 'in_collection' && order.execution_stage !== 'in_collection') return false;
+        if (selectedStatus === 'in_progress' && order.execution_stage !== 'in_progress' && order.execution_stage !== 'order_executed' && order.status !== 'in_progress') return false;
         if (selectedStatus === 'pending' && order.status !== 'pending') return false;
-        if (selectedStatus === 'completed' && order.status !== 'completed' && order.execution_stage !== 'completed') return false;
+        if (selectedStatus === 'completed' && order.status !== 'completed' && order.status !== 'closed' && order.execution_stage !== 'completed') return false;
         if (selectedStatus === 'rejected' && order.status !== 'rejected') return false;
       }
 
@@ -349,6 +352,8 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
                 <SelectItem value="pending">در انتظار تایید</SelectItem>
                 <SelectItem value="in_progress">در حال اجرا</SelectItem>
                 <SelectItem value="awaiting_collection">در انتظار جمع‌آوری</SelectItem>
+                <SelectItem value="in_collection">در حال جمع‌آوری</SelectItem>
+                <SelectItem value="collected">جمع‌آوری شد</SelectItem>
                 <SelectItem value="awaiting_payment">در انتظار پرداخت</SelectItem>
                 <SelectItem value="paid">پرداخت شده</SelectItem>
                 <SelectItem value="completed">تکمیل شده</SelectItem>
