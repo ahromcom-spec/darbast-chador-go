@@ -1836,6 +1836,8 @@ export type Database = {
           customer_id: string
           customer_name: string | null
           customer_phone: string | null
+          deep_archived_at: string | null
+          deep_archived_by: string | null
           detailed_address: string | null
           district_id: string | null
           executed_by: string | null
@@ -1850,6 +1852,7 @@ export type Database = {
           hierarchy_project_id: string | null
           id: string
           is_archived: boolean | null
+          is_deep_archived: boolean | null
           is_renewal: boolean | null
           location_lat: number | null
           location_lng: number | null
@@ -1882,6 +1885,8 @@ export type Database = {
           customer_id: string
           customer_name?: string | null
           customer_phone?: string | null
+          deep_archived_at?: string | null
+          deep_archived_by?: string | null
           detailed_address?: string | null
           district_id?: string | null
           executed_by?: string | null
@@ -1898,6 +1903,7 @@ export type Database = {
           hierarchy_project_id?: string | null
           id?: string
           is_archived?: boolean | null
+          is_deep_archived?: boolean | null
           is_renewal?: boolean | null
           location_lat?: number | null
           location_lng?: number | null
@@ -1930,6 +1936,8 @@ export type Database = {
           customer_id?: string
           customer_name?: string | null
           customer_phone?: string | null
+          deep_archived_at?: string | null
+          deep_archived_by?: string | null
           detailed_address?: string | null
           district_id?: string | null
           executed_by?: string | null
@@ -1946,6 +1954,7 @@ export type Database = {
           hierarchy_project_id?: string | null
           id?: string
           is_archived?: boolean | null
+          is_deep_archived?: boolean | null
           is_renewal?: boolean | null
           location_lat?: number | null
           location_lng?: number | null
@@ -3488,6 +3497,8 @@ export type Database = {
           customer_id: string
           customer_name: string | null
           customer_phone: string | null
+          deep_archived_at: string | null
+          deep_archived_by: string | null
           detailed_address: string | null
           district_id: string | null
           executed_by: string | null
@@ -3502,6 +3513,7 @@ export type Database = {
           hierarchy_project_id: string | null
           id: string
           is_archived: boolean | null
+          is_deep_archived: boolean | null
           is_renewal: boolean | null
           location_lat: number | null
           location_lng: number | null
@@ -3599,6 +3611,8 @@ export type Database = {
           customer_id: string
           customer_name: string | null
           customer_phone: string | null
+          deep_archived_at: string | null
+          deep_archived_by: string | null
           detailed_address: string | null
           district_id: string | null
           executed_by: string | null
@@ -3613,6 +3627,7 @@ export type Database = {
           hierarchy_project_id: string | null
           id: string
           is_archived: boolean | null
+          is_deep_archived: boolean | null
           is_renewal: boolean | null
           location_lat: number | null
           location_lng: number | null
