@@ -62,6 +62,39 @@ export const useProjectsHierarchy = () => {
 
   useEffect(() => {
     fetchProjects();
+
+    // Subscribe to realtime changes on projects_v3 for instant updates
+    const channel = supabase
+      .channel('projects-hierarchy-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects_v3'
+        },
+        (payload) => {
+          console.log('Realtime projects_v3 update:', payload);
+          fetchProjects();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects_hierarchy'
+        },
+        (payload) => {
+          console.log('Realtime projects_hierarchy update:', payload);
+          fetchProjects();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const getOrCreateProject = async (
