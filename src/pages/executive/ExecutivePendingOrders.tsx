@@ -772,13 +772,25 @@ export default function ExecutivePendingOrders() {
       <Card className={`hover:shadow-lg transition-all duration-200 border-l-4 border-l-orange-500 ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3 flex-1">
+            <div className="flex items-center gap-2">
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={() => toggleOrderSelection(order.id)}
-                className="mt-1"
               />
-              <div className="flex-1 space-y-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedOrder(order);
+                  setArchiveDialogOpen(true);
+                }}
+                className="gap-1 text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+              >
+                <Archive className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
                 <Badge variant={
@@ -835,7 +847,6 @@ export default function ExecutivePendingOrders() {
                     </span>
                   </div>
                 )}
-              </div>
               </div>
             </div>
           </div>
@@ -952,18 +963,6 @@ export default function ExecutivePendingOrders() {
               تایید سفارش
             </Button>
             
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedOrder(order);
-                setArchiveDialogOpen(true);
-              }}
-              className="gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <Archive className="h-4 w-4" />
-              بایگانی
-            </Button>
           </div>
         </CardContent>
       </Card>
