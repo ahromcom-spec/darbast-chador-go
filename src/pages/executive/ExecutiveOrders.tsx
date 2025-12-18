@@ -425,14 +425,34 @@ export default function ExecutiveOrders() {
         status: stage.statusMapping
       };
 
-      // فقط اگر executionStageMapping وجود داشت، آن را به‌روزرسانی کن
-      if (stage.executionStageMapping) {
+      // تنظیم فیلدها بر اساس مرحله جدید - برای برگشت به عقب هم کار کند
+      if (newStage === 'pending') {
+        // بازگشت به انتظار تایید - ریست همه فیلدها
+        updateData.approved_at = null;
+        updateData.approved_by = null;
+        updateData.execution_stage = null;
+        updateData.execution_start_date = null;
+        updateData.execution_end_date = null;
+        updateData.execution_confirmed_at = null;
+        updateData.closed_at = null;
+      } else if (newStage === 'approved') {
+        // بازگشت به انتظار اجرا - ریست مراحل بعدی
+        updateData.execution_stage = null;
+        updateData.execution_confirmed_at = null;
+        updateData.closed_at = null;
+      } else if (stage.executionStageMapping) {
+        // مراحل اجرایی - تنظیم execution_stage
         updateData.execution_stage = stage.executionStageMapping;
+        // ریست closed_at اگر به عقب برگشتیم
+        if (newStage !== 'closed') {
+          updateData.closed_at = null;
+        }
       }
 
       // اگر به مرحله closed رسید، closed_at را هم ثبت کن
       if (newStage === 'closed') {
         updateData.closed_at = new Date().toISOString();
+        updateData.execution_stage = null;
       }
 
       const { error } = await supabase
