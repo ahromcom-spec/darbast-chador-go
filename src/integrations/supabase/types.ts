@@ -3831,6 +3831,7 @@ export type Database = {
         | "order_executed"
         | "awaiting_collection"
         | "in_collection"
+        | "collected"
       inventory_tracking: "NONE" | "SN" | "SN_LOT"
       invoice_status: "DRAFT" | "SENT" | "PAID" | "VOID"
       media_type:
@@ -4055,6 +4056,7 @@ export const Constants = {
         "order_executed",
         "awaiting_collection",
         "in_collection",
+        "collected",
       ],
       inventory_tracking: ["NONE", "SN", "SN_LOT"],
       invoice_status: ["DRAFT", "SENT", "PAID", "VOID"],
