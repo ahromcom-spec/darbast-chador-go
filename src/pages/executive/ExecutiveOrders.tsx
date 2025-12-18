@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users, Archive } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users, Archive, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -15,13 +16,22 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
-import { setOrderScheduleSchema } from '@/lib/rpcValidation';
+import { setOrderScheduleSchema, sendNotificationSchema } from '@/lib/rpcValidation';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { useAuth } from '@/contexts/AuthContext';
+
+// مراحل اجرایی سفارش
+const executionStages = [
+  { key: 'approved', label: 'در انتظار اجرا', statusMapping: 'approved' },
+  { key: 'in_progress', label: 'در حال اجرا', statusMapping: 'in_progress' },
+  { key: 'awaiting_collection', label: 'در انتظار جمع‌آوری', statusMapping: 'completed' },
+  { key: 'in_collection', label: 'در حال جمع‌آوری', statusMapping: 'completed' },
+  { key: 'closed', label: 'اتمام سفارش', statusMapping: 'closed' },
+];
 
 // Component to display order technical details with edit capability
 const OrderDetailsContent = ({ order, getStatusBadge, onUpdate }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void }) => {
@@ -390,6 +400,104 @@ export default function ExecutiveOrders() {
         variant: 'destructive',
         title: 'خطا',
         description: 'تایید اجرا با خطا مواجه شد'
+      });
+    }
+  };
+
+  // تغییر مرحله سفارش به هر مرحله دلخواه
+  const handleStageChange = async (orderId: string, newStage: string) => {
+    const stage = executionStages.find(s => s.key === newStage);
+    if (!stage) return;
+
+    try {
+      // دریافت اطلاعات سفارش برای ارسال اعلان
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('customer_id, code')
+        .eq('id', orderId)
+        .single();
+
+      // به‌روزرسانی هم execution_stage و هم status
+      const updateData: Record<string, any> = {
+        execution_stage: newStage,
+        execution_stage_updated_at: new Date().toISOString(),
+        status: stage.statusMapping
+      };
+
+      // اگر به مرحله closed رسید، closed_at را هم ثبت کن
+      if (newStage === 'closed') {
+        updateData.closed_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from('projects_v3')
+        .update(updateData)
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // ارسال اعلان به مشتری
+      if (orderData?.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', orderData.customer_id)
+          .single();
+
+        if (customerData?.user_id) {
+          const stageMessages: Record<string, { title: string; body: string }> = {
+            approved: {
+              title: '✅ سفارش در انتظار اجرا',
+              body: `سفارش ${orderData.code} در مرحله انتظار اجرا قرار گرفت.`
+            },
+            in_progress: {
+              title: '🚧 سفارش در حال اجرا',
+              body: `اجرای سفارش ${orderData.code} آغاز شده است.`
+            },
+            awaiting_collection: {
+              title: '📦 سفارش در انتظار جمع‌آوری',
+              body: `اجرای سفارش ${orderData.code} تکمیل شد. لطفاً تاریخ فک داربست را تعیین کنید.`
+            },
+            in_collection: {
+              title: '🔧 داربست در حال جمع‌آوری',
+              body: `جمع‌آوری داربست سفارش ${orderData.code} آغاز شده است.`
+            },
+            closed: {
+              title: '🎉 سفارش تکمیل شد',
+              body: `سفارش ${orderData.code} با موفقیت به اتمام رسید.`
+            }
+          };
+
+          const message = stageMessages[newStage];
+          if (message) {
+            try {
+              const validated = sendNotificationSchema.parse({
+                _user_id: customerData.user_id,
+                _title: message.title,
+                _body: message.body,
+                _link: '/user/my-orders',
+                _type: 'info'
+              });
+              await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+            } catch (notifError) {
+              console.error('Error sending notification:', notifError);
+            }
+          }
+        }
+      }
+
+      toast({
+        title: '✓ مرحله به‌روزرسانی شد',
+        description: `سفارش به مرحله "${stage.label}" منتقل شد و به مشتری اطلاع داده شد.`
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error changing stage:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در تغییر مرحله سفارش'
       });
     }
   };
@@ -765,6 +873,27 @@ export default function ExecutiveOrders() {
               <CardContent className="space-y-4">
                 <Separator />
                 
+                {/* انتخاب مرحله سفارش */}
+                <div className="flex items-center gap-3 p-3 bg-gradient-to-l from-primary/5 to-transparent rounded-lg border border-primary/20">
+                  <RefreshCw className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-medium whitespace-nowrap">تغییر مرحله:</Label>
+                  <Select
+                    value={order.status === 'closed' ? 'closed' : (order.status === 'completed' ? 'awaiting_collection' : order.status)}
+                    onValueChange={(value) => handleStageChange(order.id, value)}
+                  >
+                    <SelectTrigger className="flex-1 h-9">
+                      <SelectValue placeholder="انتخاب مرحله" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {executionStages.map((stage) => (
+                        <SelectItem key={stage.key} value={stage.key}>
+                          {stage.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
                 {order.detailed_address && (
                   <div className="text-xs text-muted-foreground">
                     <span className="font-medium">آدرس تفصیلی:</span> {order.detailed_address}
@@ -803,39 +932,6 @@ export default function ExecutiveOrders() {
                 )}
 
                 <div className="flex gap-2 flex-wrap pt-2">
-                  {order.status === 'approved' && (
-                    <Button
-                      onClick={() => handleStartExecution(order.id)}
-                      size="sm"
-                      className="gap-2 bg-blue-600 hover:bg-blue-700"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      شروع اجرا
-                    </Button>
-                  )}
-
-                  {order.status === 'in_progress' && (
-                    <Button
-                      onClick={() => handleCompleteExecution(order.id)}
-                      size="sm"
-                      className="gap-2 bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      اتمام اجرا
-                    </Button>
-                  )}
-
-                  {order.status === 'completed' && (
-                    <div className="bg-purple-50 dark:bg-purple-950/20 p-3 rounded-lg w-full">
-                      <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                        ✓ خدمات اجرا شده و در انتظار پرداخت می‌باشد
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        سفارش به بخش فروش ارجاع داده شده است
-                      </p>
-                    </div>
-                  )}
-
                   <Button
                     variant="outline"
                     size="sm"
