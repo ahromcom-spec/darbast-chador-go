@@ -52,7 +52,7 @@ export default function ArchivedOrders() {
           subcategory:subcategories(name)
         `)
         .eq('is_archived', true)
-        .neq('is_deep_archived', true)
+        .or('is_deep_archived.is.null,is_deep_archived.eq.false')
         .order('archived_at', { ascending: false });
 
       if (error) throw error;
