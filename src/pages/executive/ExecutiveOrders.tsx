@@ -35,6 +35,14 @@ const executionStages = [
   { key: 'closed', label: 'اتمام سفارش', statusMapping: 'closed', executionStageMapping: null },
 ];
 
+// Map DB execution_stage -> UI select key
+const executionStageToUiKey: Record<string, string> = {
+  order_executed: 'in_progress',
+  awaiting_collection: 'awaiting_collection',
+  in_collection: 'in_collection',
+  collected: 'collected',
+};
+
 // Component to display order technical details with edit capability
 const OrderDetailsContent = ({ order, getStatusBadge, onUpdate }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void }) => {
   return (
@@ -89,6 +97,8 @@ interface Order {
   detailed_address: string | null;
   execution_start_date: string | null;
   execution_end_date: string | null;
+  execution_stage?: string | null;
+  execution_stage_updated_at?: string | null;
   customer_completion_date: string | null;
   executive_completion_date: string | null;
   created_at: string;
@@ -187,6 +197,8 @@ export default function ExecutiveOrders() {
           detailed_address,
           execution_start_date,
           execution_end_date,
+          execution_stage,
+          execution_stage_updated_at,
           customer_completion_date,
           executive_completion_date,
           created_at,
@@ -263,6 +275,8 @@ export default function ExecutiveOrders() {
             detailed_address: order.detailed_address,
             execution_start_date: order.execution_start_date,
             execution_end_date: order.execution_end_date,
+            execution_stage: order.execution_stage,
+            execution_stage_updated_at: order.execution_stage_updated_at,
             customer_completion_date: order.customer_completion_date,
             executive_completion_date: order.executive_completion_date,
             created_at: order.created_at,
@@ -918,12 +932,19 @@ export default function ExecutiveOrders() {
                   <Label className="text-sm font-medium whitespace-nowrap">تغییر مرحله:</Label>
                   <Select
                     value={
-                      order.status === 'closed' ? 'closed' : 
-                      order.status === 'pending' ? 'pending' :
-                      order.status === 'approved' ? 'approved' :
-                      order.status === 'in_progress' ? 'in_progress' :
-                      order.status === 'completed' ? 'awaiting_collection' : 
-                      order.status
+                      order.status === 'closed'
+                        ? 'closed'
+                        : order.status === 'pending'
+                        ? 'pending'
+                        : order.status === 'approved'
+                        ? 'approved'
+                        : order.execution_stage
+                        ? (executionStageToUiKey[order.execution_stage] ?? 'awaiting_collection')
+                        : order.status === 'in_progress'
+                        ? 'in_progress'
+                        : order.status === 'completed'
+                        ? 'awaiting_collection'
+                        : order.status
                     }
                     onValueChange={(value) => {
                       setPendingStageChange({ orderId: order.id, newStage: value });

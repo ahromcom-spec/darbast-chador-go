@@ -101,13 +101,15 @@ export const OrderTimeline = ({
   };
 
   const getCurrentStageNumber = (): number => {
-    if (orderStatus === 'closed' || orderStatus === 'completed') {
-      return 6;
-    }
+    // Final state
+    if (orderStatus === 'closed') return 6;
+
+    // Prefer execution_stage when present (even if status is 'completed')
     if (executionStage) {
-      return stageOrder[executionStage] || 0;
+      return stageOrder[executionStage] ?? stageOrder[orderStatus] ?? 0;
     }
-    return stageOrder[orderStatus] || 0;
+
+    return stageOrder[orderStatus] ?? 0;
   };
 
   const currentStageNumber = getCurrentStageNumber();
