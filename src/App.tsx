@@ -285,6 +285,7 @@ const App = () => {
                 <Route path="stage-awaiting-collection" element={<ExecutiveStageAwaitingCollection />} />
                 <Route path="completed" element={<ExecutiveCompleted />} />
                 <Route path="order-transfers" element={<OrderTransferManagement />} />
+                <Route path="archived" element={<ArchivedOrders />} />
                 <Route path="deep-archived" element={<DeepArchivedOrders />} />
               </Route>
               <Route path="/executive" element={

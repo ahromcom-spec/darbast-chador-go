@@ -16,7 +16,9 @@ import {
   ChevronDown,
   ListOrdered,
   Shield,
-  UserCheck
+  UserCheck,
+  Archive,
+  ArchiveX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -97,6 +99,16 @@ const mainNavItems = [
     title: 'تأیید پرسنل',
     href: '/ceo/staff-verifications',
     icon: Users
+  },
+  {
+    title: 'بایگانی سفارشات',
+    href: '/ceo/archived',
+    icon: Archive
+  },
+  {
+    title: 'بایگانی عمیق',
+    href: '/ceo/deep-archived',
+    icon: ArchiveX
   },
 ];
 
