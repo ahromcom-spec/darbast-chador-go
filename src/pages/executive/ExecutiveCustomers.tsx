@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Search, Phone, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Phone, Calendar, ChevronDown, ChevronUp, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ExecutiveStageTimeline } from '@/components/executive/ExecutiveStageTimeline';
 import {
@@ -120,12 +121,20 @@ export default function ExecutiveCustomers() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <PageHeader
-        title="مدیریت مشتریان"
-        description="مشاهده و مدیریت اطلاعات مشتریان"
-        showBackButton={true}
-        backTo="/executive"
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader
+          title="مدیریت مشتریان"
+          description="مشاهده و مدیریت اطلاعات مشتریان"
+          showBackButton={true}
+          backTo="/executive"
+        />
+        <Button asChild variant="outline" className="gap-2">
+          <Link to="/executive/archived">
+            <Archive className="h-4 w-4" />
+            بایگانی
+          </Link>
+        </Button>
+      </div>
 
       <Card>
         <CardHeader>

@@ -32,7 +32,7 @@ const menuItems = [
   {
     title: 'سفارشات بایگانی شده',
     icon: Archive,
-    href: '/executive/archived-orders',
+    href: '/executive/archived',
   },
   {
     title: 'مدیریت دسترسی',
