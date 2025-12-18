@@ -8,6 +8,7 @@ import {
   ChevronRight,
   ShoppingCart,
   Archive,
+  ArchiveX,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,11 @@ const menuItems = [
     href: '/executive/archived',
   },
   {
+    title: 'بایگانی عمیق',
+    icon: ArchiveX,
+    href: '/ceo/deep-archived',
+  },
+  {
     title: 'مدیریت دسترسی',
     icon: Shield,
     href: '/ceo/whitelist',
@@ -50,7 +56,6 @@ const menuItems = [
     href: '/ceo/staff-verifications',
   },
 ];
-
 export const CEOSidebar = () => {
   const { data: pendingCount = 0 } = useCEOPendingCount();
 

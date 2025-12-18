@@ -37,6 +37,7 @@ const ContractorVerifications = lazy(() => import("@/pages/ceo/ContractorVerific
 const StaffVerifications = lazy(() => import("@/pages/ceo/StaffVerifications").then(m => ({ default: m.StaffVerifications })));
 const CEOOrders = lazy(() => import("@/pages/ceo/CEOOrders").then(m => ({ default: m.CEOOrders })));
 const CEOCustomers = lazy(() => import("@/pages/ceo/CEOCustomers").then(m => ({ default: m.CEOCustomers })));
+const DeepArchivedOrders = lazy(() => import("@/pages/ceo/DeepArchivedOrders"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -284,6 +285,7 @@ const App = () => {
                 <Route path="stage-awaiting-collection" element={<ExecutiveStageAwaitingCollection />} />
                 <Route path="completed" element={<ExecutiveCompleted />} />
                 <Route path="order-transfers" element={<OrderTransferManagement />} />
+                <Route path="deep-archived" element={<DeepArchivedOrders />} />
               </Route>
               <Route path="/executive" element={
                 <ProtectedRoute>

@@ -8,11 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
-import { Archive, Search, RotateCcw, Trash2, MapPin, Phone, User, Calendar, AlertTriangle, ArchiveX } from 'lucide-react';
-import { useUserRoles } from '@/hooks/useUserRoles';
-import { useAuth } from '@/contexts/AuthContext';
+import { ArchiveX, Search, RotateCcw, Trash2, MapPin, Phone, User, Calendar, AlertTriangle } from 'lucide-react';
 
-interface ArchivedOrder {
+interface DeepArchivedOrder {
   id: string;
   code: string;
   address: string;
@@ -21,42 +19,36 @@ interface ArchivedOrder {
   customer_phone: string | null;
   status: string;
   archived_at: string;
-  archived_by: string | null;
+  deep_archived_at: string;
   created_at: string;
   province: { name: string } | null;
   subcategory: { name: string } | null;
 }
 
-export default function ArchivedOrders() {
-  const { user } = useAuth();
+export default function DeepArchivedOrders() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<ArchivedOrder | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<DeepArchivedOrder | null>(null);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showDeepArchiveDialog, setShowDeepArchiveDialog] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isCEO, isAdmin, isGeneralManager } = useUserRoles();
-
-  const canDelete = isCEO || isAdmin || isGeneralManager;
 
   const { data: orders = [], isLoading } = useQuery({
-    queryKey: ['archived-orders'],
+    queryKey: ['deep-archived-orders'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
           id, code, address, detailed_address, customer_name, customer_phone,
-          status, archived_at, archived_by, created_at,
+          status, archived_at, deep_archived_at, created_at,
           province:provinces(name),
           subcategory:subcategories(name)
         `)
-        .eq('is_archived', true)
-        .neq('is_deep_archived', true)
-        .order('archived_at', { ascending: false });
+        .eq('is_deep_archived', true)
+        .order('deep_archived_at', { ascending: false });
 
       if (error) throw error;
-      return data as ArchivedOrder[];
+      return data as DeepArchivedOrder[];
     }
   });
 
@@ -65,17 +57,17 @@ export default function ArchivedOrders() {
       const { error } = await supabase
         .from('projects_v3')
         .update({
-          is_archived: false,
-          archived_at: null,
-          archived_by: null
+          is_deep_archived: false,
+          deep_archived_at: null,
+          deep_archived_by: null
         })
         .eq('id', orderId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: 'سفارش با موفقیت بازگردانده شد' });
-      queryClient.invalidateQueries({ queryKey: ['archived-orders'] });
+      toast({ title: 'سفارش به بایگانی عادی بازگردانده شد' });
+      queryClient.invalidateQueries({ queryKey: ['deep-archived-orders'] });
       setShowRestoreDialog(false);
       setSelectedOrder(null);
     },
@@ -95,36 +87,12 @@ export default function ArchivedOrders() {
     },
     onSuccess: () => {
       toast({ title: 'سفارش به صورت دائمی حذف شد' });
-      queryClient.invalidateQueries({ queryKey: ['archived-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['deep-archived-orders'] });
       setShowDeleteDialog(false);
       setSelectedOrder(null);
     },
     onError: () => {
       toast({ title: 'خطا در حذف سفارش', variant: 'destructive' });
-    }
-  });
-
-  const deepArchiveMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      const { error } = await supabase
-        .from('projects_v3')
-        .update({
-          is_deep_archived: true,
-          deep_archived_at: new Date().toISOString(),
-          deep_archived_by: user?.id
-        })
-        .eq('id', orderId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({ title: 'سفارش به بایگانی عمیق منتقل شد' });
-      queryClient.invalidateQueries({ queryKey: ['archived-orders'] });
-      setShowDeepArchiveDialog(false);
-      setSelectedOrder(null);
-    },
-    onError: () => {
-      toast({ title: 'خطا در بایگانی عمیق سفارش', variant: 'destructive' });
     }
   });
 
@@ -150,10 +118,10 @@ export default function ArchivedOrders() {
   return (
     <div className="container mx-auto py-6 px-4" dir="rtl">
       <div className="flex items-center gap-3 mb-6">
-        <Archive className="h-8 w-8 text-primary" />
+        <ArchiveX className="h-8 w-8 text-amber-600" />
         <div>
-          <h1 className="text-2xl font-bold">بایگانی سفارشات</h1>
-          <p className="text-sm text-muted-foreground">سفارشات بایگانی شده - قابل بازگردانی یا حذف دائمی</p>
+          <h1 className="text-2xl font-bold">بایگانی عمیق</h1>
+          <p className="text-sm text-muted-foreground">سفارشات بایگانی عمیق شده - فقط مدیرعامل دسترسی دارد</p>
         </div>
       </div>
 
@@ -174,20 +142,20 @@ export default function ArchivedOrders() {
       {filteredOrders.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">هیچ سفارش بایگانی شده‌ای یافت نشد</p>
+            <ArchiveX className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">هیچ سفارش بایگانی عمیق شده‌ای یافت نشد</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
           {filteredOrders.map((order) => (
-            <Card key={order.id} className="border-r-4 border-r-muted">
+            <Card key={order.id} className="border-r-4 border-r-amber-500">
               <CardContent className="py-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="font-bold">سفارش {order.code}</span>
-                      <Badge variant="secondary">بایگانی شده</Badge>
+                      <Badge className="bg-amber-500 hover:bg-amber-600">بایگانی عمیق</Badge>
                     </div>
                     
                     {order.customer_name && (
@@ -211,7 +179,7 @@ export default function ArchivedOrders() {
 
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      <span>تاریخ بایگانی: {formatDate(order.archived_at)}</span>
+                      <span>تاریخ بایگانی عمیق: {formatDate(order.deep_archived_at)}</span>
                     </div>
 
                     {order.subcategory?.name && (
@@ -219,7 +187,7 @@ export default function ArchivedOrders() {
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -229,34 +197,20 @@ export default function ArchivedOrders() {
                       }}
                     >
                       <RotateCcw className="h-4 w-4 ml-2" />
-                      بازگردانی
+                      بازگردانی به بایگانی
                     </Button>
-
+                    
                     <Button
-                      variant="secondary"
+                      variant="destructive"
                       size="sm"
                       onClick={() => {
                         setSelectedOrder(order);
-                        setShowDeepArchiveDialog(true);
+                        setShowDeleteDialog(true);
                       }}
                     >
-                      <ArchiveX className="h-4 w-4 ml-2" />
-                      بایگانی عمیق
+                      <Trash2 className="h-4 w-4 ml-2" />
+                      حذف دائمی
                     </Button>
-                    
-                    {canDelete && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setShowDeleteDialog(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 ml-2" />
-                        حذف دائمی
-                      </Button>
-                    )}
                   </div>
                 </div>
               </CardContent>
@@ -269,13 +223,13 @@ export default function ArchivedOrders() {
       <Dialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
         <DialogContent dir="rtl">
           <DialogHeader>
-            <DialogTitle>بازگردانی سفارش</DialogTitle>
+            <DialogTitle>بازگردانی سفارش به بایگانی عادی</DialogTitle>
             <DialogDescription>
-              آیا مطمئن هستید که می‌خواهید سفارش {selectedOrder?.code} را از بایگانی خارج کنید؟
+              آیا مطمئن هستید که می‌خواهید سفارش {selectedOrder?.code} را به بایگانی عادی بازگردانید؟
             </DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            این سفارش به لیست سفارشات فعال بازگردانده می‌شود و مشتری و مدیران می‌توانند آن را مشاهده کنند.
+            این سفارش به بایگانی عادی بازگردانده می‌شود و سایر مدیران می‌توانند آن را مشاهده کنند.
           </p>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowRestoreDialog(false)}>
@@ -286,38 +240,6 @@ export default function ArchivedOrders() {
               disabled={restoreMutation.isPending}
             >
               {restoreMutation.isPending ? 'در حال بازگردانی...' : 'بازگردانی'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Deep Archive Dialog */}
-      <Dialog open={showDeepArchiveDialog} onOpenChange={setShowDeepArchiveDialog}>
-        <DialogContent dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ArchiveX className="h-5 w-5" />
-              بایگانی عمیق سفارش
-            </DialogTitle>
-            <DialogDescription>
-              آیا مطمئن هستید که می‌خواهید سفارش {selectedOrder?.code} را به بایگانی عمیق منتقل کنید؟
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
-            <p className="text-sm text-amber-700 dark:text-amber-400">
-              سفارشات بایگانی عمیق فقط توسط مدیرعامل قابل مشاهده هستند و از دسترس سایر مدیران خارج می‌شوند.
-            </p>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowDeepArchiveDialog(false)}>
-              انصراف
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => selectedOrder && deepArchiveMutation.mutate(selectedOrder.id)}
-              disabled={deepArchiveMutation.isPending}
-            >
-              {deepArchiveMutation.isPending ? 'در حال انتقال...' : 'بایگانی عمیق'}
             </Button>
           </DialogFooter>
         </DialogContent>
