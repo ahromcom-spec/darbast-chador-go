@@ -128,6 +128,9 @@ export default function ExecutiveOrders() {
   const [bulkArchiveDialogOpen, setBulkArchiveDialogOpen] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [bulkArchiving, setBulkArchiving] = useState(false);
+  // Stage change confirmation
+  const [stageChangeConfirmOpen, setStageChangeConfirmOpen] = useState(false);
+  const [pendingStageChange, setPendingStageChange] = useState<{ orderId: string; newStage: string } | null>(null);
   const { toast } = useToast();
 
   // Auto-open order from URL param
@@ -922,7 +925,10 @@ export default function ExecutiveOrders() {
                       order.status === 'completed' ? 'awaiting_collection' : 
                       order.status
                     }
-                    onValueChange={(value) => handleStageChange(order.id, value)}
+                    onValueChange={(value) => {
+                      setPendingStageChange({ orderId: order.id, newStage: value });
+                      setStageChangeConfirmOpen(true);
+                    }}
                   >
                     <SelectTrigger className="flex-1 h-9">
                       <SelectValue placeholder="انتخاب مرحله" />
@@ -1332,6 +1338,54 @@ export default function ExecutiveOrders() {
             </Button>
             <Button onClick={handleBulkArchive} disabled={bulkArchiving}>
               {bulkArchiving ? 'در حال بایگانی...' : `بایگانی ${selectedOrderIds.size} سفارش`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stage Change Confirmation Dialog */}
+      <Dialog open={stageChangeConfirmOpen} onOpenChange={setStageChangeConfirmOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-primary" />
+              تایید تغییر مرحله سفارش
+            </DialogTitle>
+            <DialogDescription>
+              {pendingStageChange && (
+                <>
+                  آیا مطمئن هستید که می‌خواهید مرحله سفارش را به{' '}
+                  <span className="font-bold text-foreground">
+                    "{executionStages.find(s => s.key === pendingStageChange.newStage)?.label}"
+                  </span>{' '}
+                  تغییر دهید؟
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            با تایید این عملیات، مشتری از تغییر مرحله سفارش مطلع خواهد شد.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setStageChangeConfirmOpen(false);
+                setPendingStageChange(null);
+              }}
+            >
+              انصراف
+            </Button>
+            <Button 
+              onClick={() => {
+                if (pendingStageChange) {
+                  handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage);
+                }
+                setStageChangeConfirmOpen(false);
+                setPendingStageChange(null);
+              }}
+            >
+              تایید تغییر مرحله
             </Button>
           </DialogFooter>
         </DialogContent>
