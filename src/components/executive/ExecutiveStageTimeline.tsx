@@ -13,13 +13,13 @@ interface ExecutiveStage {
   statusMapping: string; // وضعیت متناظر در projects_v3.status
 }
 
-// مراحل اجرایی با mapping به status - یکسان با سربرگ‌های مدیر اجرایی
+// مراحل اجرایی با mapping به status - بدون مرحله پرداخت
 export const executiveStages: ExecutiveStage[] = [
   { key: 'approved', label: 'در انتظار اجرا', order: 1, statusMapping: 'approved' },
   { key: 'in_progress', label: 'در حال اجرا', order: 2, statusMapping: 'in_progress' },
-  { key: 'awaiting_payment', label: 'در انتظار پرداخت', order: 3, statusMapping: 'completed' },
-  { key: 'awaiting_collection', label: 'در انتظار جمع‌آوری', order: 4, statusMapping: 'completed' },
-  { key: 'closed', label: 'تکمیل سفارش', order: 5, statusMapping: 'closed' },
+  { key: 'awaiting_collection', label: 'در انتظار جمع‌آوری', order: 3, statusMapping: 'completed' },
+  { key: 'in_collection', label: 'در حال جمع‌آوری', order: 4, statusMapping: 'completed' },
+  { key: 'closed', label: 'اتمام سفارش', order: 5, statusMapping: 'closed' },
 ];
 
 interface ExecutiveStageTimelineProps {
@@ -89,17 +89,17 @@ export const ExecutiveStageTimeline = ({
               title: '🚧 سفارش در حال اجرا',
               body: `اجرای سفارش ${orderData.code} آغاز شده است.`
             },
-            awaiting_payment: {
-              title: '💰 سفارش انجام شد - در انتظار پرداخت',
-              body: `سفارش ${orderData.code} انجام شد و منتظر پرداخت شماست.`
-            },
             awaiting_collection: {
               title: '📦 سفارش در انتظار جمع‌آوری',
-              body: `سفارش ${orderData.code} آماده جمع‌آوری است. لطفاً تاریخ فک داربست را تعیین کنید.`
+              body: `اجرای سفارش ${orderData.code} تکمیل شد. لطفاً تاریخ فک داربست را تعیین کنید.`
+            },
+            in_collection: {
+              title: '🔧 داربست در حال جمع‌آوری',
+              body: `جمع‌آوری داربست سفارش ${orderData.code} آغاز شده است.`
             },
             closed: {
               title: '🎉 سفارش تکمیل شد',
-              body: `سفارش ${orderData.code} با موفقیت تکمیل شده است.`
+              body: `سفارش ${orderData.code} با موفقیت به اتمام رسید.`
             }
           };
 

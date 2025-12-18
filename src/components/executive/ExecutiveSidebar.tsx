@@ -5,11 +5,9 @@ import {
   ClipboardList,
   PlayCircle,
   CheckCircle2,
-  DollarSign,
   Package,
   Users,
   FileText,
-  Banknote,
   CheckSquare,
   PackageOpen,
   ArrowLeftRight,
@@ -79,19 +77,6 @@ export function ExecutiveSidebar() {
     refetchInterval: 30000
   });
 
-  // تعداد سفارشات در انتظار پرداخت
-  const { data: awaitingPaymentCount = 0 } = useQuery({
-    queryKey: ['executive-awaiting-payment-count'],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('projects_v3')
-        .select('*', { count: 'exact', head: true })
-        .eq('execution_stage', 'awaiting_payment');
-      return count || 0;
-    },
-    refetchInterval: 30000
-  });
-
 
   // تعداد سفارشات در انتظار جمع‌آوری
   const { data: awaitingCollectionCount = 0 } = useQuery({
@@ -101,6 +86,19 @@ export function ExecutiveSidebar() {
         .from('projects_v3')
         .select('*', { count: 'exact', head: true })
         .eq('execution_stage', 'awaiting_collection');
+      return count || 0;
+    },
+    refetchInterval: 30000
+  });
+
+  // تعداد سفارشات در حال جمع‌آوری
+  const { data: inCollectionCount = 0 } = useQuery({
+    queryKey: ['executive-in-collection-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('projects_v3')
+        .select('*', { count: 'exact', head: true })
+        .eq('execution_stage', 'in_collection');
       return count || 0;
     },
     refetchInterval: 30000
@@ -158,21 +156,21 @@ export function ExecutiveSidebar() {
       badge: inProgressCount
     },
     {
-      title: 'در انتظار پرداخت',
-      href: '/executive/stage-awaiting-payment',
-      icon: Banknote,
-      badge: awaitingPaymentCount
-    },
-    {
       title: 'در انتظار جمع‌آوری',
       href: '/executive/stage-awaiting-collection',
       icon: PackageOpen,
       badge: awaitingCollectionCount
     },
     {
-      title: 'تکمیل سفارش',
+      title: 'در حال جمع‌آوری',
+      href: '/executive/stage-in-collection',
+      icon: Package,
+      badge: inCollectionCount
+    },
+    {
+      title: 'اتمام سفارش',
       href: '/executive/completed',
-      icon: DollarSign,
+      icon: CheckCircle2,
       badge: completedCount
     },
     {
