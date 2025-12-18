@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -64,6 +64,11 @@ const mainNavItems = [
     title: 'انتقال سفارش',
     href: '/executive/order-transfers',
     icon: ArrowLeftRight
+  },
+  {
+    title: 'بایگانی',
+    href: '/executive/archived',
+    icon: Archive
   }
 ];
 
