@@ -95,13 +95,14 @@ export const OrderTimeline = ({
     order_executed: 3,
     awaiting_collection: 3,
     in_collection: 4,
-    completed: 5,
-    closed: 5,
+    collected: 5,
+    completed: 6,
+    closed: 6,
   };
 
   const getCurrentStageNumber = (): number => {
     if (orderStatus === 'closed' || orderStatus === 'completed') {
-      return 5;
+      return 6;
     }
     if (executionStage) {
       return stageOrder[executionStage] || 0;
@@ -184,13 +185,22 @@ export const OrderTimeline = ({
       details: isCurrentStageByNumber(4) ? 'داربست در حال جمع‌آوری است' : undefined,
     },
     {
+      status: 'collected',
+      label: 'جمع‌آوری شد',
+      icon: PackageCheck,
+      date: executionStage === 'collected' ? executionStageUpdatedAt : undefined,
+      completed: isStageCompletedByNumber(5),
+      active: isCurrentStageByNumber(5),
+      details: isCurrentStageByNumber(5) ? 'داربست با موفقیت جمع‌آوری شد' : undefined,
+    },
+    {
       status: 'closed',
       label: 'اتمام سفارش',
       icon: CheckCircle2,
       date: customerCompletionDate,
-      completed: isCurrentStageByNumber(5) || orderStatus === 'completed' || orderStatus === 'closed',
-      active: isCurrentStageByNumber(5),
-      details: (orderStatus === 'closed' || orderStatus === 'completed' || isCurrentStageByNumber(5)) ? 'سفارش با موفقیت به اتمام رسید' : undefined,
+      completed: isCurrentStageByNumber(6) || orderStatus === 'completed' || orderStatus === 'closed',
+      active: isCurrentStageByNumber(6),
+      details: (orderStatus === 'closed' || orderStatus === 'completed' || isCurrentStageByNumber(6)) ? 'سفارش با موفقیت به اتمام رسید' : undefined,
     },
   ];
 
