@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -59,6 +59,29 @@ export default function ArchivedOrders() {
       return data as ArchivedOrder[];
     }
   });
+
+  // Subscribe to realtime changes for instant updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('archived-orders-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects_v3'
+        },
+        (payload) => {
+          console.log('Realtime archived order update:', payload);
+          queryClient.invalidateQueries({ queryKey: ['archived-orders'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const restoreMutation = useMutation({
     mutationFn: async (orderId: string) => {
