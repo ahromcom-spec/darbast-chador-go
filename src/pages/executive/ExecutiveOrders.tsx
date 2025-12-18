@@ -198,6 +198,8 @@ export default function ExecutiveOrders() {
           location_lng
         `)
         .in('status', ['pending', 'approved', 'in_progress', 'completed', 'closed'])
+        // فقط سفارشات غیر بایگانی را نمایش بده
+        .or('is_archived.is.null,is_archived.eq.false')
         .order('code', { ascending: false });
 
       if (error) throw error;
