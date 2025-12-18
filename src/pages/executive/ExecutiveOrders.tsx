@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users, Archive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -20,6 +21,7 @@ import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Component to display order technical details with edit capability
 const OrderDetailsContent = ({ order, getStatusBadge, onUpdate }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void }) => {
@@ -91,6 +93,7 @@ interface Order {
 }
 
 export default function ExecutiveOrders() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
@@ -108,6 +111,11 @@ export default function ExecutiveOrders() {
   const [editEndDate, setEditEndDate] = useState('');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
+  // Archive states
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [bulkArchiveDialogOpen, setBulkArchiveDialogOpen] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [bulkArchiving, setBulkArchiving] = useState(false);
   const { toast } = useToast();
 
   // Auto-open order from URL param
@@ -502,6 +510,98 @@ export default function ExecutiveOrders() {
     return <Badge className={className}>{label}</Badge>;
   };
 
+  // Archive functions
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.size === filteredOrders.length) {
+      setSelectedOrderIds(new Set());
+    } else {
+      setSelectedOrderIds(new Set(filteredOrders.map(o => o.id)));
+    }
+  };
+
+  const handleArchiveOrder = async () => {
+    if (!selectedOrder || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          is_archived: true,
+          archived_at: new Date().toISOString(),
+          archived_by: user.id
+        })
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سفارش بایگانی شد',
+        description: `سفارش ${selectedOrder.code} به بایگانی منتقل شد.`
+      });
+
+      setArchiveDialogOpen(false);
+      setSelectedOrder(null);
+      fetchOrders();
+    } catch (error) {
+      console.error('Error archiving order:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در بایگانی سفارش'
+      });
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedOrderIds.size === 0 || !user) return;
+
+    setBulkArchiving(true);
+    try {
+      const orderIdsArray = Array.from(selectedOrderIds);
+      
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          is_archived: true,
+          archived_at: new Date().toISOString(),
+          archived_by: user.id
+        })
+        .in('id', orderIdsArray);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سفارشات بایگانی شدند',
+        description: `${selectedOrderIds.size} سفارش به بایگانی منتقل شد.`
+      });
+
+      setBulkArchiveDialogOpen(false);
+      setSelectedOrderIds(new Set());
+      fetchOrders();
+    } catch (error) {
+      console.error('Error bulk archiving orders:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در بایگانی سفارشات'
+      });
+    } finally {
+      setBulkArchiving(false);
+    }
+  };
+
   if (loading) return <LoadingSpinner />;
 
   return (
@@ -568,6 +668,39 @@ export default function ExecutiveOrders() {
         </Card>
       )}
 
+      {/* Bulk Action Bar */}
+      {filteredOrders.length > 0 && (
+        <Card className="sticky top-0 z-10 border-primary/30">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={selectedOrderIds.size === filteredOrders.length && filteredOrders.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {selectedOrderIds.size > 0 
+                    ? `${selectedOrderIds.size} سفارش انتخاب شده`
+                    : 'انتخاب همه'}
+                </span>
+              </div>
+              
+              {selectedOrderIds.size > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBulkArchiveDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Archive className="h-4 w-4" />
+                  بایگانی {selectedOrderIds.size} سفارش
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4">
         {filteredOrders.length === 0 ? (
           <Card>
@@ -577,8 +710,10 @@ export default function ExecutiveOrders() {
             </CardContent>
           </Card>
         ) : (
-          filteredOrders.map((order) => (
-            <Card key={order.id} className={`hover:shadow-lg transition-all duration-200 ${
+          filteredOrders.map((order) => {
+            const isSelected = selectedOrderIds.has(order.id);
+            return (
+            <Card key={order.id} className={`hover:shadow-lg transition-all duration-200 ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} ${
               order.status === 'approved' ? 'border-l-4 border-l-yellow-500' :
               order.status === 'in_progress' ? 'border-l-4 border-l-blue-500' :
               order.status === 'completed' ? 'border-l-4 border-l-purple-500' :
@@ -586,30 +721,37 @@ export default function ExecutiveOrders() {
             }`}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
-                      {getStatusBadge(order.status)}
-                    </div>
-                    
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <User className="h-4 w-4" />
-                        <span>{order.customer_name}</span>
+                  <div className="flex items-start gap-3 flex-1">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleOrderSelection(order.id)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
+                        {getStatusBadge(order.status)}
                       </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="h-4 w-4" />
-                        <span dir="ltr">{order.customer_phone}</span>
-                      </div>
-                      <div className="flex items-start gap-2 text-muted-foreground">
-                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        <div className="space-y-0.5">
-                          <div className="line-clamp-1">{order.address}</div>
-                          {order.location_lat && order.location_lng && (
-                            <div className="text-xs opacity-70">
-                              موقعیت: {order.location_lat.toFixed(6)}, {order.location_lng.toFixed(6)}
-                            </div>
-                          )}
+                      
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <User className="h-4 w-4" />
+                          <span>{order.customer_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Phone className="h-4 w-4" />
+                          <span dir="ltr">{order.customer_phone}</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-muted-foreground">
+                          <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <div className="space-y-0.5">
+                            <div className="line-clamp-1">{order.address}</div>
+                            {order.location_lat && order.location_lng && (
+                              <div className="text-xs opacity-70">
+                                موقعیت: {order.location_lat.toFixed(6)}, {order.location_lng.toFixed(6)}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -729,6 +871,19 @@ export default function ExecutiveOrders() {
                     افزودن پرسنل
                   </Button>
 
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setArchiveDialogOpen(true);
+                    }}
+                    className="gap-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <Archive className="h-4 w-4" />
+                    بایگانی
+                  </Button>
+
                   {order.status === 'paid' && !order.executive_completion_date && (
                     <Button
                       onClick={() => {
@@ -774,7 +929,8 @@ export default function ExecutiveOrders() {
                 </div>
               </CardContent>
             </Card>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -997,7 +1153,58 @@ export default function ExecutiveOrders() {
           onCollaboratorAdded={fetchOrders}
         />
       )}
+
+      {/* Archive Dialog */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5" />
+              بایگانی سفارش
+            </DialogTitle>
+            <DialogDescription>
+              آیا مطمئن هستید که می‌خواهید سفارش {selectedOrder?.code} را بایگانی کنید؟
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            سفارش از دسترس مشتری و مدیران خارج می‌شود. می‌توانید بعداً از قسمت بایگانی آن را بازگردانید.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)}>
+              انصراف
+            </Button>
+            <Button onClick={handleArchiveOrder}>
+              بایگانی سفارش
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Archive Dialog */}
+      <Dialog open={bulkArchiveDialogOpen} onOpenChange={setBulkArchiveDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5" />
+              بایگانی دسته‌جمعی سفارشات
+            </DialogTitle>
+            <DialogDescription>
+              آیا مطمئن هستید که می‌خواهید {selectedOrderIds.size} سفارش را بایگانی کنید؟
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            تمام سفارشات انتخاب شده از دسترس مشتریان و مدیران خارج می‌شوند. می‌توانید بعداً از قسمت بایگانی آن‌ها را بازگردانید.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setBulkArchiveDialogOpen(false)} disabled={bulkArchiving}>
+              انصراف
+            </Button>
+            <Button onClick={handleBulkArchive} disabled={bulkArchiving}>
+              {bulkArchiving ? 'در حال بایگانی...' : `بایگانی ${selectedOrderIds.size} سفارش`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
