@@ -26,10 +26,12 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // مراحل اجرایی سفارش
 const executionStages = [
+  { key: 'pending', label: 'در انتظار تایید', statusMapping: 'pending' },
   { key: 'approved', label: 'در انتظار اجرا', statusMapping: 'approved' },
-  { key: 'in_progress', label: 'در حال اجرا', statusMapping: 'in_progress' },
+  { key: 'in_progress', label: 'اجرا شد', statusMapping: 'in_progress' },
   { key: 'awaiting_collection', label: 'در انتظار جمع‌آوری', statusMapping: 'completed' },
   { key: 'in_collection', label: 'در حال جمع‌آوری', statusMapping: 'completed' },
+  { key: 'collected', label: 'جمع‌آوری شد', statusMapping: 'completed' },
   { key: 'closed', label: 'اتمام سفارش', statusMapping: 'closed' },
 ];
 
