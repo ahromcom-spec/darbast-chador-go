@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -8,6 +8,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+// نقش‌های مجاز برای دسترسی به پنل مدیریت اجرایی
+const ALLOWED_ROLES = [
+  'admin',
+  'ceo',
+  'general_manager',
+  'sales_manager',
+  'scaffold_executive_manager',
+  'executive_manager_scaffold_execution_with_materials',
+  'rental_executive_manager',
+  'finance_manager'
+];
 
 // مراحل سفارشات مشتری
 const orderStagesItems = [
@@ -73,7 +88,44 @@ const mainNavItems = [
 ];
 
 export function ExecutiveLayout() {
+  const { user, loading: authLoading } = useAuth();
+  const [hasAccess, setHasAccess] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(true);
   const location = useLocation();
+
+  useEffect(() => {
+    const checkExecutiveRole = async () => {
+      if (!user) {
+        setHasAccess(false);
+        setRoleLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error('Error checking executive role:', error);
+          setHasAccess(false);
+        } else {
+          // بررسی اینکه آیا کاربر حداقل یکی از نقش‌های مجاز را دارد
+          const userRoles = data?.map(r => r.role) || [];
+          const hasAllowedRole = userRoles.some(role => ALLOWED_ROLES.includes(role));
+          setHasAccess(hasAllowedRole);
+        }
+      } catch (error) {
+        console.error('Error checking executive role:', error);
+        setHasAccess(false);
+      } finally {
+        setRoleLoading(false);
+      }
+    };
+
+    checkExecutiveRole();
+  }, [user]);
   
   // بررسی اینکه آیا صفحه فعلی یکی از مراحل سفارش است
   const isOrderStageActive = orderStagesItems.some(item => 
@@ -84,6 +136,23 @@ export function ExecutiveLayout() {
   const activeStage = orderStagesItems.find(item => 
     location.pathname === item.href || location.pathname.startsWith(item.href + '/')
   );
+
+  // نمایش لودینگ در حین بررسی نقش
+  if (authLoading || roleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground">در حال بارگذاری...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // اگر کاربر لاگین نکرده یا دسترسی ندارد، به صفحه اصلی هدایت شود
+  if (!user || !hasAccess) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
