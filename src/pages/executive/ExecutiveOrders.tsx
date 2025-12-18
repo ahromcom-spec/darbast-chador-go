@@ -721,37 +721,48 @@ export default function ExecutiveOrders() {
             }`}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1">
+                  <div className="flex items-center gap-2">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={() => toggleOrderSelection(order.id)}
-                      className="mt-1"
                     />
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
-                        {getStatusBadge(order.status)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedOrder(order);
+                        setArchiveDialogOpen(true);
+                      }}
+                      className="gap-1 text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                    >
+                      <Archive className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
+                      {getStatusBadge(order.status)}
+                    </div>
+                    
+                    <div className="space-y-1 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <User className="h-4 w-4" />
+                        <span>{order.customer_name}</span>
                       </div>
-                      
-                      <div className="space-y-1 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <User className="h-4 w-4" />
-                          <span>{order.customer_name}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Phone className="h-4 w-4" />
-                          <span dir="ltr">{order.customer_phone}</span>
-                        </div>
-                        <div className="flex items-start gap-2 text-muted-foreground">
-                          <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                          <div className="space-y-0.5">
-                            <div className="line-clamp-1">{order.address}</div>
-                            {order.location_lat && order.location_lng && (
-                              <div className="text-xs opacity-70">
-                                موقعیت: {order.location_lat.toFixed(6)}, {order.location_lng.toFixed(6)}
-                              </div>
-                            )}
-                          </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="h-4 w-4" />
+                        <span dir="ltr">{order.customer_phone}</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-muted-foreground">
+                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <div className="space-y-0.5">
+                          <div className="line-clamp-1">{order.address}</div>
+                          {order.location_lat && order.location_lng && (
+                            <div className="text-xs opacity-70">
+                              موقعیت: {order.location_lat.toFixed(6)}, {order.location_lng.toFixed(6)}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -871,18 +882,6 @@ export default function ExecutiveOrders() {
                     افزودن پرسنل
                   </Button>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      setArchiveDialogOpen(true);
-                    }}
-                    className="gap-2 text-muted-foreground hover:text-foreground"
-                  >
-                    <Archive className="h-4 w-4" />
-                    بایگانی
-                  </Button>
 
                   {order.status === 'paid' && !order.executive_completion_date && (
                     <Button
