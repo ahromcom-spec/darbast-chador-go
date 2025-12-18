@@ -162,25 +162,49 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   // State برای ذخیره پروژه‌هایی که حداقل یک سفارش دارند
   const [projectsWithOrders, setProjectsWithOrders] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const fetchProjectsWithOrders = async () => {
-      const { data: ordersData } = await supabase
-        .from('projects_v3')
-        .select('hierarchy_project_id')
-        .not('hierarchy_project_id', 'is', null);
-      
-      if (ordersData) {
-        const uniqueProjectIds = new Set(
-          (ordersData as any[])
-            .map(o => o.hierarchy_project_id)
-            .filter(Boolean) as string[]
-        );
-        setProjectsWithOrders(uniqueProjectIds);
-      }
-    };
+  const fetchProjectsWithOrders = useCallback(async () => {
+    const { data: ordersData } = await supabase
+      .from('projects_v3')
+      .select('hierarchy_project_id')
+      .not('hierarchy_project_id', 'is', null)
+      .or('is_archived.is.null,is_archived.eq.false')
+      .or('is_deep_archived.is.null,is_deep_archived.eq.false');
     
-    fetchProjectsWithOrders();
+    if (ordersData) {
+      const uniqueProjectIds = new Set(
+        (ordersData as any[])
+          .map(o => o.hierarchy_project_id)
+          .filter(Boolean) as string[]
+      );
+      setProjectsWithOrders(uniqueProjectIds);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchProjectsWithOrders();
+
+    // Subscribe to realtime changes on projects_v3 for instant map updates
+    const channel = supabase
+      .channel('globe-orders-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects_v3'
+        },
+        (payload) => {
+          console.log('Realtime globe order update:', payload);
+          fetchProjectsWithOrders();
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchProjectsWithOrders, refetch]);
 
   // فیلتر کردن پروژه‌ها: فقط نمایش پروژه‌هایی که حداقل یک سفارش دارند
   const filteredProjects = useMemo(() => {
