@@ -185,7 +185,7 @@ export default function ExecutiveOrders() {
           location_lat,
           location_lng
         `)
-        .in('status', ['approved', 'in_progress', 'completed', 'paid'])
+        .in('status', ['approved', 'in_progress', 'completed', 'closed'])
         .order('code', { ascending: false });
 
       if (error) throw error;
@@ -502,8 +502,8 @@ export default function ExecutiveOrders() {
     const statusMap: Record<string, { label: string; className: string }> = {
       approved: { label: 'آماده اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
       in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
-      completed: { label: 'اجرا شده - در انتظار پرداخت', className: 'bg-purple-500/10 text-purple-600' },
-      paid: { label: 'پرداخت شده - در انتظار فک', className: 'bg-green-500/10 text-green-600' }
+      completed: { label: 'اتمام سفارش', className: 'bg-teal-500/10 text-teal-600' },
+      closed: { label: 'بسته شده', className: 'bg-gray-500/10 text-gray-600' }
     };
 
     const { label, className } = statusMap[status] || { label: status, className: '' };
@@ -647,7 +647,7 @@ export default function ExecutiveOrders() {
                 size="sm"
                 onClick={() => setStatusFilter('completed')}
               >
-                اجرا شده ({orders.filter(o => o.status === 'completed').length})
+                اتمام ({orders.filter(o => o.status === 'completed' || o.status === 'closed').length})
               </Button>
               <Button
                 variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
@@ -655,13 +655,6 @@ export default function ExecutiveOrders() {
                 onClick={() => setStatusFilter('in_progress')}
               >
                 در حال اجرا ({orders.filter(o => o.status === 'in_progress').length})
-              </Button>
-              <Button
-                variant={statusFilter === 'paid' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('paid')}
-              >
-                پرداخت شده ({orders.filter(o => o.status === 'paid').length})
               </Button>
             </div>
           </CardContent>

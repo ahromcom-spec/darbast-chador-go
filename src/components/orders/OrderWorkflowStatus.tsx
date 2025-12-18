@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, XCircle, Package, Truck, CreditCard, Calendar } from 'lucide-react';
+import { CheckCircle, Clock, XCircle, Package, Truck, Calendar, PackageOpen, PackageCheck } from 'lucide-react';
 
 interface OrderWorkflowStatusProps {
   status: string;
@@ -48,15 +48,21 @@ export const OrderWorkflowStatus = ({ status }: OrderWorkflowStatusProps) => {
       variant: 'default',
       className: 'bg-blue-100 text-blue-800 border-blue-300'
     },
-    completed: {
-      label: 'تکمیل شده',
-      icon: <Package className="h-3 w-3" />,
+    awaiting_collection: {
+      label: 'در انتظار جمع‌آوری',
+      icon: <PackageOpen className="h-3 w-3" />,
       variant: 'default',
-      className: 'bg-purple-100 text-purple-800 border-purple-300'
+      className: 'bg-orange-100 text-orange-800 border-orange-300'
     },
-    paid: {
-      label: 'پرداخت شده',
-      icon: <CreditCard className="h-3 w-3" />,
+    in_collection: {
+      label: 'در حال جمع‌آوری',
+      icon: <PackageCheck className="h-3 w-3" />,
+      variant: 'default',
+      className: 'bg-amber-100 text-amber-800 border-amber-300'
+    },
+    completed: {
+      label: 'اتمام سفارش',
+      icon: <Package className="h-3 w-3" />,
       variant: 'default',
       className: 'bg-teal-100 text-teal-800 border-teal-300'
     },

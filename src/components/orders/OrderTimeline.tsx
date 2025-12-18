@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Clock, Package, PlayCircle, CheckCircle2, XCircle, DollarSign, PackageX, PackageCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, Clock, Package, PlayCircle, CheckCircle2, XCircle, PackageX, PackageCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,11 +40,9 @@ const statusMap: Record<string, string> = {
   'pending_execution': 'در انتظار اجرا',
   'approved': 'تایید شده',
   'in_progress': 'در حال اجرا',
-  'awaiting_payment': 'در انتظار پرداخت',
-  'awaiting_collection': 'سفارش در انتظار جمع‌آوری',
-  'collecting': 'سفارش در حال جمع‌آوری',
+  'awaiting_collection': 'در انتظار جمع‌آوری',
+  'in_collection': 'در حال جمع‌آوری',
   'completed': 'اتمام سفارش',
-  'paid': 'پرداخت شده',
   'closed': 'بسته شده',
   'rejected': 'رد شده',
 };
@@ -89,25 +87,21 @@ export const OrderTimeline = ({
     };
   };
 
-  // تعیین وضعیت هر مرحله بر اساس execution_stage - یکسان با سربرگ‌های مدیر اجرایی
+  // تعیین وضعیت هر مرحله بر اساس execution_stage - بدون مرحله پرداخت
   const stageOrder: Record<string, number> = {
     approved: 1,
     pending_execution: 1,
     in_progress: 2,
     order_executed: 3,
-    awaiting_payment: 4,
-    awaiting_collection: 4,
-    in_collection: 5,
-    completed: 6,
-    closed: 6,
+    awaiting_collection: 3,
+    in_collection: 4,
+    completed: 5,
+    closed: 5,
   };
 
   const getCurrentStageNumber = (): number => {
     if (orderStatus === 'closed' || orderStatus === 'completed') {
-      return 6;
-    }
-    if (orderStatus === 'paid') {
-      return 6;
+      return 5;
     }
     if (executionStage) {
       return stageOrder[executionStage] || 0;
@@ -172,49 +166,31 @@ export const OrderTimeline = ({
         : undefined,
     },
     {
-      status: 'order_executed',
-      label: 'اجرا شد',
-      icon: CheckCircle2,
-      date: isCurrentStageByNumber(3) ? executionStageUpdatedAt : undefined,
-      completed: isStageCompletedByNumber(3),
-      active: isCurrentStageByNumber(3),
-      details: isCurrentStageByNumber(3) ? 'کار نصب داربست تکمیل شد' : undefined,
-    },
-    {
-      status: 'awaiting_payment',
-      label: 'در انتظار پرداخت',
-      icon: DollarSign,
-      date: isCurrentStageByNumber(4) ? executionStageUpdatedAt : undefined,
-      completed: isStageCompletedByNumber(4),
-      active: isCurrentStageByNumber(4) && (executionStage === 'awaiting_payment' || executionStage === 'awaiting_collection'),
-      details: isCurrentStageByNumber(4) ? 'سفارش انجام شد و منتظر پرداخت است' : undefined,
-    },
-    {
       status: 'awaiting_collection',
       label: 'در انتظار جمع‌آوری',
       icon: PackageX,
-      date: isCurrentStageByNumber(4) ? executionStageUpdatedAt : undefined,
-      completed: isStageCompletedByNumber(4),
-      active: isCurrentStageByNumber(4) && (executionStage === 'awaiting_payment' || executionStage === 'awaiting_collection'),
-      details: isCurrentStageByNumber(4) ? 'لطفاً تاریخ فک داربست را تعیین کنید' : undefined,
+      date: isCurrentStageByNumber(3) ? executionStageUpdatedAt : undefined,
+      completed: isStageCompletedByNumber(3),
+      active: isCurrentStageByNumber(3) && (executionStage === 'awaiting_collection' || executionStage === 'order_executed'),
+      details: isCurrentStageByNumber(3) ? 'اجرا تکمیل شد. لطفاً تاریخ فک داربست را تعیین کنید' : undefined,
     },
     {
       status: 'in_collection',
       label: 'در حال جمع‌آوری',
       icon: PackageCheck,
       date: executionStage === 'in_collection' ? executionStageUpdatedAt : undefined,
-      completed: isStageCompletedByNumber(5),
-      active: isCurrentStageByNumber(5),
-      details: isCurrentStageByNumber(5) ? 'داربست در حال جمع‌آوری است' : undefined,
+      completed: isStageCompletedByNumber(4),
+      active: isCurrentStageByNumber(4),
+      details: isCurrentStageByNumber(4) ? 'داربست در حال جمع‌آوری است' : undefined,
     },
     {
       status: 'closed',
-      label: 'تکمیل سفارش',
+      label: 'اتمام سفارش',
       icon: CheckCircle2,
       date: customerCompletionDate,
-      completed: isCurrentStageByNumber(6) || orderStatus === 'completed' || orderStatus === 'closed',
-      active: isCurrentStageByNumber(6),
-      details: (orderStatus === 'closed' || orderStatus === 'completed' || isCurrentStageByNumber(6)) ? 'سفارش با موفقیت تکمیل شد' : undefined,
+      completed: isCurrentStageByNumber(5) || orderStatus === 'completed' || orderStatus === 'closed',
+      active: isCurrentStageByNumber(5),
+      details: (orderStatus === 'closed' || orderStatus === 'completed' || isCurrentStageByNumber(5)) ? 'سفارش با موفقیت به اتمام رسید' : undefined,
     },
   ];
 
