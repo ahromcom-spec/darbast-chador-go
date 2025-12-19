@@ -534,6 +534,7 @@ export function AssistantAvatar() {
         messages: userMessages.map(m => ({ role: m.role, content: m.content })),
         userRole: getUserRole(),
         imageBase64,
+        userId: user?.id, // ارسال شناسه کاربر برای دسترسی به اطلاعات سفارشات
       }),
     });
 

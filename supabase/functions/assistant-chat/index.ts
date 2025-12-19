@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -335,6 +336,7 @@ const SYSTEM_PROMPT = `تو منشی هوشمند و حرفه‌ای سایت ا
 5. اگر تصویر نامربوط بود، بگو که فقط درباره سایت می‌توانی کمک کنی
 6. کاربران را به صفحات مربوطه هدایت کن
 7. از افشای اطلاعات امنیتی یا داخلی سیستم خودداری کن
+8. اگر اطلاعات سفارشات کاربر را داری، می‌توانی به سوالات درباره سفارشات کاربر پاسخ دهی
 
 ═══════════════════════════════════════
 🗺️ مسیرهای مهم سایت
@@ -351,14 +353,174 @@ const SYSTEM_PROMPT = `تو منشی هوشمند و حرفه‌ای سایت ا
 
 همیشه با احترام و صبر پاسخ بده. اگر نمی‌دانی، صادقانه بگو و کاربر را به پشتیبانی راهنمایی کن.`;
 
+// تابع برای گرفتن اطلاعات سفارشات کاربر
+async function getUserOrdersContext(supabase: any, userId: string): Promise<string> {
+  try {
+    // اول customer_id را پیدا کنیم
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (customerError || !customer) {
+      console.log('No customer found for user:', userId);
+      return '';
+    }
+
+    // سفارشات کاربر را بگیریم
+    const { data: orders, error: ordersError } = await supabase
+      .from('projects_v3')
+      .select(`
+        id,
+        code,
+        address,
+        detailed_address,
+        status,
+        execution_stage,
+        payment_amount,
+        notes,
+        created_at,
+        execution_start_date,
+        execution_end_date,
+        provinces:province_id (name),
+        districts:district_id (name),
+        subcategories:subcategory_id (name)
+      `)
+      .eq('customer_id', customer.id)
+      .order('created_at', { ascending: false });
+
+    if (ordersError) {
+      console.error('Error fetching orders:', ordersError);
+      return '';
+    }
+
+    if (!orders || orders.length === 0) {
+      return '\n\n═══════════════════════════════════════\n📦 اطلاعات سفارشات کاربر\n═══════════════════════════════════════\nاین کاربر هنوز سفارشی ثبت نکرده است.';
+    }
+
+    // تبدیل وضعیت‌ها به فارسی
+    const statusMap: Record<string, string> = {
+      'pending': 'در انتظار تایید',
+      'approved': 'تایید شده',
+      'in_progress': 'در حال اجرا',
+      'completed': 'تکمیل شده',
+      'awaiting_collection': 'در انتظار جمع‌آوری',
+      'collected': 'جمع‌آوری شده',
+      'closed': 'بسته شده',
+      'rejected': 'رد شده',
+      'cancelled': 'لغو شده'
+    };
+
+    const executionStageMap: Record<string, string> = {
+      'pending_approval': 'در انتظار تایید',
+      'approved': 'تایید شده',
+      'scheduled': 'زمان‌بندی شده',
+      'in_progress': 'در حال اجرا',
+      'order_executed': 'اجرا شده',
+      'awaiting_collection': 'در انتظار جمع‌آوری',
+      'in_collection': 'در حال جمع‌آوری',
+      'collected': 'جمع‌آوری شده',
+      'awaiting_payment': 'در انتظار پرداخت',
+      'completed': 'تکمیل شده'
+    };
+
+    // محاسبه آمار کلی
+    let totalPaymentAmount = 0;
+    let paidOrders = 0;
+    let pendingOrders = 0;
+    let inProgressOrders = 0;
+    let completedOrders = 0;
+
+    orders.forEach((order: any) => {
+      if (order.payment_amount) {
+        totalPaymentAmount += Number(order.payment_amount);
+      }
+      
+      switch (order.status) {
+        case 'pending':
+          pendingOrders++;
+          break;
+        case 'in_progress':
+        case 'approved':
+          inProgressOrders++;
+          break;
+        case 'completed':
+        case 'closed':
+        case 'collected':
+          completedOrders++;
+          break;
+      }
+    });
+
+    // ساخت متن اطلاعات سفارشات
+    let ordersContext = `
+
+═══════════════════════════════════════
+📦 اطلاعات سفارشات کاربر (${orders.length} سفارش)
+═══════════════════════════════════════
+
+📊 آمار کلی:
+- تعداد کل سفارشات: ${orders.length}
+- سفارشات در انتظار تایید: ${pendingOrders}
+- سفارشات در حال اجرا: ${inProgressOrders}
+- سفارشات تکمیل شده: ${completedOrders}
+- مجموع مبالغ پرداختی ثبت شده: ${totalPaymentAmount.toLocaleString('fa-IR')} تومان
+
+═══════════════════════════════════════
+📋 لیست سفارشات:
+═══════════════════════════════════════
+`;
+
+    orders.forEach((order: any, index: number) => {
+      const provinceName = order.provinces?.name || 'نامشخص';
+      const districtName = order.districts?.name || '';
+      const subcategoryName = order.subcategories?.name || 'نامشخص';
+      const statusFa = statusMap[order.status] || order.status;
+      const executionStageFa = order.execution_stage ? executionStageMap[order.execution_stage] || order.execution_stage : '-';
+      const createdDate = new Date(order.created_at).toLocaleDateString('fa-IR');
+      
+      ordersContext += `
+${index + 1}. سفارش ${order.code}:
+   - نوع خدمات: ${subcategoryName}
+   - آدرس: ${provinceName}${districtName ? ` - ${districtName}` : ''} - ${order.address || ''}${order.detailed_address ? ` (${order.detailed_address})` : ''}
+   - وضعیت: ${statusFa}
+   - مرحله اجرا: ${executionStageFa}
+   - مبلغ پرداختی: ${order.payment_amount ? Number(order.payment_amount).toLocaleString('fa-IR') + ' تومان' : 'تعیین نشده'}
+   - تاریخ ثبت: ${createdDate}
+   ${order.execution_start_date ? `- تاریخ شروع اجرا: ${new Date(order.execution_start_date).toLocaleDateString('fa-IR')}` : ''}
+   ${order.notes ? `- یادداشت: ${order.notes}` : ''}
+`;
+    });
+
+    ordersContext += `
+═══════════════════════════════════════
+📌 نکته مهم برای پاسخگویی:
+═══════════════════════════════════════
+- وقتی کاربر از سفارشاتش می‌پرسد، از اطلاعات بالا استفاده کن
+- اگر درباره کد سفارش خاصی پرسید، اطلاعات آن سفارش را بده
+- اگر درباره مجموع پرداخت‌ها پرسید، از آمار کلی استفاده کن
+- اگر درباره وضعیت سفارش خاصی پرسید، وضعیت آن را بگو
+- اگر درباره آدرس خاصی پرسید، سفارشات آن آدرس را فیلتر کن
+`;
+
+    return ordersContext;
+  } catch (error) {
+    console.error('Error getting user orders context:', error);
+    return '';
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, userRole, imageBase64 } = await req.json();
+    const { messages, userRole, imageBase64, userId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
@@ -366,6 +528,14 @@ serve(async (req) => {
 
     // افزودن اطلاعات نقش کاربر به پرامپت سیستم
     let contextualPrompt = SYSTEM_PROMPT;
+    
+    // اگر کاربر لاگین کرده، اطلاعات سفارشاتش را بگیر
+    if (userId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const ordersContext = await getUserOrdersContext(supabase, userId);
+      contextualPrompt += ordersContext;
+    }
+    
     if (userRole) {
       contextualPrompt += `\n\nنقش کاربر فعلی: ${userRole}`;
       
