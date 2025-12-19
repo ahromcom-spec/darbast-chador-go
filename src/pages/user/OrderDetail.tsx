@@ -1479,9 +1479,9 @@ export default function OrderDetail() {
                   </section>
                 )}
 
-                {/* دکمه درخواست جمع‌آوری - فقط برای سفارش‌های اجرا شده خدمات اجرای داربست به همراه اجناس */}
+                {/* دکمه درخواست جمع‌آوری - برای سفارش‌های در حال اجرا، اجرا شده و پرداخت شده خدمات اجرای داربست به همراه اجناس */}
                 {order.subcategory?.code === '10' && 
-                 ['completed', 'paid'].includes(order.status) && (
+                 ['in_progress', 'completed', 'paid'].includes(order.status) && (
                   <section className="rounded-2xl border-2 border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 p-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-start gap-3">
