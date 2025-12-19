@@ -20,6 +20,7 @@ interface Order {
   id: string;
   code: string;
   status: string;
+  execution_stage?: string | null;
   address: string;
   created_at: string;
   notes: any;
@@ -35,6 +36,7 @@ interface Order {
     };
   };
 }
+
 
 interface OrderNotesSummary {
   hasDimensions: boolean;
@@ -210,8 +212,8 @@ export default function MyOrders() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    return <OrderWorkflowStatus status={status} />;
+  const getStatusBadge = (order: Order) => {
+    return <OrderWorkflowStatus status={order.status} executionStage={order.execution_stage} />;
   };
 
   const OrderCard = ({ order }: { order: Order }) => {
@@ -231,7 +233,7 @@ export default function MyOrders() {
                 {formatPersianDate(order.created_at, { showDayOfWeek: true })}
               </CardDescription>
             </div>
-            {getStatusBadge(order.status)}
+            {getStatusBadge(order)}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -354,7 +356,7 @@ export default function MyOrders() {
               {/* Status Section */}
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold">وضعیت سفارش</p>
-                {getStatusBadge(selectedOrder.status)}
+                {selectedOrder && getStatusBadge(selectedOrder)}
               </div>
               
               <Separator />
