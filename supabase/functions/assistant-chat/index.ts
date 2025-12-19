@@ -359,7 +359,7 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
     // اول customer_id را پیدا کنیم
     const { data: customer, error: customerError } = await supabase
       .from('customers')
-      .select('id')
+      .select('id, customer_code')
       .eq('user_id', userId)
       .single();
 
@@ -368,7 +368,14 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
       return '';
     }
 
-    // سفارشات کاربر را بگیریم
+    // پروفایل کاربر را بگیریم
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, phone_number')
+      .eq('user_id', userId)
+      .single();
+
+    // سفارشات کاربر را با تمام جزئیات بگیریم
     const { data: orders, error: ordersError } = await supabase
       .from('projects_v3')
       .select(`
@@ -379,15 +386,35 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
         status,
         execution_stage,
         payment_amount,
+        payment_method,
+        payment_confirmed_at,
+        transaction_reference,
         notes,
         created_at,
+        approved_at,
         execution_start_date,
         execution_end_date,
+        execution_confirmed_at,
+        customer_completion_date,
+        executive_completion_date,
+        closed_at,
+        is_archived,
+        is_renewal,
+        original_order_id,
+        customer_name,
+        customer_phone,
+        location_lat,
+        location_lng,
         provinces:province_id (name),
         districts:district_id (name),
-        subcategories:subcategory_id (name)
+        subcategories:subcategory_id (
+          name, 
+          code,
+          service_types_v3:service_type_id (name)
+        )
       `)
       .eq('customer_id', customer.id)
+      .eq('is_deep_archived', false)
       .order('created_at', { ascending: false });
 
     if (ordersError) {
@@ -395,9 +422,11 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
       return '';
     }
 
-    if (!orders || orders.length === 0) {
-      return '\n\n═══════════════════════════════════════\n📦 اطلاعات سفارشات کاربر\n═══════════════════════════════════════\nاین کاربر هنوز سفارشی ثبت نکرده است.';
-    }
+    // درخواست‌های جمع‌آوری را بگیریم
+    const { data: collectionRequests } = await supabase
+      .from('collection_requests')
+      .select('id, order_id, status, requested_date, created_at')
+      .eq('customer_id', customer.id);
 
     // تبدیل وضعیت‌ها به فارسی
     const statusMap: Record<string, string> = {
@@ -425,83 +454,230 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
       'completed': 'تکمیل شده'
     };
 
-    // محاسبه آمار کلی
+    const paymentMethodMap: Record<string, string> = {
+      'online': 'پرداخت آنلاین',
+      'cash': 'پرداخت نقدی',
+      'card': 'کارت به کارت',
+      'check': 'چک',
+      'transfer': 'انتقال بانکی'
+    };
+
+    if (!orders || orders.length === 0) {
+      return `
+
+═══════════════════════════════════════
+👤 اطلاعات کاربر
+═══════════════════════════════════════
+- نام: ${profile?.full_name || 'نامشخص'}
+- شماره تماس: ${profile?.phone_number || 'نامشخص'}
+- کد مشتری: ${customer.customer_code || 'تعیین نشده'}
+
+═══════════════════════════════════════
+📦 اطلاعات سفارشات
+═══════════════════════════════════════
+این کاربر هنوز سفارشی ثبت نکرده است.`;
+    }
+
+    // محاسبه آمار کلی دقیق
     let totalPaymentAmount = 0;
-    let paidOrders = 0;
+    let totalPaidAmount = 0;
     let pendingOrders = 0;
+    let approvedOrders = 0;
     let inProgressOrders = 0;
     let completedOrders = 0;
+    let awaitingCollectionOrders = 0;
+    let closedOrders = 0;
+    let rejectedOrders = 0;
+    let renewalOrders = 0;
+
+    // گروه‌بندی بر اساس آدرس
+    const ordersByAddress: Record<string, any[]> = {};
+    // گروه‌بندی بر اساس نوع خدمات
+    const ordersByService: Record<string, any[]> = {};
+    // گروه‌بندی بر اساس استان
+    const ordersByProvince: Record<string, any[]> = {};
 
     orders.forEach((order: any) => {
-      if (order.payment_amount) {
-        totalPaymentAmount += Number(order.payment_amount);
-      }
+      const paymentAmount = order.payment_amount ? Number(order.payment_amount) : 0;
+      totalPaymentAmount += paymentAmount;
       
-      switch (order.status) {
-        case 'pending':
-          pendingOrders++;
-          break;
-        case 'in_progress':
-        case 'approved':
-          inProgressOrders++;
-          break;
-        case 'completed':
-        case 'closed':
-        case 'collected':
-          completedOrders++;
-          break;
+      // اگر پرداخت تایید شده، به مجموع پرداختی اضافه کن
+      if (order.payment_confirmed_at) {
+        totalPaidAmount += paymentAmount;
       }
+
+      // شمارش وضعیت‌ها
+      switch (order.status) {
+        case 'pending': pendingOrders++; break;
+        case 'approved': approvedOrders++; break;
+        case 'in_progress': inProgressOrders++; break;
+        case 'completed': completedOrders++; break;
+        case 'awaiting_collection': awaitingCollectionOrders++; break;
+        case 'closed': case 'collected': closedOrders++; break;
+        case 'rejected': case 'cancelled': rejectedOrders++; break;
+      }
+
+      if (order.is_renewal) renewalOrders++;
+
+      // گروه‌بندی بر اساس آدرس
+      const addressKey = `${order.provinces?.name || ''} - ${order.address || ''}`;
+      if (!ordersByAddress[addressKey]) ordersByAddress[addressKey] = [];
+      ordersByAddress[addressKey].push(order);
+
+      // گروه‌بندی بر اساس نوع خدمات
+      const serviceKey = order.subcategories?.service_types_v3?.name || order.subcategories?.name || 'سایر';
+      if (!ordersByService[serviceKey]) ordersByService[serviceKey] = [];
+      ordersByService[serviceKey].push(order);
+
+      // گروه‌بندی بر اساس استان
+      const provinceKey = order.provinces?.name || 'نامشخص';
+      if (!ordersByProvince[provinceKey]) ordersByProvince[provinceKey] = [];
+      ordersByProvince[provinceKey].push(order);
     });
+
+    const remainingAmount = totalPaymentAmount - totalPaidAmount;
 
     // ساخت متن اطلاعات سفارشات
     let ordersContext = `
 
 ═══════════════════════════════════════
-📦 اطلاعات سفارشات کاربر (${orders.length} سفارش)
+👤 اطلاعات کاربر
 ═══════════════════════════════════════
-
-📊 آمار کلی:
-- تعداد کل سفارشات: ${orders.length}
-- سفارشات در انتظار تایید: ${pendingOrders}
-- سفارشات در حال اجرا: ${inProgressOrders}
-- سفارشات تکمیل شده: ${completedOrders}
-- مجموع مبالغ پرداختی ثبت شده: ${totalPaymentAmount.toLocaleString('fa-IR')} تومان
+- نام: ${profile?.full_name || 'نامشخص'}
+- شماره تماس: ${profile?.phone_number || 'نامشخص'}
+- کد مشتری: ${customer.customer_code || 'تعیین نشده'}
 
 ═══════════════════════════════════════
-📋 لیست سفارشات:
+📊 آمار کلی سفارشات (${orders.length} سفارش)
+═══════════════════════════════════════
+
+💰 وضعیت مالی:
+- مجموع کل مبالغ سفارشات: ${totalPaymentAmount.toLocaleString('fa-IR')} تومان
+- مبلغ پرداخت شده (تایید شده): ${totalPaidAmount.toLocaleString('fa-IR')} تومان
+- مانده بدهی: ${remainingAmount.toLocaleString('fa-IR')} تومان
+${remainingAmount === 0 && totalPaymentAmount > 0 ? '✅ تمام مبالغ تسویه شده است' : remainingAmount > 0 ? '⚠️ مبالغی باقی‌مانده است' : ''}
+
+📈 وضعیت سفارشات:
+- در انتظار تایید: ${pendingOrders} سفارش
+- تایید شده: ${approvedOrders} سفارش
+- در حال اجرا: ${inProgressOrders} سفارش
+- تکمیل شده: ${completedOrders} سفارش
+- در انتظار جمع‌آوری: ${awaitingCollectionOrders} سفارش
+- بسته شده/جمع‌آوری شده: ${closedOrders} سفارش
+${rejectedOrders > 0 ? `- رد شده/لغو شده: ${rejectedOrders} سفارش` : ''}
+${renewalOrders > 0 ? `- سفارشات تجدید/تمدید: ${renewalOrders} سفارش` : ''}
+
+═══════════════════════════════════════
+📍 تفکیک بر اساس آدرس:
+═══════════════════════════════════════`;
+
+    Object.entries(ordersByAddress).forEach(([address, addressOrders]) => {
+      ordersContext += `\n🏠 ${address}: ${addressOrders.length} سفارش`;
+    });
+
+    ordersContext += `
+
+═══════════════════════════════════════
+🔧 تفکیک بر اساس نوع خدمات:
+═══════════════════════════════════════`;
+
+    Object.entries(ordersByService).forEach(([service, serviceOrders]) => {
+      const serviceTotal = serviceOrders.reduce((sum: number, o: any) => sum + (Number(o.payment_amount) || 0), 0);
+      ordersContext += `\n📋 ${service}: ${serviceOrders.length} سفارش (مجموع: ${serviceTotal.toLocaleString('fa-IR')} تومان)`;
+    });
+
+    ordersContext += `
+
+═══════════════════════════════════════
+🗺️ تفکیک بر اساس استان:
+═══════════════════════════════════════`;
+
+    Object.entries(ordersByProvince).forEach(([province, provinceOrders]) => {
+      ordersContext += `\n📌 ${province}: ${provinceOrders.length} سفارش`;
+    });
+
+    ordersContext += `
+
+═══════════════════════════════════════
+📋 لیست کامل سفارشات (جدیدترین به قدیمی‌ترین):
 ═══════════════════════════════════════
 `;
 
     orders.forEach((order: any, index: number) => {
       const provinceName = order.provinces?.name || 'نامشخص';
       const districtName = order.districts?.name || '';
+      const serviceTypeName = order.subcategories?.service_types_v3?.name || '';
       const subcategoryName = order.subcategories?.name || 'نامشخص';
       const statusFa = statusMap[order.status] || order.status;
       const executionStageFa = order.execution_stage ? executionStageMap[order.execution_stage] || order.execution_stage : '-';
+      const paymentMethodFa = order.payment_method ? paymentMethodMap[order.payment_method] || order.payment_method : '-';
       const createdDate = new Date(order.created_at).toLocaleDateString('fa-IR');
+      const paymentAmount = order.payment_amount ? Number(order.payment_amount) : 0;
+      const isPaid = !!order.payment_confirmed_at;
+      
+      // پیدا کردن درخواست جمع‌آوری برای این سفارش
+      const orderCollectionRequest = collectionRequests?.find((cr: any) => cr.order_id === order.id);
       
       ordersContext += `
-${index + 1}. سفارش ${order.code}:
-   - نوع خدمات: ${subcategoryName}
-   - آدرس: ${provinceName}${districtName ? ` - ${districtName}` : ''} - ${order.address || ''}${order.detailed_address ? ` (${order.detailed_address})` : ''}
-   - وضعیت: ${statusFa}
-   - مرحله اجرا: ${executionStageFa}
-   - مبلغ پرداختی: ${order.payment_amount ? Number(order.payment_amount).toLocaleString('fa-IR') + ' تومان' : 'تعیین نشده'}
-   - تاریخ ثبت: ${createdDate}
-   ${order.execution_start_date ? `- تاریخ شروع اجرا: ${new Date(order.execution_start_date).toLocaleDateString('fa-IR')}` : ''}
-   ${order.notes ? `- یادداشت: ${order.notes}` : ''}
+┌────────────────────────────────────
+│ 📦 سفارش شماره ${index + 1} - کد: ${order.code}
+├────────────────────────────────────
+│ 🔧 نوع خدمات: ${serviceTypeName ? `${serviceTypeName} - ` : ''}${subcategoryName}
+│ 📍 آدرس: ${provinceName}${districtName ? ` - ${districtName}` : ''} - ${order.address || ''}
+│    ${order.detailed_address ? `جزئیات: ${order.detailed_address}` : ''}
+│ 📊 وضعیت: ${statusFa}
+│ 🔄 مرحله اجرا: ${executionStageFa}
+│ 💰 مبلغ: ${paymentAmount > 0 ? paymentAmount.toLocaleString('fa-IR') + ' تومان' : 'تعیین نشده'}
+│ 💳 وضعیت پرداخت: ${isPaid ? '✅ پرداخت شده' : paymentAmount > 0 ? '⏳ پرداخت نشده' : '-'}
+│    ${isPaid ? `تاریخ پرداخت: ${new Date(order.payment_confirmed_at).toLocaleDateString('fa-IR')}` : ''}
+│    ${order.payment_method ? `روش پرداخت: ${paymentMethodFa}` : ''}
+│    ${order.transaction_reference ? `شماره تراکنش: ${order.transaction_reference}` : ''}
+│ 📅 تاریخ ثبت: ${createdDate}
+│    ${order.approved_at ? `تاریخ تایید: ${new Date(order.approved_at).toLocaleDateString('fa-IR')}` : ''}
+│    ${order.execution_start_date ? `تاریخ شروع اجرا: ${new Date(order.execution_start_date).toLocaleDateString('fa-IR')}` : ''}
+│    ${order.execution_end_date ? `تاریخ پایان اجرا: ${new Date(order.execution_end_date).toLocaleDateString('fa-IR')}` : ''}
+│    ${order.execution_confirmed_at ? `تاریخ تایید اجرا: ${new Date(order.execution_confirmed_at).toLocaleDateString('fa-IR')}` : ''}
+│    ${order.closed_at ? `تاریخ بسته شدن: ${new Date(order.closed_at).toLocaleDateString('fa-IR')}` : ''}
+│ ${order.is_renewal ? '🔄 این سفارش تجدید/تمدید است' : ''}
+│ ${order.is_archived ? '📁 بایگانی شده' : ''}
+│ ${orderCollectionRequest ? `📦 درخواست جمع‌آوری: ${orderCollectionRequest.status === 'pending' ? 'در انتظار' : orderCollectionRequest.status === 'approved' ? 'تایید شده' : orderCollectionRequest.status}` : ''}
+│ ${order.notes ? `📝 یادداشت: ${order.notes}` : ''}
+└────────────────────────────────────
 `;
     });
 
     ordersContext += `
 ═══════════════════════════════════════
-📌 نکته مهم برای پاسخگویی:
+🎯 راهنمای پاسخگویی به سوالات کاربر:
 ═══════════════════════════════════════
-- وقتی کاربر از سفارشاتش می‌پرسد، از اطلاعات بالا استفاده کن
-- اگر درباره کد سفارش خاصی پرسید، اطلاعات آن سفارش را بده
-- اگر درباره مجموع پرداخت‌ها پرسید، از آمار کلی استفاده کن
-- اگر درباره وضعیت سفارش خاصی پرسید، وضعیت آن را بگو
-- اگر درباره آدرس خاصی پرسید، سفارشات آن آدرس را فیلتر کن
+
+وقتی کاربر درباره سفارشاتش سوال می‌پرسد:
+
+1️⃣ سوال درباره مبلغ و پرداخت:
+   - "چقدر پرداخت کردم؟" → مبلغ پرداخت شده: ${totalPaidAmount.toLocaleString('fa-IR')} تومان
+   - "چقدر بدهی دارم؟" → مانده: ${remainingAmount.toLocaleString('fa-IR')} تومان
+   - "مجموع سفارشاتم چقدر شد؟" → کل: ${totalPaymentAmount.toLocaleString('fa-IR')} تومان
+
+2️⃣ سوال درباره تعداد سفارشات:
+   - "چند سفارش دارم؟" → ${orders.length} سفارش
+   - "سفارش فعال چند تا دارم؟" → ${pendingOrders + approvedOrders + inProgressOrders} سفارش فعال
+
+3️⃣ سوال درباره سفارش خاص با کد:
+   - کد سفارش‌ها: ${orders.map((o: any) => o.code).join(', ')}
+   - اطلاعات کامل هر سفارش در بالا موجود است
+
+4️⃣ سوال درباره آدرس خاص:
+   - آدرس‌های موجود: ${Object.keys(ordersByAddress).join(' | ')}
+
+5️⃣ سوال درباره وضعیت:
+   - "سفارش من تایید شده؟" → بررسی وضعیت approved
+   - "کار شروع شده؟" → بررسی مرحله اجرا
+
+⚠️ نکات مهم:
+- همیشه کد سفارش را ذکر کن تا کاربر بداند کدام سفارش مد نظر است
+- مبالغ را با فرمت فارسی و واحد تومان بگو
+- تاریخ‌ها را به شمسی بگو
+- اگر سفارشی پرداخت نشده، به کاربر یادآوری کن
 `;
 
     return ordersContext;
