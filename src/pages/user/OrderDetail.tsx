@@ -157,6 +157,7 @@ const getStatusInfo = (status: string) => {
     pending: { label: 'در انتظار تایید', icon: Clock, color: 'text-yellow-600' },
     pending_execution: { label: 'در انتظار اجرا', icon: Clock, color: 'text-blue-600' },
     approved: { label: 'تایید شده', icon: CheckCircle, color: 'text-green-600' },
+    scheduled: { label: 'زمان‌بندی شده', icon: Clock, color: 'text-cyan-600' },
     rejected: { label: 'رد شده', icon: XCircle, color: 'text-destructive' },
     in_progress: { label: 'در حال اجرا', icon: Play, color: 'text-blue-600' },
     completed: { label: 'اجرا شده - در انتظار پرداخت', icon: CheckCircle, color: 'text-orange-600' },
