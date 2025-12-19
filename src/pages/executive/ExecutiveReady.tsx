@@ -40,6 +40,7 @@ interface Order {
 const stageLabels: Record<string, string> = {
   approved: 'در انتظار اجرا',
   pending_execution: 'در انتظار اجرا',
+  scheduled: 'زمان‌بندی شده',
   in_progress: 'در حال اجرا',
   awaiting_payment: 'در انتظار پرداخت',
   awaiting_collection: 'در انتظار جمع‌آوری',
@@ -64,6 +65,27 @@ export default function ExecutiveReady() {
 
   useEffect(() => {
     fetchOrders();
+
+    // Subscribe to realtime changes on projects_v3
+    const channel = supabase
+      .channel('ready-orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects_v3'
+        },
+        (payload) => {
+          console.log('Realtime update received:', payload);
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
@@ -99,7 +121,7 @@ export default function ExecutiveReady() {
           notes,
           customer_id
         `)
-        .in('status', ['approved', 'pending_execution'])
+        .in('status', ['approved', 'pending_execution', 'scheduled'])
         .order('code', { ascending: false });
 
       if (error) throw error;
