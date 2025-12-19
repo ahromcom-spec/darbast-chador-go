@@ -564,15 +564,25 @@ export default function ExecutiveOrders() {
         updateData.executive_completion_date = new Date().toISOString();
       }
 
-      const { error } = await supabase
+      const { data: updatedRows, error } = await supabase
         .from('projects_v3')
         .update(updateData)
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .select('id,status,execution_stage,execution_stage_updated_at,approved_by,execution_start_date,execution_end_date,customer_completion_date,executive_completion_date');
 
       if (error) {
         console.error('RLS/DB error updating stage:', error);
         throw error;
       }
+
+      // اگر RLS اجازه آپدیت ندهد ممکن است هیچ ردیفی آپدیت نشود ولی error هم برنگردد
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new Error('امکان تغییر مرحله این سفارش وجود ندارد (دسترسی یا وضعیت سفارش).');
+      }
+
+      // به‌روزرسانی سریع UI
+      const updated = updatedRows[0];
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, ...updated } : o)));
 
       // ارسال اعلان به مشتری
       if (orderData?.customer_id) {
@@ -677,6 +687,8 @@ export default function ExecutiveOrders() {
         .update({
           status: 'closed',
           closed_at: new Date().toISOString(),
+          execution_stage: null,
+          execution_stage_updated_at: new Date().toISOString(),
           executive_completion_date: new Date(completionDate).toISOString(),
           financial_confirmed_by: auth.user?.id,
           financial_confirmed_at: new Date().toISOString()
@@ -1092,6 +1104,7 @@ export default function ExecutiveOrders() {
                         ? 'awaiting_collection'
                         : order.status
                     }
+                    disabled={order.status === 'closed'}
                     onValueChange={(value) => {
                       setPendingStageChange({ orderId: order.id, newStage: value });
                       setStageChangeConfirmOpen(true);
