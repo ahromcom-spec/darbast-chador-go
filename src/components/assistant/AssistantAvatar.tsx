@@ -90,11 +90,23 @@ export function AssistantAvatar() {
   const auth = useAuth();
   const user = auth?.user;
 
+  // Scroll to bottom when messages change or chat opens
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Scroll to bottom when chat opens (with delay to ensure render)
+  useEffect(() => {
+    if (isOpen && scrollRef.current) {
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 100);
+    }
+  }, [isOpen]);
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
