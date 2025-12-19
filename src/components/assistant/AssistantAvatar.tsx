@@ -1,13 +1,25 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Bot, User } from 'lucide-react';
+import { X, Send, User, Image, Mic, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import assistantImage from '@/assets/assistant-avatar.png';
 
-type Message = { role: 'user' | 'assistant'; content: string };
+type MessageContent = {
+  type: 'text' | 'image' | 'voice';
+  text?: string;
+  imageUrl?: string;
+  audioUrl?: string;
+};
+
+type Message = { 
+  role: 'user' | 'assistant'; 
+  content: string;
+  attachments?: MessageContent[];
+};
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
 
@@ -16,19 +28,26 @@ export function AssistantAvatar() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
   const auth = useAuth();
   const user = auth?.user;
 
-  // اسکرول به آخرین پیام
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // فوکوس روی اینپوت هنگام باز شدن
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
@@ -37,10 +56,10 @@ export function AssistantAvatar() {
 
   const getUserRole = useCallback(() => {
     if (!user) return 'guest';
-    return 'customer'; // می‌توان بعداً بر اساس نقش واقعی کاربر تغییر دهد
+    return 'customer';
   }, [user]);
 
-  const streamChat = async (userMessages: Message[]) => {
+  const streamChat = async (userMessages: Message[], imageBase64?: string) => {
     const resp = await fetch(CHAT_URL, {
       method: 'POST',
       headers: {
@@ -48,8 +67,9 @@ export function AssistantAvatar() {
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
       body: JSON.stringify({ 
-        messages: userMessages,
+        messages: userMessages.map(m => ({ role: m.role, content: m.content })),
         userRole: getUserRole(),
+        imageBase64,
       }),
     });
 
@@ -103,17 +123,115 @@ export function AssistantAvatar() {
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const userMsg: Message = { role: 'user', content: input.trim() };
+    if (!file.type.startsWith('image/')) {
+      toast.error('لطفاً یک فایل تصویری انتخاب کنید');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('حجم تصویر باید کمتر از 5 مگابایت باشد');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        handleSendVoice(audioUrl);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      toast.error('دسترسی به میکروفون امکان‌پذیر نیست');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    }
+  };
+
+  const handleSendVoice = async (audioUrl: string) => {
+    const userMsg: Message = { 
+      role: 'user', 
+      content: '🎤 پیام صوتی',
+      attachments: [{ type: 'voice', audioUrl }]
+    };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
-    setInput('');
     setIsLoading(true);
 
     try {
-      await streamChat(newMessages);
+      await streamChat([...newMessages.slice(0, -1), { role: 'user', content: 'کاربر یک پیام صوتی فرستاد. بگو که متوجه شدی و می‌توانی به سوالات متنی پاسخ دهی.' }]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: 'متأسفانه خطایی رخ داد. لطفاً دوباره تلاش کنید.' }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if ((!input.trim() && !selectedImage) || isLoading) return;
+
+    let imageBase64: string | undefined;
+    const attachments: MessageContent[] = [];
+
+    if (selectedImage) {
+      imageBase64 = selectedImage.split(',')[1];
+      attachments.push({ type: 'image', imageUrl: selectedImage });
+    }
+
+    const userMsg: Message = { 
+      role: 'user', 
+      content: input.trim() || 'این تصویر را ببین',
+      attachments: attachments.length > 0 ? attachments : undefined
+    };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput('');
+    setSelectedImage(null);
+    setIsLoading(true);
+
+    try {
+      await streamChat(newMessages, imageBase64);
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [
@@ -132,9 +250,15 @@ export function AssistantAvatar() {
     }
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <>
-      {/* دکمه آواتار انسانی */}
+      {/* دکمه آواتار */}
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
@@ -152,14 +276,13 @@ export function AssistantAvatar() {
           alt="دستیار اهرم" 
           className="w-full h-full object-cover"
         />
-        {/* نقطه سبز آنلاین */}
         <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
       </button>
 
       {/* پنل چت */}
       {isOpen && (
-        <div className="fixed bottom-6 left-6 z-50 w-80 sm:w-96 h-[28rem] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
-          {/* هدر با تصویر منشی */}
+        <div className="fixed bottom-6 left-6 z-50 w-80 sm:w-96 h-[32rem] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
+          {/* هدر */}
           <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -238,12 +361,22 @@ export function AssistantAvatar() {
                       )}
                     </div>
                     <div className={cn(
-                      "max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed",
+                      "max-w-[80%] rounded-2xl text-sm leading-relaxed overflow-hidden",
                       msg.role === 'user' 
                         ? "bg-primary text-primary-foreground rounded-tr-sm" 
                         : "bg-muted rounded-tl-sm"
                     )}>
-                      {msg.content}
+                      {msg.attachments?.map((att, i) => (
+                        <div key={i}>
+                          {att.type === 'image' && att.imageUrl && (
+                            <img src={att.imageUrl} alt="تصویر" className="w-full max-h-40 object-cover" />
+                          )}
+                          {att.type === 'voice' && att.audioUrl && (
+                            <audio controls src={att.audioUrl} className="w-full p-2" />
+                          )}
+                        </div>
+                      ))}
+                      <p className="px-3 py-2">{msg.content}</p>
                     </div>
                   </div>
                 ))}
@@ -265,27 +398,85 @@ export function AssistantAvatar() {
             )}
           </ScrollArea>
 
+          {/* پیش‌نمایش تصویر انتخاب شده */}
+          {selectedImage && (
+            <div className="px-3 py-2 border-t border-border">
+              <div className="relative inline-block">
+                <img src={selectedImage} alt="تصویر انتخابی" className="h-16 rounded-lg" />
+                <button
+                  onClick={() => setSelectedImage(null)}
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ورودی پیام */}
           <div className="p-3 border-t border-border">
-            <div className="flex gap-2">
-              <Input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="پیام خود را بنویسید..."
-                className="flex-1"
-                disabled={isLoading}
-              />
-              <Button 
-                onClick={handleSend} 
-                disabled={!input.trim() || isLoading}
-                size="icon"
-                className="bg-amber-500 hover:bg-amber-600"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageSelect}
+              accept="image/*"
+              className="hidden"
+            />
+            
+            {isRecording ? (
+              <div className="flex items-center gap-2 justify-between bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-sm text-red-600 dark:text-red-400">در حال ضبط... {formatTime(recordingTime)}</span>
+                </div>
+                <Button
+                  onClick={stopRecording}
+                  size="icon"
+                  variant="destructive"
+                  className="h-8 w-8"
+                >
+                  <Square className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2 items-center">
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  size="icon"
+                  variant="ghost"
+                  className="h-9 w-9 text-muted-foreground hover:text-amber-600"
+                  disabled={isLoading}
+                >
+                  <Image className="h-5 w-5" />
+                </Button>
+                <Button
+                  onClick={startRecording}
+                  size="icon"
+                  variant="ghost"
+                  className="h-9 w-9 text-muted-foreground hover:text-amber-600"
+                  disabled={isLoading}
+                >
+                  <Mic className="h-5 w-5" />
+                </Button>
+                <Input
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="پیام خود را بنویسید..."
+                  className="flex-1"
+                  disabled={isLoading}
+                />
+                <Button 
+                  onClick={handleSend} 
+                  disabled={(!input.trim() && !selectedImage) || isLoading}
+                  size="icon"
+                  className="bg-amber-500 hover:bg-amber-600"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

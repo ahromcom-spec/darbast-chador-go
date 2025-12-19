@@ -47,7 +47,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, userRole } = await req.json();
+    const { messages, userRole, imageBase64 } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -66,6 +66,29 @@ serve(async (req) => {
       }
     }
 
+    // ساخت پیام‌ها با پشتیبانی از تصویر
+    const formattedMessages = messages.map((msg: { role: string; content: string }, index: number) => {
+      // اگر تصویر داریم و این آخرین پیام کاربر است
+      if (imageBase64 && msg.role === 'user' && index === messages.length - 1) {
+        return {
+          role: msg.role,
+          content: [
+            {
+              type: "text",
+              text: msg.content + "\n\nتوضیح: کاربر یک تصویر فرستاده است. اگر سوالی درباره تصویر دارد، در حد توان و مرتبط با خدمات اهرم پاسخ بده. اگر تصویر ربطی به خدمات ندارد، مودبانه بگو که فقط می‌توانی درباره خدمات داربست‌بندی کمک کنی."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${imageBase64}`
+              }
+            }
+          ]
+        };
+      }
+      return { role: msg.role, content: msg.content };
+    });
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -76,7 +99,7 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: contextualPrompt },
-          ...messages,
+          ...formattedMessages,
         ],
         stream: true,
       }),
