@@ -191,7 +191,7 @@ export const OrderTimeline = ({
       completed: isStageCompletedByNumber(3),
       active: isCurrentStageByNumber(3),
       details: isStageCompletedByNumber(3) || isCurrentStageByNumber(3)
-        ? 'اجرای سفارش با موفقیت تکمیل شد ✓'
+        ? 'نصب داربست با موفقیت انجام شد ✓'
         : undefined,
     },
     {
@@ -200,10 +200,10 @@ export const OrderTimeline = ({
       icon: Clock,
       date: executionStage === 'awaiting_payment' ? executionStageUpdatedAt : undefined,
       completed: isStageCompletedByNumber(4),
-      active: isCurrentStageByNumber(4),
+      active: isCurrentStageByNumber(3) || isCurrentStageByNumber(4), // فعال بعد از نصب
       details: isStageCompletedByNumber(4)
         ? 'پرداخت با موفقیت انجام شد ✓'
-        : isCurrentStageByNumber(4) 
+        : (isCurrentStageByNumber(3) || isCurrentStageByNumber(4))
           ? 'لطفاً مبلغ سفارش را پرداخت کنید'
           : undefined,
     },
@@ -213,10 +213,10 @@ export const OrderTimeline = ({
       icon: PackageX,
       date: executionStage === 'awaiting_collection' ? executionStageUpdatedAt : undefined,
       completed: isStageCompletedByNumber(5),
-      active: isCurrentStageByNumber(5),
+      active: isCurrentStageByNumber(3) || isCurrentStageByNumber(5), // فعال بعد از نصب
       details: isStageCompletedByNumber(5)
         ? 'تاریخ جمع‌آوری تعیین شد ✓'
-        : isCurrentStageByNumber(5) 
+        : (isCurrentStageByNumber(3) || isCurrentStageByNumber(5))
           ? 'لطفاً تاریخ فک داربست را تعیین کنید'
           : undefined,
     },
