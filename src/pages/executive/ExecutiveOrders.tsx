@@ -27,7 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 const executionStages = [
   { key: 'pending', label: 'در انتظار تایید مدیران', statusMapping: 'pending', executionStageMapping: null },
-  { key: 'pending_execution', label: 'در انتظار اجرا', statusMapping: 'pending_execution', executionStageMapping: null },
+  { key: 'pending_execution', label: 'در انتظار اجرا', statusMapping: 'approved', executionStageMapping: null },
   { key: 'in_progress', label: 'در حال اجرا', statusMapping: 'in_progress', executionStageMapping: null },
   { key: 'order_executed', label: 'اجرا شد', statusMapping: 'in_progress', executionStageMapping: 'order_executed' },
   { key: 'awaiting_payment', label: 'در انتظار پرداخت', statusMapping: 'completed', executionStageMapping: 'awaiting_payment' },
