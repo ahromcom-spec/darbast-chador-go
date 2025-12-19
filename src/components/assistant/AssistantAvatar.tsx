@@ -29,10 +29,10 @@ export function AssistantAvatar() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
-  // Drag state
-  const [position, setPosition] = useState({ x: 24, y: 24 }); // bottom-left default
+  // Drag state - using left and top for more intuitive positioning
+  const [position, setPosition] = useState({ x: 24, y: window.innerHeight - 88 }); // bottom-left default
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [hasMoved, setHasMoved] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -76,13 +76,13 @@ export function AssistantAvatar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  // Drag handlers
+  // Drag handlers - simple and works in all directions
   const handleDragStart = useCallback((clientX: number, clientY: number) => {
     setIsDragging(true);
     setHasMoved(false);
-    setDragStart({
-      x: clientX - (window.innerWidth - position.x - 64), // 64 is avatar width
-      y: clientY - (window.innerHeight - position.y - 64)
+    setDragOffset({
+      x: clientX - position.x,
+      y: clientY - position.y
     });
   }, [position]);
 
@@ -90,15 +90,20 @@ export function AssistantAvatar() {
     if (!isDragging) return;
     
     setHasMoved(true);
-    const newX = window.innerWidth - clientX + dragStart.x - 64;
-    const newY = window.innerHeight - clientY + dragStart.y - 64;
     
-    // Keep within bounds
-    const clampedX = Math.max(0, Math.min(window.innerWidth - 80, newX));
-    const clampedY = Math.max(0, Math.min(window.innerHeight - 80, newY));
+    // Calculate new position
+    const newX = clientX - dragOffset.x;
+    const newY = clientY - dragOffset.y;
     
-    setPosition({ x: clampedX, y: clampedY });
-  }, [isDragging, dragStart]);
+    // Keep within screen bounds
+    const maxX = window.innerWidth - 80;
+    const maxY = window.innerHeight - 80;
+    
+    setPosition({
+      x: Math.max(0, Math.min(maxX, newX)),
+      y: Math.max(0, Math.min(maxY, newY))
+    });
+  }, [isDragging, dragOffset]);
 
   const handleDragEnd = useCallback(() => {
     setIsDragging(false);
@@ -297,7 +302,7 @@ export function AssistantAvatar() {
         onClick={handleAvatarClick}
         style={{
           left: `${position.x}px`,
-          bottom: `${position.y}px`,
+          top: `${position.y}px`,
         }}
         className={cn(
           "fixed z-50 w-16 h-16 rounded-full",
@@ -324,7 +329,7 @@ export function AssistantAvatar() {
           ref={chatPanelRef}
           style={{
             left: `${position.x}px`,
-            bottom: `${position.y}px`,
+            top: `${Math.max(0, position.y - 450)}px`, // Position above avatar
           }}
           className="fixed z-50 w-80 sm:w-96 h-[32rem] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300"
         >
