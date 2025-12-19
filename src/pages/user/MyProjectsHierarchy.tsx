@@ -306,7 +306,6 @@ export default function MyProjectsHierarchy() {
       pending: { label: 'در انتظار تایید', variant: 'outline' },
       pending_execution: { label: 'در انتظار اجرا', variant: 'outline' },
       approved: { label: 'تایید شده', variant: 'default' },
-      scheduled: { label: 'زمان‌بندی شده', variant: 'default' },
       rejected: { label: 'رد شده', variant: 'destructive' },
       in_progress: { label: 'در حال اجرا', variant: 'default' },
       completed: { label: 'تکمیل شده', variant: 'default' },

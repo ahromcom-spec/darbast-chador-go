@@ -57,12 +57,7 @@ export const OrderWorkflowStatus = ({ status, executionStage }: OrderWorkflowSta
       variant: 'default',
       className: 'bg-green-100 text-green-800 border-green-300',
     },
-    scheduled: {
-      label: 'زمان‌بندی شده',
-      icon: <Calendar className="h-3 w-3" />,
-      variant: 'default',
-      className: 'bg-purple-100 text-purple-800 border-purple-300',
-    },
+    // scheduled status removed - orders now go directly to pending_execution
     in_progress: {
       label: 'در حال اجرا',
       icon: <Truck className="h-3 w-3" />,

@@ -47,8 +47,6 @@ export const NotificationList = ({ onClose }: NotificationListProps) => {
         return `/executive/pending?orderId=${orderId}`;
       case 'in_progress':
         return `/executive/in-progress?orderId=${orderId}`;
-      case 'scheduled':
-        return `/executive/in-progress?orderId=${orderId}`;
       case 'awaiting_payment':
         return `/executive/awaiting-payment?orderId=${orderId}`;
       case 'awaiting_collection':
