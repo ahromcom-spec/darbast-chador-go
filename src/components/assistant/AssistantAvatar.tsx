@@ -179,19 +179,20 @@ export function AssistantAvatar() {
   }, [user?.id]);
 
   // Scroll to bottom when messages change (including during streaming)
+  // NOTE: ScrollArea ref points to Root; we must scroll the Viewport element.
   useEffect(() => {
-    if (scrollRef.current) {
-      // Use requestAnimationFrame for smoother scroll during streaming
-      requestAnimationFrame(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTo({
-            top: scrollRef.current.scrollHeight,
-            behavior: 'smooth'
-          });
-        }
-      });
-    }
-  }, [messages]);
+    if (!isOpen) return;
+
+    const root = scrollRef.current;
+    const viewport = root?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+    if (!viewport) return;
+
+    const raf = requestAnimationFrame(() => {
+      viewport.scrollTop = viewport.scrollHeight;
+    });
+
+    return () => cancelAnimationFrame(raf);
+  }, [messages, isOpen]);
 
   // Scroll to bottom when chat opens (with delay to ensure render)
   // Reset chat size and scroll to bottom when chat opens
@@ -199,19 +200,19 @@ export function AssistantAvatar() {
     if (isOpen) {
       // Reset to default size when opening
       setChatSize({ width: 384, height: 512 });
-      
-      // Scroll to bottom with multiple attempts to ensure it works after render
+
       const scrollToBottom = () => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
+        const root = scrollRef.current;
+        const viewport = root?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+        if (!viewport) return;
+        viewport.scrollTop = viewport.scrollHeight;
       };
-      
-      // Multiple attempts to ensure scroll works after messages load
-      setTimeout(scrollToBottom, 50);
-      setTimeout(scrollToBottom, 150);
-      setTimeout(scrollToBottom, 300);
+
+      // Multiple attempts to ensure scroll works after render + messages load
       requestAnimationFrame(scrollToBottom);
+      setTimeout(scrollToBottom, 0);
+      setTimeout(scrollToBottom, 100);
+      setTimeout(scrollToBottom, 250);
     }
   }, [isOpen]);
 
