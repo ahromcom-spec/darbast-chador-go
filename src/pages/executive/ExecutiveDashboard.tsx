@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,11 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Users, ShoppingCart, Clock, CheckCircle, AlertCircle, Package, Calendar, TrendingUp, PlayCircle } from 'lucide-react';
+import { Users, ShoppingCart, Clock, CheckCircle, AlertCircle, Package, Calendar, TrendingUp, PlayCircle, Globe } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { ExecutiveOrdersSummary } from '@/components/executive/ExecutiveOrdersSummary';
+import ExecutiveGlobe from '@/components/executive/ExecutiveGlobe';
+import goldenGlobe from '@/assets/golden-globe-rotating.png';
 import { 
   BarChart, 
   Bar, 
@@ -48,6 +51,7 @@ const COLORS = {
 export default function ExecutiveDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [showGlobe, setShowGlobe] = useState(false);
   
   const { data: stats, isLoading } = useQuery({
     queryKey: ['executive-stats'],
@@ -152,12 +156,53 @@ export default function ExecutiveDashboard() {
 
   if (isLoading) return <LoadingSpinner />;
 
+  // نمایش کره زمین
+  if (showGlobe) {
+    return <ExecutiveGlobe onClose={() => setShowGlobe(false)} />;
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
         title="داشبورد مدیریت اجرا"
         description="مدیریت خدمات اجرای داربست به همراه اجناس"
       />
+
+      {/* بخش کره زمین */}
+      <Card className="overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-background to-muted/30">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div 
+              className="relative cursor-pointer group"
+              onClick={() => setShowGlobe(true)}
+            >
+              <img 
+                src={goldenGlobe} 
+                alt="کره زمین سفارشات" 
+                className="w-32 h-32 md:w-40 md:h-40 animate-[wiggle_3s_ease-in-out_infinite] drop-shadow-xl group-hover:scale-110 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-primary/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="flex-1 text-center md:text-right space-y-3">
+              <h3 className="text-xl font-bold flex items-center justify-center md:justify-end gap-2">
+                <Globe className="w-5 h-5 text-primary" />
+                نقشه سفارشات روی کره زمین
+              </h3>
+              <p className="text-muted-foreground text-sm max-w-md">
+                مشاهده موقعیت تمام سفارشات خدمات اجرای داربست به همراه اجناس روی کره زمین سه‌بعدی.
+                با کلیک روی هر سفارش می‌توانید مستقیماً به صفحه مدیریت آن بروید.
+              </p>
+              <Button 
+                onClick={() => setShowGlobe(true)}
+                className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
+              >
+                <Globe className="w-4 h-4" />
+                نمایش سفارشات روی کره
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card 
