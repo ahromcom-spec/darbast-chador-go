@@ -703,6 +703,11 @@ export function AssistantAvatar() {
     }
   };
 
+  // Don't render avatar if user is not logged in
+  if (!user) {
+    return null;
+  }
+
   return (
     <>
       {/* دکمه آواتار - قابل جابجایی */}
