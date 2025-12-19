@@ -508,6 +508,10 @@ export default function ExecutiveOrders() {
         status: stage.statusMapping
       };
 
+      // دریافت اطلاعات کاربر جاری برای ثبت approved_by
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData?.user?.id;
+
       // تنظیم فیلدها بر اساس مرحله جدید - برای برگشت به عقب هم کار کند
       if (newStage === 'pending') {
         // بازگشت به انتظار تایید - ریست همه فیلدها
@@ -519,9 +523,20 @@ export default function ExecutiveOrders() {
         updateData.execution_confirmed_at = null;
         updateData.closed_at = null;
       } else if (newStage === 'pending_execution') {
-        // بازگشت به انتظار اجرا - ریست مراحل بعدی
+        // تایید سفارش و انتقال به انتظار اجرا
+        updateData.approved_at = new Date().toISOString();
+        updateData.approved_by = currentUserId;
         updateData.execution_stage = null;
         updateData.execution_confirmed_at = null;
+        updateData.closed_at = null;
+      } else if (newStage === 'in_progress') {
+        // شروع اجرا
+        if (!updateData.approved_at) {
+          updateData.approved_at = new Date().toISOString();
+          updateData.approved_by = currentUserId;
+        }
+        updateData.execution_confirmed_at = new Date().toISOString();
+        updateData.execution_stage = null;
         updateData.closed_at = null;
       } else if (stage.executionStageMapping) {
         // مراحل اجرایی - تنظیم execution_stage
@@ -536,6 +551,7 @@ export default function ExecutiveOrders() {
       if (newStage === 'closed') {
         updateData.closed_at = new Date().toISOString();
         updateData.execution_stage = null;
+        updateData.executive_completion_date = new Date().toISOString();
       }
 
       const { error } = await supabase
