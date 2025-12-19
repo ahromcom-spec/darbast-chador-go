@@ -67,13 +67,17 @@ export function CollectionRequestDialog({
   const [existingRequest, setExistingRequest] = useState<CollectionRequest | null>(null);
   const [description, setDescription] = useState("");
   const [requestedDate, setRequestedDate] = useState<string>("");
+  const [confirmedDate, setConfirmedDate] = useState<string>("");
+  const [rejectionReason, setRejectionReason] = useState("");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<CollectionMessage[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [approvingRequest, setApprovingRequest] = useState(false);
+  const [rejectingRequest, setRejectingRequest] = useState(false);
   const [completingRequest, setCompletingRequest] = useState(false);
   const [cancellingRequest, setCancellingRequest] = useState(false);
+  const [showRejectForm, setShowRejectForm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -137,6 +141,7 @@ export function CollectionRequestDialog({
         setDescription(request.description || '');
         if (request.requested_date) {
           setRequestedDate(request.requested_date);
+          setConfirmedDate(request.requested_date); // Pre-fill with customer's requested date
         }
 
         // Fetch messages
@@ -153,6 +158,9 @@ export function CollectionRequestDialog({
         setExistingRequest(null);
         setDescription('');
         setRequestedDate('');
+        setConfirmedDate('');
+        setRejectionReason('');
+        setShowRejectForm(false);
         setMessages([]);
       }
     } catch (error: any) {
@@ -246,9 +254,18 @@ export function CollectionRequestDialog({
     }
   };
 
-  // Manager approves collection request
+  // Manager approves collection request with confirmed date
   const handleApproveRequest = async () => {
     if (!existingRequest || !isManager) return;
+
+    if (!confirmedDate) {
+      toast({
+        title: 'خطا',
+        description: 'لطفاً تاریخ جمع‌آوری را تایید یا تنظیم کنید',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setApprovingRequest(true);
     try {
@@ -261,6 +278,7 @@ export function CollectionRequestDialog({
           status: 'approved',
           approved_at: new Date().toISOString(),
           approved_by: user.id,
+          requested_date: confirmedDate, // Update with manager's confirmed date
         })
         .eq('id', existingRequest.id);
 
@@ -270,6 +288,7 @@ export function CollectionRequestDialog({
         ...existingRequest,
         status: 'approved',
         approved_at: new Date().toISOString(),
+        requested_date: confirmedDate,
       });
 
       toast({
@@ -285,6 +304,68 @@ export function CollectionRequestDialog({
       });
     } finally {
       setApprovingRequest(false);
+    }
+  };
+
+  // Manager rejects collection request
+  const handleRejectRequest = async () => {
+    if (!existingRequest || !isManager) return;
+
+    if (!rejectionReason.trim()) {
+      toast({
+        title: 'خطا',
+        description: 'لطفاً دلیل رد درخواست را وارد کنید',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setRejectingRequest(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { error } = await supabase
+        .from('collection_requests')
+        .update({
+          status: 'rejected',
+          approved_by: user.id,
+        })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      // Send rejection message
+      await supabase
+        .from('collection_request_messages')
+        .insert({
+          collection_request_id: existingRequest.id,
+          user_id: user.id,
+          message: `درخواست رد شد: ${rejectionReason}`,
+          is_staff: true,
+        });
+
+      setExistingRequest({
+        ...existingRequest,
+        status: 'rejected',
+      });
+
+      setShowRejectForm(false);
+      setRejectionReason('');
+
+      toast({
+        title: '✓ موفق',
+        description: 'درخواست جمع‌آوری رد شد',
+      });
+    } catch (error: any) {
+      console.error('Error rejecting request:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در رد درخواست',
+        variant: 'destructive',
+      });
+    } finally {
+      setRejectingRequest(false);
     }
   };
 
@@ -427,15 +508,72 @@ export function CollectionRequestDialog({
 
             {/* Manager Actions */}
             {isManager && existingRequest.status === 'pending' && (
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleApproveRequest}
-                  disabled={approvingRequest}
-                  className="flex-1"
-                >
-                  {approvingRequest ? <LoadingSpinner className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                  تایید درخواست
-                </Button>
+              <div className="space-y-4">
+                {/* Date Confirmation/Adjustment */}
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    تاریخ پیشنهادی مشتری را تایید یا تاریخ جدید تعیین کنید:
+                  </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تاریخ جمع‌آوری تایید شده *</label>
+                    <PersianDatePicker
+                      value={confirmedDate}
+                      onChange={setConfirmedDate}
+                      placeholder="انتخاب تاریخ جمع‌آوری"
+                      timeMode="ampm"
+                    />
+                  </div>
+                </div>
+
+                {!showRejectForm ? (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleApproveRequest}
+                      disabled={approvingRequest || !confirmedDate}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      {approvingRequest ? <LoadingSpinner className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                      تایید درخواست
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowRejectForm(true)}
+                      className="flex-1"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      رد درخواست
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <Textarea
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="دلیل رد درخواست را وارد کنید..."
+                      rows={2}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="destructive"
+                        onClick={handleRejectRequest}
+                        disabled={rejectingRequest || !rejectionReason.trim()}
+                        className="flex-1"
+                      >
+                        {rejectingRequest ? <LoadingSpinner className="h-4 w-4" /> : <AlertCircle className="h-4 w-4 mr-2" />}
+                        تایید رد درخواست
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowRejectForm(false);
+                          setRejectionReason('');
+                        }}
+                      >
+                        انصراف
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
