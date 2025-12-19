@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import InteractiveGlobe from '@/components/globe/InteractiveGlobe';
 import goldenGlobe from '@/assets/golden-globe-rotating.png';
+import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
 
 const Index = () => {
   const [showGlobe, setShowGlobe] = useState(false);
@@ -11,6 +12,8 @@ const Index = () => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
+      {/* آواتار دستیار هوشمند */}
+      <AssistantAvatar />
       {/* Hero Background Image */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
