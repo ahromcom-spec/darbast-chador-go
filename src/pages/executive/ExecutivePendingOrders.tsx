@@ -618,11 +618,11 @@ export default function ExecutivePendingOrders() {
         due_date: executionEndDate
       };
 
-      // تغییر وضعیت سفارش به approved و ثبت تاریخ‌های اجرا + آپدیت notes
+      // تغییر وضعیت سفارش به pending_execution و ثبت تاریخ‌های اجرا + آپدیت notes
       const { error: updateError } = await supabase
         .from('projects_v3')
         .update({
-          status: 'approved',
+          status: 'pending_execution',
           approved_by: user.id,
           approved_at: new Date().toISOString(),
           executed_by: user.id,

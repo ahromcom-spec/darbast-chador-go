@@ -39,6 +39,7 @@ interface Order {
 
 const stageLabels: Record<string, string> = {
   approved: 'در انتظار اجرا',
+  pending_execution: 'در انتظار اجرا',
   in_progress: 'در حال اجرا',
   awaiting_payment: 'در انتظار پرداخت',
   awaiting_collection: 'در انتظار جمع‌آوری',
@@ -82,6 +83,7 @@ export default function ExecutiveReady() {
 
   const fetchOrders = async () => {
     try {
+      // Include both approved & pending_execution (approved orders now move to pending_execution)
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
@@ -97,7 +99,7 @@ export default function ExecutiveReady() {
           notes,
           customer_id
         `)
-        .eq('status', 'approved')
+        .in('status', ['approved', 'pending_execution'])
         .order('code', { ascending: false });
 
       if (error) throw error;
