@@ -69,7 +69,6 @@ const getStatusBadge = (status: string) => {
     rejected: { label: 'رد شده', variant: 'destructive' },
     active: { label: 'در حال انجام', variant: 'default' },
     pending_execution: { label: 'در انتظار اجرا', variant: 'default' },
-    scheduled: { label: 'زمان‌بندی شده', variant: 'default' },
     in_progress: { label: 'در حال اجرا', variant: 'default' },
     completed: { label: 'تکمیل شده', variant: 'secondary' },
     closed: { label: 'بسته شده', variant: 'outline' },
@@ -154,7 +153,7 @@ export default function OrdersDashboard() {
   }
 
   const pendingOrders = orders.filter(o => o.status === 'pending');
-  const approvedOrders = orders.filter(o => ['approved', 'active', 'pending_execution', 'scheduled', 'in_progress'].includes(o.status));
+  const approvedOrders = orders.filter(o => ['approved', 'active', 'pending_execution', 'in_progress'].includes(o.status));
   const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'closed');
   const rejectedOrders = orders.filter(o => o.status === 'rejected');
 
@@ -392,7 +391,7 @@ export default function OrdersDashboard() {
                       </div>
                     )}
 
-                    {(['approved', 'pending_execution', 'scheduled'].includes(order.status)) && order.approved_at && (
+                    {(['approved', 'pending_execution'].includes(order.status)) && order.approved_at && (
                       <div className="pt-2 border-t">
                         <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
                           <CheckCircle className="h-4 w-4" />

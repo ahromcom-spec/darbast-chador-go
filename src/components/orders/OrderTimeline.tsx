@@ -40,7 +40,7 @@ const statusMap: Record<string, string> = {
   'pending': 'در انتظار تایید',
   'pending_execution': 'در انتظار اجرا',
   'approved': 'تایید شده',
-  'scheduled': 'زمان‌بندی شده',
+  // scheduled status removed
   'in_progress': 'در حال اجرا',
   'awaiting_collection': 'در انتظار جمع‌آوری',
   'in_collection': 'در حال جمع‌آوری',
@@ -94,7 +94,6 @@ export const OrderTimeline = ({
   const stageOrder: Record<string, number> = {
     approved: 1,
     pending_execution: 1,
-    scheduled: 1.5, // زمان‌بندی شده
     ready: 1, // آماده اجرا
     in_progress: 2,
     order_executed: 3,

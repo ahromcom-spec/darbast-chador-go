@@ -172,8 +172,8 @@ export default function ExecutiveOrders() {
     // Filter by status
     if (statusFilter !== 'all') {
       if (statusFilter === 'approved') {
-        // شامل approved، pending_execution و scheduled
-        filtered = filtered.filter(order => order.status === 'approved' || order.status === 'pending_execution' || order.status === 'scheduled');
+        // شامل approved و pending_execution
+        filtered = filtered.filter(order => order.status === 'approved' || order.status === 'pending_execution');
       } else {
         filtered = filtered.filter(order => order.status === statusFilter);
       }
@@ -221,7 +221,7 @@ export default function ExecutiveOrders() {
           location_lat,
           location_lng
         `)
-        .in('status', ['pending', 'approved', 'pending_execution', 'scheduled', 'in_progress', 'completed', 'closed'])
+        .in('status', ['pending', 'approved', 'pending_execution', 'in_progress', 'completed', 'closed'])
         // فقط سفارشات غیر بایگانی را نمایش بده
         .or('is_archived.is.null,is_archived.eq.false')
         .order('code', { ascending: false });
@@ -530,14 +530,6 @@ export default function ExecutiveOrders() {
         updateData.execution_stage = null;
         updateData.execution_confirmed_at = null;
         updateData.closed_at = null;
-      } else if (newStage === 'scheduled') {
-        // زمان‌بندی شده - حفظ approved و ست کردن execution_start_date اگر نداره
-        if (!updateData.approved_at) {
-          updateData.approved_at = new Date().toISOString();
-          updateData.approved_by = currentUserId;
-        }
-        updateData.execution_stage = null;
-        updateData.closed_at = null;
       } else if (newStage === 'in_progress') {
         // شروع اجرا
         if (!updateData.approved_at) {
@@ -600,10 +592,6 @@ export default function ExecutiveOrders() {
             pending_execution: {
               title: '✅ سفارش در انتظار اجرا',
               body: `سفارش ${orderData.code} در مرحله انتظار اجرا قرار گرفت.`
-            },
-            scheduled: {
-              title: '📅 سفارش زمان‌بندی شد',
-              body: `سفارش ${orderData.code} برای اجرا زمان‌بندی شد.`
             },
             in_progress: {
               title: '🚧 سفارش در حال اجرا',
@@ -796,7 +784,6 @@ export default function ExecutiveOrders() {
       pending: { label: 'در انتظار تایید مدیران', className: 'bg-amber-500/10 text-amber-600' },
       pending_execution: { label: 'در انتظار اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
       approved: { label: 'آماده اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
-      scheduled: { label: 'زمان‌بندی شده', className: 'bg-cyan-500/10 text-cyan-600' },
       in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
       completed: { label: 'اتمام سفارش', className: 'bg-teal-500/10 text-teal-600' },
       closed: { label: 'بسته شده', className: 'bg-gray-500/10 text-gray-600' }
@@ -816,7 +803,6 @@ export default function ExecutiveOrders() {
       pending: { label: 'در انتظار تایید مدیران', className: 'bg-amber-500/10 text-amber-600' },
       pending_execution: { label: 'در انتظار اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
       approved: { label: 'آماده اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
-      scheduled: { label: 'زمان‌بندی شده', className: 'bg-cyan-500/10 text-cyan-600' },
       in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
       completed: { label: 'اتمام سفارش', className: 'bg-teal-500/10 text-teal-600' },
       closed: { label: 'بسته شده', className: 'bg-gray-500/10 text-gray-600' }
@@ -1091,7 +1077,7 @@ export default function ExecutiveOrders() {
                         ? 'closed'
                         : order.status === 'pending'
                         ? 'pending'
-                        : (order.status === 'approved' || order.status === 'pending_execution' || order.status === 'scheduled')
+                        : (order.status === 'approved' || order.status === 'pending_execution')
                         ? 'pending_execution'
                         : order.execution_stage
                         ? (executionStageToUiKey[order.execution_stage] ?? 'awaiting_collection')
