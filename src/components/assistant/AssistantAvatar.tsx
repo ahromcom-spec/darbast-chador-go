@@ -192,12 +192,18 @@ export function AssistantAvatar() {
       // Reset to default size when opening
       setChatSize({ width: 384, height: 512 });
       
-      // Scroll to bottom with delay to ensure render
-      setTimeout(() => {
+      // Scroll to bottom with multiple attempts to ensure it works after render
+      const scrollToBottom = () => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-      }, 100);
+      };
+      
+      // Multiple attempts to ensure scroll works after messages load
+      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToBottom, 150);
+      setTimeout(scrollToBottom, 300);
+      requestAnimationFrame(scrollToBottom);
     }
   }, [isOpen]);
 
