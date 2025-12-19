@@ -571,15 +571,15 @@ export default function OrderDetail() {
 
   const handleCancelOrder = async () => {
     if (!order) return;
-    
+
     setIsCancelling(true);
     try {
       const { error } = await supabase
         .from('projects_v3')
-        .update({ 
+        .update({
           status: 'rejected',
           rejection_reason: 'لغو شده توسط کاربر',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', order.id);
 
@@ -1837,9 +1837,11 @@ export default function OrderDetail() {
                 <div className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-destructive mb-1">سفارش رد شده</p>
+                    <p className="font-medium text-destructive mb-1">
+                      {order.rejection_reason === 'لغو شده توسط کاربر' ? 'سفارش لغو شده' : 'سفارش رد شده'}
+                    </p>
                     <p className="text-sm text-destructive/80">
-                      دلیل رد: {order.rejection_reason}
+                      دلیل: {order.rejection_reason}
                     </p>
                   </div>
                 </div>
