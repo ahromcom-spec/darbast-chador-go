@@ -27,6 +27,7 @@ interface OrderTimelineProps {
   rejectionReason?: string;
   executionStage?: string | null; // مرحله اجرایی فعلی
   executionStageUpdatedAt?: string | null;
+  paymentConfirmedAt?: string | null; // تاریخ تایید پرداخت
   approvals?: Array<{
     approver_role: string;
     approved_at: string | null;
@@ -64,6 +65,7 @@ export const OrderTimeline = ({
   rejectionReason,
   executionStage,
   executionStageUpdatedAt,
+  paymentConfirmedAt,
   approvals = [],
 }: OrderTimelineProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -198,12 +200,12 @@ export const OrderTimeline = ({
       status: 'awaiting_payment',
       label: 'در انتظار پرداخت',
       icon: Clock,
-      date: executionStage === 'awaiting_payment' ? executionStageUpdatedAt : undefined,
-      completed: isStageCompletedByNumber(4),
-      active: isCurrentStageByNumber(3) || isCurrentStageByNumber(4), // فعال بعد از نصب
-      details: isStageCompletedByNumber(4)
+      date: paymentConfirmedAt || (executionStage === 'awaiting_payment' ? executionStageUpdatedAt : undefined),
+      completed: !!paymentConfirmedAt, // فقط وقتی پرداخت تایید شده باشد
+      active: (isCurrentStageByNumber(3) || isCurrentStageByNumber(4) || isCurrentStageByNumber(5) || isCurrentStageByNumber(6)) && !paymentConfirmedAt,
+      details: paymentConfirmedAt
         ? 'پرداخت با موفقیت انجام شد ✓'
-        : (isCurrentStageByNumber(3) || isCurrentStageByNumber(4))
+        : (currentStageNumber >= 3)
           ? 'لطفاً مبلغ سفارش را پرداخت کنید'
           : undefined,
     },
