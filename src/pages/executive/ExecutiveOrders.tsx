@@ -569,7 +569,10 @@ export default function ExecutiveOrders() {
         .update(updateData)
         .eq('id', orderId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('RLS/DB error updating stage:', error);
+        throw error;
+      }
 
       // ارسال اعلان به مشتری
       if (orderData?.customer_id) {
@@ -647,12 +650,12 @@ export default function ExecutiveOrders() {
       });
 
       fetchOrders();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error changing stage:', error);
       toast({
         variant: 'destructive',
-        title: 'خطا',
-        description: 'خطا در تغییر مرحله سفارش'
+        title: 'خطا در تغییر مرحله',
+        description: error.message || 'خطا در تغییر مرحله سفارش. ممکن است دسترسی لازم را نداشته باشید.'
       });
     }
   };

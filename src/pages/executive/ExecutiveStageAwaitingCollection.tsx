@@ -41,6 +41,7 @@ interface Order {
 
 const stageLabels: Record<string, string> = {
   approved: 'در انتظار اجرا',
+  pending_execution: 'در انتظار اجرا',
   in_progress: 'در حال اجرا',
   awaiting_payment: 'در انتظار پرداخت',
   awaiting_collection: 'در انتظار جمع‌آوری',
