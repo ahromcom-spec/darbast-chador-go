@@ -10,7 +10,8 @@ export const OrderWorkflowStatus = ({ status, executionStage }: OrderWorkflowSta
   const effectiveStatus = (() => {
     // When managers change "stage" we store detail in execution_stage,
     // but customers often only see `status` in UI. Merge them for correct display.
-    if ((status === 'completed' || status === 'in_progress') && executionStage) {
+    // Priority: if execution_stage is set and is a known stage, use it regardless of status
+    if (executionStage) {
       if (
         executionStage === 'awaiting_payment' ||
         executionStage === 'awaiting_collection' ||
