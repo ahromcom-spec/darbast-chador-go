@@ -428,6 +428,62 @@ export default function ExecutiveOrders() {
     }
   };
 
+  // علامت زدن سفارش به عنوان اجرا شده
+  const handleMarkAsExecuted = async (orderId: string, orderCode: string) => {
+    try {
+      // دریافت اطلاعات مشتری
+      const { data: orderData } = await supabase
+        .from('projects_v3')
+        .select('customer_id')
+        .eq('id', orderId)
+        .single();
+
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          execution_stage: 'order_executed',
+          execution_stage_updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // ارسال اعلان به مشتری
+      if (orderData?.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', orderData.customer_id)
+          .single();
+
+        if (customerData?.user_id) {
+          const validated = sendNotificationSchema.parse({
+            _user_id: customerData.user_id,
+            _title: '✅ سفارش اجرا شد',
+            _body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد.`,
+            _link: '/user/my-orders',
+            _type: 'success'
+          });
+          await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+        }
+      }
+
+      toast({
+        title: '✓ اجرا شد',
+        description: `سفارش ${orderCode} با موفقیت اجرا شد.`
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error marking as executed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در ثبت اجرای سفارش'
+      });
+    }
+  };
+
   // تغییر مرحله سفارش به هر مرحله دلخواه
   const handleStageChange = async (orderId: string, newStage: string) => {
     const stage = executionStages.find(s => s.key === newStage);
@@ -503,8 +559,12 @@ export default function ExecutiveOrders() {
               body: `سفارش ${orderData.code} در مرحله انتظار اجرا قرار گرفت.`
             },
             in_progress: {
-              title: '🚧 سفارش اجرا شد',
-              body: `اجرای سفارش ${orderData.code} انجام شده است.`
+              title: '🚧 سفارش در حال اجرا',
+              body: `سفارش ${orderData.code} وارد مرحله اجرا شد.`
+            },
+            order_executed: {
+              title: '✅ سفارش اجرا شد',
+              body: `سفارش ${orderData.code} با موفقیت اجرا شد.`
             },
             awaiting_collection: {
               title: '📦 سفارش در انتظار جمع‌آوری',
@@ -1044,6 +1104,17 @@ export default function ExecutiveOrders() {
                     افزودن پرسنل
                   </Button>
 
+                  {/* دکمه اجرا شد - برای سفارش‌های در حال اجرا */}
+                  {order.status === 'in_progress' && !order.execution_stage && (
+                    <Button
+                      onClick={() => handleMarkAsExecuted(order.id, order.code)}
+                      size="sm"
+                      className="gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      اجرا شد
+                    </Button>
+                  )}
 
                   {order.status === 'paid' && !order.executive_completion_date && (
                     <Button
