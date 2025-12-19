@@ -1800,6 +1800,7 @@ export default function OrderDetail() {
             rejectionReason={order.rejection_reason}
             executionStage={order.execution_stage}
             executionStageUpdatedAt={order.execution_stage_updated_at}
+            paymentConfirmedAt={order.payment_confirmed_at}
             approvals={approvals}
           />
 
