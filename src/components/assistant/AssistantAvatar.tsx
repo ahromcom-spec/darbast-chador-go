@@ -21,10 +21,49 @@ type Message = {
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
+const STORAGE_KEY = 'ahrom_assistant_chat_history';
+const MAX_MESSAGES = 50;
+const EXPIRY_MONTHS = 6;
+
+type StoredData = {
+  messages: Message[];
+  timestamp: number;
+};
+
+const loadMessagesFromStorage = (): Message[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return [];
+    
+    const data: StoredData = JSON.parse(stored);
+    const expiryTime = EXPIRY_MONTHS * 30 * 24 * 60 * 60 * 1000; // 6 months in ms
+    
+    if (Date.now() - data.timestamp > expiryTime) {
+      localStorage.removeItem(STORAGE_KEY);
+      return [];
+    }
+    
+    return data.messages.slice(-MAX_MESSAGES);
+  } catch {
+    return [];
+  }
+};
+
+const saveMessagesToStorage = (messages: Message[]) => {
+  try {
+    const data: StoredData = {
+      messages: messages.slice(-MAX_MESSAGES),
+      timestamp: Date.now()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // Storage full or unavailable
+  }
+};
 
 export function AssistantAvatar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => loadMessagesFromStorage());
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -49,6 +88,13 @@ export function AssistantAvatar() {
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMessagesToStorage(messages);
     }
   }, [messages]);
 
