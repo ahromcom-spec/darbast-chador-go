@@ -165,8 +165,13 @@ export function AssistantAvatar() {
   }, [messages]);
 
   // Scroll to bottom when chat opens (with delay to ensure render)
+  // Reset chat size and scroll to bottom when chat opens
   useEffect(() => {
-    if (isOpen && scrollRef.current) {
+    if (isOpen) {
+      // Reset to default size when opening
+      setChatSize({ width: 384, height: 512 });
+      
+      // Scroll to bottom with delay to ensure render
       setTimeout(() => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
