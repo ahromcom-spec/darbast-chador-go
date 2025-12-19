@@ -19,11 +19,16 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { order_code, order_id, customer_name, customer_phone, service_type } = await req.json();
+    const { order_code, order_id, customer_name, customer_phone, service_type, orderCode, orderId, customerName, address, messageType } = await req.json();
 
-    console.log('[NotifyManagers] New order notification request:', { order_code, order_id, customer_name });
+    // Support both naming conventions
+    const finalOrderCode = order_code || orderCode;
+    const finalOrderId = order_id || orderId;
+    const finalCustomerName = customer_name || customerName;
 
-    if (!order_code || !order_id) {
+    console.log('[NotifyManagers] Notification request:', { orderCode: finalOrderCode, orderId: finalOrderId, customerName: finalCustomerName, messageType });
+
+    if (!finalOrderCode || !finalOrderId) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields: order_code and order_id' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -58,9 +63,21 @@ serve(async (req) => {
     const uniqueManagerIds = [...new Set(managers.map(m => m.user_id))];
     console.log('[NotifyManagers] Found', uniqueManagerIds.length, 'unique managers to notify');
 
-    const title = `سفارش جدید ${order_code}`;
-    const body = `سفارش جدید از ${customer_name || 'مشتری'} ${customer_phone ? `(${customer_phone})` : ''} ثبت شد. ${service_type || ''}`.trim();
-    const link = `/sales/pending`;
+    // Determine message content based on messageType
+    let title: string;
+    let body: string;
+    let link: string;
+
+    if (messageType === 'expert_price_confirmed') {
+      title = `✓ تایید قیمت سفارش ${finalOrderCode}`;
+      body = `مشتری ${finalCustomerName || 'ناشناس'} قیمت سفارش را تایید کرد. سفارش آماده تایید نهایی و اجرا است.`;
+      link = `/executive/pending?orderId=${finalOrderId}`;
+    } else {
+      // Default: new order notification
+      title = `سفارش جدید ${finalOrderCode}`;
+      body = `سفارش جدید از ${finalCustomerName || 'مشتری'} ${customer_phone ? `(${customer_phone})` : ''} ثبت شد. ${service_type || ''}`.trim();
+      link = `/sales/pending`;
+    }
 
     // ایجاد نوتیفیکیشن داخلی برای همه مدیران
     const notifications = uniqueManagerIds.map(user_id => ({

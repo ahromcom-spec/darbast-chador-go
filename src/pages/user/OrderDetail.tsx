@@ -784,6 +784,21 @@ export default function OrderDetail() {
 
       if (error) throw error;
 
+      // Send notification to managers that price was confirmed
+      try {
+        await supabase.functions.invoke('notify-managers-new-order', {
+          body: {
+            orderCode: order.code,
+            orderId: order.id,
+            customerName: order.customer_name || parsedNotes?.customerName,
+            address: order.address,
+            messageType: 'expert_price_confirmed'
+          }
+        });
+      } catch (notifErr) {
+        console.log('Manager notification skipped:', notifErr);
+      }
+
       toast({
         title: '✓ قیمت تایید شد',
         description: 'سفارش شما وارد روال عادی شد و در انتظار بررسی مدیران قرار گرفت.',
