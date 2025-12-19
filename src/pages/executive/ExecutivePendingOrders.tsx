@@ -239,6 +239,28 @@ export default function ExecutivePendingOrders() {
 
   useEffect(() => {
     fetchOrders();
+
+    // Subscribe to realtime changes on projects_v3
+    const channel = supabase
+      .channel('pending-orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects_v3'
+        },
+        (payload) => {
+          console.log('Realtime update received:', payload);
+          // Refetch orders when any change happens
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Auto-open order details when orderId is in URL and orders are loaded
