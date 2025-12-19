@@ -29,7 +29,6 @@ import { useAuth } from '@/contexts/AuthContext';
 const executionStages = [
   { key: 'pending', label: 'در انتظار تایید مدیران', statusMapping: 'pending', executionStageMapping: null },
   { key: 'pending_execution', label: 'در انتظار اجرا', statusMapping: 'pending_execution', executionStageMapping: null },
-  { key: 'scheduled', label: 'در انتظار اجرا (زمان‌بندی شده)', statusMapping: 'scheduled', executionStageMapping: null },
   { key: 'in_progress', label: 'در حال اجرا', statusMapping: 'in_progress', executionStageMapping: null },
   { key: 'order_executed', label: 'اجرا شد', statusMapping: 'in_progress', executionStageMapping: 'order_executed' },
   { key: 'awaiting_payment', label: 'در انتظار پرداخت', statusMapping: 'completed', executionStageMapping: 'awaiting_payment' },
@@ -1092,9 +1091,7 @@ export default function ExecutiveOrders() {
                         ? 'closed'
                         : order.status === 'pending'
                         ? 'pending'
-                        : order.status === 'scheduled'
-                        ? 'scheduled'
-                        : (order.status === 'approved' || order.status === 'pending_execution')
+                        : (order.status === 'approved' || order.status === 'pending_execution' || order.status === 'scheduled')
                         ? 'pending_execution'
                         : order.execution_stage
                         ? (executionStageToUiKey[order.execution_stage] ?? 'awaiting_collection')
