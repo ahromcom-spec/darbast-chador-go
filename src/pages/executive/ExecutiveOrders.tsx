@@ -27,14 +27,14 @@ import { useAuth } from '@/contexts/AuthContext';
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 const executionStages = [
   { key: 'pending', label: 'در انتظار تایید مدیران', statusMapping: 'pending', executionStageMapping: null },
-  { key: 'approved', label: 'در انتظار اجرا', statusMapping: 'approved', executionStageMapping: null },
+  { key: 'pending_execution', label: 'در انتظار اجرا', statusMapping: 'pending_execution', executionStageMapping: null },
   { key: 'in_progress', label: 'در حال اجرا', statusMapping: 'in_progress', executionStageMapping: null },
   { key: 'order_executed', label: 'اجرا شد', statusMapping: 'in_progress', executionStageMapping: 'order_executed' },
   { key: 'awaiting_payment', label: 'در انتظار پرداخت', statusMapping: 'completed', executionStageMapping: 'awaiting_payment' },
   { key: 'awaiting_collection', label: 'در انتظار جمع‌آوری', statusMapping: 'completed', executionStageMapping: 'awaiting_collection' },
   { key: 'in_collection', label: 'در حال جمع‌آوری', statusMapping: 'completed', executionStageMapping: 'in_collection' },
   { key: 'collected', label: 'جمع‌آوری شد', statusMapping: 'completed', executionStageMapping: 'collected' },
-  { key: 'closed', label: 'تکمیل سفارش', statusMapping: 'closed', executionStageMapping: null },
+  { key: 'closed', label: 'اتمام سفارش', statusMapping: 'closed', executionStageMapping: null },
 ];
 
 // Map DB execution_stage -> UI select key
@@ -170,7 +170,12 @@ export default function ExecutiveOrders() {
 
     // Filter by status
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
+      if (statusFilter === 'approved') {
+        // شامل approved و pending_execution
+        filtered = filtered.filter(order => order.status === 'approved' || order.status === 'pending_execution');
+      } else {
+        filtered = filtered.filter(order => order.status === statusFilter);
+      }
     }
 
     // Filter by search term
@@ -513,7 +518,7 @@ export default function ExecutiveOrders() {
         updateData.execution_end_date = null;
         updateData.execution_confirmed_at = null;
         updateData.closed_at = null;
-      } else if (newStage === 'approved') {
+      } else if (newStage === 'pending_execution') {
         // بازگشت به انتظار اجرا - ریست مراحل بعدی
         updateData.execution_stage = null;
         updateData.execution_confirmed_at = null;
@@ -554,7 +559,7 @@ export default function ExecutiveOrders() {
               title: '⏳ سفارش در انتظار تایید',
               body: `سفارش ${orderData.code} به مرحله انتظار تایید بازگشت.`
             },
-            approved: {
+            pending_execution: {
               title: '✅ سفارش در انتظار اجرا',
               body: `سفارش ${orderData.code} در مرحله انتظار اجرا قرار گرفت.`
             },
@@ -864,7 +869,7 @@ export default function ExecutiveOrders() {
                 size="sm"
                 onClick={() => setStatusFilter('approved')}
               >
-                تایید شده ({orders.filter(o => o.status === 'approved').length})
+                تایید شده ({orders.filter(o => o.status === 'approved' || o.status === 'pending_execution').length})
               </Button>
               <Button
                 variant={statusFilter === 'completed' ? 'default' : 'outline'}
@@ -931,7 +936,7 @@ export default function ExecutiveOrders() {
             const isSelected = selectedOrderIds.has(order.id);
             return (
             <Card key={order.id} className={`hover:shadow-lg transition-all duration-200 ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} ${
-              order.status === 'approved' ? 'border-l-4 border-l-yellow-500' :
+              (order.status === 'approved' || order.status === 'pending_execution') ? 'border-l-4 border-l-yellow-500' :
               order.status === 'in_progress' ? 'border-l-4 border-l-blue-500' :
               order.status === 'completed' ? 'border-l-4 border-l-purple-500' :
               'border-l-4 border-l-green-500'
@@ -999,8 +1004,8 @@ export default function ExecutiveOrders() {
                         ? 'closed'
                         : order.status === 'pending'
                         ? 'pending'
-                        : order.status === 'approved'
-                        ? 'approved'
+                        : (order.status === 'approved' || order.status === 'pending_execution')
+                        ? 'pending_execution'
                         : order.execution_stage
                         ? (executionStageToUiKey[order.execution_stage] ?? 'awaiting_collection')
                         : order.status === 'in_progress'

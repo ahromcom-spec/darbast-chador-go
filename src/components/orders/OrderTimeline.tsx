@@ -127,7 +127,7 @@ export const OrderTimeline = ({
   };
 
   // تعیین وضعیت تایید شده یا نه
-  const isApprovedOrBeyond = currentStageNumber >= 1 || !!executionStage || ['approved', 'in_progress', 'completed', 'closed'].includes(orderStatus);
+  const isApprovedOrBeyond = currentStageNumber >= 1 || !!executionStage || ['approved', 'pending_execution', 'in_progress', 'completed', 'closed'].includes(orderStatus);
 
   const steps: TimelineStep[] = [
     {
@@ -156,17 +156,17 @@ export const OrderTimeline = ({
             : 'سفارش در انتظار بررسی و تایید مدیران است',
     },
     {
-      status: 'approved',
+      status: 'pending_execution',
       label: 'در انتظار اجرا',
       icon: Clock,
       date: finalApprovalDate,
       completed: isStageCompletedByNumber(1),
-      active: isCurrentStageByNumber(1),
+      active: isCurrentStageByNumber(1) || orderStatus === 'pending_execution',
       details: isStageCompletedByNumber(1)
         ? 'سفارش وارد مرحله اجرا شد ✓'
         : executionStartDate 
           ? `زمان شروع اجرا: ${formatDate(executionStartDate)?.date} - ${formatDate(executionStartDate)?.time}`
-          : isCurrentStageByNumber(1)
+          : (isCurrentStageByNumber(1) || orderStatus === 'pending_execution')
             ? 'سفارش تایید شد و منتظر شروع اجراست'
             : undefined,
     },

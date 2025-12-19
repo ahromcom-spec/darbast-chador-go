@@ -86,12 +86,12 @@ export function ExecutiveOrdersSummary() {
                     <Badge
                       variant="secondary"
                       className={
-                        order.status === 'approved'
+                        (order.status === 'approved' || order.status === 'pending_execution')
                           ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
                           : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                       }
                     >
-                      {order.status === 'approved' ? 'آماده اجرا' : 'در حال اجرا'}
+                      {(order.status === 'approved' || order.status === 'pending_execution') ? 'آماده اجرا' : 'در حال اجرا'}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">

@@ -52,7 +52,7 @@ export const useOrderStats = () => {
       const statsData: OrderStats = {
         total: orders?.length || 0,
         pending: orders?.filter(o => o.status === 'pending').length || 0,
-        approved: orders?.filter(o => o.status === 'approved').length || 0,
+        approved: orders?.filter(o => o.status === 'approved' || o.status === 'pending_execution').length || 0,
         in_progress: orders?.filter(o => o.status === 'in_progress').length || 0,
         completed: orders?.filter(o => o.status === 'completed').length || 0,
         paid: orders?.filter(o => o.status === 'paid').length || 0,
