@@ -98,7 +98,7 @@ export default function ExecutiveReady() {
           customer_id
         `)
         .eq('status', 'approved')
-        .order('execution_start_date', { ascending: true, nullsFirst: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 

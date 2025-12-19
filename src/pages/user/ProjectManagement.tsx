@@ -62,7 +62,7 @@ export default function ProjectManagement() {
           )
         `)
         .eq("customer_id", customerData.id)
-        .order("created_at", { ascending: false });
+        .order("code", { ascending: false });
 
       if (error) throw error;
       setProjects(data || []);

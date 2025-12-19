@@ -139,7 +139,7 @@ export const CEOOrders = () => {
         `)
         .eq('status', 'pending')
         .eq('subcategory_id', subcategory.id)
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 

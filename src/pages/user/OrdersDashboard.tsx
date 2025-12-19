@@ -126,7 +126,7 @@ export default function OrdersDashboard() {
           district:districts(name)
         `)
         .eq("customer_id", customer.id)
-        .order("created_at", { ascending: false });
+        .order("code", { ascending: false });
 
       if (ordersError) throw ordersError;
 
