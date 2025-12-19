@@ -1104,7 +1104,7 @@ export default function ExecutiveOrders() {
                         ? 'awaiting_collection'
                         : order.status
                     }
-                    disabled={order.status === 'closed'}
+                    disabled={false}
                     onValueChange={(value) => {
                       setPendingStageChange({ orderId: order.id, newStage: value });
                       setStageChangeConfirmOpen(true);
