@@ -22,8 +22,8 @@ type Message = {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
 const STORAGE_KEY = 'ahrom_assistant_chat_history';
-const MAX_MESSAGES = 50;
-const EXPIRY_MONTHS = 6;
+const MAX_MESSAGES = 1000;
+const EXPIRY_MONTHS = 12;
 
 type StoredData = {
   messages: Message[];
