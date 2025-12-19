@@ -19,6 +19,7 @@ import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaff
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
+import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 
 interface Order {
   id: string;
@@ -58,6 +59,7 @@ export default function ExecutiveStageAwaitingCollection() {
   const [searchTerm, setSearchTerm] = useState('');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
+  const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const { toast } = useToast();
   
   // Archive functionality
@@ -449,18 +451,34 @@ export default function ExecutiveStageAwaitingCollection() {
                 {/* نمایش تاریخ درخواست جمع‌آوری از طرف مشتری */}
                 {order.collection_request?.requested_date && (
                   <div className="bg-orange-50 dark:bg-orange-950 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
-                    <div className="flex items-center gap-2 text-sm">
-                      <PackageOpen className="h-4 w-4 text-orange-600" />
-                      <span className="font-medium text-orange-700 dark:text-orange-300">تاریخ درخواست جمع‌آوری مشتری:</span>
-                      <span className="font-medium text-orange-800 dark:text-orange-200">
-                        {new Date(order.collection_request.requested_date).toLocaleDateString('fa-IR', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <PackageOpen className="h-4 w-4 text-orange-600" />
+                        <span className="font-medium text-orange-700 dark:text-orange-300">تاریخ درخواست جمع‌آوری مشتری:</span>
+                        <span className="font-medium text-orange-800 dark:text-orange-200">
+                          {new Date(order.collection_request.requested_date).toLocaleDateString('fa-IR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      {order.collection_request?.status === 'pending' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setCollectionDialogOpen(true);
+                          }}
+                          className="gap-1 text-orange-700 border-orange-300 hover:bg-orange-100"
+                        >
+                          <Calendar className="h-3 w-3" />
+                          بررسی درخواست
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -615,6 +633,21 @@ export default function ExecutiveStageAwaitingCollection() {
           open={collaboratorDialogOpen}
           onOpenChange={setCollaboratorDialogOpen}
           onCollaboratorAdded={fetchOrders}
+        />
+      )}
+
+      {/* Collection Request Dialog - برای مدیریت درخواست جمع‌آوری */}
+      {selectedOrder && (
+        <CollectionRequestDialog
+          open={collectionDialogOpen}
+          onOpenChange={(open) => {
+            setCollectionDialogOpen(open);
+            if (!open) fetchOrders();
+          }}
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          customerId=""
+          isManager={true}
         />
       )}
     </div>
