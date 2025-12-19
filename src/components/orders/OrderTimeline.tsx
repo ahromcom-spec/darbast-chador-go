@@ -203,7 +203,8 @@ export const OrderTimeline = ({
       icon: Clock,
       date: paymentConfirmedAt || (executionStage === 'awaiting_payment' ? executionStageUpdatedAt : undefined),
       completed: !!paymentConfirmedAt, // فقط وقتی پرداخت تایید شده باشد
-      active: (isCurrentStageByNumber(3) || isCurrentStageByNumber(4) || isCurrentStageByNumber(5) || isCurrentStageByNumber(6)) && !paymentConfirmedAt,
+      // آیکن سبز بماند تا پرداخت انجام شود - از مرحله اجرا شده تا پرداخت
+      active: (currentStageNumber >= 3) && !paymentConfirmedAt,
       details: paymentConfirmedAt
         ? 'پرداخت با موفقیت انجام شد ✓'
         : (currentStageNumber >= 3)
