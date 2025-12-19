@@ -727,8 +727,45 @@ export default function ExecutiveOrders() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  // نمایش وضعیت سفارش بر اساس status و execution_stage
+  const getOrderStageLabel = (order: Order): { label: string; className: string } => {
+    // ابتدا بررسی execution_stage
+    if (order.execution_stage) {
+      const stageLabels: Record<string, { label: string; className: string }> = {
+        order_executed: { label: 'اجرا شد', className: 'bg-emerald-500/10 text-emerald-600' },
+        awaiting_payment: { label: 'در انتظار پرداخت', className: 'bg-orange-500/10 text-orange-600' },
+        awaiting_collection: { label: 'در انتظار جمع‌آوری', className: 'bg-purple-500/10 text-purple-600' },
+        in_collection: { label: 'در حال جمع‌آوری', className: 'bg-indigo-500/10 text-indigo-600' },
+        collected: { label: 'جمع‌آوری شد', className: 'bg-teal-500/10 text-teal-600' },
+      };
+      if (stageLabels[order.execution_stage]) {
+        return stageLabels[order.execution_stage];
+      }
+    }
+
+    // سپس بررسی status
     const statusMap: Record<string, { label: string; className: string }> = {
+      pending: { label: 'در انتظار تایید مدیران', className: 'bg-amber-500/10 text-amber-600' },
+      pending_execution: { label: 'در انتظار اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
+      approved: { label: 'آماده اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
+      in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
+      completed: { label: 'اتمام سفارش', className: 'bg-teal-500/10 text-teal-600' },
+      closed: { label: 'بسته شده', className: 'bg-gray-500/10 text-gray-600' }
+    };
+
+    return statusMap[order.status] || { label: order.status, className: '' };
+  };
+
+  const getStatusBadge = (status: string, order?: Order) => {
+    if (order) {
+      const { label, className } = getOrderStageLabel(order);
+      return <Badge className={className}>{label}</Badge>;
+    }
+    
+    // Fallback برای استفاده‌های قدیمی بدون order
+    const statusMap: Record<string, { label: string; className: string }> = {
+      pending: { label: 'در انتظار تایید مدیران', className: 'bg-amber-500/10 text-amber-600' },
+      pending_execution: { label: 'در انتظار اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
       approved: { label: 'آماده اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
       in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
       completed: { label: 'اتمام سفارش', className: 'bg-teal-500/10 text-teal-600' },
@@ -964,7 +1001,7 @@ export default function ExecutiveOrders() {
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
-                      {getStatusBadge(order.status)}
+                      {getStatusBadge(order.status, order)}
                     </div>
                     
                     <div className="space-y-1 text-sm">
