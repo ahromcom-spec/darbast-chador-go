@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, User, Image } from 'lucide-react';
+import { X, Send, User, Image, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,6 +19,8 @@ type Message = {
   role: 'user' | 'assistant'; 
   content: string;
   attachments?: MessageContent[];
+  timestamp?: string; // ISO string
+  id?: string; // Database ID for deletion
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
@@ -29,6 +31,13 @@ const EXPIRY_MONTHS = 12;
 type StoredData = {
   messages: Message[];
   timestamp: number;
+};
+
+// Format timestamp to Persian-friendly format
+const formatMessageTime = (timestamp?: string): string => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
 };
 
 // Load messages from localStorage (for guests)
@@ -73,7 +82,7 @@ const loadMessagesFromDB = async (userId: string): Promise<Message[]> => {
     
     const { data, error } = await supabase
       .from('assistant_chat_messages')
-      .select('role, content, attachments, created_at')
+      .select('id, role, content, attachments, created_at')
       .eq('user_id', userId)
       .gte('created_at', oneYearAgo.toISOString())
       .order('created_at', { ascending: true })
@@ -85,9 +94,11 @@ const loadMessagesFromDB = async (userId: string): Promise<Message[]> => {
     }
     
     return (data || []).map(msg => ({
+      id: msg.id,
       role: msg.role as 'user' | 'assistant',
       content: msg.content,
-      attachments: msg.attachments as MessageContent[] | undefined
+      attachments: msg.attachments as MessageContent[] | undefined,
+      timestamp: msg.created_at
     }));
   } catch (err) {
     console.error('Error loading messages from DB:', err);
@@ -95,19 +106,52 @@ const loadMessagesFromDB = async (userId: string): Promise<Message[]> => {
   }
 };
 
-// Save a message to database
-const saveMessageToDB = async (userId: string, message: Message) => {
+// Save a message to database and return the saved message with id
+const saveMessageToDB = async (userId: string, message: Message): Promise<Message | null> => {
   try {
-    await supabase
+    const { data, error } = await supabase
       .from('assistant_chat_messages')
       .insert({
         user_id: userId,
         role: message.role,
         content: message.content,
         attachments: message.attachments || null
-      });
+      })
+      .select('id, created_at')
+      .single();
+    
+    if (error) {
+      console.error('Error saving message to DB:', error);
+      return null;
+    }
+    
+    return {
+      ...message,
+      id: data.id,
+      timestamp: data.created_at
+    };
   } catch (err) {
     console.error('Error saving message to DB:', err);
+    return null;
+  }
+};
+
+// Delete a message from database
+const deleteMessageFromDB = async (messageId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('assistant_chat_messages')
+      .delete()
+      .eq('id', messageId);
+    
+    if (error) {
+      console.error('Error deleting message from DB:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Error deleting message from DB:', err);
+    return false;
   }
 };
 
@@ -578,42 +622,78 @@ export function AssistantAvatar() {
     const userMsg: Message = { 
       role: 'user', 
       content: input.trim() || 'این تصویر را ببین',
-      attachments: attachments.length > 0 ? attachments : undefined
+      attachments: attachments.length > 0 ? attachments : undefined,
+      timestamp: new Date().toISOString()
     };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
+    
     setInput('');
     setSelectedImage(null);
     setIsLoading(true);
 
-    // Save user message to DB for logged-in users
+    // Save user message to DB for logged-in users and get the saved message with id
     if (user?.id) {
-      saveMessageToDB(user.id, userMsg);
+      const savedUserMsg = await saveMessageToDB(user.id, userMsg);
+      setMessages(prev => [...prev, savedUserMsg || userMsg]);
+    } else {
+      setMessages(prev => [...prev, userMsg]);
     }
 
     try {
-      await streamChat(newMessages, imageBase64);
+      await streamChat([...messages, userMsg], imageBase64);
       
       // After streaming is complete, save assistant message to DB
       setMessages(prev => {
         const lastMsg = prev[prev.length - 1];
-        if (lastMsg?.role === 'assistant' && user?.id) {
-          saveMessageToDB(user.id, lastMsg);
+        if (lastMsg?.role === 'assistant' && user?.id && !lastMsg.id) {
+          saveMessageToDB(user.id, { ...lastMsg, timestamp: new Date().toISOString() }).then(savedMsg => {
+            if (savedMsg) {
+              setMessages(p => p.map((m, i) => i === p.length - 1 ? savedMsg : m));
+            }
+          });
         }
         return prev;
       });
     } catch (error) {
       console.error('Chat error:', error);
-      const errorMsg: Message = { role: 'assistant', content: 'متأسفانه خطایی رخ داد. لطفاً دوباره تلاش کنید.' };
-      setMessages(prev => [...prev, errorMsg]);
+      const errorMsg: Message = { 
+        role: 'assistant', 
+        content: 'متأسفانه خطایی رخ داد. لطفاً دوباره تلاش کنید.',
+        timestamp: new Date().toISOString()
+      };
       
-      // Save error message to DB too
       if (user?.id) {
-        saveMessageToDB(user.id, errorMsg);
+        const savedErrorMsg = await saveMessageToDB(user.id, errorMsg);
+        setMessages(prev => [...prev, savedErrorMsg || errorMsg]);
+      } else {
+        setMessages(prev => [...prev, errorMsg]);
       }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDeleteMessage = async (index: number) => {
+    const message = messages[index];
+    
+    // If message has ID (saved in DB), delete from DB
+    if (message.id && user?.id) {
+      const deleted = await deleteMessageFromDB(message.id);
+      if (!deleted) {
+        toast.error('خطا در حذف پیام');
+        return;
+      }
+    }
+    
+    // Remove from local state
+    setMessages(prev => prev.filter((_, i) => i !== index));
+    
+    // Update localStorage for guests
+    if (!user?.id) {
+      const newMessages = messages.filter((_, i) => i !== index);
+      saveMessagesToStorage(newMessages);
+    }
+    
+    toast.success('پیام حذف شد');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -740,9 +820,9 @@ export function AssistantAvatar() {
               <div className="space-y-3">
                 {messages.map((msg, idx) => (
                   <div
-                    key={idx}
+                    key={msg.id || idx}
                     className={cn(
-                      "flex gap-2",
+                      "flex gap-2 group",
                       msg.role === 'user' ? "flex-row-reverse" : "flex-row"
                     )}
                   >
@@ -756,20 +836,38 @@ export function AssistantAvatar() {
                         <img src={assistantImage} alt="دستیار" className="w-full h-full object-cover" />
                       )}
                     </div>
-                    <div className={cn(
-                      "max-w-[80%] rounded-2xl text-sm leading-relaxed overflow-hidden",
-                      msg.role === 'user' 
-                        ? "bg-primary text-primary-foreground rounded-tr-sm" 
-                        : "bg-muted rounded-tl-sm"
-                    )}>
-                      {msg.attachments?.map((att, i) => (
-                        <div key={i}>
-                          {att.type === 'image' && att.imageUrl && (
-                            <img src={att.imageUrl} alt="تصویر" className="w-full max-h-40 object-cover" />
-                          )}
-                        </div>
-                      ))}
-                      <p className="px-3 py-2">{msg.content}</p>
+                    <div className="flex flex-col gap-1 max-w-[80%]">
+                      <div className={cn(
+                        "rounded-2xl text-sm leading-relaxed overflow-hidden",
+                        msg.role === 'user' 
+                          ? "bg-primary text-primary-foreground rounded-tr-sm" 
+                          : "bg-muted rounded-tl-sm"
+                      )}>
+                        {msg.attachments?.map((att, i) => (
+                          <div key={i}>
+                            {att.type === 'image' && att.imageUrl && (
+                              <img src={att.imageUrl} alt="تصویر" className="w-full max-h-40 object-cover" />
+                            )}
+                          </div>
+                        ))}
+                        <p className="px-3 py-2">{msg.content}</p>
+                      </div>
+                      {/* زمان و دکمه حذف */}
+                      <div className={cn(
+                        "flex items-center gap-2 text-[10px] text-muted-foreground",
+                        msg.role === 'user' ? "flex-row-reverse" : "flex-row"
+                      )}>
+                        {msg.timestamp && (
+                          <span>{formatMessageTime(msg.timestamp)}</span>
+                        )}
+                        <button
+                          onClick={() => handleDeleteMessage(idx)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                          title="حذف پیام"
+                        >
+                          <Trash2 className="w-3 h-3 text-destructive" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
