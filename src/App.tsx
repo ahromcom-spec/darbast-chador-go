@@ -72,6 +72,7 @@ const ExecutiveStageAwaitingCollection = lazy(() => import("./pages/executive/Ex
 const ExecutiveStageInCollection = lazy(() => import("./pages/executive/ExecutiveStageInCollection"));
 const ExecutiveStageCollected = lazy(() => import("./pages/executive/ExecutiveStageCollected"));
 const ArchivedOrders = lazy(() => import("./pages/executive/ArchivedOrders"));
+const ExecutiveCollectionRequests = lazy(() => import("./pages/executive/ExecutiveCollectionRequests"));
 const SalesLayout = lazy(() => import("./pages/sales/SalesLayout"));
 const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
 const SalesPendingOrders = lazy(() => import("./pages/sales/SalesPendingOrders"));
@@ -309,6 +310,7 @@ const App = () => {
                 <Route path="pending-orders" element={<ExecutivePendingOrders />} />
                 <Route path="customers" element={<ExecutiveCustomers />} />
                 <Route path="archived" element={<ArchivedOrders />} />
+                <Route path="collection-requests" element={<ExecutiveCollectionRequests />} />
                 <Route path="order-transfers" element={<OrderTransferManagement />} />
               </Route>
               <Route path="/sales" element={
