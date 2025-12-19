@@ -455,13 +455,12 @@ export function MediaUploader({
                       onError={() => setFilePartial(file.id, { previewError: true })}
                     />
                   ) : (
-                    <div className="w-full h-full grid place-content-center text-center p-4">
-                      <div className="text-sm text-muted-foreground">پیش‌نمایش این فرمت در مرورگر شما پشتیبانی نمی‌شود.</div>
-                      {file.remoteUrl && (
-                        <a href={file.remoteUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mt-2 text-primary underline">
-                          <LinkIcon className="w-4 h-4" /> دانلود/مشاهده ویدیو
-                        </a>
-                      )}
+                    <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex flex-col items-center justify-center gap-3">
+                      <Film className="w-16 h-16 text-white/70" />
+                      <span className="text-white/80 text-sm font-medium">ویدیو</span>
+                      <div className="text-white/60 text-xs px-3 text-center truncate max-w-full">
+                        {file.file.name}
+                      </div>
                     </div>
                   )}
 
