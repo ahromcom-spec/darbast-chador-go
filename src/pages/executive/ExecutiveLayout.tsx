@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive, PackageCheck, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -42,6 +42,11 @@ const orderStagesItems = [
     icon: Loader
   },
   {
+    title: 'اجرا شد',
+    href: '/executive/stage-order-executed',
+    icon: CheckCircle
+  },
+  {
     title: 'در انتظار پرداخت',
     href: '/executive/stage-awaiting-payment',
     icon: Banknote
@@ -50,6 +55,16 @@ const orderStagesItems = [
     title: 'در انتظار جمع‌آوری',
     href: '/executive/stage-awaiting-collection',
     icon: PackageOpen
+  },
+  {
+    title: 'در حال جمع‌آوری',
+    href: '/executive/stage-in-collection',
+    icon: Package
+  },
+  {
+    title: 'جمع‌آوری شد',
+    href: '/executive/stage-collected',
+    icon: PackageCheck
   },
   {
     title: 'تکمیل سفارش',
