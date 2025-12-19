@@ -251,11 +251,14 @@ export const OrderTimeline = ({
       label: 'اتمام سفارش',
       icon: CheckCircle2,
       date: customerCompletionDate,
-      completed: isCurrentStageByNumber(8) || orderStatus === 'completed' || orderStatus === 'closed',
-      active: isCurrentStageByNumber(8),
-      details: (orderStatus === 'closed' || orderStatus === 'completed' || isCurrentStageByNumber(8)) 
+      // اتمام سفارش فقط وقتی که واقعاً سفارش بسته شده باشد (closed) - نه با order_executed
+      completed: orderStatus === 'closed',
+      active: isStageCompletedByNumber(7) && !!paymentConfirmedAt && orderStatus !== 'closed',
+      details: orderStatus === 'closed'
         ? 'سفارش با موفقیت به اتمام رسید ✓' 
-        : undefined,
+        : (isStageCompletedByNumber(7) && !!paymentConfirmedAt)
+          ? 'منتظر تایید نهایی مدیر برای اتمام سفارش'
+          : undefined,
     },
   ];
 
