@@ -15,6 +15,8 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { IncomingCallProvider } from "@/contexts/IncomingCallContext";
 import GlobalIncomingCallPopup from "@/components/calls/GlobalIncomingCallPopup";
 
+import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
+
 import Header from "./components/Header";
 import Home from "./pages/Home";
 
@@ -375,6 +377,7 @@ const App = () => {
               <Route path="*" element={<NotFound />} />
                 </Routes>
               </div>
+              <AssistantAvatar />
             </Suspense>
             </IncomingCallProvider>
         </BrowserRouter>

@@ -21,7 +21,6 @@ const HybridGlobe = lazy(() => import('@/components/globe/HybridGlobe'));
 import globeIcon from '@/assets/golden-globe.png';
 import { PWAInstallBanner } from '@/components/common/PWAInstallBanner';
 import { NotificationBanner } from '@/components/common/NotificationBanner';
-import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
 
 const Home = () => {
   usePageTitle('صفحه اصلی');
@@ -391,8 +390,6 @@ const Home = () => {
         </div>
       )}
 
-      {/* دستیار هوشمند اهرم */}
-      {!showGlobe && <AssistantAvatar />}
     </>
   );
 };
