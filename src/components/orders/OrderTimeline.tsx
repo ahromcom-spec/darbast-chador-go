@@ -272,6 +272,31 @@ export const OrderTimeline = ({
   const currentStep = steps.find(s => s.active) || steps.find(s => !s.completed) || steps[steps.length - 1];
   const currentStepLabel = isRejected ? 'رد شده' : currentStep?.label || statusMap[orderStatus] || orderStatus;
 
+  // تعیین برچسب بج وضعیت بر اساس مرحله فعلی (نه فقط orderStatus)
+  const getBadgeLabel = (): string => {
+    if (isRejected) return 'رد شده';
+    if (orderStatus === 'closed') return 'اتمام سفارش';
+    
+    // اگر execution_stage موجود باشد، از آن استفاده کنیم
+    if (executionStage) {
+      const executionStageLabels: Record<string, string> = {
+        'approved': 'در انتظار اجرا',
+        'pending_execution': 'در انتظار اجرا',
+        'ready': 'آماده اجرا',
+        'in_progress': 'در حال اجرا',
+        'order_executed': 'اجرا شده',
+        'awaiting_payment': 'در انتظار پرداخت',
+        'awaiting_collection': 'در انتظار جمع‌آوری',
+        'in_collection': 'در حال جمع‌آوری',
+        'collected': 'جمع‌آوری شد',
+        'completed': 'اتمام سفارش',
+      };
+      return executionStageLabels[executionStage] || statusMap[orderStatus] || orderStatus;
+    }
+    
+    return statusMap[orderStatus] || orderStatus;
+  };
+
   return (
     <Card>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
@@ -279,7 +304,7 @@ export const OrderTimeline = ({
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">مراحل پیشرفت سفارش</CardTitle>
             <Badge variant={isRejected ? 'destructive' : 'default'}>
-              {statusMap[orderStatus] || orderStatus}
+              {getBadgeLabel()}
             </Badge>
           </div>
         </CardHeader>
