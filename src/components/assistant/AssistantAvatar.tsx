@@ -743,9 +743,9 @@ export function AssistantAvatar() {
               draggable={false}
             />
           </button>
-          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+          <span className="absolute bottom-1 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
         </div>
-        <span className="text-xs font-medium text-amber-600 bg-background/80 px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm whitespace-nowrap">
+        <span className="text-xs font-medium text-amber-600 bg-background/80 px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm whitespace-nowrap -mt-1">
           دستیار اهرم
         </span>
       </div>
