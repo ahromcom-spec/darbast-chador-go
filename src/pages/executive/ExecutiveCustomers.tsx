@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +42,30 @@ export default function ExecutiveCustomers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
+
+  // Realtime subscription for new orders
+  useEffect(() => {
+    const channel = supabase
+      .channel('executive-customers-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects_v3'
+        },
+        (payload) => {
+          console.log('New order change detected:', payload);
+          // Invalidate the query to refetch customers with orders
+          queryClient.invalidateQueries({ queryKey: ['executive-customers'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const { data: customers, isLoading } = useQuery({
     queryKey: ['executive-customers'],
