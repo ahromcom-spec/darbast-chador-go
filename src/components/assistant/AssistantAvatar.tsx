@@ -76,6 +76,11 @@ export function AssistantAvatar() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [hasMoved, setHasMoved] = useState(false);
   
+  // Resize state
+  const [chatSize, setChatSize] = useState({ width: 384, height: 512 }); // sm:w-96 = 384px, h-[32rem] = 512px
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -177,6 +182,45 @@ export function AssistantAvatar() {
     setIsDraggingChat(false);
   }, []);
 
+  // Resize handlers
+  const handleResizeStart = useCallback((clientX: number, clientY: number) => {
+    setIsResizing(true);
+    setResizeStart({
+      x: clientX,
+      y: clientY,
+      width: chatSize.width,
+      height: chatSize.height
+    });
+  }, [chatSize]);
+
+  const handleResizeMove = useCallback((clientX: number, clientY: number) => {
+    if (!isResizing) return;
+    
+    const deltaX = clientX - resizeStart.x;
+    const deltaY = clientY - resizeStart.y;
+    
+    const newWidth = Math.max(280, Math.min(window.innerWidth - chatPosition.x - 20, resizeStart.width + deltaX));
+    const newHeight = Math.max(300, Math.min(window.innerHeight - chatPosition.y - 20, resizeStart.height + deltaY));
+    
+    setChatSize({ width: newWidth, height: newHeight });
+  }, [isResizing, resizeStart, chatPosition]);
+
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleResizeStart(e.clientX, e.clientY);
+  };
+
+  const handleResizeTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    handleResizeStart(touch.clientX, touch.clientY);
+  };
+
   // Avatar mouse events
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -214,28 +258,39 @@ export function AssistantAvatar() {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (isDragging) handleAvatarDragMove(e.clientX, e.clientY);
       if (isDraggingChat) handleChatDragMove(e.clientX, e.clientY);
+      if (isResizing) handleResizeMove(e.clientX, e.clientY);
+    };
+
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (isResizing && e.touches[0]) {
+        handleResizeMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
     };
 
     const handleGlobalMouseUp = () => {
       handleDragEnd();
+      handleResizeEnd();
     };
 
     const handleGlobalTouchEnd = () => {
       handleDragEnd();
+      handleResizeEnd();
     };
 
-    if (isDragging || isDraggingChat) {
+    if (isDragging || isDraggingChat || isResizing) {
       document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('touchmove', handleGlobalTouchMove);
       document.addEventListener('mouseup', handleGlobalMouseUp);
       document.addEventListener('touchend', handleGlobalTouchEnd);
     }
 
     return () => {
       document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
       document.removeEventListener('touchend', handleGlobalTouchEnd);
     };
-  }, [isDragging, isDraggingChat, handleAvatarDragMove, handleChatDragMove, handleDragEnd]);
+  }, [isDragging, isDraggingChat, isResizing, handleAvatarDragMove, handleChatDragMove, handleResizeMove, handleDragEnd, handleResizeEnd]);
 
   const handleAvatarClick = () => {
     if (!hasMoved) {
@@ -415,10 +470,12 @@ export function AssistantAvatar() {
           style={{
             left: `${chatPosition.x}px`,
             top: `${chatPosition.y}px`,
+            width: `${chatSize.width}px`,
+            height: `${chatSize.height}px`,
           }}
           className={cn(
-            "fixed z-50 w-80 sm:w-96 h-[32rem] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300",
-            isDraggingChat && "transition-none"
+            "fixed z-50 bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300",
+            (isDraggingChat || isResizing) && "transition-none"
           )}
         >
           {/* هدر - قابل جابجایی */}
@@ -595,6 +652,32 @@ export function AssistantAvatar() {
                 <Send className="h-4 w-4" />
               </Button>
             </div>
+          </div>
+
+          {/* دستگیره تغییر اندازه - گوشه پایین راست */}
+          <div
+            onMouseDown={handleResizeMouseDown}
+            onTouchStart={handleResizeTouchStart}
+            className={cn(
+              "absolute bottom-0 right-0 w-6 h-6 cursor-se-resize z-10",
+              "flex items-center justify-center",
+              "hover:bg-amber-100/50 rounded-br-2xl transition-colors"
+            )}
+          >
+            <svg 
+              width="12" 
+              height="12" 
+              viewBox="0 0 12 12" 
+              className="text-muted-foreground"
+            >
+              <path 
+                d="M11 11L1 11M11 11L11 1M11 11L3 3" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round"
+                fill="none"
+              />
+            </svg>
           </div>
         </div>
       )}
