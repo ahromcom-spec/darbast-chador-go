@@ -389,7 +389,7 @@ export default function OrdersDashboard() {
                       </div>
                     )}
 
-                    {order.status === 'approved' && order.approved_at && (
+                    {(order.status === 'approved' || order.status === 'pending_execution') && order.approved_at && (
                       <div className="pt-2 border-t">
                         <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
                           <CheckCircle className="h-4 w-4" />

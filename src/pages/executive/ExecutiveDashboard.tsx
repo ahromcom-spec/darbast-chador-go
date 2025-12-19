@@ -73,7 +73,7 @@ export default function ExecutiveDashboard() {
       if (approvalsError) throw approvalsError;
 
       const uniqueCustomers = new Set(orders?.map(o => o.customer_id) || []).size;
-      const pending = orders?.filter(o => o.status === 'approved').length || 0;
+      const pending = orders?.filter(o => o.status === 'approved' || o.status === 'pending_execution').length || 0;
       const inProgress = orders?.filter(o => o.status === 'in_progress').length || 0;
       const completed = orders?.filter(o => o.status === 'completed' || o.status === 'paid').length || 0;
 

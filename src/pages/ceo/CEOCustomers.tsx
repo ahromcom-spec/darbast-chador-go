@@ -84,7 +84,7 @@ export function CEOCustomers() {
             phone_number: phoneNumber,
             created_at: customer.created_at,
             total_orders: orders?.length || 0,
-            pending_orders: orders?.filter(o => o.status === 'approved').length || 0,
+            pending_orders: orders?.filter(o => o.status === 'approved' || o.status === 'pending_execution').length || 0,
             in_progress_orders: orders?.filter(o => o.status === 'in_progress').length || 0,
             orders: orders || []
           };
@@ -258,7 +258,7 @@ export function CEOCustomers() {
                                           }
                                         >
                                           {order.status === 'pending' && 'در انتظار تایید'}
-                                          {order.status === 'approved' && 'تایید شده'}
+                                          {(order.status === 'approved' || order.status === 'pending_execution') && 'تایید شده'}
                                           {order.status === 'in_progress' && 'در حال اجرا'}
                                           {order.status === 'completed' && 'تکمیل شده'}
                                           {order.status === 'closed' && 'بسته شده'}
