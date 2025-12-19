@@ -124,6 +124,9 @@ export const OrderTimeline = ({
     return currentStageNumber === stageNum;
   };
 
+  // تعیین وضعیت تایید شده یا نه
+  const isApprovedOrBeyond = currentStageNumber >= 1 || !!executionStage || ['approved', 'in_progress', 'completed', 'closed'].includes(orderStatus);
+
   const steps: TimelineStep[] = [
     {
       status: 'created',
@@ -139,14 +142,16 @@ export const OrderTimeline = ({
       label: 'در انتظار تایید مدیران',
       icon: Clock,
       date: createdAt,
-      completed: currentStageNumber >= 1 || !!executionStage,
+      completed: isApprovedOrBeyond,
       active: orderStatus === 'pending' && !executionStage,
       rejected: isRejected,
       details: isRejected 
         ? `رد شده: ${rejectionReason || 'دلیل مشخص نشده'}`
-        : approvals.length > 0 
-          ? `تایید ${approvals.filter(a => a.approved_at).length} از ${approvals.length} مدیر`
-          : undefined,
+        : isApprovedOrBeyond
+          ? 'سفارش توسط مدیران تایید شد ✓'
+          : approvals.length > 0 
+            ? `در انتظار تایید: ${approvals.filter(a => a.approved_at).length} از ${approvals.length} مدیر تایید کرده‌اند`
+            : 'سفارش در انتظار بررسی و تایید مدیران است',
     },
     {
       status: 'approved',
@@ -155,9 +160,13 @@ export const OrderTimeline = ({
       date: finalApprovalDate,
       completed: isStageCompletedByNumber(1),
       active: isCurrentStageByNumber(1),
-      details: executionStartDate 
-        ? `زمان شروع اجرا: ${formatDate(executionStartDate)?.date} - ${formatDate(executionStartDate)?.time}`
-        : 'سفارش تایید شد و منتظر شروع اجراست',
+      details: isStageCompletedByNumber(1)
+        ? 'سفارش وارد مرحله اجرا شد ✓'
+        : executionStartDate 
+          ? `زمان شروع اجرا: ${formatDate(executionStartDate)?.date} - ${formatDate(executionStartDate)?.time}`
+          : isCurrentStageByNumber(1)
+            ? 'سفارش تایید شد و منتظر شروع اجراست'
+            : undefined,
     },
     {
       status: 'in_progress',
@@ -166,9 +175,13 @@ export const OrderTimeline = ({
       date: executionStartDate,
       completed: isStageCompletedByNumber(2),
       active: isCurrentStageByNumber(2),
-      details: executionEndDate 
-        ? `مدت زمان اجرا: تا ${formatDate(executionEndDate)?.date} - ${formatDate(executionEndDate)?.time}`
-        : undefined,
+      details: isStageCompletedByNumber(2)
+        ? 'اجرا با موفقیت انجام شد ✓'
+        : executionEndDate 
+          ? `مدت زمان اجرا: تا ${formatDate(executionEndDate)?.date} - ${formatDate(executionEndDate)?.time}`
+          : isCurrentStageByNumber(2)
+            ? 'تیم اجرایی در حال انجام کار هستند'
+            : undefined,
     },
     {
       status: 'order_executed',
@@ -177,7 +190,9 @@ export const OrderTimeline = ({
       date: executionStage === 'order_executed' ? executionStageUpdatedAt : undefined,
       completed: isStageCompletedByNumber(3),
       active: isCurrentStageByNumber(3),
-      details: isCurrentStageByNumber(3) ? 'اجرا تکمیل شد' : undefined,
+      details: isStageCompletedByNumber(3) || isCurrentStageByNumber(3)
+        ? 'اجرای سفارش با موفقیت تکمیل شد ✓'
+        : undefined,
     },
     {
       status: 'awaiting_payment',
@@ -186,7 +201,11 @@ export const OrderTimeline = ({
       date: executionStage === 'awaiting_payment' ? executionStageUpdatedAt : undefined,
       completed: isStageCompletedByNumber(4),
       active: isCurrentStageByNumber(4),
-      details: isCurrentStageByNumber(4) ? 'لطفاً مبلغ سفارش را پرداخت کنید' : undefined,
+      details: isStageCompletedByNumber(4)
+        ? 'پرداخت با موفقیت انجام شد ✓'
+        : isCurrentStageByNumber(4) 
+          ? 'لطفاً مبلغ سفارش را پرداخت کنید'
+          : undefined,
     },
     {
       status: 'awaiting_collection',
@@ -195,7 +214,11 @@ export const OrderTimeline = ({
       date: executionStage === 'awaiting_collection' ? executionStageUpdatedAt : undefined,
       completed: isStageCompletedByNumber(5),
       active: isCurrentStageByNumber(5),
-      details: isCurrentStageByNumber(5) ? 'لطفاً تاریخ فک داربست را تعیین کنید' : undefined,
+      details: isStageCompletedByNumber(5)
+        ? 'تاریخ جمع‌آوری تعیین شد ✓'
+        : isCurrentStageByNumber(5) 
+          ? 'لطفاً تاریخ فک داربست را تعیین کنید'
+          : undefined,
     },
     {
       status: 'in_collection',
@@ -204,7 +227,11 @@ export const OrderTimeline = ({
       date: executionStage === 'in_collection' ? executionStageUpdatedAt : undefined,
       completed: isStageCompletedByNumber(6),
       active: isCurrentStageByNumber(6),
-      details: isCurrentStageByNumber(6) ? 'داربست در حال جمع‌آوری است' : undefined,
+      details: isStageCompletedByNumber(6)
+        ? 'عملیات جمع‌آوری انجام شد ✓'
+        : isCurrentStageByNumber(6) 
+          ? 'داربست در حال جمع‌آوری است'
+          : undefined,
     },
     {
       status: 'collected',
@@ -213,7 +240,9 @@ export const OrderTimeline = ({
       date: executionStage === 'collected' ? executionStageUpdatedAt : undefined,
       completed: isStageCompletedByNumber(7),
       active: isCurrentStageByNumber(7),
-      details: isCurrentStageByNumber(7) ? 'داربست با موفقیت جمع‌آوری شد' : undefined,
+      details: isStageCompletedByNumber(7) || isCurrentStageByNumber(7) 
+        ? 'داربست با موفقیت جمع‌آوری شد ✓'
+        : undefined,
     },
     {
       status: 'closed',
@@ -222,7 +251,9 @@ export const OrderTimeline = ({
       date: customerCompletionDate,
       completed: isCurrentStageByNumber(8) || orderStatus === 'completed' || orderStatus === 'closed',
       active: isCurrentStageByNumber(8),
-      details: (orderStatus === 'closed' || orderStatus === 'completed' || isCurrentStageByNumber(8)) ? 'سفارش با موفقیت به اتمام رسید' : undefined,
+      details: (orderStatus === 'closed' || orderStatus === 'completed' || isCurrentStageByNumber(8)) 
+        ? 'سفارش با موفقیت به اتمام رسید ✓' 
+        : undefined,
     },
   ];
 
