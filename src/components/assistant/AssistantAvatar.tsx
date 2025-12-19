@@ -111,6 +111,24 @@ const saveMessageToDB = async (userId: string, message: Message) => {
   }
 };
 
+// Helper to get viewport dimensions (works with zoom)
+const getViewportSize = () => {
+  if (window.visualViewport) {
+    return {
+      width: window.visualViewport.width,
+      height: window.visualViewport.height,
+      offsetLeft: window.visualViewport.offsetLeft,
+      offsetTop: window.visualViewport.offsetTop
+    };
+  }
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    offsetLeft: 0,
+    offsetTop: 0
+  };
+};
+
 export function AssistantAvatar() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -120,7 +138,10 @@ export function AssistantAvatar() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   
   // Drag state - separate for avatar and chat panel
-  const [avatarPosition, setAvatarPosition] = useState({ x: 24, y: window.innerHeight - 88 });
+  const [avatarPosition, setAvatarPosition] = useState(() => {
+    const vp = getViewportSize();
+    return { x: 24, y: vp.height - 88 };
+  });
   const [chatPosition, setChatPosition] = useState({ x: 24, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingChat, setIsDraggingChat] = useState(false);
@@ -193,6 +214,50 @@ export function AssistantAvatar() {
     }
   }, [isOpen]);
 
+  // Handle viewport resize/zoom to keep avatar in bounds
+  useEffect(() => {
+    const clampPositionToViewport = () => {
+      const vp = getViewportSize();
+      const avatarSize = 64;
+      const maxX = vp.width - avatarSize - 8;
+      const maxY = vp.height - avatarSize - 8;
+      
+      setAvatarPosition(prev => ({
+        x: Math.max(8, Math.min(maxX, prev.x)),
+        y: Math.max(8, Math.min(maxY, prev.y))
+      }));
+      
+      // Also clamp chat position if open
+      if (isOpen) {
+        setChatPosition(prev => ({
+          x: Math.max(8, Math.min(vp.width - chatSize.width - 8, prev.x)),
+          y: Math.max(8, Math.min(vp.height - chatSize.height - 8, prev.y))
+        }));
+      }
+    };
+
+    // Listen to visualViewport changes (handles zoom)
+    const viewport = window.visualViewport;
+    if (viewport) {
+      viewport.addEventListener('resize', clampPositionToViewport);
+      viewport.addEventListener('scroll', clampPositionToViewport);
+    }
+    
+    // Also listen to window resize
+    window.addEventListener('resize', clampPositionToViewport);
+    
+    // Initial clamp
+    clampPositionToViewport();
+    
+    return () => {
+      if (viewport) {
+        viewport.removeEventListener('resize', clampPositionToViewport);
+        viewport.removeEventListener('scroll', clampPositionToViewport);
+      }
+      window.removeEventListener('resize', clampPositionToViewport);
+    };
+  }, [isOpen, chatSize]);
+
   // Close chat when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -227,14 +292,15 @@ export function AssistantAvatar() {
     if (!isDragging) return;
     
     setHasMoved(true);
+    const vp = getViewportSize();
     const newX = clientX - dragOffset.x;
     const newY = clientY - dragOffset.y;
-    const maxX = window.innerWidth - 80;
-    const maxY = window.innerHeight - 80;
+    const maxX = vp.width - 80;
+    const maxY = vp.height - 80;
     
     setAvatarPosition({
-      x: Math.max(0, Math.min(maxX, newX)),
-      y: Math.max(0, Math.min(maxY, newY))
+      x: Math.max(8, Math.min(maxX, newX)),
+      y: Math.max(8, Math.min(maxY, newY))
     });
   }, [isDragging, dragOffset]);
 
@@ -250,16 +316,17 @@ export function AssistantAvatar() {
   const handleChatDragMove = useCallback((clientX: number, clientY: number) => {
     if (!isDraggingChat) return;
     
+    const vp = getViewportSize();
     const newX = clientX - dragOffset.x;
     const newY = clientY - dragOffset.y;
-    const maxX = window.innerWidth - 320;
-    const maxY = window.innerHeight - 520;
+    const maxX = vp.width - chatSize.width - 8;
+    const maxY = vp.height - chatSize.height - 8;
     
     setChatPosition({
-      x: Math.max(0, Math.min(maxX, newX)),
-      y: Math.max(0, Math.min(maxY, newY))
+      x: Math.max(8, Math.min(maxX, newX)),
+      y: Math.max(8, Math.min(maxY, newY))
     });
-  }, [isDraggingChat, dragOffset]);
+  }, [isDraggingChat, dragOffset, chatSize]);
 
   const handleDragEnd = useCallback(() => {
     setIsDragging(false);
@@ -280,11 +347,12 @@ export function AssistantAvatar() {
   const handleResizeMove = useCallback((clientX: number, clientY: number) => {
     if (!isResizing) return;
     
+    const vp = getViewportSize();
     const deltaX = clientX - resizeStart.x;
     const deltaY = clientY - resizeStart.y;
     
-    const newWidth = Math.max(280, Math.min(window.innerWidth - chatPosition.x - 20, resizeStart.width + deltaX));
-    const newHeight = Math.max(300, Math.min(window.innerHeight - chatPosition.y - 20, resizeStart.height + deltaY));
+    const newWidth = Math.max(280, Math.min(vp.width - chatPosition.x - 20, resizeStart.width + deltaX));
+    const newHeight = Math.max(300, Math.min(vp.height - chatPosition.y - 20, resizeStart.height + deltaY));
     
     setChatSize({ width: newWidth, height: newHeight });
   }, [isResizing, resizeStart, chatPosition]);
@@ -378,7 +446,15 @@ export function AssistantAvatar() {
 
   const handleAvatarClick = () => {
     if (!hasMoved) {
-      setChatPosition({ x: avatarPosition.x, y: Math.max(20, avatarPosition.y - 520) });
+      const vp = getViewportSize();
+      const defaultChatHeight = 512;
+      const defaultChatWidth = 384;
+      
+      // Position chat above avatar, clamped to viewport
+      const chatX = Math.max(8, Math.min(vp.width - defaultChatWidth - 8, avatarPosition.x));
+      const chatY = Math.max(8, Math.min(vp.height - defaultChatHeight - 8, avatarPosition.y - defaultChatHeight - 20));
+      
+      setChatPosition({ x: chatX, y: chatY });
       setIsOpen(true);
     }
   };
