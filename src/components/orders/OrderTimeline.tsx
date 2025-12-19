@@ -282,14 +282,19 @@ export const OrderTimeline = ({
         {/* Collapsed View - Current Stage Only */}
         {!isExpanded && (
           <CardContent className="pt-0">
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+            <div className={cn(
+              "flex items-center gap-3 p-3 rounded-lg transition-all",
+              isRejected
+                ? "bg-destructive/10 border border-destructive/30"
+                : "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800"
+            )}>
               <div className={cn(
-                'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2',
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all shadow-sm',
                 isRejected
                   ? 'border-destructive bg-destructive text-destructive-foreground'
                   : currentStep?.completed
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-primary bg-background text-primary'
+                  ? 'border-emerald-500 bg-emerald-500 text-white shadow-emerald-200 dark:shadow-emerald-900/50'
+                  : 'border-emerald-500 bg-emerald-500 text-white animate-pulse shadow-lg shadow-emerald-200 dark:shadow-emerald-900/50'
               )}>
                 {isRejected ? (
                   <XCircle className="h-5 w-5" />
@@ -351,13 +356,13 @@ export const OrderTimeline = ({
                       {/* آیکون */}
                       <div
                         className={cn(
-                          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all',
                           step.completed && !step.rejected
                             ? 'border-primary bg-primary text-primary-foreground'
                             : step.rejected
                             ? 'border-destructive bg-destructive text-destructive-foreground'
                             : step.active
-                            ? 'border-primary bg-background text-primary'
+                            ? 'border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-200 dark:shadow-emerald-900/50 animate-pulse'
                             : 'border-border bg-background text-muted-foreground'
                         )}
                       >
@@ -375,13 +380,13 @@ export const OrderTimeline = ({
                         <div className="flex items-center justify-between gap-4">
                           <h4
                             className={cn(
-                              'font-semibold',
+                              'font-semibold transition-colors',
                               step.completed && !step.rejected
                                 ? 'text-foreground'
                                 : step.rejected
                                 ? 'text-destructive'
                                 : step.active
-                                ? 'text-primary'
+                                ? 'text-emerald-600 dark:text-emerald-400'
                                 : 'text-muted-foreground'
                             )}
                           >
