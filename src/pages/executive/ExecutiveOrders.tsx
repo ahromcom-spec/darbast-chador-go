@@ -26,18 +26,21 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 const executionStages = [
-  { key: 'pending', label: 'در انتظار تایید', statusMapping: 'pending', executionStageMapping: null },
+  { key: 'pending', label: 'در انتظار تایید مدیران', statusMapping: 'pending', executionStageMapping: null },
   { key: 'approved', label: 'در انتظار اجرا', statusMapping: 'approved', executionStageMapping: null },
-  { key: 'in_progress', label: 'اجرا شد', statusMapping: 'in_progress', executionStageMapping: 'order_executed' },
+  { key: 'in_progress', label: 'در حال اجرا', statusMapping: 'in_progress', executionStageMapping: null },
+  { key: 'order_executed', label: 'اجرا شد', statusMapping: 'in_progress', executionStageMapping: 'order_executed' },
+  { key: 'awaiting_payment', label: 'در انتظار پرداخت', statusMapping: 'completed', executionStageMapping: 'awaiting_payment' },
   { key: 'awaiting_collection', label: 'در انتظار جمع‌آوری', statusMapping: 'completed', executionStageMapping: 'awaiting_collection' },
   { key: 'in_collection', label: 'در حال جمع‌آوری', statusMapping: 'completed', executionStageMapping: 'in_collection' },
   { key: 'collected', label: 'جمع‌آوری شد', statusMapping: 'completed', executionStageMapping: 'collected' },
-  { key: 'closed', label: 'اتمام سفارش', statusMapping: 'closed', executionStageMapping: null },
+  { key: 'closed', label: 'تکمیل سفارش', statusMapping: 'closed', executionStageMapping: null },
 ];
 
 // Map DB execution_stage -> UI select key
 const executionStageToUiKey: Record<string, string> = {
-  order_executed: 'in_progress',
+  order_executed: 'order_executed',
+  awaiting_payment: 'awaiting_payment',
   awaiting_collection: 'awaiting_collection',
   in_collection: 'in_collection',
   collected: 'collected',
