@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import assistantImage from '@/assets/assistant-avatar.png';
 
 type MessageContent = {
@@ -30,13 +31,14 @@ type StoredData = {
   timestamp: number;
 };
 
+// Load messages from localStorage (for guests)
 const loadMessagesFromStorage = (): Message[] => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
     
     const data: StoredData = JSON.parse(stored);
-    const expiryTime = EXPIRY_MONTHS * 30 * 24 * 60 * 60 * 1000; // 6 months in ms
+    const expiryTime = EXPIRY_MONTHS * 30 * 24 * 60 * 60 * 1000;
     
     if (Date.now() - data.timestamp > expiryTime) {
       localStorage.removeItem(STORAGE_KEY);
@@ -49,6 +51,7 @@ const loadMessagesFromStorage = (): Message[] => {
   }
 };
 
+// Save messages to localStorage (for guests)
 const saveMessagesToStorage = (messages: Message[]) => {
   try {
     const data: StoredData = {
@@ -61,12 +64,60 @@ const saveMessagesToStorage = (messages: Message[]) => {
   }
 };
 
+// Load messages from database (for logged-in users)
+const loadMessagesFromDB = async (userId: string): Promise<Message[]> => {
+  try {
+    // Get messages from the last year
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    
+    const { data, error } = await supabase
+      .from('assistant_chat_messages')
+      .select('role, content, attachments, created_at')
+      .eq('user_id', userId)
+      .gte('created_at', oneYearAgo.toISOString())
+      .order('created_at', { ascending: true })
+      .limit(MAX_MESSAGES);
+    
+    if (error) {
+      console.error('Error loading messages from DB:', error);
+      return [];
+    }
+    
+    return (data || []).map(msg => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+      attachments: msg.attachments as MessageContent[] | undefined
+    }));
+  } catch (err) {
+    console.error('Error loading messages from DB:', err);
+    return [];
+  }
+};
+
+// Save a message to database
+const saveMessageToDB = async (userId: string, message: Message) => {
+  try {
+    await supabase
+      .from('assistant_chat_messages')
+      .insert({
+        user_id: userId,
+        role: message.role,
+        content: message.content,
+        attachments: message.attachments || null
+      });
+  } catch (err) {
+    console.error('Error saving message to DB:', err);
+  }
+};
+
 export function AssistantAvatar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>(() => loadMessagesFromStorage());
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   
   // Drag state - separate for avatar and chat panel
   const [avatarPosition, setAvatarPosition] = useState({ x: 24, y: window.innerHeight - 88 });
@@ -90,6 +141,22 @@ export function AssistantAvatar() {
   const auth = useAuth();
   const user = auth?.user;
 
+  // Load messages on mount - from DB for logged-in users, from localStorage for guests
+  useEffect(() => {
+    const loadMessages = async () => {
+      setIsLoadingMessages(true);
+      if (user?.id) {
+        const dbMessages = await loadMessagesFromDB(user.id);
+        setMessages(dbMessages);
+      } else {
+        const localMessages = loadMessagesFromStorage();
+        setMessages(localMessages);
+      }
+      setIsLoadingMessages(false);
+    };
+    loadMessages();
+  }, [user?.id]);
+
   // Scroll to bottom when messages change or chat opens
   useEffect(() => {
     if (scrollRef.current) {
@@ -108,12 +175,12 @@ export function AssistantAvatar() {
     }
   }, [isOpen]);
 
-  // Save messages to localStorage whenever they change
+  // Save messages to localStorage for guests only
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && !user?.id) {
       saveMessagesToStorage(messages);
     }
-  }, [messages]);
+  }, [messages, user?.id]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -423,14 +490,31 @@ export function AssistantAvatar() {
     setSelectedImage(null);
     setIsLoading(true);
 
+    // Save user message to DB for logged-in users
+    if (user?.id) {
+      saveMessageToDB(user.id, userMsg);
+    }
+
     try {
       await streamChat(newMessages, imageBase64);
+      
+      // After streaming is complete, save assistant message to DB
+      setMessages(prev => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg?.role === 'assistant' && user?.id) {
+          saveMessageToDB(user.id, lastMsg);
+        }
+        return prev;
+      });
     } catch (error) {
       console.error('Chat error:', error);
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: 'متأسفانه خطایی رخ داد. لطفاً دوباره تلاش کنید.' }
-      ]);
+      const errorMsg: Message = { role: 'assistant', content: 'متأسفانه خطایی رخ داد. لطفاً دوباره تلاش کنید.' };
+      setMessages(prev => [...prev, errorMsg]);
+      
+      // Save error message to DB too
+      if (user?.id) {
+        saveMessageToDB(user.id, errorMsg);
+      }
     } finally {
       setIsLoading(false);
     }
