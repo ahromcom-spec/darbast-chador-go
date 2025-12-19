@@ -198,7 +198,7 @@ export default function MyOrders() {
         }));
         
         setOrders(enrichedOrders.sort((a: any, b: any) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          b.code.localeCompare(a.code, undefined, { numeric: true })
         ));
       } else {
         setOrders([]);
