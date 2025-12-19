@@ -178,10 +178,18 @@ export function AssistantAvatar() {
     loadMessages();
   }, [user?.id]);
 
-  // Scroll to bottom when messages change or chat opens
+  // Scroll to bottom when messages change (including during streaming)
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Use requestAnimationFrame for smoother scroll during streaming
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTo({
+            top: scrollRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      });
     }
   }, [messages]);
 
