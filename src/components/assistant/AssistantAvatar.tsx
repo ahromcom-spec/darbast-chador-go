@@ -730,9 +730,8 @@ export function AssistantAvatar() {
           className={cn(
             "w-16 h-16 rounded-full",
             "shadow-lg hover:shadow-2xl transition-shadow duration-300",
-            "ring-2 ring-amber-400 ring-offset-2 ring-offset-background",
             "overflow-hidden select-none relative",
-            isDragging ? "cursor-grabbing scale-110" : "cursor-grab hover:ring-amber-500"
+            isDragging ? "cursor-grabbing scale-110" : "cursor-grab"
           )}
           aria-label="باز کردن دستیار هوشمند"
         >
