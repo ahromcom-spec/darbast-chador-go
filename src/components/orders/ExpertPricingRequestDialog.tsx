@@ -308,7 +308,7 @@ export const ExpertPricingRequestDialog = ({
               <ImageIcon className="h-4 w-4" />
               عکس و فیلم از محل کار
             </Label>
-            <MediaUploader onFilesChange={handleFilesChange} disableAutoUpload={true} />
+            <MediaUploader onFilesChange={handleFilesChange} disableAutoUpload={true} maxImages={6} maxVideos={5} />
           </div>
 
           {/* Submit Button */}
