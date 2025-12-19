@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, User, Image, Trash2 } from 'lucide-react';
+import { X, Send, User, Image, Trash2, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -195,6 +195,11 @@ export function AssistantAvatar() {
   // Resize state
   const [chatSize, setChatSize] = useState({ width: 384, height: 512 }); // sm:w-96 = 384px, h-[32rem] = 512px
   const [isResizing, setIsResizing] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [previousChatState, setPreviousChatState] = useState<{
+    position: { x: number; y: number };
+    size: { width: number; height: number };
+  } | null>(null);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -419,6 +424,28 @@ export function AssistantAvatar() {
   const handleResizeEnd = useCallback(() => {
     setIsResizing(false);
   }, []);
+
+  // Toggle fullscreen mode
+  const toggleFullscreen = useCallback(() => {
+    if (isFullscreen) {
+      // Restore previous state
+      if (previousChatState) {
+        setChatPosition(previousChatState.position);
+        setChatSize(previousChatState.size);
+      }
+      setIsFullscreen(false);
+    } else {
+      // Save current state and go fullscreen
+      setPreviousChatState({
+        position: { ...chatPosition },
+        size: { ...chatSize }
+      });
+      const vp = getViewportSize();
+      setChatPosition({ x: 8, y: 8 });
+      setChatSize({ width: vp.width - 16, height: vp.height - 16 });
+      setIsFullscreen(true);
+    }
+  }, [isFullscreen, previousChatState, chatPosition, chatSize]);
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -790,14 +817,29 @@ export function AssistantAvatar() {
                 <span className="text-xs text-white/80">آنلاین - آماده خدمت‌رسانی</span>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
-              className="h-8 w-8 text-white hover:bg-white/20 pointer-events-auto"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-1 pointer-events-auto">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                className="h-8 w-8 text-white hover:bg-white/20"
+                title={isFullscreen ? "خروج از تمام صفحه" : "تمام صفحه"}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="h-5 w-5" />
+                ) : (
+                  <Maximize2 className="h-5 w-5" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); setIsOpen(false); setIsFullscreen(false); }}
+                className="h-8 w-8 text-white hover:bg-white/20"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
           {/* پیام‌ها */}
