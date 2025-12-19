@@ -67,7 +67,7 @@ export function PWAInstallBanner() {
   }
 
   return (
-    <div className="w-full max-w-[calc(100%-90px)] mr-auto" data-pwa-install-banner>
+    <div className="w-full max-w-[calc(100%-90px)] ml-auto" data-pwa-install-banner>
       <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-lg">
         <div className="p-2 sm:p-4 flex items-center gap-2 sm:gap-3">
           <div className="flex-shrink-0 p-1.5 sm:p-2 rounded-lg bg-primary/10">
