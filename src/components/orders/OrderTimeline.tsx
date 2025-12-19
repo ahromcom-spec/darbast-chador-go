@@ -216,9 +216,11 @@ export const OrderTimeline = ({
       label: 'در انتظار جمع‌آوری',
       icon: PackageX,
       date: executionStage === 'awaiting_collection' ? executionStageUpdatedAt : undefined,
-      completed: isStageCompletedByNumber(5),
-      active: isCurrentStageByNumber(3) || isCurrentStageByNumber(5), // فعال بعد از نصب
-      details: isStageCompletedByNumber(5)
+      // تکمیل شده وقتی به مرحله in_collection یا بالاتر رسیدیم
+      completed: isStageCompletedByNumber(5) || executionStage === 'in_collection' || executionStage === 'collected',
+      // فعال فقط وقتی دقیقا در این مرحله هستیم و هنوز تکمیل نشده
+      active: (isCurrentStageByNumber(3) || isCurrentStageByNumber(5)) && executionStage !== 'in_collection' && executionStage !== 'collected',
+      details: (isStageCompletedByNumber(5) || executionStage === 'in_collection' || executionStage === 'collected')
         ? 'تاریخ جمع‌آوری تعیین شد ✓'
         : (isCurrentStageByNumber(3) || isCurrentStageByNumber(5))
           ? 'لطفاً تاریخ فک داربست را تعیین کنید'
@@ -229,9 +231,11 @@ export const OrderTimeline = ({
       label: 'در حال جمع‌آوری',
       icon: PackageCheck,
       date: executionStage === 'in_collection' ? executionStageUpdatedAt : undefined,
-      completed: isStageCompletedByNumber(6),
-      active: isCurrentStageByNumber(6),
-      details: isStageCompletedByNumber(6)
+      // تکمیل شده وقتی به مرحله collected یا بالاتر رسیدیم
+      completed: isStageCompletedByNumber(6) || executionStage === 'collected',
+      // فعال فقط وقتی دقیقا در مرحله in_collection هستیم
+      active: isCurrentStageByNumber(6) && executionStage !== 'collected',
+      details: (isStageCompletedByNumber(6) || executionStage === 'collected')
         ? 'عملیات جمع‌آوری انجام شد ✓'
         : isCurrentStageByNumber(6) 
           ? 'داربست در حال جمع‌آوری است'
