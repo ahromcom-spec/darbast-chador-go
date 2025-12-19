@@ -711,34 +711,43 @@ export function AssistantAvatar() {
   return (
     <>
       {/* دکمه آواتار - قابل جابجایی */}
-      <button
-        ref={avatarRef}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onClick={handleAvatarClick}
+      <div
         style={{
           left: `${avatarPosition.x}px`,
           top: `${avatarPosition.y}px`,
         }}
         className={cn(
-          "fixed z-50 w-16 h-16 rounded-full",
-          "shadow-lg hover:shadow-2xl transition-shadow duration-300",
-          "ring-2 ring-amber-400 ring-offset-2 ring-offset-background",
-          "overflow-hidden select-none",
-          isDragging ? "cursor-grabbing scale-110" : "cursor-grab hover:ring-amber-500",
+          "fixed z-50 flex flex-col items-center gap-1",
           isOpen && "hidden"
         )}
-        aria-label="باز کردن دستیار هوشمند"
       >
-        <img 
-          src={assistantImage} 
-          alt="دستیار اهرم" 
-          className="w-full h-full object-cover pointer-events-none"
-          draggable={false}
-        />
-        <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
-      </button>
+        <button
+          ref={avatarRef}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onClick={handleAvatarClick}
+          className={cn(
+            "w-16 h-16 rounded-full",
+            "shadow-lg hover:shadow-2xl transition-shadow duration-300",
+            "ring-2 ring-amber-400 ring-offset-2 ring-offset-background",
+            "overflow-hidden select-none relative",
+            isDragging ? "cursor-grabbing scale-110" : "cursor-grab hover:ring-amber-500"
+          )}
+          aria-label="باز کردن دستیار هوشمند"
+        >
+          <img 
+            src={assistantImage} 
+            alt="دستیار اهرم" 
+            className="w-full h-full object-cover pointer-events-none"
+            draggable={false}
+          />
+          <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+        </button>
+        <span className="text-xs font-medium text-amber-600 bg-background/80 px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm whitespace-nowrap">
+          دستیار اهرم
+        </span>
+      </div>
 
       {/* پنل چت */}
       {isOpen && (
