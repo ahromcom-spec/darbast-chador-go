@@ -1,9 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, XCircle, Package, Truck, Calendar, PackageOpen, PackageCheck } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, XCircle, Package, Truck, Calendar, PackageOpen, PackageCheck } from 'lucide-react';
-
 interface OrderWorkflowStatusProps {
   status: string;
   executionStage?: string | null;
