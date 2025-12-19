@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
+import { X, Send, Bot, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import assistantImage from '@/assets/assistant-avatar.png';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
@@ -133,30 +134,46 @@ export function AssistantAvatar() {
 
   return (
     <>
-      {/* دکمه آواتار */}
+      {/* دکمه آواتار انسانی */}
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full",
-          "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700",
-          "shadow-lg hover:shadow-xl transition-all duration-300",
-          "flex items-center justify-center",
-          "animate-bounce hover:animate-none",
+          "fixed bottom-6 left-6 z-50 w-16 h-16 rounded-full",
+          "shadow-lg hover:shadow-2xl transition-all duration-300",
+          "ring-2 ring-amber-400 ring-offset-2 ring-offset-background",
+          "hover:scale-110 hover:ring-amber-500",
+          "overflow-hidden",
           isOpen && "hidden"
         )}
         aria-label="باز کردن دستیار هوشمند"
       >
-        <Bot className="w-7 h-7 text-white" />
+        <img 
+          src={assistantImage} 
+          alt="دستیار اهرم" 
+          className="w-full h-full object-cover"
+        />
+        {/* نقطه سبز آنلاین */}
+        <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
       </button>
 
       {/* پنل چت */}
       {isOpen && (
         <div className="fixed bottom-6 left-6 z-50 w-80 sm:w-96 h-[28rem] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
-          {/* هدر */}
+          {/* هدر با تصویر منشی */}
           <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bot className="w-6 h-6 text-white" />
-              <span className="font-semibold text-white">دستیار اهرم</span>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img 
+                  src={assistantImage} 
+                  alt="دستیار اهرم" 
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-white/50"
+                />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-amber-500" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-white text-sm">دستیار اهرم</span>
+                <span className="text-xs text-white/80">آنلاین - آماده خدمت‌رسانی</span>
+              </div>
             </div>
             <Button
               variant="ghost"
@@ -171,10 +188,34 @@ export function AssistantAvatar() {
           {/* پیام‌ها */}
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             {messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <Bot className="w-12 h-12 mx-auto mb-3 text-amber-500" />
-                <p className="text-sm">سلام! من دستیار اهرم هستم.</p>
-                <p className="text-sm">چطور می‌تونم کمکتون کنم؟</p>
+              <div className="text-center py-6">
+                <img 
+                  src={assistantImage} 
+                  alt="دستیار اهرم" 
+                  className="w-20 h-20 rounded-full mx-auto mb-4 object-cover ring-4 ring-amber-200 shadow-lg"
+                />
+                <p className="text-sm font-medium text-foreground">سلام! من منشی اهرم هستم 👋</p>
+                <p className="text-sm text-muted-foreground mt-1">چطور می‌تونم کمکتون کنم؟</p>
+                <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                  <button 
+                    onClick={() => setInput('چطور سفارش ثبت کنم؟')}
+                    className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors"
+                  >
+                    ثبت سفارش
+                  </button>
+                  <button 
+                    onClick={() => setInput('خدمات شما چیست؟')}
+                    className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors"
+                  >
+                    خدمات
+                  </button>
+                  <button 
+                    onClick={() => setInput('راهنمای سایت')}
+                    className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors"
+                  >
+                    راهنما
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -187,12 +228,14 @@ export function AssistantAvatar() {
                     )}
                   >
                     <div className={cn(
-                      "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
-                      msg.role === 'user' 
-                        ? "bg-primary text-primary-foreground" 
-                        : "bg-amber-500 text-white"
+                      "w-8 h-8 rounded-full shrink-0 overflow-hidden",
+                      msg.role === 'user' && "bg-primary flex items-center justify-center"
                     )}>
-                      {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                      {msg.role === 'user' ? (
+                        <User className="w-4 h-4 text-primary-foreground" />
+                      ) : (
+                        <img src={assistantImage} alt="دستیار" className="w-full h-full object-cover" />
+                      )}
                     </div>
                     <div className={cn(
                       "max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed",
@@ -206,8 +249,8 @@ export function AssistantAvatar() {
                 ))}
                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
                   <div className="flex gap-2">
-                    <div className="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center">
-                      <Bot className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                      <img src={assistantImage} alt="دستیار" className="w-full h-full object-cover" />
                     </div>
                     <div className="bg-muted px-3 py-2 rounded-2xl rounded-tl-sm">
                       <span className="flex gap-1">
