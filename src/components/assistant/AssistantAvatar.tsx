@@ -29,9 +29,11 @@ export function AssistantAvatar() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
-  // Drag state - using left and top for more intuitive positioning
-  const [position, setPosition] = useState({ x: 24, y: window.innerHeight - 88 }); // bottom-left default
+  // Drag state - separate for avatar and chat panel
+  const [avatarPosition, setAvatarPosition] = useState({ x: 24, y: window.innerHeight - 88 });
+  const [chatPosition, setChatPosition] = useState({ x: 24, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingChat, setIsDraggingChat] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [hasMoved, setHasMoved] = useState(false);
   
@@ -76,60 +78,96 @@ export function AssistantAvatar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  // Drag handlers - simple and works in all directions
-  const handleDragStart = useCallback((clientX: number, clientY: number) => {
+  // Avatar drag handlers
+  const handleAvatarDragStart = useCallback((clientX: number, clientY: number) => {
     setIsDragging(true);
     setHasMoved(false);
     setDragOffset({
-      x: clientX - position.x,
-      y: clientY - position.y
+      x: clientX - avatarPosition.x,
+      y: clientY - avatarPosition.y
     });
-  }, [position]);
+  }, [avatarPosition]);
 
-  const handleDragMove = useCallback((clientX: number, clientY: number) => {
+  const handleAvatarDragMove = useCallback((clientX: number, clientY: number) => {
     if (!isDragging) return;
     
     setHasMoved(true);
-    
-    // Calculate new position
     const newX = clientX - dragOffset.x;
     const newY = clientY - dragOffset.y;
-    
-    // Keep within screen bounds
     const maxX = window.innerWidth - 80;
     const maxY = window.innerHeight - 80;
     
-    setPosition({
+    setAvatarPosition({
       x: Math.max(0, Math.min(maxX, newX)),
       y: Math.max(0, Math.min(maxY, newY))
     });
   }, [isDragging, dragOffset]);
 
+  // Chat panel drag handlers
+  const handleChatDragStart = useCallback((clientX: number, clientY: number) => {
+    setIsDraggingChat(true);
+    setDragOffset({
+      x: clientX - chatPosition.x,
+      y: clientY - chatPosition.y
+    });
+  }, [chatPosition]);
+
+  const handleChatDragMove = useCallback((clientX: number, clientY: number) => {
+    if (!isDraggingChat) return;
+    
+    const newX = clientX - dragOffset.x;
+    const newY = clientY - dragOffset.y;
+    const maxX = window.innerWidth - 320;
+    const maxY = window.innerHeight - 520;
+    
+    setChatPosition({
+      x: Math.max(0, Math.min(maxX, newX)),
+      y: Math.max(0, Math.min(maxY, newY))
+    });
+  }, [isDraggingChat, dragOffset]);
+
   const handleDragEnd = useCallback(() => {
     setIsDragging(false);
+    setIsDraggingChat(false);
   }, []);
 
-  // Mouse events
+  // Avatar mouse events
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    handleDragStart(e.clientX, e.clientY);
+    handleAvatarDragStart(e.clientX, e.clientY);
   };
 
-  // Touch events
   const handleTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0];
-    handleDragStart(touch.clientX, touch.clientY);
+    handleAvatarDragStart(touch.clientX, touch.clientY);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     const touch = e.touches[0];
-    handleDragMove(touch.clientX, touch.clientY);
+    handleAvatarDragMove(touch.clientX, touch.clientY);
+  };
+
+  // Chat header mouse events
+  const handleChatMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleChatDragStart(e.clientX, e.clientY);
+  };
+
+  const handleChatTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleChatDragStart(touch.clientX, touch.clientY);
+  };
+
+  const handleChatTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleChatDragMove(touch.clientX, touch.clientY);
   };
 
   // Global mouse/touch move and up
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      handleDragMove(e.clientX, e.clientY);
+      if (isDragging) handleAvatarDragMove(e.clientX, e.clientY);
+      if (isDraggingChat) handleChatDragMove(e.clientX, e.clientY);
     };
 
     const handleGlobalMouseUp = () => {
@@ -140,7 +178,7 @@ export function AssistantAvatar() {
       handleDragEnd();
     };
 
-    if (isDragging) {
+    if (isDragging || isDraggingChat) {
       document.addEventListener('mousemove', handleGlobalMouseMove);
       document.addEventListener('mouseup', handleGlobalMouseUp);
       document.addEventListener('touchend', handleGlobalTouchEnd);
@@ -151,10 +189,11 @@ export function AssistantAvatar() {
       document.removeEventListener('mouseup', handleGlobalMouseUp);
       document.removeEventListener('touchend', handleGlobalTouchEnd);
     };
-  }, [isDragging, handleDragMove, handleDragEnd]);
+  }, [isDragging, isDraggingChat, handleAvatarDragMove, handleChatDragMove, handleDragEnd]);
 
   const handleAvatarClick = () => {
     if (!hasMoved) {
+      setChatPosition({ x: avatarPosition.x, y: Math.max(20, avatarPosition.y - 520) });
       setIsOpen(true);
     }
   };
@@ -301,8 +340,8 @@ export function AssistantAvatar() {
         onTouchMove={handleTouchMove}
         onClick={handleAvatarClick}
         style={{
-          left: `${position.x}px`,
-          top: `${position.y}px`,
+          left: `${avatarPosition.x}px`,
+          top: `${avatarPosition.y}px`,
         }}
         className={cn(
           "fixed z-50 w-16 h-16 rounded-full",
@@ -328,14 +367,25 @@ export function AssistantAvatar() {
         <div 
           ref={chatPanelRef}
           style={{
-            left: `${position.x}px`,
-            top: `${Math.max(0, position.y - 450)}px`, // Position above avatar
+            left: `${chatPosition.x}px`,
+            top: `${chatPosition.y}px`,
           }}
-          className="fixed z-50 w-80 sm:w-96 h-[32rem] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300"
+          className={cn(
+            "fixed z-50 w-80 sm:w-96 h-[32rem] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300",
+            isDraggingChat && "transition-none"
+          )}
         >
-          {/* هدر */}
-          <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          {/* هدر - قابل جابجایی */}
+          <div 
+            onMouseDown={handleChatMouseDown}
+            onTouchStart={handleChatTouchStart}
+            onTouchMove={handleChatTouchMove}
+            className={cn(
+              "bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3 flex items-center justify-between select-none",
+              isDraggingChat ? "cursor-grabbing" : "cursor-grab"
+            )}
+          >
+            <div className="flex items-center gap-3 pointer-events-none">
               <div className="relative">
                 <img 
                   src={assistantImage} 
@@ -352,8 +402,8 @@ export function AssistantAvatar() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsOpen(false)}
-              className="h-8 w-8 text-white hover:bg-white/20"
+              onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
+              className="h-8 w-8 text-white hover:bg-white/20 pointer-events-auto"
             >
               <X className="h-5 w-5" />
             </Button>
