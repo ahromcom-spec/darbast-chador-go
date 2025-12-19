@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, User, Image, Mic, Square } from 'lucide-react';
+import { X, Send, User, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,10 +9,9 @@ import { toast } from 'sonner';
 import assistantImage from '@/assets/assistant-avatar.png';
 
 type MessageContent = {
-  type: 'text' | 'image' | 'voice';
+  type: 'text' | 'image';
   text?: string;
   imageUrl?: string;
-  audioUrl?: string;
 };
 
 type Message = { 
@@ -28,16 +27,19 @@ export function AssistantAvatar() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
+  // Drag state
+  const [position, setPosition] = useState({ x: 24, y: 24 }); // bottom-left default
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [hasMoved, setHasMoved] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const avatarRef = useRef<HTMLButtonElement>(null);
+  const chatPanelRef = useRef<HTMLDivElement>(null);
   
   const auth = useAuth();
   const user = auth?.user;
@@ -53,6 +55,104 @@ export function AssistantAvatar() {
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  // Close chat when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!isOpen) return;
+      
+      const target = e.target as Node;
+      if (
+        chatPanelRef.current && 
+        !chatPanelRef.current.contains(target) &&
+        avatarRef.current &&
+        !avatarRef.current.contains(target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  // Drag handlers
+  const handleDragStart = useCallback((clientX: number, clientY: number) => {
+    setIsDragging(true);
+    setHasMoved(false);
+    setDragStart({
+      x: clientX - (window.innerWidth - position.x - 64), // 64 is avatar width
+      y: clientY - (window.innerHeight - position.y - 64)
+    });
+  }, [position]);
+
+  const handleDragMove = useCallback((clientX: number, clientY: number) => {
+    if (!isDragging) return;
+    
+    setHasMoved(true);
+    const newX = window.innerWidth - clientX + dragStart.x - 64;
+    const newY = window.innerHeight - clientY + dragStart.y - 64;
+    
+    // Keep within bounds
+    const clampedX = Math.max(0, Math.min(window.innerWidth - 80, newX));
+    const clampedY = Math.max(0, Math.min(window.innerHeight - 80, newY));
+    
+    setPosition({ x: clampedX, y: clampedY });
+  }, [isDragging, dragStart]);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Mouse events
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleDragStart(e.clientX, e.clientY);
+  };
+
+  // Touch events
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleDragStart(touch.clientX, touch.clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleDragMove(touch.clientX, touch.clientY);
+  };
+
+  // Global mouse/touch move and up
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      handleDragMove(e.clientX, e.clientY);
+    };
+
+    const handleGlobalMouseUp = () => {
+      handleDragEnd();
+    };
+
+    const handleGlobalTouchEnd = () => {
+      handleDragEnd();
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      document.addEventListener('touchend', handleGlobalTouchEnd);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
+
+  const handleAvatarClick = () => {
+    if (!hasMoved) {
+      setIsOpen(true);
+    }
+  };
 
   const getUserRole = useCallback(() => {
     if (!user) return 'guest';
@@ -144,70 +244,6 @@ export function AssistantAvatar() {
     reader.readAsDataURL(file);
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        audioChunksRef.current.push(e.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        handleSendVoice(audioUrl);
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-      
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      toast.error('دسترسی به میکروفون امکان‌پذیر نیست');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-      }
-    }
-  };
-
-  const handleSendVoice = async (audioUrl: string) => {
-    const userMsg: Message = { 
-      role: 'user', 
-      content: '🎤 پیام صوتی',
-      attachments: [{ type: 'voice', audioUrl }]
-    };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setIsLoading(true);
-
-    try {
-      await streamChat([...newMessages.slice(0, -1), { role: 'user', content: 'کاربر یک پیام صوتی فرستاد. بگو که متوجه شدی و می‌توانی به سوالات متنی پاسخ دهی.' }]);
-    } catch (error) {
-      console.error('Chat error:', error);
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: 'متأسفانه خطایی رخ داد. لطفاً دوباره تلاش کنید.' }
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSend = async () => {
     if ((!input.trim() && !selectedImage) || isLoading) return;
 
@@ -250,23 +286,25 @@ export function AssistantAvatar() {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   return (
     <>
-      {/* دکمه آواتار */}
+      {/* دکمه آواتار - قابل جابجایی */}
       <button
-        onClick={() => setIsOpen(true)}
+        ref={avatarRef}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onClick={handleAvatarClick}
+        style={{
+          left: `${position.x}px`,
+          bottom: `${position.y}px`,
+        }}
         className={cn(
-          "fixed bottom-6 left-6 z-50 w-16 h-16 rounded-full",
-          "shadow-lg hover:shadow-2xl transition-all duration-300",
+          "fixed z-50 w-16 h-16 rounded-full",
+          "shadow-lg hover:shadow-2xl transition-shadow duration-300",
           "ring-2 ring-amber-400 ring-offset-2 ring-offset-background",
-          "hover:scale-110 hover:ring-amber-500",
-          "overflow-hidden",
+          "overflow-hidden select-none",
+          isDragging ? "cursor-grabbing scale-110" : "cursor-grab hover:ring-amber-500",
           isOpen && "hidden"
         )}
         aria-label="باز کردن دستیار هوشمند"
@@ -274,14 +312,22 @@ export function AssistantAvatar() {
         <img 
           src={assistantImage} 
           alt="دستیار اهرم" 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover pointer-events-none"
+          draggable={false}
         />
         <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
       </button>
 
       {/* پنل چت */}
       {isOpen && (
-        <div className="fixed bottom-6 left-6 z-50 w-80 sm:w-96 h-[32rem] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
+        <div 
+          ref={chatPanelRef}
+          style={{
+            left: `${position.x}px`,
+            bottom: `${position.y}px`,
+          }}
+          className="fixed z-50 w-80 sm:w-96 h-[32rem] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300"
+        >
           {/* هدر */}
           <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -371,9 +417,6 @@ export function AssistantAvatar() {
                           {att.type === 'image' && att.imageUrl && (
                             <img src={att.imageUrl} alt="تصویر" className="w-full max-h-40 object-cover" />
                           )}
-                          {att.type === 'voice' && att.audioUrl && (
-                            <audio controls src={att.audioUrl} className="w-full p-2" />
-                          )}
                         </div>
                       ))}
                       <p className="px-3 py-2">{msg.content}</p>
@@ -423,60 +466,34 @@ export function AssistantAvatar() {
               className="hidden"
             />
             
-            {isRecording ? (
-              <div className="flex items-center gap-2 justify-between bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                  <span className="text-sm text-red-600 dark:text-red-400">در حال ضبط... {formatTime(recordingTime)}</span>
-                </div>
-                <Button
-                  onClick={stopRecording}
-                  size="icon"
-                  variant="destructive"
-                  className="h-8 w-8"
-                >
-                  <Square className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2 items-center">
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  size="icon"
-                  variant="ghost"
-                  className="h-9 w-9 text-muted-foreground hover:text-amber-600"
-                  disabled={isLoading}
-                >
-                  <Image className="h-5 w-5" />
-                </Button>
-                <Button
-                  onClick={startRecording}
-                  size="icon"
-                  variant="ghost"
-                  className="h-9 w-9 text-muted-foreground hover:text-amber-600"
-                  disabled={isLoading}
-                >
-                  <Mic className="h-5 w-5" />
-                </Button>
-                <Input
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="پیام خود را بنویسید..."
-                  className="flex-1"
-                  disabled={isLoading}
-                />
-                <Button 
-                  onClick={handleSend} 
-                  disabled={(!input.trim() && !selectedImage) || isLoading}
-                  size="icon"
-                  className="bg-amber-500 hover:bg-amber-600"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+            <div className="flex gap-2 items-center">
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9 text-muted-foreground hover:text-amber-600"
+                disabled={isLoading}
+              >
+                <Image className="h-5 w-5" />
+              </Button>
+              <Input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="پیام خود را بنویسید..."
+                className="flex-1"
+                disabled={isLoading}
+              />
+              <Button 
+                onClick={handleSend} 
+                disabled={(!input.trim() && !selectedImage) || isLoading}
+                size="icon"
+                className="bg-amber-500 hover:bg-amber-600"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
