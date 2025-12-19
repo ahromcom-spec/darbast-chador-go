@@ -23,6 +23,7 @@ import {
   User,
   ShieldCheck,
   Calendar,
+  XCircle,
 } from "lucide-react";
 import { formatPersianDateTime } from "@/lib/dateUtils";
 
@@ -72,6 +73,7 @@ export function CollectionRequestDialog({
   const [sendingMessage, setSendingMessage] = useState(false);
   const [approvingRequest, setApprovingRequest] = useState(false);
   const [completingRequest, setCompletingRequest] = useState(false);
+  const [cancellingRequest, setCancellingRequest] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -323,6 +325,42 @@ export function CollectionRequestDialog({
     }
   };
 
+  // Customer cancels their pending request
+  const handleCancelRequest = async () => {
+    if (!existingRequest || isManager || existingRequest.status !== 'pending') return;
+
+    setCancellingRequest(true);
+    try {
+      const { error } = await supabase
+        .from('collection_requests')
+        .update({
+          status: 'cancelled',
+        })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      setExistingRequest(null);
+      setDescription('');
+      setRequestedDate('');
+      setMessages([]);
+
+      toast({
+        title: '✓ موفق',
+        description: 'درخواست جمع‌آوری لغو شد',
+      });
+    } catch (error: any) {
+      console.error('Error cancelling request:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در لغو درخواست',
+        variant: 'destructive',
+      });
+    } finally {
+      setCancellingRequest(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -335,6 +373,8 @@ export function CollectionRequestDialog({
         return <Badge variant="default" className="gap-1 bg-green-600"><CheckCircle className="h-3 w-3" /> تکمیل شده</Badge>;
       case 'rejected':
         return <Badge variant="destructive" className="gap-1"><AlertCircle className="h-3 w-3" /> رد شده</Badge>;
+      case 'cancelled':
+        return <Badge variant="outline" className="gap-1 text-muted-foreground"><XCircle className="h-3 w-3" /> لغو شده</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -407,6 +447,19 @@ export function CollectionRequestDialog({
               >
                 {completingRequest ? <LoadingSpinner className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 mr-2" />}
                 جمع‌آوری تکمیل شد
+              </Button>
+            )}
+
+            {/* Customer Cancel Action */}
+            {!isManager && existingRequest.status === 'pending' && (
+              <Button
+                variant="destructive"
+                onClick={handleCancelRequest}
+                disabled={cancellingRequest}
+                className="w-full"
+              >
+                {cancellingRequest ? <LoadingSpinner className="h-4 w-4" /> : <XCircle className="h-4 w-4 mr-2" />}
+                لغو درخواست جمع‌آوری
               </Button>
             )}
 

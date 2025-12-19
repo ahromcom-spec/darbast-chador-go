@@ -104,6 +104,19 @@ export function ExecutiveSidebar() {
     refetchInterval: 30000
   });
 
+  // تعداد درخواست‌های جمع‌آوری در انتظار
+  const { data: pendingCollectionRequestsCount = 0 } = useQuery({
+    queryKey: ['executive-pending-collection-requests-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('collection_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      return count || 0;
+    },
+    refetchInterval: 30000
+  });
+
   // کارتابل: تعداد کل سفارشات نیازمند توجه (pending + approved + in_progress)
   const { data: workbenchCount = 0 } = useQuery({
     queryKey: ['executive-workbench-count'],
@@ -154,6 +167,12 @@ export function ExecutiveSidebar() {
       href: '/executive/in-progress',
       icon: PlayCircle,
       badge: inProgressCount
+    },
+    {
+      title: 'درخواست‌های جمع‌آوری',
+      href: '/executive/collection-requests',
+      icon: PackageOpen,
+      badge: pendingCollectionRequestsCount
     },
     {
       title: 'در انتظار جمع‌آوری',
