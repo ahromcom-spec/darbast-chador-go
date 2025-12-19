@@ -8,7 +8,18 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Package, MapPin, Calendar, Eye, Filter, X, Users, Search } from 'lucide-react';
+import { Package, MapPin, Calendar, Eye, Filter, X, Users, Search, XCircle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from 'sonner';
 
 interface Order {
   id: string;
@@ -56,6 +67,10 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
   const [loading, setLoading] = useState(true);
   const [addresses, setAddresses] = useState<string[]>([]);
   const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string }[]>([]);
+  
+  // Cancel order state
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   
   // Filters
   const [selectedAddress, setSelectedAddress] = useState<string>('all');
@@ -268,6 +283,33 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
     setSearchQuery('');
   };
 
+  const handleCancelOrder = async () => {
+    if (!cancelOrderId) return;
+    
+    setIsCancelling(true);
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: 'لغو شده توسط کاربر',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cancelOrderId);
+
+      if (error) throw error;
+
+      toast.success("سفارش شما با موفقیت لغو شد");
+      setCancelOrderId(null);
+      await fetchOrders();
+    } catch (error: any) {
+      console.error('Error cancelling order:', error);
+      toast.error("خطا در لغو سفارش");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const hasActiveFilters = selectedAddress !== 'all' || selectedServiceType !== 'all' || selectedStatus !== 'all' || searchQuery.trim() !== '';
   const filteredOrders = getFilteredOrders();
 
@@ -440,19 +482,36 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
                       </div>
                     </div>
 
-                    {/* Action Button */}
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="gap-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/user/orders/${order.id}`);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                      مشاهده
-                    </Button>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 flex-shrink-0">
+                      {/* Cancel button for pending orders */}
+                      {order.status === 'pending' && (
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          className="gap-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCancelOrderId(order.id);
+                          }}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          لغو
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="gap-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/user/orders/${order.id}`);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                        مشاهده
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -460,6 +519,31 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
           })}
         </div>
       )}
+
+      {/* Cancel Order Dialog */}
+      <AlertDialog open={!!cancelOrderId} onOpenChange={() => setCancelOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>لغو سفارش</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا مطمئن هستید که می‌خواهید این سفارش را لغو کنید؟ این عملیات قابل بازگشت نیست.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>انصراف</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleCancelOrder();
+              }}
+              disabled={isCancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCancelling ? 'در حال لغو...' : 'تایید لغو سفارش'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
