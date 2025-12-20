@@ -1402,8 +1402,13 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه تایید پرداخت نقدی - برای awaiting_payment */}
-                  {order.execution_stage === 'awaiting_payment' && (
+                  {/* دکمه ثبت پرداخت - برای همه مراحل بعد از اجرا */}
+                  {(order.execution_stage === 'order_executed' || 
+                    order.execution_stage === 'awaiting_payment' || 
+                    order.execution_stage === 'awaiting_collection' || 
+                    order.execution_stage === 'in_collection' || 
+                    order.execution_stage === 'collected' ||
+                    order.status === 'closed') && (
                     <Button
                       onClick={() => {
                         setSelectedOrder(order);
@@ -1411,10 +1416,11 @@ export default function ExecutiveOrders() {
                         setCashPaymentDialogOpen(true);
                       }}
                       size="sm"
-                      className="gap-2 bg-green-600 hover:bg-green-700"
+                      variant="outline"
+                      className="gap-2 text-green-600 border-green-300 hover:bg-green-50"
                     >
                       <Banknote className="h-4 w-4" />
-                      تایید پرداخت نقدی
+                      ثبت پرداخت
                     </Button>
                   )}
 
