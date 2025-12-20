@@ -28,6 +28,7 @@ interface Order {
   address: string;
   detailed_address: string | null;
   created_at: string;
+  customer_id: string;
   customer_name: string;
   customer_phone: string;
   execution_start_date: string | null;
@@ -145,6 +146,7 @@ export default function ExecutiveStageAwaitingCollection() {
             address: order.address,
             detailed_address: order.detailed_address,
             created_at: order.created_at,
+            customer_id: order.customer_id,
             execution_start_date: order.execution_start_date,
             execution_end_date: order.execution_end_date,
             execution_stage: order.execution_stage,
@@ -646,7 +648,7 @@ export default function ExecutiveStageAwaitingCollection() {
           }}
           orderId={selectedOrder.id}
           orderCode={selectedOrder.code}
-          customerId=""
+          customerId={selectedOrder.customer_id}
           isManager={true}
         />
       )}
