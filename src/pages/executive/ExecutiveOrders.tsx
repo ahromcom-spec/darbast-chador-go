@@ -1183,15 +1183,99 @@ export default function ExecutiveOrders() {
                     افزودن پرسنل
                   </Button>
 
+                  {/* دکمه تایید سفارش - برای pending */}
+                  {order.status === 'pending' && (
+                    <Button
+                      onClick={() => handleStageChange(order.id, 'pending_execution')}
+                      size="sm"
+                      className="gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      تایید سفارش
+                    </Button>
+                  )}
+
+                  {/* دکمه شروع اجرا - برای pending_execution */}
+                  {order.status === 'pending_execution' && (
+                    <Button
+                      onClick={() => handleStageChange(order.id, 'in_progress')}
+                      size="sm"
+                      className="gap-2 bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Clock className="h-4 w-4" />
+                      شروع اجرا
+                    </Button>
+                  )}
+
                   {/* دکمه اجرا شد - برای سفارش‌های در حال اجرا */}
                   {order.status === 'in_progress' && !order.execution_stage && (
                     <Button
-                      onClick={() => handleMarkAsExecuted(order.id, order.code)}
+                      onClick={() => handleStageChange(order.id, 'order_executed')}
                       size="sm"
                       className="gap-2 bg-green-600 hover:bg-green-700"
                     >
                       <CheckCircle className="h-4 w-4" />
                       اجرا شد
+                    </Button>
+                  )}
+
+                  {/* دکمه در انتظار پرداخت - برای order_executed */}
+                  {order.execution_stage === 'order_executed' && (
+                    <Button
+                      onClick={() => handleStageChange(order.id, 'awaiting_payment')}
+                      size="sm"
+                      className="gap-2 bg-amber-600 hover:bg-amber-700"
+                    >
+                      <Banknote className="h-4 w-4" />
+                      در انتظار پرداخت
+                    </Button>
+                  )}
+
+                  {/* دکمه در انتظار جمع‌آوری - برای awaiting_payment */}
+                  {order.execution_stage === 'awaiting_payment' && (
+                    <Button
+                      onClick={() => handleStageChange(order.id, 'awaiting_collection')}
+                      size="sm"
+                      className="gap-2 bg-orange-600 hover:bg-orange-700"
+                    >
+                      <Clock className="h-4 w-4" />
+                      در انتظار جمع‌آوری
+                    </Button>
+                  )}
+
+                  {/* دکمه در حال جمع‌آوری - برای awaiting_collection */}
+                  {order.execution_stage === 'awaiting_collection' && (
+                    <Button
+                      onClick={() => handleStageChange(order.id, 'in_collection')}
+                      size="sm"
+                      className="gap-2 bg-purple-600 hover:bg-purple-700"
+                    >
+                      <Wrench className="h-4 w-4" />
+                      در حال جمع‌آوری
+                    </Button>
+                  )}
+
+                  {/* دکمه جمع‌آوری شد - برای in_collection */}
+                  {order.execution_stage === 'in_collection' && (
+                    <Button
+                      onClick={() => handleStageChange(order.id, 'collected')}
+                      size="sm"
+                      className="gap-2 bg-teal-600 hover:bg-teal-700"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      جمع‌آوری شد
+                    </Button>
+                  )}
+
+                  {/* دکمه اتمام سفارش - برای collected */}
+                  {order.execution_stage === 'collected' && (
+                    <Button
+                      onClick={() => handleStageChange(order.id, 'closed')}
+                      size="sm"
+                      className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      اتمام سفارش
                     </Button>
                   )}
 
