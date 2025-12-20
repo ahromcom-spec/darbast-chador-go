@@ -164,8 +164,8 @@ export default function ExecutiveDashboard() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
-        title="داشبورد مدیریت اجرا"
-        description="مدیریت خدمات اجرای داربست به همراه اجناس"
+        title="ماژول مدیریت اجرای داربست به همراه اجناس"
+        description="مدیریت و پیگیری سفارشات خدمات اجرای داربست به همراه اجناس"
       />
 
       {/* بخش کره زمین */}

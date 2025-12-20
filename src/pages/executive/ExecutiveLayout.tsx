@@ -81,7 +81,7 @@ const orderStagesItems = [
 // آیتم‌های اصلی ناوبری
 const mainNavItems = [
   {
-    title: 'داشبورد',
+    title: 'ماژول اجرای داربست',
     href: '/executive',
     icon: LayoutDashboard
   },
