@@ -386,8 +386,11 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
     };
   }, [mapboxToken, toast]);
 
-  // تابع کلیک روی سفارش
+  // تابع کلیک روی سفارش - ذخیره وضعیت نقشه قبل از رفتن
   const handleOrderClick = useCallback((orderId: string) => {
+    // ذخیره اینکه کاربر از نقشه اومده
+    sessionStorage.setItem('executive_map_return', 'true');
+    
     if (onOrderClick) {
       onOrderClick(orderId);
     } else {
@@ -511,17 +514,41 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       `;
     };
 
-    // ایجاد مارکرها
+    // آیکون پیش‌فرض برای سفارشات بدون عکس
+    const defaultThumbIcon = (count: number) => {
+      const badge = count > 1 ? `<div class="exec-order-marker__thumb-badge">${count}</div>` : '';
+      return L.divIcon({
+        className: 'exec-order-marker',
+        html: `
+          <div class="exec-order-marker__thumb exec-order-marker__thumb--default">
+            <div class="exec-order-marker__default-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+            </div>
+            ${badge}
+            <div class="exec-order-marker__pin" aria-hidden="true"></div>
+          </div>
+        `,
+        iconSize: [56, 63],
+        iconAnchor: [28, 56],
+        popupAnchor: [0, -54],
+      });
+    };
+
+    // ایجاد مارکرها - همه سفارشات با عکس نمایش داده میشن
     orderMarkers.forEach((group) => {
       const count = group.orders.length;
-      const representative = group.orders[0];
+      // پیدا کردن اولین سفارش با عکس
+      const orderWithImage = group.orders.find(o => o.first_image_url);
+      const representative = orderWithImage || group.orders[0];
 
-      const icon =
-        count === 1
-          ? representative.first_image_url
-            ? thumbIcon(representative.first_image_url, representative.images_count ?? 0)
-            : dotIcon(statusColor(representative.status || 'pending'))
-          : centerClusterIcon(count);
+      // همه مارکرها با عکس نمایش داده میشن
+      const icon = representative.first_image_url
+        ? thumbIcon(representative.first_image_url, count)
+        : defaultThumbIcon(count);
 
       const popupContent = `
         <div class="exec-popup">
@@ -837,6 +864,24 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
 
         .exec-popup__thumb--empty {
           background: hsl(var(--muted));
+        }
+
+        .exec-order-marker__thumb--default {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, hsl(var(--muted)) 0%, hsl(var(--border)) 100%);
+        }
+
+        .exec-order-marker__default-icon {
+          width: 28px;
+          height: 28px;
+          color: hsl(var(--muted-foreground));
+        }
+
+        .exec-order-marker__default-icon svg {
+          width: 100%;
+          height: 100%;
         }
 
         .exec-popup__meta {
