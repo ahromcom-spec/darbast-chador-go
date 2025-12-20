@@ -93,17 +93,28 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
     }
   });
 
-  // تعداد موقعیت‌های یکتا (برای نمایش در کارت پایین)
-  const uniqueLocationsCount = useMemo(() => {
-    if (!orders || orders.length === 0) return 0;
+  // گروه‌بندی سفارشات بر اساس موقعیت
+  const orderMarkers = useMemo(() => {
+    if (!orders || orders.length === 0) return [] as { lat: number; lng: number; orders: OrderData[] }[];
 
-    const keys = new Set<string>();
-    orders.forEach((order) => {
+    const locationGroups: { [key: string]: OrderData[] } = {};
+    
+    orders.forEach(order => {
       if (!order.location_lat || !order.location_lng) return;
-      keys.add(`${order.location_lat.toFixed(5)}_${order.location_lng.toFixed(5)}`);
+      
+      const key = `${order.location_lat.toFixed(5)}_${order.location_lng.toFixed(5)}`;
+      
+      if (!locationGroups[key]) {
+        locationGroups[key] = [];
+      }
+      locationGroups[key].push(order);
     });
 
-    return keys.size;
+    return Object.values(locationGroups).map(group => ({
+      lat: group[0].location_lat,
+      lng: group[0].location_lng,
+      orders: group
+    }));
   }, [orders]);
 
   // دریافت توکن Mapbox
