@@ -265,16 +265,22 @@ export default function ExecutiveGlobe({ onClose, onOrderClick }: ExecutiveGlobe
         `)
         .not('location_lat', 'is', null)
         .not('location_lng', 'is', null)
-        .in('status', ['pending', 'approved', 'in_progress', 'completed', 'paid']);
+        .neq('location_lat', 0)
+        .neq('location_lng', 0)
+        .in('status', ['pending', 'pending_execution', 'approved', 'in_progress', 'completed', 'paid']);
 
       if (error) throw error;
 
-      // فیلتر کردن فقط سفارشات داربست به همراه اجناس
+      // فیلتر کردن فقط سفارشات داربست به همراه اجناس (subcategory code = 10 و service_type code = 10)
       const scaffoldOrders = data?.filter(order => {
-        const serviceCode = order.subcategories?.service_types_v3?.code;
-        return serviceCode === 'scaffold_execution_with_materials';
+        const subcategoryCode = order.subcategories?.code;
+        const serviceTypeCode = order.subcategories?.service_types_v3?.code;
+        // subcategory code 10 = خدمات اجراء داربست به همراه اجناس
+        // service_type code 10 = داربست فلزی
+        return subcategoryCode === '10' && serviceTypeCode === '10';
       }) || [];
 
+      console.log('Scaffold orders for globe:', scaffoldOrders.length);
       return scaffoldOrders;
     }
   });
