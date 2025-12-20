@@ -280,6 +280,11 @@ export const OrderTimeline = ({
     if (isRejected) return 'رد شده';
     if (orderStatus === 'closed') return 'اتمام سفارش';
     
+    // اگر پرداخت تایید شده باشد و هنوز در مرحله awaiting_payment هستیم
+    if (paymentConfirmedAt && executionStage === 'awaiting_payment') {
+      return 'پرداخت شد';
+    }
+    
     // اگر execution_stage موجود باشد، از آن استفاده کنیم
     if (executionStage) {
       const executionStageLabels: Record<string, string> = {
@@ -288,7 +293,7 @@ export const OrderTimeline = ({
         'ready': 'آماده اجرا',
         'in_progress': 'در حال اجرا',
         'order_executed': 'اجرا شده',
-        'awaiting_payment': 'در انتظار پرداخت',
+        'awaiting_payment': paymentConfirmedAt ? 'پرداخت شد' : 'در انتظار پرداخت',
         'awaiting_collection': 'در انتظار جمع‌آوری',
         'in_collection': 'در حال جمع‌آوری',
         'collected': 'جمع‌آوری شد',
