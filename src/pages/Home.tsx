@@ -1,98 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Wrench, Building2, Smartphone, Download, Sparkles, MessageSquare, Briefcase, MapPin, Globe } from 'lucide-react';
+import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
 import { SubcategoryDialog } from '@/components/common/SubcategoryDialog';
 import { useToast } from '@/hooks/use-toast';
-import { useAutoAssignProjects } from '@/hooks/useAutoAssignProjects';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useNavigation } from '@/hooks/useNavigation';
 import usePWAInstall from '@/hooks/usePWAInstall';
 import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
-import { useUserProjects } from '@/hooks/useUserProjects';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
-import { lazy, Suspense } from 'react';
 
-// Lazy load heavy globe component for better performance
+// Lazy load heavy components for better performance
 const HybridGlobe = lazy(() => import('@/components/globe/HybridGlobe'));
-import globeIcon from '@/assets/golden-globe.png';
-import { PWAInstallBanner } from '@/components/common/PWAInstallBanner';
-import { NotificationBanner } from '@/components/common/NotificationBanner';
+const PWAInstallBanner = lazy(() => import('@/components/common/PWAInstallBanner').then(m => ({ default: m.PWAInstallBanner })));
 
 const Home = () => {
   usePageTitle('صفحه اصلی');
   const [selectedServiceType, setSelectedServiceType] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
-  const [selectedProject, setSelectedProject] = useState<string>('');
   const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
   const [pendingServiceTypeId, setPendingServiceTypeId] = useState<string>('');
   const [showGlobe, setShowGlobe] = useState(() => {
-    // خواندن وضعیت نقشه از localStorage برای حفظ بعد از رفرش
     return localStorage.getItem('showGlobeMap') === 'true';
   });
   
-  const { canInstall, isIOS, isStandalone, promptInstall } = usePWAInstall();
+  const { canInstall, isIOS, promptInstall } = usePWAInstall();
   const { toast } = useToast();
-  const { navigate, navigateWithAuth } = useNavigation();
+  const { navigate } = useNavigation();
   const { user } = useAuth();
   const { serviceTypes, loading: servicesLoading } = useServiceTypesWithSubcategories();
-  const { projects, loading: projectsLoading } = useUserProjects(
-    selectedServiceType || undefined,
-    selectedSubcategory || undefined
-  );
 
-  // Auto-assign projects to contractors
-  useAutoAssignProjects();
-
-  // ذخیره وضعیت نقشه در localStorage برای حفظ بعد از رفرش
+  // ذخیره وضعیت نقشه در localStorage
   useEffect(() => {
     localStorage.setItem('showGlobeMap', showGlobe ? 'true' : 'false');
   }, [showGlobe]);
-  // Reset selections when component mounts
-  useEffect(() => {
-    setSelectedServiceType('');
-    setSelectedSubcategory('');
-    setSelectedProject('');
-  }, []);
 
-  const handleServiceTypeChange = (value: string) => {
-    // Value format: "serviceTypeId" or "serviceTypeId:subcategoryCode"
+  const handleServiceTypeChange = useCallback((value: string) => {
     const [serviceTypeId, subcategoryCode] = value.split(':');
     
-    // اگر فقط نوع خدمات انتخاب شده و زیرشاخه نیست، دیالوگ را باز کن
     if (serviceTypeId && !subcategoryCode) {
       setPendingServiceTypeId(serviceTypeId);
       setShowSubcategoryDialog(true);
       return;
     }
     
-    // اگر هر دو انتخاب شده‌اند، مستقیم تنظیم کن
     setSelectedServiceType(serviceTypeId || '');
     setSelectedSubcategory(subcategoryCode || '');
-    setSelectedProject('');
-  };
+  }, []);
 
-  const handleSubcategorySelect = (subcategory: any) => {
+  const handleSubcategorySelect = useCallback((subcategory: any) => {
     setShowSubcategoryDialog(false);
     setSelectedServiceType(pendingServiceTypeId);
     setSelectedSubcategory(subcategory.code);
-    setSelectedProject('');
     setPendingServiceTypeId('');
-  };
+  }, [pendingServiceTypeId]);
 
-  // Ensure popovers/menus are closed before navigating to avoid lingering UI
-  const safeNavigate = (path: string, state?: any) => {
-    // Close any open Radix popovers by sending Escape
+  // Ensure popovers/menus are closed before navigating
+  const safeNavigate = useCallback((path: string, state?: any) => {
     try {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' } as any));
       (document.activeElement as HTMLElement | null)?.blur?.();
     } catch {}
-    // Let closing animation finish
     setTimeout(() => navigate(path, state ? state : undefined), 120);
-  };
+  }, [navigate]);
 
   // هنگامی که نوع خدمات انتخاب شد، کاربر را به صفحه انتخاب آدرس هدایت کنیم
   useEffect(() => {
@@ -100,7 +70,6 @@ const Home = () => {
       const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
       const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
       
-      // ذخیره اطلاعات انتخاب شده برای استفاده بعد از لاگین
       const serviceSelection = {
         serviceTypeId: selectedServiceType,
         subcategoryId: subcategory?.id,
@@ -109,7 +78,6 @@ const Home = () => {
         subcategoryName: subcategory?.name
       };
       
-      // اگر کاربر لاگین نیست، ابتدا پیام بده و به صفحه لاگین هدایت کن
       if (!user) {
         toast({
           title: 'نیاز به ورود',
@@ -121,25 +89,18 @@ const Home = () => {
         return;
       }
       
-      // هدایت به صفحه انتخاب آدرس (برای همه خدمات شامل کرایه اجناس داربست)
       safeNavigate('/select-location', { state: { serviceSelection } });
     }
-  }, [selectedServiceType, selectedSubcategory, serviceTypes, user, toast]);
+  }, [selectedServiceType, selectedSubcategory, serviceTypes, user, toast, safeNavigate]);
 
-  // پروژه‌های کاربر را نمایش می‌دهیم و اجازه می‌دهیم انتخاب کند
-  // دیگر redirect خودکار نداریم تا کاربر بتواند پروژه‌هایش را ببیند
-
-  const handleProjectSelect = (projectId: string) => {
-    setSelectedProject(projectId);
-    // همه خدمات به صفحه افزودن خدمات می‌روند
+  const handleProjectSelect = useCallback((projectId: string) => {
     navigate(`/user/add-service/${projectId}`);
-  };
+  }, [navigate]);
 
-  const handleCreateNewProject = () => {
+  const handleCreateNewProject = useCallback(() => {
     const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
     const subcategory = serviceType?.subcategories.find(sc => sc.code === selectedSubcategory);
     
-    // همه خدمات به صفحه ایجاد پروژه می‌روند
     navigate('/user/create-project', {
       state: {
         preSelectedServiceType: selectedServiceType,
@@ -148,7 +109,7 @@ const Home = () => {
         subcategoryName: subcategory?.name
       }
     });
-  };
+  }, [navigate, selectedServiceType, selectedSubcategory, serviceTypes]);
 
   const selectedServiceTypeObj = serviceTypes.find(st => st.id === selectedServiceType);
   const pendingServiceTypeObj = serviceTypes.find(st => st.id === pendingServiceTypeId);
@@ -384,9 +345,9 @@ const Home = () => {
       {/* Bottom Banners - PWA Install */}
       {!showGlobe && (
         <div className="fixed bottom-4 left-4 right-4 z-50 flex flex-col gap-3 max-w-md mx-auto md:left-auto md:right-4 md:mx-0">
-          {/* NotificationBanner temporarily disabled */}
-          {/* <NotificationBanner variant="floating" /> */}
-          <PWAInstallBanner />
+          <Suspense fallback={null}>
+            <PWAInstallBanner />
+          </Suspense>
         </div>
       )}
 
