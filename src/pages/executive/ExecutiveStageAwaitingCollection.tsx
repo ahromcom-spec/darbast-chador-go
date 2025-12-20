@@ -448,24 +448,39 @@ export default function ExecutiveStageAwaitingCollection() {
                   </div>
                 )}
 
-                {/* نمایش تاریخ درخواست جمع‌آوری از طرف مشتری */}
-                {order.collection_request?.requested_date && (
-                  <div className="bg-orange-50 dark:bg-orange-950 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+                {/* نمایش وضعیت درخواست جمع‌آوری */}
+                {order.collection_request ? (
+                  <div className={`p-3 rounded-lg border ${
+                    order.collection_request.status === 'approved' 
+                      ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
+                      : order.collection_request.status === 'rejected'
+                      ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                      : 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800'
+                  }`}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <PackageOpen className="h-4 w-4 text-orange-600" />
-                        <span className="font-medium text-orange-700 dark:text-orange-300">تاریخ درخواست جمع‌آوری مشتری:</span>
-                        <span className="font-medium text-orange-800 dark:text-orange-200">
-                          {new Date(order.collection_request.requested_date).toLocaleDateString('fa-IR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                        <PackageOpen className={`h-4 w-4 ${
+                          order.collection_request.status === 'approved' 
+                            ? 'text-green-600' 
+                            : order.collection_request.status === 'rejected'
+                            ? 'text-red-600'
+                            : 'text-orange-600'
+                        }`} />
+                        <span className={`font-medium ${
+                          order.collection_request.status === 'approved' 
+                            ? 'text-green-700 dark:text-green-300' 
+                            : order.collection_request.status === 'rejected'
+                            ? 'text-red-700 dark:text-red-300'
+                            : 'text-orange-700 dark:text-orange-300'
+                        }`}>
+                          {order.collection_request.status === 'approved' 
+                            ? 'درخواست جمع‌آوری تایید شده' 
+                            : order.collection_request.status === 'rejected'
+                            ? 'درخواست جمع‌آوری رد شده'
+                            : 'درخواست جمع‌آوری در انتظار تایید'}
                         </span>
                       </div>
-                      {order.collection_request?.status === 'pending' && (
+                      {order.collection_request.status === 'pending' && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -479,6 +494,41 @@ export default function ExecutiveStageAwaitingCollection() {
                           بررسی درخواست
                         </Button>
                       )}
+                    </div>
+                    {order.collection_request.requested_date && (
+                      <div className="mt-2 text-sm">
+                        <span className="text-muted-foreground">تاریخ درخواستی: </span>
+                        <span className="font-medium">
+                          {new Date(order.collection_request.requested_date).toLocaleDateString('fa-IR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-lg border bg-muted/30 border-dashed">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <PackageOpen className="h-4 w-4" />
+                        <span>درخواست جمع‌آوری ثبت نشده</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setCollectionDialogOpen(true);
+                        }}
+                        className="gap-1"
+                      >
+                        <Calendar className="h-3 w-3" />
+                        ثبت درخواست
+                      </Button>
                     </div>
                   </div>
                 )}

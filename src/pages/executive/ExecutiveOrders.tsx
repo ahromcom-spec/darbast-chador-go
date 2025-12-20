@@ -117,6 +117,11 @@ interface Order {
   executed_by?: string | null;
   approved_by?: string | null;
   subcategory_id?: string | null;
+  collection_request?: {
+    requested_date: string | null;
+    status: string;
+    created_at: string;
+  } | null;
 }
 
 export default function ExecutiveOrders() {
@@ -284,6 +289,15 @@ export default function ExecutiveOrders() {
             }
           }
 
+          // Fetch collection request data
+          const { data: collectionRequestData } = await supabase
+            .from('collection_requests')
+            .select('requested_date, status, created_at')
+            .eq('order_id', order.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
           return {
             id: order.id,
             code: order.code,
@@ -307,6 +321,7 @@ export default function ExecutiveOrders() {
             executed_by: order.executed_by,
             approved_by: order.approved_by,
             subcategory_id: order.subcategory_id,
+            collection_request: collectionRequestData || null,
           } as Order;
         })
       );
@@ -1211,6 +1226,91 @@ export default function ExecutiveOrders() {
                         تا: {formatPersianDateTimeFull(order.execution_end_date)}
                       </p>
                     )}
+                  </div>
+                )}
+
+                {/* نمایش وضعیت درخواست جمع‌آوری */}
+                {order.collection_request ? (
+                  <div className={`p-3 rounded-lg border ${
+                    order.collection_request.status === 'approved' 
+                      ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
+                      : order.collection_request.status === 'rejected'
+                      ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                      : 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800'
+                  }`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <PackageOpen className={`h-4 w-4 ${
+                          order.collection_request.status === 'approved' 
+                            ? 'text-green-600' 
+                            : order.collection_request.status === 'rejected'
+                            ? 'text-red-600'
+                            : 'text-orange-600'
+                        }`} />
+                        <span className={`font-medium ${
+                          order.collection_request.status === 'approved' 
+                            ? 'text-green-700 dark:text-green-300' 
+                            : order.collection_request.status === 'rejected'
+                            ? 'text-red-700 dark:text-red-300'
+                            : 'text-orange-700 dark:text-orange-300'
+                        }`}>
+                          {order.collection_request.status === 'approved' 
+                            ? 'درخواست جمع‌آوری تایید شده' 
+                            : order.collection_request.status === 'rejected'
+                            ? 'درخواست جمع‌آوری رد شده'
+                            : 'درخواست جمع‌آوری در انتظار تایید'}
+                        </span>
+                      </div>
+                      {order.collection_request.status === 'pending' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setCollectionDialogOpen(true);
+                          }}
+                          className="gap-1 text-orange-700 border-orange-300 hover:bg-orange-100"
+                        >
+                          <Calendar className="h-3 w-3" />
+                          بررسی
+                        </Button>
+                      )}
+                    </div>
+                    {order.collection_request.requested_date && (
+                      <div className="mt-2 text-sm">
+                        <span className="text-muted-foreground">تاریخ درخواستی: </span>
+                        <span className="font-medium">
+                          {new Date(order.collection_request.requested_date).toLocaleDateString('fa-IR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-lg border bg-muted/30 border-dashed">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <PackageOpen className="h-4 w-4" />
+                        <span>درخواست جمع‌آوری ثبت نشده</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setCollectionDialogOpen(true);
+                        }}
+                        className="gap-1"
+                      >
+                        <Calendar className="h-3 w-3" />
+                        ثبت درخواست
+                      </Button>
+                    </div>
                   </div>
                 )}
 
