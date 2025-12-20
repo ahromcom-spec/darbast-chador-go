@@ -9,11 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ProgressMediaUploader } from '@/components/executive/ProgressMediaUploader';
-import { ExecutiveStageTimeline } from '@/components/executive/ExecutiveStageTimeline';
 import { Separator } from '@/components/ui/separator';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { OrderDetailsView } from '@/components/orders/OrderDetailsView';
+import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { sendOrderSms } from '@/lib/orderSms';
@@ -423,48 +421,27 @@ export default function ExecutiveStageAwaitingPayment() {
       </div>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
+            <DialogTitle>جزئیات کامل سفارش {selectedOrder?.code}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-4 py-4">
-              <OrderDetailsView 
-                order={{
-                  id: selectedOrder.id,
-                  code: selectedOrder.code,
-                  customer_name: selectedOrder.customer_name,
-                  customer_phone: selectedOrder.customer_phone,
-                  address: selectedOrder.address,
-                  detailed_address: selectedOrder.detailed_address,
-                  created_at: selectedOrder.created_at,
-                  notes: selectedOrder.notes
-                }}
-                showMedia={true}
-              />
-
-              <Separator className="my-4" />
-              
-              <div>
-                <span className="text-sm font-medium mb-2 block">مراحل اجرایی</span>
-                <ExecutiveStageTimeline
-                  projectId={selectedOrder.id}
-                  currentStage={selectedOrder.execution_stage}
-                  onStageChange={() => {
-                    fetchOrders();
-                    setDetailsOpen(false);
-                  }}
-                />
-              </div>
-
-              <Separator className="my-4" />
-
-              <ProgressMediaUploader
-                projectId={selectedOrder.id}
-                stage="awaiting_payment"
-                stageName="در انتظار پرداخت"
-              />
-            </div>
+            <EditableOrderDetails 
+              order={{
+                id: selectedOrder.id,
+                code: selectedOrder.code,
+                customer_name: selectedOrder.customer_name,
+                customer_phone: selectedOrder.customer_phone,
+                address: selectedOrder.address,
+                detailed_address: selectedOrder.detailed_address,
+                created_at: selectedOrder.created_at,
+                notes: selectedOrder.notes,
+                execution_start_date: selectedOrder.execution_start_date,
+                execution_end_date: selectedOrder.execution_end_date,
+                execution_stage: selectedOrder.execution_stage
+              }}
+              onUpdate={fetchOrders}
+            />
           )}
         </DialogContent>
       </Dialog>
