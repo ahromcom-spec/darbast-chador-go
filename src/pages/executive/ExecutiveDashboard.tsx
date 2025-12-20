@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,6 +52,15 @@ export default function ExecutiveDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showGlobe, setShowGlobe] = useState(false);
+  
+  // بررسی بازگشت از صفحه سفارش - اگر از نقشه اومده بود، دوباره نقشه باز بشه
+  useEffect(() => {
+    const shouldReturnToMap = sessionStorage.getItem('executive_map_return');
+    if (shouldReturnToMap === 'true') {
+      sessionStorage.removeItem('executive_map_return');
+      setShowGlobe(true);
+    }
+  }, []);
   
   const { data: stats, isLoading } = useQuery({
     queryKey: ['executive-stats'],
