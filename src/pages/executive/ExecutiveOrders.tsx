@@ -145,6 +145,11 @@ export default function ExecutiveOrders() {
   // Stage change confirmation
   const [stageChangeConfirmOpen, setStageChangeConfirmOpen] = useState(false);
   const [pendingStageChange, setPendingStageChange] = useState<{ orderId: string; newStage: string } | null>(null);
+  // Cash payment confirmation
+  const [cashPaymentDialogOpen, setCashPaymentDialogOpen] = useState(false);
+  const [cashPaymentAmount, setCashPaymentAmount] = useState('');
+  const [cashPaymentReference, setCashPaymentReference] = useState('');
+  const [confirmingCashPayment, setConfirmingCashPayment] = useState(false);
   const { toast } = useToast();
 
   // Auto-open order from URL param
@@ -763,6 +768,69 @@ export default function ExecutiveOrders() {
     }
   };
 
+  // تایید پرداخت نقدی
+  const handleConfirmCashPayment = async () => {
+    if (!selectedOrder) return;
+
+    setConfirmingCashPayment(true);
+    try {
+      const paymentAmount = cashPaymentAmount ? parseFloat(cashPaymentAmount.replace(/,/g, '')) : selectedOrder.payment_amount;
+      
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          payment_confirmed_at: new Date().toISOString(),
+          payment_confirmed_by: user?.id,
+          payment_method: 'cash',
+          payment_amount: paymentAmount,
+          transaction_reference: cashPaymentReference || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      // ارسال نوتیفیکیشن به مشتری
+      if (selectedOrder.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', selectedOrder.customer_id)
+          .maybeSingle();
+
+        if (customerData?.user_id) {
+          await supabase.from('notifications').insert({
+            user_id: customerData.user_id,
+            title: 'پرداخت سفارش تایید شد ✓',
+            body: `پرداخت نقدی سفارش ${selectedOrder.code} با موفقیت ثبت شد.`,
+            link: `/user/my-orders`,
+            type: 'success'
+          });
+        }
+      }
+
+      toast({
+        title: '✓ موفق',
+        description: 'پرداخت نقدی با موفقیت ثبت شد'
+      });
+
+      setCashPaymentDialogOpen(false);
+      setCashPaymentAmount('');
+      setCashPaymentReference('');
+      setSelectedOrder(null);
+      fetchOrders();
+    } catch (error) {
+      console.error('Error confirming cash payment:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'ثبت پرداخت نقدی با خطا مواجه شد'
+      });
+    } finally {
+      setConfirmingCashPayment(false);
+    }
+  };
+
   // نمایش وضعیت سفارش بر اساس status و execution_stage
   const getOrderStageLabel = (order: Order): { label: string; className: string } => {
     // ابتدا بررسی execution_stage
@@ -1231,6 +1299,22 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
+                  {/* دکمه تایید پرداخت نقدی - برای awaiting_payment */}
+                  {order.execution_stage === 'awaiting_payment' && (
+                    <Button
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setCashPaymentAmount(order.payment_amount?.toLocaleString('fa-IR') || '');
+                        setCashPaymentDialogOpen(true);
+                      }}
+                      size="sm"
+                      className="gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                      <Banknote className="h-4 w-4" />
+                      تایید پرداخت نقدی
+                    </Button>
+                  )}
+
                   {/* دکمه در انتظار جمع‌آوری - برای awaiting_payment */}
                   {order.execution_stage === 'awaiting_payment' && (
                     <Button
@@ -1644,6 +1728,80 @@ export default function ExecutiveOrders() {
               }}
             >
               تایید تغییر مرحله
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cash Payment Confirmation Dialog */}
+      <Dialog open={cashPaymentDialogOpen} onOpenChange={setCashPaymentDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-green-600" />
+              تایید پرداخت نقدی
+            </DialogTitle>
+            <DialogDescription>
+              ثبت پرداخت نقدی برای سفارش {selectedOrder?.code}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
+                <User className="h-4 w-4" />
+                <span>مشتری: {selectedOrder?.customer_name}</span>
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="cash-payment-amount">مبلغ پرداختی (تومان)</Label>
+              <Input
+                id="cash-payment-amount"
+                type="text"
+                value={cashPaymentAmount}
+                onChange={(e) => setCashPaymentAmount(e.target.value)}
+                placeholder={selectedOrder?.payment_amount?.toLocaleString('fa-IR') || 'مبلغ را وارد کنید'}
+                className="mt-2"
+                dir="ltr"
+              />
+              {selectedOrder?.payment_amount && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  مبلغ سفارش: {selectedOrder.payment_amount.toLocaleString('fa-IR')} تومان
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="cash-payment-reference">شماره رسید / توضیحات (اختیاری)</Label>
+              <Input
+                id="cash-payment-reference"
+                type="text"
+                value={cashPaymentReference}
+                onChange={(e) => setCashPaymentReference(e.target.value)}
+                placeholder="شماره رسید یا توضیحات"
+                className="mt-2"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setCashPaymentDialogOpen(false);
+                setCashPaymentAmount('');
+                setCashPaymentReference('');
+                setSelectedOrder(null);
+              }}
+              disabled={confirmingCashPayment}
+            >
+              انصراف
+            </Button>
+            <Button 
+              onClick={handleConfirmCashPayment}
+              disabled={confirmingCashPayment}
+              className="gap-2 bg-green-600 hover:bg-green-700"
+            >
+              {confirmingCashPayment ? 'در حال ثبت...' : 'تایید پرداخت'}
             </Button>
           </DialogFooter>
         </DialogContent>
