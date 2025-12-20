@@ -988,6 +988,45 @@ export type Database = {
           },
         ]
       }
+      module_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          assigned_phone_number: string
+          assigned_user_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          module_key: string
+          module_name: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          assigned_phone_number: string
+          assigned_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          module_key: string
+          module_name: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          assigned_phone_number?: string
+          assigned_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          module_key?: string
+          module_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string
