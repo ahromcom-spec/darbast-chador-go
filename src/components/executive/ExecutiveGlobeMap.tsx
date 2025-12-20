@@ -1,22 +1,54 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowRight, MapPin, X, Package, Building2, Eye } from 'lucide-react';
+import { MapPin, X, Package, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+
+type OrderStatus =
+  | 'pending'
+  | 'pending_execution'
+  | 'approved'
+  | 'in_progress'
+  | 'completed'
+  | 'paid'
+  | string;
+
+interface OrderMedia {
+  id: string;
+  project_id: string;
+  file_path: string;
+  thumbnail_path: string | null;
+  file_type: 'image' | 'video' | string;
+  created_at: string;
+  mime_type: string | null;
+}
+
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (ch) =>
+    ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    })[ch] as string
+  );
 
 interface OrderData {
   id: string;
   code: string;
   address: string;
-  status: string;
+  status: OrderStatus;
   customer_name: string | null;
   location_lat: number;
   location_lng: number;
+  first_image_url?: string | null;
+  images_count?: number;
   subcategories: {
     id: string;
     name: string;
@@ -28,8 +60,6 @@ interface OrderData {
     } | null;
   } | null;
 }
-
-
 interface ExecutiveGlobeMapProps {
   onClose: () => void;
   onOrderClick?: (orderId: string) => void;
@@ -52,7 +82,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
   // دریافت سفارشات داربست به همراه اجناس
   const { data: orders, isLoading } = useQuery({
     queryKey: ['executive-globe-map-orders'],
-    queryFn: async () => {
+    queryFn: async (): Promise<OrderData[]> => {
       const { data, error } = await supabase
         .from('projects_v3')
         .select(`
@@ -83,14 +113,87 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       if (error) throw error;
 
       // فیلتر کردن فقط سفارشات داربست به همراه اجناس
-      const scaffoldOrders = data?.filter(order => {
-        const subcategoryCode = order.subcategories?.code;
-        const serviceTypeCode = order.subcategories?.service_types_v3?.code;
-        return subcategoryCode === '10' && serviceTypeCode === '10';
-      }) || [];
+      const scaffoldOrders =
+        data?.filter((order) => {
+          const subcategoryCode = order.subcategories?.code;
+          const serviceTypeCode = order.subcategories?.service_types_v3?.code;
+          return subcategoryCode === '10' && serviceTypeCode === '10';
+        }) || [];
 
-      return scaffoldOrders as OrderData[];
-    }
+      const typedOrders = scaffoldOrders as OrderData[];
+      const orderIds = typedOrders.map((o) => o.id);
+
+      if (orderIds.length === 0) return [];
+
+      // دریافت media برای هر سفارش (برای ساخت marker های تصویری مثل نقشه صفحه اصلی)
+      const { data: mediaData, error: mediaError } = await supabase
+        .from('project_media')
+        .select('id, project_id, file_path, thumbnail_path, file_type, created_at, mime_type')
+        .in('project_id', orderIds)
+        .in('file_type', ['image', 'video'])
+        .order('created_at', { ascending: false })
+        .limit(2000);
+
+      if (mediaError) {
+        console.warn('[ExecutiveGlobeMap] Failed to fetch media for orders:', mediaError);
+      }
+
+      const mediaByOrder = new Map<string, OrderMedia[]>();
+      (mediaData || []).forEach((m) => {
+        const oid = (m as any).project_id as string;
+        if (!mediaByOrder.has(oid)) mediaByOrder.set(oid, []);
+        mediaByOrder.get(oid)!.push(m as any);
+      });
+
+      const imageCountByOrder = new Map<string, number>();
+      const firstImageByOrder = new Map<string, OrderMedia>();
+
+      orderIds.forEach((oid) => {
+        const list = mediaByOrder.get(oid) || [];
+        const images = list.filter((x) => x.file_type === 'image');
+        imageCountByOrder.set(oid, images.length);
+        if (images[0]) firstImageByOrder.set(oid, images[0]);
+      });
+
+      // برای هر سفارش، URL قابل نمایش بسازیم (اول signed؛ اگر نشد public)
+      const urlByOrder = new Map<string, string>();
+      const entries = Array.from(firstImageByOrder.entries()).map(([orderId, m]) => ({
+        orderId,
+        path: m.thumbnail_path || m.file_path,
+      }));
+
+      const chunkSize = 12;
+      for (let i = 0; i < entries.length; i += chunkSize) {
+        const chunk = entries.slice(i, i + chunkSize);
+        const results = await Promise.all(
+          chunk.map(async ({ orderId, path }) => {
+            try {
+              const { data: signedData, error: signedError } = await supabase.storage
+                .from('order-media')
+                .createSignedUrl(path, 3600);
+
+              if (signedData?.signedUrl && !signedError) {
+                return [orderId, signedData.signedUrl] as const;
+              }
+            } catch (_) {}
+
+            const pub = supabase.storage
+              .from('order-media')
+              .getPublicUrl(path, { transform: { width: 240, quality: 70 } }).data.publicUrl;
+
+            return [orderId, pub] as const;
+          })
+        );
+
+        results.forEach(([orderId, url]) => urlByOrder.set(orderId, url));
+      }
+
+      return typedOrders.map((o) => ({
+        ...o,
+        images_count: imageCountByOrder.get(o.id) ?? 0,
+        first_image_url: urlByOrder.get(o.id) ?? null,
+      }));
+    },
   });
 
   // گروه‌بندی سفارشات بر اساس موقعیت
@@ -248,242 +351,170 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
     onClose();
   }, [onOrderClick, navigate, onClose]);
 
-  // رسم مارکرها - استایل مشابه نقشه مشتری
+  // رسم مارکرها (مثل نقشه صفحه اصلی: تک‌سفارش = عکس، چندسفارش = دایره عددی)
   useEffect(() => {
-    if (!mapRef.current || !mapReady || orderMarkers.length === 0) return;
+    if (!mapRef.current || !mapReady) return;
 
     // پاک کردن مارکرهای قبلی
-    markersRef.current.forEach(m => m.remove());
+    markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    const statusColors: Record<string, string> = {
-      pending: '#f59e0b',
-      pending_execution: '#f59e0b',
-      approved: '#22c55e',
-      in_progress: '#3b82f6',
-      completed: '#8b5cf6',
-      paid: '#06b6d4',
+    if (orderMarkers.length === 0) return;
+
+    const map = mapRef.current;
+
+    const statusLabel: Record<string, string> = {
+      pending: 'در انتظار تایید',
+      pending_execution: 'آماده اجرا',
+      approved: 'تایید شده',
+      in_progress: 'در حال اجرا',
+      completed: 'تکمیل شده',
+      paid: 'پرداخت شده',
     };
 
-    orderMarkers.forEach(marker => {
-      const hasMultiple = marker.orders.length > 1;
-      const count = marker.orders.length;
-      const firstOrder = marker.orders[0];
-      const singleColor = statusColors[firstOrder.status] || '#f59e0b';
-
-      // ساخت آیکون سفارشی - مشابه نقشه مشتری
-      let icon: L.DivIcon;
-      
-      if (hasMultiple) {
-        // مارکر چندتایی با عدد - مثل نقشه مشتری
-        icon = L.divIcon({
-          className: 'cluster-order-marker',
-          html: `
-            <div style="
-              position: relative;
-              width: 36px;
-              height: 36px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">
-              <div style="
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                border: 3px solid white;
-                box-shadow: 0 3px 10px rgba(245, 158, 11, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                color: white;
-                font-size: 14px;
-                font-weight: bold;
-                font-family: Vazirmatn, sans-serif;
-              "
-              onmouseover="this.style.transform='scale(1.1)'"
-              onmouseout="this.style.transform='scale(1)'"
-              >
-                ${count}
-              </div>
-            </div>
-          `,
-          iconSize: [36, 36],
-          iconAnchor: [18, 18],
-          popupAnchor: [0, -18],
-        });
-      } else {
-        // مارکر تکی - دایره رنگی بدون عدد
-        icon = L.divIcon({
-          className: 'single-order-marker',
-          html: `
-            <div style="
-              position: relative;
-              width: 28px;
-              height: 28px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">
-              <div style="
-                width: 28px;
-                height: 28px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, ${singleColor} 0%, ${singleColor}dd 100%);
-                border: 3px solid white;
-                box-shadow: 0 3px 10px ${singleColor}66;
-                cursor: pointer;
-                transition: all 0.2s ease;
-              "
-              onmouseover="this.style.transform='scale(1.1)'"
-              onmouseout="this.style.transform='scale(1)'"
-              >
-              </div>
-            </div>
-          `,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14],
-          popupAnchor: [0, -14],
-        });
+    const statusColor = (status: string) => {
+      switch (status) {
+        case 'approved':
+          return 'hsl(var(--primary))';
+        case 'in_progress':
+          return 'hsl(var(--primary-light))';
+        case 'completed':
+          return 'hsl(var(--gold))';
+        case 'paid':
+          return 'hsl(var(--primary-glow))';
+        case 'pending_execution':
+        case 'pending':
+        default:
+          return 'hsl(var(--construction))';
       }
+    };
 
-      const m = L.marker([marker.lat, marker.lng], { icon }).addTo(mapRef.current!);
+    const clusterIcon = (count: number) =>
+      L.divIcon({
+        className: 'exec-order-marker',
+        html: `<div class="exec-order-marker__cluster"><span>${count}</span></div>`,
+        iconSize: [38, 38],
+        iconAnchor: [19, 19],
+        popupAnchor: [0, -18],
+      });
 
-      // ساخت محتوای پاپ‌آپ
-      let popupContent = `
-        <div style="direction: rtl; text-align: right; min-width: 220px; max-width: 300px; font-family: Vazirmatn, sans-serif;">
-      `;
+    const dotIcon = (color: string) =>
+      L.divIcon({
+        className: 'exec-order-marker',
+        html: `<div class="exec-order-marker__dot" style="--dot-bg:${color};"></div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -14],
+      });
 
-      if (hasMultiple) {
-        popupContent += `
-          <div style="
-            font-weight: bold; 
-            color: #d97706; 
-            margin-bottom: 10px; 
-            display: flex; 
-            align-items: center; 
-            gap: 6px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #f59e0b20;
-          ">
-            <span style="font-size: 18px;">📦</span>
-            <span style="font-size: 15px;">${count} سفارش در این موقعیت</span>
+    const thumbIcon = (url: string, count: number) => {
+      const safeUrl = escapeHtml(url);
+      const badge = count > 1 ? `<div class="exec-order-marker__thumb-badge">${count}</div>` : '';
+      return L.divIcon({
+        className: 'exec-order-marker',
+        html: `
+          <div class="exec-order-marker__thumb">
+            <img src="${safeUrl}" alt="عکس سفارش" loading="lazy" decoding="async" />
+            ${badge}
+            <div class="exec-order-marker__pin" aria-hidden="true"></div>
           </div>
-        `;
-      }
+        `,
+        iconSize: [56, 63],
+        iconAnchor: [28, 56],
+        popupAnchor: [0, -54],
+      });
+    };
 
-      marker.orders.forEach((order, index) => {
-        const statusLabel = {
-          pending: 'در انتظار تایید',
-          pending_execution: 'آماده اجرا',
-          approved: 'تایید شده',
-          in_progress: 'در حال اجرا',
-          completed: 'تکمیل شده',
-          paid: 'پرداخت شده'
-        }[order.status] || order.status;
+    const renderOrderCard = (o: OrderData) => {
+      const color = statusColor(o.status || 'pending');
+      const statusText = statusLabel[o.status] || o.status;
+      const address = escapeHtml(o.address || 'بدون آدرس');
+      const code = escapeHtml(o.code || '');
+      const customer = o.customer_name ? escapeHtml(o.customer_name) : '';
+      const img = o.first_image_url
+        ? `<div class="exec-popup__thumb"><img src="${escapeHtml(o.first_image_url)}" alt="تصویر سفارش" loading="lazy" decoding="async" /></div>`
+        : `<div class="exec-popup__thumb exec-popup__thumb--empty"></div>`;
 
-        const statusColor = statusColors[order.status] || '#f59e0b';
-
-        popupContent += `
-          <div style="
-            ${index > 0 ? 'border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 10px;' : ''}
-          ">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-              <div style="
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                background: ${statusColor};
-                flex-shrink: 0;
-              "></div>
-              <span style="font-weight: 600; font-size: 14px; color: #1f2937;">
-                کد: ${order.code}
-              </span>
+      return `
+        <div class="exec-popup__order">
+          ${img}
+          <div class="exec-popup__meta">
+            <div class="exec-popup__code">کد: ${code}</div>
+            <div class="exec-popup__address">📍 ${address}</div>
+            ${customer ? `<div class="exec-popup__customer">👤 ${customer}</div>` : ''}
+            <div class="exec-popup__status">
+              <span class="exec-popup__status-dot" style="background:${color};"></span>
+              <span>${escapeHtml(statusText)}</span>
             </div>
-            <div style="font-size: 12px; color: #6b7280; margin-bottom: 6px; line-height: 1.5;">
-              📍 ${order.address || 'بدون آدرس'}
-            </div>
-            ${order.customer_name ? `
-              <div style="font-size: 11px; color: #9ca3af; margin-bottom: 6px;">
-                👤 ${order.customer_name}
-              </div>
-            ` : ''}
-            <div style="
-              display: inline-block;
-              padding: 4px 10px;
-              border-radius: 12px;
-              font-size: 11px;
-              font-weight: 500;
-              background: ${statusColor}15;
-              color: ${statusColor};
-              margin-bottom: 8px;
-            ">
-              ${statusLabel}
-            </div>
-            <button 
-              onclick="window.dispatchEvent(new CustomEvent('orderClick', {detail: '${order.id}'}))"
-              style="
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 6px;
-                width: 100%;
-                padding: 8px 14px;
-                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                color: white;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 12px;
-                font-weight: 600;
-                font-family: Vazirmatn, sans-serif;
-                transition: all 0.2s ease;
-                box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
-              "
-              onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 10px rgba(245, 158, 11, 0.4)';"
-              onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 6px rgba(245, 158, 11, 0.3)';"
-            >
-              <span>👁️</span>
-              <span>مشاهده و مدیریت</span>
+            <button class="exec-popup__cta" type="button" data-order-id="${escapeHtml(o.id)}">
+              مشاهده و مدیریت
             </button>
           </div>
-        `;
-      });
+        </div>
+      `;
+    };
 
-      popupContent += '</div>';
+    orderMarkers.forEach((group) => {
+      const hasMultiple = group.orders.length > 1;
+      const count = group.orders.length;
+      const first = group.orders[0];
 
-      m.bindPopup(popupContent, {
-        maxWidth: 320,
-        className: 'order-popup',
+      const icon = hasMultiple
+        ? clusterIcon(count)
+        : first.first_image_url
+          ? thumbIcon(first.first_image_url, first.images_count ?? 0)
+          : dotIcon(statusColor(first.status || 'pending'));
+
+      const header = hasMultiple
+        ? `<div class="exec-popup__title">📦 ${count} سفارش در این موقعیت</div>`
+        : `<div class="exec-popup__title">📍 جزئیات سفارش</div>`;
+
+      const body = group.orders.map(renderOrderCard).join('');
+
+      const popupContent = `
+        <div class="exec-popup">
+          ${header}
+          <div class="exec-popup__list">${body}</div>
+        </div>
+      `;
+
+      const marker = L.marker([group.lat, group.lng], {
+        icon,
+        riseOnHover: true,
+        zIndexOffset: hasMultiple ? 400 : 600,
+      }).addTo(map);
+
+      marker.bindPopup(popupContent, {
+        maxWidth: 360,
+        className: 'exec-order-popup',
         autoPan: true,
-        autoPanPadding: [50, 50]
+        autoPanPadding: [50, 50],
       });
 
-      markersRef.current.push(m);
+      marker.on('popupopen', (e) => {
+        const popupEl = (e.popup as any)?.getElement?.() as HTMLElement | null;
+        if (!popupEl) return;
+        popupEl.querySelectorAll<HTMLElement>('[data-order-id]').forEach((btn) => {
+          btn.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            const id = btn.dataset.orderId;
+            if (id) handleOrderClick(id);
+          });
+        });
+      });
+
+      markersRef.current.push(marker);
     });
 
     // تنظیم نمای نقشه برای نمایش همه مارکرها
-    if (orderMarkers.length > 0) {
-      const bounds = L.latLngBounds(orderMarkers.map(m => [m.lat, m.lng]));
-      mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+    if (orderMarkers.length === 1) {
+      map.setView([orderMarkers[0].lat, orderMarkers[0].lng], 14);
+    } else {
+      const bounds = L.latLngBounds(orderMarkers.map((m) => [m.lat, m.lng] as [number, number]));
+      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
     }
-
-  }, [mapReady, orderMarkers]);
-
-  // گوش دادن به رویداد کلیک سفارش
-  useEffect(() => {
-    const handleCustomOrderClick = (e: CustomEvent) => {
-      handleOrderClick(e.detail);
-    };
-
-    window.addEventListener('orderClick', handleCustomOrderClick as EventListener);
-    return () => {
-      window.removeEventListener('orderClick', handleCustomOrderClick as EventListener);
-    };
-  }, [handleOrderClick]);
+  }, [handleOrderClick, mapReady, orderMarkers]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
@@ -544,30 +575,231 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
 
       {/* استایل سفارشی */}
       <style>{`
-        .cluster-order-marker,
-        .single-order-marker {
+        .exec-order-marker {
           background: transparent !important;
           border: none !important;
         }
-        .order-popup .leaflet-popup-content-wrapper {
+
+        .exec-order-marker__cluster {
+          width: 38px;
+          height: 38px;
+          border-radius: 999px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--gradient-construction);
+          border: 3px solid hsl(var(--background));
+          color: hsl(var(--accent-foreground));
+          font-size: 14px;
+          font-weight: 800;
+          box-shadow: var(--shadow-construction);
+          transition: transform 150ms ease, filter 150ms ease;
+          user-select: none;
+        }
+
+        .exec-order-marker__cluster:hover {
+          transform: scale(1.08);
+          filter: brightness(1.02);
+        }
+
+        .exec-order-marker__dot {
+          width: 28px;
+          height: 28px;
+          border-radius: 999px;
+          background: var(--dot-bg, hsl(var(--construction)));
+          border: 3px solid hsl(var(--background));
+          box-shadow: var(--shadow-md);
+          transition: transform 150ms ease;
+        }
+
+        .exec-order-marker__dot:hover {
+          transform: scale(1.08);
+        }
+
+        .exec-order-marker__thumb {
+          width: 56px;
+          height: 56px;
+          border-radius: 10px;
+          overflow: hidden;
+          background: hsl(var(--muted));
+          border: 2px solid hsl(var(--background));
+          box-shadow: var(--shadow-lg);
+          position: relative;
+        }
+
+        .exec-order-marker__thumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .exec-order-marker__thumb-badge {
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          background: hsl(var(--background) / 0.72);
+          color: hsl(var(--foreground));
+          font-size: 11px;
+          font-weight: 800;
+          padding: 2px 7px;
+          border-radius: 999px;
+          backdrop-filter: blur(6px);
+        }
+
+        .exec-order-marker__pin {
+          position: absolute;
+          left: 50%;
+          bottom: -7px;
+          transform: translateX(-50%);
+          width: 12px;
+          height: 12px;
+          border-radius: 999px;
+          background: hsl(var(--destructive));
+          border: 2px solid hsl(var(--background));
+          box-shadow: 0 8px 18px hsl(var(--destructive) / 0.35);
+        }
+
+        .exec-order-popup .leaflet-popup-content-wrapper {
           border-radius: 14px;
-          box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+          box-shadow: var(--shadow-xl);
           padding: 0;
+          background: hsl(var(--popover));
+          color: hsl(var(--popover-foreground));
         }
-        .order-popup .leaflet-popup-content {
-          margin: 14px 16px;
+
+        .exec-order-popup .leaflet-popup-content {
+          margin: 12px 14px;
+          direction: rtl;
+          text-align: right;
+          font-family: Vazirmatn, sans-serif;
         }
-        .order-popup .leaflet-popup-tip {
-          background: white;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+
+        .exec-order-popup .leaflet-popup-tip {
+          background: hsl(var(--popover));
+          box-shadow: var(--shadow-md);
         }
-        .order-popup .leaflet-popup-close-button {
-          color: #9ca3af;
+
+        .exec-order-popup .leaflet-popup-close-button {
+          color: hsl(var(--muted-foreground));
           font-size: 20px;
           padding: 6px 8px;
         }
-        .order-popup .leaflet-popup-close-button:hover {
-          color: #374151;
+
+        .exec-order-popup .leaflet-popup-close-button:hover {
+          color: hsl(var(--foreground));
+        }
+
+        .exec-popup__title {
+          font-weight: 900;
+          font-size: 13px;
+          margin-bottom: 10px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid hsl(var(--border));
+        }
+
+        .exec-popup__list {
+          display: grid;
+          gap: 10px;
+        }
+
+        .exec-popup__order {
+          display: flex;
+          gap: 10px;
+          align-items: flex-start;
+          padding: 10px;
+          border-radius: 12px;
+          background: hsl(var(--card));
+          border: 1px solid hsl(var(--border));
+        }
+
+        .exec-popup__thumb {
+          width: 44px;
+          height: 44px;
+          border-radius: 10px;
+          overflow: hidden;
+          background: hsl(var(--muted));
+          border: 1px solid hsl(var(--border));
+          flex-shrink: 0;
+        }
+
+        .exec-popup__thumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .exec-popup__thumb--empty {
+          background: hsl(var(--muted));
+        }
+
+        .exec-popup__meta {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .exec-popup__code {
+          font-weight: 800;
+          font-size: 13px;
+          color: hsl(var(--foreground));
+        }
+
+        .exec-popup__address {
+          font-size: 11px;
+          color: hsl(var(--muted-foreground));
+          margin-top: 4px;
+          line-height: 1.5;
+        }
+
+        .exec-popup__customer {
+          font-size: 11px;
+          color: hsl(var(--muted-foreground));
+          margin-top: 4px;
+        }
+
+        .exec-popup__status {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 8px;
+          padding: 4px 10px;
+          border-radius: 999px;
+          background: hsl(var(--muted));
+          color: hsl(var(--foreground));
+          font-size: 11px;
+          font-weight: 800;
+        }
+
+        .exec-popup__status-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+        }
+
+        .exec-popup__cta {
+          margin-top: 10px;
+          width: 100%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          border: 0;
+          cursor: pointer;
+          background: var(--gradient-construction);
+          color: hsl(var(--accent-foreground));
+          font-weight: 900;
+          font-size: 12px;
+          padding: 9px 12px;
+          border-radius: 10px;
+          box-shadow: var(--shadow-construction);
+          transition: transform 150ms ease, filter 150ms ease;
+          font-family: Vazirmatn, sans-serif;
+        }
+
+        .exec-popup__cta:hover {
+          transform: translateY(-1px);
+          filter: brightness(1.02);
         }
       `}</style>
     </div>
