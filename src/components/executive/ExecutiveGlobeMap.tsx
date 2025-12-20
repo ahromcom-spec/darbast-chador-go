@@ -253,7 +253,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
     onClose();
   }, [onOrderClick, navigate, onClose]);
 
-  // رسم مارکرها
+  // رسم مارکرها - استایل مشابه نقشه مشتری
   useEffect(() => {
     if (!mapRef.current || !mapReady || orderMarkers.length === 0) return;
 
@@ -262,62 +262,127 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
     markersRef.current = [];
 
     const statusColors: Record<string, string> = {
-      pending: '#ff9800',
-      pending_execution: '#ff9800',
-      approved: '#4caf50',
-      in_progress: '#2196f3',
-      completed: '#9c27b0',
-      paid: '#00bcd4',
+      pending: '#f59e0b',
+      pending_execution: '#f59e0b',
+      approved: '#22c55e',
+      in_progress: '#3b82f6',
+      completed: '#8b5cf6',
+      paid: '#06b6d4',
     };
 
     orderMarkers.forEach(marker => {
       const hasMultiple = marker.orders.length > 1;
+      const count = marker.orders.length;
       const firstOrder = marker.orders[0];
-      const color = statusColors[firstOrder.status] || '#ffd700';
+      const singleColor = statusColors[firstOrder.status] || '#f59e0b';
 
-      // ساخت آیکون سفارشی
-      const icon = L.divIcon({
-        className: 'custom-order-marker',
-        html: `
-          <div style="
-            width: ${hasMultiple ? '32px' : '24px'};
-            height: ${hasMultiple ? '32px' : '24px'};
-            background: ${hasMultiple ? '#ff9500' : color};
-            border: 3px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-          ">
-            ${hasMultiple ? marker.orders.length : ''}
-          </div>
-        `,
-        iconSize: [hasMultiple ? 32 : 24, hasMultiple ? 32 : 24],
-        iconAnchor: [hasMultiple ? 16 : 12, hasMultiple ? 16 : 12],
-      });
+      // ساخت آیکون سفارشی - مشابه نقشه مشتری
+      let icon: L.DivIcon;
+      
+      if (hasMultiple) {
+        // مارکر چندتایی با عدد - مثل نقشه مشتری
+        icon = L.divIcon({
+          className: 'cluster-order-marker',
+          html: `
+            <div style="
+              position: relative;
+              width: 36px;
+              height: 36px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <div style="
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                border: 3px solid white;
+                box-shadow: 0 3px 10px rgba(245, 158, 11, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: Vazirmatn, sans-serif;
+              "
+              onmouseover="this.style.transform='scale(1.1)'"
+              onmouseout="this.style.transform='scale(1)'"
+              >
+                ${count}
+              </div>
+            </div>
+          `,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+          popupAnchor: [0, -18],
+        });
+      } else {
+        // مارکر تکی - دایره رنگی بدون عدد
+        icon = L.divIcon({
+          className: 'single-order-marker',
+          html: `
+            <div style="
+              position: relative;
+              width: 28px;
+              height: 28px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <div style="
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, ${singleColor} 0%, ${singleColor}dd 100%);
+                border: 3px solid white;
+                box-shadow: 0 3px 10px ${singleColor}66;
+                cursor: pointer;
+                transition: all 0.2s ease;
+              "
+              onmouseover="this.style.transform='scale(1.1)'"
+              onmouseout="this.style.transform='scale(1)'"
+              >
+              </div>
+            </div>
+          `,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+          popupAnchor: [0, -14],
+        });
+      }
 
       const m = L.marker([marker.lat, marker.lng], { icon }).addTo(mapRef.current!);
 
       // ساخت محتوای پاپ‌آپ
       let popupContent = `
-        <div style="direction: rtl; text-align: right; min-width: 200px; max-width: 280px;">
+        <div style="direction: rtl; text-align: right; min-width: 220px; max-width: 300px; font-family: Vazirmatn, sans-serif;">
       `;
 
       if (hasMultiple) {
         popupContent += `
-          <div style="font-weight: bold; color: #ff9500; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
-            📦 ${marker.orders.length} سفارش در این موقعیت
+          <div style="
+            font-weight: bold; 
+            color: #d97706; 
+            margin-bottom: 10px; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f59e0b20;
+          ">
+            <span style="font-size: 18px;">📦</span>
+            <span style="font-size: 15px;">${count} سفارش در این موقعیت</span>
           </div>
         `;
       }
 
       marker.orders.forEach((order, index) => {
         const statusLabel = {
-          pending: 'در انتظار',
+          pending: 'در انتظار تایید',
           pending_execution: 'آماده اجرا',
           approved: 'تایید شده',
           in_progress: 'در حال اجرا',
@@ -325,48 +390,69 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
           paid: 'پرداخت شده'
         }[order.status] || order.status;
 
+        const statusColor = statusColors[order.status] || '#f59e0b';
+
         popupContent += `
           <div style="
-            ${index > 0 ? 'border-top: 1px solid #eee; margin-top: 8px; padding-top: 8px;' : ''}
+            ${index > 0 ? 'border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 10px;' : ''}
           ">
-            <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">
-              کد: ${order.code}
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <div style="
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: ${statusColor};
+                flex-shrink: 0;
+              "></div>
+              <span style="font-weight: 600; font-size: 14px; color: #1f2937;">
+                کد: ${order.code}
+              </span>
             </div>
-            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">
-              ${order.address || 'بدون آدرس'}
+            <div style="font-size: 12px; color: #6b7280; margin-bottom: 6px; line-height: 1.5;">
+              📍 ${order.address || 'بدون آدرس'}
             </div>
             ${order.customer_name ? `
-              <div style="font-size: 11px; color: #888; margin-bottom: 4px;">
+              <div style="font-size: 11px; color: #9ca3af; margin-bottom: 6px;">
                 👤 ${order.customer_name}
               </div>
             ` : ''}
             <div style="
               display: inline-block;
-              padding: 2px 8px;
+              padding: 4px 10px;
               border-radius: 12px;
-              font-size: 10px;
-              background: ${statusColors[order.status] || '#999'}20;
-              color: ${statusColors[order.status] || '#999'};
-              margin-bottom: 6px;
+              font-size: 11px;
+              font-weight: 500;
+              background: ${statusColor}15;
+              color: ${statusColor};
+              margin-bottom: 8px;
             ">
               ${statusLabel}
             </div>
             <button 
               onclick="window.dispatchEvent(new CustomEvent('orderClick', {detail: '${order.id}'}))"
               style="
-                display: block;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
                 width: 100%;
-                padding: 6px 12px;
-                background: linear-gradient(135deg, #f59e0b, #d97706);
+                padding: 8px 14px;
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
                 color: white;
                 border: none;
-                border-radius: 6px;
+                border-radius: 8px;
                 cursor: pointer;
                 font-size: 12px;
-                font-weight: 500;
+                font-weight: 600;
+                font-family: Vazirmatn, sans-serif;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
               "
+              onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 10px rgba(245, 158, 11, 0.4)';"
+              onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 6px rgba(245, 158, 11, 0.3)';"
             >
-              مشاهده و مدیریت
+              <span>👁️</span>
+              <span>مشاهده و مدیریت</span>
             </button>
           </div>
         `;
@@ -375,8 +461,10 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       popupContent += '</div>';
 
       m.bindPopup(popupContent, {
-        maxWidth: 300,
-        className: 'order-popup'
+        maxWidth: 320,
+        className: 'order-popup',
+        autoPan: true,
+        autoPanPadding: [50, 50]
       });
 
       markersRef.current.push(m);
@@ -385,7 +473,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
     // تنظیم نمای نقشه برای نمایش همه مارکرها
     if (orderMarkers.length > 0) {
       const bounds = L.latLngBounds(orderMarkers.map(m => [m.lat, m.lng]));
-      mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+      mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
     }
 
   }, [mapReady, orderMarkers]);
@@ -461,19 +549,30 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
 
       {/* استایل سفارشی */}
       <style>{`
-        .custom-order-marker {
+        .cluster-order-marker,
+        .single-order-marker {
           background: transparent !important;
           border: none !important;
         }
         .order-popup .leaflet-popup-content-wrapper {
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          border-radius: 14px;
+          box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+          padding: 0;
         }
         .order-popup .leaflet-popup-content {
-          margin: 12px;
+          margin: 14px 16px;
         }
         .order-popup .leaflet-popup-tip {
           background: white;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .order-popup .leaflet-popup-close-button {
+          color: #9ca3af;
+          font-size: 20px;
+          padding: 6px 8px;
+        }
+        .order-popup .leaflet-popup-close-button:hover {
+          color: #374151;
         }
       `}</style>
     </div>
