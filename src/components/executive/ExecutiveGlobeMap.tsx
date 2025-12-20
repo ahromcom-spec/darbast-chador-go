@@ -29,11 +29,6 @@ interface OrderData {
   } | null;
 }
 
-interface OrderMarker {
-  lat: number;
-  lng: number;
-  orders: OrderData[];
-}
 
 interface ExecutiveGlobeMapProps {
   onClose: () => void;
@@ -98,28 +93,17 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
     }
   });
 
-  // گروه‌بندی سفارشات بر اساس موقعیت
-  const orderMarkers = useMemo(() => {
-    if (!orders || orders.length === 0) return [];
+  // تعداد موقعیت‌های یکتا (برای نمایش در کارت پایین)
+  const uniqueLocationsCount = useMemo(() => {
+    if (!orders || orders.length === 0) return 0;
 
-    const locationGroups: { [key: string]: OrderData[] } = {};
-    
-    orders.forEach(order => {
+    const keys = new Set<string>();
+    orders.forEach((order) => {
       if (!order.location_lat || !order.location_lng) return;
-      
-      const key = `${order.location_lat.toFixed(5)}_${order.location_lng.toFixed(5)}`;
-      
-      if (!locationGroups[key]) {
-        locationGroups[key] = [];
-      }
-      locationGroups[key].push(order);
+      keys.add(`${order.location_lat.toFixed(5)}_${order.location_lng.toFixed(5)}`);
     });
 
-    return Object.values(locationGroups).map(group => ({
-      lat: group[0].location_lat,
-      lng: group[0].location_lng,
-      orders: group
-    })) as OrderMarker[];
+    return keys.size;
   }, [orders]);
 
   // دریافت توکن Mapbox
