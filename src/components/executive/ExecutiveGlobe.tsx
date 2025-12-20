@@ -238,7 +238,7 @@ export default function ExecutiveGlobe({ onClose, onOrderClick }: ExecutiveGlobe
   const navigate = useNavigate();
   const [orderMarkers, setOrderMarkers] = useState<OrderMarker[]>([]);
 
-  // فقط سفارشات خدمات اجرای داربست به همراه اجناس
+  // همه سفارشات
   const { data: orders } = useQuery({
     queryKey: ['executive-globe-orders'],
     queryFn: async () => {
@@ -269,13 +269,7 @@ export default function ExecutiveGlobe({ onClose, onOrderClick }: ExecutiveGlobe
 
       if (error) throw error;
 
-      // فیلتر کردن فقط سفارشات داربست به همراه اجناس
-      const scaffoldOrders = data?.filter(order => {
-        const serviceCode = order.subcategories?.service_types_v3?.code;
-        return serviceCode === 'scaffold_execution_with_materials';
-      }) || [];
-
-      return scaffoldOrders;
+      return data || [];
     }
   });
 
@@ -352,7 +346,7 @@ export default function ExecutiveGlobe({ onClose, onOrderClick }: ExecutiveGlobe
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
               <p className="text-center text-xl font-bold text-foreground">
-                سفارشات داربست به همراه اجناس
+                همه سفارشات روی نقشه
               </p>
               <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
             </div>
