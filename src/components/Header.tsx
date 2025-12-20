@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -7,20 +7,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import ahromLogo from "@/assets/ahrom-logo.png";
 import contactButton from "@/assets/contact-button.png";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { useGeneralManagerRole } from "@/hooks/useGeneralManagerRole";
 import { useToast } from "@/hooks/use-toast";
-import { useUserProfile } from "@/hooks/useUserProfile";
 
-const Header = () => {
+const Header = memo(() => {
   const navigate = useNavigate();
   const auth = useAuth();
   const user = auth?.user || null;
-  const { isGeneralManager } = useGeneralManagerRole();
   const { toast } = useToast();
-  const { profile } = useUserProfile();
   
-  // Safe display name with fallback
-  const displayName = profile?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
+  // نمایش نام کاربر فقط وقتی لاگین شده
+  const displayName = user?.user_metadata?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
   
   const [contactDropdownOpenMobile, setContactDropdownOpenMobile] = useState(false);
   const [contactDropdownOpenDesktop, setContactDropdownOpenDesktop] = useState(false);
@@ -413,6 +409,8 @@ const Header = () => {
       </div>
     </header>
   );
-};
+});
+
+Header.displayName = 'Header';
 
 export default Header;

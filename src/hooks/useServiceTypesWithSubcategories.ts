@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Subcategory {
@@ -18,43 +18,38 @@ export interface ServiceTypeWithSubcategories {
 }
 
 export const useServiceTypesWithSubcategories = () => {
-  const [serviceTypes, setServiceTypes] = useState<ServiceTypeWithSubcategories[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: serviceTypes = [], isLoading: loading } = useQuery({
+    queryKey: ['service-types-with-subcategories'],
+    queryFn: async (): Promise<ServiceTypeWithSubcategories[]> => {
+      const [typesRes, subsRes] = await Promise.all([
+        supabase
+          .from('service_types_v3')
+          .select('*')
+          .eq('is_active', true)
+          .order('name'),
+        supabase
+          .from('subcategories')
+          .select('*')
+          .eq('is_active', true)
+          .order('name'),
+      ]);
 
-  useEffect(() => {
-    fetchServiceTypes();
-  }, []);
+      if (typesRes.error) throw typesRes.error;
+      if (subsRes.error) throw subsRes.error;
 
-  const fetchServiceTypes = async () => {
-    try {
-      const { data: types, error: typesError } = await supabase
-        .from('service_types_v3')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
+      const types = typesRes.data || [];
+      const subs = subsRes.data || [];
 
-      if (typesError) throw typesError;
-
-      const { data: subs, error: subsError } = await supabase
-        .from('subcategories')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (subsError) throw subsError;
-
-      const typesWithSubs: ServiceTypeWithSubcategories[] = (types || []).map(type => ({
+      return types.map(type => ({
         ...type,
-        subcategories: (subs || []).filter(sub => sub.service_type_id === type.id)
+        subcategories: subs.filter(sub => sub.service_type_id === type.id)
       }));
-
-      setServiceTypes(typesWithSubs);
-    } catch (error) {
-      console.error('Error fetching service types:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    staleTime: 1000 * 60 * 10, // 10 دقیقه cache
+    gcTime: 1000 * 60 * 30, // 30 دقیقه نگهداری
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
   return { serviceTypes, loading };
 };
