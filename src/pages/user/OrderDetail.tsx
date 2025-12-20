@@ -197,6 +197,7 @@ export default function OrderDetail() {
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
+  const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
   const [isOrderDetailsExpanded, setIsOrderDetailsExpanded] = useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
   const [isConfirmingPrice, setIsConfirmingPrice] = useState(false);
@@ -458,6 +459,22 @@ export default function OrderDetail() {
         setApprovedRepairCost(totalRepairCost);
       } else {
         setApprovedRepairCost(0);
+      }
+
+      // Fetch approved collection request date
+      const { data: collectionData } = await supabase
+        .from('collection_requests')
+        .select('requested_date, status')
+        .eq('order_id', id)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (collectionData?.requested_date) {
+        setApprovedCollectionDate(collectionData.requested_date);
+      } else {
+        setApprovedCollectionDate(null);
       }
 
     } catch (error: any) {
@@ -1816,6 +1833,7 @@ export default function OrderDetail() {
             executionStage={order.execution_stage}
             executionStageUpdatedAt={order.execution_stage_updated_at}
             paymentConfirmedAt={order.payment_confirmed_at}
+            approvedCollectionDate={approvedCollectionDate}
             approvals={approvals}
           />
 
