@@ -25,8 +25,28 @@ type Message = {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
 const STORAGE_KEY = 'ahrom_assistant_chat_history';
+const LAST_USER_MESSAGE_KEY = 'ahrom_last_user_message_time';
 const MAX_MESSAGES = 1000;
 const EXPIRY_MONTHS = 12;
+const WELCOME_MESSAGE_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+
+// Welcome message content
+const WELCOME_MESSAGE_CONTENT = `من دستیار اهرم هستم، یک هوش مصنوعی که برای پاسخگویی به سوالات شما درباره سایت اهرم، خدمات آن و نحوه استفاده از آن طراحی شده‌ام. شما می‌توانید هر سوالی درباره:
+
+• **انواع خدمات اهرم** (داربست‌بندی ساختمانی، اجاره داربست، خدمات نمای ساختمان، تعمیرات داربست)
+• **نحوه ثبت سفارش** (راهنمای گام به گام)
+• **سوال پرسیدن درباره سفارشاتی که ثبت کرده‌اید**
+• **سوالات درباره پرداختی‌ها و مانده حساب‌ها**
+• **استعلام قیمت از خدمات اجرای داربست به همراه اجناس**
+• **پیگیری و وضعیت سفارشات**
+• **مدیریت آدرس‌ها و مکان‌ها**
+• **سیستم پیام‌رسانی و چت**
+• **نصب اپلیکیشن (PWA)**
+• **سایر ویژگی‌های سایت**
+
+از من بپرسید. من اینجا هستم تا به صورت حرفه‌ای و با زبان فارسی محاوره‌ای، شما را راهنمایی کنم.
+
+**چطور می‌توانم به شما کمک کنم؟**`;
 
 type StoredData = {
   messages: Message[];
@@ -211,17 +231,54 @@ export function AssistantAvatar() {
   const auth = useAuth();
   const user = auth?.user;
 
+  // Create a welcome message object
+  const createWelcomeMessage = (): Message => ({
+    role: 'assistant',
+    content: WELCOME_MESSAGE_CONTENT,
+    timestamp: new Date().toISOString(),
+    id: 'welcome-message' // Special ID for welcome message
+  });
+
+  // Check if welcome message should be added at the end (after 2 hours of no user message)
+  const shouldAddWelcomeMessage = (msgs: Message[]): boolean => {
+    if (msgs.length === 0) return false;
+    
+    // Find the last user message
+    const lastUserMsgIndex = [...msgs].reverse().findIndex(m => m.role === 'user');
+    if (lastUserMsgIndex === -1) return false;
+    
+    const lastUserMsg = msgs[msgs.length - 1 - lastUserMsgIndex];
+    if (!lastUserMsg.timestamp) return false;
+    
+    // Check if 2 hours have passed
+    const lastMsgTime = new Date(lastUserMsg.timestamp).getTime();
+    const timeSinceLastMsg = Date.now() - lastMsgTime;
+    
+    // Check if the last message is already a welcome message
+    const lastMsg = msgs[msgs.length - 1];
+    if (lastMsg.id === 'welcome-message') return false;
+    
+    return timeSinceLastMsg >= WELCOME_MESSAGE_INTERVAL_MS;
+  };
+
   // Load messages on mount - from DB for logged-in users, from localStorage for guests
   useEffect(() => {
     const loadMessages = async () => {
       setIsLoadingMessages(true);
+      let loadedMessages: Message[] = [];
+      
       if (user?.id) {
-        const dbMessages = await loadMessagesFromDB(user.id);
-        setMessages(dbMessages);
+        loadedMessages = await loadMessagesFromDB(user.id);
       } else {
-        const localMessages = loadMessagesFromStorage();
-        setMessages(localMessages);
+        loadedMessages = loadMessagesFromStorage();
       }
+      
+      // If messages exist and 2 hours passed since last user message, add welcome message
+      if (shouldAddWelcomeMessage(loadedMessages)) {
+        loadedMessages = [...loadedMessages, createWelcomeMessage()];
+      }
+      
+      setMessages(loadedMessages);
       setIsLoadingMessages(false);
     };
     loadMessages();
@@ -658,16 +715,20 @@ export function AssistantAvatar() {
     setSelectedImage(null);
     setIsLoading(true);
 
+    // Remove welcome message from messages before adding user message
+    const filteredMessages = messages.filter(m => m.id !== 'welcome-message');
+
     // Save user message to DB for logged-in users and get the saved message with id
     if (user?.id) {
       const savedUserMsg = await saveMessageToDB(user.id, userMsg);
-      setMessages(prev => [...prev, savedUserMsg || userMsg]);
+      setMessages([...filteredMessages, savedUserMsg || userMsg]);
     } else {
-      setMessages(prev => [...prev, userMsg]);
+      setMessages([...filteredMessages, userMsg]);
     }
 
     try {
-      await streamChat([...messages, userMsg], imageBase64);
+      // Use filtered messages (without welcome message) for API call
+      await streamChat([...filteredMessages, userMsg], imageBase64);
       
       // After streaming is complete, save assistant message to DB
       setMessages(prev => {
@@ -702,6 +763,11 @@ export function AssistantAvatar() {
 
   const handleDeleteMessage = async (index: number) => {
     const message = messages[index];
+    
+    // Skip welcome messages - they cannot be deleted
+    if (message.id === 'welcome-message') {
+      return;
+    }
     
     // If message has ID (saved in DB), delete from DB
     if (message.id && user?.id) {
@@ -845,14 +911,19 @@ export function AssistantAvatar() {
           {/* پیام‌ها */}
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             {messages.length === 0 ? (
-              <div className="text-center py-6">
-                <img 
-                  src={assistantImage} 
-                  alt="دستیار اهرم" 
-                  className="w-20 h-20 rounded-full mx-auto mb-4 object-cover ring-4 ring-amber-200 shadow-lg"
-                />
-                <p className="text-sm font-medium text-foreground">سلام! من منشی اهرم هستم 👋</p>
-                <p className="text-sm text-muted-foreground mt-1">چطور می‌تونم کمکتون کنم؟</p>
+              <div className="py-4">
+                {/* پیام خوش‌آمدگویی با آواتار */}
+                <div className="flex gap-2 flex-row">
+                  <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden">
+                    <img src={assistantImage} alt="دستیار" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex flex-col gap-1 max-w-[85%]">
+                    <div className="rounded-2xl text-sm leading-relaxed overflow-hidden bg-muted rounded-tl-sm">
+                      <p className="px-3 py-2 whitespace-pre-line">{WELCOME_MESSAGE_CONTENT}</p>
+                    </div>
+                  </div>
+                </div>
+                {/* دکمه‌های پیشنهادی */}
                 <div className="mt-4 flex flex-wrap gap-2 justify-center">
                   <button 
                     onClick={() => setInput('چطور سفارش ثبت کنم؟')}
@@ -908,23 +979,25 @@ export function AssistantAvatar() {
                             )}
                           </div>
                         ))}
-                        <p className="px-3 py-2">{msg.content}</p>
+                        <p className="px-3 py-2 whitespace-pre-line">{msg.content}</p>
                       </div>
-                      {/* زمان و دکمه حذف */}
+                      {/* زمان و دکمه حذف - مخفی برای پیام خوش‌آمدگویی */}
                       <div className={cn(
                         "flex items-center gap-2 text-[10px] text-muted-foreground",
                         msg.role === 'user' ? "flex-row-reverse" : "flex-row"
                       )}>
-                        {msg.timestamp && (
+                        {msg.timestamp && msg.id !== 'welcome-message' && (
                           <span>{formatMessageTime(msg.timestamp)}</span>
                         )}
-                        <button
-                          onClick={() => handleDeleteMessage(idx)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
-                          title="حذف پیام"
-                        >
-                          <Trash2 className="w-3 h-3 text-destructive" />
-                        </button>
+                        {msg.id !== 'welcome-message' && (
+                          <button
+                            onClick={() => handleDeleteMessage(idx)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                            title="حذف پیام"
+                          >
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
