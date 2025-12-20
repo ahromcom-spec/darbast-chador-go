@@ -77,6 +77,7 @@ export function CollectionRequestDialog({
   const [rejectingRequest, setRejectingRequest] = useState(false);
   const [completingRequest, setCompletingRequest] = useState(false);
   const [cancellingRequest, setCancellingRequest] = useState(false);
+  const [updatingDate, setUpdatingDate] = useState(false);
   const [showRejectForm, setShowRejectForm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -406,6 +407,51 @@ export function CollectionRequestDialog({
     }
   };
 
+  // Manager updates the collection date
+  const handleUpdateDate = async () => {
+    if (!existingRequest || !isManager) return;
+
+    if (!confirmedDate) {
+      toast({
+        title: 'خطا',
+        description: 'لطفاً تاریخ جمع‌آوری را انتخاب کنید',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUpdatingDate(true);
+    try {
+      const { error } = await supabase
+        .from('collection_requests')
+        .update({
+          requested_date: confirmedDate,
+        })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      setExistingRequest({
+        ...existingRequest,
+        requested_date: confirmedDate,
+      });
+
+      toast({
+        title: '✓ موفق',
+        description: 'تاریخ جمع‌آوری به‌روزرسانی شد',
+      });
+    } catch (error: any) {
+      console.error('Error updating date:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در به‌روزرسانی تاریخ',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingDate(false);
+    }
+  };
+
   // Customer cancels their pending request
   const handleCancelRequest = async () => {
     if (!existingRequest || isManager || existingRequest.status !== 'pending') return;
@@ -578,14 +624,69 @@ export function CollectionRequestDialog({
             )}
 
             {isManager && existingRequest.status === 'approved' && (
-              <Button
-                onClick={handleCompleteCollection}
-                disabled={completingRequest}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
-                {completingRequest ? <LoadingSpinner className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                جمع‌آوری تکمیل شد
-              </Button>
+              <div className="space-y-4">
+                {/* Allow managers to edit the approved date */}
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    در صورت نیاز می‌توانید تاریخ جمع‌آوری را ویرایش کنید:
+                  </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تاریخ جمع‌آوری</label>
+                    <PersianDatePicker
+                      value={confirmedDate}
+                      onChange={setConfirmedDate}
+                      placeholder="انتخاب تاریخ جمع‌آوری"
+                      timeMode="ampm"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleUpdateDate}
+                    disabled={updatingDate || !confirmedDate || confirmedDate === existingRequest.requested_date}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {updatingDate ? <LoadingSpinner className="h-4 w-4" /> : <Calendar className="h-4 w-4 mr-2" />}
+                    به‌روزرسانی تاریخ
+                  </Button>
+                </div>
+                <Button
+                  onClick={handleCompleteCollection}
+                  disabled={completingRequest}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {completingRequest ? <LoadingSpinner className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                  جمع‌آوری تکمیل شد
+                </Button>
+              </div>
+            )}
+
+            {isManager && existingRequest.status === 'completed' && (
+              <div className="space-y-4">
+                {/* Allow managers to edit the date even after completion */}
+                <div className="bg-muted/50 border rounded-lg p-4 space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    ویرایش تاریخ جمع‌آوری:
+                  </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تاریخ جمع‌آوری</label>
+                    <PersianDatePicker
+                      value={confirmedDate}
+                      onChange={setConfirmedDate}
+                      placeholder="انتخاب تاریخ جمع‌آوری"
+                      timeMode="ampm"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleUpdateDate}
+                    disabled={updatingDate || !confirmedDate || confirmedDate === existingRequest.requested_date}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {updatingDate ? <LoadingSpinner className="h-4 w-4" /> : <Calendar className="h-4 w-4 mr-2" />}
+                    به‌روزرسانی تاریخ
+                  </Button>
+                </div>
+              </div>
             )}
 
             {/* Customer Cancel Action */}
