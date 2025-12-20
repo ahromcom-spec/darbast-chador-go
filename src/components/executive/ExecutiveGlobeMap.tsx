@@ -44,6 +44,8 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const osmLayerRef = useRef<L.TileLayer | null>(null);
+  const mapboxLayerRef = useRef<L.TileLayer | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapboxToken, setMapboxToken] = useState<string>('');
   const { toast } = useToast();
@@ -136,7 +138,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
     fetchToken();
   }, []);
 
-  // راه‌اندازی نقشه
+  // راه‌اندازی نقشه (همیشه با OpenStreetMap شروع می‌کنیم)
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
@@ -146,27 +148,100 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       zoomControl: true,
     });
 
-    // استفاده از OpenStreetMap به عنوان fallback
-    if (mapboxToken) {
-      L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`, {
-        attribution: '© Mapbox © OpenStreetMap',
-        tileSize: 512,
-        zoomOffset: -1,
-      }).addTo(map);
-    } else {
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-      }).addTo(map);
-    }
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+    }).addTo(map);
 
+    osmLayerRef.current = osmLayer;
     mapRef.current = map;
     setMapReady(true);
+
+    // اطمینان از رندر صحیح (خصوصاً در مودال/اورلی)
+    setTimeout(() => map.invalidateSize(), 0);
 
     return () => {
       map.remove();
       mapRef.current = null;
+      osmLayerRef.current = null;
+      mapboxLayerRef.current = null;
     };
-  }, [mapboxToken]);
+  }, []);
+
+  // تلاش برای استفاده از Mapbox؛ اگر لود نشود، خودکار روی OSM می‌مانیم
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapboxToken) return;
+
+    // اگر قبلاً لایه Mapbox اضافه شده، پاکش کنیم
+    if (mapboxLayerRef.current) {
+      mapboxLayerRef.current.remove();
+      mapboxLayerRef.current = null;
+    }
+
+    const url = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`;
+
+    const layer = L.tileLayer(url, {
+      attribution: '© Mapbox © OpenStreetMap',
+      tileSize: 512,
+      zoomOffset: -1,
+    });
+
+    mapboxLayerRef.current = layer;
+
+    let tileLoaded = false;
+    let tileErrors = 0;
+
+    const cleanupAndFallback = () => {
+      if (mapboxLayerRef.current) {
+        mapboxLayerRef.current.off('tileload', onTileLoad);
+        mapboxLayerRef.current.off('load', onAnyLoad);
+        mapboxLayerRef.current.off('tileerror', onTileError);
+        mapboxLayerRef.current.remove();
+        mapboxLayerRef.current = null;
+      }
+
+      toast({
+        title: 'نقشه جایگزین فعال شد',
+        description: 'به دلیل عدم دسترسی پایدار به سرویس نقشه، از نقشه جایگزین استفاده شد.',
+        variant: 'default',
+      });
+    };
+
+    const onTileLoad = () => {
+      tileLoaded = true;
+    };
+
+    const onAnyLoad = () => {
+      tileLoaded = true;
+    };
+
+    const onTileError = () => {
+      tileErrors += 1;
+      if (tileErrors >= 3) cleanupAndFallback();
+    };
+
+    layer.on('tileload', onTileLoad);
+    layer.on('load', onAnyLoad);
+    layer.on('tileerror', onTileError);
+
+    layer.addTo(map);
+
+    const timeoutId = window.setTimeout(() => {
+      if (!tileLoaded) cleanupAndFallback();
+    }, 6000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      layer.off('tileload', onTileLoad);
+      layer.off('load', onAnyLoad);
+      layer.off('tileerror', onTileError);
+      // اگر هنوز روی نقشه هست، پاکش کنیم
+      if (mapboxLayerRef.current === layer) {
+        layer.remove();
+        mapboxLayerRef.current = null;
+      }
+    };
+  }, [mapboxToken, toast]);
 
   // تابع کلیک روی سفارش
   const handleOrderClick = useCallback((orderId: string) => {
