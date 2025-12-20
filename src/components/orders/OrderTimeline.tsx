@@ -28,6 +28,7 @@ interface OrderTimelineProps {
   executionStage?: string | null; // مرحله اجرایی فعلی
   executionStageUpdatedAt?: string | null;
   paymentConfirmedAt?: string | null; // تاریخ تایید پرداخت
+  approvedCollectionDate?: string | null; // تاریخ جمع‌آوری تایید شده توسط مدیر
   approvals?: Array<{
     approver_role: string;
     approved_at: string | null;
@@ -67,6 +68,7 @@ export const OrderTimeline = ({
   executionStage,
   executionStageUpdatedAt,
   paymentConfirmedAt,
+  approvedCollectionDate,
   approvals = [],
 }: OrderTimelineProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -215,16 +217,18 @@ export const OrderTimeline = ({
       status: 'awaiting_collection',
       label: 'در انتظار جمع‌آوری',
       icon: PackageX,
-      date: executionStage === 'awaiting_collection' ? executionStageUpdatedAt : undefined,
+      date: approvedCollectionDate || (executionStage === 'awaiting_collection' ? executionStageUpdatedAt : undefined),
       // تکمیل شده وقتی به مرحله in_collection یا بالاتر رسیدیم
       completed: isStageCompletedByNumber(5) || executionStage === 'in_collection' || executionStage === 'collected',
       // فعال فقط وقتی دقیقا در این مرحله هستیم و هنوز تکمیل نشده
       active: (isCurrentStageByNumber(3) || isCurrentStageByNumber(5)) && executionStage !== 'in_collection' && executionStage !== 'collected',
-      details: (isStageCompletedByNumber(5) || executionStage === 'in_collection' || executionStage === 'collected')
-        ? 'تاریخ جمع‌آوری تعیین شد ✓'
-        : (isCurrentStageByNumber(3) || isCurrentStageByNumber(5))
-          ? 'لطفاً تاریخ فک داربست را تعیین کنید'
-          : undefined,
+      details: approvedCollectionDate
+        ? `تاریخ جمع‌آوری تایید شده: ${formatDate(approvedCollectionDate)?.date} ساعت ${formatDate(approvedCollectionDate)?.time} ✓`
+        : (isStageCompletedByNumber(5) || executionStage === 'in_collection' || executionStage === 'collected')
+          ? 'تاریخ جمع‌آوری تعیین شد ✓'
+          : (isCurrentStageByNumber(3) || isCurrentStageByNumber(5))
+            ? 'لطفاً تاریخ فک داربست را تعیین کنید'
+            : undefined,
     },
     {
       status: 'in_collection',

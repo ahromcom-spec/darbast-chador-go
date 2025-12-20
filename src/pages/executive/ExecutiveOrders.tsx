@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users, Archive, RefreshCw } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users, Archive, RefreshCw, PackageOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -23,6 +23,7 @@ import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { useAuth } from '@/contexts/AuthContext';
+import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 // IMPORTANT: pending_execution باید به status = 'pending_execution' در دیتابیس مپ شود
@@ -150,6 +151,8 @@ export default function ExecutiveOrders() {
   const [cashPaymentAmount, setCashPaymentAmount] = useState('');
   const [cashPaymentReference, setCashPaymentReference] = useState('');
   const [confirmingCashPayment, setConfirmingCashPayment] = useState(false);
+  // Collection request dialog
+  const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Auto-open order from URL param
@@ -1363,6 +1366,20 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
+                  {/* دکمه درخواست جمع‌آوری - برای همه سفارشات (همان طور که در تب در انتظار جمع‌آوری است) */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setCollectionDialogOpen(true);
+                    }}
+                    className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
+                  >
+                    <PackageOpen className="h-4 w-4" />
+                    درخواست جمع‌آوری
+                  </Button>
+
                   {order.status === 'paid' && !order.executive_completion_date && (
                     <Button
                       onClick={() => {
@@ -1630,6 +1647,21 @@ export default function ExecutiveOrders() {
           open={collaboratorDialogOpen}
           onOpenChange={setCollaboratorDialogOpen}
           onCollaboratorAdded={fetchOrders}
+        />
+      )}
+
+      {/* Collection Request Dialog */}
+      {selectedOrder && (
+        <CollectionRequestDialog
+          open={collectionDialogOpen}
+          onOpenChange={(open) => {
+            setCollectionDialogOpen(open);
+            if (!open) fetchOrders();
+          }}
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          customerId={selectedOrder.customer_id || ''}
+          isManager={true}
         />
       )}
 

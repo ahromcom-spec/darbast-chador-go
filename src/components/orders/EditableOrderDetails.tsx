@@ -305,11 +305,12 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [orderApprovals, setOrderApprovals] = useState<Array<{ approver_role: string; approved_at: string | null; approver_user_id: string | null }>>([]);
+  const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
   const { toast } = useToast();
   
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
 
-  // Fetch approved/completed repair costs and approvals
+  // Fetch approved/completed repair costs, approvals, and collection date
   useEffect(() => {
     const fetchData = async () => {
       // Fetch repair costs
@@ -332,6 +333,22 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
 
       if (approvalsData) {
         setOrderApprovals(approvalsData);
+      }
+
+      // Fetch approved collection request date
+      const { data: collectionData } = await supabase
+        .from('collection_requests')
+        .select('requested_date, status')
+        .eq('order_id', order.id)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (collectionData?.requested_date) {
+        setApprovedCollectionDate(collectionData.requested_date);
+      } else {
+        setApprovedCollectionDate(null);
       }
     };
     fetchData();
@@ -880,6 +897,7 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         rejectionReason={order.rejection_reason || undefined}
         executionStage={order.execution_stage}
         executionStageUpdatedAt={order.execution_stage_updated_at}
+        approvedCollectionDate={approvedCollectionDate}
         approvals={orderApprovals}
       />
 
