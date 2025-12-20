@@ -45,6 +45,7 @@ interface OrderData {
   address: string;
   status: OrderStatus;
   customer_name: string | null;
+  hierarchy_project_id?: string | null;
   location_lat: number;
   location_lng: number;
   first_image_url?: string | null;
@@ -82,8 +83,15 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
   // مختصات مرکز استان قم
   const QOM_CENTER = { lat: 34.6416, lng: 50.8746 };
 
-  // دریافت سفارشات داربست به همراه اجناس
-  const { data: orders, isLoading } = useQuery({
+  // دریافت سفارشات داربست به همراه اجناس (بدون بلاک کردن UI روی عکس‌ها)
+  const {
+    data: baseOrders,
+    isLoading: isLoadingOrders,
+    isFetching: isFetchingOrders,
+    isError: isOrdersError,
+    error: ordersError,
+    refetch: refetchOrders,
+  } = useQuery({
     queryKey: ['executive-globe-map-orders'],
     queryFn: async (): Promise<OrderData[]> => {
       const { data, error } = await supabase
@@ -96,6 +104,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
           customer_name,
           location_lat,
           location_lng,
+          hierarchy_project_id,
           subcategories!projects_v3_subcategory_id_fkey (
             id,
             name,
@@ -105,99 +114,135 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
               name,
               code
             )
+          ),
+          projects_hierarchy:projects_hierarchy!projects_v3_hierarchy_project_id_fkey (
+            id,
+            locations (lat, lng)
           )
         `)
-        .not('location_lat', 'is', null)
-        .not('location_lng', 'is', null)
-        .neq('location_lat', 0)
-        .neq('location_lng', 0)
-        .in('status', ['pending', 'pending_execution', 'approved', 'in_progress', 'completed', 'paid']);
+        .in('status', [
+          'pending',
+          'pending_execution',
+          'approved',
+          'in_progress',
+          'completed',
+          'paid',
+          'closed',
+        ])
+        .or('is_archived.is.null,is_archived.eq.false')
+        .or('is_deep_archived.is.null,is_deep_archived.eq.false')
+        .order('code', { ascending: false })
+        .limit(800);
 
       if (error) throw error;
 
       // فیلتر کردن فقط سفارشات داربست به همراه اجناس
       const scaffoldOrders =
-        data?.filter((order) => {
+        data?.filter((order: any) => {
           const subcategoryCode = order.subcategories?.code;
           const serviceTypeCode = order.subcategories?.service_types_v3?.code;
           return subcategoryCode === '10' && serviceTypeCode === '10';
         }) || [];
 
-      const typedOrders = scaffoldOrders as OrderData[];
-      const orderIds = typedOrders.map((o) => o.id);
+      // نرمال‌سازی مختصات: اگر lat/lng روی سفارش خالی بود از پروژه‌ی سلسله‌مراتبی و لوکیشن آن استفاده کن
+      const normalized = (scaffoldOrders as any[])
+        .map((o) => {
+          const directLat = typeof o.location_lat === 'number' ? o.location_lat : null;
+          const directLng = typeof o.location_lng === 'number' ? o.location_lng : null;
 
-      if (orderIds.length === 0) return [];
+          const fallbackLat = typeof o.projects_hierarchy?.locations?.lat === 'number'
+            ? o.projects_hierarchy.locations.lat
+            : null;
+          const fallbackLng = typeof o.projects_hierarchy?.locations?.lng === 'number'
+            ? o.projects_hierarchy.locations.lng
+            : null;
 
-      // دریافت media برای هر سفارش (برای ساخت marker های تصویری مثل نقشه صفحه اصلی)
+          const lat = directLat && directLat !== 0 ? directLat : fallbackLat && fallbackLat !== 0 ? fallbackLat : null;
+          const lng = directLng && directLng !== 0 ? directLng : fallbackLng && fallbackLng !== 0 ? fallbackLng : null;
+
+          if (!lat || !lng) return null;
+
+          return {
+            id: o.id,
+            code: o.code,
+            address: o.address,
+            status: o.status,
+            customer_name: o.customer_name ?? null,
+            hierarchy_project_id: o.hierarchy_project_id ?? null,
+            location_lat: lat,
+            location_lng: lng,
+            subcategories: o.subcategories ?? null,
+          } as OrderData;
+        })
+        .filter(Boolean) as OrderData[];
+
+      return normalized;
+    },
+    staleTime: 15_000,
+    retry: 1,
+  });
+
+  // دریافت media (فقط برای ساخت thumbnail های مارکر) — جدا از سفارشات تا UI گیر نکند
+  const MAX_MEDIA_ORDERS = 300;
+  const orderIdsForMedia = useMemo(
+    () => (baseOrders || []).map((o) => o.id).slice(0, MAX_MEDIA_ORDERS),
+    [baseOrders]
+  );
+
+  const { data: mediaByOrder } = useQuery({
+    queryKey: ['executive-globe-map-media', orderIdsForMedia],
+    enabled: orderIdsForMedia.length > 0,
+    queryFn: async () => {
       const { data: mediaData, error: mediaError } = await supabase
         .from('project_media')
         .select('id, project_id, file_path, thumbnail_path, file_type, created_at, mime_type')
-        .in('project_id', orderIds)
-        .in('file_type', ['image', 'video'])
+        .in('project_id', orderIdsForMedia)
+        .in('file_type', ['image'])
         .order('created_at', { ascending: false })
         .limit(2000);
 
-      if (mediaError) {
-        console.warn('[ExecutiveGlobeMap] Failed to fetch media for orders:', mediaError);
-      }
+      if (mediaError) throw mediaError;
 
-      const mediaByOrder = new Map<string, OrderMedia[]>();
-      (mediaData || []).forEach((m) => {
-        const oid = (m as any).project_id as string;
-        if (!mediaByOrder.has(oid)) mediaByOrder.set(oid, []);
-        mediaByOrder.get(oid)!.push(m as any);
+      const firstByOrder = new Map<string, OrderMedia>();
+      const countByOrder = new Map<string, number>();
+
+      (mediaData || []).forEach((m: any) => {
+        const oid = m.project_id as string;
+        countByOrder.set(oid, (countByOrder.get(oid) || 0) + 1);
+        if (!firstByOrder.has(oid)) firstByOrder.set(oid, m as OrderMedia);
       });
 
-      const imageCountByOrder = new Map<string, number>();
-      const firstImageByOrder = new Map<string, OrderMedia>();
+      const out: Record<string, { first_image_url: string | null; images_count: number }> = {};
+      orderIdsForMedia.forEach((oid) => {
+        const first = firstByOrder.get(oid);
+        const count = countByOrder.get(oid) || 0;
+        const path = first ? (first.thumbnail_path || first.file_path) : null;
 
-      orderIds.forEach((oid) => {
-        const list = mediaByOrder.get(oid) || [];
-        const images = list.filter((x) => x.file_type === 'image');
-        imageCountByOrder.set(oid, images.length);
-        if (images[0]) firstImageByOrder.set(oid, images[0]);
-      });
-
-      // برای هر سفارش، URL قابل نمایش بسازیم (اول signed؛ اگر نشد public)
-      const urlByOrder = new Map<string, string>();
-      const entries = Array.from(firstImageByOrder.entries()).map(([orderId, m]) => ({
-        orderId,
-        path: m.thumbnail_path || m.file_path,
-      }));
-
-      const chunkSize = 12;
-      for (let i = 0; i < entries.length; i += chunkSize) {
-        const chunk = entries.slice(i, i + chunkSize);
-        const results = await Promise.all(
-          chunk.map(async ({ orderId, path }) => {
-            try {
-              const { data: signedData, error: signedError } = await supabase.storage
-                .from('order-media')
-                .createSignedUrl(path, 3600);
-
-              if (signedData?.signedUrl && !signedError) {
-                return [orderId, signedData.signedUrl] as const;
-              }
-            } catch (_) {}
-
-            const pub = supabase.storage
+        const publicUrl = path
+          ? supabase.storage
               .from('order-media')
-              .getPublicUrl(path, { transform: { width: 240, quality: 70 } }).data.publicUrl;
+              .getPublicUrl(path, { transform: { width: 240, quality: 70 } }).data.publicUrl
+          : null;
 
-            return [orderId, pub] as const;
-          })
-        );
+        out[oid] = { first_image_url: publicUrl, images_count: count };
+      });
 
-        results.forEach(([orderId, url]) => urlByOrder.set(orderId, url));
-      }
-
-      return typedOrders.map((o) => ({
-        ...o,
-        images_count: imageCountByOrder.get(o.id) ?? 0,
-        first_image_url: urlByOrder.get(o.id) ?? null,
-      }));
+      return out;
     },
+    staleTime: 30_000,
+    retry: 1,
   });
+
+  const orders = useMemo(() => {
+    const list = baseOrders || [];
+    if (!mediaByOrder) return list;
+    return list.map((o) => ({
+      ...o,
+      ...mediaByOrder[o.id],
+    }));
+  }, [baseOrders, mediaByOrder]);
+
+  const isLoading = isLoadingOrders || isFetchingOrders;
 
   // گروه‌بندی سفارشات بر اساس موقعیت
   const orderMarkers = useMemo(() => {
