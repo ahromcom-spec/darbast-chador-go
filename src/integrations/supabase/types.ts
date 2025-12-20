@@ -1154,6 +1154,47 @@ export type Database = {
           },
         ]
       }
+      order_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          paid_by: string
+          payment_method: string | null
+          receipt_number: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          paid_by: string
+          payment_method?: string | null
+          receipt_number?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          paid_by?: string
+          payment_method?: string | null
+          receipt_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_transfer_requests: {
         Row: {
           created_at: string
@@ -1893,6 +1934,8 @@ export type Database = {
           rejection_reason: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
+          total_paid: number | null
+          total_price: number | null
           transaction_reference: string | null
           transferred_from_phone: string | null
           transferred_from_user_id: string | null
@@ -1944,6 +1987,8 @@ export type Database = {
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
+          total_paid?: number | null
+          total_price?: number | null
           transaction_reference?: string | null
           transferred_from_phone?: string | null
           transferred_from_user_id?: string | null
@@ -1995,6 +2040,8 @@ export type Database = {
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id?: string
+          total_paid?: number | null
+          total_price?: number | null
           transaction_reference?: string | null
           transferred_from_phone?: string | null
           transferred_from_user_id?: string | null
@@ -3554,6 +3601,8 @@ export type Database = {
           rejection_reason: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
+          total_paid: number | null
+          total_price: number | null
           transaction_reference: string | null
           transferred_from_phone: string | null
           transferred_from_user_id: string | null
@@ -3668,6 +3717,8 @@ export type Database = {
           rejection_reason: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
+          total_paid: number | null
+          total_price: number | null
           transaction_reference: string | null
           transferred_from_phone: string | null
           transferred_from_user_id: string | null
