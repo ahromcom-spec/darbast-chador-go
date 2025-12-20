@@ -69,10 +69,13 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const centerMarkersRef = useRef<L.Marker[]>([]);
+  const linesRef = useRef<L.Polyline[]>([]);
   const osmLayerRef = useRef<L.TileLayer | null>(null);
   const mapboxLayerRef = useRef<L.TileLayer | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -351,17 +354,26 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
     onClose();
   }, [onOrderClick, navigate, onClose]);
 
-  // رسم مارکرها (مثل نقشه صفحه اصلی: تک‌سفارش = عکس، چندسفارش = دایره عددی)
+  // رسم مارکرها (مثل نقشه صفحه اصلی: چند سفارش در یک نقطه = قابل باز/بسته شدن)
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
+
+    const map = mapRef.current;
+
+    // برای اطمینان از رندر صحیح در حالت فول‌اسکرین/مودال
+    window.setTimeout(() => map.invalidateSize(), 0);
 
     // پاک کردن مارکرهای قبلی
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    if (orderMarkers.length === 0) return;
+    centerMarkersRef.current.forEach((m) => m.remove());
+    centerMarkersRef.current = [];
 
-    const map = mapRef.current;
+    linesRef.current.forEach((l) => l.remove());
+    linesRef.current = [];
+
+    if (orderMarkers.length === 0) return;
 
     const statusLabel: Record<string, string> = {
       pending: 'در انتظار تایید',
@@ -389,13 +401,24 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       }
     };
 
-    const clusterIcon = (count: number) =>
+    const clusterKeyOf = (lat: number, lng: number) => `${lat.toFixed(5)}_${lng.toFixed(5)}`;
+
+    const centerClusterIcon = (count: number) =>
       L.divIcon({
         className: 'exec-order-marker',
-        html: `<div class="exec-order-marker__cluster"><span>${count}</span></div>`,
-        iconSize: [38, 38],
-        iconAnchor: [19, 19],
-        popupAnchor: [0, -18],
+        html: `
+          <div class="exec-center-marker">
+            <div class="exec-center-marker__dot" aria-hidden="true"></div>
+            ${
+              count > 1
+                ? `<div class="exec-center-marker__count" aria-label="${count} سفارش">${count}</div>`
+                : ''
+            }
+          </div>
+        `,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -14],
       });
 
     const dotIcon = (color: string) =>
@@ -454,67 +477,131 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       `;
     };
 
+    const computeTargetLatLng = (centerLat: number, centerLng: number, index: number, count: number) => {
+      const angle = (2 * Math.PI * index) / count;
+      const centerPoint = map.latLngToLayerPoint(L.latLng(centerLat, centerLng));
+      const baseRadiusPx = 46;
+      const adaptiveRadiusPx = baseRadiusPx + Math.min(count, 7) * 3;
+      const dx = adaptiveRadiusPx * Math.cos(angle);
+      const dy = adaptiveRadiusPx * Math.sin(angle);
+      const targetPoint = L.point(centerPoint.x + dx, centerPoint.y + dy);
+      return map.layerPointToLatLng(targetPoint);
+    };
+
+    // ایجاد مارکرها
     orderMarkers.forEach((group) => {
-      const hasMultiple = group.orders.length > 1;
+      const centerLat = group.lat;
+      const centerLng = group.lng;
       const count = group.orders.length;
-      const first = group.orders[0];
+      const clusterKey = clusterKeyOf(centerLat, centerLng);
+      const isExpanded = expandedClusters.has(clusterKey);
 
-      const icon = hasMultiple
-        ? clusterIcon(count)
-        : first.first_image_url
-          ? thumbIcon(first.first_image_url, first.images_count ?? 0)
-          : dotIcon(statusColor(first.status || 'pending'));
+      // برای چند سفارش در یک نقطه، یک نقطه مرکزی مثل نقشه صفحه اصلی بگذاریم
+      if (count > 1) {
+        const centerMarker = L.marker([centerLat, centerLng], {
+          icon: centerClusterIcon(count),
+          zIndexOffset: 900,
+          opacity: isExpanded ? 0.35 : 1,
+        }).addTo(map);
 
-      const header = hasMultiple
-        ? `<div class="exec-popup__title">📦 ${count} سفارش در این موقعیت</div>`
-        : `<div class="exec-popup__title">📍 جزئیات سفارش</div>`;
-
-      const body = group.orders.map(renderOrderCard).join('');
-
-      const popupContent = `
-        <div class="exec-popup">
-          ${header}
-          <div class="exec-popup__list">${body}</div>
-        </div>
-      `;
-
-      const marker = L.marker([group.lat, group.lng], {
-        icon,
-        riseOnHover: true,
-        zIndexOffset: hasMultiple ? 400 : 600,
-      }).addTo(map);
-
-      marker.bindPopup(popupContent, {
-        maxWidth: 360,
-        className: 'exec-order-popup',
-        autoPan: true,
-        autoPanPadding: [50, 50],
-      });
-
-      marker.on('popupopen', (e) => {
-        const popupEl = (e.popup as any)?.getElement?.() as HTMLElement | null;
-        if (!popupEl) return;
-        popupEl.querySelectorAll<HTMLElement>('[data-order-id]').forEach((btn) => {
-          btn.addEventListener('click', (evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
-            const id = btn.dataset.orderId;
-            if (id) handleOrderClick(id);
+        centerMarker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setExpandedClusters((prev) => {
+            const next = new Set(prev);
+            if (next.has(clusterKey)) next.delete(clusterKey);
+            else next.add(clusterKey);
+            return next;
           });
         });
-      });
 
-      markersRef.current.push(marker);
+        centerMarkersRef.current.push(centerMarker);
+      }
+
+      group.orders.forEach((o, index) => {
+        // موقعیت نهایی (حلقه‌ای دور مرکز) فقط برای cluster ها
+        const target = count > 1 ? computeTargetLatLng(centerLat, centerLng, index, count) : L.latLng(centerLat, centerLng);
+
+        // در حالت جمع شده، مارکرها نزدیک مرکز روی هم قرار می‌گیرند تا «وجودشان» دیده شود
+        let lat = target.lat;
+        let lng = target.lng;
+        let opacity = 1;
+
+        if (count > 1 && !isExpanded) {
+          const stackOffset = index * 0.00003;
+          lat = centerLat + stackOffset;
+          lng = centerLng + stackOffset * 0.8;
+          opacity = Math.max(0.16, 0.85 - index * 0.12);
+        }
+
+        const icon = o.first_image_url
+          ? thumbIcon(o.first_image_url, o.images_count ?? 0)
+          : dotIcon(statusColor(o.status || 'pending'));
+
+        const popupContent = `
+          <div class="exec-popup">
+            <div class="exec-popup__title">📍 جزئیات سفارش</div>
+            <div class="exec-popup__list">${renderOrderCard(o)}</div>
+          </div>
+        `;
+
+        const marker = L.marker([lat, lng], {
+          icon,
+          riseOnHover: true,
+          opacity,
+          zIndexOffset: count > 1 ? 650 : 750,
+        }).addTo(map);
+
+        marker.bindPopup(popupContent, {
+          maxWidth: 360,
+          className: 'exec-order-popup',
+          autoPan: true,
+          autoPanPadding: [50, 50],
+        });
+
+        marker.on('popupopen', (e) => {
+          const popupEl = (e.popup as any)?.getElement?.() as HTMLElement | null;
+          if (!popupEl) return;
+          popupEl.querySelectorAll<HTMLElement>('[data-order-id]').forEach((btn) => {
+            btn.addEventListener('click', (evt) => {
+              evt.preventDefault();
+              evt.stopPropagation();
+              const id = btn.dataset.orderId;
+              if (id) handleOrderClick(id);
+            });
+          });
+        });
+
+        markersRef.current.push(marker);
+
+        // خط اتصال به مرکز (فقط برای cluster ها)
+        if (count > 1) {
+          const line = L.polyline(
+            [
+              [target.lat, target.lng],
+              [centerLat, centerLng],
+            ],
+            {
+              color: 'hsl(var(--primary))',
+              weight: 2,
+              opacity: isExpanded ? 0.6 : 0,
+              dashArray: '8, 10',
+              className: 'exec-connection-line',
+            }
+          ).addTo(map);
+
+          linesRef.current.push(line);
+        }
+      });
     });
 
-    // تنظیم نمای نقشه برای نمایش همه مارکرها
+    // تنظیم نمای نقشه برای نمایش همه مارکرها (مرکزهای اصلی)
     if (orderMarkers.length === 1) {
       map.setView([orderMarkers[0].lat, orderMarkers[0].lng], 14);
     } else {
       const bounds = L.latLngBounds(orderMarkers.map((m) => [m.lat, m.lng] as [number, number]));
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
     }
-  }, [handleOrderClick, mapReady, orderMarkers]);
+  }, [expandedClusters, handleOrderClick, mapReady, orderMarkers]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
@@ -573,33 +660,54 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       {/* نقشه */}
       <div ref={mapContainer} className="absolute inset-0" />
 
-      {/* استایل سفارشی */}
+       {/* استایل سفارشی */}
       <style>{`
         .exec-order-marker {
           background: transparent !important;
           border: none !important;
         }
 
-        .exec-order-marker__cluster {
-          width: 38px;
-          height: 38px;
-          border-radius: 999px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--gradient-construction);
-          border: 3px solid hsl(var(--background));
-          color: hsl(var(--accent-foreground));
-          font-size: 14px;
-          font-weight: 800;
-          box-shadow: var(--shadow-construction);
-          transition: transform 150ms ease, filter 150ms ease;
+        .exec-center-marker {
+          width: 28px;
+          height: 28px;
+          display: grid;
+          place-items: center;
+          position: relative;
           user-select: none;
         }
 
-        .exec-order-marker__cluster:hover {
-          transform: scale(1.08);
+        .exec-center-marker__dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 999px;
+          background: hsl(var(--destructive));
+          border: 2px solid hsl(var(--background));
+          box-shadow: 0 10px 24px hsl(var(--destructive) / 0.28);
+          transition: transform 150ms ease, filter 150ms ease;
+        }
+
+        .exec-center-marker:hover .exec-center-marker__dot {
+          transform: scale(1.16);
           filter: brightness(1.02);
+        }
+
+        .exec-center-marker__count {
+          position: absolute;
+          top: -6px;
+          right: -6px;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 6px;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--gradient-construction);
+          color: hsl(var(--accent-foreground));
+          border: 2px solid hsl(var(--background));
+          box-shadow: var(--shadow-construction);
+          font-size: 11px;
+          font-weight: 900;
         }
 
         .exec-order-marker__dot {
