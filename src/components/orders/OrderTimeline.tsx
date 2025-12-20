@@ -246,15 +246,13 @@ export const OrderTimeline = ({
       label: 'جمع‌آوری شد',
       icon: PackageCheck,
       date: executionStage === 'collected' ? executionStageUpdatedAt : (orderStatus === 'closed' ? customerCompletionDate : undefined),
-      // تکمیل شده وقتی به مرحله closed رسیدیم (شماره 9)
-      completed: isStageCompletedByNumber(7) || orderStatus === 'closed',
-      // فعال وقتی در مرحله collected هستیم (شماره 7)
-      active: isCurrentStageByNumber(7) && orderStatus !== 'closed',
-      details: (isStageCompletedByNumber(7) || orderStatus === 'closed')
+      // تکمیل شده وقتی به مرحله collected رسیدیم یا سفارش بسته شده
+      completed: executionStage === 'collected' || isStageCompletedByNumber(7) || orderStatus === 'closed',
+      // فعال نباشد چون وقتی collected است یعنی تکمیل شده
+      active: false,
+      details: (executionStage === 'collected' || isStageCompletedByNumber(7) || orderStatus === 'closed')
         ? 'داربست با موفقیت جمع‌آوری شد ✓'
-        : isCurrentStageByNumber(7)
-          ? 'داربست با موفقیت جمع‌آوری شد'
-          : undefined,
+        : undefined,
     },
     {
       status: 'closed',
