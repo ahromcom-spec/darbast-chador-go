@@ -102,12 +102,12 @@ export const OrderTimeline = ({
     in_collection: 6,
     collected: 7,
     completed: 8,
-    closed: 8,
+    closed: 9, // closed بعد از collected
   };
 
   const getCurrentStageNumber = (): number => {
-    // Final state
-    if (orderStatus === 'closed') return 6;
+    // Final state - closed = 9 یعنی همه مراحل قبلی کامل شده
+    if (orderStatus === 'closed') return 9;
 
     // Prefer execution_stage when present (even if status is 'completed')
     if (executionStage) {
@@ -231,12 +231,12 @@ export const OrderTimeline = ({
       label: 'در حال جمع‌آوری',
       icon: PackageCheck,
       date: executionStage === 'in_collection' ? executionStageUpdatedAt : undefined,
-      // تکمیل شده وقتی به مرحله collected یا بالاتر رسیدیم
-      completed: isStageCompletedByNumber(6) || executionStage === 'collected',
+      // تکمیل شده وقتی به مرحله collected یا بالاتر رسیدیم (شماره 7 یا بیشتر)
+      completed: isStageCompletedByNumber(6) || executionStage === 'collected' || orderStatus === 'closed',
       // فعال فقط وقتی دقیقا در مرحله in_collection هستیم
-      active: isCurrentStageByNumber(6) && executionStage !== 'collected',
-      details: (isStageCompletedByNumber(6) || executionStage === 'collected')
-        ? 'عملیات جمع‌آوری انجام شد ✓'
+      active: isCurrentStageByNumber(6) && executionStage !== 'collected' && orderStatus !== 'closed',
+      details: (isStageCompletedByNumber(6) || executionStage === 'collected' || orderStatus === 'closed')
+        ? 'داربست در حال جمع‌آوری است ✓'
         : isCurrentStageByNumber(6) 
           ? 'داربست در حال جمع‌آوری است'
           : undefined,
@@ -245,24 +245,29 @@ export const OrderTimeline = ({
       status: 'collected',
       label: 'جمع‌آوری شد',
       icon: PackageCheck,
-      date: executionStage === 'collected' ? executionStageUpdatedAt : undefined,
-      completed: isStageCompletedByNumber(7),
-      active: isCurrentStageByNumber(7),
-      details: isStageCompletedByNumber(7) || isCurrentStageByNumber(7) 
+      date: executionStage === 'collected' ? executionStageUpdatedAt : (orderStatus === 'closed' ? customerCompletionDate : undefined),
+      // تکمیل شده وقتی به مرحله closed رسیدیم (شماره 9)
+      completed: isStageCompletedByNumber(7) || orderStatus === 'closed',
+      // فعال وقتی در مرحله collected هستیم (شماره 7)
+      active: isCurrentStageByNumber(7) && orderStatus !== 'closed',
+      details: (isStageCompletedByNumber(7) || orderStatus === 'closed')
         ? 'داربست با موفقیت جمع‌آوری شد ✓'
-        : undefined,
+        : isCurrentStageByNumber(7)
+          ? 'داربست با موفقیت جمع‌آوری شد'
+          : undefined,
     },
     {
       status: 'closed',
       label: 'اتمام سفارش',
       icon: CheckCircle2,
       date: customerCompletionDate,
-      // اتمام سفارش فقط وقتی که واقعاً سفارش بسته شده باشد (closed) - نه با order_executed
+      // اتمام سفارش فقط وقتی که واقعاً سفارش بسته شده باشد (closed)
       completed: orderStatus === 'closed',
-      active: isStageCompletedByNumber(7) && !!paymentConfirmedAt && orderStatus !== 'closed',
+      // فعال وقتی همه مراحل قبلی انجام شده ولی هنوز closed نشده
+      active: (executionStage === 'collected' || isStageCompletedByNumber(7)) && orderStatus !== 'closed',
       details: orderStatus === 'closed'
         ? 'سفارش با موفقیت به اتمام رسید ✓' 
-        : (isStageCompletedByNumber(7) && !!paymentConfirmedAt)
+        : (executionStage === 'collected' || isStageCompletedByNumber(7))
           ? 'منتظر تایید نهایی مدیر برای اتمام سفارش'
           : undefined,
     },
