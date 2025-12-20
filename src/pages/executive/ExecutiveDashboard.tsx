@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { ExecutiveOrdersSummary } from '@/components/executive/ExecutiveOrdersSummary';
-import ExecutiveGlobe from '@/components/executive/ExecutiveGlobe';
+import ExecutiveGlobeMap from '@/components/executive/ExecutiveGlobeMap';
 import goldenGlobe from '@/assets/golden-globe-rotating.png';
 import { 
   BarChart, 
@@ -158,7 +158,7 @@ export default function ExecutiveDashboard() {
 
   // نمایش کره زمین
   if (showGlobe) {
-    return <ExecutiveGlobe onClose={() => setShowGlobe(false)} />;
+    return <ExecutiveGlobeMap onClose={() => setShowGlobe(false)} />;
   }
 
   return (
@@ -186,10 +186,10 @@ export default function ExecutiveDashboard() {
             <div className="flex-1 text-center md:text-right space-y-3">
               <h3 className="text-xl font-bold flex items-center justify-center md:justify-end gap-2">
                 <Globe className="w-5 h-5 text-primary" />
-                نقشه سفارشات روی کره زمین
+                نقشه سفارشات
               </h3>
               <p className="text-muted-foreground text-sm max-w-md">
-                مشاهده موقعیت تمام سفارشات خدمات اجرای داربست به همراه اجناس روی کره زمین سه‌بعدی.
+                مشاهده موقعیت تمام سفارشات خدمات اجرای داربست به همراه اجناس روی نقشه.
                 با کلیک روی هر سفارش می‌توانید مستقیماً به صفحه مدیریت آن بروید.
               </p>
               <Button 
@@ -197,7 +197,7 @@ export default function ExecutiveDashboard() {
                 className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
               >
                 <Globe className="w-4 h-4" />
-                نمایش سفارشات روی کره
+                نمایش سفارشات روی نقشه
               </Button>
             </div>
           </div>

@@ -1,0 +1,406 @@
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { ArrowRight, MapPin, X, Package, Building2, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+
+interface OrderData {
+  id: string;
+  code: string;
+  address: string;
+  status: string;
+  customer_name: string | null;
+  location_lat: number;
+  location_lng: number;
+  subcategories: {
+    id: string;
+    name: string;
+    code: string;
+    service_types_v3: {
+      id: string;
+      name: string;
+      code: string;
+    } | null;
+  } | null;
+}
+
+interface OrderMarker {
+  lat: number;
+  lng: number;
+  orders: OrderData[];
+}
+
+interface ExecutiveGlobeMapProps {
+  onClose: () => void;
+  onOrderClick?: (orderId: string) => void;
+}
+
+export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGlobeMapProps) {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // مختصات مرکز استان قم
+  const QOM_CENTER = { lat: 34.6416, lng: 50.8746 };
+
+  // دریافت سفارشات داربست به همراه اجناس
+  const { data: orders, isLoading } = useQuery({
+    queryKey: ['executive-globe-map-orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects_v3')
+        .select(`
+          id,
+          code,
+          address,
+          status,
+          customer_name,
+          location_lat,
+          location_lng,
+          subcategories!projects_v3_subcategory_id_fkey (
+            id,
+            name,
+            code,
+            service_types_v3 (
+              id,
+              name,
+              code
+            )
+          )
+        `)
+        .not('location_lat', 'is', null)
+        .not('location_lng', 'is', null)
+        .neq('location_lat', 0)
+        .neq('location_lng', 0)
+        .in('status', ['pending', 'pending_execution', 'approved', 'in_progress', 'completed', 'paid']);
+
+      if (error) throw error;
+
+      // فیلتر کردن فقط سفارشات داربست به همراه اجناس
+      const scaffoldOrders = data?.filter(order => {
+        const subcategoryCode = order.subcategories?.code;
+        const serviceTypeCode = order.subcategories?.service_types_v3?.code;
+        return subcategoryCode === '10' && serviceTypeCode === '10';
+      }) || [];
+
+      return scaffoldOrders as OrderData[];
+    }
+  });
+
+  // گروه‌بندی سفارشات بر اساس موقعیت
+  const orderMarkers = useMemo(() => {
+    if (!orders || orders.length === 0) return [];
+
+    const locationGroups: { [key: string]: OrderData[] } = {};
+    
+    orders.forEach(order => {
+      if (!order.location_lat || !order.location_lng) return;
+      
+      const key = `${order.location_lat.toFixed(5)}_${order.location_lng.toFixed(5)}`;
+      
+      if (!locationGroups[key]) {
+        locationGroups[key] = [];
+      }
+      locationGroups[key].push(order);
+    });
+
+    return Object.values(locationGroups).map(group => ({
+      lat: group[0].location_lat,
+      lng: group[0].location_lng,
+      orders: group
+    })) as OrderMarker[];
+  }, [orders]);
+
+  // دریافت توکن Mapbox
+  useEffect(() => {
+    const fetchToken = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+        if (error) throw error;
+        if (data?.token) {
+          setMapboxToken(data.token);
+        }
+      } catch (err) {
+        console.error('Error fetching mapbox token:', err);
+      }
+    };
+    fetchToken();
+  }, []);
+
+  // راه‌اندازی نقشه
+  useEffect(() => {
+    if (!mapContainer.current || mapRef.current) return;
+
+    const map = L.map(mapContainer.current, {
+      center: [QOM_CENTER.lat, QOM_CENTER.lng],
+      zoom: 12,
+      zoomControl: true,
+    });
+
+    // استفاده از OpenStreetMap به عنوان fallback
+    if (mapboxToken) {
+      L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`, {
+        attribution: '© Mapbox © OpenStreetMap',
+        tileSize: 512,
+        zoomOffset: -1,
+      }).addTo(map);
+    } else {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+      }).addTo(map);
+    }
+
+    mapRef.current = map;
+    setMapReady(true);
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [mapboxToken]);
+
+  // تابع کلیک روی سفارش
+  const handleOrderClick = useCallback((orderId: string) => {
+    if (onOrderClick) {
+      onOrderClick(orderId);
+    } else {
+      navigate(`/executive/orders?orderId=${orderId}`);
+    }
+    onClose();
+  }, [onOrderClick, navigate, onClose]);
+
+  // رسم مارکرها
+  useEffect(() => {
+    if (!mapRef.current || !mapReady || orderMarkers.length === 0) return;
+
+    // پاک کردن مارکرهای قبلی
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+
+    const statusColors: Record<string, string> = {
+      pending: '#ff9800',
+      pending_execution: '#ff9800',
+      approved: '#4caf50',
+      in_progress: '#2196f3',
+      completed: '#9c27b0',
+      paid: '#00bcd4',
+    };
+
+    orderMarkers.forEach(marker => {
+      const hasMultiple = marker.orders.length > 1;
+      const firstOrder = marker.orders[0];
+      const color = statusColors[firstOrder.status] || '#ffd700';
+
+      // ساخت آیکون سفارشی
+      const icon = L.divIcon({
+        className: 'custom-order-marker',
+        html: `
+          <div style="
+            width: ${hasMultiple ? '32px' : '24px'};
+            height: ${hasMultiple ? '32px' : '24px'};
+            background: ${hasMultiple ? '#ff9500' : color};
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+          ">
+            ${hasMultiple ? marker.orders.length : ''}
+          </div>
+        `,
+        iconSize: [hasMultiple ? 32 : 24, hasMultiple ? 32 : 24],
+        iconAnchor: [hasMultiple ? 16 : 12, hasMultiple ? 16 : 12],
+      });
+
+      const m = L.marker([marker.lat, marker.lng], { icon }).addTo(mapRef.current!);
+
+      // ساخت محتوای پاپ‌آپ
+      let popupContent = `
+        <div style="direction: rtl; text-align: right; min-width: 200px; max-width: 280px;">
+      `;
+
+      if (hasMultiple) {
+        popupContent += `
+          <div style="font-weight: bold; color: #ff9500; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+            📦 ${marker.orders.length} سفارش در این موقعیت
+          </div>
+        `;
+      }
+
+      marker.orders.forEach((order, index) => {
+        const statusLabel = {
+          pending: 'در انتظار',
+          pending_execution: 'آماده اجرا',
+          approved: 'تایید شده',
+          in_progress: 'در حال اجرا',
+          completed: 'تکمیل شده',
+          paid: 'پرداخت شده'
+        }[order.status] || order.status;
+
+        popupContent += `
+          <div style="
+            ${index > 0 ? 'border-top: 1px solid #eee; margin-top: 8px; padding-top: 8px;' : ''}
+          ">
+            <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">
+              کد: ${order.code}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">
+              ${order.address || 'بدون آدرس'}
+            </div>
+            ${order.customer_name ? `
+              <div style="font-size: 11px; color: #888; margin-bottom: 4px;">
+                👤 ${order.customer_name}
+              </div>
+            ` : ''}
+            <div style="
+              display: inline-block;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 10px;
+              background: ${statusColors[order.status] || '#999'}20;
+              color: ${statusColors[order.status] || '#999'};
+              margin-bottom: 6px;
+            ">
+              ${statusLabel}
+            </div>
+            <button 
+              onclick="window.dispatchEvent(new CustomEvent('orderClick', {detail: '${order.id}'}))"
+              style="
+                display: block;
+                width: 100%;
+                padding: 6px 12px;
+                background: linear-gradient(135deg, #f59e0b, #d97706);
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: 500;
+              "
+            >
+              مشاهده و مدیریت
+            </button>
+          </div>
+        `;
+      });
+
+      popupContent += '</div>';
+
+      m.bindPopup(popupContent, {
+        maxWidth: 300,
+        className: 'order-popup'
+      });
+
+      markersRef.current.push(m);
+    });
+
+    // تنظیم نمای نقشه برای نمایش همه مارکرها
+    if (orderMarkers.length > 0) {
+      const bounds = L.latLngBounds(orderMarkers.map(m => [m.lat, m.lng]));
+      mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+    }
+
+  }, [mapReady, orderMarkers]);
+
+  // گوش دادن به رویداد کلیک سفارش
+  useEffect(() => {
+    const handleCustomOrderClick = (e: CustomEvent) => {
+      handleOrderClick(e.detail);
+    };
+
+    window.addEventListener('orderClick', handleCustomOrderClick as EventListener);
+    return () => {
+      window.removeEventListener('orderClick', handleCustomOrderClick as EventListener);
+    };
+  }, [handleOrderClick]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background">
+      {/* دکمه بستن */}
+      <div className="absolute top-4 right-4 z-[1000]">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onClose}
+          className="rounded-full bg-background/90 backdrop-blur-sm shadow-lg"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* کارت اطلاعات */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000]">
+        <Card className="p-6 bg-gradient-to-br from-background/95 to-background/90 backdrop-blur-md border-2 border-amber-500/30 shadow-2xl">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
+              <p className="text-center text-xl font-bold text-foreground">
+                سفارشات داربست به همراه اجناس
+              </p>
+              <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
+            </div>
+            <div className="flex items-center gap-4 text-sm flex-wrap justify-center">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground">استان قم</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full">
+                <Building2 className="w-4 h-4 text-amber-500" />
+                <span className="text-muted-foreground">{orderMarkers.length} موقعیت</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-full">
+                <Package className="w-4 h-4 text-blue-500" />
+                <span className="text-muted-foreground">{orders?.length || 0} سفارش</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">برای مدیریت روی هر سفارش کلیک کنید</p>
+          </div>
+        </Card>
+      </div>
+
+      {/* لودینگ */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-[999]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+            <p className="text-lg font-semibold">در حال بارگذاری نقشه...</p>
+          </div>
+        </div>
+      )}
+
+      {/* نقشه */}
+      <div ref={mapContainer} className="absolute inset-0" />
+
+      {/* استایل سفارشی */}
+      <style>{`
+        .custom-order-marker {
+          background: transparent !important;
+          border: none !important;
+        }
+        .order-popup .leaflet-popup-content-wrapper {
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .order-popup .leaflet-popup-content {
+          margin: 12px;
+        }
+        .order-popup .leaflet-popup-tip {
+          background: white;
+        }
+      `}</style>
+    </div>
+  );
+}
