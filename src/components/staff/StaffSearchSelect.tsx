@@ -106,7 +106,7 @@ export function StaffSearchSelect({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[350px] p-0" align="start">
+      <PopoverContent className="w-[350px] p-0 z-50 bg-background border shadow-lg" align="start">
         <div className="p-3 border-b">
           <div className="relative">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -125,12 +125,13 @@ export function StaffSearchSelect({
               پرسنلی یافت نشد
             </div>
           ) : (
-            <div className="p-1">
+            <div className="p-1 bg-background">
               {sortedStaff.map((staff) => (
                 <button
                   key={staff.code}
+                  type="button"
                   onClick={() => handleSelect(staff.code, staff.name)}
-                  className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors ${
+                  className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer ${
                     value === staff.code ? 'bg-amber-100 dark:bg-amber-900/30' : ''
                   }`}
                 >
