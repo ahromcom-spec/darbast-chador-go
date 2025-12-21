@@ -472,6 +472,7 @@ export default function DailyReportModule() {
             <PersianDatePicker
               value={reportDate.toISOString()}
               onChange={(date) => date && setReportDate(new Date(date))}
+              timeMode="none"
             />
           </div>
         </div>
