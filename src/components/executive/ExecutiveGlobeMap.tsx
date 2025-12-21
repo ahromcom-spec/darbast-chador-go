@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPin, X, Package, Building2 } from 'lucide-react';
+import { MapPin, X, Package, Building2, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,6 +74,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
   const mapboxLayerRef = useRef<L.TileLayer | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [infoCollapsed, setInfoCollapsed] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -621,33 +622,53 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
         </Button>
       </div>
 
-      {/* کارت اطلاعات */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000]">
-        <Card className="p-6 bg-gradient-to-br from-background/95 to-background/90 backdrop-blur-md border-2 border-amber-500/30 shadow-2xl">
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
-              <p className="text-center text-xl font-bold text-foreground">
-                سفارشات داربست به همراه اجناس
-              </p>
-              <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
+      {/* کارت اطلاعات - قابل باز/بسته شدن */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] max-w-[95vw]">
+        <Card className={`bg-gradient-to-br from-background/95 to-background/90 backdrop-blur-md border-2 border-amber-500/30 shadow-2xl transition-all duration-300 ${infoCollapsed ? 'p-2' : 'p-4 sm:p-6'}`}>
+          {/* دکمه باز/بسته کردن */}
+          <button
+            onClick={() => setInfoCollapsed(!infoCollapsed)}
+            className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-amber-500 text-white shadow-lg flex items-center justify-center hover:bg-amber-600 transition-colors"
+            aria-label={infoCollapsed ? 'نمایش اطلاعات' : 'مخفی کردن اطلاعات'}
+          >
+            {infoCollapsed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+          
+          {infoCollapsed ? (
+            // حالت بسته - فقط خلاصه
+            <div className="flex items-center gap-3 pt-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+              <span className="text-sm font-bold">{orders?.length || 0} سفارش</span>
+              <span className="text-xs text-muted-foreground">|</span>
+              <span className="text-sm">{orderMarkers.length} موقعیت</span>
             </div>
-            <div className="flex items-center gap-4 text-sm flex-wrap justify-center">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full">
-                <MapPin className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">استان قم</span>
+          ) : (
+            // حالت باز - اطلاعات کامل
+            <div className="flex flex-col items-center gap-3 pt-2">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
+                <p className="text-center text-base sm:text-xl font-bold text-foreground">
+                  سفارشات داربست به همراه اجناس
+                </p>
+                <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full">
-                <Building2 className="w-4 h-4 text-amber-500" />
-                <span className="text-muted-foreground">{orderMarkers.length} موقعیت</span>
+              <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm flex-wrap justify-center">
+                <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-primary/10 rounded-full">
+                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                  <span className="text-muted-foreground">استان قم</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-amber-500/10 rounded-full">
+                  <Building2 className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" />
+                  <span className="text-muted-foreground">{orderMarkers.length} موقعیت</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-500/10 rounded-full">
+                  <Package className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
+                  <span className="text-muted-foreground">{orders?.length || 0} سفارش</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-full">
-                <Package className="w-4 h-4 text-blue-500" />
-                <span className="text-muted-foreground">{orders?.length || 0} سفارش</span>
-              </div>
+              <p className="text-xs text-muted-foreground">برای مدیریت روی هر سفارش کلیک کنید</p>
             </div>
-            <p className="text-xs text-muted-foreground">برای مدیریت روی هر سفارش کلیک کنید</p>
-          </div>
+          )}
         </Card>
       </div>
 
