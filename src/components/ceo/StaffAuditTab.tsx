@@ -65,22 +65,19 @@ export function StaffAuditTab() {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
-  const fetchSalarySettings = async (staffCode: string) => {
+  const fetchSalarySettings = async (staffCode: string): Promise<SalarySettings> => {
     const { data, error } = await supabase
       .from('staff_salary_settings')
       .select('base_daily_salary, overtime_rate_fraction')
       .eq('staff_code', staffCode)
       .maybeSingle();
 
-    if (!error && data) {
-      setSalarySettings(data);
-    } else {
-      // Default values
-      setSalarySettings({
-        base_daily_salary: 0,
-        overtime_rate_fraction: 0.167 // 1/6
-      });
-    }
+    const settings: SalarySettings = !error && data 
+      ? data 
+      : { base_daily_salary: 0, overtime_rate_fraction: 0.167 };
+    
+    setSalarySettings(settings);
+    return settings;
   };
 
   const calculateSummary = (records: StaffAuditRecord[], settings: SalarySettings) => {
@@ -142,8 +139,8 @@ export function StaffAuditTab() {
 
     setLoading(true);
     try {
-      // Fetch salary settings
-      await fetchSalarySettings(selectedStaffCode);
+      // Fetch salary settings and wait for result
+      const settings = await fetchSalarySettings(selectedStaffCode);
 
       const startStr = startDate.toISOString().split('T')[0];
       const endStr = endDate.toISOString().split('T')[0];
@@ -194,9 +191,9 @@ export function StaffAuditTab() {
 
       setRecords(mappedRecords);
 
-      // Calculate summary
-      if (salarySettings) {
-        calculateSummary(mappedRecords, salarySettings);
+      // Calculate summary with the fetched settings directly
+      if (settings) {
+        calculateSummary(mappedRecords, settings);
       }
     } catch (error) {
       console.error('Error fetching audit data:', error);
