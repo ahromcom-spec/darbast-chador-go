@@ -614,13 +614,13 @@ export default function DailyReportModule() {
                       <Table className="table-auto">
                         <TableHeader>
                           <TableRow className="bg-blue-100 dark:bg-blue-900/30">
-                            <TableHead className="text-right whitespace-nowrap px-2">سفارش مشتری را انتخاب کنید</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">شرح فعالیت امروز</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">تعداد، ابعاد و متراژ خدمات</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">اکیپ</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات</TableHead>
-                            <TableHead className="whitespace-nowrap px-2">رنگ</TableHead>
                             <TableHead className="w-[50px]"></TableHead>
+                            <TableHead className="whitespace-nowrap px-2">رنگ</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">اکیپ</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">تعداد، ابعاد و متراژ خدمات</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">شرح فعالیت امروز</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">سفارش مشتری را انتخاب کنید</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -634,27 +634,24 @@ export default function DailyReportModule() {
                             orderReports.map((row, index) => (
                               <TableRow key={index} className={getRowColorClass(row.row_color)}>
                                 <TableCell>
-                                  <OrderSearchSelect
-                                    orders={orders}
-                                    value={row.order_id}
-                                    onValueChange={(value) => updateOrderRow(index, 'order_id', value)}
-                                    placeholder="انتخاب سفارش"
-                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeOrderRow(index)}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                                <TableCell>
+                                  <div className={`w-6 h-6 rounded ${getRowColorClass(row.row_color)}`}></div>
                                 </TableCell>
                                 <TableCell>
                                   <AutoResizeTextarea
-                                    value={row.activity_description}
-                                    onChange={(e) => updateOrderRow(index, 'activity_description', e.target.value)}
+                                    value={row.notes}
+                                    onChange={(e) => updateOrderRow(index, 'notes', e.target.value)}
                                     className="min-h-[40px] bg-white/50"
-                                    placeholder="شرح فعالیت..."
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <AutoResizeTextarea
-                                    value={row.service_details}
-                                    onChange={(e) => updateOrderRow(index, 'service_details', e.target.value)}
-                                    className="min-h-[40px] bg-white/50"
-                                    placeholder="جزئیات خدمات..."
+                                    placeholder="توضیحات..."
                                   />
                                 </TableCell>
                                 <TableCell>
@@ -667,24 +664,27 @@ export default function DailyReportModule() {
                                 </TableCell>
                                 <TableCell>
                                   <AutoResizeTextarea
-                                    value={row.notes}
-                                    onChange={(e) => updateOrderRow(index, 'notes', e.target.value)}
+                                    value={row.service_details}
+                                    onChange={(e) => updateOrderRow(index, 'service_details', e.target.value)}
                                     className="min-h-[40px] bg-white/50"
-                                    placeholder="توضیحات..."
+                                    placeholder="جزئیات خدمات..."
                                   />
                                 </TableCell>
                                 <TableCell>
-                                  <div className={`w-6 h-6 rounded ${getRowColorClass(row.row_color)}`}></div>
+                                  <AutoResizeTextarea
+                                    value={row.activity_description}
+                                    onChange={(e) => updateOrderRow(index, 'activity_description', e.target.value)}
+                                    className="min-h-[40px] bg-white/50"
+                                    placeholder="شرح فعالیت..."
+                                  />
                                 </TableCell>
                                 <TableCell>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => removeOrderRow(index)}
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                                  <OrderSearchSelect
+                                    orders={orders}
+                                    value={row.order_id}
+                                    onValueChange={(value) => updateOrderRow(index, 'order_id', value)}
+                                    placeholder="انتخاب سفارش"
+                                  />
                                 </TableCell>
                               </TableRow>
                             ))
@@ -716,15 +716,15 @@ export default function DailyReportModule() {
                       <Table className="table-auto">
                         <TableHeader>
                           <TableRow className="bg-amber-100 dark:bg-amber-900/30">
-                            <TableHead className="text-right whitespace-nowrap px-2">نیروها</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">کارکرد</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">اضافه کاری</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">مبلغ دریافتی</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات دریافتی</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">مبلغ خرج کرده شده در کار</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات مبلغ خرج کرد</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات</TableHead>
                             <TableHead className="w-[50px]"></TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات مبلغ خرج کرد</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">مبلغ خرج کرده شده در کار</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات دریافتی</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">مبلغ دریافتی</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">اضافه کاری</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">کارکرد</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2">نیروها</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -734,79 +734,29 @@ export default function DailyReportModule() {
                               className={row.is_cash_box ? 'bg-amber-50 dark:bg-amber-900/20' : ''}
                             >
                               <TableCell>
-                                {row.is_cash_box ? (
-                                  <div className="font-semibold text-amber-700">{row.staff_name}</div>
-                                ) : (
-                                  <StaffSearchSelect
-                                    value={row.staff_user_id || ''}
-                                    onValueChange={(code, name) => {
-                                      updateStaffRow(index, 'staff_user_id', code);
-                                      updateStaffRow(index, 'staff_name', name);
-                                    }}
-                                    placeholder="انتخاب نیرو"
-                                  />
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {row.is_cash_box ? (
-                                  <span className="text-muted-foreground">—</span>
-                                ) : (
-                                  <Select
-                                    value={row.work_status}
-                                    onValueChange={(value: 'کارکرده' | 'غایب') => updateStaffRow(index, 'work_status', value)}
+                                {!row.is_cash_box && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeStaffRow(index)}
+                                    className="text-destructive hover:text-destructive"
                                   >
-                                    <SelectTrigger className="min-w-[90px] w-auto">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-background">
-                                      <SelectItem value="کارکرده">کارکرده</SelectItem>
-                                      <SelectItem value="غایب">غایب</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 )}
-                              </TableCell>
-                              <TableCell>
-                                {row.is_cash_box ? (
-                                  <span className="text-muted-foreground">—</span>
-                                ) : (
-                                  <div className="flex items-center gap-1">
-                                    <Input
-                                      type="text"
-                                      inputMode="decimal"
-                                      value={row.overtime_hours === 0 ? '' : row.overtime_hours.toString()}
-                                      onChange={(e) => {
-                                        const val = e.target.value.replace(/^0+(?=\d)/, '');
-                                        updateStaffRow(index, 'overtime_hours', parseFloat(val) || 0);
-                                      }}
-                                      className="min-w-[60px] w-[70px]"
-                                      dir="ltr"
-                                      placeholder="0"
-                                    />
-                                    <span className="text-sm text-muted-foreground whitespace-nowrap">ساعت</span>
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={row.amount_received === 0 ? '' : row.amount_received.toString()}
-                                    onChange={(e) => {
-                                      const val = e.target.value.replace(/^0+(?=\d)/, '');
-                                      updateStaffRow(index, 'amount_received', parseFloat(val) || 0);
-                                    }}
-                                    className="min-w-[80px] w-[90px]"
-                                    dir="ltr"
-                                    placeholder="0"
-                                  />
-                                  <span className="text-sm text-muted-foreground whitespace-nowrap">تومان</span>
-                                </div>
                               </TableCell>
                               <TableCell>
                                 <AutoResizeTextarea
-                                  value={row.receiving_notes}
-                                  onChange={(e) => updateStaffRow(index, 'receiving_notes', e.target.value)}
+                                  value={row.notes}
+                                  onChange={(e) => updateStaffRow(index, 'notes', e.target.value)}
+                                  placeholder="توضیحات..."
+                                  className="min-w-[100px] min-h-[36px]"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <AutoResizeTextarea
+                                  value={row.spending_notes}
+                                  onChange={(e) => updateStaffRow(index, 'spending_notes', e.target.value)}
                                   placeholder="توضیحات..."
                                   className="min-w-[100px] min-h-[36px]"
                                 />
@@ -830,30 +780,80 @@ export default function DailyReportModule() {
                               </TableCell>
                               <TableCell>
                                 <AutoResizeTextarea
-                                  value={row.spending_notes}
-                                  onChange={(e) => updateStaffRow(index, 'spending_notes', e.target.value)}
+                                  value={row.receiving_notes}
+                                  onChange={(e) => updateStaffRow(index, 'receiving_notes', e.target.value)}
                                   placeholder="توضیحات..."
                                   className="min-w-[100px] min-h-[36px]"
                                 />
                               </TableCell>
                               <TableCell>
-                                <AutoResizeTextarea
-                                  value={row.notes}
-                                  onChange={(e) => updateStaffRow(index, 'notes', e.target.value)}
-                                  placeholder="توضیحات..."
-                                  className="min-w-[100px] min-h-[36px]"
-                                />
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={row.amount_received === 0 ? '' : row.amount_received.toString()}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/^0+(?=\d)/, '');
+                                      updateStaffRow(index, 'amount_received', parseFloat(val) || 0);
+                                    }}
+                                    className="min-w-[80px] w-[90px]"
+                                    dir="ltr"
+                                    placeholder="0"
+                                  />
+                                  <span className="text-sm text-muted-foreground whitespace-nowrap">تومان</span>
+                                </div>
                               </TableCell>
                               <TableCell>
-                                {!row.is_cash_box && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => removeStaffRow(index)}
-                                    className="text-destructive hover:text-destructive"
+                                {row.is_cash_box ? (
+                                  <span className="text-muted-foreground">—</span>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={row.overtime_hours === 0 ? '' : row.overtime_hours.toString()}
+                                      onChange={(e) => {
+                                        const val = e.target.value.replace(/^0+(?=\d)/, '');
+                                        updateStaffRow(index, 'overtime_hours', parseFloat(val) || 0);
+                                      }}
+                                      className="min-w-[60px] w-[70px]"
+                                      dir="ltr"
+                                      placeholder="0"
+                                    />
+                                    <span className="text-sm text-muted-foreground whitespace-nowrap">ساعت</span>
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {row.is_cash_box ? (
+                                  <span className="text-muted-foreground">—</span>
+                                ) : (
+                                  <Select
+                                    value={row.work_status}
+                                    onValueChange={(value: 'کارکرده' | 'غایب') => updateStaffRow(index, 'work_status', value)}
                                   >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                                    <SelectTrigger className="min-w-[90px] w-auto">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-background">
+                                      <SelectItem value="کارکرده">کارکرده</SelectItem>
+                                      <SelectItem value="غایب">غایب</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {row.is_cash_box ? (
+                                  <div className="font-semibold text-amber-700">{row.staff_name}</div>
+                                ) : (
+                                  <StaffSearchSelect
+                                    value={row.staff_user_id || ''}
+                                    onValueChange={(code, name) => {
+                                      updateStaffRow(index, 'staff_user_id', code);
+                                      updateStaffRow(index, 'staff_name', name);
+                                    }}
+                                    placeholder="انتخاب نیرو"
+                                  />
                                 )}
                               </TableCell>
                             </TableRow>
@@ -861,13 +861,14 @@ export default function DailyReportModule() {
 
                           {/* Summary Row */}
                           <TableRow className="bg-amber-200 dark:bg-amber-800/40 font-bold">
-                            <TableCell>جمع:</TableCell>
-                            <TableCell>{totals.presentCount} نیرو</TableCell>
-                            <TableCell>{totals.totalOvertime} ساعت</TableCell>
-                            <TableCell>{totals.totalReceived.toLocaleString()} تومان</TableCell>
                             <TableCell></TableCell>
+                            <TableCell colSpan={2}></TableCell>
                             <TableCell>{totals.totalSpent.toLocaleString()} تومان</TableCell>
-                            <TableCell colSpan={3}></TableCell>
+                            <TableCell></TableCell>
+                            <TableCell>{totals.totalReceived.toLocaleString()} تومان</TableCell>
+                            <TableCell>{totals.totalOvertime} ساعت</TableCell>
+                            <TableCell>{totals.presentCount} نیرو</TableCell>
+                            <TableCell>جمع:</TableCell>
                           </TableRow>
 
                           {/* Balance Row */}
