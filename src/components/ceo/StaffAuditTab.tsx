@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -89,7 +89,7 @@ export function StaffAuditTab() {
   const [salarySettings, setSalarySettings] = useState<SalarySettings | null>(null);
   const [summary, setSummary] = useState<AuditSummary | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const reportRef = useRef<HTMLDivElement>(null);
+  // reportRef removed - now using dynamic PDF generation
 
   // Generate year options (last 5 years)
   const yearOptions = Array.from({ length: 5 }, (_, i) => getCurrentPersianYear() - i);
@@ -283,7 +283,7 @@ export function StaffAuditTab() {
   };
 
   const handleGeneratePdf = async () => {
-    if (!reportRef.current || !summary || !salarySettings) {
+    if (!summary || !salarySettings) {
       toast.error('لطفاً ابتدا جستجو کنید');
       return;
     }
@@ -295,6 +295,140 @@ export function StaffAuditTab() {
         : '';
       
       const filename = `حساب-${selectedStaffName}-${dateRangeStr}.pdf`;
+      
+      // Create a temporary container for PDF with embedded font
+      const pdfContainer = document.createElement('div');
+      pdfContainer.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 800px; direction: rtl; font-family: Tahoma, Arial, sans-serif;';
+      
+      // Build daily records HTML - only records with data
+      const recordsWithData = records.filter(r => 
+        r.work_status === 'حاضر' || 
+        r.amount_received > 0 || 
+        r.amount_spent > 0 || 
+        r.notes
+      );
+      
+      const dailyRecordsHtml = recordsWithData.length > 0 ? `
+        <div style="margin-top: 20px; border: 2px solid #d4a574; border-radius: 8px; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 100%); padding: 12px; border-bottom: 1px solid #d4a574;">
+            <h3 style="margin: 0; color: #8b5a2b; font-size: 16px; text-align: center;">جزئیات روزانه</h3>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <thead>
+              <tr style="background-color: #f5e6d3;">
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">ردیف</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">تاریخ</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">کارکرد</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">اضافه‌کاری</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">دریافتی</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">یادداشت</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recordsWithData.map((record, index) => `
+                <tr style="background-color: ${index % 2 === 0 ? '#fff' : '#faf5ef'};">
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center;">${(index + 1).toLocaleString('fa-IR')}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right;">${formatPersianDate(record.report_date)}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center;">${record.work_status === 'حاضر' ? '۱ روز' : 'غایب'}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center;">${record.overtime_hours > 0 ? record.overtime_hours + ' ساعت' : '—'}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; color: ${record.amount_received > 0 ? '#16a34a' : '#666'};">${record.amount_received > 0 ? formatCurrency(record.amount_received) : '—'}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right; max-width: 150px;">${record.notes || record.receiving_notes || '—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : '';
+      
+      // Determine balance status
+      let balanceHtml = '';
+      if (summary.remainingBalanceThisMonth > 0) {
+        balanceHtml = `
+          <div style="background-color: #0ea5e9; color: white; padding: 16px; border-radius: 8px; text-align: center; margin-top: 16px;">
+            <p style="margin: 0 0 8px 0; font-size: 14px; opacity: 0.9;">الباقی کل حساب از این ماه:</p>
+            <p style="margin: 0; font-size: 24px; font-weight: bold;">${formatCurrency(summary.remainingBalanceThisMonth)}</p>
+            <p style="margin: 8px 0 0 0; font-size: 12px; opacity: 0.75;">(شرکت بدهکار به نیرو)</p>
+          </div>
+        `;
+      } else if (summary.extraReceivedThisMonth > 0) {
+        balanceHtml = `
+          <div style="background-color: #fbbf24; color: #78350f; padding: 16px; border-radius: 8px; text-align: center; margin-top: 16px;">
+            <p style="margin: 0 0 8px 0; font-size: 14px; opacity: 0.9;">دریافتی اضافی در این ماه:</p>
+            <p style="margin: 0; font-size: 24px; font-weight: bold;">${formatCurrency(summary.extraReceivedThisMonth)}</p>
+            <p style="margin: 8px 0 0 0; font-size: 12px; opacity: 0.75;">(نیرو بیشتر از حق خود دریافت کرده)</p>
+          </div>
+        `;
+      } else {
+        balanceHtml = `
+          <div style="background-color: #22c55e; color: white; padding: 16px; border-radius: 8px; text-align: center; margin-top: 16px;">
+            <p style="margin: 0 0 8px 0; font-size: 14px; opacity: 0.9;">تسویه کامل</p>
+            <p style="margin: 0; font-size: 24px; font-weight: bold;">۰ تومان</p>
+            <p style="margin: 8px 0 0 0; font-size: 12px; opacity: 0.75;">(حساب‌ها تسویه شده)</p>
+          </div>
+        `;
+      }
+      
+      pdfContainer.innerHTML = `
+        <div style="padding: 20px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); min-height: 100%;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; border: 2px solid #d4a574;">
+            <h1 style="margin: 0 0 10px 0; color: #8b5a2b; font-size: 22px; font-weight: bold;">حسابکتاب روزمزدی ${selectedStaffName}</h1>
+            <p style="margin: 0; color: #a16207; font-size: 14px;">بازه زمانی: ${dateRangeStr}</p>
+          </div>
+          
+          <!-- Salary Info -->
+          <div style="background-color: #fef3c7; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; border: 1px solid #fcd34d;">
+            <span style="color: #92400e; font-weight: bold;">حقوق روزمزدی: ${formatCurrency(salarySettings.base_daily_salary)}</span>
+          </div>
+          
+          <!-- Summary Table -->
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px;">
+            <tbody>
+              <tr style="background-color: #fef3c7;">
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع کارکرد</td>
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع اضافه‌کاری</td>
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalOvertime.toLocaleString('fa-IR')} ساعت</td>
+              </tr>
+              <tr style="background-color: #fef3c7;">
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع دریافتی این ماه</td>
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.totalReceived)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع خرج‌کرد این ماه</td>
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left; color: #dc2626;">${formatCurrency(summary.totalSpent)}</td>
+              </tr>
+              <tr style="background-color: #fef3c7;">
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">حقوق پایه (${summary.totalDaysWorked} روز)</td>
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.estimatedSalary)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">اضافه‌کاری (${summary.totalOvertime} ساعت)</td>
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.overtimePay)}</td>
+              </tr>
+              <tr style="background-color: #fef3c7;">
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold;">کارکرد و مزایای این ماه</td>
+                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.totalWorkAndBenefits)}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <!-- Balance Box -->
+          ${balanceHtml}
+          
+          <!-- Daily Records -->
+          ${dailyRecordsHtml}
+          
+          <!-- Footer -->
+          <div style="margin-top: 24px; padding-top: 16px; border-top: 2px dashed #d4a574; text-align: center; font-size: 12px; color: #92400e;">
+            <p style="margin: 0;">تاریخ صدور: ${format(new Date(), 'yyyy/MM/dd - HH:mm')}</p>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(pdfContainer);
       
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
@@ -312,7 +446,8 @@ export function StaffAuditTab() {
         }
       };
 
-      await html2pdf().set(opt).from(reportRef.current).save();
+      await html2pdf().set(opt).from(pdfContainer).save();
+      document.body.removeChild(pdfContainer);
       toast.success('فایل PDF با موفقیت ذخیره شد');
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -549,7 +684,8 @@ export function StaffAuditTab() {
 
       {/* Comprehensive Salary Calculation Summary - PDF Style */}
       {summary && salarySettings && salarySettings.base_daily_salary > 0 && (
-        <div ref={reportRef}>
+        <>
+          {/* PDF Download Button - Outside the PDF content */}
           <Card className="border-2 border-amber-500/50 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -705,7 +841,7 @@ export function StaffAuditTab() {
             </div>
           </CardContent>
         </Card>
-      </div>
+        </>
       )}
 
       {/* Warning if no salary settings */}
