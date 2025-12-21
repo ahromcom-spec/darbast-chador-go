@@ -912,9 +912,9 @@ export default function DailyReportModule() {
                                   <Input
                                     type="text"
                                     inputMode="numeric"
-                                    value={row.amount_spent === 0 ? '' : row.amount_spent.toLocaleString('fa-IR')}
+                                    value={row.amount_spent === 0 ? '' : row.amount_spent.toLocaleString('en-US')}
                                     onChange={(e) => {
-                                      const val = e.target.value.replace(/[^\d]/g, '');
+                                      const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
                                       updateStaffRow(index, 'amount_spent', parseInt(val) || 0);
                                     }}
                                     className="min-w-[120px] pl-12 text-left"
@@ -937,9 +937,9 @@ export default function DailyReportModule() {
                                   <Input
                                     type="text"
                                     inputMode="numeric"
-                                    value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('fa-IR')}
+                                    value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
                                     onChange={(e) => {
-                                      const val = e.target.value.replace(/[^\d]/g, '');
+                                      const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
                                       updateStaffRow(index, 'amount_received', parseInt(val) || 0);
                                     }}
                                     className="min-w-[120px] pl-12 text-left"
