@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink } from 'lucide-react';
+import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,8 @@ import { OrderSearchSelect } from '@/components/orders/OrderSearchSelect';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { format } from 'date-fns-jalali';
+import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
+import { StaffSalarySettingsTab } from '@/components/ceo/StaffSalarySettingsTab';
 
 interface SavedReport {
   id: string;
@@ -847,7 +849,7 @@ export default function DailyReportModule() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="new-report" className="gap-2">
               <FileText className="h-4 w-4" />
               ثبت گزارش
@@ -855,6 +857,14 @@ export default function DailyReportModule() {
             <TabsTrigger value="saved-reports" className="gap-2">
               <History className="h-4 w-4" />
               گزارشات ذخیره شده
+            </TabsTrigger>
+            <TabsTrigger value="staff-audit" className="gap-2">
+              <Calculator className="h-4 w-4" />
+              حسابرسی نیروها
+            </TabsTrigger>
+            <TabsTrigger value="salary-settings" className="gap-2">
+              <Settings className="h-4 w-4" />
+              تنظیمات حقوق
             </TabsTrigger>
           </TabsList>
 
@@ -1272,6 +1282,16 @@ export default function DailyReportModule() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Staff Audit Tab */}
+          <TabsContent value="staff-audit" className="mt-6">
+            <StaffAuditTab />
+          </TabsContent>
+
+          {/* Salary Settings Tab */}
+          <TabsContent value="salary-settings" className="mt-6">
+            <StaffSalarySettingsTab />
           </TabsContent>
         </Tabs>
       </div>

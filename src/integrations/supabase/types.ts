@@ -3318,6 +3318,42 @@ export type Database = {
           },
         ]
       }
+      staff_salary_settings: {
+        Row: {
+          base_daily_salary: number
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          overtime_rate_fraction: number
+          staff_code: string
+          staff_name: string
+          updated_at: string
+        }
+        Insert: {
+          base_daily_salary?: number
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          overtime_rate_fraction?: number
+          staff_code: string
+          staff_name: string
+          updated_at?: string
+        }
+        Update: {
+          base_daily_salary?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          overtime_rate_fraction?: number
+          staff_code?: string
+          staff_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staff_verification_requests: {
         Row: {
           created_at: string | null
