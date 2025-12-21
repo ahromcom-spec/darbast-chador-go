@@ -658,26 +658,39 @@ export default function DailyReportModule() {
                             {row.is_cash_box ? (
                               <span className="text-muted-foreground">—</span>
                             ) : (
-                              <Input
-                                type="number"
-                                value={row.overtime_hours}
-                                onChange={(e) => updateStaffRow(index, 'overtime_hours', parseFloat(e.target.value) || 0)}
-                                className="min-w-[70px] w-auto"
-                                min={0}
-                                step={0.5}
-                                dir="ltr"
-                              />
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={row.overtime_hours === 0 ? '' : row.overtime_hours.toString()}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/^0+(?=\d)/, '');
+                                    updateStaffRow(index, 'overtime_hours', parseFloat(val) || 0);
+                                  }}
+                                  className="min-w-[60px] w-[70px]"
+                                  dir="ltr"
+                                  placeholder="0"
+                                />
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">ساعت</span>
+                              </div>
                             )}
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              value={row.amount_received}
-                              onChange={(e) => updateStaffRow(index, 'amount_received', parseFloat(e.target.value) || 0)}
-                              className="min-w-[90px] w-auto"
-                              min={0}
-                              dir="ltr"
-                            />
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                value={row.amount_received === 0 ? '' : row.amount_received.toString()}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/^0+(?=\d)/, '');
+                                  updateStaffRow(index, 'amount_received', parseFloat(val) || 0);
+                                }}
+                                className="min-w-[80px] w-[90px]"
+                                dir="ltr"
+                                placeholder="0"
+                              />
+                              <span className="text-sm text-muted-foreground whitespace-nowrap">تومان</span>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <AutoResizeTextarea
@@ -688,14 +701,21 @@ export default function DailyReportModule() {
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              value={row.amount_spent}
-                              onChange={(e) => updateStaffRow(index, 'amount_spent', parseFloat(e.target.value) || 0)}
-                              className="min-w-[90px] w-auto"
-                              min={0}
-                              dir="ltr"
-                            />
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                value={row.amount_spent === 0 ? '' : row.amount_spent.toString()}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/^0+(?=\d)/, '');
+                                  updateStaffRow(index, 'amount_spent', parseFloat(val) || 0);
+                                }}
+                                className="min-w-[80px] w-[90px]"
+                                dir="ltr"
+                                placeholder="0"
+                              />
+                              <span className="text-sm text-muted-foreground whitespace-nowrap">تومان</span>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <AutoResizeTextarea
