@@ -475,7 +475,13 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
         className: 'exec-order-marker',
         html: `
           <div class="exec-order-marker__thumb">
-            <img src="${safeUrl}" alt="عکس سفارش" loading="lazy" decoding="async" />
+            <img
+              src="${safeUrl}"
+              alt="عکس سفارش"
+              loading="lazy"
+              decoding="async"
+              style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;"
+            />
             ${badge}
             <div class="exec-order-marker__pin" aria-hidden="true"></div>
           </div>
