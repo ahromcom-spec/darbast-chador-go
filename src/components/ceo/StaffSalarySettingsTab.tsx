@@ -160,12 +160,16 @@ export function StaffSalarySettingsTab() {
     ));
   };
 
+  // Overtime is calculated as: dailySalary / fraction denominator
+  // e.g., if fraction is 0.167 (1/6), overtime per hour = dailySalary / 6
   const calculateOvertimeExamples = (dailySalary: number, fraction: number) => {
-    const hourlyOvertime = dailySalary * fraction;
+    // Convert fraction to denominator (0.167 -> 6, 0.125 -> 8)
+    const denominator = fraction > 0 ? Math.round(1 / fraction) : 6;
+    const hourlyOvertime = dailySalary / denominator;
     return {
-      oneHour: hourlyOvertime,
-      twoHours: hourlyOvertime * 2,
-      fourHours: hourlyOvertime * 4
+      oneHour: Math.round(hourlyOvertime),
+      twoHours: Math.round(hourlyOvertime * 2),
+      fourHours: Math.round(hourlyOvertime * 4)
     };
   };
 
