@@ -203,8 +203,16 @@ export function StaffAuditTab() {
       // Fetch salary settings and wait for result
       const settings = await fetchSalarySettings(selectedStaffCode);
 
-      const startStr = startDate.toISOString().split('T')[0];
-      const endStr = endDate.toISOString().split('T')[0];
+      // Use local date format to avoid timezone issues
+      const formatLocalDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const startStr = formatLocalDate(startDate);
+      const endStr = formatLocalDate(endDate);
 
       // Fetch all daily reports in date range
       const { data: reports, error: reportsError } = await supabase
