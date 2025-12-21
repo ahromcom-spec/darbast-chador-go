@@ -454,16 +454,16 @@ export default function DailyReportModule() {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="table-auto">
                     <TableHeader>
                       <TableRow className="bg-blue-100 dark:bg-blue-900/30">
-                        <TableHead className="text-right min-w-[200px]">سفارش مشتری را انتخاب کنید</TableHead>
-                        <TableHead className="text-right min-w-[150px]">شرح فعالیت امروز</TableHead>
-                        <TableHead className="text-right min-w-[150px]">تعداد، ابعاد و متراژ خدمات</TableHead>
-                        <TableHead className="text-right min-w-[100px]">اکیپ</TableHead>
-                        <TableHead className="text-right min-w-[150px]">توضیحات</TableHead>
-                        <TableHead className="w-[80px]">رنگ</TableHead>
-                        <TableHead className="w-[60px]"></TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">سفارش مشتری را انتخاب کنید</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">شرح فعالیت امروز</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">تعداد، ابعاد و متراژ خدمات</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">اکیپ</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">توضیحات</TableHead>
+                        <TableHead className="whitespace-nowrap px-2">رنگ</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -556,18 +556,18 @@ export default function DailyReportModule() {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="table-auto">
                     <TableHeader>
                       <TableRow className="bg-amber-100 dark:bg-amber-900/30">
-                        <TableHead className="text-right min-w-[150px]">نیروها</TableHead>
-                        <TableHead className="text-right min-w-[80px]">کارکرد</TableHead>
-                        <TableHead className="text-right min-w-[100px]">اضافه کاری</TableHead>
-                        <TableHead className="text-right min-w-[120px]">مبلغ دریافتی</TableHead>
-                        <TableHead className="text-right min-w-[120px]">توضیحات دریافتی</TableHead>
-                        <TableHead className="text-right min-w-[120px]">مبلغ خرج کرده شده در کار</TableHead>
-                        <TableHead className="text-right min-w-[120px]">توضیحات مبلغ خرج کرد</TableHead>
-                        <TableHead className="text-right min-w-[120px]">توضیحات</TableHead>
-                        <TableHead className="w-[60px]"></TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">نیروها</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">کارکرد</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">اضافه کاری</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">مبلغ دریافتی</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">توضیحات دریافتی</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">مبلغ خرج کرده شده در کار</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">توضیحات مبلغ خرج کرد</TableHead>
+                        <TableHead className="text-right whitespace-nowrap px-2">توضیحات</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -598,7 +598,7 @@ export default function DailyReportModule() {
                                 value={row.work_status}
                                 onValueChange={(value: 'کارکرده' | 'غایب') => updateStaffRow(index, 'work_status', value)}
                               >
-                                <SelectTrigger className="w-[100px]">
+                                <SelectTrigger className="min-w-[90px] w-auto">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-background">
@@ -616,7 +616,7 @@ export default function DailyReportModule() {
                                 type="number"
                                 value={row.overtime_hours}
                                 onChange={(e) => updateStaffRow(index, 'overtime_hours', parseFloat(e.target.value) || 0)}
-                                className="w-[80px]"
+                                className="min-w-[70px] w-auto"
                                 min={0}
                                 step={0.5}
                                 dir="ltr"
@@ -628,7 +628,7 @@ export default function DailyReportModule() {
                               type="number"
                               value={row.amount_received}
                               onChange={(e) => updateStaffRow(index, 'amount_received', parseFloat(e.target.value) || 0)}
-                              className="w-[120px]"
+                              className="min-w-[90px] w-auto"
                               min={0}
                               dir="ltr"
                             />
@@ -638,6 +638,7 @@ export default function DailyReportModule() {
                               value={row.receiving_notes}
                               onChange={(e) => updateStaffRow(index, 'receiving_notes', e.target.value)}
                               placeholder="توضیحات..."
+                              className="min-w-[100px]"
                             />
                           </TableCell>
                           <TableCell>
@@ -645,7 +646,7 @@ export default function DailyReportModule() {
                               type="number"
                               value={row.amount_spent}
                               onChange={(e) => updateStaffRow(index, 'amount_spent', parseFloat(e.target.value) || 0)}
-                              className="w-[120px]"
+                              className="min-w-[90px] w-auto"
                               min={0}
                               dir="ltr"
                             />
@@ -655,6 +656,7 @@ export default function DailyReportModule() {
                               value={row.spending_notes}
                               onChange={(e) => updateStaffRow(index, 'spending_notes', e.target.value)}
                               placeholder="توضیحات..."
+                              className="min-w-[100px]"
                             />
                           </TableCell>
                           <TableCell>
@@ -662,6 +664,7 @@ export default function DailyReportModule() {
                               value={row.notes}
                               onChange={(e) => updateStaffRow(index, 'notes', e.target.value)}
                               placeholder="توضیحات..."
+                              className="min-w-[100px]"
                             />
                           </TableCell>
                           <TableCell>
