@@ -12,12 +12,14 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { OrderSearchSelect } from '@/components/orders/OrderSearchSelect';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 
 interface Order {
   id: string;
   code: string;
   customer_name: string | null;
+  customer_phone?: string | null;
   address: string;
   subcategory_name?: string;
 }
@@ -94,6 +96,7 @@ export default function DailyReportModule() {
           id,
           code,
           customer_name,
+          customer_phone,
           address,
           subcategory_id,
           subcategories!projects_v3_subcategory_id_fkey(name)
@@ -107,6 +110,7 @@ export default function DailyReportModule() {
         id: o.id,
         code: o.code,
         customer_name: o.customer_name,
+        customer_phone: o.customer_phone,
         address: o.address,
         subcategory_name: o.subcategories?.name
       })));
@@ -450,21 +454,12 @@ export default function DailyReportModule() {
                         orderReports.map((row, index) => (
                           <TableRow key={index} className={getRowColorClass(row.row_color)}>
                             <TableCell>
-                              <Select
+                              <OrderSearchSelect
+                                orders={orders}
                                 value={row.order_id}
                                 onValueChange={(value) => updateOrderRow(index, 'order_id', value)}
-                              >
-                                <SelectTrigger className="bg-white/50">
-                                  <SelectValue placeholder="انتخاب سفارش" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {orders.map((order) => (
-                                    <SelectItem key={order.id} value={order.id}>
-                                      {order.code} - {order.customer_name || order.address}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                placeholder="انتخاب سفارش"
+                              />
                             </TableCell>
                             <TableCell>
                               <Textarea
