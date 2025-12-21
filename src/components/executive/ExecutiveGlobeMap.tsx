@@ -611,9 +611,24 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
         : defaultThumbIcon(count);
 
       const popupContent = `
-        <div class="exec-popup">
-          <div class="exec-popup__title">📍 سفارشات این موقعیت (${count})</div>
+        <div class="exec-popup" data-popup-id="${group.orders[0].id}">
+          <div class="exec-popup__header">
+            <div class="exec-popup__title">📍 سفارشات این موقعیت (${count})</div>
+            <div class="exec-popup__actions">
+              <button class="exec-popup__resize-btn" data-action="resize-toggle" title="تغییر اندازه">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                </svg>
+              </button>
+              <button class="exec-popup__fullscreen-btn" data-action="fullscreen" title="تمام صفحه">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
           <div class="exec-popup__list exec-popup__list--scroll">${group.orders.map(renderOrderCard).join('')}</div>
+          <div class="exec-popup__resize-handle" data-action="resize-handle"></div>
         </div>
       `;
 
@@ -624,7 +639,8 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       }).addTo(map);
 
       marker.bindPopup(popupContent, {
-        maxWidth: 360,
+        maxWidth: 600,
+        minWidth: 300,
         className: 'exec-order-popup',
         autoPan: true,
         autoPanPadding: [50, 50],
@@ -637,12 +653,104 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
         const root = popupEl.querySelector('.exec-popup') as HTMLElement | null;
         if (!root) return;
 
+        const contentWrapper = popupEl.querySelector('.leaflet-popup-content-wrapper') as HTMLElement | null;
+        const popupContent = popupEl.querySelector('.leaflet-popup-content') as HTMLElement | null;
+
         // جلوگیری از drag نقشه هنگام اسکرول داخل popup
         L.DomEvent.disableClickPropagation(root);
         L.DomEvent.disableScrollPropagation(root);
 
         if (root.dataset.boundClick === '1') return;
         root.dataset.boundClick = '1';
+
+        // متغیرهای resize
+        let isResizing = false;
+        let startX = 0;
+        let startY = 0;
+        let startWidth = 0;
+        let startHeight = 0;
+
+        // Handler برای resize
+        const resizeHandle = root.querySelector('[data-action="resize-handle"]') as HTMLElement | null;
+        if (resizeHandle) {
+          resizeHandle.addEventListener('mousedown', (evt: MouseEvent) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            isResizing = true;
+            startX = evt.clientX;
+            startY = evt.clientY;
+            startWidth = root.offsetWidth;
+            startHeight = root.offsetHeight;
+            document.body.style.cursor = 'nwse-resize';
+            document.body.style.userSelect = 'none';
+          });
+
+          document.addEventListener('mousemove', (evt: MouseEvent) => {
+            if (!isResizing) return;
+            const newWidth = Math.max(280, Math.min(800, startWidth + (evt.clientX - startX)));
+            const newHeight = Math.max(200, Math.min(600, startHeight + (evt.clientY - startY)));
+            root.style.width = newWidth + 'px';
+            const listEl = root.querySelector('.exec-popup__list--scroll') as HTMLElement | null;
+            if (listEl) {
+              listEl.style.maxHeight = (newHeight - 60) + 'px';
+            }
+            if (contentWrapper) {
+              contentWrapper.style.width = (newWidth + 28) + 'px';
+            }
+          });
+
+          document.addEventListener('mouseup', () => {
+            if (isResizing) {
+              isResizing = false;
+              document.body.style.cursor = '';
+              document.body.style.userSelect = '';
+            }
+          });
+        }
+
+        // Handler برای resize toggle
+        const resizeToggleBtn = root.querySelector('[data-action="resize-toggle"]') as HTMLElement | null;
+        if (resizeToggleBtn) {
+          resizeToggleBtn.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            const isExpanded = root.classList.contains('exec-popup--expanded');
+            if (isExpanded) {
+              root.classList.remove('exec-popup--expanded');
+              root.style.width = '';
+              const listEl = root.querySelector('.exec-popup__list--scroll') as HTMLElement | null;
+              if (listEl) listEl.style.maxHeight = '';
+              if (contentWrapper) contentWrapper.style.width = '';
+            } else {
+              root.classList.add('exec-popup--expanded');
+              root.style.width = '450px';
+              const listEl = root.querySelector('.exec-popup__list--scroll') as HTMLElement | null;
+              if (listEl) listEl.style.maxHeight = '400px';
+              if (contentWrapper) contentWrapper.style.width = '478px';
+            }
+          });
+        }
+
+        // Handler برای fullscreen
+        const fullscreenBtn = root.querySelector('[data-action="fullscreen"]') as HTMLElement | null;
+        if (fullscreenBtn) {
+          fullscreenBtn.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            const isFullscreen = root.classList.contains('exec-popup--fullscreen');
+            if (isFullscreen) {
+              root.classList.remove('exec-popup--fullscreen');
+              popupEl.classList.remove('exec-order-popup--fullscreen');
+              root.style.width = '';
+              const listEl = root.querySelector('.exec-popup__list--scroll') as HTMLElement | null;
+              if (listEl) listEl.style.maxHeight = '';
+              if (contentWrapper) contentWrapper.style.width = '';
+            } else {
+              root.classList.add('exec-popup--fullscreen');
+              popupEl.classList.add('exec-order-popup--fullscreen');
+            }
+          });
+        }
 
         root.addEventListener('click', (evt) => {
           const target = evt.target as HTMLElement | null;
@@ -886,12 +994,125 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
           color: hsl(var(--foreground));
         }
 
-        .exec-popup__title {
-          font-weight: 900;
-          font-size: 13px;
+        .exec-popup {
+          position: relative;
+          transition: width 0.2s ease, height 0.2s ease;
+        }
+
+        .exec-popup__header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
           margin-bottom: 10px;
           padding-bottom: 8px;
           border-bottom: 1px solid hsl(var(--border));
+        }
+
+        .exec-popup__title {
+          font-weight: 900;
+          font-size: 13px;
+          flex: 1;
+        }
+
+        .exec-popup__actions {
+          display: flex;
+          gap: 4px;
+        }
+
+        .exec-popup__resize-btn,
+        .exec-popup__fullscreen-btn {
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid hsl(var(--border));
+          background: hsl(var(--muted));
+          border-radius: 6px;
+          cursor: pointer;
+          color: hsl(var(--muted-foreground));
+          transition: all 0.15s ease;
+        }
+
+        .exec-popup__resize-btn:hover,
+        .exec-popup__fullscreen-btn:hover {
+          background: hsl(var(--accent));
+          color: hsl(var(--foreground));
+        }
+
+        .exec-popup__resize-handle {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 20px;
+          height: 20px;
+          cursor: nwse-resize;
+          opacity: 0.5;
+          transition: opacity 0.15s ease;
+        }
+
+        .exec-popup__resize-handle::before {
+          content: '';
+          position: absolute;
+          bottom: 4px;
+          left: 4px;
+          width: 10px;
+          height: 10px;
+          border-left: 2px solid hsl(var(--muted-foreground));
+          border-bottom: 2px solid hsl(var(--muted-foreground));
+        }
+
+        .exec-popup__resize-handle:hover {
+          opacity: 1;
+        }
+
+        .exec-popup--expanded .exec-popup__resize-btn svg {
+          transform: rotate(180deg);
+        }
+
+        .exec-popup--fullscreen {
+          position: fixed !important;
+          top: 60px !important;
+          left: 20px !important;
+          right: 20px !important;
+          bottom: 20px !important;
+          width: auto !important;
+          max-width: none !important;
+          z-index: 10000 !important;
+          background: hsl(var(--popover));
+          border-radius: 16px;
+          padding: 16px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .exec-popup--fullscreen .exec-popup__list--scroll {
+          max-height: calc(100vh - 200px) !important;
+        }
+
+        .exec-popup--fullscreen .exec-popup__fullscreen-btn svg {
+          transform: rotate(180deg);
+        }
+
+        .exec-order-popup--fullscreen .leaflet-popup-content-wrapper {
+          position: fixed !important;
+          top: 50px !important;
+          left: 10px !important;
+          right: 10px !important;
+          bottom: 10px !important;
+          width: auto !important;
+          max-width: none !important;
+          border-radius: 16px;
+        }
+
+        .exec-order-popup--fullscreen .leaflet-popup-content {
+          width: 100% !important;
+          height: 100% !important;
+          margin: 0 !important;
+          padding: 16px !important;
+        }
+
+        .exec-order-popup--fullscreen .leaflet-popup-tip-container {
+          display: none;
         }
 
         .exec-popup__list {
