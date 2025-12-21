@@ -51,7 +51,19 @@ const COLORS = {
 export default function ExecutiveDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [showGlobe, setShowGlobe] = useState(false);
+  // بررسی وضعیت نقشه از sessionStorage
+  const [showGlobe, setShowGlobe] = useState(() => {
+    return sessionStorage.getItem('executive_map_open') === 'true';
+  });
+  
+  // ذخیره وضعیت نقشه در sessionStorage
+  useEffect(() => {
+    if (showGlobe) {
+      sessionStorage.setItem('executive_map_open', 'true');
+    } else {
+      sessionStorage.removeItem('executive_map_open');
+    }
+  }, [showGlobe]);
   
   // بررسی بازگشت از صفحه سفارش - اگر از نقشه اومده بود، دوباره نقشه باز بشه
   useEffect(() => {
