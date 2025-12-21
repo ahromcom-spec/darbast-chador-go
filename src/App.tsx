@@ -292,8 +292,13 @@ const App = () => {
                 <Route path="order-transfers" element={<OrderTransferManagement />} />
                 <Route path="archived" element={<ArchivedOrders />} />
                 <Route path="deep-archived" element={<DeepArchivedOrders />} />
-                <Route path="daily-report" element={<DailyReportModule />} />
               </Route>
+              {/* مسیر جداگانه برای ماژول گزارش روزانه - بدون ناوبری CEO */}
+              <Route path="/daily-report" element={
+                <ProtectedRoute>
+                  <DailyReportModule />
+                </ProtectedRoute>
+              } />
               <Route path="/executive" element={
                 <ProtectedRoute>
                   <ExecutiveLayout />
