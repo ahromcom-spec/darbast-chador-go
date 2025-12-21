@@ -127,11 +127,6 @@ export function PersianDatePicker({
           mode="single"
           selected={selectedDate}
           onSelect={handleDateSelect}
-          disabled={(date) => {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            return date < today;
-          }}
           initialFocus
           className="p-3 pointer-events-auto"
         />
