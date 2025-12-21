@@ -12,8 +12,6 @@ import { toast } from 'sonner';
 import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet, Download, CalendarDays } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, setMonth as setJalaliMonth, setYear as setJalaliYear } from 'date-fns-jalali';
 import { Separator } from '@/components/ui/separator';
-import html2pdf from 'html2pdf.js';
-
 // Persian months
 const PERSIAN_MONTHS = [
   { value: 1, label: 'فروردین' },
