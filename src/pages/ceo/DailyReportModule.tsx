@@ -118,11 +118,45 @@ export default function DailyReportModule() {
     if (!user || loading) return;
 
     // Check if there's any meaningful data to save
-    const hasOrderData = orderReports.some(r => r.order_id);
-    const hasStaffData = staffReports.some(s => s.staff_name && !s.is_cash_box);
-    const hasCashBoxData = staffReports.some(s => s.is_cash_box && (s.amount_spent > 0 || s.amount_received > 0));
+    const hasOrderData = orderReports.some((r) => r.order_id);
+
+    const hasStaffData = staffReports.some(
+      (s) =>
+        !s.is_cash_box &&
+        (Boolean(s.staff_user_id) ||
+          Boolean(s.staff_name?.trim()) ||
+          (s.overtime_hours ?? 0) > 0 ||
+          (s.amount_received ?? 0) > 0 ||
+          (s.amount_spent ?? 0) > 0 ||
+          Boolean(s.receiving_notes?.trim()) ||
+          Boolean(s.spending_notes?.trim()) ||
+          Boolean(s.notes?.trim()))
+    );
+
+    const hasCashBoxData = staffReports.some(
+      (s) =>
+        s.is_cash_box &&
+        ((s.amount_spent ?? 0) > 0 ||
+          (s.amount_received ?? 0) > 0 ||
+          Boolean(s.receiving_notes?.trim()) ||
+          Boolean(s.spending_notes?.trim()) ||
+          Boolean(s.notes?.trim()))
+    );
 
     if (!hasOrderData && !hasStaffData && !hasCashBoxData) return;
+
+    const staffToSave = staffReports.filter(
+      (s) =>
+        s.is_cash_box ||
+        Boolean(s.staff_user_id) ||
+        Boolean(s.staff_name?.trim()) ||
+        (s.overtime_hours ?? 0) > 0 ||
+        (s.amount_received ?? 0) > 0 ||
+        (s.amount_spent ?? 0) > 0 ||
+        Boolean(s.receiving_notes?.trim()) ||
+        Boolean(s.spending_notes?.trim()) ||
+        Boolean(s.notes?.trim())
+    );
 
     try {
       setAutoSaveStatus('saving');
@@ -147,47 +181,59 @@ export default function DailyReportModule() {
       }
 
       // Delete existing order reports and insert new ones
-      await supabase
+      const { error: deleteOrdersError } = await supabase
         .from('daily_report_orders')
         .delete()
         .eq('daily_report_id', reportId);
 
-      if (orderReports.filter(r => r.order_id).length > 0) {
-        await supabase
+      if (deleteOrdersError) throw deleteOrdersError;
+
+      if (orderReports.filter((r) => r.order_id).length > 0) {
+        const { error: insertOrdersError } = await supabase
           .from('daily_report_orders')
-          .insert(orderReports.filter(r => r.order_id).map(r => ({
-            daily_report_id: reportId,
-            order_id: r.order_id,
-            activity_description: r.activity_description,
-            service_details: r.service_details,
-            team_name: r.team_name,
-            notes: r.notes,
-            row_color: r.row_color
-          })));
+          .insert(
+            orderReports.filter((r) => r.order_id).map((r) => ({
+              daily_report_id: reportId,
+              order_id: r.order_id,
+              activity_description: r.activity_description,
+              service_details: r.service_details,
+              team_name: r.team_name,
+              notes: r.notes,
+              row_color: r.row_color
+            }))
+          );
+
+        if (insertOrdersError) throw insertOrdersError;
       }
 
       // Delete existing staff reports and insert new ones
-      await supabase
+      const { error: deleteStaffError } = await supabase
         .from('daily_report_staff')
         .delete()
         .eq('daily_report_id', reportId);
 
-      if (staffReports.length > 0) {
-        await supabase
+      if (deleteStaffError) throw deleteStaffError;
+
+      if (staffToSave.length > 0) {
+        const { error: insertStaffError } = await supabase
           .from('daily_report_staff')
-          .insert(staffReports.map(s => ({
-            daily_report_id: reportId,
-            staff_user_id: s.staff_user_id,
-            staff_name: s.staff_name,
-            work_status: s.work_status,
-            overtime_hours: s.overtime_hours,
-            amount_received: s.amount_received,
-            receiving_notes: s.receiving_notes,
-            amount_spent: s.amount_spent,
-            spending_notes: s.spending_notes,
-            notes: s.notes,
-            is_cash_box: s.is_cash_box
-          })));
+          .insert(
+            staffToSave.map((s) => ({
+              daily_report_id: reportId,
+              staff_user_id: s.staff_user_id,
+              staff_name: s.staff_name,
+              work_status: s.work_status,
+              overtime_hours: s.overtime_hours,
+              amount_received: s.amount_received,
+              receiving_notes: s.receiving_notes,
+              amount_spent: s.amount_spent,
+              spending_notes: s.spending_notes,
+              notes: s.notes,
+              is_cash_box: s.is_cash_box
+            }))
+          );
+
+        if (insertStaffError) throw insertStaffError;
       }
 
       setAutoSaveStatus('saved');
@@ -392,7 +438,7 @@ export default function DailyReportModule() {
           .select('*')
           .eq('daily_report_id', report.id);
 
-        setStaffReports((staffData || []).map((s: any) => ({
+        const normalizedStaff: StaffReportRow[] = (staffData || []).map((s: any) => ({
           id: s.id,
           staff_user_id: s.staff_user_id,
           staff_name: s.staff_name || '',
@@ -404,7 +450,41 @@ export default function DailyReportModule() {
           spending_notes: s.spending_notes || '',
           notes: s.notes || '',
           is_cash_box: s.is_cash_box || false
-        })));
+        }));
+
+        const hasCashBox = normalizedStaff.some((s) => s.is_cash_box);
+        if (!hasCashBox) {
+          normalizedStaff.unshift({
+            staff_user_id: null,
+            staff_name: 'کارت صندوق اهرم',
+            work_status: 'کارکرده',
+            overtime_hours: 0,
+            amount_received: 0,
+            receiving_notes: '',
+            amount_spent: 0,
+            spending_notes: '',
+            notes: '',
+            is_cash_box: true
+          });
+        }
+
+        const hasAnyNonCashRow = normalizedStaff.some((s) => !s.is_cash_box);
+        if (!hasAnyNonCashRow) {
+          normalizedStaff.push({
+            staff_user_id: null,
+            staff_name: '',
+            work_status: 'غایب',
+            overtime_hours: 0,
+            amount_received: 0,
+            receiving_notes: '',
+            amount_spent: 0,
+            spending_notes: '',
+            notes: '',
+            is_cash_box: false
+          });
+        }
+
+        setStaffReports(normalizedStaff);
       } else {
         setExistingReportId(null);
         // Initialize with one default empty order row
@@ -625,27 +705,44 @@ export default function DailyReportModule() {
       }
 
       // Delete existing staff reports and insert new ones
-      await supabase
+      const { error: deleteStaffError } = await supabase
         .from('daily_report_staff')
         .delete()
         .eq('daily_report_id', reportId);
 
-      if (staffReports.length > 0) {
+      if (deleteStaffError) throw deleteStaffError;
+
+      const staffToSave = staffReports.filter(
+        (s) =>
+          s.is_cash_box ||
+          Boolean(s.staff_user_id) ||
+          Boolean(s.staff_name?.trim()) ||
+          (s.overtime_hours ?? 0) > 0 ||
+          (s.amount_received ?? 0) > 0 ||
+          (s.amount_spent ?? 0) > 0 ||
+          Boolean(s.receiving_notes?.trim()) ||
+          Boolean(s.spending_notes?.trim()) ||
+          Boolean(s.notes?.trim())
+      );
+
+      if (staffToSave.length > 0) {
         const { error: staffError } = await supabase
           .from('daily_report_staff')
-          .insert(staffReports.map(s => ({
-            daily_report_id: reportId,
-            staff_user_id: s.staff_user_id,
-            staff_name: s.staff_name,
-            work_status: s.work_status,
-            overtime_hours: s.overtime_hours,
-            amount_received: s.amount_received,
-            receiving_notes: s.receiving_notes,
-            amount_spent: s.amount_spent,
-            spending_notes: s.spending_notes,
-            notes: s.notes,
-            is_cash_box: s.is_cash_box
-          })));
+          .insert(
+            staffToSave.map((s) => ({
+              daily_report_id: reportId,
+              staff_user_id: s.staff_user_id,
+              staff_name: s.staff_name,
+              work_status: s.work_status,
+              overtime_hours: s.overtime_hours,
+              amount_received: s.amount_received,
+              receiving_notes: s.receiving_notes,
+              amount_spent: s.amount_spent,
+              spending_notes: s.spending_notes,
+              notes: s.notes,
+              is_cash_box: s.is_cash_box
+            }))
+          );
 
         if (staffError) throw staffError;
       }
@@ -662,6 +759,7 @@ export default function DailyReportModule() {
   const totals = calculateTotals();
   // تراز مالی: پول خرج شده از صندوق باید برابر مبلغ دریافتی نیروها باشد
   const balance = totals.cashBoxSpent - totals.staffReceived;
+  const balanceState: 'balanced' | 'deficit' | 'surplus' = balance === 0 ? 'balanced' : balance < 0 ? 'deficit' : 'surplus';
 
   const getRowColorClass = (color: string) => {
     return ROW_COLORS.find(c => c.value === color)?.class || 'bg-background';
@@ -1014,15 +1112,26 @@ export default function DailyReportModule() {
                             <TableCell className="border border-amber-300">{totals.totalReceived.toLocaleString('fa-IR')} تومان</TableCell>
                             <TableCell className="border border-amber-300">{totals.totalOvertime} ساعت</TableCell>
                             <TableCell className="border border-amber-300">{totals.presentCount} نیرو</TableCell>
-                            <TableCell>جمع:</TableCell>
+                            <TableCell className="border border-amber-300 text-right">جمع:</TableCell>
                           </TableRow>
 
                           {/* Balance Row */}
-                          <TableRow className={balance >= 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}>
+                          <TableRow
+                            className={
+                              balanceState === 'balanced'
+                                ? 'bg-green-100 dark:bg-green-900/30'
+                                : balanceState === 'deficit'
+                                  ? 'bg-red-100 dark:bg-red-900/30'
+                                  : 'bg-amber-100 dark:bg-amber-900/30'
+                            }
+                          >
                             <TableCell colSpan={9} className="text-center">
-                              <Badge variant={balance >= 0 ? 'default' : 'destructive'} className="text-base px-4 py-2">
-                                {balance >= 0 ? 'تراز مالی صحیح است' : 'کسری مالی'}
-                                {balance !== 0 && ` (${Math.abs(balance).toLocaleString()} تومان)`}
+                              <Badge
+                                variant={balanceState === 'balanced' ? 'default' : balanceState === 'deficit' ? 'destructive' : 'secondary'}
+                                className="text-base px-4 py-2"
+                              >
+                                {balanceState === 'balanced' ? 'تراز مالی صحیح است' : balanceState === 'deficit' ? 'کسری مالی' : 'مازاد مالی'}
+                                {balanceState !== 'balanced' && ` (${Math.abs(balance).toLocaleString('fa-IR')} تومان)`}
                               </Badge>
                             </TableCell>
                           </TableRow>
