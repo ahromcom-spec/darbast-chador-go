@@ -83,7 +83,7 @@ export function StaffSearchSelect({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -106,7 +106,13 @@ export function StaffSearchSelect({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[350px] p-0 z-50 bg-background border shadow-lg" align="start">
+      <PopoverContent 
+        className="w-[350px] p-0 z-[9999] bg-background border shadow-lg" 
+        align="start"
+        side="bottom"
+        sideOffset={4}
+        style={{ pointerEvents: 'auto' }}
+      >
         <div className="p-3 border-b">
           <div className="relative">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
