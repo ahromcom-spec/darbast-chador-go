@@ -4,7 +4,7 @@ import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package } from
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -485,18 +485,18 @@ export default function DailyReportModule() {
                               />
                             </TableCell>
                             <TableCell>
-                              <Textarea
+                              <AutoResizeTextarea
                                 value={row.activity_description}
                                 onChange={(e) => updateOrderRow(index, 'activity_description', e.target.value)}
-                                className="min-h-[60px] bg-white/50"
+                                className="min-h-[40px] bg-white/50"
                                 placeholder="شرح فعالیت..."
                               />
                             </TableCell>
                             <TableCell>
-                              <Textarea
+                              <AutoResizeTextarea
                                 value={row.service_details}
                                 onChange={(e) => updateOrderRow(index, 'service_details', e.target.value)}
-                                className="min-h-[60px] bg-white/50"
+                                className="min-h-[40px] bg-white/50"
                                 placeholder="جزئیات خدمات..."
                               />
                             </TableCell>
@@ -509,10 +509,10 @@ export default function DailyReportModule() {
                               />
                             </TableCell>
                             <TableCell>
-                              <Textarea
+                              <AutoResizeTextarea
                                 value={row.notes}
                                 onChange={(e) => updateOrderRow(index, 'notes', e.target.value)}
-                                className="min-h-[60px] bg-white/50"
+                                className="min-h-[40px] bg-white/50"
                                 placeholder="توضیحات..."
                               />
                             </TableCell>
@@ -634,11 +634,11 @@ export default function DailyReportModule() {
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
+                            <AutoResizeTextarea
                               value={row.receiving_notes}
                               onChange={(e) => updateStaffRow(index, 'receiving_notes', e.target.value)}
                               placeholder="توضیحات..."
-                              className="min-w-[100px]"
+                              className="min-w-[100px] min-h-[36px]"
                             />
                           </TableCell>
                           <TableCell>
@@ -652,19 +652,19 @@ export default function DailyReportModule() {
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
+                            <AutoResizeTextarea
                               value={row.spending_notes}
                               onChange={(e) => updateStaffRow(index, 'spending_notes', e.target.value)}
                               placeholder="توضیحات..."
-                              className="min-w-[100px]"
+                              className="min-w-[100px] min-h-[36px]"
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
+                            <AutoResizeTextarea
                               value={row.notes}
                               onChange={(e) => updateStaffRow(index, 'notes', e.target.value)}
                               placeholder="توضیحات..."
-                              className="min-w-[100px]"
+                              className="min-w-[100px] min-h-[36px]"
                             />
                           </TableCell>
                           <TableCell>
