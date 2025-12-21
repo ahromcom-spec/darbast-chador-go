@@ -304,10 +304,23 @@ export function StaffAuditTab() {
       
       const filename = `حساب-${selectedStaffName}-${dateRangeStr}.pdf`;
       
-      // Create a temporary container for PDF with embedded font
+      // Create a temporary container for PDF (must be renderable for html2canvas)
       const pdfContainer = document.createElement('div');
-      pdfContainer.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 800px; direction: rtl; font-family: Tahoma, Arial, sans-serif;';
-      
+      pdfContainer.setAttribute('dir', 'rtl');
+      pdfContainer.style.cssText = [
+        'position: fixed',
+        'left: 0',
+        'top: 0',
+        'width: 800px',
+        'max-width: 800px',
+        'background: #ffffff',
+        'direction: rtl',
+        'font-family: Tahoma, Arial, sans-serif',
+        'pointer-events: none',
+        // Keep it behind the app UI to avoid flicker, but still renderable
+        'z-index: -1',
+      ].join('; ');
+
       // Build daily records HTML - only records with data
       const recordsWithData = records.filter(r => 
         r.work_status === 'حاضر' || 
@@ -437,26 +450,52 @@ export function StaffAuditTab() {
       `;
       
       document.body.appendChild(pdfContainer);
-      
+
+      // Wait one paint/frame so the element is fully laid out before capture
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      // Wait for fonts if the browser supports it
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fontsReady = (document as any).fonts?.ready;
+      if (fontsReady) {
+        try {
+          await fontsReady;
+        } catch {
+          // ignore
+        }
+      }
+
+      console.log('[StaffAudit PDF] ready', {
+        scrollWidth: pdfContainer.scrollWidth,
+        scrollHeight: pdfContainer.scrollHeight,
+        innerLength: pdfContainer.innerHTML.length,
+      });
+
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
         filename,
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
+        html2canvas: {
+          scale: 2,
           useCORS: true,
-          logging: false
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: pdfContainer.scrollWidth || 800,
+          windowHeight: pdfContainer.scrollHeight || 1200,
         },
-        jsPDF: { 
-          unit: 'mm' as const, 
-          format: 'a4' as const, 
-          orientation: 'portrait' as const 
-        }
+        jsPDF: {
+          unit: 'mm' as const,
+          format: 'a4' as const,
+          orientation: 'portrait' as const,
+        },
       };
 
-      await html2pdf().set(opt).from(pdfContainer).save();
-      document.body.removeChild(pdfContainer);
-      toast.success('فایل PDF با موفقیت ذخیره شد');
+      try {
+        await html2pdf().set(opt).from(pdfContainer).save();
+        toast.success('فایل PDF با موفقیت ذخیره شد');
+      } finally {
+        if (pdfContainer.parentNode) pdfContainer.parentNode.removeChild(pdfContainer);
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('خطا در تولید PDF');
