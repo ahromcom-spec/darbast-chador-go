@@ -112,16 +112,19 @@ const mainNavItems = [
   },
 ];
 
+// نقش‌هایی که اجازه دسترسی به ماژول گزارش روزانه دارند
+const ALLOWED_ROLES = ['ceo', 'general_manager', 'scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials'] as const;
+
 export const CEOLayout = () => {
   const { user, loading: authLoading } = useAuth();
-  const [isCEO, setIsCEO] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
-    const checkCEORole = async () => {
+    const checkRoles = async () => {
       if (!user) {
-        setIsCEO(false);
+        setHasAccess(false);
         setRoleLoading(false);
         return;
       }
@@ -131,24 +134,23 @@ export const CEOLayout = () => {
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .eq('role', 'ceo')
-          .maybeSingle();
+          .in('role', ALLOWED_ROLES);
 
         if (error) {
-          console.error('Error checking CEO role:', error);
-          setIsCEO(false);
+          console.error('Error checking roles:', error);
+          setHasAccess(false);
         } else {
-          setIsCEO(!!data);
+          setHasAccess(data && data.length > 0);
         }
       } catch (error) {
-        console.error('Error checking CEO role:', error);
-        setIsCEO(false);
+        console.error('Error checking roles:', error);
+        setHasAccess(false);
       } finally {
         setRoleLoading(false);
       }
     };
 
-    checkCEORole();
+    checkRoles();
   }, [user]);
 
   // بررسی اینکه آیا صفحه فعلی یکی از مراحل سفارش است
@@ -172,7 +174,7 @@ export const CEOLayout = () => {
     );
   }
 
-  if (!user || !isCEO) {
+  if (!user || !hasAccess) {
     return <Navigate to="/" replace />;
   }
 
