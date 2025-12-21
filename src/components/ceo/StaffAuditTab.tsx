@@ -54,6 +54,7 @@ interface SalarySettings {
   previous_month_extra_received: number;
   bonuses: number;
   deductions: number;
+  notes: string;
 }
 
 interface AuditSummary {
@@ -131,7 +132,7 @@ export function StaffAuditTab() {
   const fetchSalarySettings = async (staffCode: string): Promise<SalarySettings> => {
     const { data, error } = await supabase
       .from('staff_salary_settings')
-      .select('base_daily_salary, overtime_rate_fraction, previous_month_balance, previous_month_extra_received, bonuses, deductions')
+      .select('base_daily_salary, overtime_rate_fraction, previous_month_balance, previous_month_extra_received, bonuses, deductions, notes')
       .eq('staff_code', staffCode)
       .maybeSingle();
 
@@ -143,8 +144,9 @@ export function StaffAuditTab() {
           previous_month_extra_received: data.previous_month_extra_received || 0,
           bonuses: data.bonuses || 0,
           deductions: data.deductions || 0,
+          notes: data.notes || '',
         }
-      : { base_daily_salary: 0, overtime_rate_fraction: 0.167, previous_month_balance: 0, previous_month_extra_received: 0, bonuses: 0, deductions: 0 };
+      : { base_daily_salary: 0, overtime_rate_fraction: 0.167, previous_month_balance: 0, previous_month_extra_received: 0, bonuses: 0, deductions: 0, notes: '' };
     
     setSalarySettings(settings);
     return settings;
@@ -947,6 +949,19 @@ export function StaffAuditTab() {
                 )}
               </div>
             </div>
+            
+            {/* Notes Section */}
+            {salarySettings.notes && (
+              <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                <div className="flex items-start gap-3">
+                  <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h5 className="font-bold text-blue-800 dark:text-blue-200 mb-1">یادداشت / توضیحات:</h5>
+                    <p className="text-blue-700 dark:text-blue-300 whitespace-pre-wrap">{salarySettings.notes}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
         </>
