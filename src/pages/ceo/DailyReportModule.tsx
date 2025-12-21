@@ -759,8 +759,6 @@ export default function DailyReportModule() {
           Boolean(s.notes?.trim())
       );
 
-      console.log('Staff reports to save:', staffToSave.length, staffToSave);
-
       if (staffToSave.length > 0) {
         const staffPayload = staffToSave.map((s) => ({
           daily_report_id: reportId,
