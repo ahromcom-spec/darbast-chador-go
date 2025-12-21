@@ -125,7 +125,7 @@ export function StaffSearchSelect({
             />
           </div>
         </div>
-        <ScrollArea className="max-h-[300px]">
+        <ScrollArea className="h-[300px] overflow-y-auto">
           {sortedStaff.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
               پرسنلی یافت نشد
