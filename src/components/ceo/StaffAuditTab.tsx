@@ -539,7 +539,6 @@ export function StaffAuditTab() {
             format: 'a4' as const,
             orientation: 'portrait' as const,
           },
-          pagebreak: { mode: ['css', 'legacy'] },
         })
         .from(pdfContainer)
         .save();
