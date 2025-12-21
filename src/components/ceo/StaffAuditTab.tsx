@@ -4,14 +4,38 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet, Download } from 'lucide-react';
-import { format } from 'date-fns-jalali';
+import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet, Download, CalendarDays } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, setMonth as setJalaliMonth, setYear as setJalaliYear } from 'date-fns-jalali';
 import { Separator } from '@/components/ui/separator';
 import html2pdf from 'html2pdf.js';
+
+// Persian months
+const PERSIAN_MONTHS = [
+  { value: 1, label: 'فروردین' },
+  { value: 2, label: 'اردیبهشت' },
+  { value: 3, label: 'خرداد' },
+  { value: 4, label: 'تیر' },
+  { value: 5, label: 'مرداد' },
+  { value: 6, label: 'شهریور' },
+  { value: 7, label: 'مهر' },
+  { value: 8, label: 'آبان' },
+  { value: 9, label: 'آذر' },
+  { value: 10, label: 'دی' },
+  { value: 11, label: 'بهمن' },
+  { value: 12, label: 'اسفند' },
+];
+
+// Get current Persian year
+const getCurrentPersianYear = (): number => {
+  const now = new Date();
+  const yearStr = format(now, 'yyyy');
+  return parseInt(yearStr, 10);
+};
 
 interface StaffAuditRecord {
   id: string;
@@ -56,6 +80,8 @@ interface AuditSummary {
 export function StaffAuditTab() {
   const [selectedStaffCode, setSelectedStaffCode] = useState<string>('');
   const [selectedStaffName, setSelectedStaffName] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<number>(getCurrentPersianYear());
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,6 +90,41 @@ export function StaffAuditTab() {
   const [summary, setSummary] = useState<AuditSummary | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+
+  // Generate year options (last 5 years)
+  const yearOptions = Array.from({ length: 5 }, (_, i) => getCurrentPersianYear() - i);
+
+  // Handle month selection - auto set start and end dates
+  const handleMonthSelect = (monthValue: string) => {
+    setSelectedMonth(monthValue);
+    const monthNum = parseInt(monthValue, 10);
+    
+    // Create a date in the middle of that Persian month, then get start and end
+    // We need to convert Persian month to Gregorian dates
+    const now = new Date();
+    const targetDate = setJalaliYear(setJalaliMonth(now, monthNum - 1), selectedYear);
+    const monthStart = startOfMonth(targetDate);
+    const monthEnd = endOfMonth(targetDate);
+    
+    setStartDate(monthStart);
+    setEndDate(monthEnd);
+  };
+
+  // Handle year change
+  const handleYearChange = (year: string) => {
+    setSelectedYear(parseInt(year, 10));
+    // If month is already selected, recalculate dates
+    if (selectedMonth) {
+      const monthNum = parseInt(selectedMonth, 10);
+      const now = new Date();
+      const targetDate = setJalaliYear(setJalaliMonth(now, monthNum - 1), parseInt(year, 10));
+      const monthStart = startOfMonth(targetDate);
+      const monthEnd = endOfMonth(targetDate);
+      
+      setStartDate(monthStart);
+      setEndDate(monthEnd);
+    }
+  };
 
   const fetchSalarySettings = async (staffCode: string): Promise<SalarySettings> => {
     const { data, error } = await supabase
@@ -273,7 +334,41 @@ export function StaffAuditTab() {
             <CardTitle className="text-lg">جستجوی حسابرسی نیروها</CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Quick Month Selector */}
+          <div className="flex flex-wrap items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-purple-600" />
+              <span className="text-sm font-medium">انتخاب سریع ماه:</span>
+            </div>
+            <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
+              <SelectTrigger className="w-24">
+                <SelectValue placeholder="سال" />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year.toLocaleString('fa-IR')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex flex-wrap gap-1">
+              {PERSIAN_MONTHS.map((month) => (
+                <Button
+                  key={month.value}
+                  variant={selectedMonth === month.value.toString() ? 'default' : 'outline'}
+                  size="sm"
+                  className={`text-xs px-2 py-1 h-7 ${selectedMonth === month.value.toString() ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
+                  onClick={() => handleMonthSelect(month.value.toString())}
+                >
+                  {month.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Manual Date Selection */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>انتخاب نیرو</Label>
@@ -290,7 +385,12 @@ export function StaffAuditTab() {
               <Label>از تاریخ</Label>
               <PersianDatePicker
                 value={startDate?.toISOString() || ''}
-                onChange={(date) => date && setStartDate(new Date(date))}
+                onChange={(date) => {
+                  if (date) {
+                    setStartDate(new Date(date));
+                    setSelectedMonth(''); // Clear month selection when manual date is picked
+                  }
+                }}
                 timeMode="none"
               />
             </div>
@@ -298,7 +398,12 @@ export function StaffAuditTab() {
               <Label>تا تاریخ</Label>
               <PersianDatePicker
                 value={endDate?.toISOString() || ''}
-                onChange={(date) => date && setEndDate(new Date(date))}
+                onChange={(date) => {
+                  if (date) {
+                    setEndDate(new Date(date));
+                    setSelectedMonth(''); // Clear month selection when manual date is picked
+                  }
+                }}
                 timeMode="none"
               />
             </div>
