@@ -266,9 +266,26 @@ export default function DailyReportModule() {
   };
 
   const updateOrderRow = (index: number, field: keyof OrderReportRow, value: string) => {
-    const updated = [...orderReports];
-    updated[index] = { ...updated[index], [field]: value };
-    setOrderReports(updated);
+    setOrderReports((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+
+      // اگر آخرین ردیف ویرایش شد و مقداری وارد شد، یک ردیف جدید اضافه کن
+      const isLastRow = index === prev.length - 1;
+      const hasContent = value && value.trim().length > 0;
+      if (isLastRow && hasContent) {
+        updated.push({
+          order_id: '',
+          activity_description: '',
+          service_details: '',
+          team_name: '',
+          notes: '',
+          row_color: ROW_COLORS[updated.length % ROW_COLORS.length].value
+        });
+      }
+
+      return updated;
+    });
   };
 
   const addStaffRow = () => {
@@ -305,6 +322,33 @@ export default function DailyReportModule() {
         if (staff) {
           updated[index].staff_name = staff.full_name;
         }
+      }
+
+      // آخرین ردیف غیر صندوق را پیدا کن
+      const nonCashBoxRows = updated.filter((r) => !r.is_cash_box);
+      const lastNonCashBoxIndex = updated.findIndex(
+        (r, i) => !r.is_cash_box && i === updated.lastIndexOf(nonCashBoxRows[nonCashBoxRows.length - 1])
+      );
+
+      // اگر آخرین ردیف غیر صندوق ویرایش شد و مقداری وارد شد، یک ردیف جدید اضافه کن
+      const isLastNonCashBoxRow = index === lastNonCashBoxIndex;
+      const hasContent =
+        (typeof value === 'string' && value.trim().length > 0) ||
+        (typeof value === 'number' && value > 0);
+
+      if (isLastNonCashBoxRow && hasContent && !updated[index].is_cash_box) {
+        updated.push({
+          staff_user_id: null,
+          staff_name: '',
+          work_status: 'غایب',
+          overtime_hours: 0,
+          amount_received: 0,
+          receiving_notes: '',
+          amount_spent: 0,
+          spending_notes: '',
+          notes: '',
+          is_cash_box: false
+        });
       }
 
       return updated;
