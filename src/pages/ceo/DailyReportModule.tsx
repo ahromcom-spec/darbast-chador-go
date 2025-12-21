@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye } from 'lucide-react';
+import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -82,6 +82,7 @@ export default function DailyReportModule() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [reportDate, setReportDate] = useState<Date>(new Date());
   const [orders, setOrders] = useState<Order[]>([]);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
@@ -91,6 +92,8 @@ export default function DailyReportModule() {
   const [activeTab, setActiveTab] = useState<string>('new-report');
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [loadingSavedReports, setLoadingSavedReports] = useState(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     fetchOrders();
@@ -105,9 +108,135 @@ export default function DailyReportModule() {
 
   useEffect(() => {
     if (reportDate) {
+      isInitialLoadRef.current = true;
       fetchExistingReport();
     }
   }, [reportDate]);
+
+  // Auto-save function
+  const performAutoSave = useCallback(async () => {
+    if (!user || loading) return;
+
+    // Check if there's any meaningful data to save
+    const hasOrderData = orderReports.some(r => r.order_id);
+    const hasStaffData = staffReports.some(s => s.staff_name && !s.is_cash_box);
+    const hasCashBoxData = staffReports.some(s => s.is_cash_box && (s.amount_spent > 0 || s.amount_received > 0));
+
+    if (!hasOrderData && !hasStaffData && !hasCashBoxData) return;
+
+    try {
+      setAutoSaveStatus('saving');
+      const dateStr = reportDate.toISOString().split('T')[0];
+
+      let reportId = existingReportId;
+
+      if (!reportId) {
+        // Create new report
+        const { data: newReport, error: createError } = await supabase
+          .from('daily_reports')
+          .insert({
+            report_date: dateStr,
+            created_by: user.id
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        reportId = newReport.id;
+        setExistingReportId(reportId);
+      }
+
+      // Delete existing order reports and insert new ones
+      await supabase
+        .from('daily_report_orders')
+        .delete()
+        .eq('daily_report_id', reportId);
+
+      if (orderReports.filter(r => r.order_id).length > 0) {
+        await supabase
+          .from('daily_report_orders')
+          .insert(orderReports.filter(r => r.order_id).map(r => ({
+            daily_report_id: reportId,
+            order_id: r.order_id,
+            activity_description: r.activity_description,
+            service_details: r.service_details,
+            team_name: r.team_name,
+            notes: r.notes,
+            row_color: r.row_color
+          })));
+      }
+
+      // Delete existing staff reports and insert new ones
+      await supabase
+        .from('daily_report_staff')
+        .delete()
+        .eq('daily_report_id', reportId);
+
+      if (staffReports.length > 0) {
+        await supabase
+          .from('daily_report_staff')
+          .insert(staffReports.map(s => ({
+            daily_report_id: reportId,
+            staff_user_id: s.staff_user_id,
+            staff_name: s.staff_name,
+            work_status: s.work_status,
+            overtime_hours: s.overtime_hours,
+            amount_received: s.amount_received,
+            receiving_notes: s.receiving_notes,
+            amount_spent: s.amount_spent,
+            spending_notes: s.spending_notes,
+            notes: s.notes,
+            is_cash_box: s.is_cash_box
+          })));
+      }
+
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      setAutoSaveStatus('idle');
+    }
+  }, [user, loading, reportDate, existingReportId, orderReports, staffReports]);
+
+  // Auto-save with debounce when data changes
+  useEffect(() => {
+    // Skip auto-save on initial load
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      return;
+    }
+
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // Set new timer for auto-save (debounce 2 seconds)
+    autoSaveTimerRef.current = setTimeout(() => {
+      performAutoSave();
+    }, 2000);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [orderReports, staffReports, performAutoSave]);
+
+  // Save on page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      performAutoSave();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [performAutoSave]);
 
   const fetchSavedReports = async () => {
     if (!user) return;
@@ -560,6 +689,23 @@ export default function DailyReportModule() {
               <p className="text-sm text-muted-foreground">ثبت گزارش فعالیت‌های روزانه</p>
             </div>
           </div>
+          {/* Auto-save status indicator */}
+          {autoSaveStatus !== 'idle' && (
+            <div className="flex items-center gap-2 text-sm">
+              {autoSaveStatus === 'saving' && (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                  <span className="text-muted-foreground">در حال ذخیره...</span>
+                </>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <>
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-green-600">ذخیره شد</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
