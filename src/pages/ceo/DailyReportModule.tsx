@@ -77,6 +77,20 @@ const ROW_COLORS = [
   { value: 'green', label: 'سبز', class: 'bg-green-500' },
 ];
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isUuid = (value: unknown): value is string => {
+  if (typeof value !== 'string') return false;
+  return UUID_REGEX.test(value);
+};
+
+const extractStaffCode = (value: unknown): string => {
+  if (typeof value !== 'string') return '';
+  const match = value.match(/\b\d{4}\b/);
+  return match?.[0] ?? '';
+};
+
+
 export default function DailyReportModule() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -220,8 +234,9 @@ export default function DailyReportModule() {
           .insert(
             staffToSave.map((s) => ({
               daily_report_id: reportId,
-              staff_user_id: s.staff_user_id,
-              staff_name: s.staff_name,
+              // ستون staff_user_id در دیتابیس uuid است؛ کدهای پرسنلی مثل 0106 را نباید اینجا ذخیره کنیم
+              staff_user_id: isUuid(s.staff_user_id) ? s.staff_user_id : null,
+              staff_name: s.staff_name || '',
               work_status: s.work_status,
               overtime_hours: s.overtime_hours,
               amount_received: s.amount_received,
@@ -438,19 +453,25 @@ export default function DailyReportModule() {
           .select('*')
           .eq('daily_report_id', report.id);
 
-        const normalizedStaff: StaffReportRow[] = (staffData || []).map((s: any) => ({
-          id: s.id,
-          staff_user_id: s.staff_user_id,
-          staff_name: s.staff_name || '',
-          work_status: s.work_status || 'غایب',
-          overtime_hours: s.overtime_hours || 0,
-          amount_received: s.amount_received || 0,
-          receiving_notes: s.receiving_notes || '',
-          amount_spent: s.amount_spent || 0,
-          spending_notes: s.spending_notes || '',
-          notes: s.notes || '',
-          is_cash_box: s.is_cash_box || false
-        }));
+        const normalizedStaff: StaffReportRow[] = (staffData || []).map((s: any) => {
+          const staffCode = extractStaffCode(s.staff_name || '');
+
+          return {
+            id: s.id,
+            // در UI این فیلد را برای «کد پرسنلی» استفاده می‌کنیم تا انتخاب داخل StaffSearchSelect باقی بماند
+            // ولی در زمان ذخیره، فقط اگر uuid واقعی باشد به دیتابیس می‌رود (بقیه null می‌شود)
+            staff_user_id: staffCode || null,
+            staff_name: s.staff_name || '',
+            work_status: s.work_status || 'غایب',
+            overtime_hours: s.overtime_hours || 0,
+            amount_received: s.amount_received || 0,
+            receiving_notes: s.receiving_notes || '',
+            amount_spent: s.amount_spent || 0,
+            spending_notes: s.spending_notes || '',
+            notes: s.notes || '',
+            is_cash_box: s.is_cash_box || false
+          };
+        });
 
         const hasCashBox = normalizedStaff.some((s) => s.is_cash_box);
         if (!hasCashBox) {
@@ -737,30 +758,31 @@ export default function DailyReportModule() {
           Boolean(s.notes?.trim())
       );
 
-      if (staffToSave.length > 0) {
-        const { error: staffError } = await supabase
-          .from('daily_report_staff')
-          .insert(
-            staffToSave.map((s) => ({
-              daily_report_id: reportId,
-              staff_user_id: s.staff_user_id || null,
-              staff_name: s.staff_name || '',
-              work_status: s.work_status || 'غایب',
-              overtime_hours: s.overtime_hours || 0,
-              amount_received: s.amount_received || 0,
-              receiving_notes: s.receiving_notes || '',
-              amount_spent: s.amount_spent || 0,
-              spending_notes: s.spending_notes || '',
-              notes: s.notes || '',
-              is_cash_box: s.is_cash_box || false
-            }))
-          );
+       if (staffToSave.length > 0) {
+         const { error: staffError } = await supabase
+           .from('daily_report_staff')
+           .insert(
+             staffToSave.map((s) => ({
+               daily_report_id: reportId,
+               // ستون staff_user_id در دیتابیس uuid است؛ کدهای پرسنلی مثل 0106 را نباید اینجا ذخیره کنیم
+               staff_user_id: isUuid(s.staff_user_id) ? s.staff_user_id : null,
+               staff_name: s.staff_name || '',
+               work_status: s.work_status || 'غایب',
+               overtime_hours: s.overtime_hours || 0,
+               amount_received: s.amount_received || 0,
+               receiving_notes: s.receiving_notes || '',
+               amount_spent: s.amount_spent || 0,
+               spending_notes: s.spending_notes || '',
+               notes: s.notes || '',
+               is_cash_box: s.is_cash_box || false
+             }))
+           );
 
-        if (staffError) {
-          console.error('Error inserting staff reports:', staffError);
-          throw staffError;
-        }
-      }
+         if (staffError) {
+           console.error('Error inserting staff reports:', staffError);
+           throw staffError;
+         }
+       }
 
       toast.success('گزارش با موفقیت ذخیره شد');
     } catch (error: any) {
@@ -1123,7 +1145,7 @@ export default function DailyReportModule() {
                                     value={row.staff_user_id || ''}
                                     onValueChange={(code, name) => {
                                       updateStaffRow(index, 'staff_user_id', code);
-                                      updateStaffRow(index, 'staff_name', name);
+                                      updateStaffRow(index, 'staff_name', code && name ? `${code} - ${name}` : '');
                                     }}
                                     placeholder="انتخاب نیرو"
                                   />
