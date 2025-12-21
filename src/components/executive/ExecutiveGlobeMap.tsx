@@ -514,29 +514,40 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       // پارس کردن notes برای استخراج ابعاد و شرح فعالیت
       let description = '';
       let dimensions = '';
+      let serviceType = '';
       
       if (o.notes) {
         try {
-          const notesData: OrderNotes = typeof o.notes === 'string' ? JSON.parse(o.notes) : o.notes;
+          const notesData: OrderNotes = typeof o.notes === 'string' ? JSON.parse(o.notes) : o.notes as OrderNotes;
           
-          // شرح فعالیت
-          if (notesData.description) {
-            description = escapeHtml(notesData.description);
-          } else if (notesData.locationPurpose) {
+          // شرح فعالیت (محل نصب)
+          if (notesData.locationPurpose) {
             description = escapeHtml(notesData.locationPurpose);
+          } else if (notesData.description) {
+            description = escapeHtml(notesData.description);
+          }
+          
+          // نوع سرویس
+          if (notesData.service_type) {
+            const serviceLabels: Record<string, string> = {
+              'facade': 'نما',
+              'rental': 'اجاره',
+              'comprehensive': 'جامع'
+            };
+            serviceType = serviceLabels[notesData.service_type] || notesData.service_type;
           }
           
           // ابعاد
           if (notesData.dimensions && notesData.dimensions.length > 0) {
             const dims = notesData.dimensions[0];
             const parts = [];
-            if (dims.length) parts.push(`طول: ${dims.length}م`);
-            if (dims.width) parts.push(`عرض: ${dims.width}م`);
-            if (dims.height) parts.push(`ارتفاع: ${dims.height}م`);
+            if (dims.length) parts.push(`${dims.length}m`);
+            if (dims.width) parts.push(`${dims.width}m`);
+            if (dims.height) parts.push(`${dims.height}m`);
             dimensions = parts.join(' × ');
           }
         } catch (e) {
-          // خطا در پارس notes
+          console.error('Error parsing notes:', e, o.notes);
         }
       }
 
@@ -547,8 +558,9 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
             <div class="exec-popup__code">کد: ${code}</div>
             <div class="exec-popup__address">📍 ${address}</div>
             ${customer ? `<div class="exec-popup__customer">👤 ${customer}</div>` : ''}
-            ${description ? `<div class="exec-popup__description">📝 ${description}</div>` : ''}
-            ${dimensions ? `<div class="exec-popup__dimensions">📐 ${dimensions}</div>` : ''}
+            ${description ? `<div class="exec-popup__description">🏗️ محل: ${description}</div>` : ''}
+            ${dimensions ? `<div class="exec-popup__dimensions">📐 ابعاد: ${dimensions}</div>` : ''}
+            ${serviceType ? `<div class="exec-popup__service-type">🔧 نوع: ${serviceType}</div>` : ''}
             <div class="exec-popup__status">
               <span class="exec-popup__status-dot" style="background:${color};"></span>
               <span>${escapeHtml(statusText)}</span>
@@ -988,13 +1000,20 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
 
         .exec-popup__dimensions {
           font-size: 11px;
-          color: hsl(var(--amber-600, #d97706));
+          color: #d97706;
           margin-top: 4px;
           font-weight: 600;
-          background: hsl(var(--amber-100, #fef3c7) / 0.5);
+          background: rgba(254, 243, 199, 0.5);
           padding: 2px 8px;
           border-radius: 4px;
           display: inline-block;
+        }
+
+        .exec-popup__service-type {
+          font-size: 11px;
+          color: #059669;
+          margin-top: 4px;
+          font-weight: 500;
         }
 
         .exec-popup__status {
