@@ -113,7 +113,14 @@ export default function DailyReportModule() {
   const [orderReports, setOrderReports] = useState<OrderReportRow[]>([]);
   const [staffReports, setStaffReports] = useState<StaffReportRow[]>([]);
   const [existingReportId, setExistingReportId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('new-report');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    return localStorage.getItem('dailyReportActiveTab') || 'new-report';
+  });
+
+  // Persist active tab to localStorage
+  useEffect(() => {
+    localStorage.setItem('dailyReportActiveTab', activeTab);
+  }, [activeTab]);
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [loadingSavedReports, setLoadingSavedReports] = useState(false);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
