@@ -20,6 +20,10 @@ interface SalarySetting {
   base_daily_salary: number;
   overtime_rate_fraction: number;
   notes: string | null;
+  previous_month_balance: number;
+  previous_month_extra_received: number;
+  bonuses: number;
+  deductions: number;
 }
 
 export function StaffSalarySettingsTab() {
@@ -37,6 +41,10 @@ export function StaffSalarySettingsTab() {
   const [newBaseSalary, setNewBaseSalary] = useState<number>(0);
   const [newOvertimeFraction, setNewOvertimeFraction] = useState<number>(0.167);
   const [newNotes, setNewNotes] = useState('');
+  const [newPrevMonthBalance, setNewPrevMonthBalance] = useState<number>(0);
+  const [newPrevMonthExtra, setNewPrevMonthExtra] = useState<number>(0);
+  const [newBonuses, setNewBonuses] = useState<number>(0);
+  const [newDeductions, setNewDeductions] = useState<number>(0);
 
   const copyDebugToClipboard = async (debugText: string) => {
     try {
@@ -112,6 +120,10 @@ export function StaffSalarySettingsTab() {
       base_daily_salary: newBaseSalary,
       overtime_rate_fraction: newOvertimeFraction,
       notes: newNotes || null,
+      previous_month_balance: newPrevMonthBalance,
+      previous_month_extra_received: newPrevMonthExtra,
+      bonuses: newBonuses,
+      deductions: newDeductions,
       created_by: user?.id ?? null,
     };
 
@@ -145,6 +157,10 @@ export function StaffSalarySettingsTab() {
           base_daily_salary: newBaseSalary,
           overtime_rate_fraction: newOvertimeFraction,
           notes: newNotes || null,
+          previous_month_balance: newPrevMonthBalance,
+          previous_month_extra_received: newPrevMonthExtra,
+          bonuses: newBonuses,
+          deductions: newDeductions,
           created_by: user.id,
         });
 
@@ -191,6 +207,10 @@ export function StaffSalarySettingsTab() {
       setNewBaseSalary(0);
       setNewOvertimeFraction(0.167);
       setNewNotes('');
+      setNewPrevMonthBalance(0);
+      setNewPrevMonthExtra(0);
+      setNewBonuses(0);
+      setNewDeductions(0);
       setLastSaveDebug(null);
 
       // Refresh list
@@ -208,6 +228,10 @@ export function StaffSalarySettingsTab() {
       base_daily_salary: setting.base_daily_salary,
       overtime_rate_fraction: setting.overtime_rate_fraction,
       notes: setting.notes,
+      previous_month_balance: setting.previous_month_balance,
+      previous_month_extra_received: setting.previous_month_extra_received,
+      bonuses: setting.bonuses,
+      deductions: setting.deductions,
     };
 
     if (authLoading) {
@@ -228,6 +252,10 @@ export function StaffSalarySettingsTab() {
           base_daily_salary: setting.base_daily_salary,
           overtime_rate_fraction: setting.overtime_rate_fraction,
           notes: setting.notes,
+          previous_month_balance: setting.previous_month_balance,
+          previous_month_extra_received: setting.previous_month_extra_received,
+          bonuses: setting.bonuses,
+          deductions: setting.deductions,
         })
         .eq('id', setting.id);
 
@@ -389,6 +417,72 @@ export function StaffSalarySettingsTab() {
               </div>
             </div>
 
+            {/* New fields row */}
+            <div className="space-y-2">
+              <Label>باقی‌مانده ماه قبل (تومان)</Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={newPrevMonthBalance === 0 ? '' : newPrevMonthBalance.toLocaleString('en-US')}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9-]/g, '');
+                  setNewPrevMonthBalance(parseInt(val) || 0);
+                }}
+                className="pl-14"
+                dir="ltr"
+                placeholder="0"
+              />
+              <p className="text-xs text-muted-foreground">مثبت = طلبکار، منفی = بدهکار</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>دریافتی اضافه ماه قبل (تومان)</Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={newPrevMonthExtra === 0 ? '' : newPrevMonthExtra.toLocaleString('en-US')}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setNewPrevMonthExtra(parseInt(val) || 0);
+                }}
+                className="pl-14"
+                dir="ltr"
+                placeholder="0"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>مزایا (تومان)</Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={newBonuses === 0 ? '' : newBonuses.toLocaleString('en-US')}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setNewBonuses(parseInt(val) || 0);
+                }}
+                className="pl-14"
+                dir="ltr"
+                placeholder="0"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>کسورات (تومان)</Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={newDeductions === 0 ? '' : newDeductions.toLocaleString('en-US')}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setNewDeductions(parseInt(val) || 0);
+                }}
+                className="pl-14"
+                dir="ltr"
+                placeholder="0"
+              />
+            </div>
+
             <div className="space-y-2 md:col-span-2">
               <Label>توضیحات</Label>
               <AutoResizeTextarea
@@ -456,9 +550,13 @@ export function StaffSalarySettingsTab() {
                     <TableHead className="text-right">نام نیرو</TableHead>
                     <TableHead className="text-right">کد پرسنلی</TableHead>
                     <TableHead className="text-right">حقوق روزانه</TableHead>
-                    <TableHead className="text-right">ضریب اضافه‌کاری</TableHead>
+                    <TableHead className="text-right">ضریب</TableHead>
+                    <TableHead className="text-right">باقی‌مانده قبل</TableHead>
+                    <TableHead className="text-right">دریافتی اضافه</TableHead>
+                    <TableHead className="text-right">مزایا</TableHead>
+                    <TableHead className="text-right">کسورات</TableHead>
                     <TableHead className="text-right">توضیحات</TableHead>
-                    <TableHead className="text-center w-[120px]">عملیات</TableHead>
+                    <TableHead className="text-center w-[100px]">عملیات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -478,11 +576,11 @@ export function StaffSalarySettingsTab() {
                               const val = e.target.value.replace(/[^0-9]/g, '');
                               updateSettingField(setting.id, 'base_daily_salary', parseInt(val) || 0);
                             }}
-                            className="w-32"
+                            className="w-28"
                             dir="ltr"
                           />
                         ) : (
-                          <span>{setting.base_daily_salary.toLocaleString('fa-IR')} تومان</span>
+                          <span>{setting.base_daily_salary.toLocaleString('fa-IR')}</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -492,14 +590,84 @@ export function StaffSalarySettingsTab() {
                             step="0.01"
                             value={setting.overtime_rate_fraction}
                             onChange={(e) => updateSettingField(setting.id, 'overtime_rate_fraction', parseFloat(e.target.value) || 0)}
-                            className="w-24"
+                            className="w-20"
                             dir="ltr"
                           />
                         ) : (
                           <span>{setting.overtime_rate_fraction === 0.167 ? '۱/۶' : setting.overtime_rate_fraction}</span>
                         )}
                       </TableCell>
-                      <TableCell className="max-w-[200px]">
+                      <TableCell>
+                        {editingId === setting.id ? (
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={(setting.previous_month_balance || 0).toLocaleString('en-US')}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9-]/g, '');
+                              updateSettingField(setting.id, 'previous_month_balance', parseInt(val) || 0);
+                            }}
+                            className="w-28"
+                            dir="ltr"
+                          />
+                        ) : (
+                          <span className={setting.previous_month_balance > 0 ? 'text-green-600' : setting.previous_month_balance < 0 ? 'text-red-600' : ''}>
+                            {(setting.previous_month_balance || 0).toLocaleString('fa-IR')}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === setting.id ? (
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={(setting.previous_month_extra_received || 0).toLocaleString('en-US')}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9]/g, '');
+                              updateSettingField(setting.id, 'previous_month_extra_received', parseInt(val) || 0);
+                            }}
+                            className="w-28"
+                            dir="ltr"
+                          />
+                        ) : (
+                          <span>{(setting.previous_month_extra_received || 0).toLocaleString('fa-IR')}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === setting.id ? (
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={(setting.bonuses || 0).toLocaleString('en-US')}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9]/g, '');
+                              updateSettingField(setting.id, 'bonuses', parseInt(val) || 0);
+                            }}
+                            className="w-24"
+                            dir="ltr"
+                          />
+                        ) : (
+                          <span className="text-green-600">{(setting.bonuses || 0).toLocaleString('fa-IR')}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === setting.id ? (
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={(setting.deductions || 0).toLocaleString('en-US')}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9]/g, '');
+                              updateSettingField(setting.id, 'deductions', parseInt(val) || 0);
+                            }}
+                            className="w-24"
+                            dir="ltr"
+                          />
+                        ) : (
+                          <span className="text-red-600">{(setting.deductions || 0).toLocaleString('fa-IR')}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="max-w-[150px]">
                         {editingId === setting.id ? (
                           <AutoResizeTextarea
                             value={setting.notes || ''}
@@ -507,7 +675,7 @@ export function StaffSalarySettingsTab() {
                             className="min-h-[36px]"
                           />
                         ) : (
-                          <span className="text-muted-foreground">{setting.notes || '—'}</span>
+                          <span className="text-muted-foreground text-xs">{setting.notes || '—'}</span>
                         )}
                       </TableCell>
                       <TableCell>

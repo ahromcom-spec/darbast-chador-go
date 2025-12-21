@@ -3321,33 +3321,45 @@ export type Database = {
       staff_salary_settings: {
         Row: {
           base_daily_salary: number
+          bonuses: number | null
           created_at: string
           created_by: string
+          deductions: number | null
           id: string
           notes: string | null
           overtime_rate_fraction: number
+          previous_month_balance: number | null
+          previous_month_extra_received: number | null
           staff_code: string
           staff_name: string
           updated_at: string
         }
         Insert: {
           base_daily_salary?: number
+          bonuses?: number | null
           created_at?: string
           created_by?: string
+          deductions?: number | null
           id?: string
           notes?: string | null
           overtime_rate_fraction?: number
+          previous_month_balance?: number | null
+          previous_month_extra_received?: number | null
           staff_code: string
           staff_name: string
           updated_at?: string
         }
         Update: {
           base_daily_salary?: number
+          bonuses?: number | null
           created_at?: string
           created_by?: string
+          deductions?: number | null
           id?: string
           notes?: string | null
           overtime_rate_fraction?: number
+          previous_month_balance?: number | null
+          previous_month_extra_received?: number | null
           staff_code?: string
           staff_name?: string
           updated_at?: string
