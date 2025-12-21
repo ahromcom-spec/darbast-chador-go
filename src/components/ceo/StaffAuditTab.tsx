@@ -333,8 +333,8 @@ export function StaffAuditTab() {
       pdfContainer.setAttribute('dir', 'rtl');
       pdfContainer.style.cssText = [
         'position: fixed',
-        // Keep it inside the viewport (html2canvas only captures what it considers “in view”),
-        // but push it behind the app so the user won't see it.
+        // Keep it inside the viewport so html2canvas can capture it reliably.
+        // The loading overlay hides it from the user while generating.
         'left: 0',
         'top: 0',
         'width: 800px',
@@ -344,7 +344,8 @@ export function StaffAuditTab() {
         'font-family: Tahoma, Arial, sans-serif',
         'pointer-events: none',
         'opacity: 1',
-        'z-index: -1',
+        // Avoid negative z-index (can render behind the page background in the html2canvas clone → blank PDF)
+        'z-index: 10',
       ].join('; ');
 
       // Build daily records HTML - only records with meaningful data
@@ -558,7 +559,7 @@ export function StaffAuditTab() {
   return (
     <div className="space-y-6">
       {generatingPdf && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
           <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-foreground shadow-lg">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span className="text-sm font-medium">در حال ساخت فایل PDF...</span>
