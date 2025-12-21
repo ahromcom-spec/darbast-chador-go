@@ -333,6 +333,8 @@ export function StaffAuditTab() {
       pdfContainer.setAttribute('dir', 'rtl');
       pdfContainer.style.cssText = [
         'position: fixed',
+        // Keep it inside the viewport (html2canvas only captures what it considers “in view”),
+        // but push it behind the app so the user won't see it.
         'left: 0',
         'top: 0',
         'width: 800px',
@@ -341,9 +343,7 @@ export function StaffAuditTab() {
         'direction: rtl',
         'font-family: Tahoma, Arial, sans-serif',
         'pointer-events: none',
-        'visibility: visible',
-        // Avoid showing it to the user while still allowing capture
-        'opacity: 0',
+        'opacity: 1',
         'z-index: -1',
       ].join('; ');
 
