@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, MessageSquare, Briefcase, FolderKanban, ClipboardList, Receipt, Users } from 'lucide-react';
+import { Package, MessageSquare, Briefcase, FolderKanban, ClipboardList, Receipt, Users, Boxes } from 'lucide-react';
 import { MyOrdersList } from '@/components/profile/MyOrdersList';
 import { CustomerInvoice } from '@/components/profile/CustomerInvoice';
 import { toast } from 'sonner';
@@ -37,6 +37,7 @@ import { RecentActivityFeed } from '@/components/profile/RecentActivityFeed';
 import { IncomingTransferRequests } from '@/components/orders/IncomingTransferRequest';
 import { PendingCollaborationInvites } from '@/components/orders/PendingCollaborationInvites';
 import { PendingProjectInvites } from '@/components/projects/PendingProjectInvites';
+import { UserModulesTab } from '@/components/profile/UserModulesTab';
 import { lazy } from 'react';
 
 const SalesCustomers = lazy(() => import('@/pages/sales/SalesCustomers'));
@@ -266,12 +267,19 @@ const fetchOrders = async () => {
 
         {/* Tabs */}
         <Tabs defaultValue={tabFromUrl} className="w-full">
-          <TabsList className="grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 sm:grid-cols-5">
+          <TabsList className="grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 sm:grid-cols-6">
             <TabsTrigger 
               value="info" 
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               اطلاعات کاربری
+            </TabsTrigger>
+            <TabsTrigger 
+              value="modules" 
+              className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
+              <Boxes className="h-4 w-4 ml-1 hidden sm:inline" />
+              ماژول‌ها
             </TabsTrigger>
             <TabsTrigger 
               value="projects" 
@@ -340,6 +348,11 @@ const fetchOrders = async () => {
             <div className="flex justify-center pt-4">
               <StaffRegistrationButton onClick={() => setStaffDialogOpen(true)} />
             </div>
+          </TabsContent>
+
+          {/* Modules Tab */}
+          <TabsContent value="modules" className="mt-4">
+            <UserModulesTab />
           </TabsContent>
 
 {/* Projects Tab */}
