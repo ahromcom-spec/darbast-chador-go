@@ -819,17 +819,25 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] max-w-[95vw]">
         <Card className={`bg-gradient-to-br from-background/95 to-background/90 backdrop-blur-md border-2 border-amber-500/30 shadow-2xl transition-all duration-300 ${infoCollapsed ? 'p-2' : 'p-4 sm:p-6'}`}>
           {/* دکمه باز/بسته کردن - ناحیه کلیک بزرگتر */}
-          <button
-            onClick={() => setInfoCollapsed(!infoCollapsed)}
-            onTouchStart={() => setInfoCollapsed(!infoCollapsed)}
-            className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 flex items-center justify-center cursor-pointer touch-manipulation"
+          <div
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setInfoCollapsed(!infoCollapsed);
+            }}
+            role="button"
+            tabIndex={0}
+            className="absolute -top-8 left-1/2 -translate-x-1/2 w-20 h-20 flex items-center justify-center cursor-pointer z-[1001]"
             aria-label={infoCollapsed ? 'نمایش اطلاعات' : 'مخفی کردن اطلاعات'}
-            style={{ WebkitTapHighlightColor: 'transparent' }}
+            style={{ 
+              WebkitTapHighlightColor: 'transparent',
+              touchAction: 'manipulation'
+            }}
           >
-            <span className="w-12 h-12 rounded-full bg-amber-500 text-white shadow-lg flex items-center justify-center hover:bg-amber-600 active:bg-amber-700 active:scale-95 transition-all duration-150">
-              {infoCollapsed ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-6 h-6" />}
+            <span className="w-14 h-14 rounded-full bg-amber-500 text-white shadow-xl flex items-center justify-center hover:bg-amber-600 active:bg-amber-700 active:scale-90 transition-all duration-100 border-4 border-white/30">
+              {infoCollapsed ? <ChevronUp className="w-7 h-7" /> : <ChevronDown className="w-7 h-7" />}
             </span>
-          </button>
+          </div>
           
           {infoCollapsed ? (
             // حالت بسته - فقط خلاصه
