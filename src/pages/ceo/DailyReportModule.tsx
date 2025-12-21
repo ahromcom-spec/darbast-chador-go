@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrderSearchSelect } from '@/components/orders/OrderSearchSelect';
+import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 
 interface Order {
@@ -557,21 +558,14 @@ export default function DailyReportModule() {
                             {row.is_cash_box ? (
                               <div className="font-semibold text-amber-700">{row.staff_name}</div>
                             ) : (
-                              <Select
+                              <StaffSearchSelect
                                 value={row.staff_user_id || ''}
-                                onValueChange={(value) => updateStaffRow(index, 'staff_user_id', value)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="انتخاب نیرو" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {staffMembers.map((staff) => (
-                                    <SelectItem key={staff.user_id} value={staff.user_id}>
-                                      {staff.full_name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                onValueChange={(code, name) => {
+                                  updateStaffRow(index, 'staff_user_id', code);
+                                  updateStaffRow(index, 'staff_name', name);
+                                }}
+                                placeholder="انتخاب نیرو"
+                              />
                             )}
                           </TableCell>
                           <TableCell>
