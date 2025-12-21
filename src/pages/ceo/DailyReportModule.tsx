@@ -295,18 +295,20 @@ export default function DailyReportModule() {
   };
 
   const updateStaffRow = (index: number, field: keyof StaffReportRow, value: any) => {
-    const updated = [...staffReports];
-    updated[index] = { ...updated[index], [field]: value };
-    
-    // If selecting a staff member, update the name too
-    if (field === 'staff_user_id' && value) {
-      const staff = staffMembers.find(s => s.user_id === value);
-      if (staff) {
-        updated[index].staff_name = staff.full_name;
+    setStaffReports((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+
+      // If selecting a staff member (from DB-based picker), update the name too
+      if (field === 'staff_user_id' && value) {
+        const staff = staffMembers.find((s) => s.user_id === value);
+        if (staff) {
+          updated[index].staff_name = staff.full_name;
+        }
       }
-    }
-    
-    setStaffReports(updated);
+
+      return updated;
+    });
   };
 
   const calculateTotals = () => {
