@@ -147,17 +147,10 @@ export default function DailyReportModule() {
           Boolean(s.notes?.trim()))
     );
 
-    const hasCashBoxData = staffReports.some(
-      (s) =>
-        s.is_cash_box &&
-        ((s.amount_spent ?? 0) > 0 ||
-          (s.amount_received ?? 0) > 0 ||
-          Boolean(s.receiving_notes?.trim()) ||
-          Boolean(s.spending_notes?.trim()) ||
-          Boolean(s.notes?.trim()))
-    );
+    // صندوق همیشه وجود دارد - فقط بررسی می‌کنیم که آیا داده‌ای قابل ذخیره هست
+    const hasCashBox = staffReports.some((s) => s.is_cash_box);
 
-    if (!hasOrderData && !hasStaffData && !hasCashBoxData) return;
+    if (!hasOrderData && !hasStaffData && !hasCashBox) return;
 
     const staffToSave = staffReports.filter(
       (s) =>
@@ -758,31 +751,39 @@ export default function DailyReportModule() {
           Boolean(s.notes?.trim())
       );
 
-       if (staffToSave.length > 0) {
-         const { error: staffError } = await supabase
-           .from('daily_report_staff')
-           .insert(
-             staffToSave.map((s) => ({
-               daily_report_id: reportId,
-               // ستون staff_user_id در دیتابیس uuid است؛ کدهای پرسنلی مثل 0106 را نباید اینجا ذخیره کنیم
-               staff_user_id: isUuid(s.staff_user_id) ? s.staff_user_id : null,
-               staff_name: s.staff_name || '',
-               work_status: s.work_status || 'غایب',
-               overtime_hours: s.overtime_hours || 0,
-               amount_received: s.amount_received || 0,
-               receiving_notes: s.receiving_notes || '',
-               amount_spent: s.amount_spent || 0,
-               spending_notes: s.spending_notes || '',
-               notes: s.notes || '',
-               is_cash_box: s.is_cash_box || false
-             }))
-           );
+      console.log('Staff reports to save:', staffToSave.length, staffToSave);
 
-         if (staffError) {
-           console.error('Error inserting staff reports:', staffError);
-           throw staffError;
-         }
-       }
+      if (staffToSave.length > 0) {
+        const staffPayload = staffToSave.map((s) => ({
+          daily_report_id: reportId,
+          // ستون staff_user_id در دیتابیس uuid است؛ کدهای پرسنلی مثل 0106 را نباید اینجا ذخیره کنیم
+          staff_user_id: isUuid(s.staff_user_id) ? s.staff_user_id : null,
+          staff_name: s.staff_name || '',
+          work_status: s.work_status || 'غایب',
+          overtime_hours: s.overtime_hours || 0,
+          amount_received: s.amount_received || 0,
+          receiving_notes: s.receiving_notes || '',
+          amount_spent: s.amount_spent || 0,
+          spending_notes: s.spending_notes || '',
+          notes: s.notes || '',
+          is_cash_box: s.is_cash_box || false
+        }));
+        
+        console.log('Staff payload being sent:', staffPayload);
+        
+        const { error: staffError } = await supabase
+          .from('daily_report_staff')
+          .insert(staffPayload);
+
+        if (staffError) {
+          console.error('Error inserting staff reports:', staffError);
+          throw staffError;
+        }
+        
+        console.log('Staff reports saved successfully');
+      } else {
+        console.log('No staff reports to save');
+      }
 
       toast.success('گزارش با موفقیت ذخیره شد');
     } catch (error: any) {
