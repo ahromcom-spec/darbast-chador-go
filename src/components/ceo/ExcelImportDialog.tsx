@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Loader2, Check, AlertCircle, X } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, Check, AlertCircle, X, Sparkles, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -10,6 +10,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import * as XLSX from 'xlsx';
@@ -55,6 +62,8 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'reading' | 'parsing' | 'saving' | 'done' | 'error'>('idle');
   const [results, setResults] = useState<{ total: number; parsed: number } | null>(null);
+  const [customInstructions, setCustomInstructions] = useState('');
+  const [showInstructions, setShowInstructions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,7 +130,8 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
       const { data, error } = await supabase.functions.invoke('parse-excel-report', {
         body: {
           sheetsData,
-          knownStaffMembers: staffWithCodes
+          knownStaffMembers: staffWithCodes,
+          customInstructions: customInstructions.trim() || undefined
         }
       });
 
@@ -165,6 +175,8 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     setStatus('idle');
     setProgress(0);
     setResults(null);
+    setCustomInstructions('');
+    setShowInstructions(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -192,7 +204,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
           ورود از اکسل
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-green-600" />
@@ -203,11 +215,11 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 py-4">
           {/* File Upload Area */}
           <div 
             className={`
-              border-2 border-dashed rounded-xl p-8 text-center transition-colors
+              border-2 border-dashed rounded-xl p-6 text-center transition-colors
               ${file ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-muted-foreground/30 hover:border-primary/50'}
             `}
           >
@@ -222,8 +234,8 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
             
             {file ? (
               <div className="space-y-2">
-                <div className="w-16 h-16 mx-auto rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
-                  <FileSpreadsheet className="h-8 w-8 text-green-600" />
+                <div className="w-14 h-14 mx-auto rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                  <FileSpreadsheet className="h-7 w-7 text-green-600" />
                 </div>
                 <p className="font-medium text-green-700 dark:text-green-400">{file.name}</p>
                 <p className="text-sm text-muted-foreground">
@@ -241,8 +253,8 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
               </div>
             ) : (
               <label htmlFor="excel-upload" className="cursor-pointer space-y-3 block">
-                <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
+                <div className="w-14 h-14 mx-auto rounded-full bg-muted flex items-center justify-center">
+                  <Upload className="h-7 w-7 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="font-medium">فایل اکسل را اینجا رها کنید یا کلیک کنید</p>
@@ -251,6 +263,55 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
               </label>
             )}
           </div>
+
+          {/* AI Instructions Section */}
+          <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant="ghost" 
+                className="w-full justify-between gap-2 text-primary hover:bg-primary/5"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  <span>توضیحات اختصاصی برای هوش مصنوعی</span>
+                </div>
+                <MessageSquare className={`h-4 w-4 transition-transform ${showInstructions ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-3">
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-start gap-2 text-sm text-primary">
+                  <Sparkles className="h-4 w-4 mt-0.5 shrink-0" />
+                  <p>
+                    هوش مصنوعی مانند یک کارمند حرفه‌ای با شما همکاری می‌کند. 
+                    هرچه توضیحات دقیق‌تر بدهید، نتیجه بهتری خواهید گرفت.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="custom-instructions" className="text-sm font-medium">
+                    توضیحات و دستورات خاص:
+                  </Label>
+                  <Textarea
+                    id="custom-instructions"
+                    placeholder={`مثال‌ها:
+- ستون اول نام نیرو است و ستون دوم ساعت کارکرد
+- اگر عدد صفر در ستون کارکرد بود یعنی غایب است
+- مبالغ به تومان هستند نه ریال
+- ردیف‌هایی که رنگ زرد دارند مهم هستند
+- تاریخ را از نام شیت استخراج کن
+- فقط اطلاعات نیروها را استخراج کن، سفارشات مهم نیست`}
+                    value={customInstructions}
+                    onChange={(e) => setCustomInstructions(e.target.value)}
+                    className="min-h-[120px] text-sm resize-none"
+                    dir="rtl"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  💡 هرچه توضیحات شما دقیق‌تر باشد، هوش مصنوعی بهتر می‌تواند داده‌ها را استخراج کند.
+                </p>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Progress */}
           {processing && (
