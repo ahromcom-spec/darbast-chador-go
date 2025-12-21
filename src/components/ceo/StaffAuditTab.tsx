@@ -310,15 +310,24 @@ export function StaffAuditTab() {
     }
 
     setGeneratingPdf(true);
+
+    let pdfContainer: HTMLDivElement | null = null;
+
     try {
-      const dateRangeStr = startDate && endDate 
+      const dateRangeStr = startDate && endDate
         ? `${format(startDate, 'yyyy/MM/dd')} تا ${format(endDate, 'yyyy/MM/dd')}`
         : '';
-      
-      const filename = `حساب-${selectedStaffName}-${dateRangeStr}.pdf`;
-      
+
+      const rawFilename = `حساب-${selectedStaffName || selectedStaffCode}-${dateRangeStr}`;
+      const safeFilenameBase = rawFilename
+        .replace(/[\\/:*?"<>|]/g, '-')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^-|-$|^_+|_+$/g, '');
+      const filename = `${safeFilenameBase || 'حساب-نیرو'}.pdf`;
+
       // Create a temporary container for PDF (must be renderable for html2canvas)
-      const pdfContainer = document.createElement('div');
+      pdfContainer = document.createElement('div');
       pdfContainer.setAttribute('dir', 'rtl');
       pdfContainer.style.cssText = [
         'position: fixed',
@@ -330,52 +339,71 @@ export function StaffAuditTab() {
         'direction: rtl',
         'font-family: Tahoma, Arial, sans-serif',
         'pointer-events: none',
-        // Must be in the normal stacking context for reliable html2canvas rendering
         'visibility: visible',
-        'z-index: 1',
+        // Avoid showing it to the user while still allowing capture
+        'opacity: 0',
+        'z-index: -1',
       ].join('; ');
 
-
-      // Build daily records HTML - only records with data
-      const recordsWithData = records.filter(r => 
-        r.work_status === 'حاضر' || 
-        r.amount_received > 0 || 
-        r.amount_spent > 0 || 
-        r.notes
+      // Build daily records HTML - only records with meaningful data
+      const recordsWithData = records.filter((r) =>
+        r.work_status === 'حاضر' ||
+        (r.amount_received || 0) > 0 ||
+        (r.amount_spent || 0) > 0 ||
+        !!r.notes ||
+        !!r.receiving_notes ||
+        !!r.spending_notes
       );
-      
+
       const dailyRecordsHtml = recordsWithData.length > 0 ? `
         <div style="margin-top: 20px; border: 2px solid #d4a574; border-radius: 8px; overflow: hidden;">
           <div style="background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 100%); padding: 12px; border-bottom: 1px solid #d4a574;">
             <h3 style="margin: 0; color: #8b5a2b; font-size: 16px; text-align: center;">جزئیات روزانه</h3>
           </div>
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
             <thead>
               <tr style="background-color: #f5e6d3;">
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">ردیف</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">تاریخ</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">کارکرد</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">اضافه‌کاری</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">دریافتی</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">ردیف</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">تاریخ</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">کارکرد</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">اضافه‌کاری</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">مبلغ دریافتی</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">توضیحات دریافت</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">مبلغ خرج‌کرد</th>
+                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">توضیحات خرج</th>
                 <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">یادداشت</th>
               </tr>
             </thead>
             <tbody>
               ${recordsWithData.map((record, index) => `
                 <tr style="background-color: ${index % 2 === 0 ? '#fff' : '#faf5ef'};">
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center;">${(index + 1).toLocaleString('fa-IR')}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right;">${formatPersianDate(record.report_date)}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center;">${record.work_status === 'حاضر' ? '۱ روز' : 'غایب'}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center;">${record.overtime_hours > 0 ? record.overtime_hours + ' ساعت' : '—'}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; color: ${record.amount_received > 0 ? '#16a34a' : '#666'};">${record.amount_received > 0 ? formatCurrency(record.amount_received) : '—'}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right; max-width: 150px;">${record.notes || record.receiving_notes || '—'}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${(index + 1).toLocaleString('fa-IR')}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">${formatPersianDate(record.report_date)}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.work_status === 'حاضر' ? '۱ روز' : 'غایب'}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.overtime_hours > 0 ? record.overtime_hours + ' ساعت' : '—'}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; white-space: nowrap; color: ${record.amount_received > 0 ? '#16a34a' : '#666'};">${record.amount_received > 0 ? formatCurrency(record.amount_received) : '—'}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right; max-width: 160px; word-break: break-word;">${record.receiving_notes || '—'}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; white-space: nowrap; color: ${record.amount_spent > 0 ? '#dc2626' : '#666'};">${record.amount_spent > 0 ? formatCurrency(record.amount_spent) : '—'}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right; max-width: 160px; word-break: break-word;">${record.spending_notes || '—'}</td>
+                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right; max-width: 160px; word-break: break-word;">${record.notes || '—'}</td>
                 </tr>
               `).join('')}
             </tbody>
+            <tfoot>
+              <tr style="background-color: #f5e6d3; font-weight: bold;">
+                <td colspan="2" style="padding: 8px; border: 1px solid #d4a574; text-align: right;">جمع کل:</td>
+                <td style="padding: 8px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
+                <td style="padding: 8px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${summary.totalOvertime.toLocaleString('fa-IR')} ساعت</td>
+                <td style="padding: 8px; border: 1px solid #d4a574; text-align: center; white-space: nowrap; color: #16a34a;">${formatCurrency(summary.totalReceived)}</td>
+                <td style="padding: 8px; border: 1px solid #d4a574;"></td>
+                <td style="padding: 8px; border: 1px solid #d4a574; text-align: center; white-space: nowrap; color: #dc2626;">${formatCurrency(summary.totalSpent)}</td>
+                <td colspan="2" style="padding: 8px; border: 1px solid #d4a574;"></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       ` : '';
-      
+
       // Determine balance status
       let balanceHtml = '';
       if (summary.remainingBalanceThisMonth > 0) {
@@ -403,7 +431,7 @@ export function StaffAuditTab() {
           </div>
         `;
       }
-      
+
       pdfContainer.innerHTML = `
         <div style="padding: 20px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); min-height: 100%;">
           <!-- Header -->
@@ -411,12 +439,12 @@ export function StaffAuditTab() {
             <h1 style="margin: 0 0 10px 0; color: #8b5a2b; font-size: 22px; font-weight: bold;">حسابکتاب روزمزدی ${selectedStaffName}</h1>
             <p style="margin: 0; color: #a16207; font-size: 14px;">بازه زمانی: ${dateRangeStr}</p>
           </div>
-          
+
           <!-- Salary Info -->
           <div style="background-color: #fef3c7; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; border: 1px solid #fcd34d;">
             <span style="color: #92400e; font-weight: bold;">حقوق روزمزدی: ${formatCurrency(salarySettings.base_daily_salary)}</span>
           </div>
-          
+
           <!-- Summary Table -->
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px;">
             <tbody>
@@ -450,20 +478,20 @@ export function StaffAuditTab() {
               </tr>
             </tbody>
           </table>
-          
+
           <!-- Balance Box -->
           ${balanceHtml}
-          
+
           <!-- Daily Records -->
           ${dailyRecordsHtml}
-          
+
           <!-- Footer -->
           <div style="margin-top: 24px; padding-top: 16px; border-top: 2px dashed #d4a574; text-align: center; font-size: 12px; color: #92400e;">
             <p style="margin: 0;">تاریخ صدور: ${format(new Date(), 'yyyy/MM/dd - HH:mm')}</p>
           </div>
         </div>
       `;
-      
+
       document.body.appendChild(pdfContainer);
 
       // Wait one paint/frame so the element is fully laid out before capture
@@ -487,82 +515,42 @@ export function StaffAuditTab() {
         throw new Error('PDF container has zero size');
       }
 
-      const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
-        filename,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          letterRendering: true,
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: canvasWidth,
-          windowHeight: canvasHeight,
-        },
-        jsPDF: {
-          unit: 'mm' as const,
-          format: 'a4' as const,
-          orientation: 'portrait' as const,
-        },
-      };
+      // Dynamic import for html2pdf
+      const html2pdf = (await import('html2pdf.js')).default;
 
+      await html2pdf()
+        .set({
+          margin: [10, 10, 10, 10] as [number, number, number, number],
+          filename,
+          image: { type: 'jpeg' as const, quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            letterRendering: true,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: canvasWidth,
+            windowHeight: canvasHeight,
+          },
+          jsPDF: {
+            unit: 'mm' as const,
+            format: 'a4' as const,
+            orientation: 'portrait' as const,
+          },
+          pagebreak: { mode: ['css', 'legacy'] },
+        })
+        .from(pdfContainer)
+        .save();
 
-      // Use browser print to PDF via iframe
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position: fixed; top: -9999px; left: -9999px; width: 800px; height: 1200px;';
-      document.body.appendChild(iframe);
-      
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!iframeDoc) {
-        throw new Error('Could not access iframe document');
-      }
-      
-      iframeDoc.open();
-      iframeDoc.write(`
-        <!DOCTYPE html>
-        <html dir="rtl" lang="fa">
-        <head>
-          <meta charset="UTF-8">
-          <title>حساب ${selectedStaffName}</title>
-          <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { 
-              font-family: Tahoma, Arial, sans-serif; 
-              direction: rtl; 
-              background: #fff;
-              padding: 20px;
-            }
-            @media print {
-              body { padding: 10mm; }
-            }
-          </style>
-        </head>
-        <body>${pdfContainer.innerHTML}</body>
-        </html>
-      `);
-      iframeDoc.close();
-      
-      // Wait for content to render
-      await new Promise<void>((resolve) => setTimeout(resolve, 500));
-      
-      // Trigger print dialog (user can save as PDF)
-      iframe.contentWindow?.print();
-      
-      // Clean up after print dialog closes
-      setTimeout(() => {
-        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-        if (pdfContainer.parentNode) pdfContainer.parentNode.removeChild(pdfContainer);
-      }, 1000);
-      
-      toast.success('پنجره چاپ باز شد. برای ذخیره به عنوان PDF، پرینتر را "Save as PDF" انتخاب کنید');
+      toast.success('فایل PDF با موفقیت دانلود شد');
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('خطا در تولید PDF');
     } finally {
       setGeneratingPdf(false);
+      if (pdfContainer?.parentNode) pdfContainer.parentNode.removeChild(pdfContainer);
     }
   };
 
