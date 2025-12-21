@@ -757,8 +757,8 @@ export default function DailyReportModule() {
   };
 
   const totals = calculateTotals();
-  // تراز مالی: پول خرج شده از صندوق باید برابر مبلغ دریافتی نیروها باشد
-  const balance = totals.cashBoxSpent - totals.staffReceived;
+  // تراز مالی: کل مبلغ دریافتی باید برابر کل مبلغ خرج کرده باشد
+  const balance = totals.totalReceived - totals.totalSpent;
   const balanceState: 'balanced' | 'deficit' | 'surplus' = balance === 0 ? 'balanced' : balance < 0 ? 'deficit' : 'surplus';
 
   const getRowColorClass = (color: string) => {
