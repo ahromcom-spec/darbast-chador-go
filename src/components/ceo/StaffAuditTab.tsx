@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,10 @@ import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet } from 'lucide-react';
+import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet, Download } from 'lucide-react';
 import { format } from 'date-fns-jalali';
 import { Separator } from '@/components/ui/separator';
+import html2pdf from 'html2pdf.js';
 
 interface StaffAuditRecord {
   id: string;
@@ -61,6 +62,8 @@ export function StaffAuditTab() {
   const [records, setRecords] = useState<StaffAuditRecord[]>([]);
   const [salarySettings, setSalarySettings] = useState<SalarySettings | null>(null);
   const [summary, setSummary] = useState<AuditSummary | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const fetchSalarySettings = async (staffCode: string) => {
     const { data, error } = await supabase
@@ -219,6 +222,46 @@ export function StaffAuditTab() {
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('fa-IR') + ' تومان';
+  };
+
+  const handleGeneratePdf = async () => {
+    if (!reportRef.current || !summary || !salarySettings) {
+      toast.error('لطفاً ابتدا جستجو کنید');
+      return;
+    }
+
+    setGeneratingPdf(true);
+    try {
+      const dateRangeStr = startDate && endDate 
+        ? `${format(startDate, 'yyyy/MM/dd')} تا ${format(endDate, 'yyyy/MM/dd')}`
+        : '';
+      
+      const filename = `حساب-${selectedStaffName}-${dateRangeStr}.pdf`;
+      
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          logging: false
+        },
+        jsPDF: { 
+          unit: 'mm' as const, 
+          format: 'a4' as const, 
+          orientation: 'portrait' as const 
+        }
+      };
+
+      await html2pdf().set(opt).from(reportRef.current).save();
+      toast.success('فایل PDF با موفقیت ذخیره شد');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('خطا در تولید PDF');
+    } finally {
+      setGeneratingPdf(false);
+    }
   };
 
   return (
@@ -404,17 +447,33 @@ export function StaffAuditTab() {
 
       {/* Comprehensive Salary Calculation Summary - PDF Style */}
       {summary && salarySettings && salarySettings.base_daily_salary > 0 && (
-        <Card className="border-2 border-amber-500/50 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/20">
-                <FileText className="h-5 w-5 text-amber-700" />
+        <div ref={reportRef}>
+          <Card className="border-2 border-amber-500/50 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/20">
+                    <FileText className="h-5 w-5 text-amber-700" />
+                  </div>
+                  <CardTitle className="text-lg text-amber-900 dark:text-amber-100">
+                    حسابکتاب روزمزدی {selectedStaffName}
+                  </CardTitle>
+                </div>
+                <Button
+                  onClick={handleGeneratePdf}
+                  disabled={generatingPdf}
+                  className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {generatingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  دانلود PDF
+                </Button>
               </div>
-              <CardTitle className="text-lg text-amber-900 dark:text-amber-100">
-                حسابکتاب روزمزدی {selectedStaffName}
-              </CardTitle>
-            </div>
-          </CardHeader>
+              {startDate && endDate && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  بازه زمانی: {format(startDate, 'yyyy/MM/dd')} تا {format(endDate, 'yyyy/MM/dd')}
+                </p>
+              )}
+            </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Right Column - Summary Table */}
@@ -544,6 +603,7 @@ export function StaffAuditTab() {
             </div>
           </CardContent>
         </Card>
+      </div>
       )}
 
       {/* Warning if no salary settings */}
