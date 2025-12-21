@@ -510,12 +510,54 @@ export function StaffAuditTab() {
       };
 
 
-      try {
-        await html2pdf().set(opt).from(pdfContainer).save();
-        toast.success('فایل PDF با موفقیت ذخیره شد');
-      } finally {
-        if (pdfContainer.parentNode) pdfContainer.parentNode.removeChild(pdfContainer);
+      // Use browser print to PDF via iframe
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position: fixed; top: -9999px; left: -9999px; width: 800px; height: 1200px;';
+      document.body.appendChild(iframe);
+      
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) {
+        throw new Error('Could not access iframe document');
       }
+      
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html dir="rtl" lang="fa">
+        <head>
+          <meta charset="UTF-8">
+          <title>حساب ${selectedStaffName}</title>
+          <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { 
+              font-family: Tahoma, Arial, sans-serif; 
+              direction: rtl; 
+              background: #fff;
+              padding: 20px;
+            }
+            @media print {
+              body { padding: 10mm; }
+            }
+          </style>
+        </head>
+        <body>${pdfContainer.innerHTML}</body>
+        </html>
+      `);
+      iframeDoc.close();
+      
+      // Wait for content to render
+      await new Promise<void>((resolve) => setTimeout(resolve, 500));
+      
+      // Trigger print dialog (user can save as PDF)
+      iframe.contentWindow?.print();
+      
+      // Clean up after print dialog closes
+      setTimeout(() => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        if (pdfContainer.parentNode) pdfContainer.parentNode.removeChild(pdfContainer);
+      }, 1000);
+      
+      toast.success('پنجره چاپ باز شد. برای ذخیره به عنوان PDF، پرینتر را "Save as PDF" انتخاب کنید');
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('خطا در تولید PDF');
@@ -790,129 +832,132 @@ export function StaffAuditTab() {
             </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Right Column - Summary Table */}
+              {/* Right Column - Earnings (بستانکار - چه چیزی به نیرو تعلق دارد) */}
               <div className="space-y-4">
-                <div className="bg-amber-100 dark:bg-amber-900/40 rounded-lg p-3">
-                  <h4 className="font-bold text-amber-900 dark:text-amber-100 mb-3 text-center">
-                    حقوق روزمزدی: {formatCurrency(salarySettings.base_daily_salary)}
+                <div className="bg-green-100 dark:bg-green-900/40 rounded-lg p-3 border border-green-300">
+                  <h4 className="font-bold text-green-900 dark:text-green-100 text-center text-lg">
+                    بستانکار (حقوق نیرو)
                   </h4>
                 </div>
                 
-                <Table>
+                <Table className="border border-green-200 rounded-lg overflow-hidden">
                   <TableBody>
-                    <TableRow className="bg-amber-100/50">
-                      <TableCell className="font-medium text-right">جمع کارکرد</TableCell>
-                      <TableCell className="text-left font-bold">{summary.totalDaysWorked.toLocaleString('fa-IR')} روز</TableCell>
+                    <TableRow className="bg-green-50/50 dark:bg-green-900/20">
+                      <TableCell className="font-medium text-right">حقوق پایه ({summary.totalDaysWorked} روز × {salarySettings.base_daily_salary.toLocaleString('fa-IR')})</TableCell>
+                      <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.estimatedSalary)}</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium text-right">جمع اضافه‌کاری</TableCell>
-                      <TableCell className="text-left font-bold">{summary.totalOvertime.toLocaleString('fa-IR')} ساعت</TableCell>
+                      <TableCell className="font-medium text-right">اضافه‌کاری ({summary.totalOvertime} ساعت)</TableCell>
+                      <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.overtimePay)}</TableCell>
                     </TableRow>
-                    <TableRow className="bg-amber-100/50">
-                      <TableCell className="font-medium text-right">جمع دریافتی این ماه</TableCell>
-                      <TableCell className="text-left font-bold text-green-600">{formatCurrency(summary.totalReceived)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium text-right">جمع خرج‌کرد این ماه</TableCell>
-                      <TableCell className="text-left font-bold text-red-600">{formatCurrency(summary.totalSpent)}</TableCell>
-                    </TableRow>
-                    <TableRow className="bg-amber-100/50">
-                      <TableCell className="font-medium text-right">کارکرد و مزایای این ماه</TableCell>
-                      <TableCell className="text-left font-bold">{formatCurrency(summary.totalWorkAndBenefits)}</TableCell>
+                    <TableRow className="bg-green-50/50 dark:bg-green-900/20">
+                      <TableCell className="font-medium text-right">مزایا</TableCell>
+                      <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.benefits)}</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium text-right">الباقی حساب مانده از ماه قبل</TableCell>
-                      <TableCell className="text-left">{formatCurrency(summary.remainingBalanceFromPreviousMonth)}</TableCell>
+                      <TableCell className="font-medium text-right">مانده از ماه قبل</TableCell>
+                      <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.remainingBalanceFromPreviousMonth)}</TableCell>
                     </TableRow>
-                    <TableRow className="bg-amber-100/50">
-                      <TableCell className="font-medium text-right">دریافتی اضافی در ماه قبل</TableCell>
-                      <TableCell className="text-left">{formatCurrency(summary.extraReceivedPreviousMonth)}</TableCell>
+                    <TableRow className="bg-green-50/50 dark:bg-green-900/20">
+                      <TableCell className="font-medium text-right">خرج‌کرد بر سر کار</TableCell>
+                      <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.totalSpent)}</TableCell>
+                    </TableRow>
+                    <TableRow className="bg-green-200 dark:bg-green-800 border-t-2 border-green-400">
+                      <TableCell className="font-bold text-right text-lg">جمع بستانکار:</TableCell>
+                      <TableCell className="text-left font-bold text-lg text-green-800 dark:text-green-200">
+                        {formatCurrency(summary.estimatedSalary + summary.overtimePay + summary.benefits + summary.remainingBalanceFromPreviousMonth + summary.totalSpent)}
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </div>
               
-              {/* Left Column - Final Calculation */}
+              {/* Left Column - Deductions (بدهکار - چه چیزی از نیرو کم می‌شود) */}
               <div className="space-y-4">
-                <Table>
+                <div className="bg-red-100 dark:bg-red-900/40 rounded-lg p-3 border border-red-300">
+                  <h4 className="font-bold text-red-900 dark:text-red-100 text-center text-lg">
+                    بدهکار (کسورات)
+                  </h4>
+                </div>
+                
+                <Table className="border border-red-200 rounded-lg overflow-hidden">
                   <TableBody>
-                    <TableRow className="bg-amber-200/50">
-                      <TableCell className="font-bold text-right">جمع کارکرد کل</TableCell>
-                      <TableCell className="text-left font-bold">{formatCurrency(summary.totalWorkAmount)}</TableCell>
+                    <TableRow className="bg-red-50/50 dark:bg-red-900/20">
+                      <TableCell className="font-medium text-right">دریافتی این ماه</TableCell>
+                      <TableCell className="text-left font-bold text-red-600">{formatCurrency(summary.totalReceived)}</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium text-right">حقوق پایه ({summary.totalDaysWorked} روز × {salarySettings.base_daily_salary.toLocaleString('fa-IR')})</TableCell>
-                      <TableCell className="text-left">{formatCurrency(summary.estimatedSalary)}</TableCell>
+                      <TableCell className="font-medium text-right">دریافتی اضافی از ماه قبل</TableCell>
+                      <TableCell className="text-left font-bold text-red-600">{formatCurrency(summary.extraReceivedPreviousMonth)}</TableCell>
                     </TableRow>
-                    <TableRow className="bg-amber-100/50">
-                      <TableCell className="font-medium text-right">اضافه‌کاری ({summary.totalOvertime} ساعت)</TableCell>
-                      <TableCell className="text-left">{formatCurrency(summary.overtimePay)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium text-right">مزایا</TableCell>
-                      <TableCell className="text-left">{formatCurrency(summary.benefits)}</TableCell>
-                    </TableRow>
-                    <TableRow className="bg-amber-100/50">
+                    <TableRow className="bg-red-50/50 dark:bg-red-900/20">
                       <TableCell className="font-medium text-right">کسورات</TableCell>
-                      <TableCell className="text-left text-red-600">{formatCurrency(summary.deductions)}</TableCell>
+                      <TableCell className="text-left font-bold text-red-600">{formatCurrency(summary.deductions)}</TableCell>
+                    </TableRow>
+                    <TableRow className="bg-red-200 dark:bg-red-800 border-t-2 border-red-400">
+                      <TableCell className="font-bold text-right text-lg">جمع بدهکار:</TableCell>
+                      <TableCell className="text-left font-bold text-lg text-red-800 dark:text-red-200">
+                        {formatCurrency(summary.totalReceived + summary.extraReceivedPreviousMonth + summary.deductions)}
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
                 
-                <Separator className="bg-amber-400" />
-                
-                {/* Final Balance - Highlighted */}
-                <div className="space-y-3">
-                  {summary.remainingBalanceThisMonth > 0 ? (
-                    <div className="bg-sky-500 text-white rounded-lg p-4 text-center">
-                      <p className="text-sm opacity-90">الباقی کل حساب از این ماه:</p>
-                      <p className="text-2xl font-bold">{formatCurrency(summary.remainingBalanceThisMonth)}</p>
-                      <p className="text-xs opacity-75 mt-1">(شرکت بدهکار به نیرو)</p>
-                    </div>
-                  ) : summary.extraReceivedThisMonth > 0 ? (
-                    <div className="bg-amber-400 text-amber-900 rounded-lg p-4 text-center">
-                      <p className="text-sm opacity-90">دریافتی اضافی در این ماه:</p>
-                      <p className="text-2xl font-bold">{formatCurrency(summary.extraReceivedThisMonth)}</p>
-                      <p className="text-xs opacity-75 mt-1">(نیرو بیشتر از حق خود دریافت کرده)</p>
-                    </div>
-                  ) : (
-                    <div className="bg-green-500 text-white rounded-lg p-4 text-center">
-                      <p className="text-sm opacity-90">تسویه کامل</p>
-                      <p className="text-2xl font-bold">۰ تومان</p>
-                      <p className="text-xs opacity-75 mt-1">(حساب‌ها تسویه شده)</p>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Summary Box */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-amber-300 shadow-lg">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">مجموع حقوق:</span>
-                      <span className="font-bold">{formatCurrency(summary.estimatedSalary)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">+ اضافه‌کاری:</span>
-                      <span className="font-bold">{formatCurrency(summary.overtimePay)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">- دریافتی‌ها:</span>
-                      <span className="font-bold text-green-600">{formatCurrency(summary.totalReceived)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">+ خرج‌کرد:</span>
-                      <span className="font-bold text-red-600">{formatCurrency(summary.totalSpent)}</span>
-                    </div>
-                    <div className="col-span-2 pt-2 border-t border-amber-200">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-lg">مانده حساب:</span>
-                        <span className={`font-bold text-lg ${summary.netBalance >= 0 ? 'text-blue-600' : 'text-amber-600'}`}>
-                          {summary.netBalance >= 0 ? '' : '-'}{formatCurrency(Math.abs(summary.netBalance))}
-                        </span>
-                      </div>
-                    </div>
+                {/* Spacer to align with left column */}
+                <div className="h-[52px]"></div>
+              </div>
+            </div>
+            
+            <Separator className="my-6 bg-amber-400" />
+            
+            {/* Final Balance Calculation */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Calculation Summary */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-amber-300 shadow-lg">
+                <h5 className="font-bold text-amber-800 dark:text-amber-200 mb-3 text-center">محاسبه مانده حساب</h5>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/30 rounded">
+                    <span className="text-green-700 dark:text-green-300">جمع بستانکار:</span>
+                    <span className="font-bold text-green-700 dark:text-green-300">
+                      {formatCurrency(summary.estimatedSalary + summary.overtimePay + summary.benefits + summary.remainingBalanceFromPreviousMonth + summary.totalSpent)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-red-50 dark:bg-red-900/30 rounded">
+                    <span className="text-red-700 dark:text-red-300">جمع بدهکار:</span>
+                    <span className="font-bold text-red-700 dark:text-red-300">
+                      - {formatCurrency(summary.totalReceived + summary.extraReceivedPreviousMonth + summary.deductions)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-amber-100 dark:bg-amber-900/40 rounded border-t-2 border-amber-400">
+                    <span className="font-bold text-lg">تفاوت (مانده):</span>
+                    <span className={`font-bold text-lg ${summary.netBalance >= 0 ? 'text-blue-600' : 'text-amber-600'}`}>
+                      {formatCurrency(Math.abs(summary.netBalance))}
+                    </span>
                   </div>
                 </div>
+              </div>
+              
+              {/* Final Balance - Highlighted */}
+              <div className="flex items-center">
+                {summary.remainingBalanceThisMonth > 0 ? (
+                  <div className="bg-sky-500 text-white rounded-lg p-6 text-center w-full shadow-lg">
+                    <p className="text-sm opacity-90">مانده حساب این ماه:</p>
+                    <p className="text-3xl font-bold my-2">{formatCurrency(summary.remainingBalanceThisMonth)}</p>
+                    <p className="text-sm opacity-75">(شرکت بدهکار به نیرو)</p>
+                  </div>
+                ) : summary.extraReceivedThisMonth > 0 ? (
+                  <div className="bg-amber-400 text-amber-900 rounded-lg p-6 text-center w-full shadow-lg">
+                    <p className="text-sm opacity-90">دریافتی اضافی این ماه:</p>
+                    <p className="text-3xl font-bold my-2">{formatCurrency(summary.extraReceivedThisMonth)}</p>
+                    <p className="text-sm opacity-75">(نیرو بیشتر از حق خود دریافت کرده)</p>
+                  </div>
+                ) : (
+                  <div className="bg-green-500 text-white rounded-lg p-6 text-center w-full shadow-lg">
+                    <p className="text-sm opacity-90">تسویه کامل</p>
+                    <p className="text-3xl font-bold my-2">۰ تومان</p>
+                    <p className="text-sm opacity-75">(حساب‌ها تسویه شده)</p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
