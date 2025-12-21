@@ -354,11 +354,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
         mapboxLayerRef.current = null;
       }
 
-      toast({
-        title: 'نقشه جایگزین فعال شد',
-        description: 'به دلیل عدم دسترسی پایدار به سرویس نقشه، از نقشه جایگزین استفاده شد.',
-        variant: 'default',
-      });
+      // پیام هشدار نقشه جایگزین طبق درخواست نمایش داده نمی‌شود
     };
 
     const onTileLoad = () => {
