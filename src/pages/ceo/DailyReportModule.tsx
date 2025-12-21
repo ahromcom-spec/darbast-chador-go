@@ -555,7 +555,7 @@ export default function DailyReportModule() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                <div className="overflow-visible">
                   <Table className="table-auto">
                     <TableHeader>
                       <TableRow className="bg-amber-100 dark:bg-amber-900/30">
