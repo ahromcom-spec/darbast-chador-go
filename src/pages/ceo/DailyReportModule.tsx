@@ -358,10 +358,22 @@ export default function DailyReportModule() {
   const calculateTotals = () => {
     const presentCount = staffReports.filter(s => s.work_status === 'کارکرده' && !s.is_cash_box).length;
     const totalOvertime = staffReports.reduce((sum, s) => sum + (s.overtime_hours || 0), 0);
+    
+    // صندوق: مبلغ خرج کرده = پرداخت به نیروها
+    const cashBoxSpent = staffReports
+      .filter(s => s.is_cash_box)
+      .reduce((sum, s) => sum + (s.amount_spent || 0), 0);
+    
+    // نیروها: مبلغ دریافتی از صندوق
+    const staffReceived = staffReports
+      .filter(s => !s.is_cash_box)
+      .reduce((sum, s) => sum + (s.amount_received || 0), 0);
+    
+    // کل دریافتی و خرج کرده برای نمایش
     const totalReceived = staffReports.reduce((sum, s) => sum + (s.amount_received || 0), 0);
     const totalSpent = staffReports.reduce((sum, s) => sum + (s.amount_spent || 0), 0);
     
-    return { presentCount, totalOvertime, totalReceived, totalSpent };
+    return { presentCount, totalOvertime, totalReceived, totalSpent, cashBoxSpent, staffReceived };
   };
 
   const saveReport = async () => {
@@ -447,7 +459,8 @@ export default function DailyReportModule() {
   };
 
   const totals = calculateTotals();
-  const balance = totals.totalReceived - totals.totalSpent;
+  // تراز مالی: پول خرج شده از صندوق باید برابر مبلغ دریافتی نیروها باشد
+  const balance = totals.cashBoxSpent - totals.staffReceived;
 
   const getRowColorClass = (color: string) => {
     return ROW_COLORS.find(c => c.value === color)?.class || 'bg-background';
