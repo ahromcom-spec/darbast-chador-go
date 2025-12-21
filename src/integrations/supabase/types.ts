@@ -579,6 +579,146 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_report_orders: {
+        Row: {
+          activity_description: string | null
+          created_at: string
+          daily_report_id: string
+          id: string
+          notes: string | null
+          order_id: string
+          row_color: string | null
+          service_details: string | null
+          team_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_description?: string | null
+          created_at?: string
+          daily_report_id: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          row_color?: string | null
+          service_details?: string | null
+          team_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_description?: string | null
+          created_at?: string
+          daily_report_id?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          row_color?: string | null
+          service_details?: string | null
+          team_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_report_orders_daily_report_id_fkey"
+            columns: ["daily_report_id"]
+            isOneToOne: false
+            referencedRelation: "daily_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_report_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_report_staff: {
+        Row: {
+          amount_received: number | null
+          amount_spent: number | null
+          created_at: string
+          daily_report_id: string
+          id: string
+          is_cash_box: boolean | null
+          notes: string | null
+          overtime_hours: number | null
+          receiving_notes: string | null
+          spending_notes: string | null
+          staff_name: string | null
+          staff_user_id: string | null
+          updated_at: string
+          work_status: string
+        }
+        Insert: {
+          amount_received?: number | null
+          amount_spent?: number | null
+          created_at?: string
+          daily_report_id: string
+          id?: string
+          is_cash_box?: boolean | null
+          notes?: string | null
+          overtime_hours?: number | null
+          receiving_notes?: string | null
+          spending_notes?: string | null
+          staff_name?: string | null
+          staff_user_id?: string | null
+          updated_at?: string
+          work_status?: string
+        }
+        Update: {
+          amount_received?: number | null
+          amount_spent?: number | null
+          created_at?: string
+          daily_report_id?: string
+          id?: string
+          is_cash_box?: boolean | null
+          notes?: string | null
+          overtime_hours?: number | null
+          receiving_notes?: string | null
+          spending_notes?: string | null
+          staff_name?: string | null
+          staff_user_id?: string | null
+          updated_at?: string
+          work_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_report_staff_daily_report_id_fkey"
+            columns: ["daily_report_id"]
+            isOneToOne: false
+            referencedRelation: "daily_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_reports: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          report_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          report_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          report_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       districts: {
         Row: {
           created_at: string | null
