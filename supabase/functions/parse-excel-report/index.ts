@@ -38,7 +38,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sheetsData, knownStaffMembers } = await req.json();
+    const { sheetsData, knownStaffMembers, customInstructions } = await req.json();
 
     if (!sheetsData || !Array.isArray(sheetsData)) {
       return new Response(
@@ -57,6 +57,7 @@ serve(async (req) => {
 
     console.log('Processing', sheetsData.length, 'sheets');
     console.log('Known staff members:', knownStaffMembers?.length || 0);
+    console.log('Custom instructions provided:', !!customInstructions);
 
     const parsedReports: ParsedDailyReport[] = [];
 
@@ -69,23 +70,36 @@ serve(async (req) => {
         .map((row, idx) => `Row ${idx + 1}: ${row.join(' | ')}`)
         .join('\n');
 
+      // Build dynamic system prompt with custom instructions
+      const customInstructionsSection = customInstructions 
+        ? `
+CUSTOM INSTRUCTIONS FROM USER (VERY IMPORTANT - FOLLOW THESE CAREFULLY):
+${customInstructions}
+
+The user has provided specific instructions above. These take priority over default rules where applicable.
+`
+        : '';
+
       const systemPrompt = `You are an expert at parsing Persian/Farsi daily work reports from Excel sheets.
-Your task is to extract structured data from the Excel content.
+You are like a highly skilled, intelligent, and professional employee who works precisely and carefully.
+Your task is to extract structured data from the Excel content based on user instructions and context.
 
 KNOWN STAFF MEMBERS IN THE SYSTEM:
 ${knownStaffMembers?.map((s: any) => `- ${s.full_name} (کد: ${s.code || 'ندارد'})`).join('\n') || 'هیچ نیروی ثبت شده‌ای وجود ندارد'}
-
-IMPORTANT RULES:
+${customInstructionsSection}
+DEFAULT RULES (apply unless overridden by custom instructions):
 1. Extract the date from the sheet name if it contains Persian date (like "30 آذر 1404" or "1 دی 1404")
 2. For staff names, try to match with the known staff members above. Look for similarities in names.
 3. "کارت صندوق اهرم" is a special cash box entry - set isCashBox: true for it
-4. Work status "کارکرده" or "1روز کارکرد" means حاضر (present), "غایب" means غایب (absent)
-5. Parse amounts like "2,000,000 تومان" as numbers (2000000)
+4. Work status "کارکرده" or "1روز کارکرد" means حاضر (present), "غایب" or "0" in work column means غایب (absent)
+5. Parse amounts like "2,000,000 تومان" as numbers (2000000). Amounts are typically in Tomans unless specified otherwise.
 6. Extract overtime hours from text like "0.5 ساعت" 
 7. Look for the staff section that typically has columns: نیروها, کارکرد, اضافه کاری, مبلغ دریافتی, etc.
 8. Look for the orders section that has project info, activity description, team names
 9. Skip rows that are just "0" or empty
 10. If a row has meaningful text in "توضیحات مبلغ خرج کرد", include it in spendingNotes
+11. Be intelligent about understanding the context and structure of the data
+12. If something is unclear, make your best professional judgment based on the context
 
 OUTPUT FORMAT - Return valid JSON only:
 {
