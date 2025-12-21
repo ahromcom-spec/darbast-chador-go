@@ -3333,7 +3333,7 @@ export type Database = {
         Insert: {
           base_daily_salary?: number
           created_at?: string
-          created_by: string
+          created_by?: string
           id?: string
           notes?: string | null
           overtime_rate_fraction?: number
