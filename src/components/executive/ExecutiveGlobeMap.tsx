@@ -39,6 +39,13 @@ const escapeHtml = (value: string) =>
     })[ch] as string
   );
 
+interface OrderNotes {
+  dimensions?: Array<{ length?: number; width?: number; height?: number }>;
+  description?: string;
+  locationPurpose?: string;
+  service_type?: string;
+}
+
 interface OrderData {
   id: string;
   code: string;
@@ -50,6 +57,7 @@ interface OrderData {
   location_lng: number;
   first_image_url?: string | null;
   images_count?: number;
+  notes?: string | OrderNotes | null;
   subcategories: {
     id: string;
     name: string;
@@ -103,6 +111,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
           location_lat,
           location_lng,
           hierarchy_project_id,
+          notes,
           subcategories!projects_v3_subcategory_id_fkey (
             id,
             name,
@@ -502,6 +511,35 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
         ? `<div class="exec-popup__thumb"><img src="${escapeHtml(o.first_image_url)}" alt="تصویر سفارش" loading="lazy" decoding="async" /></div>`
         : `<div class="exec-popup__thumb exec-popup__thumb--empty"></div>`;
 
+      // پارس کردن notes برای استخراج ابعاد و شرح فعالیت
+      let description = '';
+      let dimensions = '';
+      
+      if (o.notes) {
+        try {
+          const notesData: OrderNotes = typeof o.notes === 'string' ? JSON.parse(o.notes) : o.notes;
+          
+          // شرح فعالیت
+          if (notesData.description) {
+            description = escapeHtml(notesData.description);
+          } else if (notesData.locationPurpose) {
+            description = escapeHtml(notesData.locationPurpose);
+          }
+          
+          // ابعاد
+          if (notesData.dimensions && notesData.dimensions.length > 0) {
+            const dims = notesData.dimensions[0];
+            const parts = [];
+            if (dims.length) parts.push(`طول: ${dims.length}م`);
+            if (dims.width) parts.push(`عرض: ${dims.width}م`);
+            if (dims.height) parts.push(`ارتفاع: ${dims.height}م`);
+            dimensions = parts.join(' × ');
+          }
+        } catch (e) {
+          // خطا در پارس notes
+        }
+      }
+
       return `
         <div class="exec-popup__order">
           ${img}
@@ -509,6 +547,8 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
             <div class="exec-popup__code">کد: ${code}</div>
             <div class="exec-popup__address">📍 ${address}</div>
             ${customer ? `<div class="exec-popup__customer">👤 ${customer}</div>` : ''}
+            ${description ? `<div class="exec-popup__description">📝 ${description}</div>` : ''}
+            ${dimensions ? `<div class="exec-popup__dimensions">📐 ${dimensions}</div>` : ''}
             <div class="exec-popup__status">
               <span class="exec-popup__status-dot" style="background:${color};"></span>
               <span>${escapeHtml(statusText)}</span>
@@ -936,6 +976,24 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
           font-size: 11px;
           color: hsl(var(--muted-foreground));
           margin-top: 4px;
+        }
+
+        .exec-popup__description {
+          font-size: 11px;
+          color: hsl(var(--primary));
+          margin-top: 4px;
+          font-weight: 500;
+        }
+
+        .exec-popup__dimensions {
+          font-size: 11px;
+          color: hsl(var(--amber-600, #d97706));
+          margin-top: 4px;
+          font-weight: 600;
+          background: hsl(var(--amber-100, #fef3c7) / 0.5);
+          padding: 2px 8px;
+          border-radius: 4px;
+          display: inline-block;
         }
 
         .exec-popup__status {
