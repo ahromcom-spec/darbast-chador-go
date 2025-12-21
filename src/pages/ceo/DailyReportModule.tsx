@@ -611,29 +611,29 @@ export default function DailyReportModule() {
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
-                      <Table className="table-auto">
+                      <Table className="table-auto border-collapse border border-blue-300">
                         <TableHeader>
                           <TableRow className="bg-blue-100 dark:bg-blue-900/30">
-                            <TableHead className="w-[50px]"></TableHead>
-                            <TableHead className="whitespace-nowrap px-2">رنگ</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">اکیپ</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">تعداد، ابعاد و متراژ خدمات</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">شرح فعالیت امروز</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">سفارش مشتری را انتخاب کنید</TableHead>
+                            <TableHead className="w-[50px] border border-blue-300"></TableHead>
+                            <TableHead className="whitespace-nowrap px-2 border border-blue-300">رنگ</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">توضیحات</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">اکیپ</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">تعداد، ابعاد و متراژ خدمات</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">شرح فعالیت امروز</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">سفارش مشتری را انتخاب کنید</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {orderReports.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground border border-blue-200">
                                 هنوز سفارشی اضافه نشده است
                               </TableCell>
                             </TableRow>
                           ) : (
                             orderReports.map((row, index) => (
-                              <TableRow key={index} className={getRowColorClass(row.row_color)}>
-                                <TableCell>
+                              <TableRow key={index} className={`${getRowColorClass(row.row_color)} even:opacity-90`}>
+                                <TableCell className="border border-blue-200">
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -643,10 +643,10 @@ export default function DailyReportModule() {
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="border border-blue-200">
                                   <div className={`w-6 h-6 rounded ${getRowColorClass(row.row_color)}`}></div>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="border border-blue-200">
                                   <AutoResizeTextarea
                                     value={row.notes}
                                     onChange={(e) => updateOrderRow(index, 'notes', e.target.value)}
@@ -654,7 +654,7 @@ export default function DailyReportModule() {
                                     placeholder="توضیحات..."
                                   />
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="border border-blue-200">
                                   <Input
                                     value={row.team_name}
                                     onChange={(e) => updateOrderRow(index, 'team_name', e.target.value)}
@@ -662,7 +662,7 @@ export default function DailyReportModule() {
                                     placeholder="نام اکیپ"
                                   />
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="border border-blue-200">
                                   <AutoResizeTextarea
                                     value={row.service_details}
                                     onChange={(e) => updateOrderRow(index, 'service_details', e.target.value)}
@@ -670,7 +670,7 @@ export default function DailyReportModule() {
                                     placeholder="جزئیات خدمات..."
                                   />
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="border border-blue-200">
                                   <AutoResizeTextarea
                                     value={row.activity_description}
                                     onChange={(e) => updateOrderRow(index, 'activity_description', e.target.value)}
@@ -678,7 +678,7 @@ export default function DailyReportModule() {
                                     placeholder="شرح فعالیت..."
                                   />
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="border border-blue-200">
                                   <OrderSearchSelect
                                     orders={orders}
                                     value={row.order_id}
@@ -713,27 +713,27 @@ export default function DailyReportModule() {
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-visible">
-                      <Table className="table-auto">
+                      <Table className="table-auto border-collapse border border-amber-300">
                         <TableHeader>
                           <TableRow className="bg-amber-100 dark:bg-amber-900/30">
-                            <TableHead className="w-[50px]"></TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات مبلغ خرج کرد</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">مبلغ خرج کرده شده در کار</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">توضیحات دریافتی</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">مبلغ دریافتی</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">اضافه کاری</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">کارکرد</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2">نیروها</TableHead>
+                            <TableHead className="w-[50px] border border-amber-300"></TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات مبلغ خرج کرد</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">مبلغ خرج کرده شده در کار</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات دریافتی</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">مبلغ دریافتی</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">اضافه کاری</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">کارکرد</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">نیروها</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {staffReports.map((row, index) => (
                             <TableRow 
                               key={index} 
-                              className={row.is_cash_box ? 'bg-amber-50 dark:bg-amber-900/20' : ''}
+                              className={row.is_cash_box ? 'bg-amber-50 dark:bg-amber-900/20' : 'even:bg-amber-50/50'}
                             >
-                              <TableCell>
+                              <TableCell className="border border-amber-200">
                                 {!row.is_cash_box && (
                                   <Button
                                     variant="ghost"
@@ -745,7 +745,7 @@ export default function DailyReportModule() {
                                   </Button>
                                 )}
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="border border-amber-200">
                                 <AutoResizeTextarea
                                   value={row.notes}
                                   onChange={(e) => updateStaffRow(index, 'notes', e.target.value)}
@@ -753,7 +753,7 @@ export default function DailyReportModule() {
                                   className="min-w-[100px] min-h-[36px]"
                                 />
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="border border-amber-200">
                                 <AutoResizeTextarea
                                   value={row.spending_notes}
                                   onChange={(e) => updateStaffRow(index, 'spending_notes', e.target.value)}
@@ -761,24 +761,24 @@ export default function DailyReportModule() {
                                   className="min-w-[100px] min-h-[36px]"
                                 />
                               </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
+                              <TableCell className="border border-amber-200">
+                                <div className="relative">
                                   <Input
                                     type="text"
                                     inputMode="numeric"
-                                    value={row.amount_spent === 0 ? '' : row.amount_spent.toString()}
+                                    value={row.amount_spent === 0 ? '' : row.amount_spent.toLocaleString('fa-IR')}
                                     onChange={(e) => {
-                                      const val = e.target.value.replace(/^0+(?=\d)/, '');
-                                      updateStaffRow(index, 'amount_spent', parseFloat(val) || 0);
+                                      const val = e.target.value.replace(/[^\d]/g, '');
+                                      updateStaffRow(index, 'amount_spent', parseInt(val) || 0);
                                     }}
-                                    className="min-w-[80px] w-[90px]"
+                                    className="min-w-[120px] pl-12 text-left"
                                     dir="ltr"
                                     placeholder="0"
                                   />
-                                  <span className="text-sm text-muted-foreground whitespace-nowrap">تومان</span>
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
                                 </div>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="border border-amber-200">
                                 <AutoResizeTextarea
                                   value={row.receiving_notes}
                                   onChange={(e) => updateStaffRow(index, 'receiving_notes', e.target.value)}
@@ -786,28 +786,28 @@ export default function DailyReportModule() {
                                   className="min-w-[100px] min-h-[36px]"
                                 />
                               </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
+                              <TableCell className="border border-amber-200">
+                                <div className="relative">
                                   <Input
                                     type="text"
                                     inputMode="numeric"
-                                    value={row.amount_received === 0 ? '' : row.amount_received.toString()}
+                                    value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('fa-IR')}
                                     onChange={(e) => {
-                                      const val = e.target.value.replace(/^0+(?=\d)/, '');
-                                      updateStaffRow(index, 'amount_received', parseFloat(val) || 0);
+                                      const val = e.target.value.replace(/[^\d]/g, '');
+                                      updateStaffRow(index, 'amount_received', parseInt(val) || 0);
                                     }}
-                                    className="min-w-[80px] w-[90px]"
+                                    className="min-w-[120px] pl-12 text-left"
                                     dir="ltr"
                                     placeholder="0"
                                   />
-                                  <span className="text-sm text-muted-foreground whitespace-nowrap">تومان</span>
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
                                 </div>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="border border-amber-200">
                                 {row.is_cash_box ? (
                                   <span className="text-muted-foreground">—</span>
                                 ) : (
-                                  <div className="flex items-center gap-1">
+                                  <div className="relative">
                                     <Input
                                       type="text"
                                       inputMode="decimal"
@@ -816,15 +816,15 @@ export default function DailyReportModule() {
                                         const val = e.target.value.replace(/^0+(?=\d)/, '');
                                         updateStaffRow(index, 'overtime_hours', parseFloat(val) || 0);
                                       }}
-                                      className="min-w-[60px] w-[70px]"
+                                      className="min-w-[80px] pl-10 text-left"
                                       dir="ltr"
                                       placeholder="0"
                                     />
-                                    <span className="text-sm text-muted-foreground whitespace-nowrap">ساعت</span>
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">ساعت</span>
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="border border-amber-200">
                                 {row.is_cash_box ? (
                                   <span className="text-muted-foreground">—</span>
                                 ) : (
@@ -842,7 +842,7 @@ export default function DailyReportModule() {
                                   </Select>
                                 )}
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="border border-amber-200">
                                 {row.is_cash_box ? (
                                   <div className="font-semibold text-amber-700">{row.staff_name}</div>
                                 ) : (
@@ -861,13 +861,13 @@ export default function DailyReportModule() {
 
                           {/* Summary Row */}
                           <TableRow className="bg-amber-200 dark:bg-amber-800/40 font-bold">
-                            <TableCell></TableCell>
-                            <TableCell colSpan={2}></TableCell>
-                            <TableCell>{totals.totalSpent.toLocaleString()} تومان</TableCell>
-                            <TableCell></TableCell>
-                            <TableCell>{totals.totalReceived.toLocaleString()} تومان</TableCell>
-                            <TableCell>{totals.totalOvertime} ساعت</TableCell>
-                            <TableCell>{totals.presentCount} نیرو</TableCell>
+                            <TableCell className="border border-amber-300"></TableCell>
+                            <TableCell className="border border-amber-300" colSpan={2}></TableCell>
+                            <TableCell className="border border-amber-300">{totals.totalSpent.toLocaleString('fa-IR')} تومان</TableCell>
+                            <TableCell className="border border-amber-300"></TableCell>
+                            <TableCell className="border border-amber-300">{totals.totalReceived.toLocaleString('fa-IR')} تومان</TableCell>
+                            <TableCell className="border border-amber-300">{totals.totalOvertime} ساعت</TableCell>
+                            <TableCell className="border border-amber-300">{totals.presentCount} نیرو</TableCell>
                             <TableCell>جمع:</TableCell>
                           </TableRow>
 
