@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check } from 'lucide-react';
+import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -923,12 +923,25 @@ export default function DailyReportModule() {
                                   />
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
-                                  <OrderSearchSelect
-                                    orders={orders}
-                                    value={row.order_id}
-                                    onValueChange={(value) => updateOrderRow(index, 'order_id', value)}
-                                    placeholder="انتخاب سفارش"
-                                  />
+                                  <div className="flex items-center gap-2">
+                                    <OrderSearchSelect
+                                      orders={orders}
+                                      value={row.order_id}
+                                      onValueChange={(value) => updateOrderRow(index, 'order_id', value)}
+                                      placeholder="انتخاب سفارش"
+                                    />
+                                    {row.order_id && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => window.open(`/orders/${row.order_id}`, '_blank')}
+                                        title="مشاهده جزئیات سفارش"
+                                        className="shrink-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))
