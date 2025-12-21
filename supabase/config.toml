@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.assistant-chat]
 verify_jwt = false
+
+[functions.parse-excel-report]
+verify_jwt = true
