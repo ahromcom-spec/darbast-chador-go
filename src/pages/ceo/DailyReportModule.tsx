@@ -45,7 +45,7 @@ interface StaffReportRow {
   id?: string;
   staff_user_id: string | null;
   staff_name: string;
-  work_status: 'حاضر' | 'غایب';
+  work_status: 'کارکرده' | 'غایب';
   overtime_hours: number;
   amount_received: number;
   receiving_notes: string;
@@ -211,7 +211,7 @@ export default function DailyReportModule() {
         setStaffReports([{
           staff_user_id: null,
           staff_name: 'کارت صندوق اهرم',
-          work_status: 'حاضر',
+          work_status: 'کارکرده',
           overtime_hours: 0,
           amount_received: 0,
           receiving_notes: '',
@@ -288,7 +288,7 @@ export default function DailyReportModule() {
   };
 
   const calculateTotals = () => {
-    const presentCount = staffReports.filter(s => s.work_status === 'حاضر' && !s.is_cash_box).length;
+    const presentCount = staffReports.filter(s => s.work_status === 'کارکرده' && !s.is_cash_box).length;
     const totalOvertime = staffReports.reduce((sum, s) => sum + (s.overtime_hours || 0), 0);
     const totalReceived = staffReports.reduce((sum, s) => sum + (s.amount_received || 0), 0);
     const totalSpent = staffReports.reduce((sum, s) => sum + (s.amount_spent || 0), 0);
@@ -574,13 +574,13 @@ export default function DailyReportModule() {
                             ) : (
                               <Select
                                 value={row.work_status}
-                                onValueChange={(value: 'حاضر' | 'غایب') => updateStaffRow(index, 'work_status', value)}
+                                onValueChange={(value: 'کارکرده' | 'غایب') => updateStaffRow(index, 'work_status', value)}
                               >
-                                <SelectTrigger className="w-[90px]">
+                                <SelectTrigger className="w-[100px]">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="حاضر">حاضر</SelectItem>
+                                <SelectContent className="bg-background">
+                                  <SelectItem value="کارکرده">کارکرده</SelectItem>
                                   <SelectItem value="غایب">غایب</SelectItem>
                                 </SelectContent>
                               </Select>
