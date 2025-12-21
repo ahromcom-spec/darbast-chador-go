@@ -40,7 +40,7 @@ const MODULE_DETAILS: Record<string, ModuleInfo> = {
     key: 'daily_report',
     name: 'ماژول گزارش روزانه شرکت اهرم',
     description: 'ثبت گزارش فعالیت‌های روزانه شرکت و نیروها',
-    href: '/ceo/daily-report',
+    href: '/daily-report',
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     icon: 'report',
