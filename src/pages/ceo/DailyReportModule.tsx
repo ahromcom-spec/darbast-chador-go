@@ -683,25 +683,34 @@ export default function DailyReportModule() {
       }
 
       // Delete existing order reports and insert new ones
-      await supabase
+      const { error: deleteOrderError } = await supabase
         .from('daily_report_orders')
         .delete()
         .eq('daily_report_id', reportId);
 
-      if (orderReports.filter(r => r.order_id).length > 0) {
+      if (deleteOrderError) {
+        console.error('Error deleting order reports:', deleteOrderError);
+        throw deleteOrderError;
+      }
+
+      const ordersToInsert = orderReports.filter(r => r.order_id);
+      if (ordersToInsert.length > 0) {
         const { error: orderError } = await supabase
           .from('daily_report_orders')
-          .insert(orderReports.filter(r => r.order_id).map(r => ({
+          .insert(ordersToInsert.map(r => ({
             daily_report_id: reportId,
             order_id: r.order_id,
-            activity_description: r.activity_description,
-            service_details: r.service_details,
-            team_name: r.team_name,
-            notes: r.notes,
-            row_color: r.row_color
+            activity_description: r.activity_description || '',
+            service_details: r.service_details || '',
+            team_name: r.team_name || '',
+            notes: r.notes || '',
+            row_color: r.row_color || 'yellow'
           })));
 
-        if (orderError) throw orderError;
+        if (orderError) {
+          console.error('Error inserting order reports:', orderError);
+          throw orderError;
+        }
       }
 
       // Delete existing staff reports and insert new ones
@@ -710,7 +719,10 @@ export default function DailyReportModule() {
         .delete()
         .eq('daily_report_id', reportId);
 
-      if (deleteStaffError) throw deleteStaffError;
+      if (deleteStaffError) {
+        console.error('Error deleting staff reports:', deleteStaffError);
+        throw deleteStaffError;
+      }
 
       const staffToSave = staffReports.filter(
         (s) =>
@@ -731,26 +743,30 @@ export default function DailyReportModule() {
           .insert(
             staffToSave.map((s) => ({
               daily_report_id: reportId,
-              staff_user_id: s.staff_user_id,
-              staff_name: s.staff_name,
-              work_status: s.work_status,
-              overtime_hours: s.overtime_hours,
-              amount_received: s.amount_received,
-              receiving_notes: s.receiving_notes,
-              amount_spent: s.amount_spent,
-              spending_notes: s.spending_notes,
-              notes: s.notes,
-              is_cash_box: s.is_cash_box
+              staff_user_id: s.staff_user_id || null,
+              staff_name: s.staff_name || '',
+              work_status: s.work_status || 'غایب',
+              overtime_hours: s.overtime_hours || 0,
+              amount_received: s.amount_received || 0,
+              receiving_notes: s.receiving_notes || '',
+              amount_spent: s.amount_spent || 0,
+              spending_notes: s.spending_notes || '',
+              notes: s.notes || '',
+              is_cash_box: s.is_cash_box || false
             }))
           );
 
-        if (staffError) throw staffError;
+        if (staffError) {
+          console.error('Error inserting staff reports:', staffError);
+          throw staffError;
+        }
       }
 
       toast.success('گزارش با موفقیت ذخیره شد');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving report:', error);
-      toast.error('خطا در ذخیره گزارش');
+      const errorMessage = error?.message || error?.details || 'خطای نامشخص';
+      toast.error(`خطا در ذخیره گزارش: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
