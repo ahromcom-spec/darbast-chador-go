@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPin, X, Package, Building2, ChevronUp, ChevronDown } from 'lucide-react';
+import { MapPin, ArrowRight, Package, Building2, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -656,15 +656,16 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
-      {/* دکمه بستن */}
+      {/* دکمه بازگشت */}
       <div className="absolute top-4 right-4 z-[1000]">
         <Button
           variant="outline"
-          size="icon"
+          size="sm"
           onClick={onClose}
-          className="rounded-full bg-background/90 backdrop-blur-sm shadow-lg"
+          className="gap-2 bg-background/90 backdrop-blur-sm shadow-lg"
         >
-          <X className="h-4 w-4" />
+          <ArrowRight className="h-4 w-4" />
+          بازگشت
         </Button>
       </div>
 
