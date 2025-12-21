@@ -273,7 +273,7 @@ export function ModulesManagement() {
                 </div>
                 <Button
                   onClick={handleAssignModule}
-                  disabled={saving || !newPhoneNumber.trim()}
+                  disabled={saving || !/^09[0-9]{9}$/.test(newPhoneNumber)}
                   className="gap-2"
                 >
                   {saving ? (
