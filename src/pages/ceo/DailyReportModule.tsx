@@ -19,6 +19,7 @@ import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { format } from 'date-fns-jalali';
 import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
 import { StaffSalarySettingsTab } from '@/components/ceo/StaffSalarySettingsTab';
+import { ExcelImportDialog } from '@/components/ceo/ExcelImportDialog';
 
 interface SavedReport {
   id: string;
@@ -804,6 +805,98 @@ export default function DailyReportModule() {
     }
   };
 
+  // Handle import from Excel
+  const handleExcelImport = async (reports: any[]) => {
+    if (!user || reports.length === 0) return;
+
+    try {
+      setLoading(true);
+      let importedCount = 0;
+
+      for (const report of reports) {
+        if (!report.date) continue;
+
+        // Convert date to ISO format
+        const dateStr = report.date;
+
+        // Check if report exists for this date
+        const { data: existingReport } = await supabase
+          .from('daily_reports')
+          .select('id')
+          .eq('report_date', dateStr)
+          .eq('created_by', user.id)
+          .maybeSingle();
+
+        let reportId = existingReport?.id;
+
+        if (!reportId) {
+          // Create new report
+          const { data: newReport, error: createError } = await supabase
+            .from('daily_reports')
+            .insert({
+              report_date: dateStr,
+              created_by: user.id
+            })
+            .select('id')
+            .single();
+
+          if (createError) {
+            console.error('Error creating report for', dateStr, ':', createError);
+            continue;
+          }
+          reportId = newReport.id;
+        }
+
+        // Insert staff reports
+        if (report.staffReports && report.staffReports.length > 0) {
+          // Delete existing staff reports for this date
+          await supabase
+            .from('daily_report_staff')
+            .delete()
+            .eq('daily_report_id', reportId);
+
+          const staffToInsert = report.staffReports.map((s: any) => ({
+            daily_report_id: reportId,
+            staff_user_id: null, // We'll match by name
+            staff_name: s.staffName || '',
+            work_status: s.workStatus === 'حاضر' ? 'حاضر' : 'غایب',
+            overtime_hours: s.overtimeHours || 0,
+            amount_received: s.amountReceived || 0,
+            receiving_notes: s.receivingNotes || '',
+            amount_spent: s.amountSpent || 0,
+            spending_notes: s.spendingNotes || '',
+            notes: s.notes || '',
+            is_cash_box: s.isCashBox || false
+          }));
+
+          const { error: staffError } = await supabase
+            .from('daily_report_staff')
+            .insert(staffToInsert);
+
+          if (staffError) {
+            console.error('Error inserting staff for', dateStr, ':', staffError);
+          }
+        }
+
+        importedCount++;
+      }
+
+      toast.success(`${importedCount} گزارش با موفقیت وارد شد`);
+      
+      // Refresh saved reports list
+      fetchSavedReports();
+      
+      // Switch to saved reports tab
+      setActiveTab('saved-reports');
+
+    } catch (error) {
+      console.error('Error importing Excel reports:', error);
+      toast.error('خطا در ذخیره گزارشات');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const totals = calculateTotals();
   // تراز مالی: کل مبلغ دریافتی باید برابر کل مبلغ خرج کرده باشد
   const balance = totals.totalReceived - totals.totalSpent;
@@ -835,23 +928,30 @@ export default function DailyReportModule() {
               <p className="text-sm text-muted-foreground">ثبت گزارش فعالیت‌های روزانه</p>
             </div>
           </div>
-          {/* Auto-save status indicator */}
-          {autoSaveStatus !== 'idle' && (
-            <div className="flex items-center gap-2 text-sm">
-              {autoSaveStatus === 'saving' && (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
-                  <span className="text-muted-foreground">در حال ذخیره...</span>
-                </>
-              )}
-              {autoSaveStatus === 'saved' && (
-                <>
-                  <Check className="h-4 w-4 text-green-600" />
-                  <span className="text-green-600">ذخیره شد</span>
-                </>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {/* Excel Import Button */}
+            <ExcelImportDialog
+              onImportComplete={handleExcelImport}
+              knownStaffMembers={staffMembers}
+            />
+            {/* Auto-save status indicator */}
+            {autoSaveStatus !== 'idle' && (
+              <div className="flex items-center gap-2 text-sm">
+                {autoSaveStatus === 'saving' && (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                    <span className="text-muted-foreground">در حال ذخیره...</span>
+                  </>
+                )}
+                {autoSaveStatus === 'saved' && (
+                  <>
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span className="text-green-600">ذخیره شد</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}
