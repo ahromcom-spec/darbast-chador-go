@@ -23,18 +23,59 @@ interface SalarySetting {
 }
 
 export function StaffSalarySettingsTab() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<SalarySetting[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // New staff form state
-  const [newStaffCode, setNewStaffCode] = useState('');
-  const [newStaffName, setNewStaffName] = useState('');
-  const [newBaseSalary, setNewBaseSalary] = useState<number>(0);
-  const [newOvertimeFraction, setNewOvertimeFraction] = useState<number>(0.167);
-  const [newNotes, setNewNotes] = useState('');
+  const [lastSaveDebug, setLastSaveDebug] = useState<string | null>(null);
+
+  const copyDebugToClipboard = async (debugText: string) => {
+    try {
+      await navigator.clipboard.writeText(debugText);
+      toast.success('جزئیات خطا کپی شد؛ برای پشتیبانی ارسال کنید');
+    } catch (e) {
+      console.error('Clipboard copy failed:', e);
+      toast.error('کپی انجام نشد؛ لطفاً از کنسول مرورگر اسکرین‌شات بگیرید');
+    }
+  };
+
+  const showPersistError = (err: any, operation: string, payload?: Record<string, unknown>) => {
+    const debugPayload = {
+      feature: 'staff_salary_settings',
+      operation,
+      time: new Date().toISOString(),
+      path: typeof window !== 'undefined' ? window.location.pathname : undefined,
+      userId: user?.id ?? null,
+      error: {
+        code: err?.code ?? err?.status ?? null,
+        message: err?.message ?? String(err),
+        details: err?.details ?? null,
+        hint: err?.hint ?? null,
+      },
+      payload,
+    };
+
+    const debugText = JSON.stringify(debugPayload, null, 2);
+    setLastSaveDebug(debugText);
+
+    // Always log full details (helps support)
+    console.error('[SalarySettings Persist Error]', debugPayload, err);
+
+    toast.error('خطا در ذخیره تنظیمات حقوق', {
+      description: `کد خطا: ${debugPayload.error.code ?? '—'}\n${debugPayload.error.message ?? ''}`,
+      action: lastSaveDebug
+        ? {
+            label: 'کپی جزئیات',
+            onClick: () => copyDebugToClipboard(lastSaveDebug),
+          }
+        : {
+            label: 'کپی جزئیات',
+            onClick: () => copyDebugToClipboard(debugText),
+          },
+    });
+  };
 
   const fetchSettings = async () => {
     setLoading(true);
