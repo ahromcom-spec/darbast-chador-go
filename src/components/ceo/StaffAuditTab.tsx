@@ -317,9 +317,11 @@ export function StaffAuditTab() {
         'direction: rtl',
         'font-family: Tahoma, Arial, sans-serif',
         'pointer-events: none',
-        // Keep it behind the app UI to avoid flicker, but still renderable
-        'z-index: -1',
+        // Must be in the normal stacking context for reliable html2canvas rendering
+        'visibility: visible',
+        'z-index: 1',
       ].join('; ');
+
 
       // Build daily records HTML - only records with data
       const recordsWithData = records.filter(r => 
@@ -464,11 +466,13 @@ export function StaffAuditTab() {
         }
       }
 
-      console.log('[StaffAudit PDF] ready', {
-        scrollWidth: pdfContainer.scrollWidth,
-        scrollHeight: pdfContainer.scrollHeight,
-        innerLength: pdfContainer.innerHTML.length,
-      });
+      const rect = pdfContainer.getBoundingClientRect();
+      const canvasWidth = Math.max(800, Math.ceil(rect.width || 0), pdfContainer.scrollWidth || 0);
+      const canvasHeight = Math.max(1200, Math.ceil(rect.height || 0), pdfContainer.scrollHeight || 0);
+
+      if (canvasWidth <= 0 || canvasHeight <= 0) {
+        throw new Error('PDF container has zero size');
+      }
 
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
@@ -478,10 +482,12 @@ export function StaffAuditTab() {
           scale: 2,
           useCORS: true,
           logging: false,
+          backgroundColor: '#ffffff',
+          letterRendering: true,
           scrollX: 0,
           scrollY: 0,
-          windowWidth: pdfContainer.scrollWidth || 800,
-          windowHeight: pdfContainer.scrollHeight || 1200,
+          windowWidth: canvasWidth,
+          windowHeight: canvasHeight,
         },
         jsPDF: {
           unit: 'mm' as const,
@@ -489,6 +495,7 @@ export function StaffAuditTab() {
           orientation: 'portrait' as const,
         },
       };
+
 
       try {
         await html2pdf().set(opt).from(pdfContainer).save();
@@ -506,7 +513,16 @@ export function StaffAuditTab() {
 
   return (
     <div className="space-y-6">
+      {generatingPdf && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-foreground shadow-lg">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm font-medium">در حال ساخت فایل PDF...</span>
+          </div>
+        </div>
+      )}
       {/* Search Filters */}
+
       <Card className="border-2 border-purple-500/30">
         <CardHeader>
           <div className="flex items-center gap-3">
