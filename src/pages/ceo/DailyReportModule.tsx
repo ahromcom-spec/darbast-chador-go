@@ -206,20 +206,42 @@ export default function DailyReportModule() {
         })));
       } else {
         setExistingReportId(null);
-        setOrderReports([]);
-        // Initialize with cash box row
-        setStaffReports([{
-          staff_user_id: null,
-          staff_name: 'کارت صندوق اهرم',
-          work_status: 'کارکرده',
-          overtime_hours: 0,
-          amount_received: 0,
-          receiving_notes: '',
-          amount_spent: 0,
-          spending_notes: '',
+        // Initialize with one default empty order row
+        setOrderReports([{
+          order_id: '',
+          activity_description: '',
+          service_details: '',
+          team_name: '',
           notes: '',
-          is_cash_box: true
+          row_color: ROW_COLORS[0].value
         }]);
+        // Initialize with cash box row and one default staff row
+        setStaffReports([
+          {
+            staff_user_id: null,
+            staff_name: 'کارت صندوق اهرم',
+            work_status: 'کارکرده',
+            overtime_hours: 0,
+            amount_received: 0,
+            receiving_notes: '',
+            amount_spent: 0,
+            spending_notes: '',
+            notes: '',
+            is_cash_box: true
+          },
+          {
+            staff_user_id: null,
+            staff_name: '',
+            work_status: 'غایب',
+            overtime_hours: 0,
+            amount_received: 0,
+            receiving_notes: '',
+            amount_spent: 0,
+            spending_notes: '',
+            notes: '',
+            is_cash_box: false
+          }
+        ]);
       }
     } catch (error) {
       console.error('Error fetching report:', error);
