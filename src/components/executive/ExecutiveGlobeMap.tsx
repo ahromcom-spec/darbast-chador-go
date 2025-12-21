@@ -818,13 +818,17 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
       {/* کارت اطلاعات - قابل باز/بسته شدن */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] max-w-[95vw]">
         <Card className={`bg-gradient-to-br from-background/95 to-background/90 backdrop-blur-md border-2 border-amber-500/30 shadow-2xl transition-all duration-300 ${infoCollapsed ? 'p-2' : 'p-4 sm:p-6'}`}>
-          {/* دکمه باز/بسته کردن */}
+          {/* دکمه باز/بسته کردن - ناحیه کلیک بزرگتر */}
           <button
             onClick={() => setInfoCollapsed(!infoCollapsed)}
-            className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-amber-500 text-white shadow-lg flex items-center justify-center hover:bg-amber-600 transition-colors"
+            onTouchStart={() => setInfoCollapsed(!infoCollapsed)}
+            className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 flex items-center justify-center cursor-pointer touch-manipulation"
             aria-label={infoCollapsed ? 'نمایش اطلاعات' : 'مخفی کردن اطلاعات'}
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
-            {infoCollapsed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            <span className="w-12 h-12 rounded-full bg-amber-500 text-white shadow-lg flex items-center justify-center hover:bg-amber-600 active:bg-amber-700 active:scale-95 transition-all duration-150">
+              {infoCollapsed ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-6 h-6" />}
+            </span>
           </button>
           
           {infoCollapsed ? (
