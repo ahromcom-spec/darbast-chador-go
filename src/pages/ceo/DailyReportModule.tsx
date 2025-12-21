@@ -90,7 +90,15 @@ const extractStaffCode = (value: unknown): string => {
   return match?.[0] ?? '';
 };
 
+// DB constraint expects: 'حاضر' | 'غایب'
+const toDbWorkStatus = (value: unknown): 'حاضر' | 'غایب' => {
+  return value === 'کارکرده' || value === 'حاضر' ? 'حاضر' : 'غایب';
+};
 
+// UI expects: 'کارکرده' | 'غایب'
+const fromDbWorkStatus = (value: unknown): 'کارکرده' | 'غایب' => {
+  return value === 'حاضر' ? 'کارکرده' : 'غایب';
+};
 export default function DailyReportModule() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -230,7 +238,7 @@ export default function DailyReportModule() {
               // ستون staff_user_id در دیتابیس uuid است؛ کدهای پرسنلی مثل 0106 را نباید اینجا ذخیره کنیم
               staff_user_id: isUuid(s.staff_user_id) ? s.staff_user_id : null,
               staff_name: s.staff_name || '',
-              work_status: s.work_status,
+              work_status: toDbWorkStatus(s.work_status),
               overtime_hours: s.overtime_hours,
               amount_received: s.amount_received,
               receiving_notes: s.receiving_notes,
@@ -455,7 +463,7 @@ export default function DailyReportModule() {
             // ولی در زمان ذخیره، فقط اگر uuid واقعی باشد به دیتابیس می‌رود (بقیه null می‌شود)
             staff_user_id: staffCode || null,
             staff_name: s.staff_name || '',
-            work_status: s.work_status || 'غایب',
+            work_status: fromDbWorkStatus(s.work_status),
             overtime_hours: s.overtime_hours || 0,
             amount_received: s.amount_received || 0,
             receiving_notes: s.receiving_notes || '',
@@ -759,7 +767,7 @@ export default function DailyReportModule() {
           // ستون staff_user_id در دیتابیس uuid است؛ کدهای پرسنلی مثل 0106 را نباید اینجا ذخیره کنیم
           staff_user_id: isUuid(s.staff_user_id) ? s.staff_user_id : null,
           staff_name: s.staff_name || '',
-          work_status: s.work_status || 'غایب',
+          work_status: toDbWorkStatus(s.work_status),
           overtime_hours: s.overtime_hours || 0,
           amount_received: s.amount_received || 0,
           receiving_notes: s.receiving_notes || '',
@@ -768,9 +776,7 @@ export default function DailyReportModule() {
           notes: s.notes || '',
           is_cash_box: s.is_cash_box || false
         }));
-        
-        console.log('Staff payload being sent:', staffPayload);
-        
+
         const { error: staffError } = await supabase
           .from('daily_report_staff')
           .insert(staffPayload);
@@ -779,10 +785,6 @@ export default function DailyReportModule() {
           console.error('Error inserting staff reports:', staffError);
           throw staffError;
         }
-        
-        console.log('Staff reports saved successfully');
-      } else {
-        console.log('No staff reports to save');
       }
 
       toast.success('گزارش با موفقیت ذخیره شد');
