@@ -52,6 +52,10 @@ interface StaffAuditRecord {
 interface SalarySettings {
   base_daily_salary: number;
   overtime_rate_fraction: number;
+  previous_month_balance: number;
+  previous_month_extra_received: number;
+  bonuses: number;
+  deductions: number;
 }
 
 interface AuditSummary {
@@ -129,13 +133,20 @@ export function StaffAuditTab() {
   const fetchSalarySettings = async (staffCode: string): Promise<SalarySettings> => {
     const { data, error } = await supabase
       .from('staff_salary_settings')
-      .select('base_daily_salary, overtime_rate_fraction')
+      .select('base_daily_salary, overtime_rate_fraction, previous_month_balance, previous_month_extra_received, bonuses, deductions')
       .eq('staff_code', staffCode)
       .maybeSingle();
 
     const settings: SalarySettings = !error && data 
-      ? data 
-      : { base_daily_salary: 0, overtime_rate_fraction: 0.167 };
+      ? {
+          base_daily_salary: data.base_daily_salary || 0,
+          overtime_rate_fraction: data.overtime_rate_fraction || 0.167,
+          previous_month_balance: data.previous_month_balance || 0,
+          previous_month_extra_received: data.previous_month_extra_received || 0,
+          bonuses: data.bonuses || 0,
+          deductions: data.deductions || 0,
+        }
+      : { base_daily_salary: 0, overtime_rate_fraction: 0.167, previous_month_balance: 0, previous_month_extra_received: 0, bonuses: 0, deductions: 0 };
     
     setSalarySettings(settings);
     return settings;
@@ -154,19 +165,23 @@ export function StaffAuditTab() {
     // Calculated salary
     const estimatedSalary = totalDaysWorked * settings.base_daily_salary;
     const overtimePay = totalOvertime * settings.base_daily_salary * settings.overtime_rate_fraction;
-    const totalWorkAndBenefits = estimatedSalary + overtimePay;
     
-    // Balance calculations (simplified - can be extended later for multi-month tracking)
+    // Use values from salary settings
+    const benefits = settings.bonuses || 0;
+    const deductions = settings.deductions || 0;
+    const remainingBalanceFromPreviousMonth = settings.previous_month_balance || 0;
+    const extraReceivedPreviousMonth = settings.previous_month_extra_received || 0;
+    
+    // Total work and benefits includes bonuses
+    const totalWorkAndBenefits = estimatedSalary + overtimePay + benefits;
     const totalWorkAmount = totalWorkAndBenefits;
-    const benefits = 0; // Can be extended later
-    const deductions = 0; // Can be extended later
-    const remainingBalanceFromPreviousMonth = 0; // Can be extended later
-    const extraReceivedPreviousMonth = 0; // Can be extended later
     
-    // Net calculation: What company owes vs what employee received
+    // Net calculation: 
+    // What company owes = (work + benefits + prev balance) - (received + deductions + prev extra received)
     // Positive = Employee is owed money (company should pay)
     // Negative = Employee received more than earned (excess)
-    const netBalance = totalWorkAndBenefits - totalReceived + totalSpent;
+    const netBalance = (totalWorkAndBenefits + remainingBalanceFromPreviousMonth + totalSpent) 
+                     - (totalReceived + deductions + extraReceivedPreviousMonth);
     
     // Determine remaining balance or extra received
     const remainingBalanceThisMonth = netBalance > 0 ? netBalance : 0;
