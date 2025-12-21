@@ -512,45 +512,74 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
         ? `<div class="exec-popup__thumb"><img src="${escapeHtml(o.first_image_url)}" alt="تصویر سفارش" loading="lazy" decoding="async" /></div>`
         : `<div class="exec-popup__thumb exec-popup__thumb--empty"></div>`;
 
-      // پارس کردن notes برای استخراج ابعاد و شرح فعالیت
+      // پارس کردن notes برای استخراج ابعاد و شرح فعالیت (پشتیبانی از چندین ساختار)
       let description = '';
       let dimensions = '';
       let serviceType = '';
-      
+
+      const normalizeText = (v: unknown) => {
+        if (typeof v !== 'string') return '';
+        const t = v.trim();
+        return t ? escapeHtml(t) : '';
+      };
+
+      const toNumber = (v: unknown): number | undefined => {
+        if (typeof v === 'number' && Number.isFinite(v)) return v;
+        if (typeof v === 'string') {
+          const s = v.trim();
+          if (!s) return undefined;
+          const n = Number(s);
+          return Number.isFinite(n) ? n : undefined;
+        }
+        return undefined;
+      };
+
       if (o.notes) {
         try {
-          const notesData: OrderNotes = typeof o.notes === 'string' ? JSON.parse(o.notes) : o.notes as OrderNotes;
-          
-          // شرح فعالیت (محل نصب)
-          if (notesData.locationPurpose) {
-            description = escapeHtml(notesData.locationPurpose);
-          } else if (notesData.description) {
-            description = escapeHtml(notesData.description);
-          }
-          
+          const notesData: any = typeof o.notes === 'string' ? JSON.parse(o.notes) : o.notes;
+
+          // شرح فعالیت
+          description =
+            normalizeText(notesData.locationPurpose) ||
+            normalizeText(notesData.description) ||
+            normalizeText(notesData.activity) ||
+            normalizeText(notesData.activity_description);
+
           // نوع سرویس
           if (notesData.service_type) {
+            const raw = String(notesData.service_type);
             const serviceLabels: Record<string, string> = {
-              'facade': 'نما',
-              'rental': 'اجاره',
-              'comprehensive': 'جامع'
+              facade: 'نما',
+              rental: 'اجاره',
+              comprehensive: 'جامع',
             };
-            serviceType = serviceLabels[notesData.service_type] || notesData.service_type;
+            serviceType = escapeHtml(serviceLabels[raw] || raw);
           }
-          
+
           // ابعاد
-          if (notesData.dimensions && notesData.dimensions.length > 0) {
-            const dims = notesData.dimensions[0];
-            const parts = [];
-            if (dims.length) parts.push(`${dims.length}m`);
-            if (dims.width) parts.push(`${dims.width}m`);
-            if (dims.height) parts.push(`${dims.height}m`);
-            dimensions = parts.join(' × ');
+          const dimSource = Array.isArray(notesData.dimensions)
+            ? notesData.dimensions[0]
+            : notesData.dimensions;
+
+          if (dimSource && typeof dimSource === 'object') {
+            const d: any = dimSource;
+            const len = toNumber(d.length ?? d.len ?? d.l ?? d.L);
+            const wid = toNumber(d.width ?? d.w ?? d.W);
+            const hei = toNumber(d.height ?? d.h ?? d.H);
+
+            const parts = [len, wid, hei].filter((x) => typeof x === 'number') as number[];
+            if (parts.length) {
+              dimensions = `${parts.join(' × ')} متر`;
+            }
           }
         } catch (e) {
           console.error('Error parsing notes:', e, o.notes);
         }
       }
+
+      // اگر چیزی ثبت نشده بود، یک متن کوتاه نشان بدهیم تا مدیر متوجه کمبود اطلاعات شود
+      if (!description) description = 'ثبت نشده';
+      if (!dimensions) dimensions = 'ثبت نشده';
 
       return `
         <div class="exec-popup__order">
