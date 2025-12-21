@@ -31,13 +31,23 @@ export function StaffSalarySettingsTab() {
 
   const [lastSaveDebug, setLastSaveDebug] = useState<string | null>(null);
 
+  // New staff form state
+  const [newStaffCode, setNewStaffCode] = useState('');
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newBaseSalary, setNewBaseSalary] = useState<number>(0);
+  const [newOvertimeFraction, setNewOvertimeFraction] = useState<number>(0.167);
+  const [newNotes, setNewNotes] = useState('');
+
   const copyDebugToClipboard = async (debugText: string) => {
     try {
+      if (!navigator?.clipboard?.writeText) {
+        throw new Error('Clipboard API not available');
+      }
       await navigator.clipboard.writeText(debugText);
       toast.success('جزئیات خطا کپی شد؛ برای پشتیبانی ارسال کنید');
     } catch (e) {
       console.error('Clipboard copy failed:', e);
-      toast.error('کپی انجام نشد؛ لطفاً از کنسول مرورگر اسکرین‌شات بگیرید');
+      toast.error('کپی انجام نشد؛ لطفاً از همین صفحه اسکرین‌شات بگیرید');
     }
   };
 
@@ -48,6 +58,7 @@ export function StaffSalarySettingsTab() {
       time: new Date().toISOString(),
       path: typeof window !== 'undefined' ? window.location.pathname : undefined,
       userId: user?.id ?? null,
+      authLoading,
       error: {
         code: err?.code ?? err?.status ?? null,
         message: err?.message ?? String(err),
@@ -65,15 +76,10 @@ export function StaffSalarySettingsTab() {
 
     toast.error('خطا در ذخیره تنظیمات حقوق', {
       description: `کد خطا: ${debugPayload.error.code ?? '—'}\n${debugPayload.error.message ?? ''}`,
-      action: lastSaveDebug
-        ? {
-            label: 'کپی جزئیات',
-            onClick: () => copyDebugToClipboard(lastSaveDebug),
-          }
-        : {
-            label: 'کپی جزئیات',
-            onClick: () => copyDebugToClipboard(debugText),
-          },
+      action: {
+        label: 'کپی جزئیات',
+        onClick: () => copyDebugToClipboard(debugText),
+      },
     });
   };
 
@@ -100,6 +106,25 @@ export function StaffSalarySettingsTab() {
   }, []);
 
   const handleAddNew = async () => {
+    const payload = {
+      staff_code: newStaffCode,
+      staff_name: newStaffName,
+      base_daily_salary: newBaseSalary,
+      overtime_rate_fraction: newOvertimeFraction,
+      notes: newNotes || null,
+      created_by: user?.id ?? null,
+    };
+
+    if (authLoading) {
+      toast.error('لطفاً چند لحظه صبر کنید؛ در حال بررسی ورود شما هستیم');
+      return;
+    }
+
+    if (!user?.id) {
+      showPersistError({ message: 'Not authenticated' }, 'insert', payload);
+      return;
+    }
+
     if (!newStaffCode || !newStaffName) {
       toast.error('لطفاً نیرو را انتخاب کنید');
       return;
@@ -120,38 +145,81 @@ export function StaffSalarySettingsTab() {
           base_daily_salary: newBaseSalary,
           overtime_rate_fraction: newOvertimeFraction,
           notes: newNotes || null,
-          created_by: user?.id
+          created_by: user.id,
         });
 
       if (error) {
         if (error.code === '23505') {
-          toast.error('این نیرو قبلاً ثبت شده است');
+          // Duplicate staff_code
+          const debugPayload = {
+            feature: 'staff_salary_settings',
+            operation: 'insert',
+            time: new Date().toISOString(),
+            path: typeof window !== 'undefined' ? window.location.pathname : undefined,
+            userId: user.id,
+            authLoading,
+            error: {
+              code: error.code,
+              message: error.message,
+              details: (error as any)?.details ?? null,
+              hint: (error as any)?.hint ?? null,
+            },
+            payload,
+          };
+          const debugText = JSON.stringify(debugPayload, null, 2);
+          setLastSaveDebug(debugText);
+          console.error('[SalarySettings Persist Error - Duplicate]', debugPayload, error);
+
+          toast.error('این نیرو قبلاً ثبت شده است', {
+            description: 'کد پرسنلی تکراری است. اگر لازم بود، جزئیات را کپی کنید.',
+            action: {
+              label: 'کپی جزئیات',
+              onClick: () => copyDebugToClipboard(debugText),
+            },
+          });
         } else {
-          throw error;
+          showPersistError(error, 'insert', payload);
         }
         return;
       }
 
       toast.success('تنظیمات حقوق با موفقیت ذخیره شد');
-      
+
       // Reset form
       setNewStaffCode('');
       setNewStaffName('');
       setNewBaseSalary(0);
       setNewOvertimeFraction(0.167);
       setNewNotes('');
-      
+      setLastSaveDebug(null);
+
       // Refresh list
       fetchSettings();
     } catch (error) {
-      console.error('Error saving salary settings:', error);
-      toast.error('خطا در ذخیره تنظیمات');
+      showPersistError(error, 'insert', payload);
     } finally {
       setSaving(false);
     }
   };
 
   const handleUpdate = async (setting: SalarySetting) => {
+    const payload = {
+      id: setting.id,
+      base_daily_salary: setting.base_daily_salary,
+      overtime_rate_fraction: setting.overtime_rate_fraction,
+      notes: setting.notes,
+    };
+
+    if (authLoading) {
+      toast.error('لطفاً چند لحظه صبر کنید؛ در حال بررسی ورود شما هستیم');
+      return;
+    }
+
+    if (!user?.id) {
+      showPersistError({ message: 'Not authenticated' }, 'update', payload);
+      return;
+    }
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -159,24 +227,39 @@ export function StaffSalarySettingsTab() {
         .update({
           base_daily_salary: setting.base_daily_salary,
           overtime_rate_fraction: setting.overtime_rate_fraction,
-          notes: setting.notes
+          notes: setting.notes,
         })
         .eq('id', setting.id);
 
-      if (error) throw error;
+      if (error) {
+        showPersistError(error, 'update', payload);
+        return;
+      }
 
       toast.success('تنظیمات بروزرسانی شد');
+      setLastSaveDebug(null);
       setEditingId(null);
       fetchSettings();
     } catch (error) {
-      console.error('Error updating salary settings:', error);
-      toast.error('خطا در بروزرسانی');
+      showPersistError(error, 'update', payload);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    const payload = { id };
+
+    if (authLoading) {
+      toast.error('لطفاً چند لحظه صبر کنید؛ در حال بررسی ورود شما هستیم');
+      return;
+    }
+
+    if (!user?.id) {
+      showPersistError({ message: 'Not authenticated' }, 'delete', payload);
+      return;
+    }
+
     if (!confirm('آیا از حذف این تنظیمات اطمینان دارید؟')) return;
 
     try {
@@ -185,13 +268,16 @@ export function StaffSalarySettingsTab() {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        showPersistError(error, 'delete', payload);
+        return;
+      }
 
       toast.success('تنظیمات حذف شد');
+      setLastSaveDebug(null);
       fetchSettings();
     } catch (error) {
-      console.error('Error deleting salary settings:', error);
-      toast.error('خطا در حذف');
+      showPersistError(error, 'delete', payload);
     }
   };
 
