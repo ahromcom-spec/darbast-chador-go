@@ -178,6 +178,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
             hierarchy_project_id: o.hierarchy_project_id ?? null,
             location_lat: lat,
             location_lng: lng,
+            notes: o.notes ?? null,
             subcategories: o.subcategories ?? null,
           } as OrderData;
         })
