@@ -157,6 +157,8 @@ export function UserModulesTab() {
       <div className="grid gap-4">
         {assignments.map((assignment) => {
           const moduleInfo = getModuleInfo(assignment.module_key);
+          // Use assignment.module_name as fallback if MODULE_DETAILS doesn't have the name
+          const displayName = MODULE_DETAILS[assignment.module_key]?.name || assignment.module_name || assignment.module_key;
           return (
             <Card
               key={assignment.id}
@@ -170,7 +172,7 @@ export function UserModulesTab() {
                   </div>
                   <div className="flex-1">
                     <h4 className="font-bold text-lg text-foreground mb-1">
-                      {moduleInfo.name}
+                      {displayName}
                     </h4>
                     <p className="text-sm text-muted-foreground">
                       {moduleInfo.description}
