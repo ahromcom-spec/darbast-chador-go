@@ -145,6 +145,13 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     }
   };
 
+  useEffect(() => {
+    // Make "Recent files" visible by default when the dialog opens (reduces need to re-pick locked files)
+    if (open && recentFiles.length > 0 && !selectedExcel) {
+      setShowRecentFiles(true);
+    }
+  }, [open, recentFiles.length, selectedExcel]);
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -334,6 +341,25 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {recentFiles.length > 0 && !selectedExcel && (
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">آخرین فایل استفاده‌شده</p>
+                  <p className="text-xs text-muted-foreground truncate">{recentFiles[0].name}</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => selectRecentFile(recentFiles[0])}
+                >
+                  انتخاب
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* File Upload Area */}
           <div 
             className={`
@@ -380,10 +406,15 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
                 </div>
               </div>
             )}
+
+            <p className="mt-3 text-xs text-muted-foreground">
+              اگر هنگام انتخاب فایل پیام <span className="font-medium">This file is in use</span> دیدید، یعنی فایل داخل Excel باز است.
+              در این حالت یا Excel را ببندید/یک کپی با نام جدید ذخیره کنید، یا از بخش «فایل‌های اخیر» همینجا فایل قبلی را انتخاب کنید.
+            </p>
           </div>
 
           {/* Recent Files Section */}
-          {recentFiles.length > 0 && !selectedExcel && (
+          {recentFiles.length > 0 && (
             <Collapsible open={showRecentFiles} onOpenChange={setShowRecentFiles}>
               <CollapsibleTrigger asChild>
                 <Button 

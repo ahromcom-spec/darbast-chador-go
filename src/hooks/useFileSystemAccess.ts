@@ -1,5 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 
+// Minimal typings to avoid TypeScript issues across environments
+// (File System Access API types are not available in all TS DOM libs)
+type FSFileHandle = any;
+type FSDirectoryHandle = any;
+
 // Extend Window interface for File System Access API
 declare global {
   interface Window {
@@ -10,12 +15,12 @@ declare global {
         description?: string;
         accept: Record<string, string[]>;
       }>;
-    }) => Promise<FileSystemFileHandle[]>;
+    }) => Promise<FSFileHandle[]>;
   }
 }
 
 interface StoredDirectoryHandle {
-  handle: FileSystemDirectoryHandle;
+  handle: FSDirectoryHandle;
   name: string;
 }
 
