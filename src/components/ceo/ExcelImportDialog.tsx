@@ -132,17 +132,27 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     }
   };
 
-  const openExcelPicker = () => {
-    // If File System Access API is supported, use it for better folder memory
+  const openNewFilePicker = () => {
     if (fsApiSupported) {
       openWithFsApi();
-    } else {
-      // Fallback to regular input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-        fileInputRef.current.click();
-      }
+      return;
     }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
+
+  const openExcelPicker = () => {
+    // Prefer "Recent files" first to avoid Windows/Excel lock issues (This file is in use)
+    if (recentFiles.length > 0) {
+      setShowRecentFiles(true);
+      toast.message('برای استفاده از همان فایل قبلی، از «فایل‌های اخیر» انتخاب کنید. برای فایل جدید، دکمه «انتخاب فایل جدید» را بزنید.');
+      return;
+    }
+
+    openNewFilePicker();
   };
 
   useEffect(() => {
@@ -385,15 +395,28 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
                 <p className="text-sm text-muted-foreground">
                   {(selectedExcel.size / 1024).toFixed(1)} KB
                 </p>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={openExcelPicker}
-                  className="text-muted-foreground"
-                >
-                  <Upload className="h-4 w-4 ml-1" />
-                  انتخاب مجدد / فایل دیگر
-                </Button>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {recentFiles.length > 0 && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowRecentFiles(true)}
+                      className="gap-2"
+                    >
+                      <Clock className="h-4 w-4" />
+                      انتخاب از فایل‌های اخیر
+                    </Button>
+                  )}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={openNewFilePicker}
+                    className="text-muted-foreground gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    انتخاب فایل جدید
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="cursor-pointer space-y-3" onClick={(e) => { e.preventDefault(); openExcelPicker(); }}>
