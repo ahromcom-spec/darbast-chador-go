@@ -13,26 +13,6 @@ const MAX_RECENT_FILES = 5;
 export function useRecentExcelFiles() {
   const [recentFiles, setRecentFiles] = useState<RecentExcelFile[]>([]);
 
-  // Load recent files from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as { name: string; size: number; base64: string; addedAt: number }[];
-        // Convert base64 back to ArrayBuffer
-        const files: RecentExcelFile[] = parsed.map(f => ({
-          name: f.name,
-          size: f.size,
-          buffer: base64ToArrayBuffer(f.base64),
-          addedAt: f.addedAt
-        }));
-        setRecentFiles(files);
-      }
-    } catch (error) {
-      console.error('[useRecentExcelFiles] Error loading recent files:', error);
-    }
-  }, []);
-
   // Convert ArrayBuffer to base64 for storage
   const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
     const bytes = new Uint8Array(buffer);
@@ -52,6 +32,26 @@ export function useRecentExcelFiles() {
     }
     return bytes.buffer;
   };
+
+  // Load recent files from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as { name: string; size: number; base64: string; addedAt: number }[];
+        const files: RecentExcelFile[] = parsed.map(f => ({
+          name: f.name,
+          size: f.size,
+          buffer: base64ToArrayBuffer(f.base64),
+          addedAt: f.addedAt,
+        }));
+        setRecentFiles(files);
+      }
+    } catch (error) {
+      console.error('[useRecentExcelFiles] Error loading recent files:', error);
+    }
+  }, []);
+
 
   // Add a file to recent files
   const addRecentFile = useCallback((file: { name: string; size: number; buffer: ArrayBuffer }) => {
