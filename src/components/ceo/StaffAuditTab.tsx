@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
@@ -99,6 +100,7 @@ export function StaffAuditTab() {
   const [deductions, setDeductions] = useState<number>(0);
   const [prevMonthBalance, setPrevMonthBalance] = useState<number>(0);
   const [prevMonthExtra, setPrevMonthExtra] = useState<number>(0);
+  const [financialNotes, setFinancialNotes] = useState<string>('');
 
   // Generate year options (last 5 years)
   const yearOptions = Array.from({ length: 5 }, (_, i) => getCurrentPersianYear() - i);
@@ -494,6 +496,18 @@ export function StaffAuditTab() {
           <!-- Daily Records -->
           ${dailyRecordsHtml}
 
+          <!-- Financial Notes -->
+          ${financialNotes ? `
+          <div style="margin-top: 20px; border: 2px solid #a855f7; border-radius: 8px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); padding: 12px; border-bottom: 1px solid #a855f7;">
+              <h3 style="margin: 0; color: #7c3aed; font-size: 16px; text-align: center;">توضیحات</h3>
+            </div>
+            <div style="padding: 12px; background-color: #faf5ff;">
+              <p style="margin: 0; color: #581c87; font-size: 14px; line-height: 1.8; white-space: pre-wrap;">${financialNotes}</p>
+            </div>
+          </div>
+          ` : ''}
+
           <!-- Footer -->
           <div style="margin-top: 24px; padding-top: 16px; border-top: 2px dashed #d4a574; text-align: center; font-size: 12px; color: #92400e;">
             <p style="margin: 0;">تاریخ صدور: ${format(new Date(), 'yyyy/MM/dd - HH:mm')}</p>
@@ -744,6 +758,20 @@ export function StaffAuditTab() {
               />
               <p className="text-xs text-muted-foreground">مثبت = طلبکار، منفی = بدهکار</p>
             </div>
+          </div>
+          
+          {/* Notes Textarea */}
+          <div className="mt-4">
+            <Label className="flex items-center gap-2 text-purple-600 mb-2">
+              <FileText className="h-4 w-4" />
+              توضیحات (در صورتحساب درج می‌شود)
+            </Label>
+            <Textarea
+              value={financialNotes}
+              onChange={(e) => setFinancialNotes(e.target.value)}
+              placeholder="توضیحات اضافی که می‌خواهید در صورتحساب درج شود..."
+              className="min-h-[80px] border-purple-200 focus:border-purple-500"
+            />
           </div>
         </CardContent>
       </Card>
