@@ -439,11 +439,11 @@ async function getDailyReportsContext(supabase: any): Promise<string> {
       .from("daily_reports")
       .select(`
         id, report_date, notes, created_at,
-        daily_report_staff(staff_name, work_status, overtime_hours, amount_received, amount_spent, notes, spending_notes, receiving_notes),
+        daily_report_staff(staff_name, work_status, overtime_hours, amount_received, amount_spent, notes, spending_notes, receiving_notes, is_cash_box),
         daily_report_orders(order_id, team_name, activity_description, service_details, notes)
       `)
       .order("report_date", { ascending: false })
-      .limit(7);
+      .limit(45); // گزارشات 45 روز اخیر برای محاسبه آمار ماهانه
     
     if (error || !recentReports || recentReports.length === 0) {
       return '\n📊 گزارشات روزانه: هنوز گزارشی ثبت نشده است.';
@@ -457,33 +457,94 @@ async function getDailyReportsContext(supabase: any): Promise<string> {
 
     recentReports.forEach((report: any) => {
       const reportDate = new Date(report.report_date).toLocaleDateString('fa-IR');
-      const staffCount = report.daily_report_staff?.length || 0;
+      const staffCount = report.daily_report_staff?.filter((s: any) => !s.is_cash_box)?.length || 0;
       const ordersCount = report.daily_report_orders?.length || 0;
       
       // محاسبه مجموع دریافتی و پرداختی
       let totalReceived = 0;
       let totalSpent = 0;
       let totalOvertime = 0;
+      let presentCount = 0;
       
       report.daily_report_staff?.forEach((staff: any) => {
-        totalReceived += Number(staff.amount_received) || 0;
-        totalSpent += Number(staff.amount_spent) || 0;
-        totalOvertime += Number(staff.overtime_hours) || 0;
+        if (!staff.is_cash_box) {
+          totalReceived += Number(staff.amount_received) || 0;
+          totalSpent += Number(staff.amount_spent) || 0;
+          totalOvertime += Number(staff.overtime_hours) || 0;
+          if (staff.work_status === 'حاضر' || staff.work_status === 'کارکرده') {
+            presentCount++;
+          }
+        }
       });
 
       context += `
 ┌────────────────────────────────────
 │ 📅 گزارش تاریخ: ${reportDate}
 ├────────────────────────────────────
-│ 👥 تعداد نیروها: ${staffCount} نفر
+│ 👥 تعداد نیروها: ${staffCount} نفر (${presentCount} حاضر)
 │ 📦 تعداد سفارشات: ${ordersCount} سفارش
 │ 💰 مجموع دریافتی: ${totalReceived.toLocaleString('fa-IR')} تومان
 │ 💸 مجموع هزینه‌ها: ${totalSpent.toLocaleString('fa-IR')} تومان
 │ ⏱️ مجموع اضافه‌کاری: ${totalOvertime} ساعت
 │ ${report.notes ? `📝 یادداشت: ${report.notes}` : ''}
+│
+│ 👷 لیست نیروها:`;
+
+      // نمایش جزئیات هر نیرو
+      report.daily_report_staff?.filter((s: any) => !s.is_cash_box && s.staff_name).forEach((staff: any) => {
+        const workStatus = staff.work_status === 'حاضر' || staff.work_status === 'کارکرده' ? '✅ حاضر' : '❌ غایب';
+        const overtime = staff.overtime_hours > 0 ? ` | اضافه‌کاری: ${staff.overtime_hours} ساعت` : '';
+        const received = staff.amount_received > 0 ? ` | دریافتی: ${Number(staff.amount_received).toLocaleString('fa-IR')}` : '';
+        const spent = staff.amount_spent > 0 ? ` | هزینه: ${Number(staff.amount_spent).toLocaleString('fa-IR')}` : '';
+        context += `
+│   • ${staff.staff_name}: ${workStatus}${overtime}${received}${spent}`;
+      });
+
+      context += `
 └────────────────────────────────────
 `;
     });
+
+    // محاسبه آمار کلی کارکرد هر نیرو در کل گزارشات
+    const staffStats: Record<string, { presentDays: number; absentDays: number; totalOvertime: number; totalReceived: number; totalSpent: number }> = {};
+    
+    recentReports.forEach((report: any) => {
+      report.daily_report_staff?.filter((s: any) => !s.is_cash_box && s.staff_name).forEach((staff: any) => {
+        const name = staff.staff_name.trim();
+        if (!staffStats[name]) {
+          staffStats[name] = { presentDays: 0, absentDays: 0, totalOvertime: 0, totalReceived: 0, totalSpent: 0 };
+        }
+        if (staff.work_status === 'حاضر' || staff.work_status === 'کارکرده') {
+          staffStats[name].presentDays++;
+        } else {
+          staffStats[name].absentDays++;
+        }
+        staffStats[name].totalOvertime += Number(staff.overtime_hours) || 0;
+        staffStats[name].totalReceived += Number(staff.amount_received) || 0;
+        staffStats[name].totalSpent += Number(staff.amount_spent) || 0;
+      });
+    });
+
+    // اضافه کردن آمار کلی به context
+    if (Object.keys(staffStats).length > 0) {
+      context += `
+═══════════════════════════════════════
+📊 آمار کلی کارکرد نیروها (${recentReports.length} روز گذشته)
+═══════════════════════════════════════
+`;
+      Object.entries(staffStats)
+        .sort((a, b) => b[1].presentDays - a[1].presentDays)
+        .forEach(([name, stats]) => {
+          context += `
+• ${name}:
+   ✅ روزهای کارکرده: ${stats.presentDays} روز
+   ❌ روزهای غیبت: ${stats.absentDays} روز
+   ⏱️ مجموع اضافه‌کاری: ${stats.totalOvertime} ساعت
+   💰 مجموع دریافتی: ${stats.totalReceived.toLocaleString('fa-IR')} تومان
+   💸 مجموع هزینه: ${stats.totalSpent.toLocaleString('fa-IR')} تومان
+`;
+        });
+    }
 
     return context;
   } catch (error) {
