@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Loader2, Check, AlertCircle, X, Sparkles, MessageSquare } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, Check, AlertCircle, X, Sparkles, MessageSquare, Image, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -64,7 +64,9 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
   const [results, setResults] = useState<{ total: number; parsed: number } | null>(null);
   const [customInstructions, setCustomInstructions] = useState('');
   const [showInstructions, setShowInstructions] = useState(false);
+  const [instructionImages, setInstructionImages] = useState<{ file: File; preview: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -88,6 +90,47 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const newImages: { file: File; preview: string }[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type.startsWith('image/')) {
+          newImages.push({
+            file,
+            preview: URL.createObjectURL(file)
+          });
+        }
+      }
+      setInstructionImages(prev => [...prev, ...newImages]);
+    }
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
+  const removeInstructionImage = (index: number) => {
+    setInstructionImages(prev => {
+      const updated = [...prev];
+      URL.revokeObjectURL(updated[index].preview);
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
+
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const processExcel = async () => {
@@ -137,12 +180,20 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
         code: extractCode(s.full_name) || s.phone_number?.slice(-4) || ''
       }));
 
+      // Convert images to base64
+      const imageBase64List: string[] = [];
+      for (const img of instructionImages) {
+        const base64 = await convertImageToBase64(img.file);
+        imageBase64List.push(base64);
+      }
+
       // Send to edge function for AI processing
       const { data, error } = await supabase.functions.invoke('parse-excel-report', {
         body: {
           sheetsData,
           knownStaffMembers: staffWithCodes,
-          customInstructions: customInstructions.trim() || undefined
+          customInstructions: customInstructions.trim() || undefined,
+          instructionImages: imageBase64List.length > 0 ? imageBase64List : undefined
         }
       });
 
@@ -188,6 +239,9 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     setResults(null);
     setCustomInstructions('');
     setShowInstructions(false);
+    // Clean up image previews
+    instructionImages.forEach(img => URL.revokeObjectURL(img.preview));
+    setInstructionImages([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -318,6 +372,56 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
                     dir="rtl"
                   />
                 </div>
+
+                {/* Image Upload Section */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Image className="h-4 w-4" />
+                    تصاویر کمکی (اختیاری):
+                  </Label>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {instructionImages.map((img, index) => (
+                      <div key={index} className="relative group">
+                        <img 
+                          src={img.preview} 
+                          alt={`تصویر ${index + 1}`}
+                          className="w-20 h-20 object-cover rounded-lg border border-border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeInstructionImage(index)}
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    
+                    <label 
+                      htmlFor="instruction-image-upload"
+                      className="w-20 h-20 border-2 border-dashed border-muted-foreground/30 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors"
+                    >
+                      <Plus className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground mt-1">افزودن</span>
+                    </label>
+                    
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageSelect}
+                      className="hidden"
+                      id="instruction-image-upload"
+                    />
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground">
+                    📷 می‌توانید اسکرین‌شات از اکسل یا توضیحات بیشتر را اینجا اضافه کنید.
+                  </p>
+                </div>
+
                 <p className="text-xs text-muted-foreground">
                   💡 هرچه توضیحات شما دقیق‌تر باشد، هوش مصنوعی بهتر می‌تواند داده‌ها را استخراج کند.
                 </p>

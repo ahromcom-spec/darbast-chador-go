@@ -38,7 +38,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sheetsData, knownStaffMembers, customInstructions } = await req.json();
+    const { sheetsData, knownStaffMembers, customInstructions, instructionImages } = await req.json();
 
     if (!sheetsData || !Array.isArray(sheetsData)) {
       return new Response(
@@ -58,6 +58,7 @@ serve(async (req) => {
     console.log('Processing', sheetsData.length, 'sheets');
     console.log('Known staff members:', knownStaffMembers?.length || 0);
     console.log('Custom instructions provided:', !!customInstructions);
+    console.log('Instruction images provided:', instructionImages?.length || 0);
 
     const parsedReports: ParsedDailyReport[] = [];
 
@@ -130,14 +131,33 @@ OUTPUT FORMAT - Return valid JSON only:
 
 If you cannot determine the date, use null. If a sheet seems empty or just a holiday notice (like "جمعه اکیپ تعطیل"), return empty arrays but still try to extract the date.`;
 
-      const userPrompt = `Parse this Persian daily work report Excel sheet:
+      // Build user message with optional images
+      const userMessageContent: any[] = [];
+      
+      // Add text content first
+      userMessageContent.push({
+        type: 'text',
+        text: `Parse this Persian daily work report Excel sheet:
 
 Sheet Name: "${sheet.sheetName}"
 
 Content:
 ${sheetContent}
 
-Extract all staff and order data. Return valid JSON only.`;
+Extract all staff and order data. Return valid JSON only.`
+      });
+
+      // Add instruction images if provided (only for first sheet to avoid redundancy)
+      if (instructionImages && instructionImages.length > 0 && sheetsData.indexOf(sheet) === 0) {
+        for (const imageBase64 of instructionImages) {
+          userMessageContent.push({
+            type: 'image_url',
+            image_url: {
+              url: imageBase64
+            }
+          });
+        }
+      }
 
       try {
         const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -150,7 +170,7 @@ Extract all staff and order data. Return valid JSON only.`;
             model: 'google/gemini-2.5-flash',
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
+              { role: 'user', content: userMessageContent }
             ],
           }),
         });
