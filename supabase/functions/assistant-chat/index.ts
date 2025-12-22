@@ -353,6 +353,274 @@ const SYSTEM_PROMPT = `تو منشی هوشمند و حرفه‌ای سایت ا
 
 همیشه با احترام و صبر پاسخ بده. اگر نمی‌دانی، صادقانه بگو و کاربر را به پشتیبانی راهنمایی کن.`;
 
+// Module definitions with their data access capabilities
+const MODULE_CAPABILITIES: Record<string, { name: string; dataAccess: string[]; description: string }> = {
+  scaffold_execution_with_materials: {
+    name: "ماژول مدیریت اجرای داربست به همراه اجناس",
+    dataAccess: ["سفارشات", "اجرای داربست", "اجناس", "قیمت‌گذاری", "پیمانکاران"],
+    description: "دسترسی به مدیریت سفارشات اجرا، قیمت‌گذاری، اجناس و پیمانکاران"
+  },
+  daily_report: {
+    name: "ماژول گزارش روزانه شرکت اهرم",
+    dataAccess: ["گزارشات روزانه", "نیروها", "کارکنان", "ساعات کاری", "هزینه‌ها", "دریافتی‌ها", "اضافه‌کاری"],
+    description: "دسترسی به گزارشات روزانه، مدیریت نیروها، ساعات کاری و امور مالی روزانه"
+  },
+  staff_management: {
+    name: "ماژول مدیریت نیروها",
+    dataAccess: ["نیروها", "کارکنان", "سمت‌ها", "منطقه‌ها", "پرسنل"],
+    description: "دسترسی به لیست نیروها، سمت‌های سازمانی و مناطق"
+  },
+  customer_management: {
+    name: "ماژول مدیریت مشتریان",
+    dataAccess: ["مشتریان", "آدرس‌ها", "سفارشات مشتری", "پروفایل مشتری"],
+    description: "دسترسی به اطلاعات مشتریان و سفارشات آن‌ها"
+  },
+  financial_management: {
+    name: "ماژول مالی",
+    dataAccess: ["پرداخت‌ها", "فاکتورها", "مانده حساب", "گزارشات مالی", "تسویه‌حساب"],
+    description: "دسترسی به امور مالی، پرداخت‌ها و گزارشات مالی"
+  },
+  service_requests: {
+    name: "ماژول درخواست خدمات",
+    dataAccess: ["خدمات", "زیرمجموعه‌ها", "درخواست‌ها", "انواع خدمات"],
+    description: "دسترسی به انواع خدمات و درخواست‌ها"
+  },
+  ceo_dashboard: {
+    name: "ماژول داشبورد مدیرعامل",
+    dataAccess: ["آمار کلی", "گزارشات جامع", "عملکرد شرکت", "همه سفارشات", "همه نیروها"],
+    description: "دسترسی کامل به تمام اطلاعات شرکت"
+  }
+};
+
+// تابع برای گرفتن ماژول‌های کاربر
+async function getUserModules(supabase: any, userId: string): Promise<{ moduleKeys: string[]; moduleNames: string[] }> {
+  try {
+    const { data: moduleData, error } = await supabase
+      .from("module_assignments")
+      .select("module_key, module_name")
+      .eq("assigned_user_id", userId)
+      .eq("is_active", true);
+    
+    if (error || !moduleData || moduleData.length === 0) {
+      console.log('No modules found for user:', userId);
+      return { moduleKeys: [], moduleNames: [] };
+    }
+    
+    return {
+      moduleKeys: moduleData.map((m: any) => m.module_key),
+      moduleNames: moduleData.map((m: any) => m.module_name)
+    };
+  } catch (error) {
+    console.error('Error fetching user modules:', error);
+    return { moduleKeys: [], moduleNames: [] };
+  }
+}
+
+// تابع برای گرفتن نقش‌های کاربر
+async function getUserRoles(supabase: any, userId: string): Promise<string[]> {
+  try {
+    const { data: roles, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    
+    if (error || !roles) return [];
+    return roles.map((r: any) => r.role);
+  } catch (error) {
+    console.error('Error fetching user roles:', error);
+    return [];
+  }
+}
+
+// تابع برای گرفتن اطلاعات گزارشات روزانه
+async function getDailyReportsContext(supabase: any): Promise<string> {
+  try {
+    const { data: recentReports, error } = await supabase
+      .from("daily_reports")
+      .select(`
+        id, report_date, notes, created_at,
+        daily_report_staff(staff_name, work_status, overtime_hours, amount_received, amount_spent, notes, spending_notes, receiving_notes),
+        daily_report_orders(order_id, team_name, activity_description, service_details, notes)
+      `)
+      .order("report_date", { ascending: false })
+      .limit(7);
+    
+    if (error || !recentReports || recentReports.length === 0) {
+      return '\n📊 گزارشات روزانه: هنوز گزارشی ثبت نشده است.';
+    }
+
+    let context = `
+═══════════════════════════════════════
+📊 گزارشات روزانه (${recentReports.length} گزارش اخیر)
+═══════════════════════════════════════
+`;
+
+    recentReports.forEach((report: any) => {
+      const reportDate = new Date(report.report_date).toLocaleDateString('fa-IR');
+      const staffCount = report.daily_report_staff?.length || 0;
+      const ordersCount = report.daily_report_orders?.length || 0;
+      
+      // محاسبه مجموع دریافتی و پرداختی
+      let totalReceived = 0;
+      let totalSpent = 0;
+      let totalOvertime = 0;
+      
+      report.daily_report_staff?.forEach((staff: any) => {
+        totalReceived += Number(staff.amount_received) || 0;
+        totalSpent += Number(staff.amount_spent) || 0;
+        totalOvertime += Number(staff.overtime_hours) || 0;
+      });
+
+      context += `
+┌────────────────────────────────────
+│ 📅 گزارش تاریخ: ${reportDate}
+├────────────────────────────────────
+│ 👥 تعداد نیروها: ${staffCount} نفر
+│ 📦 تعداد سفارشات: ${ordersCount} سفارش
+│ 💰 مجموع دریافتی: ${totalReceived.toLocaleString('fa-IR')} تومان
+│ 💸 مجموع هزینه‌ها: ${totalSpent.toLocaleString('fa-IR')} تومان
+│ ⏱️ مجموع اضافه‌کاری: ${totalOvertime} ساعت
+│ ${report.notes ? `📝 یادداشت: ${report.notes}` : ''}
+└────────────────────────────────────
+`;
+    });
+
+    return context;
+  } catch (error) {
+    console.error('Error getting daily reports context:', error);
+    return '';
+  }
+}
+
+// تابع برای گرفتن لیست نیروها
+async function getStaffListContext(supabase: any): Promise<string> {
+  try {
+    const { data: staffProfiles, error } = await supabase
+      .from("internal_staff_profiles")
+      .select(`
+        id, user_id, status,
+        organizational_positions(name),
+        regions(name)
+      `)
+      .eq("status", "approved");
+    
+    if (error || !staffProfiles || staffProfiles.length === 0) {
+      return '\n👥 نیروها: هیچ نیرویی ثبت نشده است.';
+    }
+
+    // گرفتن پروفایل‌ها
+    const userIds = staffProfiles.map((s: any) => s.user_id);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, phone_number")
+      .in("user_id", userIds);
+    
+    const profileMap = new Map(profiles?.map((p: any) => [p.user_id, p]) || []);
+
+    let context = `
+═══════════════════════════════════════
+👥 لیست نیروها (${staffProfiles.length} نفر)
+═══════════════════════════════════════
+`;
+
+    // گروه‌بندی بر اساس سمت
+    const byPosition: Record<string, any[]> = {};
+    staffProfiles.forEach((staff: any) => {
+      const positionName = staff.organizational_positions?.name || 'سایر';
+      if (!byPosition[positionName]) byPosition[positionName] = [];
+      const profile: any = profileMap.get(staff.user_id);
+      byPosition[positionName].push({
+        name: profile?.full_name || 'نامشخص',
+        phone: profile?.phone_number || '',
+        region: staff.regions?.name || ''
+      });
+    });
+
+    Object.entries(byPosition).forEach(([position, staffList]) => {
+      context += `\n🏷️ ${position} (${staffList.length} نفر):\n`;
+      staffList.forEach((s: any) => {
+        context += `   • ${s.name}${s.region ? ` - ${s.region}` : ''}${s.phone ? ` - ${s.phone}` : ''}\n`;
+      });
+    });
+
+    return context;
+  } catch (error) {
+    console.error('Error getting staff list context:', error);
+    return '';
+  }
+}
+
+// تابع برای گرفتن سفارشات اخیر (برای ماژول اجرا)
+async function getRecentOrdersContext(supabase: any): Promise<string> {
+  try {
+    const { data: orders, error } = await supabase
+      .from("projects_v3")
+      .select(`
+        id, code, status, execution_stage, address, 
+        customer_name, customer_phone, total_price, total_paid,
+        created_at, execution_start_date, execution_end_date,
+        provinces:province_id (name),
+        subcategories:subcategory_id (name)
+      `)
+      .eq("is_deep_archived", false)
+      .order("created_at", { ascending: false })
+      .limit(15);
+    
+    if (error || !orders || orders.length === 0) {
+      return '\n📦 سفارشات: هنوز سفارشی ثبت نشده است.';
+    }
+
+    const statusMap: Record<string, string> = {
+      'pending': 'در انتظار تایید',
+      'approved': 'تایید شده',
+      'in_progress': 'در حال اجرا',
+      'completed': 'تکمیل شده',
+      'awaiting_collection': 'در انتظار جمع‌آوری',
+      'collected': 'جمع‌آوری شده',
+      'closed': 'بسته شده',
+      'rejected': 'رد شده'
+    };
+
+    let context = `
+═══════════════════════════════════════
+📦 سفارشات اخیر (${orders.length} سفارش)
+═══════════════════════════════════════
+`;
+
+    // آمار کلی
+    let totalPrice = 0;
+    let totalPaid = 0;
+    const statusCounts: Record<string, number> = {};
+
+    orders.forEach((order: any) => {
+      totalPrice += Number(order.total_price) || 0;
+      totalPaid += Number(order.total_paid) || 0;
+      const status = order.status || 'pending';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+
+    context += `\n📊 خلاصه:\n`;
+    Object.entries(statusCounts).forEach(([status, count]) => {
+      context += `   • ${statusMap[status] || status}: ${count} سفارش\n`;
+    });
+    context += `   💰 مجموع مبالغ: ${totalPrice.toLocaleString('fa-IR')} تومان\n`;
+    context += `   ✅ مجموع پرداختی: ${totalPaid.toLocaleString('fa-IR')} تومان\n`;
+    context += `   ⏳ مانده: ${(totalPrice - totalPaid).toLocaleString('fa-IR')} تومان\n`;
+
+    context += `\n📋 لیست سفارشات:\n`;
+    orders.slice(0, 10).forEach((order: any) => {
+      const statusFa = statusMap[order.status] || order.status;
+      const date = new Date(order.created_at).toLocaleDateString('fa-IR');
+      context += `   📦 ${order.code} | ${order.customer_name || 'بدون نام'} | ${statusFa} | ${order.provinces?.name || ''} | ${date}\n`;
+    });
+
+    return context;
+  } catch (error) {
+    console.error('Error getting recent orders context:', error);
+    return '';
+  }
+}
+
 // تابع برای گرفتن اطلاعات سفارشات کاربر
 async function getUserOrdersContext(supabase: any, userId: string): Promise<string> {
   try {
@@ -589,96 +857,20 @@ ${renewalOrders > 0 ? `- سفارشات تجدید/تمدید: ${renewalOrders} 
     ordersContext += `
 
 ═══════════════════════════════════════
-🗺️ تفکیک بر اساس استان:
-═══════════════════════════════════════`;
-
-    Object.entries(ordersByProvince).forEach(([province, provinceOrders]) => {
-      ordersContext += `\n📌 ${province}: ${provinceOrders.length} سفارش`;
-    });
-
-    ordersContext += `
-
-═══════════════════════════════════════
-📋 لیست کامل سفارشات (جدیدترین به قدیمی‌ترین):
+📋 آخرین سفارشات:
 ═══════════════════════════════════════
 `;
 
-    orders.forEach((order: any, index: number) => {
-      const provinceName = order.provinces?.name || 'نامشخص';
-      const districtName = order.districts?.name || '';
-      const serviceTypeName = order.subcategories?.service_types_v3?.name || '';
-      const subcategoryName = order.subcategories?.name || 'نامشخص';
+    orders.slice(0, 5).forEach((order: any, index: number) => {
       const statusFa = statusMap[order.status] || order.status;
-      const executionStageFa = order.execution_stage ? executionStageMap[order.execution_stage] || order.execution_stage : '-';
-      const paymentMethodFa = order.payment_method ? paymentMethodMap[order.payment_method] || order.payment_method : '-';
       const createdDate = new Date(order.created_at).toLocaleDateString('fa-IR');
       const paymentAmount = order.payment_amount ? Number(order.payment_amount) : 0;
       const isPaid = !!order.payment_confirmed_at;
       
-      // پیدا کردن درخواست جمع‌آوری برای این سفارش
-      const orderCollectionRequest = collectionRequests?.find((cr: any) => cr.order_id === order.id);
-      
       ordersContext += `
-┌────────────────────────────────────
-│ 📦 سفارش شماره ${index + 1} - کد: ${order.code}
-├────────────────────────────────────
-│ 🔧 نوع خدمات: ${serviceTypeName ? `${serviceTypeName} - ` : ''}${subcategoryName}
-│ 📍 آدرس: ${provinceName}${districtName ? ` - ${districtName}` : ''} - ${order.address || ''}
-│    ${order.detailed_address ? `جزئیات: ${order.detailed_address}` : ''}
-│ 📊 وضعیت: ${statusFa}
-│ 🔄 مرحله اجرا: ${executionStageFa}
-│ 💰 مبلغ: ${paymentAmount > 0 ? paymentAmount.toLocaleString('fa-IR') + ' تومان' : 'تعیین نشده'}
-│ 💳 وضعیت پرداخت: ${isPaid ? '✅ پرداخت شده' : paymentAmount > 0 ? '⏳ پرداخت نشده' : '-'}
-│    ${isPaid ? `تاریخ پرداخت: ${new Date(order.payment_confirmed_at).toLocaleDateString('fa-IR')}` : ''}
-│    ${order.payment_method ? `روش پرداخت: ${paymentMethodFa}` : ''}
-│    ${order.transaction_reference ? `شماره تراکنش: ${order.transaction_reference}` : ''}
-│ 📅 تاریخ ثبت: ${createdDate}
-│    ${order.approved_at ? `تاریخ تایید: ${new Date(order.approved_at).toLocaleDateString('fa-IR')}` : ''}
-│    ${order.execution_start_date ? `تاریخ شروع اجرا: ${new Date(order.execution_start_date).toLocaleDateString('fa-IR')}` : ''}
-│    ${order.execution_end_date ? `تاریخ پایان اجرا: ${new Date(order.execution_end_date).toLocaleDateString('fa-IR')}` : ''}
-│    ${order.execution_confirmed_at ? `تاریخ تایید اجرا: ${new Date(order.execution_confirmed_at).toLocaleDateString('fa-IR')}` : ''}
-│    ${order.closed_at ? `تاریخ بسته شدن: ${new Date(order.closed_at).toLocaleDateString('fa-IR')}` : ''}
-│ ${order.is_renewal ? '🔄 این سفارش تجدید/تمدید است' : ''}
-│ ${order.is_archived ? '📁 بایگانی شده' : ''}
-│ ${orderCollectionRequest ? `📦 درخواست جمع‌آوری: ${orderCollectionRequest.status === 'pending' ? 'در انتظار' : orderCollectionRequest.status === 'approved' ? 'تایید شده' : orderCollectionRequest.status}` : ''}
-│ ${order.notes ? `📝 یادداشت: ${order.notes}` : ''}
-└────────────────────────────────────
+📦 ${order.code} | ${statusFa} | ${paymentAmount > 0 ? paymentAmount.toLocaleString('fa-IR') + ' تومان' : 'قیمت تعیین نشده'} | ${isPaid ? '✅ پرداخت شده' : '⏳'}
 `;
     });
-
-    ordersContext += `
-═══════════════════════════════════════
-🎯 راهنمای پاسخگویی به سوالات کاربر:
-═══════════════════════════════════════
-
-وقتی کاربر درباره سفارشاتش سوال می‌پرسد:
-
-1️⃣ سوال درباره مبلغ و پرداخت:
-   - "چقدر پرداخت کردم؟" → مبلغ پرداخت شده: ${totalPaidAmount.toLocaleString('fa-IR')} تومان
-   - "چقدر بدهی دارم؟" → مانده: ${remainingAmount.toLocaleString('fa-IR')} تومان
-   - "مجموع سفارشاتم چقدر شد؟" → کل: ${totalPaymentAmount.toLocaleString('fa-IR')} تومان
-
-2️⃣ سوال درباره تعداد سفارشات:
-   - "چند سفارش دارم؟" → ${orders.length} سفارش
-   - "سفارش فعال چند تا دارم؟" → ${pendingOrders + approvedOrders + inProgressOrders} سفارش فعال
-
-3️⃣ سوال درباره سفارش خاص با کد:
-   - کد سفارش‌ها: ${orders.map((o: any) => o.code).join(', ')}
-   - اطلاعات کامل هر سفارش در بالا موجود است
-
-4️⃣ سوال درباره آدرس خاص:
-   - آدرس‌های موجود: ${Object.keys(ordersByAddress).join(' | ')}
-
-5️⃣ سوال درباره وضعیت:
-   - "سفارش من تایید شده؟" → بررسی وضعیت approved
-   - "کار شروع شده؟" → بررسی مرحله اجرا
-
-⚠️ نکات مهم:
-- همیشه کد سفارش را ذکر کن تا کاربر بداند کدام سفارش مد نظر است
-- مبالغ را با فرمت فارسی و واحد تومان بگو
-- تاریخ‌ها را به شمسی بگو
-- اگر سفارشی پرداخت نشده، به کاربر یادآوری کن
-`;
 
     return ordersContext;
   } catch (error) {
@@ -705,20 +897,67 @@ serve(async (req) => {
     // افزودن اطلاعات نقش کاربر به پرامپت سیستم
     let contextualPrompt = SYSTEM_PROMPT;
     
-    // اگر کاربر لاگین کرده، اطلاعات سفارشاتش را بگیر
+    // اگر کاربر لاگین کرده، اطلاعات ماژول‌ها و سفارشاتش را بگیر
     if (userId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      
+      // گرفتن ماژول‌های کاربر
+      const { moduleKeys, moduleNames } = await getUserModules(supabase, userId);
+      const userRoles = await getUserRoles(supabase, userId);
+      
+      console.log('User modules:', moduleKeys);
+      console.log('User roles:', userRoles);
+      
+      // اطلاعات سفارشات کاربر (همیشه)
       const ordersContext = await getUserOrdersContext(supabase, userId);
       contextualPrompt += ordersContext;
-    }
-    
-    if (userRole) {
-      contextualPrompt += `\n\nنقش کاربر فعلی: ${userRole}`;
       
-      if (userRole === 'manager' || userRole === 'admin') {
-        contextualPrompt += `\nاین کاربر یک مدیر است. می‌توانی اطلاعات بیشتری درباره مدیریت سفارشات و گزارشات ارائه دهی.`;
-      } else if (userRole === 'customer') {
-        contextualPrompt += `\nاین کاربر یک مشتری است. به او در ثبت سفارش و پیگیری سفارشات کمک کن.`;
+      // بررسی دسترسی به ماژول‌ها
+      if (moduleKeys.length > 0) {
+        const accessibleTopics = moduleKeys.flatMap(
+          moduleKey => MODULE_CAPABILITIES[moduleKey]?.dataAccess || []
+        );
+        
+        contextualPrompt += `
+
+═══════════════════════════════════════
+🔐 ماژول‌های فعال برای این کاربر
+═══════════════════════════════════════
+${moduleNames.map((name, i) => `${i + 1}. ${name}`).join("\n")}
+
+موضوعاتی که می‌توانی درباره آن‌ها اطلاعات بدهی:
+${accessibleTopics.map(topic => `• ${topic}`).join("\n")}
+
+⚠️ مهم: فقط درباره موضوعات بالا اطلاعات تخصصی بده. اگر کاربر درباره موضوعی سوال کرد که ماژول آن را ندارد، بگو:
+"متأسفانه شما دسترسی به این بخش را ندارید. لطفاً از مدیر بخواهید ماژول مربوطه را برای شما فعال کند."
+`;
+
+        // اضافه کردن اطلاعات بر اساس ماژول‌ها
+        if (moduleKeys.includes('daily_report')) {
+          const reportsContext = await getDailyReportsContext(supabase);
+          contextualPrompt += reportsContext;
+        }
+        
+        if (moduleKeys.includes('staff_management') || moduleKeys.includes('daily_report')) {
+          const staffContext = await getStaffListContext(supabase);
+          contextualPrompt += staffContext;
+        }
+        
+        if (moduleKeys.includes('scaffold_execution_with_materials') || moduleKeys.includes('ceo_dashboard')) {
+          const ordersListContext = await getRecentOrdersContext(supabase);
+          contextualPrompt += ordersListContext;
+        }
+      } else {
+        contextualPrompt += `
+
+⚠️ این کاربر هیچ ماژول تخصصی فعالی ندارد.
+فقط به سوالات عمومی درباره سایت و سفارشات شخصی این کاربر پاسخ بده.
+اگر درباره گزارشات روزانه، نیروها، یا اطلاعات مدیریتی سوال کرد، بگو که باید از مدیر بخواهد ماژول مربوطه را برایش فعال کند.
+`;
+      }
+      
+      if (userRoles.length > 0) {
+        contextualPrompt += `\n\nنقش‌های کاربر: ${userRoles.join('، ')}`;
       }
     }
 
