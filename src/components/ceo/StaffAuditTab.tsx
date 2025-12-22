@@ -310,7 +310,7 @@ export function StaffAuditTab() {
   };
 
   const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('fa-IR') + ' تومان';
+    return 'تومان ' + amount.toLocaleString('fa-IR');
   };
 
   const handleGeneratePdf = async () => {
