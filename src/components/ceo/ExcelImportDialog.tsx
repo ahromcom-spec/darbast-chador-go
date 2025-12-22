@@ -98,16 +98,12 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     }
   };
 
-  const handleUploadClick = () => {
+  const openExcelPicker = () => {
     // Always reset the input before clicking to ensure same file can be selected
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+      fileInputRef.current.click();
     }
-  };
-
-  const openExcelPicker = () => {
-    handleUploadClick();
-    fileInputRef.current?.click();
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -312,7 +308,6 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
               onChange={handleFileSelect}
               className="hidden"
               id="excel-upload"
-              onClick={handleUploadClick}
             />
             
             {selectedExcel ? (
@@ -335,7 +330,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
                 </Button>
               </div>
             ) : (
-              <label htmlFor="excel-upload" className="cursor-pointer space-y-3 block">
+              <label htmlFor="excel-upload" className="cursor-pointer space-y-3 block" onClick={openExcelPicker}>
                 <div className="w-14 h-14 mx-auto rounded-full bg-muted flex items-center justify-center">
                   <Upload className="h-7 w-7 text-muted-foreground" />
                 </div>
