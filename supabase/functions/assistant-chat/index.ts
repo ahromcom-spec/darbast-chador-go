@@ -432,6 +432,112 @@ async function getUserRoles(supabase: any, userId: string): Promise<string[]> {
   }
 }
 
+// تابع برای نرمال‌سازی نام کارکنان - حذف کدها و یکپارچه‌سازی
+function normalizeStaffName(rawName: string): { normalizedName: string; code: string } {
+  if (!rawName) return { normalizedName: '', code: '' };
+  
+  let name = rawName.trim();
+  let code = '';
+  
+  // الگوهای مختلف کد را استخراج کن
+  // الگو 1: "0103 - مهدی صادقی" یا "0103 مهدی صادقی"
+  const pattern1 = /^(\d+(?:\/\d+)?)\s*[-–]?\s*(.+)$/;
+  // الگو 2: "مهدی صادقی 000103/101510" یا "مهدی صادقی - 000103"
+  const pattern2 = /^(.+?)\s*[-–]?\s*(\d+(?:\/\d+)?)$/;
+  // الگو 3: فقط عدد در ابتدا "0103"
+  const pattern3 = /^(\d+(?:\/\d+)?)$/;
+  
+  let match = name.match(pattern1);
+  if (match) {
+    code = match[1];
+    name = match[2].trim();
+  } else {
+    match = name.match(pattern2);
+    if (match && match[2].length >= 2) {
+      name = match[1].trim();
+      code = match[2];
+    }
+  }
+  
+  // حذف کاراکترهای اضافی از اول و آخر نام
+  name = name.replace(/^[-–\s]+|[-–\s]+$/g, '').trim();
+  
+  // اگر نام فقط عدد است، برگردان
+  if (/^\d+$/.test(name)) {
+    return { normalizedName: name, code };
+  }
+  
+  return { normalizedName: name, code };
+}
+
+// تابع برای یکپارچه‌سازی نام‌های مشابه
+function unifyStaffNames(staffStats: Record<string, any>): Record<string, any> {
+  const unified: Record<string, any> = {};
+  const nameMapping: Record<string, string> = {};
+  
+  // مرتب‌سازی نام‌ها برای پردازش یکپارچه
+  const allNames = Object.keys(staffStats);
+  
+  allNames.forEach(rawName => {
+    const { normalizedName } = normalizeStaffName(rawName);
+    
+    if (!normalizedName) return;
+    
+    // بررسی شباهت با نام‌های موجود
+    let foundMatch = false;
+    for (const [existingRaw, existingNormalized] of Object.entries(nameMapping)) {
+      const { normalizedName: existingNorm } = normalizeStaffName(existingNormalized);
+      
+      // اگر نام نرمال‌شده یکی است یا یکی زیرمجموعه دیگری است
+      if (normalizedName === existingNorm || 
+          normalizedName.includes(existingNorm) || 
+          existingNorm.includes(normalizedName)) {
+        // از نام طولانی‌تر استفاده کن
+        const betterName = normalizedName.length >= existingNorm.length ? normalizedName : existingNorm;
+        nameMapping[rawName] = betterName;
+        foundMatch = true;
+        break;
+      }
+    }
+    
+    if (!foundMatch) {
+      nameMapping[rawName] = normalizedName;
+    }
+  });
+  
+  // حالا داده‌ها را یکپارچه کن
+  allNames.forEach(rawName => {
+    const targetName = nameMapping[rawName] || rawName;
+    
+    if (!unified[targetName]) {
+      unified[targetName] = {
+        presentDays: 0,
+        absentDays: 0,
+        totalOvertime: 0,
+        totalReceived: 0,
+        totalSpent: 0,
+        dates: [],
+        codes: new Set<string>(),
+        rawNames: new Set<string>()
+      };
+    }
+    
+    const stats = staffStats[rawName];
+    const { code } = normalizeStaffName(rawName);
+    
+    unified[targetName].presentDays += stats.presentDays || 0;
+    unified[targetName].absentDays += stats.absentDays || 0;
+    unified[targetName].totalOvertime += stats.totalOvertime || 0;
+    unified[targetName].totalReceived += stats.totalReceived || 0;
+    unified[targetName].totalSpent += stats.totalSpent || 0;
+    if (stats.dates) unified[targetName].dates.push(...stats.dates);
+    if (code) unified[targetName].codes.add(code);
+    unified[targetName].rawNames.add(rawName);
+  });
+  
+  return unified;
+}
+
 // تابع برای گرفتن اطلاعات گزارشات روزانه
 async function getDailyReportsContext(supabase: any): Promise<string> {
   try {
@@ -443,7 +549,7 @@ async function getDailyReportsContext(supabase: any): Promise<string> {
         daily_report_orders(order_id, team_name, activity_description, service_details, notes)
       `)
       .order("report_date", { ascending: false })
-      .limit(45); // گزارشات 45 روز اخیر برای محاسبه آمار ماهانه
+      .limit(60); // گزارشات 60 روز اخیر برای محاسبه آمار دقیق‌تر
     
     if (error || !recentReports || recentReports.length === 0) {
       return '\n📊 گزارشات روزانه: هنوز گزارشی ثبت نشده است.';
@@ -453,6 +559,9 @@ async function getDailyReportsContext(supabase: any): Promise<string> {
 ═══════════════════════════════════════
 📊 گزارشات روزانه (${recentReports.length} گزارش اخیر)
 ═══════════════════════════════════════
+
+⚠️ نکته مهم: نام کارکنان ممکن است با کدهای مختلف در گزارشات آمده باشد.
+سیستم به صورت هوشمند نام‌های مشابه را یکپارچه می‌کند.
 `;
 
     recentReports.forEach((report: any) => {
@@ -490,14 +599,16 @@ async function getDailyReportsContext(supabase: any): Promise<string> {
 │
 │ 👷 لیست نیروها:`;
 
-      // نمایش جزئیات هر نیرو
+      // نمایش جزئیات هر نیرو با نام نرمال‌شده
       report.daily_report_staff?.filter((s: any) => !s.is_cash_box && s.staff_name).forEach((staff: any) => {
+        const { normalizedName } = normalizeStaffName(staff.staff_name);
+        const displayName = normalizedName || staff.staff_name;
         const workStatus = staff.work_status === 'حاضر' || staff.work_status === 'کارکرده' ? '✅ حاضر' : '❌ غایب';
         const overtime = staff.overtime_hours > 0 ? ` | اضافه‌کاری: ${staff.overtime_hours} ساعت` : '';
         const received = staff.amount_received > 0 ? ` | دریافتی: ${Number(staff.amount_received).toLocaleString('fa-IR')}` : '';
         const spent = staff.amount_spent > 0 ? ` | هزینه: ${Number(staff.amount_spent).toLocaleString('fa-IR')}` : '';
         context += `
-│   • ${staff.staff_name}: ${workStatus}${overtime}${received}${spent}`;
+│   • ${displayName}: ${workStatus}${overtime}${received}${spent}`;
       });
 
       context += `
@@ -505,25 +616,30 @@ async function getDailyReportsContext(supabase: any): Promise<string> {
 `;
     });
 
-    // محاسبه آمار کلی کارکرد هر نیرو در کل گزارشات
-    const staffStats: Record<string, { presentDays: number; absentDays: number; totalOvertime: number; totalReceived: number; totalSpent: number }> = {};
+    // محاسبه آمار کلی کارکرد هر نیرو در کل گزارشات - با یکپارچه‌سازی نام‌ها
+    const staffStatsRaw: Record<string, { presentDays: number; absentDays: number; totalOvertime: number; totalReceived: number; totalSpent: number; dates: string[] }> = {};
     
     recentReports.forEach((report: any) => {
+      const reportDate = report.report_date;
       report.daily_report_staff?.filter((s: any) => !s.is_cash_box && s.staff_name).forEach((staff: any) => {
-        const name = staff.staff_name.trim();
-        if (!staffStats[name]) {
-          staffStats[name] = { presentDays: 0, absentDays: 0, totalOvertime: 0, totalReceived: 0, totalSpent: 0 };
+        const rawName = staff.staff_name.trim();
+        if (!staffStatsRaw[rawName]) {
+          staffStatsRaw[rawName] = { presentDays: 0, absentDays: 0, totalOvertime: 0, totalReceived: 0, totalSpent: 0, dates: [] };
         }
         if (staff.work_status === 'حاضر' || staff.work_status === 'کارکرده') {
-          staffStats[name].presentDays++;
+          staffStatsRaw[rawName].presentDays++;
         } else {
-          staffStats[name].absentDays++;
+          staffStatsRaw[rawName].absentDays++;
         }
-        staffStats[name].totalOvertime += Number(staff.overtime_hours) || 0;
-        staffStats[name].totalReceived += Number(staff.amount_received) || 0;
-        staffStats[name].totalSpent += Number(staff.amount_spent) || 0;
+        staffStatsRaw[rawName].totalOvertime += Number(staff.overtime_hours) || 0;
+        staffStatsRaw[rawName].totalReceived += Number(staff.amount_received) || 0;
+        staffStatsRaw[rawName].totalSpent += Number(staff.amount_spent) || 0;
+        staffStatsRaw[rawName].dates.push(reportDate);
       });
     });
+
+    // یکپارچه‌سازی نام‌های مشابه
+    const staffStats = unifyStaffNames(staffStatsRaw);
 
     // اضافه کردن آمار کلی به context
     if (Object.keys(staffStats).length > 0) {
@@ -531,12 +647,17 @@ async function getDailyReportsContext(supabase: any): Promise<string> {
 ═══════════════════════════════════════
 📊 آمار کلی کارکرد نیروها (${recentReports.length} روز گذشته)
 ═══════════════════════════════════════
+
+⚠️ توجه: اگر یک نفر با کدهای مختلف در گزارشات ثبت شده باشد،
+آمار او به صورت یکپارچه محاسبه شده است.
 `;
       Object.entries(staffStats)
-        .sort((a, b) => b[1].presentDays - a[1].presentDays)
-        .forEach(([name, stats]) => {
+        .sort((a: any, b: any) => b[1].presentDays - a[1].presentDays)
+        .forEach(([name, stats]: [string, any]) => {
+          const codesArr = Array.from(stats.codes || []) as string[];
+          const codesInfo = codesArr.length > 0 ? ` (کدها: ${codesArr.join('، ')})` : '';
           context += `
-• ${name}:
+• ${name}${codesInfo}:
    ✅ روزهای کارکرده: ${stats.presentDays} روز
    ❌ روزهای غیبت: ${stats.absentDays} روز
    ⏱️ مجموع اضافه‌کاری: ${stats.totalOvertime} ساعت
