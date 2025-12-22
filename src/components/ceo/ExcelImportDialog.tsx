@@ -77,6 +77,17 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
       setStatus('idle');
       setResults(null);
     }
+    // Reset input value to allow selecting the same file again
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
+  const handleUploadClick = () => {
+    // Always reset the input before clicking to ensure same file can be selected
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const processExcel = async () => {
@@ -230,6 +241,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
               onChange={handleFileSelect}
               className="hidden"
               id="excel-upload"
+              onClick={handleUploadClick}
             />
             
             {file ? (
