@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Loader2, Check, AlertCircle, X, Sparkles, MessageSquare, Image, Plus } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Upload, FileSpreadsheet, Loader2, Check, AlertCircle, X, Sparkles, MessageSquare, Image, Plus, Clock, Trash2, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,6 +20,8 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import * as XLSX from 'xlsx';
+import { useRecentExcelFiles } from '@/hooks/useRecentExcelFiles';
+import { useFileSystemAccess } from '@/hooks/useFileSystemAccess';
 
 interface StaffMember {
   user_id: string;
@@ -67,8 +69,13 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
   const [customInstructions, setCustomInstructions] = useState('');
   const [showInstructions, setShowInstructions] = useState(false);
   const [instructionImages, setInstructionImages] = useState<{ file: File; preview: string }[]>([]);
+  const [showRecentFiles, setShowRecentFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Recent files and File System Access hooks
+  const { recentFiles, addRecentFile, removeRecentFile } = useRecentExcelFiles();
+  const { isSupported: fsApiSupported, openFilePicker } = useFileSystemAccess();
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -88,21 +95,53 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     try {
       const buffer = await selectedFile.arrayBuffer();
       console.log('[ExcelImportDialog] excel selected:', selectedFile.name, selectedFile.size);
-      setSelectedExcel({ name: selectedFile.name, size: selectedFile.size, buffer });
+      const excelData = { name: selectedFile.name, size: selectedFile.size, buffer };
+      setSelectedExcel(excelData);
+      addRecentFile(excelData);
       setStatus('idle');
       setResults(null);
       setProgress(0);
+      setShowRecentFiles(false);
     } catch (error) {
       console.error('[ExcelImportDialog] error reading excel:', error);
       toast.error('خطا در خواندن فایل اکسل');
     }
   };
 
+  // Select from recent files
+  const selectRecentFile = (file: { name: string; size: number; buffer: ArrayBuffer }) => {
+    setSelectedExcel(file);
+    addRecentFile(file); // Move to top of recent list
+    setStatus('idle');
+    setResults(null);
+    setProgress(0);
+    setShowRecentFiles(false);
+    toast.success(`فایل "${file.name}" انتخاب شد`);
+  };
+
+  // Use File System Access API if supported
+  const openWithFsApi = async () => {
+    const result = await openFilePicker();
+    if (result) {
+      setSelectedExcel(result);
+      addRecentFile(result);
+      setStatus('idle');
+      setResults(null);
+      setProgress(0);
+      setShowRecentFiles(false);
+    }
+  };
+
   const openExcelPicker = () => {
-    // Always reset the input before clicking to ensure same file can be selected
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-      fileInputRef.current.click();
+    // If File System Access API is supported, use it for better folder memory
+    if (fsApiSupported) {
+      openWithFsApi();
+    } else {
+      // Fallback to regular input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current.click();
+      }
     }
   };
 
@@ -252,6 +291,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     setResults(null);
     setCustomInstructions('');
     setShowInstructions(false);
+    setShowRecentFiles(false);
     // Clean up image previews
     instructionImages.forEach(img => URL.revokeObjectURL(img.preview));
     setInstructionImages([]);
@@ -330,7 +370,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
                 </Button>
               </div>
             ) : (
-              <label htmlFor="excel-upload" className="cursor-pointer space-y-3 block" onClick={openExcelPicker}>
+              <div className="cursor-pointer space-y-3" onClick={(e) => { e.preventDefault(); openExcelPicker(); }}>
                 <div className="w-14 h-14 mx-auto rounded-full bg-muted flex items-center justify-center">
                   <Upload className="h-7 w-7 text-muted-foreground" />
                 </div>
@@ -338,9 +378,62 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
                   <p className="font-medium">فایل اکسل را اینجا رها کنید یا کلیک کنید</p>
                   <p className="text-sm text-muted-foreground">فرمت‌های پشتیبانی شده: xlsx, xls</p>
                 </div>
-              </label>
+              </div>
             )}
           </div>
+
+          {/* Recent Files Section */}
+          {recentFiles.length > 0 && !selectedExcel && (
+            <Collapsible open={showRecentFiles} onOpenChange={setShowRecentFiles}>
+              <CollapsibleTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-between gap-2 text-muted-foreground hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span>فایل‌های اخیر ({recentFiles.length})</span>
+                  </div>
+                  <FolderOpen className={`h-4 w-4 transition-transform ${showRecentFiles ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-2 pt-2">
+                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    💡 روی هر فایل کلیک کنید تا مستقیم انتخاب شود
+                  </p>
+                  {recentFiles.map((file, index) => (
+                    <div 
+                      key={`${file.name}-${index}`}
+                      className="flex items-center justify-between p-2 rounded-md bg-background hover:bg-accent/50 cursor-pointer transition-colors group"
+                      onClick={() => selectRecentFile(file)}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <FileSpreadsheet className="h-4 w-4 text-green-600 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(file.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeRecentFile(file.name);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           {/* AI Instructions Section */}
           <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
