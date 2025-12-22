@@ -72,6 +72,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
   const [showRecentFiles, setShowRecentFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const recentFilesSectionRef = useRef<HTMLDivElement>(null);
 
   // Recent files and File System Access hooks
   const { recentFiles, addRecentFile, removeRecentFile } = useRecentExcelFiles();
@@ -161,6 +162,16 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
       setShowRecentFiles(true);
     }
   }, [open, recentFiles.length, selectedExcel]);
+
+  useEffect(() => {
+    if (!showRecentFiles) return;
+
+    const t = window.setTimeout(() => {
+      recentFilesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+
+    return () => window.clearTimeout(t);
+  }, [showRecentFiles]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -438,55 +449,57 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
 
           {/* Recent Files Section */}
           {recentFiles.length > 0 && (
-            <Collapsible open={showRecentFiles} onOpenChange={setShowRecentFiles}>
-              <CollapsibleTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-between gap-2 text-muted-foreground hover:bg-muted/50"
-                >
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span>فایل‌های اخیر ({recentFiles.length})</span>
-                  </div>
-                  <FolderOpen className={`h-4 w-4 transition-transform ${showRecentFiles ? 'rotate-180' : ''}`} />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-2 pt-2">
-                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
-                  <p className="text-xs text-muted-foreground mb-2">
-                    💡 روی هر فایل کلیک کنید تا مستقیم انتخاب شود
-                  </p>
-                  {recentFiles.map((file, index) => (
-                    <div 
-                      key={`${file.name}-${index}`}
-                      className="flex items-center justify-between p-2 rounded-md bg-background hover:bg-accent/50 cursor-pointer transition-colors group"
-                      onClick={() => selectRecentFile(file)}
-                    >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <FileSpreadsheet className="h-4 w-4 text-green-600 shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{file.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {(file.size / 1024).toFixed(1)} KB
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeRecentFile(file.name);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
+            <div ref={recentFilesSectionRef} className="scroll-mt-4">
+              <Collapsible open={showRecentFiles} onOpenChange={setShowRecentFiles}>
+                <CollapsibleTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-between gap-2 text-muted-foreground hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      <span>فایل‌های اخیر ({recentFiles.length})</span>
                     </div>
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+                    <FolderOpen className={`h-4 w-4 transition-transform ${showRecentFiles ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-2 pt-2">
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      روی هر فایل کلیک کنید تا مستقیم انتخاب شود
+                    </p>
+                    {recentFiles.map((file, index) => (
+                      <div 
+                        key={`${file.name}-${index}`}
+                        className="flex items-center justify-between p-2 rounded-md bg-background hover:bg-accent/50 cursor-pointer transition-colors group"
+                        onClick={() => selectRecentFile(file)}
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileSpreadsheet className="h-4 w-4 text-green-600 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(file.size / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeRecentFile(file.name);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
           )}
 
           {/* AI Instructions Section */}
