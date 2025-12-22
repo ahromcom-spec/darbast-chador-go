@@ -78,6 +78,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
   const [showRecentFiles, setShowRecentFiles] = useState(false);
   const [progressLogs, setProgressLogs] = useState<{ message: string; type: 'info' | 'success' | 'warning' | 'error' }[]>([]);
   const [currentSheet, setCurrentSheet] = useState<{ index: number; name: string; total: number } | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const recentFilesSectionRef = useRef<HTMLDivElement>(null);
