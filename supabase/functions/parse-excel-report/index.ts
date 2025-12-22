@@ -61,6 +61,13 @@ serve(async (req) => {
     console.log('Instruction images provided:', instructionImages?.length || 0);
 
     const parsedReports: ParsedDailyReport[] = [];
+    const allProcessingReports: {
+      sheetName: string;
+      actionsPerformed: string[];
+      itemsIgnored: string[];
+      warnings: string[];
+      needsUserInput: string[];
+    }[] = [];
 
     // Process each sheet with AI
     for (const sheet of sheetsData as ExcelSheetData[]) {
@@ -126,8 +133,16 @@ OUTPUT FORMAT - Return valid JSON only:
       "teamName": "team members names",
       "notes": "additional notes"
     }
-  ]
+  ],
+  "processingReport": {
+    "actionsPerformed": ["list of actions done", "e.g. استخراج اطلاعات 5 نیرو", "استخراج 3 سفارش"],
+    "itemsIgnored": ["list of things ignored", "e.g. ردیف‌های خالی نادیده گرفته شد"],
+    "warnings": ["warnings or issues found", "e.g. نام فلانی در لیست نیروها پیدا نشد"],
+    "needsUserInput": ["things that need user clarification", "e.g. مبلغ X مشخص نیست - ریال است یا تومان؟"]
+  }
 }
+
+IMPORTANT: Always include processingReport with detailed information about what you did, what you ignored, and what needs clarification.
 
 If you cannot determine the date, use null. If a sheet seems empty or just a holiday notice (like "جمعه اکیپ تعطیل"), return empty arrays but still try to extract the date.`;
 
@@ -189,7 +204,7 @@ Extract all staff and order data. Return valid JSON only.`
         }
 
         // Parse JSON from AI response
-        let parsed: ParsedDailyReport;
+        let parsed: any;
         try {
           // Try to extract JSON from the response (might be wrapped in markdown code blocks)
           const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
@@ -198,27 +213,66 @@ Extract all staff and order data. Return valid JSON only.`
           const jsonStr = jsonMatch[1] || content;
           parsed = JSON.parse(jsonStr.trim());
           
+          // Collect processing report
+          if (parsed.processingReport) {
+            allProcessingReports.push({
+              sheetName: sheet.sheetName,
+              actionsPerformed: parsed.processingReport.actionsPerformed || [],
+              itemsIgnored: parsed.processingReport.itemsIgnored || [],
+              warnings: parsed.processingReport.warnings || [],
+              needsUserInput: parsed.processingReport.needsUserInput || []
+            });
+          }
+          
           if (parsed.date || parsed.staffReports?.length || parsed.orderReports?.length) {
-            parsedReports.push(parsed);
+            parsedReports.push({
+              date: parsed.date,
+              staffReports: parsed.staffReports || [],
+              orderReports: parsed.orderReports || []
+            });
             console.log('Successfully parsed sheet:', sheet.sheetName, 'Date:', parsed.date);
           }
         } catch (parseError) {
           console.error('Failed to parse AI response JSON for sheet', sheet.sheetName, ':', parseError);
           console.log('AI response was:', content.substring(0, 500));
+          allProcessingReports.push({
+            sheetName: sheet.sheetName,
+            actionsPerformed: [],
+            itemsIgnored: [],
+            warnings: [`خطا در پردازش این شیت: ${parseError}`],
+            needsUserInput: []
+          });
         }
       } catch (sheetError) {
         console.error('Error processing sheet', sheet.sheetName, ':', sheetError);
+        allProcessingReports.push({
+          sheetName: sheet.sheetName,
+          actionsPerformed: [],
+          itemsIgnored: [],
+          warnings: [`خطا در ارتباط با هوش مصنوعی: ${sheetError}`],
+          needsUserInput: []
+        });
       }
     }
 
     console.log('Successfully parsed', parsedReports.length, 'reports');
+
+    // Aggregate processing reports
+    const aggregatedReport = {
+      actionsPerformed: allProcessingReports.flatMap(r => r.actionsPerformed),
+      itemsIgnored: allProcessingReports.flatMap(r => r.itemsIgnored),
+      warnings: allProcessingReports.flatMap(r => r.warnings),
+      needsUserInput: allProcessingReports.flatMap(r => r.needsUserInput),
+      perSheet: allProcessingReports
+    };
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         reports: parsedReports,
         totalSheets: sheetsData.length,
-        parsedSheets: parsedReports.length
+        parsedSheets: parsedReports.length,
+        processingReport: aggregatedReport
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
