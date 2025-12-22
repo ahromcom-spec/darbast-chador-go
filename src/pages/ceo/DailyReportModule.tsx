@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings } from 'lucide-react';
+import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square } from 'lucide-react';
+import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,17 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -118,12 +130,29 @@ export default function DailyReportModule() {
     return localStorage.getItem('dailyReportActiveTab') || 'new-report';
   });
 
+  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+  const [loadingSavedReports, setLoadingSavedReports] = useState(false);
+
+  // Bulk delete hook
+  const {
+    selectedReportIds,
+    bulkDeleteDialogOpen,
+    setBulkDeleteDialogOpen,
+    deleting,
+    toggleReportSelection,
+    toggleSelectAll,
+    clearSelection,
+    handleBulkDelete
+  } = useDailyReportBulkDelete(() => {
+    // Remove deleted reports from state
+    setSavedReports(prev => prev.filter(r => !selectedReportIds.has(r.id)));
+  });
+
   // Persist active tab to localStorage
   useEffect(() => {
     localStorage.setItem('dailyReportActiveTab', activeTab);
   }, [activeTab]);
-  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
-  const [loadingSavedReports, setLoadingSavedReports] = useState(false);
+
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
 
@@ -1357,11 +1386,41 @@ export default function DailyReportModule() {
           <TabsContent value="saved-reports" className="mt-6">
             <Card>
               <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <History className="h-5 w-5 text-primary" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <History className="h-5 w-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-lg">گزارشات ذخیره شده</CardTitle>
                   </div>
-                  <CardTitle className="text-lg">گزارشات ذخیره شده</CardTitle>
+                  {savedReports.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleSelectAll(savedReports.map(r => r.id))}
+                        className="gap-2"
+                      >
+                        {selectedReportIds.size === savedReports.length ? (
+                          <CheckSquare className="h-4 w-4" />
+                        ) : (
+                          <Square className="h-4 w-4" />
+                        )}
+                        {selectedReportIds.size === savedReports.length ? 'لغو انتخاب' : 'انتخاب همه'}
+                      </Button>
+                      {selectedReportIds.size > 0 && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setBulkDeleteDialogOpen(true)}
+                          className="gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          حذف {selectedReportIds.size} گزارش
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -1379,30 +1438,47 @@ export default function DailyReportModule() {
                     {savedReports.map((report) => (
                       <Card 
                         key={report.id} 
-                        className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => viewSavedReport(report.report_date)}
+                        className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
+                          selectedReportIds.has(report.id) ? 'ring-2 ring-primary bg-primary/5' : ''
+                        }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                              <Calendar className="h-5 w-5 text-amber-600" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{formatPersianDate(report.report_date)}</h3>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                                <span className="flex items-center gap-1">
-                                  <Package className="h-4 w-4" />
-                                  {report.orders_count} سفارش
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <User className="h-4 w-4" />
-                                  {report.staff_count} نیرو
-                                </span>
+                            <Checkbox
+                              checked={selectedReportIds.has(report.id)}
+                              onCheckedChange={() => toggleReportSelection(report.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="ml-2"
+                            />
+                            <div 
+                              className="flex items-center gap-4 flex-1"
+                              onClick={() => viewSavedReport(report.report_date)}
+                            >
+                              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                                <Calendar className="h-5 w-5 text-amber-600" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold">{formatPersianDate(report.report_date)}</h3>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                                  <span className="flex items-center gap-1">
+                                    <Package className="h-4 w-4" />
+                                    {report.orders_count} سفارش
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <User className="h-4 w-4" />
+                                    {report.staff_count} نیرو
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" className="gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="gap-2"
+                              onClick={() => viewSavedReport(report.report_date)}
+                            >
                               <Eye className="h-4 w-4" />
                               مشاهده
                             </Button>
@@ -1423,6 +1499,35 @@ export default function DailyReportModule() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Bulk Delete Confirmation Dialog */}
+            <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-right">تایید حذف گروهی</AlertDialogTitle>
+                  <AlertDialogDescription className="text-right">
+                    آیا از حذف {selectedReportIds.size} گزارش انتخاب شده اطمینان دارید؟
+                    <br />
+                    این عمل قابل بازگشت نیست.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row-reverse gap-2">
+                  <AlertDialogCancel>انصراف</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleBulkDelete}
+                    disabled={deleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 ml-2" />
+                    )}
+                    حذف {selectedReportIds.size} گزارش
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
 
           {/* Staff Audit Tab */}
