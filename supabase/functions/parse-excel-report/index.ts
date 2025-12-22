@@ -105,23 +105,49 @@ serve(async (req) => {
               .map((row, idx) => `Row ${idx + 1}: ${row.join(' | ')}`)
               .join('\n');
 
+            // Build custom instructions section with emphasis
             const customInstructionsSection = customInstructions 
-              ? `\nCUSTOM INSTRUCTIONS FROM USER (VERY IMPORTANT - FOLLOW THESE CAREFULLY):\n${customInstructions}\n\nThe user has provided specific instructions above. These take priority over default rules where applicable.\n`
+              ? `\n${'='.repeat(60)}
+⚠️ CUSTOM INSTRUCTIONS FROM USER (HIGHEST PRIORITY - MUST FOLLOW):
+${'='.repeat(60)}
+${customInstructions}
+${'='.repeat(60)}
+The user has provided these specific instructions above. 
+These OVERRIDE and TAKE PRIORITY over all default rules where applicable.
+Pay special attention to any questions or specific requests in the instructions.
+${'='.repeat(60)}\n`
               : '';
 
             const systemPrompt = buildSystemPrompt(knownStaffMembers, customInstructionsSection);
 
+            // Build user message with text and optional images
             const userMessageContent: any[] = [];
+            
+            // Add main text content with custom instructions reminder
+            let textContent = `Parse this Persian daily work report Excel sheet:\n\nSheet Name: "${sheet.sheetName}"\n\nContent:\n${sheetContent}\n\n`;
+            
+            if (customInstructions) {
+              textContent += `\n⚠️ REMINDER - USER'S SPECIFIC INSTRUCTIONS:\n${customInstructions}\n\nMake sure to address the user's questions and follow their specific instructions above!\n`;
+            }
+            
+            textContent += `\nExtract all staff and order data. Return valid JSON only.`;
+            
             userMessageContent.push({
               type: 'text',
-              text: `Parse this Persian daily work report Excel sheet:\n\nSheet Name: "${sheet.sheetName}"\n\nContent:\n${sheetContent}\n\nExtract all staff and order data. Return valid JSON only.`
+              text: textContent
             });
 
-            if (instructionImages && instructionImages.length > 0 && i === 0) {
+            // Add instruction images to EVERY sheet processing for context
+            if (instructionImages && instructionImages.length > 0) {
+              console.log(`Adding ${instructionImages.length} instruction images to sheet ${i + 1}`);
               for (const imageBase64 of instructionImages) {
+                // Ensure proper data URL format
+                const imageUrl = imageBase64.startsWith('data:') 
+                  ? imageBase64 
+                  : `data:image/png;base64,${imageBase64}`;
                 userMessageContent.push({
                   type: 'image_url',
-                  image_url: { url: imageBase64 }
+                  image_url: { url: imageUrl }
                 });
               }
             }
@@ -306,30 +332,57 @@ serve(async (req) => {
       needsUserInput: string[];
     }[] = [];
 
-    for (const sheet of sheetsData as ExcelSheetData[]) {
+    for (let i = 0; i < (sheetsData as ExcelSheetData[]).length; i++) {
+      const sheet = sheetsData[i] as ExcelSheetData;
       console.log('Processing sheet:', sheet.sheetName);
       
       const sheetContent = sheet.rows
         .map((row, idx) => `Row ${idx + 1}: ${row.join(' | ')}`)
         .join('\n');
 
+      // Build custom instructions section with emphasis
       const customInstructionsSection = customInstructions 
-        ? `\nCUSTOM INSTRUCTIONS FROM USER (VERY IMPORTANT - FOLLOW THESE CAREFULLY):\n${customInstructions}\n\nThe user has provided specific instructions above. These take priority over default rules where applicable.\n`
+        ? `\n${'='.repeat(60)}
+⚠️ CUSTOM INSTRUCTIONS FROM USER (HIGHEST PRIORITY - MUST FOLLOW):
+${'='.repeat(60)}
+${customInstructions}
+${'='.repeat(60)}
+The user has provided these specific instructions above. 
+These OVERRIDE and TAKE PRIORITY over all default rules where applicable.
+Pay special attention to any questions or specific requests in the instructions.
+${'='.repeat(60)}\n`
         : '';
 
       const systemPrompt = buildSystemPrompt(knownStaffMembers, customInstructionsSection);
 
+      // Build user message with text and optional images
       const userMessageContent: any[] = [];
+      
+      // Add main text content with custom instructions reminder
+      let textContent = `Parse this Persian daily work report Excel sheet:\n\nSheet Name: "${sheet.sheetName}"\n\nContent:\n${sheetContent}\n\n`;
+      
+      if (customInstructions) {
+        textContent += `\n⚠️ REMINDER - USER'S SPECIFIC INSTRUCTIONS:\n${customInstructions}\n\nMake sure to address the user's questions and follow their specific instructions above!\n`;
+      }
+      
+      textContent += `\nExtract all staff and order data. Return valid JSON only.`;
+      
       userMessageContent.push({
         type: 'text',
-        text: `Parse this Persian daily work report Excel sheet:\n\nSheet Name: "${sheet.sheetName}"\n\nContent:\n${sheetContent}\n\nExtract all staff and order data. Return valid JSON only.`
+        text: textContent
       });
 
-      if (instructionImages && instructionImages.length > 0 && sheetsData.indexOf(sheet) === 0) {
+      // Add instruction images to EVERY sheet processing for context
+      if (instructionImages && instructionImages.length > 0) {
+        console.log(`Adding ${instructionImages.length} instruction images to sheet ${i + 1}`);
         for (const imageBase64 of instructionImages) {
+          // Ensure proper data URL format
+          const imageUrl = imageBase64.startsWith('data:') 
+            ? imageBase64 
+            : `data:image/png;base64,${imageBase64}`;
           userMessageContent.push({
             type: 'image_url',
-            image_url: { url: imageBase64 }
+            image_url: { url: imageUrl }
           });
         }
       }
