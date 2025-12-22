@@ -118,7 +118,7 @@ Pay special attention to any questions or specific requests in the instructions.
 ${'='.repeat(60)}\n`
               : '';
 
-            const systemPrompt = buildSystemPrompt(knownStaffMembers, customInstructionsSection);
+            const systemPrompt = buildSystemPrompt(knownStaffMembers, customInstructionsSection, !!customInstructions);
 
             // Build user message with text and optional images
             const userMessageContent: any[] = [];
@@ -353,7 +353,7 @@ Pay special attention to any questions or specific requests in the instructions.
 ${'='.repeat(60)}\n`
         : '';
 
-      const systemPrompt = buildSystemPrompt(knownStaffMembers, customInstructionsSection);
+      const systemPrompt = buildSystemPrompt(knownStaffMembers, customInstructionsSection, !!customInstructions);
 
       // Build user message with text and optional images
       const userMessageContent: any[] = [];
@@ -496,15 +496,66 @@ ${'='.repeat(60)}\n`
 });
 
 // Helper function to build system prompt
-function buildSystemPrompt(knownStaffMembers: any[], customInstructionsSection: string): string {
-  return `You are an expert at parsing Persian/Farsi daily work reports from Excel sheets.
-You are like a highly skilled, intelligent, and professional employee who works precisely and carefully.
-Your task is to extract structured data from the Excel content based on user instructions and context.
+function buildSystemPrompt(knownStaffMembers: any[], customInstructionsSection: string, hasCustomInstructions: boolean): string {
+  // If user provided specific instructions, focus ONLY on those
+  if (hasCustomInstructions) {
+    return `You are a highly intelligent, professional assistant who works precisely and carefully with Excel data.
+Your PRIMARY TASK is to UNDERSTAND and FULFILL the user's SPECIFIC REQUEST/QUESTION.
+
+⚠️ CRITICAL BEHAVIOR CHANGE:
+- The user has provided SPECIFIC INSTRUCTIONS or a QUESTION
+- You must FIRST understand exactly what they want
+- Then SEARCH through the Excel data to find ONLY the relevant information
+- Do NOT do generic extraction of all data
+- Focus ONLY on what the user asked for
 
 KNOWN STAFF MEMBERS IN THE SYSTEM:
 ${knownStaffMembers?.map((s: any) => `- ${s.full_name} (کد: ${s.code || 'ندارد'})`).join('\n') || 'هیچ نیروی ثبت شده‌ای وجود ندارد'}
 ${customInstructionsSection}
-DEFAULT RULES (apply unless overridden by custom instructions):
+INTELLIGENT PROCESSING RULES:
+1. READ and UNDERSTAND the user's question/instruction FIRST
+2. If user asks "چرا تاریخ X استخراج نشده؟" - Find that specific date and report what you found
+3. If user asks about specific staff - Focus only on that staff member's data
+4. If user asks about specific orders - Focus only on those orders
+5. If user provides helper images - Use them as reference to understand what they're looking for
+6. Be like a smart employee who understands the context and answers specifically
+
+RESPONSE APPROACH:
+- Answer the user's specific question first
+- Provide targeted information, not generic extraction
+- If the user wants a specific date/person/item, find it and report on it
+- Explain what you found and why (if something is missing, explain why)
+
+OUTPUT FORMAT - Return valid JSON:
+{
+  "date": "YYYY-MM-DD or null",
+  "userQueryResponse": "پاسخ مستقیم به سوال کاربر - توضیح دقیق در مورد آنچه یافتید یا نیافتید",
+  "staffReports": [/* only relevant staff based on user's request */],
+  "orderReports": [/* only relevant orders based on user's request */],
+  "processingReport": {
+    "actionsPerformed": ["exactly what was done based on user's request"],
+    "itemsIgnored": ["what was skipped and why"],
+    "warnings": ["any issues found"],
+    "needsUserInput": ["clarifications needed"],
+    "specificFindings": ["targeted findings related to user's question"]
+  }
+}
+
+IMPORTANT: 
+- processingReport.specificFindings should directly answer the user's question
+- Don't extract everything - be focused and targeted
+- Explain clearly if something requested was not found and why`;
+  }
+  
+  // Default behavior when no custom instructions - do generic extraction
+  return `You are an expert at parsing Persian/Farsi daily work reports from Excel sheets.
+You are like a highly skilled, intelligent, and professional employee who works precisely and carefully.
+Your task is to extract structured data from the Excel content.
+
+KNOWN STAFF MEMBERS IN THE SYSTEM:
+${knownStaffMembers?.map((s: any) => `- ${s.full_name} (کد: ${s.code || 'ندارد'})`).join('\n') || 'هیچ نیروی ثبت شده‌ای وجود ندارد'}
+
+DEFAULT RULES:
 1. Extract the date from the sheet name if it contains Persian date (like "30 آذر 1404" or "1 دی 1404")
 2. For staff names, try to match with the known staff members above. Look for similarities in names.
 3. "کارت صندوق اهرم" is a special cash box entry - set isCashBox: true for it
