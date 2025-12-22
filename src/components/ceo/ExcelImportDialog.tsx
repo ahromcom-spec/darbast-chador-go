@@ -76,9 +76,12 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
   const [showInstructions, setShowInstructions] = useState(false);
   const [instructionImages, setInstructionImages] = useState<{ file: File; preview: string }[]>([]);
   const [showRecentFiles, setShowRecentFiles] = useState(false);
+  const [progressLogs, setProgressLogs] = useState<{ message: string; type: 'info' | 'success' | 'warning' | 'error' }[]>([]);
+  const [currentSheet, setCurrentSheet] = useState<{ index: number; name: string; total: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const recentFilesSectionRef = useRef<HTMLDivElement>(null);
+  const progressLogsRef = useRef<HTMLDivElement>(null);
 
   // Recent files and File System Access hooks
   const { recentFiles, addRecentFile, removeRecentFile } = useRecentExcelFiles();
@@ -224,14 +227,17 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     if (!selectedExcel) return;
 
     setProcessing(true);
-    setProgress(10);
+    setProgress(5);
     setStatus('reading');
+    setProgressLogs([]);
+    setCurrentSheet(null);
 
     try {
       // Read Excel file from memory buffer (prevents OS "file is in use" lock issues)
+      setProgressLogs(prev => [...prev, { message: 'خواندن فایل اکسل...', type: 'info' }]);
       const workbook = XLSX.read(selectedExcel.buffer, { type: 'array' });
       
-      setProgress(30);
+      setProgress(15);
       setStatus('parsing');
 
       // Extract data from each sheet
@@ -257,8 +263,8 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
         }
       }
 
-      console.log('Extracted', sheetsData.length, 'sheets with data');
-      setProgress(50);
+      setProgressLogs(prev => [...prev, { message: `${sheetsData.length} شیت با داده یافت شد`, type: 'info' }]);
+      setProgress(20);
 
       // Prepare staff members with codes extracted from names
       const staffWithCodes = knownStaffMembers.map(s => ({
@@ -273,44 +279,137 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
         imageBase64List.push(base64);
       }
 
-      // Send to edge function for AI processing
-      const { data, error } = await supabase.functions.invoke('parse-excel-report', {
-        body: {
+      setProgressLogs(prev => [...prev, { message: 'ارسال به هوش مصنوعی برای پردازش...', type: 'info' }]);
+
+      // Use streaming for real-time progress
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/parse-excel-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
           sheetsData,
           knownStaffMembers: staffWithCodes,
           customInstructions: customInstructions.trim() || undefined,
-          instructionImages: imageBase64List.length > 0 ? imageBase64List : undefined
-        }
+          instructionImages: imageBase64List.length > 0 ? imageBase64List : undefined,
+          streaming: true
+        })
       });
 
-      setProgress(90);
-
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        throw new Error(`خطا در ارتباط با سرور: ${response.status}`);
       }
 
-      if (!data?.success) {
-        throw new Error(data?.error || 'خطا در پردازش فایل');
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let finalData: any = null;
+
+      if (reader) {
+        let buffer = '';
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          
+          // Process complete SSE events
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr === '[DONE]') continue;
+              
+              try {
+                const event = JSON.parse(jsonStr);
+                
+                switch (event.type) {
+                  case 'start':
+                    setProgressLogs(prev => [...prev, { message: event.message, type: 'info' }]);
+                    setCurrentSheet({ index: 0, name: '', total: event.totalSheets });
+                    break;
+                    
+                  case 'progress':
+                    setCurrentSheet({ index: event.sheetIndex, name: event.sheetName, total: sheetsData.length });
+                    setProgress(20 + ((event.sheetIndex / sheetsData.length) * 70));
+                    // Show step-specific message
+                    if (event.step === 'ai_processing') {
+                      setProgressLogs(prev => [...prev, { message: event.message, type: 'info' }]);
+                    }
+                    break;
+                    
+                  case 'sheet_done':
+                    setProgressLogs(prev => [...prev, { message: event.message, type: 'success' }]);
+                    break;
+                    
+                  case 'sheet_empty':
+                    setProgressLogs(prev => [...prev, { message: event.message, type: 'warning' }]);
+                    break;
+                    
+                  case 'warning':
+                    setProgressLogs(prev => [...prev, { message: event.message, type: 'warning' }]);
+                    break;
+                    
+                  case 'error':
+                    setProgressLogs(prev => [...prev, { message: event.message, type: 'error' }]);
+                    break;
+                    
+                  case 'complete':
+                    finalData = event;
+                    setProgress(95);
+                    break;
+                    
+                  case 'done':
+                    setProgress(100);
+                    break;
+                }
+                
+                // Auto-scroll logs
+                setTimeout(() => {
+                  progressLogsRef.current?.scrollTo({
+                    top: progressLogsRef.current.scrollHeight,
+                    behavior: 'smooth'
+                  });
+                }, 50);
+                
+              } catch (e) {
+                // Ignore parse errors for incomplete JSON
+              }
+            }
+          }
+        }
       }
 
-      setResults({ total: data.totalSheets, parsed: data.parsedSheets });
-      setProcessingReport(data.processingReport || null);
-      setStatus('done');
-      setProgress(100);
+      if (finalData) {
+        setResults({ total: finalData.totalSheets, parsed: finalData.parsedSheets });
+        setProcessingReport(finalData.processingReport || null);
+        setStatus('done');
+        setCurrentSheet(null);
 
-      if (data.reports && data.reports.length > 0) {
-        toast.success(`${data.parsedSheets} گزارش از ${data.totalSheets} شیت استخراج شد`);
-        onImportComplete(data.reports);
+        if (finalData.reports && finalData.reports.length > 0) {
+          toast.success(`${finalData.parsedSheets} گزارش از ${finalData.totalSheets} شیت استخراج شد`);
+          onImportComplete(finalData.reports);
+        } else {
+          toast.warning('هیچ گزارش قابل استخراجی یافت نشد');
+        }
       } else {
-        toast.warning('هیچ گزارش قابل استخراجی یافت نشد');
+        throw new Error('پاسخی از سرور دریافت نشد');
       }
 
     } catch (error) {
       console.error('Error processing Excel:', error);
       setStatus('error');
+      setProgressLogs(prev => [...prev, { message: `خطا: ${error instanceof Error ? error.message : 'خطای نامشخص'}`, type: 'error' }]);
       toast.error(error instanceof Error ? error.message : 'خطا در پردازش فایل');
     } finally {
       setProcessing(false);
+      setCurrentSheet(null);
     }
   };
 
@@ -328,6 +427,8 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     setCustomInstructions('');
     setShowInstructions(false);
     setShowRecentFiles(false);
+    setProgressLogs([]);
+    setCurrentSheet(null);
     // Clean up image previews
     instructionImages.forEach(img => URL.revokeObjectURL(img.preview));
     setInstructionImages([]);
@@ -612,11 +713,48 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
           {/* Progress */}
           {processing && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {getStatusText()}
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {currentSheet ? (
+                    <span>پردازش شیت {currentSheet.index} از {currentSheet.total}: "{currentSheet.name}"</span>
+                  ) : (
+                    getStatusText()
+                  )}
+                </div>
+                {currentSheet && (
+                  <span className="text-xs text-primary font-medium">
+                    {Math.round(progress)}%
+                  </span>
+                )}
               </div>
               <Progress value={progress} className="h-2" />
+              
+              {/* Real-time progress logs */}
+              {progressLogs.length > 0 && (
+                <div 
+                  ref={progressLogsRef}
+                  className="max-h-32 overflow-y-auto rounded-lg border bg-muted/30 p-2 space-y-1 text-xs"
+                >
+                  {progressLogs.map((log, idx) => (
+                    <div 
+                      key={idx}
+                      className={`flex items-start gap-2 ${
+                        log.type === 'success' ? 'text-green-600 dark:text-green-400' :
+                        log.type === 'warning' ? 'text-amber-600 dark:text-amber-400' :
+                        log.type === 'error' ? 'text-destructive' :
+                        'text-muted-foreground'
+                      }`}
+                    >
+                      {log.type === 'success' && <Check className="h-3 w-3 mt-0.5 shrink-0" />}
+                      {log.type === 'warning' && <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />}
+                      {log.type === 'error' && <X className="h-3 w-3 mt-0.5 shrink-0" />}
+                      {log.type === 'info' && <Loader2 className="h-3 w-3 mt-0.5 shrink-0 animate-spin" />}
+                      <span>{log.message}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

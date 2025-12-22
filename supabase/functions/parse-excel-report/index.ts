@@ -38,7 +38,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sheetsData, knownStaffMembers, customInstructions, instructionImages } = await req.json();
+    const { sheetsData, knownStaffMembers, customInstructions, instructionImages, streaming } = await req.json();
 
     if (!sheetsData || !Array.isArray(sheetsData)) {
       return new Response(
@@ -59,7 +59,220 @@ serve(async (req) => {
     console.log('Known staff members:', knownStaffMembers?.length || 0);
     console.log('Custom instructions provided:', !!customInstructions);
     console.log('Instruction images provided:', instructionImages?.length || 0);
+    console.log('Streaming mode:', !!streaming);
 
+    // If streaming mode is requested, use SSE
+    if (streaming) {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        async start(controller) {
+          const sendEvent = (data: any) => {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+          };
+
+          const parsedReports: ParsedDailyReport[] = [];
+          const allProcessingReports: any[] = [];
+
+          sendEvent({ 
+            type: 'start', 
+            message: `شروع پردازش ${sheetsData.length} شیت...`,
+            totalSheets: sheetsData.length 
+          });
+
+          for (let i = 0; i < sheetsData.length; i++) {
+            const sheet = sheetsData[i] as ExcelSheetData;
+            const sheetIndex = i + 1;
+
+            sendEvent({ 
+              type: 'progress', 
+              sheetIndex,
+              sheetName: sheet.sheetName,
+              message: `در حال پردازش شیت ${sheetIndex} از ${sheetsData.length}: "${sheet.sheetName}"`,
+              step: 'reading'
+            });
+
+            const sheetContent = sheet.rows
+              .map((row, idx) => `Row ${idx + 1}: ${row.join(' | ')}`)
+              .join('\n');
+
+            const customInstructionsSection = customInstructions 
+              ? `\nCUSTOM INSTRUCTIONS FROM USER (VERY IMPORTANT - FOLLOW THESE CAREFULLY):\n${customInstructions}\n\nThe user has provided specific instructions above. These take priority over default rules where applicable.\n`
+              : '';
+
+            const systemPrompt = buildSystemPrompt(knownStaffMembers, customInstructionsSection);
+
+            const userMessageContent: any[] = [];
+            userMessageContent.push({
+              type: 'text',
+              text: `Parse this Persian daily work report Excel sheet:\n\nSheet Name: "${sheet.sheetName}"\n\nContent:\n${sheetContent}\n\nExtract all staff and order data. Return valid JSON only.`
+            });
+
+            if (instructionImages && instructionImages.length > 0 && i === 0) {
+              for (const imageBase64 of instructionImages) {
+                userMessageContent.push({
+                  type: 'image_url',
+                  image_url: { url: imageBase64 }
+                });
+              }
+            }
+
+            sendEvent({ 
+              type: 'progress', 
+              sheetIndex,
+              sheetName: sheet.sheetName,
+              message: `ارسال به هوش مصنوعی: "${sheet.sheetName}"`,
+              step: 'ai_processing'
+            });
+
+            try {
+              const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  model: 'google/gemini-2.5-flash',
+                  messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userMessageContent }
+                  ],
+                }),
+              });
+
+              if (!response.ok) {
+                sendEvent({ 
+                  type: 'warning', 
+                  sheetIndex,
+                  sheetName: sheet.sheetName,
+                  message: `خطا در پردازش شیت "${sheet.sheetName}": ${response.status}`
+                });
+                continue;
+              }
+
+              const aiData = await response.json();
+              const content = aiData.choices?.[0]?.message?.content;
+
+              if (!content) {
+                sendEvent({ 
+                  type: 'warning', 
+                  sheetIndex,
+                  sheetName: sheet.sheetName,
+                  message: `پاسخی از هوش مصنوعی برای "${sheet.sheetName}" دریافت نشد`
+                });
+                continue;
+              }
+
+              sendEvent({ 
+                type: 'progress', 
+                sheetIndex,
+                sheetName: sheet.sheetName,
+                message: `تحلیل نتایج: "${sheet.sheetName}"`,
+                step: 'parsing'
+              });
+
+              let parsed: any;
+              try {
+                const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
+                                 content.match(/```\s*([\s\S]*?)\s*```/) ||
+                                 [null, content];
+                const jsonStr = jsonMatch[1] || content;
+                parsed = JSON.parse(jsonStr.trim());
+
+                if (parsed.processingReport) {
+                  allProcessingReports.push({
+                    sheetName: sheet.sheetName,
+                    ...parsed.processingReport
+                  });
+                }
+
+                if (parsed.date || parsed.staffReports?.length || parsed.orderReports?.length) {
+                  parsedReports.push({
+                    date: parsed.date,
+                    staffReports: parsed.staffReports || [],
+                    orderReports: parsed.orderReports || []
+                  });
+
+                  const staffCount = parsed.staffReports?.length || 0;
+                  const orderCount = parsed.orderReports?.length || 0;
+                  
+                  sendEvent({ 
+                    type: 'sheet_done', 
+                    sheetIndex,
+                    sheetName: sheet.sheetName,
+                    message: `✓ "${sheet.sheetName}": ${staffCount} نیرو و ${orderCount} سفارش استخراج شد`,
+                    date: parsed.date,
+                    staffCount,
+                    orderCount
+                  });
+                } else {
+                  sendEvent({ 
+                    type: 'sheet_empty', 
+                    sheetIndex,
+                    sheetName: sheet.sheetName,
+                    message: `"${sheet.sheetName}": داده‌ای برای استخراج یافت نشد`
+                  });
+                }
+              } catch (parseError) {
+                sendEvent({ 
+                  type: 'warning', 
+                  sheetIndex,
+                  sheetName: sheet.sheetName,
+                  message: `خطا در تحلیل نتایج "${sheet.sheetName}"`
+                });
+                allProcessingReports.push({
+                  sheetName: sheet.sheetName,
+                  actionsPerformed: [],
+                  itemsIgnored: [],
+                  warnings: [`خطا در پردازش: ${parseError}`],
+                  needsUserInput: []
+                });
+              }
+            } catch (sheetError) {
+              sendEvent({ 
+                type: 'error', 
+                sheetIndex,
+                sheetName: sheet.sheetName,
+                message: `خطا در پردازش "${sheet.sheetName}": ${sheetError}`
+              });
+            }
+          }
+
+          // Send final result
+          const aggregatedReport = {
+            actionsPerformed: allProcessingReports.flatMap(r => r.actionsPerformed || []),
+            itemsIgnored: allProcessingReports.flatMap(r => r.itemsIgnored || []),
+            warnings: allProcessingReports.flatMap(r => r.warnings || []),
+            needsUserInput: allProcessingReports.flatMap(r => r.needsUserInput || []),
+            perSheet: allProcessingReports
+          };
+
+          sendEvent({ 
+            type: 'complete', 
+            message: `پردازش کامل شد: ${parsedReports.length} گزارش از ${sheetsData.length} شیت`,
+            success: true,
+            reports: parsedReports,
+            totalSheets: sheetsData.length,
+            parsedSheets: parsedReports.length,
+            processingReport: aggregatedReport
+          });
+
+          sendEvent({ type: 'done' });
+          controller.close();
+        }
+      });
+
+      return new Response(stream, {
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        }
+      });
+    }
+
+    // Non-streaming mode (original behavior)
     const parsedReports: ParsedDailyReport[] = [];
     const allProcessingReports: {
       sheetName: string;
@@ -69,26 +282,145 @@ serve(async (req) => {
       needsUserInput: string[];
     }[] = [];
 
-    // Process each sheet with AI
     for (const sheet of sheetsData as ExcelSheetData[]) {
       console.log('Processing sheet:', sheet.sheetName);
       
-      // Convert rows to a readable format for AI
       const sheetContent = sheet.rows
         .map((row, idx) => `Row ${idx + 1}: ${row.join(' | ')}`)
         .join('\n');
 
-      // Build dynamic system prompt with custom instructions
       const customInstructionsSection = customInstructions 
-        ? `
-CUSTOM INSTRUCTIONS FROM USER (VERY IMPORTANT - FOLLOW THESE CAREFULLY):
-${customInstructions}
-
-The user has provided specific instructions above. These take priority over default rules where applicable.
-`
+        ? `\nCUSTOM INSTRUCTIONS FROM USER (VERY IMPORTANT - FOLLOW THESE CAREFULLY):\n${customInstructions}\n\nThe user has provided specific instructions above. These take priority over default rules where applicable.\n`
         : '';
 
-      const systemPrompt = `You are an expert at parsing Persian/Farsi daily work reports from Excel sheets.
+      const systemPrompt = buildSystemPrompt(knownStaffMembers, customInstructionsSection);
+
+      const userMessageContent: any[] = [];
+      userMessageContent.push({
+        type: 'text',
+        text: `Parse this Persian daily work report Excel sheet:\n\nSheet Name: "${sheet.sheetName}"\n\nContent:\n${sheetContent}\n\nExtract all staff and order data. Return valid JSON only.`
+      });
+
+      if (instructionImages && instructionImages.length > 0 && sheetsData.indexOf(sheet) === 0) {
+        for (const imageBase64 of instructionImages) {
+          userMessageContent.push({
+            type: 'image_url',
+            image_url: { url: imageBase64 }
+          });
+        }
+      }
+
+      try {
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userMessageContent }
+            ],
+          }),
+        });
+
+        if (!response.ok) {
+          console.error('AI API error for sheet', sheet.sheetName, ':', response.status);
+          continue;
+        }
+
+        const aiData = await response.json();
+        const content = aiData.choices?.[0]?.message?.content;
+        
+        if (!content) {
+          console.error('No content in AI response for sheet', sheet.sheetName);
+          continue;
+        }
+
+        let parsed: any;
+        try {
+          const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
+                           content.match(/```\s*([\s\S]*?)\s*```/) ||
+                           [null, content];
+          const jsonStr = jsonMatch[1] || content;
+          parsed = JSON.parse(jsonStr.trim());
+          
+          if (parsed.processingReport) {
+            allProcessingReports.push({
+              sheetName: sheet.sheetName,
+              actionsPerformed: parsed.processingReport.actionsPerformed || [],
+              itemsIgnored: parsed.processingReport.itemsIgnored || [],
+              warnings: parsed.processingReport.warnings || [],
+              needsUserInput: parsed.processingReport.needsUserInput || []
+            });
+          }
+          
+          if (parsed.date || parsed.staffReports?.length || parsed.orderReports?.length) {
+            parsedReports.push({
+              date: parsed.date,
+              staffReports: parsed.staffReports || [],
+              orderReports: parsed.orderReports || []
+            });
+            console.log('Successfully parsed sheet:', sheet.sheetName, 'Date:', parsed.date);
+          }
+        } catch (parseError) {
+          console.error('Failed to parse AI response JSON for sheet', sheet.sheetName, ':', parseError);
+          console.log('AI response was:', content.substring(0, 500));
+          allProcessingReports.push({
+            sheetName: sheet.sheetName,
+            actionsPerformed: [],
+            itemsIgnored: [],
+            warnings: [`خطا در پردازش این شیت: ${parseError}`],
+            needsUserInput: []
+          });
+        }
+      } catch (sheetError) {
+        console.error('Error processing sheet', sheet.sheetName, ':', sheetError);
+        allProcessingReports.push({
+          sheetName: sheet.sheetName,
+          actionsPerformed: [],
+          itemsIgnored: [],
+          warnings: [`خطا در ارتباط با هوش مصنوعی: ${sheetError}`],
+          needsUserInput: []
+        });
+      }
+    }
+
+    console.log('Successfully parsed', parsedReports.length, 'reports');
+
+    const aggregatedReport = {
+      actionsPerformed: allProcessingReports.flatMap(r => r.actionsPerformed),
+      itemsIgnored: allProcessingReports.flatMap(r => r.itemsIgnored),
+      warnings: allProcessingReports.flatMap(r => r.warnings),
+      needsUserInput: allProcessingReports.flatMap(r => r.needsUserInput),
+      perSheet: allProcessingReports
+    };
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        reports: parsedReports,
+        totalSheets: sheetsData.length,
+        parsedSheets: parsedReports.length,
+        processingReport: aggregatedReport
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Error in parse-excel-report:', error);
+    return new Response(
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'خطای نامشخص' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
+
+// Helper function to build system prompt
+function buildSystemPrompt(knownStaffMembers: any[], customInstructionsSection: string): string {
+  return `You are an expert at parsing Persian/Farsi daily work reports from Excel sheets.
 You are like a highly skilled, intelligent, and professional employee who works precisely and carefully.
 Your task is to extract structured data from the Excel content based on user instructions and context.
 
@@ -145,143 +477,4 @@ OUTPUT FORMAT - Return valid JSON only:
 IMPORTANT: Always include processingReport with detailed information about what you did, what you ignored, and what needs clarification.
 
 If you cannot determine the date, use null. If a sheet seems empty or just a holiday notice (like "جمعه اکیپ تعطیل"), return empty arrays but still try to extract the date.`;
-
-      // Build user message with optional images
-      const userMessageContent: any[] = [];
-      
-      // Add text content first
-      userMessageContent.push({
-        type: 'text',
-        text: `Parse this Persian daily work report Excel sheet:
-
-Sheet Name: "${sheet.sheetName}"
-
-Content:
-${sheetContent}
-
-Extract all staff and order data. Return valid JSON only.`
-      });
-
-      // Add instruction images if provided (only for first sheet to avoid redundancy)
-      if (instructionImages && instructionImages.length > 0 && sheetsData.indexOf(sheet) === 0) {
-        for (const imageBase64 of instructionImages) {
-          userMessageContent.push({
-            type: 'image_url',
-            image_url: {
-              url: imageBase64
-            }
-          });
-        }
-      }
-
-      try {
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userMessageContent }
-            ],
-          }),
-        });
-
-        if (!response.ok) {
-          console.error('AI API error for sheet', sheet.sheetName, ':', response.status);
-          continue;
-        }
-
-        const aiData = await response.json();
-        const content = aiData.choices?.[0]?.message?.content;
-        
-        if (!content) {
-          console.error('No content in AI response for sheet', sheet.sheetName);
-          continue;
-        }
-
-        // Parse JSON from AI response
-        let parsed: any;
-        try {
-          // Try to extract JSON from the response (might be wrapped in markdown code blocks)
-          const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
-                           content.match(/```\s*([\s\S]*?)\s*```/) ||
-                           [null, content];
-          const jsonStr = jsonMatch[1] || content;
-          parsed = JSON.parse(jsonStr.trim());
-          
-          // Collect processing report
-          if (parsed.processingReport) {
-            allProcessingReports.push({
-              sheetName: sheet.sheetName,
-              actionsPerformed: parsed.processingReport.actionsPerformed || [],
-              itemsIgnored: parsed.processingReport.itemsIgnored || [],
-              warnings: parsed.processingReport.warnings || [],
-              needsUserInput: parsed.processingReport.needsUserInput || []
-            });
-          }
-          
-          if (parsed.date || parsed.staffReports?.length || parsed.orderReports?.length) {
-            parsedReports.push({
-              date: parsed.date,
-              staffReports: parsed.staffReports || [],
-              orderReports: parsed.orderReports || []
-            });
-            console.log('Successfully parsed sheet:', sheet.sheetName, 'Date:', parsed.date);
-          }
-        } catch (parseError) {
-          console.error('Failed to parse AI response JSON for sheet', sheet.sheetName, ':', parseError);
-          console.log('AI response was:', content.substring(0, 500));
-          allProcessingReports.push({
-            sheetName: sheet.sheetName,
-            actionsPerformed: [],
-            itemsIgnored: [],
-            warnings: [`خطا در پردازش این شیت: ${parseError}`],
-            needsUserInput: []
-          });
-        }
-      } catch (sheetError) {
-        console.error('Error processing sheet', sheet.sheetName, ':', sheetError);
-        allProcessingReports.push({
-          sheetName: sheet.sheetName,
-          actionsPerformed: [],
-          itemsIgnored: [],
-          warnings: [`خطا در ارتباط با هوش مصنوعی: ${sheetError}`],
-          needsUserInput: []
-        });
-      }
-    }
-
-    console.log('Successfully parsed', parsedReports.length, 'reports');
-
-    // Aggregate processing reports
-    const aggregatedReport = {
-      actionsPerformed: allProcessingReports.flatMap(r => r.actionsPerformed),
-      itemsIgnored: allProcessingReports.flatMap(r => r.itemsIgnored),
-      warnings: allProcessingReports.flatMap(r => r.warnings),
-      needsUserInput: allProcessingReports.flatMap(r => r.needsUserInput),
-      perSheet: allProcessingReports
-    };
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        reports: parsedReports,
-        totalSheets: sheetsData.length,
-        parsedSheets: parsedReports.length,
-        processingReport: aggregatedReport
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error in parse-excel-report:', error);
-    return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'خطای نامشخص' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-});
+}
