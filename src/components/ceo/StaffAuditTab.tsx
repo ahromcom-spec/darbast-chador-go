@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,7 +10,7 @@ import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet, Download, CalendarDays } from 'lucide-react';
+import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet, Download, CalendarDays, Gift, MinusCircle, CreditCard, Banknote } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, setMonth as setJalaliMonth, setYear as setJalaliYear } from 'date-fns-jalali';
 import { Separator } from '@/components/ui/separator';
 // Persian months
@@ -92,7 +93,12 @@ export function StaffAuditTab() {
   const [salarySettings, setSalarySettings] = useState<SalarySettings | null>(null);
   const [summary, setSummary] = useState<AuditSummary | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  // reportRef removed - now using dynamic PDF generation
+  
+  // Financial fields for search/calculation
+  const [bonuses, setBonuses] = useState<number>(0);
+  const [deductions, setDeductions] = useState<number>(0);
+  const [prevMonthBalance, setPrevMonthBalance] = useState<number>(0);
+  const [prevMonthExtra, setPrevMonthExtra] = useState<number>(0);
 
   // Generate year options (last 5 years)
   const yearOptions = Array.from({ length: 5 }, (_, i) => getCurrentPersianYear() - i);
@@ -152,7 +158,7 @@ export function StaffAuditTab() {
     return settings;
   };
 
-  const calculateSummary = (records: StaffAuditRecord[], settings: SalarySettings) => {
+  const calculateSummary = (records: StaffAuditRecord[], settings: SalarySettings, localBonuses?: number, localDeductions?: number, localPrevBalance?: number, localPrevExtra?: number) => {
     // Basic counts
     const totalDaysWorked = records.filter(r => r.work_status === 'حاضر').length;
     const totalAbsentDays = records.filter(r => r.work_status === 'غایب').length;
@@ -166,11 +172,11 @@ export function StaffAuditTab() {
     const estimatedSalary = totalDaysWorked * settings.base_daily_salary;
     const overtimePay = totalOvertime * settings.base_daily_salary * settings.overtime_rate_fraction;
     
-    // Use values from salary settings
-    const benefits = settings.bonuses || 0;
-    const deductions = settings.deductions || 0;
-    const remainingBalanceFromPreviousMonth = settings.previous_month_balance || 0;
-    const extraReceivedPreviousMonth = settings.previous_month_extra_received || 0;
+    // Use local values (from UI) instead of settings
+    const benefits = localBonuses ?? bonuses;
+    const deductionsVal = localDeductions ?? deductions;
+    const remainingBalanceFromPreviousMonth = localPrevBalance ?? prevMonthBalance;
+    const extraReceivedPreviousMonth = localPrevExtra ?? prevMonthExtra;
     
     // Total work and benefits includes bonuses
     const totalWorkAndBenefits = estimatedSalary + overtimePay + benefits;
@@ -181,7 +187,7 @@ export function StaffAuditTab() {
     // Positive = Employee is owed money (company should pay)
     // Negative = Employee received more than earned (excess)
     const netBalance = (totalWorkAndBenefits + remainingBalanceFromPreviousMonth + totalSpent) 
-                     - (totalReceived + deductions + extraReceivedPreviousMonth);
+                     - (totalReceived + deductionsVal + extraReceivedPreviousMonth);
     
     // Determine remaining balance or extra received
     const remainingBalanceThisMonth = netBalance > 0 ? netBalance : 0;
@@ -200,7 +206,7 @@ export function StaffAuditTab() {
       extraReceivedPreviousMonth,
       totalWorkAmount,
       benefits,
-      deductions,
+      deductions: deductionsVal,
       remainingBalanceThisMonth,
       extraReceivedThisMonth,
       netBalance
@@ -289,9 +295,9 @@ export function StaffAuditTab() {
 
   useEffect(() => {
     if (records.length > 0 && salarySettings) {
-      calculateSummary(records, salarySettings);
+      calculateSummary(records, salarySettings, bonuses, deductions, prevMonthBalance, prevMonthExtra);
     }
-  }, [salarySettings]);
+  }, [salarySettings, bonuses, deductions, prevMonthBalance, prevMonthExtra]);
 
   const formatPersianDate = (dateStr: string) => {
     try {
@@ -659,6 +665,84 @@ export function StaffAuditTab() {
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 جستجو
               </Button>
+            </div>
+          </div>
+
+          {/* Financial Fields */}
+          <Separator className="my-4" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-green-600">
+                <Gift className="h-4 w-4" />
+                مزایا (تومان)
+              </Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={bonuses === 0 ? '' : bonuses.toLocaleString('en-US')}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setBonuses(parseInt(val) || 0);
+                }}
+                className="border-green-200 focus:border-green-500"
+                dir="ltr"
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-red-600">
+                <MinusCircle className="h-4 w-4" />
+                کسورات (تومان)
+              </Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={deductions === 0 ? '' : deductions.toLocaleString('en-US')}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setDeductions(parseInt(val) || 0);
+                }}
+                className="border-red-200 focus:border-red-500"
+                dir="ltr"
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-blue-600">
+                <CreditCard className="h-4 w-4" />
+                دریافتی اضافه ماه قبل (تومان)
+              </Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={prevMonthExtra === 0 ? '' : prevMonthExtra.toLocaleString('en-US')}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setPrevMonthExtra(parseInt(val) || 0);
+                }}
+                className="border-blue-200 focus:border-blue-500"
+                dir="ltr"
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-amber-600">
+                <Banknote className="h-4 w-4" />
+                الباقی حساب ماه قبل (تومان)
+              </Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={prevMonthBalance === 0 ? '' : prevMonthBalance.toLocaleString('en-US')}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9-]/g, '');
+                  setPrevMonthBalance(parseInt(val) || 0);
+                }}
+                className="border-amber-200 focus:border-amber-500"
+                dir="ltr"
+                placeholder="0"
+              />
+              <p className="text-xs text-muted-foreground">مثبت = طلبکار، منفی = بدهکار</p>
             </div>
           </div>
         </CardContent>
