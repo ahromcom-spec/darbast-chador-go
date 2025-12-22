@@ -66,6 +66,12 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'reading' | 'parsing' | 'saving' | 'done' | 'error'>('idle');
   const [results, setResults] = useState<{ total: number; parsed: number } | null>(null);
+  const [processingReport, setProcessingReport] = useState<{
+    actionsPerformed: string[];
+    itemsIgnored: string[];
+    warnings: string[];
+    needsUserInput: string[];
+  } | null>(null);
   const [customInstructions, setCustomInstructions] = useState('');
   const [showInstructions, setShowInstructions] = useState(false);
   const [instructionImages, setInstructionImages] = useState<{ file: File; preview: string }[]>([]);
@@ -288,6 +294,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
       }
 
       setResults({ total: data.totalSheets, parsed: data.parsedSheets });
+      setProcessingReport(data.processingReport || null);
       setStatus('done');
       setProgress(100);
 
@@ -317,6 +324,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     setStatus('idle');
     setProgress(0);
     setResults(null);
+    setProcessingReport(null);
     setCustomInstructions('');
     setShowInstructions(false);
     setShowRecentFiles(false);
@@ -614,16 +622,91 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
 
           {/* Results */}
           {status === 'done' && results && (
-            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
-              <Check className="h-6 w-6 text-green-600" />
-              <div>
-                <p className="font-medium text-green-700 dark:text-green-400">
-                  پردازش با موفقیت انجام شد
-                </p>
-                <p className="text-sm text-green-600 dark:text-green-500">
-                  {results.parsed} گزارش از {results.total} شیت استخراج شد
-                </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                <Check className="h-6 w-6 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-700 dark:text-green-400">
+                    پردازش با موفقیت انجام شد
+                  </p>
+                  <p className="text-sm text-green-600 dark:text-green-500">
+                    {results.parsed} گزارش از {results.total} شیت استخراج شد
+                  </p>
+                </div>
               </div>
+
+              {/* Processing Report */}
+              {processingReport && (
+                <div className="space-y-3 rounded-lg border border-border p-4 bg-muted/30">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    گزارش پردازش هوش مصنوعی
+                  </h4>
+
+                  {/* Actions Performed */}
+                  {processingReport.actionsPerformed.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
+                        <Check className="h-3 w-3" />
+                        کارهای انجام شده:
+                      </p>
+                      <ul className="text-xs text-muted-foreground space-y-0.5 mr-4 list-disc">
+                        {processingReport.actionsPerformed.map((action, i) => (
+                          <li key={i}>{action}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Items Ignored */}
+                  {processingReport.itemsIgnored.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                        <X className="h-3 w-3" />
+                        موارد نادیده گرفته شده:
+                      </p>
+                      <ul className="text-xs text-muted-foreground space-y-0.5 mr-4 list-disc">
+                        {processingReport.itemsIgnored.map((item, i) => (
+                          <li key={i}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Warnings */}
+                  {processingReport.warnings.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        هشدارها:
+                      </p>
+                      <ul className="text-xs text-amber-600 dark:text-amber-400 space-y-0.5 mr-4 list-disc">
+                        {processingReport.warnings.map((warning, i) => (
+                          <li key={i}>{warning}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Needs User Input */}
+                  {processingReport.needsUserInput.length > 0 && (
+                    <div className="space-y-1 p-2 rounded bg-primary/10 border border-primary/20">
+                      <p className="text-xs font-medium text-primary flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        نیاز به توضیحات بیشتر:
+                      </p>
+                      <ul className="text-xs text-primary space-y-0.5 mr-4 list-disc">
+                        {processingReport.needsUserInput.map((item, i) => (
+                          <li key={i}>{item}</li>
+                        ))}
+                      </ul>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        💡 این موارد را در بخش "توضیحات اختصاصی برای هوش مصنوعی" وارد کنید و دوباره پردازش کنید.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
