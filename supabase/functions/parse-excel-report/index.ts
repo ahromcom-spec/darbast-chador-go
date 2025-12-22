@@ -64,16 +64,26 @@ serve(async (req) => {
     // If streaming mode is requested, use SSE
     if (streaming) {
       const encoder = new TextEncoder();
-      const stream = new ReadableStream({
-        async start(controller) {
-          const sendEvent = (data: any) => {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-          };
+      
+      // Use TransformStream for better control
+      const { readable, writable } = new TransformStream();
+      const writer = writable.getWriter();
+      
+      const sendEvent = async (data: any) => {
+        try {
+          await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch (e) {
+          console.error('Error sending SSE event:', e);
+        }
+      };
 
+      // Start processing in background
+      (async () => {
+        try {
           const parsedReports: ParsedDailyReport[] = [];
           const allProcessingReports: any[] = [];
 
-          sendEvent({ 
+          await sendEvent({ 
             type: 'start', 
             message: `شروع پردازش ${sheetsData.length} شیت...`,
             totalSheets: sheetsData.length 
@@ -83,7 +93,7 @@ serve(async (req) => {
             const sheet = sheetsData[i] as ExcelSheetData;
             const sheetIndex = i + 1;
 
-            sendEvent({ 
+            await sendEvent({ 
               type: 'progress', 
               sheetIndex,
               sheetName: sheet.sheetName,
@@ -116,7 +126,7 @@ serve(async (req) => {
               }
             }
 
-            sendEvent({ 
+            await sendEvent({ 
               type: 'progress', 
               sheetIndex,
               sheetName: sheet.sheetName,
@@ -141,7 +151,7 @@ serve(async (req) => {
               });
 
               if (!response.ok) {
-                sendEvent({ 
+                await sendEvent({ 
                   type: 'warning', 
                   sheetIndex,
                   sheetName: sheet.sheetName,
@@ -154,7 +164,7 @@ serve(async (req) => {
               const content = aiData.choices?.[0]?.message?.content;
 
               if (!content) {
-                sendEvent({ 
+                await sendEvent({ 
                   type: 'warning', 
                   sheetIndex,
                   sheetName: sheet.sheetName,
@@ -163,7 +173,7 @@ serve(async (req) => {
                 continue;
               }
 
-              sendEvent({ 
+              await sendEvent({ 
                 type: 'progress', 
                 sheetIndex,
                 sheetName: sheet.sheetName,
@@ -196,7 +206,7 @@ serve(async (req) => {
                   const staffCount = parsed.staffReports?.length || 0;
                   const orderCount = parsed.orderReports?.length || 0;
                   
-                  sendEvent({ 
+                  await sendEvent({ 
                     type: 'sheet_done', 
                     sheetIndex,
                     sheetName: sheet.sheetName,
@@ -206,7 +216,7 @@ serve(async (req) => {
                     orderCount
                   });
                 } else {
-                  sendEvent({ 
+                  await sendEvent({ 
                     type: 'sheet_empty', 
                     sheetIndex,
                     sheetName: sheet.sheetName,
@@ -214,7 +224,7 @@ serve(async (req) => {
                   });
                 }
               } catch (parseError) {
-                sendEvent({ 
+                await sendEvent({ 
                   type: 'warning', 
                   sheetIndex,
                   sheetName: sheet.sheetName,
@@ -229,7 +239,7 @@ serve(async (req) => {
                 });
               }
             } catch (sheetError) {
-              sendEvent({ 
+              await sendEvent({ 
                 type: 'error', 
                 sheetIndex,
                 sheetName: sheet.sheetName,
@@ -247,7 +257,9 @@ serve(async (req) => {
             perSheet: allProcessingReports
           };
 
-          sendEvent({ 
+          console.log('Streaming complete, sending final result with', parsedReports.length, 'reports');
+
+          await sendEvent({ 
             type: 'complete', 
             message: `پردازش کامل شد: ${parsedReports.length} گزارش از ${sheetsData.length} شیت`,
             success: true,
@@ -257,17 +269,29 @@ serve(async (req) => {
             processingReport: aggregatedReport
           });
 
-          sendEvent({ type: 'done' });
-          controller.close();
+          await sendEvent({ type: 'done' });
+        } catch (err) {
+          console.error('Error in streaming processing:', err);
+          await sendEvent({ 
+            type: 'error', 
+            message: `خطای کلی: ${err instanceof Error ? err.message : 'خطای نامشخص'}`
+          });
+        } finally {
+          try {
+            await writer.close();
+          } catch (e) {
+            console.error('Error closing writer:', e);
+          }
         }
-      });
+      })();
 
-      return new Response(stream, {
+      return new Response(readable, {
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive'
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no'
         }
       });
     }

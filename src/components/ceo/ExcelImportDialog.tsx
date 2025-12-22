@@ -281,26 +281,41 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
 
       setProgressLogs(prev => [...prev, { message: 'ارسال به هوش مصنوعی برای پردازش...', type: 'info' }]);
 
-      // Use streaming for real-time progress
+      // Use streaming for real-time progress with extended timeout
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/parse-excel-report`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({
-          sheetsData,
-          knownStaffMembers: staffWithCodes,
-          customInstructions: customInstructions.trim() || undefined,
-          instructionImages: imageBase64List.length > 0 ? imageBase64List : undefined,
-          streaming: true
-        })
-      });
+      // Create AbortController with 10 minute timeout for large files
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000);
+
+      let response: Response;
+      try {
+        response = await fetch(`${supabaseUrl}/functions/v1/parse-excel-report`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({
+            sheetsData,
+            knownStaffMembers: staffWithCodes,
+            customInstructions: customInstructions.trim() || undefined,
+            instructionImages: imageBase64List.length > 0 ? imageBase64List : undefined,
+            streaming: true
+          }),
+          signal: controller.signal
+        });
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          throw new Error('پردازش بیش از حد طول کشید. لطفا فایل کوچکتری امتحان کنید یا تعداد شیت‌ها را کاهش دهید.');
+        }
+        throw fetchError;
+      }
 
       if (!response.ok) {
+        clearTimeout(timeoutId);
         throw new Error(`خطا در ارتباط با سرور: ${response.status}`);
       }
 
@@ -385,6 +400,9 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
           }
         }
       }
+
+      // Clear timeout after successful read
+      clearTimeout(timeoutId);
 
       if (finalData) {
         setResults({ total: finalData.totalSheets, parsed: finalData.parsedSheets });
