@@ -362,6 +362,29 @@ export default function DailyReportModule() {
     setActiveTab('new-report');
   };
 
+  const deleteSavedReport = async (reportId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click from triggering navigation
+    
+    if (!confirm('آیا از حذف این گزارش اطمینان دارید؟')) return;
+    
+    try {
+      // Delete related records first
+      await supabase.from('daily_report_orders').delete().eq('daily_report_id', reportId);
+      await supabase.from('daily_report_staff').delete().eq('daily_report_id', reportId);
+      
+      // Delete the report itself
+      const { error } = await supabase.from('daily_reports').delete().eq('id', reportId);
+      
+      if (error) throw error;
+      
+      toast.success('گزارش با موفقیت حذف شد');
+      setSavedReports(prev => prev.filter(r => r.id !== reportId));
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      toast.error('خطا در حذف گزارش');
+    }
+  };
+
   const fetchOrders = async () => {
     try {
       const { data, error } = await supabase
@@ -1378,10 +1401,21 @@ export default function DailyReportModule() {
                               </div>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" className="gap-2">
-                            <Eye className="h-4 w-4" />
-                            مشاهده
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" className="gap-2">
+                              <Eye className="h-4 w-4" />
+                              مشاهده
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => deleteSavedReport(report.id, e)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              حذف
+                            </Button>
+                          </div>
                         </div>
                       </Card>
                     ))}
