@@ -56,8 +56,10 @@ interface ExcelImportDialogProps {
 }
 
 export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: ExcelImportDialogProps) {
+  type SelectedExcel = { name: string; size: number; buffer: ArrayBuffer };
+
   const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [selectedExcel, setSelectedExcel] = useState<SelectedExcel | null>(null);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'reading' | 'parsing' | 'saving' | 'done' | 'error'>('idle');
@@ -68,20 +70,31 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (!selectedFile.name.endsWith('.xlsx') && !selectedFile.name.endsWith('.xls')) {
-        toast.error('لطفاً یک فایل اکسل (.xlsx یا .xls) انتخاب کنید');
-        return;
-      }
-      setFile(selectedFile);
-      setStatus('idle');
-      setResults(null);
-    }
-    // Reset input value to allow selecting the same file again
+
+    // Always reset input so selecting the same file again triggers change
     if (e.target) {
       e.target.value = '';
+    }
+
+    if (!selectedFile) return;
+
+    if (!selectedFile.name.endsWith('.xlsx') && !selectedFile.name.endsWith('.xls')) {
+      toast.error('لطفاً یک فایل اکسل (.xlsx یا .xls) انتخاب کنید');
+      return;
+    }
+
+    try {
+      const buffer = await selectedFile.arrayBuffer();
+      console.log('[ExcelImportDialog] excel selected:', selectedFile.name, selectedFile.size);
+      setSelectedExcel({ name: selectedFile.name, size: selectedFile.size, buffer });
+      setStatus('idle');
+      setResults(null);
+      setProgress(0);
+    } catch (error) {
+      console.error('[ExcelImportDialog] error reading excel:', error);
+      toast.error('خطا در خواندن فایل اکسل');
     }
   };
 
@@ -90,6 +103,11 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const openExcelPicker = () => {
+    handleUploadClick();
+    fileInputRef.current?.click();
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,16 +152,15 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
   };
 
   const processExcel = async () => {
-    if (!file) return;
+    if (!selectedExcel) return;
 
     setProcessing(true);
     setProgress(10);
     setStatus('reading');
 
     try {
-      // Read Excel file
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      // Read Excel file from memory buffer (prevents OS "file is in use" lock issues)
+      const workbook = XLSX.read(selectedExcel.buffer, { type: 'array' });
       
       setProgress(30);
       setStatus('parsing');
@@ -233,7 +250,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
   };
 
   const resetDialog = () => {
-    setFile(null);
+    setSelectedExcel(null);
     setStatus('idle');
     setProgress(0);
     setResults(null);
@@ -285,7 +302,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
           <div 
             className={`
               border-2 border-dashed rounded-xl p-6 text-center transition-colors
-              ${file ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-muted-foreground/30 hover:border-primary/50'}
+              ${selectedExcel ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-muted-foreground/30 hover:border-primary/50'}
             `}
           >
             <input
@@ -298,23 +315,23 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
               onClick={handleUploadClick}
             />
             
-            {file ? (
+            {selectedExcel ? (
               <div className="space-y-2">
                 <div className="w-14 h-14 mx-auto rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
                   <FileSpreadsheet className="h-7 w-7 text-green-600" />
                 </div>
-                <p className="font-medium text-green-700 dark:text-green-400">{file.name}</p>
+                <p className="font-medium text-green-700 dark:text-green-400">{selectedExcel.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {(file.size / 1024).toFixed(1)} KB
+                  {(selectedExcel.size / 1024).toFixed(1)} KB
                 </p>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={resetDialog}
+                  onClick={openExcelPicker}
                   className="text-muted-foreground"
                 >
-                  <X className="h-4 w-4 ml-1" />
-                  انتخاب فایل دیگر
+                  <Upload className="h-4 w-4 ml-1" />
+                  انتخاب مجدد / فایل دیگر
                 </Button>
               </div>
             ) : (
@@ -472,7 +489,7 @@ export function ExcelImportDialog({ onImportComplete, knownStaffMembers }: Excel
             </Button>
             <Button 
               onClick={processExcel} 
-              disabled={!file || processing}
+              disabled={!selectedExcel || processing}
               className="gap-2"
             >
               {processing ? (
