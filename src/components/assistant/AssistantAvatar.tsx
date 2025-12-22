@@ -204,7 +204,10 @@ export function AssistantAvatar() {
   // Drag state - separate for avatar and chat panel
   const [avatarPosition, setAvatarPosition] = useState(() => {
     const vp = getViewportSize();
-    return { x: 24, y: vp.height - 88 };
+    // Position higher from bottom to avoid footer/ticker overlap (120px from bottom on mobile, 140px on desktop)
+    const isMobile = vp.width < 640;
+    const bottomOffset = isMobile ? 160 : 180;
+    return { x: 24, y: vp.height - bottomOffset };
   });
   const [chatPosition, setChatPosition] = useState({ x: 24, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
