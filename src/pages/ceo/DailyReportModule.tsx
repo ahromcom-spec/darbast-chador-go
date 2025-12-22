@@ -907,19 +907,61 @@ export default function DailyReportModule() {
             .delete()
             .eq('daily_report_id', reportId);
 
-          const staffToInsert = report.staffReports.map((s: any) => ({
-            daily_report_id: reportId,
-            staff_user_id: null, // We'll match by name
-            staff_name: s.staffName || '',
-            work_status: s.workStatus === 'حاضر' ? 'حاضر' : 'غایب',
-            overtime_hours: s.overtimeHours || 0,
-            amount_received: s.amountReceived || 0,
-            receiving_notes: s.receivingNotes || '',
-            amount_spent: s.amountSpent || 0,
-            spending_notes: s.spendingNotes || '',
-            notes: s.notes || '',
-            is_cash_box: s.isCashBox || false
-          }));
+          // Match staff names from Excel to known staff members
+          const staffToInsert = report.staffReports.map((s: any) => {
+            const extractedName = (s.staffName || '').trim();
+            
+            // Try to find matching staff member by name or code
+            let matchedStaff: StaffMember | undefined;
+            
+            if (extractedName) {
+              // First try exact match
+              matchedStaff = staffMembers.find(
+                (m) => m.full_name.toLowerCase() === extractedName.toLowerCase()
+              );
+              
+              // If no exact match, try partial match (name contains extracted name or vice versa)
+              if (!matchedStaff) {
+                matchedStaff = staffMembers.find(
+                  (m) => 
+                    m.full_name.toLowerCase().includes(extractedName.toLowerCase()) ||
+                    extractedName.toLowerCase().includes(m.full_name.toLowerCase())
+                );
+              }
+              
+              // Try matching by code in name (e.g., "0106" or "علی 0106")
+              if (!matchedStaff) {
+                const codeMatch = extractedName.match(/\b(\d{3,6})\b/);
+                if (codeMatch) {
+                  const code = codeMatch[1];
+                  matchedStaff = staffMembers.find(
+                    (m) => m.full_name.includes(code) || m.phone_number?.endsWith(code)
+                  );
+                }
+              }
+              
+              // Log matching result for debugging
+              if (matchedStaff) {
+                console.log(`[ExcelImport] Matched "${extractedName}" → "${matchedStaff.full_name}" (${matchedStaff.user_id})`);
+              } else {
+                console.log(`[ExcelImport] No match found for "${extractedName}"`);
+              }
+            }
+            
+            return {
+              daily_report_id: reportId,
+              staff_user_id: matchedStaff?.user_id || null,
+              staff_name: matchedStaff?.full_name || extractedName,
+              work_status: s.workStatus === 'حاضر' ? 'حاضر' : 'غایب',
+              overtime_hours: s.overtimeHours || 0,
+              amount_received: s.amountReceived || 0,
+              receiving_notes: s.receivingNotes || '',
+              amount_spent: s.amountSpent || 0,
+              spending_notes: s.spendingNotes || '',
+              notes: s.notes || '',
+              is_cash_box: s.isCashBox || false
+            };
+          });
 
           const { error: staffError } = await supabase
             .from('daily_report_staff')
