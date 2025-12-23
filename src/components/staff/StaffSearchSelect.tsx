@@ -39,11 +39,12 @@ interface StaffMember {
   name: string;
   fullCode: string;
   source?: 'static' | 'hr' | 'salary';
+  user_id?: string | null;
 }
 
 interface StaffSearchSelectProps {
   value: string;
-  onValueChange: (value: string, staffName: string) => void;
+  onValueChange: (value: string, staffName: string, userId?: string | null) => void;
   placeholder?: string;
 }
 
@@ -73,22 +74,24 @@ export function StaffSearchSelect({
             code: s.staff_code || '',
             name: s.staff_name || '',
             fullCode: s.staff_code || '',
-            source: 'salary' as const
+            source: 'salary' as const,
+            user_id: null // No user_id link in salary settings
           })).filter(s => s.code && s.name);
           setSalaryStaff(salaryList);
         }
 
-        // Fetch from hr_employees
+        // Fetch from hr_employees with user_id
         const { data: hrData } = await supabase
           .from('hr_employees')
-          .select('phone_number, full_name, position, department');
+          .select('phone_number, full_name, position, department, user_id');
 
         if (hrData) {
           const hrList: StaffMember[] = hrData.map(h => ({
             code: h.phone_number || '',
             name: h.full_name || '',
             fullCode: `${h.position || ''} - ${h.department || ''}`.trim().replace(/^- | -$/g, ''),
-            source: 'hr' as const
+            source: 'hr' as const,
+            user_id: h.user_id || null
           })).filter(h => h.code && h.name);
           setHrStaff(hrList);
         }
@@ -146,8 +149,8 @@ export function StaffSearchSelect({
     return [...filteredStaff].sort((a, b) => a.code.localeCompare(b.code));
   }, [filteredStaff]);
 
-  const handleSelect = (staffCode: string, staffName: string) => {
-    onValueChange(staffCode, staffName);
+  const handleSelect = (staff: StaffMember) => {
+    onValueChange(staff.code, staff.name, staff.user_id);
     setOpen(false);
     setSearch('');
   };
@@ -216,7 +219,7 @@ export function StaffSearchSelect({
                 <button
                   key={staff.code}
                   type="button"
-                  onClick={() => handleSelect(staff.code, staff.name)}
+                  onClick={() => handleSelect(staff)}
                   className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer ${
                     value === staff.code ? 'bg-amber-100 dark:bg-amber-900/30' : ''
                   }`}
