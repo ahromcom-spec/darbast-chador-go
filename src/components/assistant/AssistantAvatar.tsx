@@ -204,9 +204,10 @@ export function AssistantAvatar() {
   // Drag state - separate for avatar and chat panel
   const [avatarPosition, setAvatarPosition] = useState(() => {
     const vp = getViewportSize();
-    // Position higher from bottom to avoid footer/ticker overlap (120px from bottom on mobile, 140px on desktop)
+    // Avatar (64px) + label (~24px) + gap (4px) = ~92px total height
+    // Position higher from bottom to avoid footer/ticker overlap and keep label visible
     const isMobile = vp.width < 640;
-    const bottomOffset = isMobile ? 160 : 180;
+    const bottomOffset = isMobile ? 180 : 200; // Increased to account for label
     return { x: 24, y: vp.height - bottomOffset };
   });
   const [chatPosition, setChatPosition] = useState({ x: 24, y: 100 });
@@ -342,9 +343,11 @@ export function AssistantAvatar() {
   useEffect(() => {
     const clampPositionToViewport = () => {
       const vp = getViewportSize();
+      // Avatar (64px) + label (~24px) + gap (4px) = ~92px total height
+      const avatarTotalHeight = 96; // 64 (avatar) + 24 (label) + 8 (spacing)
       const avatarSize = 64;
       const maxX = vp.width - avatarSize - 8;
-      const maxY = vp.height - avatarSize - 8;
+      const maxY = vp.height - avatarTotalHeight - 8; // Use total height including label
       
       setAvatarPosition(prev => ({
         x: Math.max(8, Math.min(maxX, prev.x)),
@@ -419,8 +422,9 @@ export function AssistantAvatar() {
     const vp = getViewportSize();
     const newX = clientX - dragOffset.x;
     const newY = clientY - dragOffset.y;
+    const avatarTotalHeight = 96; // 64 (avatar) + 24 (label) + 8 (spacing)
     const maxX = vp.width - 80;
-    const maxY = vp.height - 80;
+    const maxY = vp.height - avatarTotalHeight - 8; // Use total height including label
     
     setAvatarPosition({
       x: Math.max(8, Math.min(maxX, newX)),
