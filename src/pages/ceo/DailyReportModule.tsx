@@ -1639,6 +1639,15 @@ export default function DailyReportModule() {
                                   <StaffSearchSelect
                                     value={row.staff_user_id || ''}
                                     onValueChange={(code, name, userId) => {
+                                      // Check if this staff is already selected
+                                      const alreadySelected = staffReports.some(
+                                        (r, i) => i !== index && r.staff_user_id === code && code
+                                      );
+                                      if (alreadySelected) {
+                                        toast.error('این نیرو قبلاً انتخاب شده است');
+                                        return;
+                                      }
+                                      
                                       // Update all fields at once to avoid multiple renders
                                       setStaffReports((prev) => {
                                         const updated = [...prev];
@@ -1674,6 +1683,9 @@ export default function DailyReportModule() {
                                       });
                                     }}
                                     placeholder="انتخاب نیرو"
+                                    excludeCodes={staffReports
+                                      .filter((r, i) => i !== index && r.staff_user_id)
+                                      .map(r => r.staff_user_id as string)}
                                   />
                                 )}
                               </TableCell>

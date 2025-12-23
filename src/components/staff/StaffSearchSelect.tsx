@@ -46,12 +46,14 @@ interface StaffSearchSelectProps {
   value: string;
   onValueChange: (value: string, staffName: string, userId?: string | null) => void;
   placeholder?: string;
+  excludeCodes?: string[];
 }
 
 export function StaffSearchSelect({
   value,
   onValueChange,
-  placeholder = 'انتخاب نیرو'
+  placeholder = 'انتخاب نیرو',
+  excludeCodes = []
 }: StaffSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -167,10 +169,15 @@ export function StaffSearchSelect({
   const selectedStaff = allStaff.find(s => s.code === value);
 
   const filteredStaff = useMemo(() => {
-    if (!search.trim()) return allStaff;
+    // First filter out excluded codes (but allow current value)
+    const availableStaff = allStaff.filter(staff => 
+      staff.code === value || !excludeCodes.includes(staff.code)
+    );
+    
+    if (!search.trim()) return availableStaff;
     
     const searchLower = search.toLowerCase().trim();
-    return allStaff.filter(staff => {
+    return availableStaff.filter(staff => {
       const code = staff.code.toLowerCase();
       const name = staff.name.toLowerCase();
       const fullCode = staff.fullCode.toLowerCase();
@@ -181,7 +188,7 @@ export function StaffSearchSelect({
         fullCode.includes(searchLower)
       );
     });
-  }, [search, allStaff]);
+  }, [search, allStaff, excludeCodes, value]);
 
   // Sort by code
   const sortedStaff = useMemo(() => {
