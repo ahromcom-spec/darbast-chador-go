@@ -487,6 +487,31 @@ export function StaffAuditTab() {
               margin-bottom: 16px;
               font-size: 14px;
             }
+            .print-btn {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+              color: white;
+              border: none;
+              padding: 14px 28px;
+              border-radius: 8px;
+              font-size: 16px;
+              font-weight: bold;
+              cursor: pointer;
+              margin: 20px auto;
+              box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+              transition: all 0.2s ease;
+            }
+            .print-btn:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 6px 16px rgba(22, 163, 74, 0.4);
+            }
+            .print-btn svg {
+              width: 20px;
+              height: 20px;
+            }
             @media print {
               body {
                 background: white !important;
@@ -494,11 +519,22 @@ export function StaffAuditTab() {
               .container {
                 padding: 0;
               }
+              .print-btn {
+                display: none !important;
+              }
             }
           </style>
         </head>
         <body>
           <div class="container">
+            <!-- Print Button -->
+            <button class="print-btn" onclick="window.print()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              پرینت / ذخیره PDF
+            </button>
+
             <!-- Header -->
             <div class="header">
               <h1>حسابکتاب روزمزدی ${selectedStaffName}</h1>
