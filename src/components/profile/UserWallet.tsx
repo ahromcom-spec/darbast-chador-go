@@ -9,7 +9,9 @@ import {
   ChevronUp,
   Calendar,
   FileText,
-  Clock
+  Clock,
+  Receipt,
+  CreditCard
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +42,10 @@ interface WalletSummary {
   balance: number;
   salaryEarnings: number;
   cashBalance: number;
+  // Customer order-related
+  orderTotal: number;
+  orderPaid: number;
+  orderDebt: number;
 }
 
 export function UserWallet() {
@@ -55,6 +61,9 @@ export function UserWallet() {
     balance: 0,
     salaryEarnings: 0,
     cashBalance: 0,
+    orderTotal: 0,
+    orderPaid: 0,
+    orderDebt: 0,
   });
 
   useEffect(() => {
@@ -110,17 +119,63 @@ export function UserWallet() {
         cashBalance = workRecordsSummary.totalSpent - workRecordsSummary.totalReceived;
       }
 
-      // Final balance = salary earnings + cash balance
-      const finalBalance = salaryEarnings + cashBalance;
+      // Calculate customer order debt
+      let orderTotal = 0;
+      let orderPaid = 0;
+      let orderDebt = 0;
+
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (customer) {
+        const { data: orders } = await supabase
+          .from('projects_v3')
+          .select('payment_amount, payment_confirmed_at, notes, total_paid')
+          .eq('customer_id', customer.id);
+
+        if (orders) {
+          orders.forEach(order => {
+            const totalAmount = order.payment_amount || 0;
+            orderTotal += totalAmount;
+            
+            if (order.payment_confirmed_at) {
+              // Fully paid order
+              orderPaid += totalAmount;
+            } else {
+              // Check for advance payment from total_paid or notes
+              let advancePayment = order.total_paid || 0;
+              if (!advancePayment && order.notes) {
+                try {
+                  const notesData = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+                  advancePayment = notesData?.advance_payment || 0;
+                } catch {
+                  advancePayment = 0;
+                }
+              }
+              orderPaid += advancePayment;
+            }
+          });
+          orderDebt = orderTotal - orderPaid;
+        }
+      }
+
+      // Final balance = salary earnings + cash balance - order debt
+      const finalBalance = salaryEarnings + cashBalance - orderDebt;
 
       setSummary({
-        totalIncome: 0, // Not used in new calculation
+        totalIncome: 0,
         totalExpense: 0,
         totalPayments: 0,
-        totalDebt: 0,
+        totalDebt: orderDebt,
         balance: finalBalance,
         salaryEarnings,
         cashBalance,
+        orderTotal,
+        orderPaid,
+        orderDebt,
       });
     } catch (error) {
       console.error('Error fetching wallet data:', error);
@@ -325,7 +380,7 @@ export function UserWallet() {
                     </Badge>
                   </CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {summary.balance >= 0 ? 'مانده حساب' : 'دریافتی اضافی'}
+                    {summary.balance >= 0 ? 'مانده حساب' : 'بدهی به شرکت'}
                   </p>
                 </div>
               </div>
@@ -340,25 +395,57 @@ export function UserWallet() {
           <CardContent className="pt-0 space-y-6">
             {/* Summary Stats */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                  <span className="text-sm text-muted-foreground">جمع کارکرد حقوق</span>
-                </div>
-                <div className="font-bold text-green-600">{formatCurrency(summary.salaryEarnings)}</div>
-              </div>
-              <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <Calculator className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm text-muted-foreground">مانده نقدی</span>
-                </div>
-                <div className={`font-bold ${summary.cashBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {summary.cashBalance >= 0 ? '+' : ''}{formatCurrency(summary.cashBalance)}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {summary.cashBalance >= 0 ? 'طلب از شرکت' : 'بدهی به شرکت'}
-                </div>
-              </div>
+              {/* Staff salary section - only show if user has salary data */}
+              {(summary.salaryEarnings > 0 || summary.cashBalance !== 0) && (
+                <>
+                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-muted-foreground">جمع کارکرد حقوق</span>
+                    </div>
+                    <div className="font-bold text-green-600">{formatCurrency(summary.salaryEarnings)}</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calculator className="h-4 w-4 text-orange-600" />
+                      <span className="text-sm text-muted-foreground">مانده نقدی</span>
+                    </div>
+                    <div className={`font-bold ${summary.cashBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {summary.cashBalance >= 0 ? '+' : ''}{formatCurrency(summary.cashBalance)}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {summary.cashBalance >= 0 ? 'طلب از شرکت' : 'بدهی به شرکت'}
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {/* Customer order debt section - only show if user has orders */}
+              {summary.orderTotal > 0 && (
+                <>
+                  <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Receipt className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm text-muted-foreground">جمع سفارشات</span>
+                    </div>
+                    <div className="font-bold text-blue-600">{formatCurrency(summary.orderTotal)}</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CreditCard className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-muted-foreground">پرداخت شده</span>
+                    </div>
+                    <div className="font-bold text-green-600">{formatCurrency(summary.orderPaid)}</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 col-span-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingDown className="h-4 w-4 text-red-600" />
+                      <span className="text-sm text-muted-foreground">بدهی سفارشات به شرکت</span>
+                    </div>
+                    <div className="font-bold text-red-600 text-lg">{formatCurrency(summary.orderDebt)}</div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Balance */}
