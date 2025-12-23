@@ -346,12 +346,13 @@ export default function PersonnelAccountingModule() {
 
       const totalEarnings = salaryEarnings + overtimeEarnings;
 
-      // مانده حساب نقدی (دریافتی - پرداختی)
-      const cashBalance = totalReceived - totalSpent;
+      // مانده حساب نقدی (پرداختی - دریافتی)
+      // دریافتی = منفی (پول گرفته از شرکت = بدهی به شرکت)
+      // پرداختی = مثبت (خرج کرده برای شرکت = طلب از شرکت)
+      // مانده = پرداختی - دریافتی (اگر بیشتر خرج کرده، مثبت = طلب دارد)
+      const cashBalance = totalSpent - totalReceived;
       
       // مانده نهایی = جمع کارکرد حقوق + مانده حساب نقدی
-      // اگر حقوق تنظیم شده: salary + overtime - spent + received
-      // اگر حقوق تنظیم نشده: فقط مانده نقدی
       const finalBalance = totalEarnings > 0 
         ? totalEarnings + cashBalance 
         : cashBalance;
@@ -395,7 +396,8 @@ export default function PersonnelAccountingModule() {
     totalEarnings: number
   ) => {
     try {
-      const cashBalance = totalReceived - totalSpent;
+      // پرداختی - دریافتی (پرداختی مثبت، دریافتی منفی)
+      const cashBalance = totalSpent - totalReceived;
       
       // Get existing personnel_accounting transaction (any date)
       const { data: existingSync } = await supabase
