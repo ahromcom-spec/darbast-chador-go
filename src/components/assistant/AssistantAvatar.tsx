@@ -830,7 +830,7 @@ export function AssistantAvatar() {
             onTouchMove={handleTouchMove}
             onClick={handleAvatarClick}
             className={cn(
-              "w-16 h-16 rounded-full",
+              "w-[74px] h-[74px] rounded-full",
               "shadow-lg hover:shadow-2xl transition-shadow duration-300",
               "overflow-hidden select-none",
               isDragging ? "cursor-grabbing scale-110" : "cursor-grab"
@@ -844,7 +844,7 @@ export function AssistantAvatar() {
               draggable={false}
             />
           </button>
-          <span className="absolute bottom-1 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+          <span className="absolute bottom-1 -right-0.5 w-[18px] h-[18px] bg-green-500 rounded-full border-2 border-background animate-pulse" />
         </div>
         <span className="text-xs font-medium text-amber-600 bg-background/80 px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm whitespace-nowrap -mt-1">
           دستیار اهرم
