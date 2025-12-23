@@ -526,6 +526,8 @@ export default function DailyReportModule() {
             // ولی در زمان ذخیره، فقط اگر uuid واقعی باشد به دیتابیس می‌رود (بقیه null می‌شود)
             staff_user_id: staffCode || null,
             staff_name: s.staff_name || '',
+            // Preserve the real user_id from DB so wallet sync works on re-save
+            real_user_id: s.staff_user_id || null,
             work_status: fromDbWorkStatus(s.work_status),
             overtime_hours: s.overtime_hours || 0,
             amount_received: s.amount_received || 0,
