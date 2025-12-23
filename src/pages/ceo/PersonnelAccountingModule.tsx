@@ -189,14 +189,57 @@ export default function PersonnelAccountingModule() {
 
       setWorkRecords(recordsWithDates);
 
-      // Fetch salary settings for this user
-      const { data: salaryData } = await supabase
+      // Fetch salary settings for this user - try multiple matching strategies
+      // 1. First try exact phone match
+      let salaryData = null;
+      
+      const { data: salaryByPhone } = await supabase
         .from('staff_salary_settings')
-        .select('base_daily_salary, overtime_rate_fraction')
+        .select('base_daily_salary, overtime_rate_fraction, staff_code, staff_name')
         .eq('staff_code', phone)
         .maybeSingle();
+      
+      if (salaryByPhone) {
+        salaryData = salaryByPhone;
+      } else {
+        // 2. Try with normalized phone (remove leading 0)
+        const normalizedPhone = phone.startsWith('0') ? phone.substring(1) : phone;
+        const { data: salaryByNormalized } = await supabase
+          .from('staff_salary_settings')
+          .select('base_daily_salary, overtime_rate_fraction, staff_code, staff_name')
+          .or(`staff_code.eq.${normalizedPhone},staff_code.eq.0${normalizedPhone}`)
+          .maybeSingle();
+        
+        if (salaryByNormalized) {
+          salaryData = salaryByNormalized;
+        } else {
+          // 3. Try by staff name from HR
+          const { data: hrEmployee } = await supabase
+            .from('hr_employees')
+            .select('full_name')
+            .eq('user_id', userId)
+            .maybeSingle();
+          
+          if (hrEmployee?.full_name) {
+            const { data: salaryByName } = await supabase
+              .from('staff_salary_settings')
+              .select('base_daily_salary, overtime_rate_fraction, staff_code, staff_name')
+              .eq('staff_name', hrEmployee.full_name)
+              .maybeSingle();
+            
+            if (salaryByName) {
+              salaryData = salaryByName;
+            }
+          }
+        }
+      }
 
-      const userSalarySetting = salaryData || null;
+      console.log('Salary settings lookup:', { phone, salaryData });
+      
+      const userSalarySetting = salaryData ? {
+        base_daily_salary: salaryData.base_daily_salary,
+        overtime_rate_fraction: salaryData.overtime_rate_fraction
+      } : null;
       setSalarySetting(userSalarySetting);
 
       // Calculate summary
