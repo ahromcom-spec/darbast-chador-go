@@ -31,6 +31,7 @@ import { useFinanceManagerRole } from '@/hooks/useFinanceManagerRole';
 import { useExecutiveManagerRole } from '@/hooks/useExecutiveManagerRole';
 import { CEOManagementSection } from '@/components/profile/CEOManagementSection';
 import { ModulesManagement } from '@/components/profile/ModulesManagement';
+import { UserWallet } from '@/components/profile/UserWallet';
 
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
@@ -266,6 +267,8 @@ const fetchOrders = async () => {
         {/* Profile Header */}
         <ProfileHeader user={user} fullName={fullName} roles={roles} />
 
+        {/* User Wallet */}
+        <UserWallet />
         {/* Tabs */}
         <Tabs defaultValue={tabFromUrl} className="w-full">
           <TabsList className="grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 sm:grid-cols-6">

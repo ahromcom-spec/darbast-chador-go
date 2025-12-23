@@ -3712,6 +3712,48 @@ export type Database = {
           },
         ]
       }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number | null
+          created_at: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          title: string
+          transaction_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          title: string
+          transaction_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          title?: string
+          transaction_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workflow_tasks: {
         Row: {
           assignee_role: Database["public"]["Enums"]["app_role"] | null
@@ -3761,6 +3803,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_wallet_transaction: {
+        Args: {
+          _amount: number
+          _description?: string
+          _reference_id?: string
+          _reference_type?: string
+          _title: string
+          _transaction_type: string
+          _user_id: string
+        }
+        Returns: string
+      }
       approve_order_as_sales_manager: {
         Args: { _order_id: string }
         Returns: undefined
@@ -4062,6 +4116,7 @@ export type Database = {
         }[]
       }
       get_user_id_by_phone: { Args: { _phone: string }; Returns: string }
+      get_wallet_balance: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
