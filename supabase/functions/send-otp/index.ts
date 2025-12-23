@@ -237,16 +237,13 @@ serve(async (req) => {
       );
     }
     const safeHost = baseHost;
-    // Build Web OTP bindings for both apex and www variants to maximize auto-fill reliability
+    // Use apex domain only for Web OTP binding (remove www prefix)
     const hasWWW = safeHost.startsWith('www.');
     const apexHost = hasWWW ? safeHost.slice(4) : safeHost;
-    const wwwHost = hasWWW ? safeHost : `www.${safeHost}`;
-    const bindings = Array.from(new Set([`@${apexHost} #${code}`, `@${wwwHost} #${code}`])).join('\n');
-    const webOtpBinding = bindings;
     
-    // Format message with Web OTP binding for autofill
-    // Adding binding at the end enables Chrome/Android to auto-fill the code
-    const message = `کد تایید: ${code} ورود به سایت اهرم\n\n${webOtpBinding}`;
+    // Format message: simple text + single Web OTP binding
+    // The binding at the LAST LINE enables Chrome/Android to auto-fill the code
+    const message = `کد تایید: ${code}\n\n@${apexHost} #${code}`;
     
     const rawSender = Deno.env.get('PARSGREEN_SENDER') || '';
     const senderNumber = /^[0-9]+$/.test(rawSender) ? rawSender : '90000319';
