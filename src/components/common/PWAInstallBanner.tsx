@@ -18,12 +18,17 @@ export function PWAInstallBanner() {
   const navigate = useNavigate();
 
   // Drag state
+  // Banner starts in the right half and bottom half of the screen
   const [position, setPosition] = useState(() => {
     const vp = getViewportSize();
-    const isMobile = vp.width < 640;
-    // Position higher from bottom to avoid footer/ticker overlap
-    const bottomOffset = isMobile ? 160 : 180;
-    return { x: vp.width - 320, y: vp.height - bottomOffset };
+    const bannerWidth = 300;
+    const bannerHeight = 80;
+    // Ensure banner is in right half and bottom half
+    const minX = vp.width / 2;
+    const minY = vp.height / 2;
+    const x = Math.max(minX, vp.width - bannerWidth - 20);
+    const y = Math.max(minY, vp.height - bannerHeight - 100);
+    return { x, y };
   });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
@@ -60,16 +65,22 @@ export function PWAInstallBanner() {
   }, [location.pathname, isStandalone]);
 
   // Update position on resize
+  // Banner restricted to right half and bottom half of screen
   useEffect(() => {
     const handleResize = () => {
       const vp = getViewportSize();
-      const isMobile = vp.width < 640;
-      const bottomOffset = isMobile ? 160 : 180;
       const bannerWidth = bannerRef.current?.offsetWidth || 300;
+      const bannerHeight = bannerRef.current?.offsetHeight || 80;
+      // Banner restricted to right half of screen (width/2 to width - bannerWidth)
+      const minX = vp.width / 2;
+      const maxX = vp.width - bannerWidth - 20;
+      // Banner restricted to bottom half of screen
+      const minY = vp.height / 2;
+      const maxY = vp.height - bannerHeight - 20;
       
       setPosition(prev => ({
-        x: Math.min(prev.x, vp.width - bannerWidth - 20),
-        y: Math.min(prev.y, vp.height - bottomOffset)
+        x: Math.max(minX, Math.min(maxX, prev.x)),
+        y: Math.max(minY, Math.min(maxY, prev.y))
       }));
     };
 
@@ -118,9 +129,16 @@ export function PWAInstallBanner() {
     const bannerWidth = bannerRef.current?.offsetWidth || 300;
     const bannerHeight = bannerRef.current?.offsetHeight || 80;
 
+    // Banner restricted to right half of screen
+    const minX = vp.width / 2;
+    const maxX = vp.width - bannerWidth - 10;
+    // Banner restricted to bottom half of screen
+    const minY = vp.height / 2;
+    const maxY = vp.height - bannerHeight - 10;
+
     // Calculate new position with bounds
-    const newX = Math.max(10, Math.min(vp.width - bannerWidth - 10, dragStartRef.current.posX + deltaX));
-    const newY = Math.max(80, Math.min(vp.height - bannerHeight - 10, dragStartRef.current.posY + deltaY));
+    const newX = Math.max(minX, Math.min(maxX, dragStartRef.current.posX + deltaX));
+    const newY = Math.max(minY, Math.min(maxY, dragStartRef.current.posY + deltaY));
 
     setPosition({ x: newX, y: newY });
   }, [isDragging]);
