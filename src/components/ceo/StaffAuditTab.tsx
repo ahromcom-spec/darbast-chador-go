@@ -313,15 +313,13 @@ export function StaffAuditTab() {
     return 'تومان ' + amount.toLocaleString('fa-IR');
   };
 
-  const handleGeneratePdf = async () => {
+  const handleGeneratePdf = () => {
     if (!summary || !salarySettings) {
       toast.error('لطفاً ابتدا جستجو کنید');
       return;
     }
 
     setGeneratingPdf(true);
-
-    let pdfContainer: HTMLDivElement | null = null;
 
     try {
       const dateRangeStr = startDate && endDate
@@ -334,27 +332,7 @@ export function StaffAuditTab() {
         .replace(/\s+/g, '_')
         .replace(/_+/g, '_')
         .replace(/^-|-$|^_+|_+$/g, '');
-      const filename = `${safeFilenameBase || 'حساب-نیرو'}.pdf`;
-
-      // Create a temporary container for PDF (must be renderable for html2canvas)
-      pdfContainer = document.createElement('div');
-      pdfContainer.setAttribute('dir', 'rtl');
-      pdfContainer.style.cssText = [
-        'position: fixed',
-        // Keep it inside the viewport so html2canvas can capture it reliably.
-        // The loading overlay hides it from the user while generating.
-        'left: 0',
-        'top: 0',
-        'width: 800px',
-        'max-width: 800px',
-        'background: #ffffff',
-        'direction: rtl',
-        'font-family: Tahoma, Arial, sans-serif',
-        'pointer-events: none',
-        'opacity: 1',
-        // Avoid negative z-index (can render behind the page background in the html2canvas clone → blank PDF)
-        'z-index: 10',
-      ].join('; ');
+      const filename = `${safeFilenameBase || 'حساب-نیرو'}`;
 
       // Build daily records HTML - only records with meaningful data
       const recordsWithData = records.filter((r) =>
@@ -367,7 +345,7 @@ export function StaffAuditTab() {
       );
 
       const dailyRecordsHtml = recordsWithData.length > 0 ? `
-        <div style="margin-top: 20px; border: 2px solid #d4a574; border-radius: 8px; overflow: hidden;">
+        <div style="margin-top: 20px; border: 2px solid #d4a574; border-radius: 8px; overflow: hidden; page-break-inside: avoid;">
           <div style="background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 100%); padding: 12px; border-bottom: 1px solid #d4a574;">
             <h3 style="margin: 0; color: #8b5a2b; font-size: 16px; text-align: center;">جزئیات روزانه</h3>
           </div>
@@ -443,136 +421,182 @@ export function StaffAuditTab() {
         `;
       }
 
-      pdfContainer.innerHTML = `
-        <div style="padding: 20px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); min-height: 100%;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; border: 2px solid #d4a574;">
-            <h1 style="margin: 0 0 10px 0; color: #8b5a2b; font-size: 22px; font-weight: bold;">حسابکتاب روزمزدی ${selectedStaffName}</h1>
-            <p style="margin: 0; color: #a16207; font-size: 14px;">بازه زمانی: ${dateRangeStr}</p>
-          </div>
-
-          <!-- Salary Info -->
-          <div style="background-color: #fef3c7; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; border: 1px solid #fcd34d;">
-            <span style="color: #92400e; font-weight: bold;">حقوق روزمزدی: ${formatCurrency(salarySettings.base_daily_salary)}</span>
-          </div>
-
-          <!-- Summary Table -->
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px;">
-            <tbody>
-              <tr style="background-color: #fef3c7;">
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع کارکرد</td>
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع اضافه‌کاری</td>
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalOvertime.toLocaleString('fa-IR')} ساعت</td>
-              </tr>
-              <tr style="background-color: #fef3c7;">
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع دریافتی این ماه</td>
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.totalReceived)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع خرج‌کرد این ماه</td>
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left; color: #dc2626;">${formatCurrency(summary.totalSpent)}</td>
-              </tr>
-              <tr style="background-color: #fef3c7;">
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">حقوق پایه (${summary.totalDaysWorked} روز)</td>
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.estimatedSalary)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">اضافه‌کاری (${summary.totalOvertime} ساعت)</td>
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.overtimePay)}</td>
-              </tr>
-              <tr style="background-color: #fef3c7;">
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold;">کارکرد و مزایای این ماه</td>
-                <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.totalWorkAndBenefits)}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- Balance Box -->
-          ${balanceHtml}
-
-          <!-- Daily Records -->
-          ${dailyRecordsHtml}
-
-          <!-- Financial Notes -->
-          ${financialNotes ? `
-          <div style="margin-top: 20px; border: 2px solid #a855f7; border-radius: 8px; overflow: hidden;">
-            <div style="background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); padding: 12px; border-bottom: 1px solid #a855f7;">
-              <h3 style="margin: 0; color: #7c3aed; font-size: 16px; text-align: center;">توضیحات</h3>
+      const fullHtml = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="fa">
+        <head>
+          <meta charset="UTF-8">
+          <title>${filename}</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 15mm;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body {
+              font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
+              direction: rtl;
+              margin: 0;
+              padding: 0;
+              background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+              min-height: 100vh;
+            }
+            .container {
+              padding: 20px;
+              max-width: 800px;
+              margin: 0 auto;
+            }
+            .header {
+              background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 100%);
+              padding: 20px;
+              border-radius: 12px;
+              margin-bottom: 20px;
+              text-align: center;
+              border: 2px solid #d4a574;
+            }
+            .header h1 {
+              margin: 0 0 10px 0;
+              color: #8b5a2b;
+              font-size: 22px;
+              font-weight: bold;
+            }
+            .header p {
+              margin: 0;
+              color: #a16207;
+              font-size: 14px;
+            }
+            .salary-info {
+              background-color: #fef3c7;
+              padding: 12px;
+              border-radius: 8px;
+              margin-bottom: 16px;
+              text-align: center;
+              border: 1px solid #fcd34d;
+            }
+            .salary-info span {
+              color: #92400e;
+              font-weight: bold;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 16px;
+              font-size: 14px;
+            }
+            @media print {
+              body {
+                background: white !important;
+              }
+              .container {
+                padding: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <!-- Header -->
+            <div class="header">
+              <h1>حسابکتاب روزمزدی ${selectedStaffName}</h1>
+              <p>بازه زمانی: ${dateRangeStr}</p>
             </div>
-            <div style="padding: 12px; background-color: #faf5ff;">
-              <p style="margin: 0; color: #581c87; font-size: 14px; line-height: 1.8; white-space: pre-wrap;">${financialNotes}</p>
+
+            <!-- Salary Info -->
+            <div class="salary-info">
+              <span>حقوق روزمزدی: ${formatCurrency(salarySettings.base_daily_salary)}</span>
+            </div>
+
+            <!-- Summary Table -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px;">
+              <tbody>
+                <tr style="background-color: #fef3c7;">
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع کارکرد</td>
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع اضافه‌کاری</td>
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalOvertime.toLocaleString('fa-IR')} ساعت</td>
+                </tr>
+                <tr style="background-color: #fef3c7;">
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع دریافتی این ماه</td>
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.totalReceived)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع خرج‌کرد این ماه</td>
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left; color: #dc2626;">${formatCurrency(summary.totalSpent)}</td>
+                </tr>
+                <tr style="background-color: #fef3c7;">
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">حقوق پایه (${summary.totalDaysWorked} روز)</td>
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.estimatedSalary)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">اضافه‌کاری (${summary.totalOvertime} ساعت)</td>
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.overtimePay)}</td>
+                </tr>
+                <tr style="background-color: #fef3c7;">
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold;">کارکرد و مزایای این ماه</td>
+                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.totalWorkAndBenefits)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Balance Box -->
+            ${balanceHtml}
+
+            <!-- Daily Records -->
+            ${dailyRecordsHtml}
+
+            <!-- Financial Notes -->
+            ${financialNotes ? `
+            <div style="margin-top: 20px; border: 2px solid #a855f7; border-radius: 8px; overflow: hidden;">
+              <div style="background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); padding: 12px; border-bottom: 1px solid #a855f7;">
+                <h3 style="margin: 0; color: #7c3aed; font-size: 16px; text-align: center;">توضیحات</h3>
+              </div>
+              <div style="padding: 12px; background-color: #faf5ff;">
+                <p style="margin: 0; color: #581c87; font-size: 14px; line-height: 1.8; white-space: pre-wrap;">${financialNotes}</p>
+              </div>
+            </div>
+            ` : ''}
+
+            <!-- Footer -->
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 2px dashed #d4a574; text-align: center; font-size: 12px; color: #92400e;">
+              <p style="margin: 0;">تاریخ صدور: ${format(new Date(), 'yyyy/MM/dd - HH:mm')}</p>
             </div>
           </div>
-          ` : ''}
-
-          <!-- Footer -->
-          <div style="margin-top: 24px; padding-top: 16px; border-top: 2px dashed #d4a574; text-align: center; font-size: 12px; color: #92400e;">
-            <p style="margin: 0;">تاریخ صدور: ${format(new Date(), 'yyyy/MM/dd - HH:mm')}</p>
-          </div>
-        </div>
+        </body>
+        </html>
       `;
 
-      document.body.appendChild(pdfContainer);
+      // Open a new window and trigger print
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(fullHtml);
+        printWindow.document.close();
+        
+        // Wait for content to load then print
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+            setGeneratingPdf(false);
+          }, 500);
+        };
 
-      // Wait one paint/frame so the element is fully laid out before capture
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      // Wait for fonts if the browser supports it
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fontsReady = (document as any).fonts?.ready;
-      if (fontsReady) {
-        try {
-          await fontsReady;
-        } catch {
-          // ignore
-        }
+        // Fallback if onload doesn't fire
+        setTimeout(() => {
+          setGeneratingPdf(false);
+        }, 3000);
+      } else {
+        toast.error('مرورگر پنجره پاپ‌آپ را مسدود کرده است. لطفاً اجازه دهید.');
+        setGeneratingPdf(false);
       }
-
-      const rect = pdfContainer.getBoundingClientRect();
-      const canvasWidth = Math.max(800, Math.ceil(rect.width || 0), pdfContainer.scrollWidth || 0);
-      const canvasHeight = Math.max(1200, Math.ceil(rect.height || 0), pdfContainer.scrollHeight || 0);
-
-      if (canvasWidth <= 0 || canvasHeight <= 0) {
-        throw new Error('PDF container has zero size');
-      }
-
-      // Dynamic import for html2pdf
-      const html2pdf = (await import('html2pdf.js')).default;
-
-      await html2pdf()
-        .set({
-          margin: [10, 10, 10, 10] as [number, number, number, number],
-          filename,
-          image: { type: 'jpeg' as const, quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff',
-            letterRendering: true,
-            scrollX: 0,
-            scrollY: 0,
-            windowWidth: canvasWidth,
-            windowHeight: canvasHeight,
-          },
-          jsPDF: {
-            unit: 'mm' as const,
-            format: 'a4' as const,
-            orientation: 'portrait' as const,
-          },
-        })
-        .from(pdfContainer)
-        .save();
-
-      toast.success('فایل PDF با موفقیت دانلود شد');
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('خطا در تولید PDF');
-    } finally {
       setGeneratingPdf(false);
-      if (pdfContainer?.parentNode) pdfContainer.parentNode.removeChild(pdfContainer);
     }
   };
 
