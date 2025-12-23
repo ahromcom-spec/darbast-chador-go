@@ -1086,13 +1086,13 @@ async function getUserWorkRecordsContext(supabase: any, userId: string): Promise
     }
 
     // بررسی اینکه کاربر در HR ثبت شده است یا نه
-    const { data: hrEmployee } = await supabase
+    const { data: hrEmpCheck } = await supabase
       .from('hr_employees')
       .select('id, full_name')
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (!hrEmployee) {
+    if (!hrEmpCheck) {
       return '';
     }
 
@@ -1113,12 +1113,56 @@ async function getUserWorkRecordsContext(supabase: any, userId: string): Promise
 `;
     }
 
-    // گرفتن تنظیمات حقوق کاربر
-    const { data: salarySetting } = await supabase
-      .from('staff_salary_settings')
-      .select('base_daily_salary, overtime_rate_fraction')
-      .eq('staff_code', profile.phone_number)
+    // گرفتن اطلاعات HR کاربر
+    const { data: hrEmployee } = await supabase
+      .from('hr_employees')
+      .select('full_name, phone_number, department, position, hire_date, status')
+      .eq('user_id', userId)
       .maybeSingle();
+
+    // گرفتن تنظیمات حقوق کاربر با روش‌های مختلف
+    let salarySetting: any = null;
+    
+    // جستجو با شماره تلفن کامل
+    if (profile.phone_number) {
+      const { data: setting1 } = await supabase
+        .from('staff_salary_settings')
+        .select('*')
+        .eq('staff_code', profile.phone_number)
+        .maybeSingle();
+      if (setting1) salarySetting = setting1;
+    }
+    
+    // جستجو بدون صفر ابتدایی
+    if (!salarySetting && profile.phone_number) {
+      const normalizedPhone = profile.phone_number.startsWith('0') 
+        ? profile.phone_number.substring(1) 
+        : profile.phone_number;
+      const { data: setting2 } = await supabase
+        .from('staff_salary_settings')
+        .select('*')
+        .eq('staff_code', normalizedPhone)
+        .maybeSingle();
+      if (setting2) salarySetting = setting2;
+    }
+    
+    // جستجو با نام از HR
+    if (!salarySetting && hrEmployee?.full_name) {
+      const { data: setting3 } = await supabase
+        .from('staff_salary_settings')
+        .select('*')
+        .eq('staff_name', hrEmployee.full_name)
+        .maybeSingle();
+      if (setting3) salarySetting = setting3;
+    }
+
+    // گرفتن موجودی کیف پول
+    const { data: walletTransactions } = await supabase
+      .from('wallet_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(10);
 
     // محاسبه آمار
     let totalPresent = 0;
@@ -1128,7 +1172,7 @@ async function getUserWorkRecordsContext(supabase: any, userId: string): Promise
     let totalSpent = 0;
 
     // گروه‌بندی بر اساس ماه شمسی
-    const monthlyStats: Record<string, { present: number; absent: number; overtime: number; received: number; spent: number; dates: string[] }> = {};
+    const monthlyStats: Record<string, { present: number; absent: number; overtime: number; received: number; spent: number; dates: string[]; records: any[] }> = {};
 
     workRecords.forEach((record: any) => {
       if (record.work_status === 'حاضر') totalPresent++;
@@ -1146,7 +1190,7 @@ async function getUserWorkRecordsContext(supabase: any, userId: string): Promise
         const monthKey = `${parts[0]}/${parts[1]}`; // سال/ماه
         
         if (!monthlyStats[monthKey]) {
-          monthlyStats[monthKey] = { present: 0, absent: 0, overtime: 0, received: 0, spent: 0, dates: [] };
+          monthlyStats[monthKey] = { present: 0, absent: 0, overtime: 0, received: 0, spent: 0, dates: [], records: [] };
         }
         
         if (record.work_status === 'حاضر') monthlyStats[monthKey].present++;
@@ -1155,6 +1199,16 @@ async function getUserWorkRecordsContext(supabase: any, userId: string): Promise
         monthlyStats[monthKey].received += Number(record.amount_received) || 0;
         monthlyStats[monthKey].spent += Number(record.amount_spent) || 0;
         monthlyStats[monthKey].dates.push(persianDate);
+        monthlyStats[monthKey].records.push({
+          date: persianDate,
+          status: record.work_status,
+          overtime: record.overtime_hours || 0,
+          received: record.amount_received || 0,
+          spent: record.amount_spent || 0,
+          receivingNotes: record.receiving_notes,
+          spendingNotes: record.spending_notes,
+          notes: record.notes
+        });
       }
     });
 
@@ -1189,11 +1243,94 @@ async function getUserWorkRecordsContext(supabase: any, userId: string): Promise
 `;
     }
 
+    // اطلاعات HR
+    let hrInfo = '';
+    if (hrEmployee) {
+      hrInfo = `
+👤 اطلاعات پرسنلی:
+- نام کامل: ${hrEmployee.full_name}
+- شماره تماس: ${hrEmployee.phone_number || profile.phone_number}
+${hrEmployee.department ? `- دپارتمان: ${hrEmployee.department}` : ''}
+${hrEmployee.position ? `- سمت: ${hrEmployee.position}` : ''}
+${hrEmployee.hire_date ? `- تاریخ استخدام: ${new Date(hrEmployee.hire_date).toLocaleDateString('fa-IR')}` : ''}
+- وضعیت: ${hrEmployee.status === 'active' ? '✅ فعال' : '⚪ غیرفعال'}
+`;
+    }
+
+    // اطلاعات کیف پول
+    let walletInfo = '';
+    if (walletTransactions && walletTransactions.length > 0) {
+      const latestBalance = walletTransactions[0]?.balance_after || 0;
+      walletInfo = `
+💼 کیف پول:
+- موجودی فعلی: ${Number(latestBalance).toLocaleString('fa-IR')} تومان
+- آخرین تراکنش‌ها:`;
+      walletTransactions.slice(0, 5).forEach((tx: any) => {
+        const txDate = new Date(tx.created_at).toLocaleDateString('fa-IR');
+        const txType = tx.transaction_type === 'income' ? '📥 دریافت' : '📤 برداشت';
+        walletInfo += `\n  ${txType}: ${Number(tx.amount).toLocaleString('fa-IR')} تومان (${txDate})${tx.title ? ` - ${tx.title}` : ''}`;
+      });
+    }
+
+    // محاسبه حقوق ماهانه دقیق
+    let monthlySalaryDetails = '';
+    const sortedMonths = Object.keys(monthlyStats).sort().reverse();
+    
+    if (salarySetting && sortedMonths.length > 0) {
+      const dailySalary = Number(salarySetting.base_daily_salary);
+      const overtimeFraction = Number(salarySetting.overtime_rate_fraction);
+      const overtimeDenominator = overtimeFraction > 0 ? Math.round(1 / overtimeFraction) : 6;
+      const hourlyOvertime = dailySalary / overtimeDenominator;
+
+      monthlySalaryDetails = `
+
+📊 جزئیات حقوق ماهانه:`;
+      
+      sortedMonths.slice(0, 6).forEach(month => {
+        const stats = monthlyStats[month];
+        const monthName = getJalaliMonthName(parseInt(month.split('/')[1]));
+        const monthlySalary = stats.present * dailySalary;
+        const monthlyOvertime = Math.round(stats.overtime * hourlyOvertime);
+        const monthlyNet = monthlySalary + monthlyOvertime - stats.spent + stats.received;
+        const monthlyBalance = stats.received - stats.spent;
+        
+        monthlySalaryDetails += `
+
+🗓️ ${monthName} ${month.split('/')[0]}:
+   ┌─ کارکرد: ${stats.present} روز حضور | ${stats.absent} روز غیبت | ${stats.overtime} ساعت اضافه‌کاری
+   ├─ حقوق پایه: ${monthlySalary.toLocaleString('fa-IR')} تومان
+   ├─ اضافه‌کاری: ${monthlyOvertime.toLocaleString('fa-IR')} تومان
+   ├─ دریافتی نقدی: ${stats.received.toLocaleString('fa-IR')} تومان
+   ├─ پرداختی (هزینه): ${stats.spent.toLocaleString('fa-IR')} تومان
+   └─ مانده ماهانه: ${monthlyBalance >= 0 ? '+' : ''}${monthlyBalance.toLocaleString('fa-IR')} تومان`;
+        
+        // نمایش جزئیات روزانه برای ماه جاری
+        if (sortedMonths.indexOf(month) === 0 && stats.records.length > 0) {
+          monthlySalaryDetails += `
+   
+   📋 جزئیات روزانه این ماه:`;
+          stats.records.slice(0, 10).forEach((rec: any) => {
+            const statusIcon = rec.status === 'حاضر' ? '✅' : rec.status === 'غایب' ? '❌' : '⚪';
+            let dayDetails = `\n   ${rec.date}: ${statusIcon} ${rec.status}`;
+            if (rec.overtime > 0) dayDetails += ` | ⏰ ${rec.overtime}س اضافه‌کاری`;
+            if (rec.received > 0) dayDetails += ` | 📥 ${Number(rec.received).toLocaleString('fa-IR')}`;
+            if (rec.spent > 0) dayDetails += ` | 📤 ${Number(rec.spent).toLocaleString('fa-IR')}`;
+            if (rec.receivingNotes) dayDetails += ` (${rec.receivingNotes})`;
+            if (rec.spendingNotes) dayDetails += ` (${rec.spendingNotes})`;
+            monthlySalaryDetails += dayDetails;
+          });
+          if (stats.records.length > 10) {
+            monthlySalaryDetails += `\n   ... و ${stats.records.length - 10} رکورد دیگر`;
+          }
+        }
+      });
+    }
+
     let context = `
 ═══════════════════════════════════════
 📊 کارکرد و حسابکتاب شما (${profile.full_name || 'کاربر'})
 ═══════════════════════════════════════
-
+${hrInfo}
 📋 آمار کلی:
 - تعداد کل ثبت‌ها: ${workRecords.length} رکورد
 - روزهای حضور: ${totalPresent} روز
@@ -1201,28 +1338,20 @@ async function getUserWorkRecordsContext(supabase: any, userId: string): Promise
 - ساعات اضافه‌کاری: ${totalOvertime} ساعت
 
 💵 خلاصه مالی:
-- کل دریافتی: ${totalReceived.toLocaleString('fa-IR')} تومان
-- کل پرداختی: ${totalSpent.toLocaleString('fa-IR')} تومان
+- کل دریافتی (نقد): ${totalReceived.toLocaleString('fa-IR')} تومان
+- کل پرداختی (هزینه): ${totalSpent.toLocaleString('fa-IR')} تومان
 - مانده حساب: ${balance >= 0 ? '+' : ''}${balance.toLocaleString('fa-IR')} تومان (${balance >= 0 ? 'طلب از شرکت' : 'بدهی به شرکت'})
 
 ${salaryInfo}
+${walletInfo}
+${monthlySalaryDetails}
 
-📅 تفکیک ماهانه:`;
-
-    // نمایش آمار ماهانه
-    const sortedMonths = Object.keys(monthlyStats).sort().reverse();
-    sortedMonths.slice(0, 3).forEach(month => {
-      const stats = monthlyStats[month];
-      const monthName = getJalaliMonthName(parseInt(month.split('/')[1]));
-      context += `
-🗓️ ${monthName} ${month.split('/')[0]}:
-   - حضور: ${stats.present} روز | غیبت: ${stats.absent} روز | اضافه‌کاری: ${stats.overtime} ساعت
-   - دریافت: ${stats.received.toLocaleString('fa-IR')} | پرداخت: ${stats.spent.toLocaleString('fa-IR')} تومان`;
-    });
-
-    context += `
-
-⚠️ نکته: این اطلاعات از گزارشات روزانه استخراج شده است. برای مشاهده جزئیات کامل به بخش "حسابکتاب و کارکرد" در پروفایل خود مراجعه کنید.
+═══════════════════════════════════════
+💡 راهنمای حسابکتاب:
+- "مانده حساب" = دریافتی - پرداختی (اگر مثبت باشد یعنی شما طلبکارید)
+- "کارکرد حقوق" = حقوق روزانه × روزهای حضور + اضافه‌کاری
+- هر ساعت اضافه‌کاری = حقوق روزانه ÷ ضریب اضافه‌کاری
+═══════════════════════════════════════
 `;
 
     return context;
