@@ -238,8 +238,8 @@ export default function PersonnelAccountingModule() {
           </CardContent>
         </Card>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {/* Work Summary Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card className="bg-green-50 dark:bg-green-950/30 border-green-200">
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-green-600">{summary.totalPresent}</div>
@@ -256,6 +256,12 @@ export default function PersonnelAccountingModule() {
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-blue-600">{summary.totalOvertime}</div>
               <div className="text-sm text-muted-foreground">ساعت اضافه‌کاری</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-purple-600">{workRecords.length}</div>
+              <div className="text-sm text-muted-foreground">کل ثبت‌ها</div>
             </CardContent>
           </Card>
         </div>
@@ -288,9 +294,14 @@ export default function PersonnelAccountingModule() {
                 <Calculator className="h-5 w-5 text-primary" />
                 <span className="font-semibold">مانده حساب</span>
               </div>
-              <span className={`font-bold text-lg ${summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(summary.balance)}
-              </span>
+              <div className="text-left">
+                <span className={`font-bold text-lg ${summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {summary.balance >= 0 ? '+' : ''}{formatCurrency(summary.balance)}
+                </span>
+                <div className="text-xs text-muted-foreground">
+                  {summary.balance >= 0 ? 'طلب از شرکت' : 'بدهی به شرکت'}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
