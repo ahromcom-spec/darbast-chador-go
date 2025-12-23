@@ -69,7 +69,8 @@ interface OrderReportRow {
 
 interface StaffReportRow {
   id?: string;
-  staff_user_id: string | null;
+  staff_user_id: string | null; // This stores the staff code for UI display
+  real_user_id?: string | null; // This stores the actual UUID for wallet sync
   staff_name: string;
   work_status: 'کارکرده' | 'غایب';
   overtime_hours: number;
@@ -274,8 +275,8 @@ export default function DailyReportModule() {
           .insert(
             staffToSave.map((s) => ({
               daily_report_id: reportId,
-              // ستون staff_user_id در دیتابیس uuid است؛ کدهای پرسنلی مثل 0106 را نباید اینجا ذخیره کنیم
-              staff_user_id: isUuid(s.staff_user_id) ? s.staff_user_id : null,
+              // Use real_user_id if available, otherwise check if staff_user_id is UUID
+              staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
               staff_name: s.staff_name || '',
               work_status: toDbWorkStatus(s.work_status),
               overtime_hours: s.overtime_hours,
@@ -824,8 +825,8 @@ export default function DailyReportModule() {
       if (staffToSave.length > 0) {
         const staffPayload = staffToSave.map((s) => ({
           daily_report_id: reportId,
-          // ستون staff_user_id در دیتابیس uuid است؛ کدهای پرسنلی مثل 0106 را نباید اینجا ذخیره کنیم
-          staff_user_id: isUuid(s.staff_user_id) ? s.staff_user_id : null,
+          // Use real_user_id if available, otherwise check if staff_user_id is UUID
+          staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
           staff_name: s.staff_name || '',
           work_status: toDbWorkStatus(s.work_status),
           overtime_hours: s.overtime_hours || 0,
@@ -1355,9 +1356,10 @@ export default function DailyReportModule() {
                                 ) : (
                                   <StaffSearchSelect
                                     value={row.staff_user_id || ''}
-                                    onValueChange={(code, name) => {
+                                    onValueChange={(code, name, userId) => {
                                       updateStaffRow(index, 'staff_user_id', code);
                                       updateStaffRow(index, 'staff_name', code && name ? `${code} - ${name}` : '');
+                                      updateStaffRow(index, 'real_user_id', userId || null);
                                     }}
                                     placeholder="انتخاب نیرو"
                                   />
