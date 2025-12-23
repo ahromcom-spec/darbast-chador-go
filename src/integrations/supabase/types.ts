@@ -890,6 +890,51 @@ export type Database = {
           },
         ]
       }
+      hr_employees: {
+        Row: {
+          created_at: string
+          created_by: string
+          department: string | null
+          full_name: string
+          hire_date: string | null
+          id: string
+          notes: string | null
+          phone_number: string
+          position: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          department?: string | null
+          full_name: string
+          hire_date?: string | null
+          id?: string
+          notes?: string | null
+          phone_number: string
+          position?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          department?: string | null
+          full_name?: string
+          hire_date?: string | null
+          id?: string
+          notes?: string | null
+          phone_number?: string
+          position?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       internal_staff_profiles: {
         Row: {
           created_at: string | null
