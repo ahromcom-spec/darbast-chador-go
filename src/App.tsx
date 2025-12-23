@@ -41,6 +41,7 @@ const CEOOrders = lazy(() => import("@/pages/ceo/CEOOrders").then(m => ({ defaul
 const CEOCustomers = lazy(() => import("@/pages/ceo/CEOCustomers").then(m => ({ default: m.CEOCustomers })));
 const DeepArchivedOrders = lazy(() => import("@/pages/ceo/DeepArchivedOrders"));
 const DailyReportModule = lazy(() => import("@/pages/ceo/DailyReportModule"));
+const HRManagementModule = lazy(() => import("@/pages/ceo/HRManagementModule"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -297,6 +298,12 @@ const App = () => {
               <Route path="/daily-report" element={
                 <ProtectedRoute>
                   <DailyReportModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر جداگانه برای ماژول مدیریت منابع انسانی */}
+              <Route path="/hr-management" element={
+                <ProtectedRoute>
+                  <HRManagementModule />
                 </ProtectedRoute>
               } />
               <Route path="/executive" element={
