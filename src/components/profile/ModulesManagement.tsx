@@ -55,6 +55,14 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-green-600',
     bgColor: 'bg-green-50',
   },
+  {
+    key: 'personnel_accounting',
+    name: 'ماژول حسابکتاب و کارکرد پرسنل',
+    description: 'مشاهده کارکرد و حسابکتاب شخصی',
+    href: '/personnel-accounting',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+  },
 ];
 
 export function ModulesManagement() {

@@ -54,6 +54,15 @@ const MODULE_DETAILS: Record<string, ModuleInfo> = {
     bgColor: 'bg-green-50',
     icon: 'users',
   },
+  personnel_accounting: {
+    key: 'personnel_accounting',
+    name: 'ماژول حسابکتاب و کارکرد پرسنل',
+    description: 'مشاهده کارکرد و حسابکتاب شخصی',
+    href: '/personnel-accounting',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    icon: 'calculator',
+  },
 };
 
 export function UserModulesTab() {
