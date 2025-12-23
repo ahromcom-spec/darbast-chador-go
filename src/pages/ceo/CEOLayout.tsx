@@ -18,7 +18,8 @@ import {
   Shield,
   UserCheck,
   Archive,
-  ArchiveX
+  ArchiveX,
+  CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -109,6 +110,11 @@ const mainNavItems = [
     title: 'بایگانی عمیق',
     href: '/ceo/deep-archived',
     icon: ArchiveX
+  },
+  {
+    title: 'تاریخچه پرداخت‌ها',
+    href: '/ceo/payments',
+    icon: CreditCard
   },
 ];
 
