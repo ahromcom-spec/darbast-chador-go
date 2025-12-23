@@ -325,7 +325,7 @@ export function UserWallet() {
                     </Badge>
                   </CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    مشاهده تراکنش‌ها و موجودی حساب
+                    {summary.balance >= 0 ? 'مانده حساب' : 'دریافتی اضافی'}
                   </p>
                 </div>
               </div>
