@@ -34,22 +34,24 @@ export function useDailyReportBulkDelete(onSuccess?: () => void) {
 
   const handleBulkDelete = async () => {
     if (selectedReportIds.size === 0) return;
-    
+
     setDeleting(true);
     try {
       const ids = Array.from(selectedReportIds);
-      
+
       // Delete related records first
-      await supabase
+      const { error: ordersError } = await supabase
         .from('daily_report_orders')
         .delete()
         .in('daily_report_id', ids);
-        
-      await supabase
+      if (ordersError) throw ordersError;
+
+      const { error: staffError } = await supabase
         .from('daily_report_staff')
         .delete()
         .in('daily_report_id', ids);
-      
+      if (staffError) throw staffError;
+
       // Delete the reports
       const { error } = await supabase
         .from('daily_reports')
@@ -68,10 +70,13 @@ export function useDailyReportBulkDelete(onSuccess?: () => void) {
       onSuccess?.();
     } catch (error) {
       console.error('Error bulk deleting reports:', error);
+      const message = (error as any)?.message ? String((error as any).message) : '';
+      const isRls = message.toLowerCase().includes('row-level security') || message.toLowerCase().includes('permission denied');
+
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: 'خطا در حذف گزارشات'
+        description: isRls ? 'شما دسترسی حذف گزارشات را ندارید' : 'خطا در حذف گزارشات'
       });
     } finally {
       setDeleting(false);

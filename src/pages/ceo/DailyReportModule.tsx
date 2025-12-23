@@ -155,6 +155,9 @@ export default function DailyReportModule() {
 
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [loadingSavedReports, setLoadingSavedReports] = useState(false);
+  const [singleDeleteDialogOpen, setSingleDeleteDialogOpen] = useState(false);
+  const [singleDeleteTarget, setSingleDeleteTarget] = useState<SavedReport | null>(null);
+  const [singleDeleting, setSingleDeleting] = useState(false);
 
   // Bulk delete hook
   const {
@@ -440,26 +443,68 @@ export default function DailyReportModule() {
     setActiveTab('new-report');
   };
 
-  const deleteSavedReport = async (reportId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click from triggering navigation
-    
-    if (!confirm('آیا از حذف این گزارش اطمینان دارید؟')) return;
-    
+  const getDeleteErrorText = (err: unknown) => {
+    const message = (err as any)?.message ? String((err as any).message) : '';
+
+    if (
+      message.toLowerCase().includes('row-level security') ||
+      message.toLowerCase().includes('permission denied')
+    ) {
+      return 'شما دسترسی حذف این گزارش را ندارید';
+    }
+
+    if (message.toLowerCase().includes('foreign key')) {
+      return 'به دلیل وجود اطلاعات مرتبط، حذف گزارش انجام نشد';
+    }
+
+    return 'خطا در حذف گزارش';
+  };
+
+  const requestDeleteSavedReport = (report: SavedReport, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSingleDeleteTarget(report);
+    setSingleDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteSavedReport = async () => {
+    if (!singleDeleteTarget) return;
+
+    const reportId = singleDeleteTarget.id;
+
     try {
-      // Delete related records first
-      await supabase.from('daily_report_orders').delete().eq('daily_report_id', reportId);
-      await supabase.from('daily_report_staff').delete().eq('daily_report_id', reportId);
-      
-      // Delete the report itself
-      const { error } = await supabase.from('daily_reports').delete().eq('id', reportId);
-      
-      if (error) throw error;
-      
+      setSingleDeleting(true);
+
+      const { error: ordersError } = await supabase
+        .from('daily_report_orders')
+        .delete()
+        .eq('daily_report_id', reportId);
+      if (ordersError) throw ordersError;
+
+      const { error: staffError } = await supabase
+        .from('daily_report_staff')
+        .delete()
+        .eq('daily_report_id', reportId);
+      if (staffError) throw staffError;
+
+      const { error: reportError } = await supabase
+        .from('daily_reports')
+        .delete()
+        .eq('id', reportId);
+      if (reportError) throw reportError;
+
       toast.success('گزارش با موفقیت حذف شد');
-      setSavedReports(prev => prev.filter(r => r.id !== reportId));
+      setSavedReports((prev) => prev.filter((r) => r.id !== reportId));
+      if (selectedReportIds.has(reportId)) {
+        toggleReportSelection(reportId);
+      }
+
+      setSingleDeleteDialogOpen(false);
+      setSingleDeleteTarget(null);
     } catch (error) {
       console.error('Error deleting report:', error);
-      toast.error('خطا در حذف گزارش');
+      toast.error(getDeleteErrorText(error));
+    } finally {
+      setSingleDeleting(false);
     }
   };
 
@@ -1652,7 +1697,7 @@ export default function DailyReportModule() {
                               variant="ghost" 
                               size="sm" 
                               className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={(e) => deleteSavedReport(report.id, e)}
+                              onClick={(e) => requestDeleteSavedReport(report, e)}
                             >
                               <Trash2 className="h-4 w-4" />
                               حذف
@@ -1690,6 +1735,49 @@ export default function DailyReportModule() {
                       <Trash2 className="h-4 w-4 ml-2" />
                     )}
                     حذف {selectedReportIds.size} گزارش
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Single Delete Confirmation Dialog */}
+            <AlertDialog open={singleDeleteDialogOpen} onOpenChange={setSingleDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-right">تایید حذف گزارش</AlertDialogTitle>
+                  <AlertDialogDescription className="text-right">
+                    آیا از حذف این گزارش اطمینان دارید؟
+                    {singleDeleteTarget ? (
+                      <>
+                        <br />
+                        <span className="font-medium">{formatPersianDate(singleDeleteTarget.report_date)}</span>
+                      </>
+                    ) : null}
+                    <br />
+                    این عمل قابل بازگشت نیست.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row-reverse gap-2">
+                  <AlertDialogCancel
+                    onClick={() => {
+                      setSingleDeleteTarget(null);
+                      setSingleDeleteDialogOpen(false);
+                    }}
+                    disabled={singleDeleting}
+                  >
+                    انصراف
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={confirmDeleteSavedReport}
+                    disabled={singleDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {singleDeleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 ml-2" />
+                    )}
+                    حذف گزارش
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
