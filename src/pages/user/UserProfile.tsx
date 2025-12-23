@@ -31,6 +31,7 @@ import { useFinanceManagerRole } from '@/hooks/useFinanceManagerRole';
 import { useExecutiveManagerRole } from '@/hooks/useExecutiveManagerRole';
 import { CEOManagementSection } from '@/components/profile/CEOManagementSection';
 import { ModulesManagement } from '@/components/profile/ModulesManagement';
+import { HRManagement } from '@/components/ceo/HRManagement';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { RecentActivityFeed } from '@/components/profile/RecentActivityFeed';
@@ -318,6 +319,11 @@ const fetchOrders = async () => {
             {/* Modules Management Section - Only for CEO */}
             {isCEO && (
               <ModulesManagement />
+            )}
+
+            {/* HR Management Section - Only for CEO */}
+            {isCEO && (
+              <HRManagement />
             )}
 
             {/* Manager Activity Summary */}

@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
+import { HRStaffSearchSelect } from '@/components/staff/HRStaffSearchSelect';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Loader2, Plus, Save, Trash2, Settings, Info, Calculator, DollarSign, Edit, X } from 'lucide-react';
+import { Loader2, Plus, Save, Trash2, Settings, Info, Calculator, DollarSign, Edit, X, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SalarySetting {
   id: string;
@@ -330,14 +332,37 @@ export function StaffSalarySettingsTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>انتخاب نیرو</Label>
-              <StaffSearchSelect
-                value={newStaffCode}
-                onValueChange={(code, name) => {
-                  setNewStaffCode(code);
-                  setNewStaffName(name || '');
-                }}
-                placeholder="نیرو را انتخاب کنید"
-              />
+              <Tabs defaultValue="hr" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 h-8 mb-2">
+                  <TabsTrigger value="hr" className="text-xs">
+                    <Users className="h-3 w-3 ml-1" />
+                    نیروهای منابع انسانی
+                  </TabsTrigger>
+                  <TabsTrigger value="static" className="text-xs">
+                    لیست ثابت
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="hr" className="mt-0">
+                  <HRStaffSearchSelect
+                    value={newStaffCode}
+                    onValueChange={(phone, name) => {
+                      setNewStaffCode(phone);
+                      setNewStaffName(name || '');
+                    }}
+                    placeholder="انتخاب از منابع انسانی"
+                  />
+                </TabsContent>
+                <TabsContent value="static" className="mt-0">
+                  <StaffSearchSelect
+                    value={newStaffCode}
+                    onValueChange={(code, name) => {
+                      setNewStaffCode(code);
+                      setNewStaffName(name || '');
+                    }}
+                    placeholder="انتخاب از لیست ثابت"
+                  />
+                </TabsContent>
+              </Tabs>
             </div>
 
             <div className="space-y-2">
