@@ -369,17 +369,8 @@ export default function PersonnelAccountingModule() {
         totalEarnings,
       });
 
-      // Auto-sync final balance (salary + cash balance) to wallet
-      if (recordsWithDates.length > 0) {
-        await autoSyncBalanceToWallet(
-          userId, 
-          finalBalance, 
-          totalPresent, 
-          totalReceived, 
-          totalSpent,
-          totalEarnings
-        );
-      }
+      // Note: Auto-sync removed to prevent constant refreshes
+      // Balance syncing is now done only when user explicitly requests it
     } catch (error) {
       console.error('Error fetching work records:', error);
       toast.error('خطا در دریافت کارکرد');
