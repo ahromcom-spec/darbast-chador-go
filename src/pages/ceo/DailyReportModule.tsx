@@ -1538,17 +1538,27 @@ export default function DailyReportModule() {
                               <TableCell className="border border-amber-200">
                                 <AutoResizeTextarea
                                   value={row.notes}
-                                  onChange={(e) => updateStaffRow(index, 'notes', e.target.value)}
+                                  onChange={(e) => {
+                                    if (e.target.value.length <= 300) {
+                                      updateStaffRow(index, 'notes', e.target.value);
+                                    }
+                                  }}
                                   placeholder="توضیحات..."
                                   className="min-w-[100px] min-h-[36px]"
+                                  maxLength={300}
                                 />
                               </TableCell>
                               <TableCell className="border border-amber-200">
                                 <AutoResizeTextarea
                                   value={row.spending_notes}
-                                  onChange={(e) => updateStaffRow(index, 'spending_notes', e.target.value)}
+                                  onChange={(e) => {
+                                    if (e.target.value.length <= 300) {
+                                      updateStaffRow(index, 'spending_notes', e.target.value);
+                                    }
+                                  }}
                                   placeholder="توضیحات..."
                                   className="min-w-[100px] min-h-[36px]"
+                                  maxLength={300}
                                 />
                               </TableCell>
                               <TableCell className="border border-amber-200">
@@ -1559,7 +1569,12 @@ export default function DailyReportModule() {
                                     value={row.amount_spent === 0 ? '' : row.amount_spent.toLocaleString('en-US')}
                                     onChange={(e) => {
                                       const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                                      updateStaffRow(index, 'amount_spent', parseInt(val) || 0);
+                                      const numVal = parseInt(val) || 0;
+                                      if (numVal <= 300000000) {
+                                        updateStaffRow(index, 'amount_spent', numVal);
+                                      } else {
+                                        toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                                      }
                                     }}
                                     className="min-w-[120px] pl-12 text-left"
                                     dir="ltr"
@@ -1571,9 +1586,14 @@ export default function DailyReportModule() {
                               <TableCell className="border border-amber-200">
                                 <AutoResizeTextarea
                                   value={row.receiving_notes}
-                                  onChange={(e) => updateStaffRow(index, 'receiving_notes', e.target.value)}
+                                  onChange={(e) => {
+                                    if (e.target.value.length <= 300) {
+                                      updateStaffRow(index, 'receiving_notes', e.target.value);
+                                    }
+                                  }}
                                   placeholder="توضیحات..."
                                   className="min-w-[100px] min-h-[36px]"
+                                  maxLength={300}
                                 />
                               </TableCell>
                               <TableCell className="border border-amber-200">
@@ -1584,7 +1604,12 @@ export default function DailyReportModule() {
                                     value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
                                     onChange={(e) => {
                                       const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                                      updateStaffRow(index, 'amount_received', parseInt(val) || 0);
+                                      const numVal = parseInt(val) || 0;
+                                      if (numVal <= 300000000) {
+                                        updateStaffRow(index, 'amount_received', numVal);
+                                      } else {
+                                        toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                                      }
                                     }}
                                     className="min-w-[120px] pl-12 text-left"
                                     dir="ltr"
@@ -1604,7 +1629,12 @@ export default function DailyReportModule() {
                                       value={row.overtime_hours === 0 ? '' : row.overtime_hours.toString()}
                                       onChange={(e) => {
                                         const val = e.target.value.replace(/^0+(?=\d)/, '');
-                                        updateStaffRow(index, 'overtime_hours', parseFloat(val) || 0);
+                                        const numVal = parseFloat(val) || 0;
+                                        if (numVal <= 15) {
+                                          updateStaffRow(index, 'overtime_hours', numVal);
+                                        } else {
+                                          toast.error('اضافه‌کاری نمی‌تواند بیشتر از ۱۵ ساعت باشد');
+                                        }
                                       }}
                                       className="min-w-[80px] pl-10 text-left"
                                       dir="ltr"
