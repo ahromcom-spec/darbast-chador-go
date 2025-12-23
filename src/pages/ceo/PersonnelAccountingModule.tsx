@@ -172,7 +172,7 @@ export default function PersonnelAccountingModule() {
 
   const fetchWorkRecords = async (userId: string, phone: string) => {
     try {
-      // Get work records where staff_user_id matches OR phone number matches
+      // Get work records where staff_user_id matches OR phone/name matches
       // First, get all daily reports
       const { data: reports, error: reportsError } = await supabase
         .from('daily_reports')
@@ -184,20 +184,81 @@ export default function PersonnelAccountingModule() {
       const reportMap = new Map<string, string>();
       reports?.forEach(r => reportMap.set(r.id, r.report_date));
 
-      // Get staff records linked to this user
-      const { data: staffRecords, error: staffError } = await supabase
+      // Get staff records linked to this user by staff_user_id
+      const { data: staffRecordsByUserId, error: staffError1 } = await supabase
         .from('daily_report_staff')
         .select('*')
         .eq('staff_user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (staffError) throw staffError;
+      if (staffError1) throw staffError1;
+
+      // Also search by phone number in staff_name (for records without staff_user_id)
+      // Extract just the phone digits for matching
+      const phoneDigits = phone.replace(/\D/g, '');
+      const lastFourDigits = phoneDigits.slice(-4);
+      
+      // Get user's full name for name-based matching
+      let userFullName = userName || '';
+      if (!userFullName) {
+        const { data: hrEmployee } = await supabase
+          .from('hr_employees')
+          .select('full_name')
+          .eq('user_id', userId)
+          .maybeSingle();
+        userFullName = hrEmployee?.full_name || '';
+      }
+
+      // Search for records where staff_name contains the phone number or user's name
+      let staffRecordsByName: any[] = [];
+      if (phoneDigits || userFullName) {
+        const { data: nameRecords, error: staffError2 } = await supabase
+          .from('daily_report_staff')
+          .select('*')
+          .is('staff_user_id', null) // Only records without user_id
+          .order('created_at', { ascending: false });
+
+        if (!staffError2 && nameRecords) {
+          // Filter records where staff_name contains phone number or user's name
+          staffRecordsByName = nameRecords.filter(record => {
+            const staffName = (record.staff_name || '').toLowerCase();
+            // Match by phone number (full or last 4 digits)
+            if (phoneDigits && (staffName.includes(phoneDigits) || staffName.includes(lastFourDigits))) {
+              return true;
+            }
+            // Match by user's full name
+            if (userFullName) {
+              const nameParts = userFullName.toLowerCase().split(' ');
+              // If staff_name contains all parts of the user's name
+              return nameParts.every(part => staffName.includes(part));
+            }
+            return false;
+          });
+        }
+      }
+
+      // Combine and deduplicate records by id
+      const allRecords = [...(staffRecordsByUserId || [])];
+      const existingIds = new Set(allRecords.map(r => r.id));
+      staffRecordsByName.forEach(record => {
+        if (!existingIds.has(record.id)) {
+          allRecords.push(record);
+          existingIds.add(record.id);
+        }
+      });
 
       // Add report_date to each record
-      const recordsWithDates = (staffRecords || []).map(record => ({
+      const recordsWithDates = allRecords.map(record => ({
         ...record,
         report_date: reportMap.get(record.daily_report_id),
       }));
+
+      // Sort by report_date descending
+      recordsWithDates.sort((a, b) => {
+        const dateA = a.report_date || '';
+        const dateB = b.report_date || '';
+        return dateB.localeCompare(dateA);
+      });
 
       setWorkRecords(recordsWithDates);
 
