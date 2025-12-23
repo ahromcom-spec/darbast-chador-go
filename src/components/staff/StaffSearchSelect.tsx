@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Search, User, X } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, User, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { supabase } from '@/integrations/supabase/client';
 
 // لیست ثابت پرسنل اهرم با کد
 const AHROM_STAFF_LIST = [
@@ -33,6 +34,13 @@ const AHROM_STAFF_LIST = [
   { code: '0147', name: 'محمدرضا سارجالو داربست', fullCode: '0001۴۷' },
 ];
 
+interface StaffMember {
+  code: string;
+  name: string;
+  fullCode: string;
+  source?: 'static' | 'hr' | 'salary';
+}
+
 interface StaffSearchSelectProps {
   value: string;
   onValueChange: (value: string, staffName: string) => void;
@@ -46,14 +54,81 @@ export function StaffSearchSelect({
 }: StaffSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [hrStaff, setHrStaff] = useState<StaffMember[]>([]);
+  const [salaryStaff, setSalaryStaff] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const selectedStaff = AHROM_STAFF_LIST.find(s => s.code === value);
+  // Fetch HR employees and salary settings staff
+  useEffect(() => {
+    const fetchStaff = async () => {
+      setLoading(true);
+      try {
+        // Fetch from staff_salary_settings
+        const { data: salaryData } = await supabase
+          .from('staff_salary_settings')
+          .select('staff_code, staff_name');
+
+        if (salaryData) {
+          const salaryList: StaffMember[] = salaryData.map(s => ({
+            code: s.staff_code || '',
+            name: s.staff_name || '',
+            fullCode: s.staff_code || '',
+            source: 'salary' as const
+          })).filter(s => s.code && s.name);
+          setSalaryStaff(salaryList);
+        }
+
+        // Fetch from hr_employees
+        const { data: hrData } = await supabase
+          .from('hr_employees')
+          .select('phone_number, full_name, position, department');
+
+        if (hrData) {
+          const hrList: StaffMember[] = hrData.map(h => ({
+            code: h.phone_number || '',
+            name: h.full_name || '',
+            fullCode: `${h.position || ''} - ${h.department || ''}`.trim().replace(/^- | -$/g, ''),
+            source: 'hr' as const
+          })).filter(h => h.code && h.name);
+          setHrStaff(hrList);
+        }
+      } catch (error) {
+        console.error('Error fetching staff:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStaff();
+  }, []);
+
+  // Combine all staff lists, removing duplicates by code
+  const allStaff = useMemo(() => {
+    const staticList: StaffMember[] = AHROM_STAFF_LIST.map(s => ({
+      ...s,
+      source: 'static' as const
+    }));
+
+    const combined = [...salaryStaff, ...hrStaff, ...staticList];
+    
+    // Remove duplicates by code, prioritizing salary > hr > static
+    const uniqueMap = new Map<string, StaffMember>();
+    for (const staff of combined) {
+      if (!uniqueMap.has(staff.code)) {
+        uniqueMap.set(staff.code, staff);
+      }
+    }
+
+    return Array.from(uniqueMap.values());
+  }, [hrStaff, salaryStaff]);
+
+  const selectedStaff = allStaff.find(s => s.code === value);
 
   const filteredStaff = useMemo(() => {
-    if (!search.trim()) return AHROM_STAFF_LIST;
+    if (!search.trim()) return allStaff;
     
     const searchLower = search.toLowerCase().trim();
-    return AHROM_STAFF_LIST.filter(staff => {
+    return allStaff.filter(staff => {
       const code = staff.code.toLowerCase();
       const name = staff.name.toLowerCase();
       const fullCode = staff.fullCode.toLowerCase();
@@ -64,7 +139,7 @@ export function StaffSearchSelect({
         fullCode.includes(searchLower)
       );
     });
-  }, [search]);
+  }, [search, allStaff]);
 
   // Sort by code
   const sortedStaff = useMemo(() => {
@@ -126,7 +201,12 @@ export function StaffSearchSelect({
           </div>
         </div>
         <ScrollArea className="h-[300px] overflow-y-auto">
-          {sortedStaff.length === 0 ? (
+          {loading ? (
+            <div className="py-6 flex items-center justify-center text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin ml-2" />
+              <span>در حال بارگذاری...</span>
+            </div>
+          ) : sortedStaff.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
               پرسنلی یافت نشد
             </div>
@@ -142,10 +222,19 @@ export function StaffSearchSelect({
                   }`}
                 >
                   <div className="font-medium flex items-center gap-2">
-                    <span className="text-amber-600 font-bold text-xs bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
+                    <span className={`font-bold text-xs px-1.5 py-0.5 rounded ${
+                      staff.source === 'salary' 
+                        ? 'text-green-600 bg-green-100 dark:bg-green-900/30' 
+                        : staff.source === 'hr'
+                        ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
+                        : 'text-amber-600 bg-amber-100 dark:bg-amber-900/30'
+                    }`}>
                       {staff.code}
                     </span>
                     <span>{staff.name}</span>
+                    {staff.fullCode && staff.fullCode !== staff.code && (
+                      <span className="text-xs text-muted-foreground">({staff.fullCode})</span>
+                    )}
                   </div>
                 </button>
               ))}
