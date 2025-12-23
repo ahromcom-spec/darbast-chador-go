@@ -671,7 +671,7 @@ export default function PersonnelAccountingModule() {
           </CardContent>
         </Card>
 
-        {/* Wallet Balance Card */}
+        {/* Wallet Balance Card - جمع کارکرد حقوق + مانده حساب */}
         <Card className="border-2 border-purple-500/30 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -680,47 +680,62 @@ export default function PersonnelAccountingModule() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-5 rounded-lg bg-background/80 border-2 border-purple-300 dark:border-purple-700">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-purple-500/20">
-                  <Calculator className="h-6 w-6 text-purple-600" />
+            {/* Total Balance = Salary Earnings + Cash Balance */}
+            {(() => {
+              // مانده نهایی کیف پول = جمع کارکرد حقوق + مانده حساب نقدی
+              const totalWallet = summary.totalEarnings + summary.balance;
+              return (
+                <div className="flex items-center justify-between p-5 rounded-lg bg-background/80 border-2 border-purple-300 dark:border-purple-700">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-purple-500/20">
+                      <Calculator className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">مانده حساب شما</p>
+                      <p className={`font-bold text-2xl ${totalWallet >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {totalWallet >= 0 ? '+' : ''}{formatCurrency(totalWallet)}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge 
+                    variant={totalWallet >= 0 ? 'default' : 'destructive'}
+                    className={totalWallet >= 0 ? 'bg-green-100 text-green-800' : ''}
+                  >
+                    {totalWallet >= 0 ? 'طلبکار' : 'بدهکار'}
+                  </Badge>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">مانده حساب شما</p>
-                  <p className={`font-bold text-2xl ${walletBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {walletBalance >= 0 ? '+' : ''}{formatCurrency(walletBalance)}
-                  </p>
-                </div>
-              </div>
-              <Badge 
-                variant={walletBalance >= 0 ? 'default' : 'destructive'}
-                className={walletBalance >= 0 ? 'bg-green-100 text-green-800' : ''}
-              >
-                {walletBalance >= 0 ? 'طلبکار' : 'بدهکار'}
-              </Badge>
-            </div>
+              );
+            })()}
 
-            {/* Recent Wallet Transactions */}
+            {/* Recent Wallet Transactions - دریافتی منفی، پرداختی مثبت */}
             {walletTransactions.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">آخرین تراکنش‌های حقوقی</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {walletTransactions.slice(0, 5).map((tx: any) => (
-                    <div
-                      key={tx.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
-                    >
-                      <div>
-                        <p className="font-medium text-sm">{tx.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(tx.created_at)}
-                        </p>
+                  {walletTransactions.slice(0, 5).map((tx: any) => {
+                    // دریافتی = منفی (پول گرفته از شرکت)
+                    // پرداختی = مثبت (خرج کرده برای شرکت)
+                    const isReceived = tx.title?.includes('دریافتی');
+                    const isSpent = tx.title?.includes('پرداختی');
+                    const displayAmount = isReceived ? -Math.abs(tx.amount) : (isSpent ? Math.abs(tx.amount) : tx.amount);
+                    
+                    return (
+                      <div
+                        key={tx.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+                      >
+                        <div>
+                          <p className="font-medium text-sm">{tx.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(tx.created_at)}
+                          </p>
+                        </div>
+                        <span className={`font-bold ${displayAmount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {displayAmount >= 0 ? '+' : ''}{formatCurrency(displayAmount)}
+                        </span>
                       </div>
-                      <span className={`font-bold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {tx.amount >= 0 ? '+' : ''}{formatCurrency(tx.amount)}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
