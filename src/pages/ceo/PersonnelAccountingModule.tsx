@@ -272,7 +272,15 @@ export default function PersonnelAccountingModule() {
 
       const totalEarnings = salaryEarnings + overtimeEarnings;
 
-      const calculatedBalance = totalReceived - totalSpent;
+      // مانده حساب نقدی (دریافتی - پرداختی)
+      const cashBalance = totalReceived - totalSpent;
+      
+      // مانده نهایی = جمع کارکرد حقوق + مانده حساب نقدی
+      // اگر حقوق تنظیم شده: salary + overtime - spent + received
+      // اگر حقوق تنظیم نشده: فقط مانده نقدی
+      const finalBalance = totalEarnings > 0 
+        ? totalEarnings + cashBalance 
+        : cashBalance;
       
       setSummary({
         totalPresent,
@@ -280,15 +288,22 @@ export default function PersonnelAccountingModule() {
         totalOvertime,
         totalReceived,
         totalSpent,
-        balance: calculatedBalance,
+        balance: cashBalance,
         salaryEarnings,
         overtimeEarnings,
         totalEarnings,
       });
 
-      // Auto-sync balance to wallet if there are work records
+      // Auto-sync final balance (salary + cash balance) to wallet
       if (recordsWithDates.length > 0) {
-        await autoSyncBalanceToWallet(userId, calculatedBalance, totalPresent, totalReceived, totalSpent);
+        await autoSyncBalanceToWallet(
+          userId, 
+          finalBalance, 
+          totalPresent, 
+          totalReceived, 
+          totalSpent,
+          totalEarnings
+        );
       }
     } catch (error) {
       console.error('Error fetching work records:', error);
@@ -299,10 +314,11 @@ export default function PersonnelAccountingModule() {
   // Auto sync balance to wallet (only syncs the difference)
   const autoSyncBalanceToWallet = async (
     userId: string, 
-    balance: number, 
+    finalBalance: number, 
     totalPresent: number, 
     totalReceived: number, 
-    totalSpent: number
+    totalSpent: number,
+    totalEarnings: number
   ) => {
     try {
       // Check if we already synced today for personnel_accounting
@@ -316,7 +332,7 @@ export default function PersonnelAccountingModule() {
         .maybeSingle();
 
       // Skip if already synced today with same amount
-      if (existingSync && existingSync.amount === balance) {
+      if (existingSync && existingSync.amount === finalBalance) {
         setBalanceSynced(true);
         return;
       }
@@ -331,20 +347,24 @@ export default function PersonnelAccountingModule() {
         .maybeSingle();
 
       const currentWalletBalance = lastTx?.balance_after || 0;
-      const newBalance = currentWalletBalance + balance;
+      const newBalance = currentWalletBalance + finalBalance;
 
-      const title = balance >= 0 
-        ? 'مانده حساب کارکرد - طلب از شرکت' 
-        : 'مانده حساب کارکرد - بدهی به شرکت';
+      const cashBalance = totalReceived - totalSpent;
       
-      const description = `به‌روزرسانی خودکار | ${totalPresent} روز حضور | دریافتی: ${new Intl.NumberFormat('fa-IR').format(totalReceived)} | پرداختی: ${new Intl.NumberFormat('fa-IR').format(totalSpent)} ریال`;
+      const title = finalBalance >= 0 
+        ? 'حساب کارکرد نیرو - طلب از شرکت' 
+        : 'حساب کارکرد نیرو - بدهی به شرکت';
+      
+      const description = totalEarnings > 0
+        ? `جمع کارکرد حقوق: ${new Intl.NumberFormat('fa-IR').format(totalEarnings)} + مانده نقدی: ${new Intl.NumberFormat('fa-IR').format(cashBalance)} = ${new Intl.NumberFormat('fa-IR').format(finalBalance)} ریال`
+        : `${totalPresent} روز حضور | دریافتی: ${new Intl.NumberFormat('fa-IR').format(totalReceived)} | پرداختی: ${new Intl.NumberFormat('fa-IR').format(totalSpent)} ریال`;
 
       const { error: txError } = await supabase
         .from('wallet_transactions')
         .insert({
           user_id: userId,
-          transaction_type: balance >= 0 ? 'income' : 'expense',
-          amount: balance,
+          transaction_type: finalBalance >= 0 ? 'income' : 'expense',
+          amount: finalBalance,
           balance_after: newBalance,
           title: title,
           description: description,
@@ -355,7 +375,7 @@ export default function PersonnelAccountingModule() {
 
       setBalanceSynced(true);
       setWalletBalance(newBalance);
-      console.log('Auto synced balance to wallet:', balance);
+      console.log('Auto synced final balance to wallet:', finalBalance, '(salary:', totalEarnings, '+ cash:', cashBalance, ')');
     } catch (error) {
       console.error('Error auto-syncing to wallet:', error);
     }
