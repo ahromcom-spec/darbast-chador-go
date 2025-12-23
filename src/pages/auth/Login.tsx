@@ -242,10 +242,10 @@ const handleResendOTP = async () => {
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
+      {/* Content - Full screen on mobile */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-0 sm:p-4">
+        <div className="w-full h-full sm:h-auto sm:max-w-md">
+          <Card className="min-h-screen sm:min-h-0 rounded-none sm:rounded-lg shadow-2xl bg-card/95 backdrop-blur-md border-0 sm:border-2 flex flex-col justify-center">
             <CardHeader className="text-center space-y-2 pb-4">
               <CardTitle className="text-3xl font-bold">ورود به اهرم</CardTitle>
               <CardDescription className="text-base">
