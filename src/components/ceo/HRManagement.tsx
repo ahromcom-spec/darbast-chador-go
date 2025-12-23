@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,13 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { 
   Loader2, Plus, Save, Trash2, Users, Info, 
   ChevronDown, ChevronUp, User, Phone, Briefcase,
-  Building, Calendar, Check, Clock, X, Edit
+  Building, Calendar, Check, Clock, X, Edit, UserCheck
 } from 'lucide-react';
 import {
   Select,
@@ -24,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface HREmployee {
   id: string;
@@ -84,6 +86,11 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
   const [newDepartment, setNewDepartment] = useState('');
   const [newHireDate, setNewHireDate] = useState('');
   const [newNotes, setNewNotes] = useState('');
+  
+  // User lookup state
+  const [lookingUpUser, setLookingUpUser] = useState(false);
+  const [foundUser, setFoundUser] = useState<{ user_id: string; full_name: string } | null>(null);
+  const debouncedPhone = useDebounce(newPhoneNumber, 500);
 
   const fetchEmployees = async () => {
     setLoading(true);
@@ -112,6 +119,45 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
   const isValidPhone = useMemo(() => {
     return /^09[0-9]{9}$/.test(newPhoneNumber);
   }, [newPhoneNumber]);
+
+  // Lookup user when phone number changes
+  const lookupUserByPhone = useCallback(async (phone: string) => {
+    if (!/^09[0-9]{9}$/.test(phone)) {
+      setFoundUser(null);
+      return;
+    }
+    
+    setLookingUpUser(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .eq('phone_number', phone)
+        .single();
+
+      if (error || !data) {
+        setFoundUser(null);
+      } else {
+        setFoundUser({ user_id: data.user_id, full_name: data.full_name || '' });
+        // Auto-fill name if empty
+        if (data.full_name && !newFullName.trim()) {
+          setNewFullName(data.full_name);
+        }
+      }
+    } catch (error) {
+      setFoundUser(null);
+    } finally {
+      setLookingUpUser(false);
+    }
+  }, [newFullName]);
+
+  useEffect(() => {
+    if (debouncedPhone) {
+      lookupUserByPhone(debouncedPhone);
+    } else {
+      setFoundUser(null);
+    }
+  }, [debouncedPhone, lookupUserByPhone]);
 
   const handleAddEmployee = async () => {
     if (!user?.id) {
@@ -289,14 +335,27 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 <Phone className="h-4 w-4" />
                 شماره موبایل <span className="text-destructive">*</span>
               </Label>
-              <Input
-                type="tel"
-                value={newPhoneNumber}
-                onChange={(e) => setNewPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                placeholder="09123456789"
-                dir="ltr"
-                className={!newPhoneNumber ? '' : isValidPhone ? 'border-green-500' : 'border-destructive'}
-              />
+              <div className="relative">
+                <Input
+                  type="tel"
+                  value={newPhoneNumber}
+                  onChange={(e) => setNewPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  placeholder="09123456789"
+                  dir="ltr"
+                  className={!newPhoneNumber ? '' : isValidPhone ? 'border-green-500' : 'border-destructive'}
+                />
+                {lookingUpUser && (
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              {foundUser && (
+                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 rounded-md p-2">
+                  <UserCheck className="h-4 w-4" />
+                  <span>کاربر یافت شد: <strong>{foundUser.full_name || 'بدون نام'}</strong></span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -309,6 +368,17 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 onChange={(e) => setNewFullName(e.target.value)}
                 placeholder="نام کامل نیرو"
               />
+              {foundUser && foundUser.full_name && newFullName !== foundUser.full_name && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-primary h-auto p-1"
+                  onClick={() => setNewFullName(foundUser.full_name)}
+                >
+                  استفاده از نام ثبت‌شده: {foundUser.full_name}
+                </Button>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -350,11 +420,11 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 <Calendar className="h-4 w-4" />
                 تاریخ استخدام
               </Label>
-              <Input
-                type="date"
+              <PersianDatePicker
                 value={newHireDate}
-                onChange={(e) => setNewHireDate(e.target.value)}
-                dir="ltr"
+                onChange={(val) => setNewHireDate(val)}
+                placeholder="انتخاب تاریخ"
+                timeMode="none"
               />
             </div>
 
