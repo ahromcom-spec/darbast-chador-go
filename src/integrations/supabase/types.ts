@@ -694,25 +694,34 @@ export type Database = {
       }
       daily_reports: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           created_by: string
           id: string
+          is_archived: boolean | null
           notes: string | null
           report_date: string
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           created_by: string
           id?: string
+          is_archived?: boolean | null
           notes?: string | null
           report_date: string
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           created_by?: string
           id?: string
+          is_archived?: boolean | null
           notes?: string | null
           report_date?: string
           updated_at?: string
@@ -3819,6 +3828,10 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      archive_daily_report: {
+        Args: { p_report_id: string }
+        Returns: undefined
+      }
       assign_role_to_user:
         | {
             Args: {
@@ -4197,6 +4210,10 @@ export type Database = {
           p_transferred_from_phone: string
           p_transferred_from_user_id: string
         }
+        Returns: undefined
+      }
+      unarchive_daily_report: {
+        Args: { p_report_id: string }
         Returns: undefined
       }
       validate_contractor_phone: {
