@@ -11,7 +11,9 @@ import {
   TrendingDown,
   FileText,
   User,
-  Banknote
+  Banknote,
+  Send,
+  CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,6 +73,8 @@ export default function PersonnelAccountingModule() {
     overtimeEarnings: 0,
     totalEarnings: 0,
   });
+  const [syncingBalance, setSyncingBalance] = useState(false);
+  const [balanceSynced, setBalanceSynced] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -256,6 +260,58 @@ export default function PersonnelAccountingModule() {
     }
   };
 
+  // Sync balance to wallet
+  const handleSyncBalanceToWallet = async () => {
+    if (!user) return;
+
+    setSyncingBalance(true);
+    try {
+      // Get current wallet balance
+      const { data: lastTx } = await supabase
+        .from('wallet_transactions')
+        .select('balance_after')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const currentWalletBalance = lastTx?.balance_after || 0;
+      
+      // Calculate the balance to sync (negative balance means debt to company)
+      const balanceToSync = summary.balance;
+      const newBalance = currentWalletBalance + balanceToSync;
+
+      const title = balanceToSync >= 0 
+        ? 'طلب کارکرد از شرکت' 
+        : 'بدهی به شرکت';
+      
+      const description = `کارکرد: ${summary.totalPresent} روز حضور | دریافتی: ${formatCurrency(summary.totalReceived)} | پرداختی: ${formatCurrency(summary.totalSpent)}`;
+
+      const { error: txError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: user.id,
+          transaction_type: balanceToSync >= 0 ? 'income' : 'expense',
+          amount: balanceToSync,
+          balance_after: newBalance,
+          title: title,
+          description: description,
+          reference_type: 'personnel_accounting',
+        });
+
+      if (txError) throw txError;
+
+      setBalanceSynced(true);
+      setWalletBalance(newBalance);
+      toast.success(`مانده حساب ${formatCurrency(Math.abs(balanceToSync))} به کیف پول اضافه شد`);
+    } catch (error) {
+      console.error('Error syncing to wallet:', error);
+      toast.error('خطا در ارسال به کیف پول');
+    } finally {
+      setSyncingBalance(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4">
@@ -363,19 +419,39 @@ export default function PersonnelAccountingModule() {
               </div>
               <span className="font-bold text-red-600">{formatCurrency(summary.totalSpent)}</span>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-primary/10 border-2 border-primary/30">
-              <div className="flex items-center gap-2">
-                <Calculator className="h-5 w-5 text-primary" />
-                <span className="font-semibold">مانده حساب</span>
-              </div>
-              <div className="text-left">
-                <span className={`font-bold text-lg ${summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {summary.balance >= 0 ? '+' : ''}{formatCurrency(summary.balance)}
-                </span>
-                <div className="text-xs text-muted-foreground">
-                  {summary.balance >= 0 ? 'طلب از شرکت' : 'بدهی به شرکت'}
+            <div className="p-4 rounded-lg bg-primary/10 border-2 border-primary/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">مانده حساب</span>
+                </div>
+                <div className="text-left">
+                  <span className={`font-bold text-lg ${summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {summary.balance >= 0 ? '+' : ''}{formatCurrency(summary.balance)}
+                  </span>
+                  <div className="text-xs text-muted-foreground">
+                    {summary.balance >= 0 ? 'طلب از شرکت' : 'بدهی به شرکت'}
+                  </div>
                 </div>
               </div>
+              
+              {/* Sync to Wallet Button */}
+              {workRecords.length > 0 && (
+                <Button
+                  onClick={handleSyncBalanceToWallet}
+                  disabled={syncingBalance || balanceSynced}
+                  className={`w-full gap-2 ${balanceSynced ? 'bg-green-600 hover:bg-green-700' : 'bg-purple-600 hover:bg-purple-700'} text-white`}
+                >
+                  {syncingBalance ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : balanceSynced ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  {balanceSynced ? 'به کیف پول ارسال شد' : 'ارسال مانده به کیف پول'}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
