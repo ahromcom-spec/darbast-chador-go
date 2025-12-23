@@ -95,7 +95,21 @@ export function UserWallet() {
         }
       });
 
-      const balance = txs?.length ? (txs[0].balance_after || 0) : 0;
+      // Balance: prefer balance_after if available, otherwise compute by summing amounts
+      const latestBalanceAfter = txs?.length ? txs[0].balance_after : null;
+
+      let computedBalance = 0;
+      if (latestBalanceAfter === null) {
+        const { data: amountRows } = await supabase
+          .from('wallet_transactions')
+          .select('amount')
+          .eq('user_id', user.id)
+          .limit(1000);
+
+        computedBalance = (amountRows || []).reduce((sum, row) => sum + (row.amount || 0), 0);
+      }
+
+      const balance = latestBalanceAfter ?? computedBalance;
 
       setSummary({
         totalIncome,

@@ -142,7 +142,7 @@ export default function PersonnelAccountingModule() {
 
       setWalletTransactions(txs || []);
 
-      // Get current wallet balance
+      // Wallet balance: prefer balance_after if available, otherwise compute by summing amounts
       const { data: lastTx } = await supabase
         .from('wallet_transactions')
         .select('balance_after')
@@ -151,7 +151,20 @@ export default function PersonnelAccountingModule() {
         .limit(1)
         .maybeSingle();
 
-      setWalletBalance(lastTx?.balance_after || 0);
+      const latestBalanceAfter = lastTx?.balance_after ?? null;
+
+      let computedBalance = 0;
+      if (latestBalanceAfter === null) {
+        const { data: amountRows } = await supabase
+          .from('wallet_transactions')
+          .select('amount')
+          .eq('user_id', userId)
+          .limit(1000);
+
+        computedBalance = (amountRows || []).reduce((sum, row) => sum + (row.amount || 0), 0);
+      }
+
+      setWalletBalance(latestBalanceAfter ?? computedBalance);
     } catch (error) {
       console.error('Error fetching wallet data:', error);
     }
