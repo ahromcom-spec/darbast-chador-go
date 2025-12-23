@@ -55,6 +55,23 @@ const Index = () => {
           </button>
         </div>
       </div>
+
+      {/* Enamad Trust Seal */}
+      <div className="absolute bottom-4 left-4 z-20">
+        <a 
+          referrerPolicy="origin" 
+          target="_blank" 
+          href="https://trustseal.enamad.ir/?id=367671&Code=hwPDIxFj5XA7YNrVda7i"
+          rel="noopener noreferrer"
+        >
+          <img 
+            referrerPolicy="origin" 
+            src="https://trustseal.enamad.ir/logo.aspx?id=367671&Code=hwPDIxFj5XA7YNrVda7i" 
+            alt="نماد اعتماد الکترونیکی" 
+            className="w-20 h-20 cursor-pointer hover:opacity-80 transition-opacity"
+          />
+        </a>
+      </div>
     </div>
   );
 };
