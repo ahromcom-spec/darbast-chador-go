@@ -1357,9 +1357,39 @@ export default function DailyReportModule() {
                                   <StaffSearchSelect
                                     value={row.staff_user_id || ''}
                                     onValueChange={(code, name, userId) => {
-                                      updateStaffRow(index, 'staff_user_id', code);
-                                      updateStaffRow(index, 'staff_name', code && name ? `${code} - ${name}` : '');
-                                      updateStaffRow(index, 'real_user_id', userId || null);
+                                      // Update all fields at once to avoid multiple renders
+                                      setStaffReports((prev) => {
+                                        const updated = [...prev];
+                                        updated[index] = {
+                                          ...updated[index],
+                                          staff_user_id: code,
+                                          staff_name: code && name ? `${code} - ${name}` : '',
+                                          real_user_id: userId || null
+                                        };
+                                        
+                                        // Add new row if this is the last non-cash-box row
+                                        const nonCashBoxRows = updated.filter((r) => !r.is_cash_box);
+                                        const lastNonCashBoxIndex = updated.findIndex(
+                                          (r, i) => !r.is_cash_box && i === updated.lastIndexOf(nonCashBoxRows[nonCashBoxRows.length - 1])
+                                        );
+                                        
+                                        if (index === lastNonCashBoxIndex && code) {
+                                          updated.push({
+                                            staff_user_id: null,
+                                            staff_name: '',
+                                            work_status: 'غایب',
+                                            overtime_hours: 0,
+                                            amount_received: 0,
+                                            receiving_notes: '',
+                                            amount_spent: 0,
+                                            spending_notes: '',
+                                            notes: '',
+                                            is_cash_box: false
+                                          });
+                                        }
+                                        
+                                        return updated;
+                                      });
                                     }}
                                     placeholder="انتخاب نیرو"
                                   />
