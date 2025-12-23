@@ -49,9 +49,10 @@ interface WalletSummary {
 }
 
 export function UserWallet() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataFetched, setDataFetched] = useState(false);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [summary, setSummary] = useState<WalletSummary>({
     totalIncome: 0,
@@ -67,16 +68,16 @@ export function UserWallet() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user?.id && !dataFetched) {
       fetchWalletData();
     }
-  }, [user]);
+  }, [user?.id, dataFetched]);
 
   const fetchWalletData = async () => {
-    if (!user) return;
+    if (!user?.id) return;
 
     try {
-      setLoading(true);
+      setDataLoading(true);
 
       // Get user profile for phone lookup
       const { data: profile } = await supabase
@@ -180,7 +181,8 @@ export function UserWallet() {
     } catch (error) {
       console.error('Error fetching wallet data:', error);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
+      setDataFetched(true);
     }
   };
 
@@ -348,7 +350,7 @@ export function UserWallet() {
     }
   };
 
-  if (loading) {
+  if (authLoading || dataLoading) {
     return (
       <Card className="border-2 border-purple-500/30">
         <CardContent className="py-8 flex items-center justify-center">
