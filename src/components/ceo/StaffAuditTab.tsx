@@ -11,7 +11,7 @@ import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet, Download, CalendarDays, Gift, MinusCircle, CreditCard, Banknote } from 'lucide-react';
+import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet, Download, CalendarDays, Gift, MinusCircle, CreditCard, Banknote, Send, CheckCircle2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, setMonth as setJalaliMonth, setYear as setJalaliYear } from 'date-fns-jalali';
 import { Separator } from '@/components/ui/separator';
 // Persian months
@@ -94,6 +94,8 @@ export function StaffAuditTab() {
   const [salarySettings, setSalarySettings] = useState<SalarySettings | null>(null);
   const [summary, setSummary] = useState<AuditSummary | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [syncingToWallet, setSyncingToWallet] = useState(false);
+  const [syncedToWallet, setSyncedToWallet] = useState(false);
   
   // Financial fields for search/calculation
   const [bonuses, setBonuses] = useState<number>(0);
@@ -222,6 +224,7 @@ export function StaffAuditTab() {
     }
 
     setLoading(true);
+    setSyncedToWallet(false); // Reset sync status on new search
     try {
       // Fetch salary settings and wait for result
       const settings = await fetchSalarySettings(selectedStaffCode);
@@ -636,6 +639,84 @@ export function StaffAuditTab() {
     }
   };
 
+  // Sync balance to staff's wallet
+  const handleSyncToWallet = async () => {
+    if (!summary || !salarySettings || !selectedStaffCode) {
+      toast.error('لطفاً ابتدا جستجو کنید');
+      return;
+    }
+
+    setSyncingToWallet(true);
+    try {
+      // Extract phone number from staff_code (format: "نام نیرو (شماره تلفن)")
+      const phoneMatch = selectedStaffCode.match(/\((\d+)\)/);
+      const phoneNumber = phoneMatch ? phoneMatch[1] : selectedStaffCode;
+
+      // Find user by phone number
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .eq('phone_number', phoneNumber)
+        .maybeSingle();
+
+      if (profileError || !profile) {
+        toast.error('کاربر مرتبط با این نیرو یافت نشد');
+        setSyncingToWallet(false);
+        return;
+      }
+
+      // Get current wallet balance
+      const { data: lastTx } = await supabase
+        .from('wallet_transactions')
+        .select('balance_after')
+        .eq('user_id', profile.user_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const currentBalance = lastTx?.balance_after || 0;
+      
+      // Calculate the balance to sync (positive = company owes staff, negative = staff owes company)
+      const balanceToSync = summary.netBalance;
+      const newBalance = currentBalance + balanceToSync;
+
+      // Create date range string for reference
+      const dateRangeStr = startDate && endDate
+        ? `${format(startDate, 'yyyy/MM/dd')} تا ${format(endDate, 'yyyy/MM/dd')}`
+        : '';
+
+      // Create wallet transaction
+      const transactionType = balanceToSync >= 0 ? 'salary' : 'expense';
+      const title = balanceToSync >= 0 
+        ? `طلب کارکرد ${dateRangeStr}` 
+        : `بدهی کارکرد ${dateRangeStr}`;
+      
+      const description = `کارکرد: ${summary.totalDaysWorked} روز | اضافه‌کاری: ${summary.totalOvertime} ساعت | حقوق: ${formatCurrency(summary.estimatedSalary)} | اضافه‌کاری: ${formatCurrency(summary.overtimePay)}`;
+
+      const { error: txError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: profile.user_id,
+          transaction_type: transactionType,
+          amount: balanceToSync,
+          balance_after: newBalance,
+          title: title,
+          description: description,
+          reference_type: 'staff_audit',
+        });
+
+      if (txError) throw txError;
+
+      setSyncedToWallet(true);
+      toast.success(`موجودی ${formatCurrency(Math.abs(balanceToSync))} به کیف پول ${profile.full_name || selectedStaffName} ${balanceToSync >= 0 ? 'اضافه' : 'کسر'} شد`);
+    } catch (error) {
+      console.error('Error syncing to wallet:', error);
+      toast.error('خطا در ارسال به کیف پول');
+    } finally {
+      setSyncingToWallet(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {generatingPdf && (
@@ -977,14 +1058,30 @@ export function StaffAuditTab() {
                     حسابکتاب روزمزدی {selectedStaffName}
                   </CardTitle>
                 </div>
-                <Button
-                  onClick={handleGeneratePdf}
-                  disabled={generatingPdf}
-                  className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
-                >
-                  {generatingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                  دانلود PDF
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSyncToWallet}
+                    disabled={syncingToWallet || syncedToWallet}
+                    className={`gap-2 ${syncedToWallet ? 'bg-green-600 hover:bg-green-700' : 'bg-purple-600 hover:bg-purple-700'} text-white`}
+                  >
+                    {syncingToWallet ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : syncedToWallet ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    {syncedToWallet ? 'ارسال شد به کیف پول' : 'ارسال به کیف پول نیرو'}
+                  </Button>
+                  <Button
+                    onClick={handleGeneratePdf}
+                    disabled={generatingPdf}
+                    className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    {generatingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    دانلود PDF
+                  </Button>
+                </div>
               </div>
               {startDate && endDate && (
                 <p className="text-sm text-muted-foreground mt-2">

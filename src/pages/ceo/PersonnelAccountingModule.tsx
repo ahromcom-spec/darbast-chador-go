@@ -58,6 +58,8 @@ export default function PersonnelAccountingModule() {
   const [hrEmployeeId, setHrEmployeeId] = useState<string | null>(null);
   const [workRecords, setWorkRecords] = useState<StaffWorkRecord[]>([]);
   const [salarySetting, setSalarySetting] = useState<SalarySetting | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
   const [summary, setSummary] = useState({
     totalPresent: 0,
     totalAbsent: 0,
@@ -111,11 +113,44 @@ export default function PersonnelAccountingModule() {
 
       // Fetch work records for this user
       await fetchWorkRecords(user.id, profile.phone_number);
+      
+      // Fetch wallet data
+      await fetchWalletData(user.id);
     } catch (error) {
       console.error('Error fetching user data:', error);
       toast.error('خطا در دریافت اطلاعات کاربر');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWalletData = async (userId: string) => {
+    try {
+      // Fetch recent wallet transactions for salary/staff_audit
+      const { data: txs, error } = await supabase
+        .from('wallet_transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .in('reference_type', ['staff_audit', 'daily_report_staff'])
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      setWalletTransactions(txs || []);
+
+      // Get current wallet balance
+      const { data: lastTx } = await supabase
+        .from('wallet_transactions')
+        .select('balance_after')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setWalletBalance(lastTx?.balance_after || 0);
+    } catch (error) {
+      console.error('Error fetching wallet data:', error);
     }
   };
 
@@ -391,6 +426,62 @@ export default function PersonnelAccountingModule() {
                 <Banknote className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>تنظیمات حقوق برای شما ثبت نشده است</p>
                 <p className="text-sm mt-2">برای محاسبه کارکرد، مدیر باید تنظیمات حقوق شما را ثبت کند</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Wallet Balance Card */}
+        <Card className="border-2 border-purple-500/30 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-purple-600" />
+              موجودی کیف پول
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-5 rounded-lg bg-background/80 border-2 border-purple-300 dark:border-purple-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-purple-500/20">
+                  <Calculator className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">مانده حساب شما</p>
+                  <p className={`font-bold text-2xl ${walletBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {walletBalance >= 0 ? '+' : ''}{formatCurrency(walletBalance)}
+                  </p>
+                </div>
+              </div>
+              <Badge 
+                variant={walletBalance >= 0 ? 'default' : 'destructive'}
+                className={walletBalance >= 0 ? 'bg-green-100 text-green-800' : ''}
+              >
+                {walletBalance >= 0 ? 'طلبکار' : 'بدهکار'}
+              </Badge>
+            </div>
+
+            {/* Recent Wallet Transactions */}
+            {walletTransactions.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">آخرین تراکنش‌های حقوقی</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {walletTransactions.slice(0, 5).map((tx: any) => (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">{tx.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(tx.created_at)}
+                        </p>
+                      </div>
+                      <span className={`font-bold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {tx.amount >= 0 ? '+' : ''}{formatCurrency(tx.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
