@@ -38,6 +38,8 @@ interface WalletSummary {
   totalPayments: number;
   totalDebt: number;
   balance: number;
+  salaryEarnings: number;
+  cashBalance: number;
 }
 
 export function UserWallet() {
@@ -51,6 +53,8 @@ export function UserWallet() {
     totalPayments: 0,
     totalDebt: 0,
     balance: 0,
+    salaryEarnings: 0,
+    cashBalance: 0,
   });
 
   useEffect(() => {
@@ -65,7 +69,14 @@ export function UserWallet() {
     try {
       setLoading(true);
 
-      // Fetch transactions
+      // Get user profile for phone lookup
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('phone_number, full_name')
+        .eq('user_id', user.id)
+        .single();
+
+      // Fetch transactions for display
       const { data: txs, error } = await supabase
         .from('wallet_transactions')
         .select('*')
@@ -77,52 +88,157 @@ export function UserWallet() {
 
       setTransactions(txs || []);
 
-      // Calculate summary
-      let totalIncome = 0;
-      let totalExpense = 0;
-      let totalPayments = 0;
-      let totalDebt = 0;
+      // Calculate salary earnings from daily reports (same logic as PersonnelAccountingModule)
+      let salaryEarnings = 0;
+      let cashBalance = 0;
 
-      (txs || []).forEach(tx => {
-        if (tx.transaction_type === 'income' || tx.transaction_type === 'salary') {
-          totalIncome += Math.abs(tx.amount);
-        } else if (tx.transaction_type === 'expense') {
-          totalExpense += Math.abs(tx.amount);
-        } else if (tx.transaction_type === 'payment') {
-          totalPayments += Math.abs(tx.amount);
-        } else if (tx.transaction_type === 'invoice_debt') {
-          totalDebt += Math.abs(tx.amount);
+      if (profile?.phone_number) {
+        const { workRecordsSummary, salarySettings } = await calculateSalaryFromReports(user.id, profile.phone_number, profile.full_name);
+        
+        if (salarySettings) {
+          const dailySalary = salarySettings.base_daily_salary;
+          const overtimeFraction = salarySettings.overtime_rate_fraction;
+          const overtimeDenominator = overtimeFraction > 0 ? Math.round(1 / overtimeFraction) : 6;
+          const hourlyOvertime = dailySalary / overtimeDenominator;
+
+          const salaryFromDays = workRecordsSummary.totalPresent * dailySalary;
+          const overtimeFromHours = Math.round(workRecordsSummary.totalOvertime * hourlyOvertime);
+          salaryEarnings = salaryFromDays + overtimeFromHours;
         }
-      });
 
-      // Balance: prefer balance_after if available, otherwise compute by summing amounts
-      const latestBalanceAfter = txs?.length ? txs[0].balance_after : null;
-
-      let computedBalance = 0;
-      if (latestBalanceAfter === null) {
-        const { data: amountRows } = await supabase
-          .from('wallet_transactions')
-          .select('amount')
-          .eq('user_id', user.id)
-          .limit(1000);
-
-        computedBalance = (amountRows || []).reduce((sum, row) => sum + (row.amount || 0), 0);
+        // Cash balance: پرداختی - دریافتی (positive if user spent more = company owes user)
+        cashBalance = workRecordsSummary.totalSpent - workRecordsSummary.totalReceived;
       }
 
-      const balance = latestBalanceAfter ?? computedBalance;
+      // Final balance = salary earnings + cash balance
+      const finalBalance = salaryEarnings + cashBalance;
 
       setSummary({
-        totalIncome,
-        totalExpense,
-        totalPayments,
-        totalDebt,
-        balance,
+        totalIncome: 0, // Not used in new calculation
+        totalExpense: 0,
+        totalPayments: 0,
+        totalDebt: 0,
+        balance: finalBalance,
+        salaryEarnings,
+        cashBalance,
       });
     } catch (error) {
       console.error('Error fetching wallet data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Calculate salary from daily reports (same as PersonnelAccountingModule)
+  const calculateSalaryFromReports = async (userId: string, phone: string, fullName: string | null) => {
+    let workRecordsSummary = {
+      totalPresent: 0,
+      totalAbsent: 0,
+      totalOvertime: 0,
+      totalReceived: 0,
+      totalSpent: 0,
+    };
+    let salarySettings: { base_daily_salary: number; overtime_rate_fraction: number } | null = null;
+
+    try {
+      // Get staff records linked to this user by staff_user_id
+      const { data: staffRecordsByUserId } = await supabase
+        .from('daily_report_staff')
+        .select('*')
+        .eq('staff_user_id', userId);
+
+      // Also search by phone number in staff_name (for records without staff_user_id)
+      const phoneDigits = phone.replace(/\D/g, '');
+      const lastFourDigits = phoneDigits.slice(-4);
+      
+      let userFullName = fullName || '';
+      if (!userFullName) {
+        const { data: hrEmployee } = await supabase
+          .from('hr_employees')
+          .select('full_name')
+          .eq('user_id', userId)
+          .maybeSingle();
+        userFullName = hrEmployee?.full_name || '';
+      }
+
+      // Search for records where staff_name contains the phone number or user's name
+      let staffRecordsByName: any[] = [];
+      if (phoneDigits || userFullName) {
+        const { data: nameRecords } = await supabase
+          .from('daily_report_staff')
+          .select('*')
+          .is('staff_user_id', null);
+
+        if (nameRecords) {
+          staffRecordsByName = nameRecords.filter(record => {
+            const staffName = (record.staff_name || '').toLowerCase();
+            if (phoneDigits && (staffName.includes(phoneDigits) || staffName.includes(lastFourDigits))) {
+              return true;
+            }
+            if (userFullName) {
+              const nameParts = userFullName.toLowerCase().split(' ');
+              return nameParts.every(part => staffName.includes(part));
+            }
+            return false;
+          });
+        }
+      }
+
+      // Combine and deduplicate records
+      const allRecords = [...(staffRecordsByUserId || [])];
+      const existingIds = new Set(allRecords.map(r => r.id));
+      staffRecordsByName.forEach(record => {
+        if (!existingIds.has(record.id)) {
+          allRecords.push(record);
+          existingIds.add(record.id);
+        }
+      });
+
+      // Calculate summary from records
+      allRecords.forEach(record => {
+        if (record.work_status === 'حاضر') workRecordsSummary.totalPresent++;
+        if (record.work_status === 'غایب') workRecordsSummary.totalAbsent++;
+        workRecordsSummary.totalOvertime += record.overtime_hours || 0;
+        workRecordsSummary.totalReceived += record.amount_received || 0;
+        workRecordsSummary.totalSpent += record.amount_spent || 0;
+      });
+
+      // Fetch salary settings - try multiple matching strategies
+      const { data: salaryByPhone } = await supabase
+        .from('staff_salary_settings')
+        .select('base_daily_salary, overtime_rate_fraction')
+        .eq('staff_code', phone)
+        .maybeSingle();
+
+      if (salaryByPhone) {
+        salarySettings = salaryByPhone;
+      } else {
+        const normalizedPhone = phone.startsWith('0') ? phone.substring(1) : phone;
+        const { data: salaryByNormalized } = await supabase
+          .from('staff_salary_settings')
+          .select('base_daily_salary, overtime_rate_fraction')
+          .or(`staff_code.eq.${normalizedPhone},staff_code.eq.0${normalizedPhone}`)
+          .maybeSingle();
+
+        if (salaryByNormalized) {
+          salarySettings = salaryByNormalized;
+        } else if (userFullName) {
+          const { data: salaryByName } = await supabase
+            .from('staff_salary_settings')
+            .select('base_daily_salary, overtime_rate_fraction')
+            .eq('staff_name', userFullName)
+            .maybeSingle();
+
+          if (salaryByName) {
+            salarySettings = salaryByName;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error calculating salary from reports:', error);
+    }
+
+    return { workRecordsSummary, salarySettings };
   };
 
   const formatCurrency = (amount: number) => {
@@ -227,16 +343,21 @@ export function UserWallet() {
               <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200">
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingUp className="h-4 w-4 text-green-600" />
-                  <span className="text-sm text-muted-foreground">کل دریافتی</span>
+                  <span className="text-sm text-muted-foreground">جمع کارکرد حقوق</span>
                 </div>
-                <div className="font-bold text-green-600">{formatCurrency(summary.totalIncome)}</div>
+                <div className="font-bold text-green-600">{formatCurrency(summary.salaryEarnings)}</div>
               </div>
-              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200">
+              <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200">
                 <div className="flex items-center gap-2 mb-1">
-                  <TrendingDown className="h-4 w-4 text-red-600" />
-                  <span className="text-sm text-muted-foreground">کل پرداختی</span>
+                  <Calculator className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm text-muted-foreground">مانده نقدی</span>
                 </div>
-                <div className="font-bold text-red-600">{formatCurrency(summary.totalExpense)}</div>
+                <div className={`font-bold ${summary.cashBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {summary.cashBalance >= 0 ? '+' : ''}{formatCurrency(summary.cashBalance)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {summary.cashBalance >= 0 ? 'طلب از شرکت' : 'بدهی به شرکت'}
+                </div>
               </div>
             </div>
 
@@ -244,12 +365,20 @@ export function UserWallet() {
             <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border-2 border-purple-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5 text-purple-600" />
-                  <span className="font-semibold">مانده حساب</span>
+                  <Wallet className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <span className="font-semibold">مانده حساب شما</span>
+                    {summary.balance >= 0 && (
+                      <Badge variant="secondary" className="mr-2 bg-green-100 text-green-800">طلبکار</Badge>
+                    )}
+                  </div>
                 </div>
                 <span className={`font-bold text-xl ${summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {summary.balance >= 0 ? '+' : '-'}{formatCurrency(summary.balance)}
+                  {summary.balance >= 0 ? '+' : ''}{formatCurrency(summary.balance)}
                 </span>
+              </div>
+              <div className="text-xs text-muted-foreground mt-2 text-left">
+                جمع کارکرد حقوق + مانده نقدی
               </div>
             </div>
 
