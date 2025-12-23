@@ -73,7 +73,6 @@ export default function PersonnelAccountingModule() {
     overtimeEarnings: 0,
     totalEarnings: 0,
   });
-  const [syncingBalance, setSyncingBalance] = useState(false);
   const [balanceSynced, setBalanceSynced] = useState(false);
 
   useEffect(() => {
@@ -273,20 +272,92 @@ export default function PersonnelAccountingModule() {
 
       const totalEarnings = salaryEarnings + overtimeEarnings;
 
+      const calculatedBalance = totalReceived - totalSpent;
+      
       setSummary({
         totalPresent,
         totalAbsent,
         totalOvertime,
         totalReceived,
         totalSpent,
-        balance: totalReceived - totalSpent,
+        balance: calculatedBalance,
         salaryEarnings,
         overtimeEarnings,
         totalEarnings,
       });
+
+      // Auto-sync balance to wallet if there are work records
+      if (recordsWithDates.length > 0) {
+        await autoSyncBalanceToWallet(userId, calculatedBalance, totalPresent, totalReceived, totalSpent);
+      }
     } catch (error) {
       console.error('Error fetching work records:', error);
       toast.error('خطا در دریافت کارکرد');
+    }
+  };
+
+  // Auto sync balance to wallet (only syncs the difference)
+  const autoSyncBalanceToWallet = async (
+    userId: string, 
+    balance: number, 
+    totalPresent: number, 
+    totalReceived: number, 
+    totalSpent: number
+  ) => {
+    try {
+      // Check if we already synced today for personnel_accounting
+      const today = new Date().toISOString().split('T')[0];
+      const { data: existingSync } = await supabase
+        .from('wallet_transactions')
+        .select('id, amount')
+        .eq('user_id', userId)
+        .eq('reference_type', 'personnel_accounting')
+        .gte('created_at', today)
+        .maybeSingle();
+
+      // Skip if already synced today with same amount
+      if (existingSync && existingSync.amount === balance) {
+        setBalanceSynced(true);
+        return;
+      }
+
+      // Get current wallet balance
+      const { data: lastTx } = await supabase
+        .from('wallet_transactions')
+        .select('balance_after')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const currentWalletBalance = lastTx?.balance_after || 0;
+      const newBalance = currentWalletBalance + balance;
+
+      const title = balance >= 0 
+        ? 'مانده حساب کارکرد - طلب از شرکت' 
+        : 'مانده حساب کارکرد - بدهی به شرکت';
+      
+      const description = `به‌روزرسانی خودکار | ${totalPresent} روز حضور | دریافتی: ${new Intl.NumberFormat('fa-IR').format(totalReceived)} | پرداختی: ${new Intl.NumberFormat('fa-IR').format(totalSpent)} ریال`;
+
+      const { error: txError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: userId,
+          transaction_type: balance >= 0 ? 'income' : 'expense',
+          amount: balance,
+          balance_after: newBalance,
+          title: title,
+          description: description,
+          reference_type: 'personnel_accounting',
+        });
+
+      if (txError) throw txError;
+
+      setBalanceSynced(true);
+      setWalletBalance(newBalance);
+      console.log('Auto synced balance to wallet:', balance);
+    } catch (error) {
+      console.error('Error auto-syncing to wallet:', error);
     }
   };
 
@@ -300,58 +371,6 @@ export default function PersonnelAccountingModule() {
       return format(new Date(dateStr), 'yyyy/MM/dd', { locale: faIR });
     } catch {
       return dateStr;
-    }
-  };
-
-  // Sync balance to wallet
-  const handleSyncBalanceToWallet = async () => {
-    if (!user) return;
-
-    setSyncingBalance(true);
-    try {
-      // Get current wallet balance
-      const { data: lastTx } = await supabase
-        .from('wallet_transactions')
-        .select('balance_after')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const currentWalletBalance = lastTx?.balance_after || 0;
-      
-      // Calculate the balance to sync (negative balance means debt to company)
-      const balanceToSync = summary.balance;
-      const newBalance = currentWalletBalance + balanceToSync;
-
-      const title = balanceToSync >= 0 
-        ? 'طلب کارکرد از شرکت' 
-        : 'بدهی به شرکت';
-      
-      const description = `کارکرد: ${summary.totalPresent} روز حضور | دریافتی: ${formatCurrency(summary.totalReceived)} | پرداختی: ${formatCurrency(summary.totalSpent)}`;
-
-      const { error: txError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: user.id,
-          transaction_type: balanceToSync >= 0 ? 'income' : 'expense',
-          amount: balanceToSync,
-          balance_after: newBalance,
-          title: title,
-          description: description,
-          reference_type: 'personnel_accounting',
-        });
-
-      if (txError) throw txError;
-
-      setBalanceSynced(true);
-      setWalletBalance(newBalance);
-      toast.success(`مانده حساب ${formatCurrency(Math.abs(balanceToSync))} به کیف پول اضافه شد`);
-    } catch (error) {
-      console.error('Error syncing to wallet:', error);
-      toast.error('خطا در ارسال به کیف پول');
-    } finally {
-      setSyncingBalance(false);
     }
   };
 
@@ -478,22 +497,12 @@ export default function PersonnelAccountingModule() {
                 </div>
               </div>
               
-              {/* Sync to Wallet Button */}
-              {workRecords.length > 0 && (
-                <Button
-                  onClick={handleSyncBalanceToWallet}
-                  disabled={syncingBalance || balanceSynced}
-                  className={`w-full gap-2 ${balanceSynced ? 'bg-green-600 hover:bg-green-700' : 'bg-purple-600 hover:bg-purple-700'} text-white`}
-                >
-                  {syncingBalance ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : balanceSynced ? (
-                    <CheckCircle2 className="h-4 w-4" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                  {balanceSynced ? 'به کیف پول ارسال شد' : 'ارسال مانده به کیف پول'}
-                </Button>
+              {/* Auto Sync Status */}
+              {workRecords.length > 0 && balanceSynced && (
+                <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="text-sm">مانده حساب به کیف پول شما ارسال شد</span>
+                </div>
               )}
             </div>
           </CardContent>
