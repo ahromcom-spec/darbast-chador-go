@@ -107,17 +107,25 @@ export function StaffSearchSelect({
 
   // Combine all staff lists, removing duplicates by code
   const allStaff = useMemo(() => {
-    const staticList: StaffMember[] = AHROM_STAFF_LIST.map(s => ({
+    const staticList: StaffMember[] = AHROM_STAFF_LIST.map((s) => ({
       ...s,
-      source: 'static' as const
+      source: 'static' as const,
     }));
 
+    // NOTE: If we have duplicates by code, we prefer the entry that is linked to a real user_id
+    // so that wallet/accounting sync can work.
     const combined = [...salaryStaff, ...hrStaff, ...staticList];
-    
-    // Remove duplicates by code, prioritizing salary > hr > static
+
+    const score = (s: StaffMember) => {
+      const sourceScore = s.source === 'hr' ? 3 : s.source === 'salary' ? 2 : 1;
+      const hasUserScore = s.user_id ? 100 : 0;
+      return hasUserScore + sourceScore;
+    };
+
     const uniqueMap = new Map<string, StaffMember>();
     for (const staff of combined) {
-      if (!uniqueMap.has(staff.code)) {
+      const existing = uniqueMap.get(staff.code);
+      if (!existing || score(staff) > score(existing)) {
         uniqueMap.set(staff.code, staff);
       }
     }
