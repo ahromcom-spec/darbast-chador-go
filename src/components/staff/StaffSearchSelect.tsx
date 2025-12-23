@@ -59,24 +59,47 @@ export function StaffSearchSelect({
   const [salaryStaff, setSalaryStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch HR employees and salary settings staff
+  // Fetch HR employees and salary settings staff, and match with profiles for user_id
   useEffect(() => {
     const fetchStaff = async () => {
       setLoading(true);
       try {
+        // Fetch all profiles to match phone numbers with user_id
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, phone_number, full_name');
+        
+        const phoneToUserMap = new Map<string, string>();
+        profilesData?.forEach(p => {
+          if (p.phone_number && p.user_id) {
+            // Store both normalized and original formats
+            phoneToUserMap.set(p.phone_number, p.user_id);
+            // Also store without leading zero for matching
+            if (p.phone_number.startsWith('0')) {
+              phoneToUserMap.set(p.phone_number.substring(1), p.user_id);
+            }
+          }
+        });
+
         // Fetch from staff_salary_settings
         const { data: salaryData } = await supabase
           .from('staff_salary_settings')
           .select('staff_code, staff_name');
 
         if (salaryData) {
-          const salaryList: StaffMember[] = salaryData.map(s => ({
-            code: s.staff_code || '',
-            name: s.staff_name || '',
-            fullCode: s.staff_code || '',
-            source: 'salary' as const,
-            user_id: null // No user_id link in salary settings
-          })).filter(s => s.code && s.name);
+          const salaryList: StaffMember[] = salaryData.map(s => {
+            // Try to find user_id by matching phone number in staff_name
+            const phoneMatch = (s.staff_name || '').match(/09\d{9}/);
+            const matchedUserId = phoneMatch ? phoneToUserMap.get(phoneMatch[0]) : null;
+            
+            return {
+              code: s.staff_code || '',
+              name: s.staff_name || '',
+              fullCode: s.staff_code || '',
+              source: 'salary' as const,
+              user_id: matchedUserId || null
+            };
+          }).filter(s => s.code && s.name);
           setSalaryStaff(salaryList);
         }
 
@@ -86,13 +109,21 @@ export function StaffSearchSelect({
           .select('phone_number, full_name, position, department, user_id');
 
         if (hrData) {
-          const hrList: StaffMember[] = hrData.map(h => ({
-            code: h.phone_number || '',
-            name: h.full_name || '',
-            fullCode: `${h.position || ''} - ${h.department || ''}`.trim().replace(/^- | -$/g, ''),
-            source: 'hr' as const,
-            user_id: h.user_id || null
-          })).filter(h => h.code && h.name);
+          const hrList: StaffMember[] = hrData.map(h => {
+            // If hr_employee doesn't have user_id, try to find it from profiles by phone
+            let userId = h.user_id;
+            if (!userId && h.phone_number) {
+              userId = phoneToUserMap.get(h.phone_number) || null;
+            }
+            
+            return {
+              code: h.phone_number || '',
+              name: h.full_name || '',
+              fullCode: `${h.position || ''} - ${h.department || ''}`.trim().replace(/^- | -$/g, ''),
+              source: 'hr' as const,
+              user_id: userId || null
+            };
+          }).filter(h => h.code && h.name);
           setHrStaff(hrList);
         }
       } catch (error) {

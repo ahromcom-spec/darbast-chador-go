@@ -100,10 +100,15 @@ const isUuid = (value: unknown): value is string => {
   return UUID_REGEX.test(value);
 };
 
+// Extract staff code from name - support both 4-digit codes and 11-digit phone numbers
 const extractStaffCode = (value: unknown): string => {
   if (typeof value !== 'string') return '';
-  const match = value.match(/\b\d{4}\b/);
-  return match?.[0] ?? '';
+  // Try 11-digit phone number first (e.g., 09388231167)
+  const phoneMatch = value.match(/09\d{9}/);
+  if (phoneMatch) return phoneMatch[0];
+  // Fallback to 4-digit code
+  const codeMatch = value.match(/\b\d{4}\b/);
+  return codeMatch?.[0] ?? '';
 };
 
 // DB constraint expects: 'حاضر' | 'غایب'
