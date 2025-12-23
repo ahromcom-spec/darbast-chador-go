@@ -10,7 +10,8 @@ import {
   TrendingUp,
   TrendingDown,
   FileText,
-  User
+  User,
+  Banknote
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +44,11 @@ interface DailyReport {
   report_date: string;
 }
 
+interface SalarySetting {
+  base_daily_salary: number;
+  overtime_rate_fraction: number;
+}
+
 export default function PersonnelAccountingModule() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -51,6 +57,7 @@ export default function PersonnelAccountingModule() {
   const [userName, setUserName] = useState<string | null>(null);
   const [hrEmployeeId, setHrEmployeeId] = useState<string | null>(null);
   const [workRecords, setWorkRecords] = useState<StaffWorkRecord[]>([]);
+  const [salarySetting, setSalarySetting] = useState<SalarySetting | null>(null);
   const [summary, setSummary] = useState({
     totalPresent: 0,
     totalAbsent: 0,
@@ -58,6 +65,9 @@ export default function PersonnelAccountingModule() {
     totalReceived: 0,
     totalSpent: 0,
     balance: 0,
+    salaryEarnings: 0,
+    overtimeEarnings: 0,
+    totalEarnings: 0,
   });
 
   useEffect(() => {
@@ -140,6 +150,16 @@ export default function PersonnelAccountingModule() {
 
       setWorkRecords(recordsWithDates);
 
+      // Fetch salary settings for this user
+      const { data: salaryData } = await supabase
+        .from('staff_salary_settings')
+        .select('base_daily_salary, overtime_rate_fraction')
+        .eq('staff_code', phone)
+        .maybeSingle();
+
+      const userSalarySetting = salaryData || null;
+      setSalarySetting(userSalarySetting);
+
       // Calculate summary
       let totalPresent = 0;
       let totalAbsent = 0;
@@ -155,6 +175,22 @@ export default function PersonnelAccountingModule() {
         totalSpent += record.amount_spent || 0;
       });
 
+      // Calculate salary earnings
+      let salaryEarnings = 0;
+      let overtimeEarnings = 0;
+
+      if (userSalarySetting) {
+        const dailySalary = userSalarySetting.base_daily_salary;
+        const overtimeFraction = userSalarySetting.overtime_rate_fraction;
+        const overtimeDenominator = overtimeFraction > 0 ? Math.round(1 / overtimeFraction) : 6;
+        const hourlyOvertime = dailySalary / overtimeDenominator;
+
+        salaryEarnings = totalPresent * dailySalary;
+        overtimeEarnings = Math.round(totalOvertime * hourlyOvertime);
+      }
+
+      const totalEarnings = salaryEarnings + overtimeEarnings;
+
       setSummary({
         totalPresent,
         totalAbsent,
@@ -162,6 +198,9 @@ export default function PersonnelAccountingModule() {
         totalReceived,
         totalSpent,
         balance: totalReceived - totalSpent,
+        salaryEarnings,
+        overtimeEarnings,
+        totalEarnings,
       });
     } catch (error) {
       console.error('Error fetching work records:', error);
@@ -303,6 +342,57 @@ export default function PersonnelAccountingModule() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Salary Earnings Summary */}
+        <Card className="border-2 border-amber-500/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-amber-600" />
+              کارکرد حقوق
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {salarySetting ? (
+              <>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-amber-600" />
+                    <span>حقوق روزهای حضور ({summary.totalPresent} روز)</span>
+                  </div>
+                  <span className="font-bold text-amber-600">{formatCurrency(summary.salaryEarnings)}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                    <span>اضافه‌کاری ({summary.totalOvertime} ساعت)</span>
+                  </div>
+                  <span className="font-bold text-blue-600">{formatCurrency(summary.overtimeEarnings)}</span>
+                </div>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-2 border-amber-500/30">
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-5 w-5 text-amber-600" />
+                    <span className="font-semibold">جمع کارکرد حقوق</span>
+                  </div>
+                  <div className="text-left">
+                    <span className="font-bold text-xl text-amber-600">
+                      {formatCurrency(summary.totalEarnings)}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded-lg">
+                  <p>حقوق روزانه: {new Intl.NumberFormat('fa-IR').format(salarySetting.base_daily_salary)} تومان</p>
+                  <p>ضریب اضافه‌کاری: ۱/{Math.round(1 / salarySetting.overtime_rate_fraction)}</p>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Banknote className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>تنظیمات حقوق برای شما ثبت نشده است</p>
+                <p className="text-sm mt-2">برای محاسبه کارکرد، مدیر باید تنظیمات حقوق شما را ثبت کند</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
