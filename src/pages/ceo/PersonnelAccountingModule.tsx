@@ -311,7 +311,7 @@ export default function PersonnelAccountingModule() {
     }
   };
 
-  // Auto sync balance to wallet (only syncs the difference)
+  // Auto sync balance to wallet - updates or creates personnel accounting record
   const autoSyncBalanceToWallet = async (
     userId: string, 
     finalBalance: number, 
@@ -321,36 +321,25 @@ export default function PersonnelAccountingModule() {
     totalEarnings: number
   ) => {
     try {
-      // Check if we already synced today for personnel_accounting
-      const today = new Date().toISOString().split('T')[0];
+      const cashBalance = totalReceived - totalSpent;
+      
+      // Get existing personnel_accounting transaction (any date)
       const { data: existingSync } = await supabase
         .from('wallet_transactions')
-        .select('id, amount')
+        .select('id, amount, balance_after')
         .eq('user_id', userId)
         .eq('reference_type', 'personnel_accounting')
-        .gte('created_at', today)
-        .maybeSingle();
-
-      // Skip if already synced today with same amount
-      if (existingSync && existingSync.amount === finalBalance) {
-        setBalanceSynced(true);
-        return;
-      }
-
-      // Get current wallet balance
-      const { data: lastTx } = await supabase
-        .from('wallet_transactions')
-        .select('balance_after')
-        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      const currentWalletBalance = lastTx?.balance_after || 0;
-      const newBalance = currentWalletBalance + finalBalance;
+      // Skip if already synced with same amount
+      if (existingSync && existingSync.amount === finalBalance) {
+        setBalanceSynced(true);
+        setWalletBalance(existingSync.balance_after);
+        return;
+      }
 
-      const cashBalance = totalReceived - totalSpent;
-      
       const title = finalBalance >= 0 
         ? 'حساب کارکرد نیرو - طلب از شرکت' 
         : 'حساب کارکرد نیرو - بدهی به شرکت';
@@ -359,23 +348,59 @@ export default function PersonnelAccountingModule() {
         ? `جمع کارکرد حقوق: ${new Intl.NumberFormat('fa-IR').format(totalEarnings)} + مانده نقدی: ${new Intl.NumberFormat('fa-IR').format(cashBalance)} = ${new Intl.NumberFormat('fa-IR').format(finalBalance)} ریال`
         : `${totalPresent} روز حضور | دریافتی: ${new Intl.NumberFormat('fa-IR').format(totalReceived)} | پرداختی: ${new Intl.NumberFormat('fa-IR').format(totalSpent)} ریال`;
 
-      const { error: txError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: userId,
-          transaction_type: finalBalance >= 0 ? 'income' : 'expense',
-          amount: finalBalance,
-          balance_after: newBalance,
-          title: title,
-          description: description,
-          reference_type: 'personnel_accounting',
-        });
+      if (existingSync) {
+        // Update existing record with new balance
+        const balanceDifference = finalBalance - existingSync.amount;
+        const newBalance = existingSync.balance_after + balanceDifference;
 
-      if (txError) throw txError;
+        const { error: updateError } = await supabase
+          .from('wallet_transactions')
+          .update({
+            transaction_type: finalBalance >= 0 ? 'income' : 'expense',
+            amount: finalBalance,
+            balance_after: newBalance,
+            title: title,
+            description: description,
+            created_at: new Date().toISOString(),
+          })
+          .eq('id', existingSync.id);
 
-      setBalanceSynced(true);
-      setWalletBalance(newBalance);
-      console.log('Auto synced final balance to wallet:', finalBalance, '(salary:', totalEarnings, '+ cash:', cashBalance, ')');
+        if (updateError) throw updateError;
+
+        setBalanceSynced(true);
+        setWalletBalance(newBalance);
+        console.log('Updated personnel accounting in wallet:', finalBalance, '(salary:', totalEarnings, '+ cash:', cashBalance, ')');
+      } else {
+        // Create new record - get current wallet balance first
+        const { data: lastTx } = await supabase
+          .from('wallet_transactions')
+          .select('balance_after')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const currentWalletBalance = lastTx?.balance_after || 0;
+        const newBalance = currentWalletBalance + finalBalance;
+
+        const { error: txError } = await supabase
+          .from('wallet_transactions')
+          .insert({
+            user_id: userId,
+            transaction_type: finalBalance >= 0 ? 'income' : 'expense',
+            amount: finalBalance,
+            balance_after: newBalance,
+            title: title,
+            description: description,
+            reference_type: 'personnel_accounting',
+          });
+
+        if (txError) throw txError;
+
+        setBalanceSynced(true);
+        setWalletBalance(newBalance);
+        console.log('Created personnel accounting in wallet:', finalBalance, '(salary:', totalEarnings, '+ cash:', cashBalance, ')');
+      }
     } catch (error) {
       console.error('Error auto-syncing to wallet:', error);
     }
