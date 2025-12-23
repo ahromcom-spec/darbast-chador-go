@@ -42,7 +42,7 @@ serve(async (req) => {
     // Verify order belongs to user and is approved
     const { data: order, error: orderError } = await supabaseClient
       .from('projects_v3')
-      .select('id, customer_id, status, payment_confirmed_at')
+      .select('id, customer_id, status, payment_confirmed_at, code')
       .eq('id', order_id)
       .single();
 
@@ -71,6 +71,20 @@ serve(async (req) => {
       throw new Error('Order does not belong to user');
     }
 
+    // Get user profile for better description
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('full_name, phone_number')
+      .eq('user_id', user.id)
+      .single();
+
+    const customerName = profile?.full_name || 'نامشخص';
+    const customerPhone = profile?.phone_number || '';
+    const orderCode = order.code || order_id.substring(0, 8);
+
+    // Build description with customer info for ZarinPal panel
+    const paymentDescription = `سفارش ${orderCode} - ${customerName}${customerPhone ? ` - ${customerPhone}` : ''}`;
+
     // ZarinPal configuration
     const ZARINPAL_MERCHANT_ID = '93f06023-423a-44d6-ac08-8ee0aa9ed257';
     const ZARINPAL_API_URL = 'https://api.zarinpal.com/pg/v4/payment/request.json';
@@ -87,11 +101,14 @@ serve(async (req) => {
       body: JSON.stringify({
         merchant_id: ZARINPAL_MERCHANT_ID,
         amount: amount * 10, // Convert Toman to Rial (multiply by 10)
-        description: description || 'پرداخت سفارش',
+        description: paymentDescription,
         callback_url: `${CALLBACK_URL}?order_id=${order_id}`,
         metadata: {
           order_id: order_id,
           user_id: user.id,
+          customer_name: customerName,
+          customer_phone: customerPhone,
+          order_code: orderCode,
         }
       }),
     });

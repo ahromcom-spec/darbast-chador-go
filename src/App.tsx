@@ -40,6 +40,7 @@ const StaffVerifications = lazy(() => import("@/pages/ceo/StaffVerifications").t
 const CEOOrders = lazy(() => import("@/pages/ceo/CEOOrders").then(m => ({ default: m.CEOOrders })));
 const CEOCustomers = lazy(() => import("@/pages/ceo/CEOCustomers").then(m => ({ default: m.CEOCustomers })));
 const DeepArchivedOrders = lazy(() => import("@/pages/ceo/DeepArchivedOrders"));
+const PaymentHistory = lazy(() => import("@/pages/ceo/PaymentHistory"));
 const DailyReportModule = lazy(() => import("@/pages/ceo/DailyReportModule"));
 const HRManagementModule = lazy(() => import("@/pages/ceo/HRManagementModule"));
 const PersonnelAccountingModule = lazy(() => import("@/pages/ceo/PersonnelAccountingModule"));
@@ -294,6 +295,7 @@ const App = () => {
                 <Route path="order-transfers" element={<OrderTransferManagement />} />
                 <Route path="archived" element={<ArchivedOrders />} />
                 <Route path="deep-archived" element={<DeepArchivedOrders />} />
+                <Route path="payments" element={<PaymentHistory />} />
               </Route>
               {/* مسیر جداگانه برای ماژول گزارش روزانه - بدون ناوبری CEO */}
               <Route path="/daily-report" element={
