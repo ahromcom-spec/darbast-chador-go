@@ -191,11 +191,13 @@ export default function DailyReportModule() {
   }, [activeTab, user]);
 
   useEffect(() => {
-    if (reportDate) {
+    // وقتی کاربر هنوز لود نشده باشد، fetchExistingReport اجرا نمی‌شود
+    // و بعد از login نیز دوباره اجرا نمی‌شد؛ بنابراین user را هم در dependency می‌آوریم.
+    if (user && reportDate) {
       isInitialLoadRef.current = true;
       fetchExistingReport();
     }
-  }, [reportDate]);
+  }, [reportDate, user]);
 
   // Auto-save function
   const performAutoSave = useCallback(async () => {
