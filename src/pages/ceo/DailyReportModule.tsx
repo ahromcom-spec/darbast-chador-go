@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square } from 'lucide-react';
+import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +40,8 @@ interface SavedReport {
   notes: string | null;
   orders_count: number;
   staff_count: number;
+  is_archived?: boolean;
+  archived_at?: string | null;
 }
 
 interface Order {
@@ -154,10 +156,16 @@ export default function DailyReportModule() {
   });
 
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+  const [archivedReports, setArchivedReports] = useState<SavedReport[]>([]);
   const [loadingSavedReports, setLoadingSavedReports] = useState(false);
+  const [loadingArchivedReports, setLoadingArchivedReports] = useState(false);
   const [singleDeleteDialogOpen, setSingleDeleteDialogOpen] = useState(false);
   const [singleDeleteTarget, setSingleDeleteTarget] = useState<SavedReport | null>(null);
   const [singleDeleting, setSingleDeleting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [reportToArchive, setReportToArchive] = useState<SavedReport | null>(null);
+  const [unarchiving, setUnarchiving] = useState(false);
 
   // Bulk delete hook
   const {
@@ -190,6 +198,8 @@ export default function DailyReportModule() {
   useEffect(() => {
     if (activeTab === 'saved-reports') {
       fetchSavedReports();
+    } else if (activeTab === 'archived-reports') {
+      fetchArchivedReports();
     }
   }, [activeTab, user]);
 
@@ -376,9 +386,11 @@ export default function DailyReportModule() {
       const isManager = await isManagerUser(user.id);
 
       // Managers: see all reports. Staff: see only reports that include them.
+      // Only show non-archived reports
       let reportsQuery = supabase
         .from('daily_reports')
-        .select('id, report_date, created_at, notes')
+        .select('id, report_date, created_at, notes, is_archived')
+        .or('is_archived.is.null,is_archived.eq.false')
         .order('report_date', { ascending: false });
 
       if (!isManager) {
@@ -422,6 +434,7 @@ export default function DailyReportModule() {
               notes: report.notes,
               orders_count: ordersCount.count || 0,
               staff_count: staffCount.count || 0,
+              is_archived: (report as any).is_archived || false,
             };
           })
         );
@@ -436,6 +449,134 @@ export default function DailyReportModule() {
     } finally {
       setLoadingSavedReports(false);
     }
+  };
+
+  const fetchArchivedReports = async () => {
+    if (!user) return;
+
+    try {
+      setLoadingArchivedReports(true);
+
+      const isManager = await isManagerUser(user.id);
+
+      // Only show archived reports
+      let reportsQuery = supabase
+        .from('daily_reports')
+        .select('id, report_date, created_at, notes, is_archived, archived_at')
+        .eq('is_archived', true)
+        .order('archived_at', { ascending: false });
+
+      if (!isManager) {
+        const { data: myStaffRows, error: staffRowsError } = await supabase
+          .from('daily_report_staff')
+          .select('daily_report_id')
+          .eq('staff_user_id', user.id);
+
+        if (staffRowsError) throw staffRowsError;
+
+        const reportIds = Array.from(new Set((myStaffRows || []).map((r: any) => r.daily_report_id).filter(Boolean)));
+        if (reportIds.length === 0) {
+          setArchivedReports([]);
+          return;
+        }
+
+        reportsQuery = reportsQuery.in('id', reportIds);
+      }
+
+      const { data: reports, error: reportsError } = await reportsQuery;
+      if (reportsError) throw reportsError;
+
+      if (reports && reports.length > 0) {
+        const reportsWithCounts = await Promise.all(
+          reports.map(async (report) => {
+            const [ordersCount, staffCount] = await Promise.all([
+              supabase
+                .from('daily_report_orders')
+                .select('id', { count: 'exact', head: true })
+                .eq('daily_report_id', report.id),
+              supabase
+                .from('daily_report_staff')
+                .select('id', { count: 'exact', head: true })
+                .eq('daily_report_id', report.id),
+            ]);
+
+            return {
+              id: report.id,
+              report_date: report.report_date,
+              created_at: report.created_at,
+              notes: report.notes,
+              orders_count: ordersCount.count || 0,
+              staff_count: staffCount.count || 0,
+              is_archived: true,
+              archived_at: (report as any).archived_at,
+            };
+          })
+        );
+
+        setArchivedReports(reportsWithCounts);
+      } else {
+        setArchivedReports([]);
+      }
+    } catch (error) {
+      console.error('Error fetching archived reports:', error);
+      toast.error('خطا در دریافت گزارشات بایگانی شده');
+    } finally {
+      setLoadingArchivedReports(false);
+    }
+  };
+
+  const archiveReport = async (report: SavedReport) => {
+    if (!user) return;
+
+    try {
+      setArchiving(true);
+
+      const { error } = await supabase.rpc('archive_daily_report', { p_report_id: report.id });
+      if (error) throw error;
+
+      toast.success('گزارش با موفقیت بایگانی شد');
+      setSavedReports((prev) => prev.filter((r) => r.id !== report.id));
+      setArchiveDialogOpen(false);
+      setReportToArchive(null);
+      
+      // Refresh archived reports if that tab is active
+      if (activeTab === 'archived-reports') {
+        fetchArchivedReports();
+      }
+    } catch (error) {
+      console.error('Error archiving report:', error);
+      toast.error('خطا در بایگانی گزارش');
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const unarchiveReport = async (report: SavedReport) => {
+    if (!user) return;
+
+    try {
+      setUnarchiving(true);
+
+      const { error } = await supabase.rpc('unarchive_daily_report', { p_report_id: report.id });
+      if (error) throw error;
+
+      toast.success('گزارش از بایگانی خارج شد');
+      setArchivedReports((prev) => prev.filter((r) => r.id !== report.id));
+      
+      // Refresh saved reports
+      fetchSavedReports();
+    } catch (error) {
+      console.error('Error unarchiving report:', error);
+      toast.error('خطا در خارج کردن گزارش از بایگانی');
+    } finally {
+      setUnarchiving(false);
+    }
+  };
+
+  const openArchiveDialog = (report: SavedReport, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReportToArchive(report);
+    setArchiveDialogOpen(true);
   };
 
   const viewSavedReport = (reportDate: string) => {
@@ -1188,7 +1329,7 @@ export default function DailyReportModule() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
+          <TabsList className="grid w-full max-w-3xl grid-cols-5">
             <TabsTrigger value="new-report" className="gap-2">
               <FileText className="h-4 w-4" />
               ثبت گزارش
@@ -1196,6 +1337,10 @@ export default function DailyReportModule() {
             <TabsTrigger value="saved-reports" className="gap-2">
               <History className="h-4 w-4" />
               گزارشات ذخیره شده
+            </TabsTrigger>
+            <TabsTrigger value="archived-reports" className="gap-2">
+              <Archive className="h-4 w-4" />
+              بایگانی
             </TabsTrigger>
             <TabsTrigger value="staff-audit" className="gap-2">
               <Calculator className="h-4 w-4" />
@@ -1696,6 +1841,16 @@ export default function DailyReportModule() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
+                              className="gap-2 text-amber-600 hover:text-amber-700 hover:bg-amber-100"
+                              onClick={(e) => openArchiveDialog(report, e)}
+                              disabled={archiving}
+                            >
+                              <Archive className="h-4 w-4" />
+                              بایگانی
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
                               className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={(e) => requestDeleteSavedReport(report, e)}
                             >
@@ -1782,6 +1937,135 @@ export default function DailyReportModule() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+          </TabsContent>
+
+          {/* Archive Confirmation Dialog */}
+          <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-right">تایید بایگانی گزارش</AlertDialogTitle>
+                <AlertDialogDescription className="text-right">
+                  آیا از بایگانی این گزارش اطمینان دارید؟
+                  {reportToArchive ? (
+                    <>
+                      <br />
+                      <span className="font-medium">{formatPersianDate(reportToArchive.report_date)}</span>
+                    </>
+                  ) : null}
+                  <br />
+                  <span className="text-amber-600">با بایگانی گزارش، تأثیرات مالی آن در حسابرسی نیروها حذف خواهد شد.</span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="flex-row-reverse gap-2">
+                <AlertDialogCancel
+                  onClick={() => {
+                    setReportToArchive(null);
+                    setArchiveDialogOpen(false);
+                  }}
+                  disabled={archiving}
+                >
+                  انصراف
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => reportToArchive && archiveReport(reportToArchive)}
+                  disabled={archiving}
+                  className="bg-amber-600 text-white hover:bg-amber-700"
+                >
+                  {archiving ? (
+                    <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                  ) : (
+                    <Archive className="h-4 w-4 ml-2" />
+                  )}
+                  بایگانی گزارش
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Archived Reports Tab */}
+          <TabsContent value="archived-reports" className="mt-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/10">
+                    <Archive className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <CardTitle className="text-lg">گزارشات بایگانی شده</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingArchivedReports ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+                  </div>
+                ) : archivedReports.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Archive className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>هنوز گزارشی بایگانی نشده است</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {archivedReports.map((report) => (
+                      <Card 
+                        key={report.id} 
+                        className="p-4 hover:bg-muted/50 transition-colors bg-amber-50/50 dark:bg-amber-900/10"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                              <Calendar className="h-5 w-5 text-amber-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{formatPersianDate(report.report_date)}</h3>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                                <span className="flex items-center gap-1">
+                                  <Package className="h-4 w-4" />
+                                  {report.orders_count} سفارش
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <User className="h-4 w-4" />
+                                  {report.staff_count} نیرو
+                                </span>
+                                {report.archived_at && (
+                                  <span className="text-amber-600">
+                                    بایگانی شده
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="gap-2"
+                              onClick={() => viewSavedReport(report.report_date)}
+                            >
+                              <Eye className="h-4 w-4" />
+                              مشاهده
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="gap-2 text-green-600 hover:text-green-700 hover:bg-green-100"
+                              onClick={() => unarchiveReport(report)}
+                              disabled={unarchiving}
+                            >
+                              {unarchiving ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <ArchiveRestore className="h-4 w-4" />
+                              )}
+                              بازیابی
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Staff Audit Tab */}
