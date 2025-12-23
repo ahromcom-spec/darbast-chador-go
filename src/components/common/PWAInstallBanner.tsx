@@ -1,4 +1,4 @@
-import { Download, X, GripVertical } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -132,6 +132,8 @@ export function PWAInstallBanner() {
 
   // Mouse events
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Don't start drag if clicking on buttons
+    if ((e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
     handleDragStart(e.clientX, e.clientY);
   };
@@ -159,6 +161,8 @@ export function PWAInstallBanner() {
 
   // Touch events
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Don't start drag if touching buttons
+    if ((e.target as HTMLElement).closest('button')) return;
     const touch = e.touches[0];
     handleDragStart(touch.clientX, touch.clientY);
   };
@@ -192,7 +196,7 @@ export function PWAInstallBanner() {
   return (
     <div 
       ref={bannerRef}
-      className="fixed z-50"
+      className="fixed z-50 select-none"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -200,18 +204,11 @@ export function PWAInstallBanner() {
         cursor: isDragging ? 'grabbing' : 'grab'
       }}
       data-pwa-install-banner
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
     >
       <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-lg">
         <div className="p-2 sm:p-4 flex items-center gap-2 sm:gap-3">
-          {/* Drag handle */}
-          <div
-            className="flex-shrink-0 p-1 rounded cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors"
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
-          >
-            <GripVertical className="h-4 w-4" />
-          </div>
-          
           <div className="flex-shrink-0 p-1.5 sm:p-2 rounded-lg bg-primary/10">
             <Download className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           </div>
