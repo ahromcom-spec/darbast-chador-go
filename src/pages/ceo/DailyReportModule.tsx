@@ -1127,6 +1127,52 @@ export default function DailyReportModule() {
       }
 
       toast.success('گزارش با موفقیت ذخیره شد');
+      
+      // Switch to saved reports tab after successful save
+      setActiveTab('saved-reports');
+      
+      // Reset form for new report
+      setExistingReportId(null);
+      setOrderReports([
+        {
+          order_id: '',
+          activity_description: '',
+          service_details: '',
+          team_name: '',
+          notes: '',
+          row_color: ROW_COLORS[0].value,
+        },
+      ]);
+      setStaffReports([
+        {
+          staff_user_id: null,
+          staff_name: 'کارت صندوق اهرم',
+          work_status: 'کارکرده',
+          overtime_hours: 0,
+          amount_received: 0,
+          receiving_notes: '',
+          amount_spent: 0,
+          spending_notes: '',
+          notes: '',
+          is_cash_box: true,
+        },
+        {
+          staff_user_id: null,
+          staff_name: '',
+          work_status: 'غایب',
+          overtime_hours: 0,
+          amount_received: 0,
+          receiving_notes: '',
+          amount_spent: 0,
+          spending_notes: '',
+          notes: '',
+          is_cash_box: false,
+        },
+      ]);
+      setReportDate(new Date());
+      
+      // Refresh saved reports list
+      fetchSavedReports();
     } catch (error: any) {
       console.error('Error saving report:', error);
       const errorMessage = error?.message || error?.details || 'خطای نامشخص';
