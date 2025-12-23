@@ -100,6 +100,23 @@ const isUuid = (value: unknown): value is string => {
   return UUID_REGEX.test(value);
 };
 
+const MANAGER_ROLES = new Set([
+  'admin',
+  'ceo',
+  'general_manager',
+  'scaffold_executive_manager',
+  'executive_manager_scaffold_execution_with_materials',
+]);
+
+const isManagerUser = async (userId: string): Promise<boolean> => {
+  const { data } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId);
+
+  return (data || []).some((r: any) => MANAGER_ROLES.has(r.role));
+};
+
 // Extract staff code from name - support both 4-digit codes and 11-digit phone numbers
 const extractStaffCode = (value: unknown): string => {
   if (typeof value !== 'string') return '';
@@ -350,23 +367,47 @@ export default function DailyReportModule() {
 
     try {
       setLoadingSavedReports(true);
-      
-      // Fetch all daily reports for this user
-      const { data: reports, error: reportsError } = await supabase
+
+      const isManager = await isManagerUser(user.id);
+
+      // Managers: see all reports. Staff: see only reports that include them.
+      let reportsQuery = supabase
         .from('daily_reports')
         .select('id, report_date, created_at, notes')
-        .eq('created_by', user.id)
         .order('report_date', { ascending: false });
 
+      if (!isManager) {
+        const { data: myStaffRows, error: staffRowsError } = await supabase
+          .from('daily_report_staff')
+          .select('daily_report_id')
+          .eq('staff_user_id', user.id);
+
+        if (staffRowsError) throw staffRowsError;
+
+        const reportIds = Array.from(new Set((myStaffRows || []).map((r: any) => r.daily_report_id).filter(Boolean)));
+        if (reportIds.length === 0) {
+          setSavedReports([]);
+          return;
+        }
+
+        reportsQuery = reportsQuery.in('id', reportIds);
+      }
+
+      const { data: reports, error: reportsError } = await reportsQuery;
       if (reportsError) throw reportsError;
 
       if (reports && reports.length > 0) {
-        // Get counts for each report
         const reportsWithCounts = await Promise.all(
           reports.map(async (report) => {
             const [ordersCount, staffCount] = await Promise.all([
-              supabase.from('daily_report_orders').select('id', { count: 'exact', head: true }).eq('daily_report_id', report.id),
-              supabase.from('daily_report_staff').select('id', { count: 'exact', head: true }).eq('daily_report_id', report.id)
+              supabase
+                .from('daily_report_orders')
+                .select('id', { count: 'exact', head: true })
+                .eq('daily_report_id', report.id),
+              supabase
+                .from('daily_report_staff')
+                .select('id', { count: 'exact', head: true })
+                .eq('daily_report_id', report.id),
             ]);
 
             return {
@@ -375,7 +416,7 @@ export default function DailyReportModule() {
               created_at: report.created_at,
               notes: report.notes,
               orders_count: ordersCount.count || 0,
-              staff_count: staffCount.count || 0
+              staff_count: staffCount.count || 0,
             };
           })
         );
@@ -488,23 +529,69 @@ export default function DailyReportModule() {
       setLoading(true);
       const dateStr = reportDate.toISOString().split('T')[0];
 
-      const { data: report, error: reportError } = await supabase
-        .from('daily_reports')
-        .select('id')
-        .eq('report_date', dateStr)
-        .eq('created_by', user.id)
-        .maybeSingle();
+      const isManager = await isManagerUser(user.id);
 
-      if (reportError) throw reportError;
+      let reportIdToLoad: string | null = null;
 
-      if (report) {
-        setExistingReportId(report.id);
+      // Managers: prefer their own report for that date, otherwise take latest.
+      if (isManager) {
+        const { data: myReport, error: myReportError } = await supabase
+          .from('daily_reports')
+          .select('id')
+          .eq('report_date', dateStr)
+          .eq('created_by', user.id)
+          .maybeSingle();
 
-        // Fetch order reports
+        if (myReportError) throw myReportError;
+
+        if (myReport?.id) {
+          reportIdToLoad = myReport.id;
+        } else {
+          const { data: anyReport, error: anyReportError } = await supabase
+            .from('daily_reports')
+            .select('id')
+            .eq('report_date', dateStr)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (anyReportError) throw anyReportError;
+          reportIdToLoad = anyReport?.id ?? null;
+        }
+      } else {
+        // Staff: load the report of that date which contains a row for them.
+        const { data: candidateReports, error: candidatesError } = await supabase
+          .from('daily_reports')
+          .select('id')
+          .eq('report_date', dateStr)
+          .order('created_at', { ascending: false });
+
+        if (candidatesError) throw candidatesError;
+
+        const candidateIds = (candidateReports || []).map((r: any) => r.id);
+
+        if (candidateIds.length > 0) {
+          const { data: staffRow, error: staffRowError } = await supabase
+            .from('daily_report_staff')
+            .select('daily_report_id')
+            .eq('staff_user_id', user.id)
+            .in('daily_report_id', candidateIds)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (staffRowError) throw staffRowError;
+          reportIdToLoad = staffRow?.daily_report_id ?? null;
+        }
+      }
+
+      if (reportIdToLoad) {
+        setExistingReportId(reportIdToLoad);
+
         const { data: orderData } = await supabase
           .from('daily_report_orders')
           .select('*')
-          .eq('daily_report_id', report.id);
+          .eq('daily_report_id', reportIdToLoad);
 
         setOrderReports((orderData || []).map((o: any) => ({
           id: o.id,
@@ -513,25 +600,21 @@ export default function DailyReportModule() {
           service_details: o.service_details || '',
           team_name: o.team_name || '',
           notes: o.notes || '',
-          row_color: o.row_color || 'yellow'
+          row_color: o.row_color || 'yellow',
         })));
 
-        // Fetch staff reports
         const { data: staffData } = await supabase
           .from('daily_report_staff')
           .select('*')
-          .eq('daily_report_id', report.id);
+          .eq('daily_report_id', reportIdToLoad);
 
         const normalizedStaff: StaffReportRow[] = (staffData || []).map((s: any) => {
           const staffCode = extractStaffCode(s.staff_name || '');
 
           return {
             id: s.id,
-            // در UI این فیلد را برای «کد پرسنلی» استفاده می‌کنیم تا انتخاب داخل StaffSearchSelect باقی بماند
-            // ولی در زمان ذخیره، فقط اگر uuid واقعی باشد به دیتابیس می‌رود (بقیه null می‌شود)
             staff_user_id: staffCode || null,
             staff_name: s.staff_name || '',
-            // Preserve the real user_id from DB so wallet sync works on re-save
             real_user_id: s.staff_user_id || null,
             work_status: fromDbWorkStatus(s.work_status),
             overtime_hours: s.overtime_hours || 0,
@@ -540,7 +623,7 @@ export default function DailyReportModule() {
             amount_spent: s.amount_spent || 0,
             spending_notes: s.spending_notes || '',
             notes: s.notes || '',
-            is_cash_box: s.is_cash_box || false
+            is_cash_box: s.is_cash_box || false,
           };
         });
 
@@ -556,7 +639,7 @@ export default function DailyReportModule() {
             amount_spent: 0,
             spending_notes: '',
             notes: '',
-            is_cash_box: true
+            is_cash_box: true,
           });
         }
 
@@ -572,23 +655,23 @@ export default function DailyReportModule() {
             amount_spent: 0,
             spending_notes: '',
             notes: '',
-            is_cash_box: false
+            is_cash_box: false,
           });
         }
 
         setStaffReports(normalizedStaff);
       } else {
         setExistingReportId(null);
-        // Initialize with one default empty order row
-        setOrderReports([{
-          order_id: '',
-          activity_description: '',
-          service_details: '',
-          team_name: '',
-          notes: '',
-          row_color: ROW_COLORS[0].value
-        }]);
-        // Initialize with cash box row and one default staff row
+        setOrderReports([
+          {
+            order_id: '',
+            activity_description: '',
+            service_details: '',
+            team_name: '',
+            notes: '',
+            row_color: ROW_COLORS[0].value,
+          },
+        ]);
         setStaffReports([
           {
             staff_user_id: null,
@@ -600,7 +683,7 @@ export default function DailyReportModule() {
             amount_spent: 0,
             spending_notes: '',
             notes: '',
-            is_cash_box: true
+            is_cash_box: true,
           },
           {
             staff_user_id: null,
@@ -612,8 +695,8 @@ export default function DailyReportModule() {
             amount_spent: 0,
             spending_notes: '',
             notes: '',
-            is_cash_box: false
-          }
+            is_cash_box: false,
+          },
         ]);
       }
     } catch (error) {
