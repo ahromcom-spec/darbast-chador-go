@@ -579,19 +579,19 @@ export default function PersonnelAccountingModule() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                <span>کل دریافتی</span>
-              </div>
-              <span className="font-bold text-green-600">{formatCurrency(summary.totalReceived)}</span>
-            </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-red-50 dark:bg-red-950/30">
               <div className="flex items-center gap-2">
                 <TrendingDown className="h-5 w-5 text-red-600" />
-                <span>کل پرداختی</span>
+                <span>کل دریافتی</span>
               </div>
-              <span className="font-bold text-red-600">{formatCurrency(summary.totalSpent)}</span>
+              <span className="font-bold text-red-600">{formatCurrency(summary.totalReceived)}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                <span>خرج کرده در کار</span>
+              </div>
+              <span className="font-bold text-green-600">{formatCurrency(summary.totalSpent)}</span>
             </div>
             <div className="p-4 rounded-lg bg-primary/10 border-2 border-primary/30 space-y-3">
               <div className="flex items-center justify-between">
