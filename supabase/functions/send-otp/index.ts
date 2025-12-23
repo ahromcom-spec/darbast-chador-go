@@ -243,8 +243,11 @@ serve(async (req) => {
     const wwwHost = hasWWW ? safeHost : `www.${safeHost}`;
     const bindings = Array.from(new Set([`@${apexHost} #${code}`, `@${wwwHost} #${code}`])).join('\n');
     const webOtpBinding = bindings;
-    // Format simple message
-    const message = `کد تایید: ${code} ورود به سایت اهرم`;
+    
+    // Format message with Web OTP binding for autofill
+    // Adding binding at the end enables Chrome/Android to auto-fill the code
+    const message = `کد تایید: ${code} ورود به سایت اهرم\n\n${webOtpBinding}`;
+    
     const rawSender = Deno.env.get('PARSGREEN_SENDER') || '';
     const senderNumber = /^[0-9]+$/.test(rawSender) ? rawSender : '90000319';
     if (rawSender && !/^[0-9]+$/.test(rawSender)) {
