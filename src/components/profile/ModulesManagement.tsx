@@ -43,9 +43,17 @@ const AVAILABLE_MODULES: Module[] = [
     key: 'daily_report',
     name: 'ماژول گزارش روزانه شرکت اهرم',
     description: 'ثبت گزارش فعالیت‌های روزانه شرکت و نیروها',
-    href: '/ceo/daily-report',
+    href: '/daily-report',
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
+  },
+  {
+    key: 'hr_management',
+    name: 'ماژول مدیریت منابع انسانی',
+    description: 'ثبت و مدیریت نیروهای شرکت اهرم',
+    href: '/hr-management',
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
   },
 ];
 

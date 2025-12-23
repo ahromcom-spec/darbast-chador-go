@@ -65,9 +65,13 @@ const POSITIONS = [
   'حسابدار',
 ];
 
-export function HRManagement() {
+interface HRManagementProps {
+  showAsCard?: boolean;
+}
+
+export function HRManagement({ showAsCard = true }: HRManagementProps) {
   const { user } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(!showAsCard);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [employees, setEmployees] = useState<HREmployee[]>([]);
@@ -100,10 +104,10 @@ export function HRManagement() {
   };
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen || !showAsCard) {
       fetchEmployees();
     }
-  }, [isOpen]);
+  }, [isOpen, showAsCard]);
 
   const isValidPhone = useMemo(() => {
     return /^09[0-9]{9}$/.test(newPhoneNumber);
@@ -251,6 +255,287 @@ export function HRManagement() {
   const activeCount = employees.filter(e => e.status === 'active').length;
   const pendingCount = employees.filter(e => e.status === 'pending_registration').length;
 
+  const content = (
+    <div className="space-y-6">
+      {/* Info Alert */}
+      <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-900/20">
+        <Info className="h-4 w-4" />
+        <AlertTitle>راهنما</AlertTitle>
+        <AlertDescription className="text-sm mt-2 space-y-1">
+          <p>• وارد کردن <strong>شماره موبایل</strong> الزامی است</p>
+          <p>• اگر نیرو هنوز در اهرم ثبت‌نام نکرده، وضعیت "در انتظار ثبت‌نام" خواهد بود</p>
+          <p>• پس از ثبت‌نام، وضعیت خودکار به "فعال" تغییر می‌کند</p>
+          <p>• نیروهای ثبت‌شده در تنظیمات حقوق گزارش روزانه قابل انتخاب هستند</p>
+        </AlertDescription>
+      </Alert>
+
+      {/* Add New Employee Form */}
+      <Card className="border-2 border-green-500/30">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <Plus className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">افزودن نیروی جدید</CardTitle>
+              <CardDescription>اطلاعات نیروی جدید را وارد کنید</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <Phone className="h-4 w-4" />
+                شماره موبایل <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                type="tel"
+                value={newPhoneNumber}
+                onChange={(e) => setNewPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                placeholder="09123456789"
+                dir="ltr"
+                className={!newPhoneNumber ? '' : isValidPhone ? 'border-green-500' : 'border-destructive'}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <User className="h-4 w-4" />
+                نام و نام خانوادگی <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={newFullName}
+                onChange={(e) => setNewFullName(e.target.value)}
+                placeholder="نام کامل نیرو"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <Briefcase className="h-4 w-4" />
+                سمت
+              </Label>
+              <Select value={newPosition} onValueChange={setNewPosition}>
+                <SelectTrigger>
+                  <SelectValue placeholder="انتخاب سمت" />
+                </SelectTrigger>
+                <SelectContent>
+                  {POSITIONS.map(pos => (
+                    <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <Building className="h-4 w-4" />
+                واحد سازمانی
+              </Label>
+              <Select value={newDepartment} onValueChange={setNewDepartment}>
+                <SelectTrigger>
+                  <SelectValue placeholder="انتخاب واحد" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.map(dep => (
+                    <SelectItem key={dep} value={dep}>{dep}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                تاریخ استخدام
+              </Label>
+              <Input
+                type="date"
+                value={newHireDate}
+                onChange={(e) => setNewHireDate(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2 lg:col-span-1">
+              <Label>توضیحات</Label>
+              <AutoResizeTextarea
+                value={newNotes}
+                onChange={(e) => setNewNotes(e.target.value)}
+                placeholder="توضیحات اضافی..."
+                className="min-h-[40px]"
+              />
+            </div>
+
+            <div className="flex items-end lg:col-span-3">
+              <Button
+                onClick={handleAddEmployee}
+                disabled={saving || !isValidPhone || !newFullName.trim()}
+                className="gap-2 w-full md:w-auto"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                ثبت نیروی جدید
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Employees List */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <CardTitle className="text-lg">لیست نیروهای ثبت‌شده ({employees.length})</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            </div>
+          ) : employees.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>هنوز نیرویی ثبت نشده است</p>
+            </div>
+          ) : (
+            <ScrollArea className="h-[400px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="text-right">نام</TableHead>
+                    <TableHead className="text-right">شماره موبایل</TableHead>
+                    <TableHead className="text-right">سمت</TableHead>
+                    <TableHead className="text-right">واحد</TableHead>
+                    <TableHead className="text-right">وضعیت</TableHead>
+                    <TableHead className="text-center w-[100px]">عملیات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employees.map((employee) => (
+                    <TableRow key={employee.id}>
+                      <TableCell>
+                        {editingId === employee.id ? (
+                          <Input
+                            value={employee.full_name}
+                            onChange={(e) => updateEmployeeField(employee.id, 'full_name', e.target.value)}
+                            className="w-40"
+                          />
+                        ) : (
+                          <span className="font-medium">{employee.full_name}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span dir="ltr" className="text-muted-foreground">
+                          {employee.phone_number}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {editingId === employee.id ? (
+                          <Select
+                            value={employee.position || ''}
+                            onValueChange={(v) => updateEmployeeField(employee.id, 'position', v || null)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue placeholder="انتخاب" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {POSITIONS.map(pos => (
+                                <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          employee.position || '-'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === employee.id ? (
+                          <Select
+                            value={employee.department || ''}
+                            onValueChange={(v) => updateEmployeeField(employee.id, 'department', v || null)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue placeholder="انتخاب" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DEPARTMENTS.map(dep => (
+                                <SelectItem key={dep} value={dep}>{dep}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          employee.department || '-'
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(employee.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-center gap-1">
+                          {editingId === employee.id ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleUpdateEmployee(employee)}
+                                disabled={saving}
+                                className="h-8 w-8 p-0 text-green-600"
+                              >
+                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingId(null);
+                                  fetchEmployees();
+                                }}
+                                className="h-8 w-8 p-0 text-muted-foreground"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingId(employee.id)}
+                                className="h-8 w-8 p-0 text-blue-600"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteEmployee(employee.id)}
+                                className="h-8 w-8 p-0 text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  // If not showing as card, just return the content
+  if (!showAsCard) {
+    return content;
+  }
+
   return (
     <Card className="border-2 border-indigo-500/30">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -283,293 +568,7 @@ export function HRManagement() {
 
         <CollapsibleContent>
           <CardContent className="space-y-6">
-            {/* Info Alert */}
-            <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-900/20">
-              <Info className="h-4 w-4" />
-              <AlertTitle>راهنما</AlertTitle>
-              <AlertDescription className="text-sm mt-2 space-y-1">
-                <p>• وارد کردن <strong>شماره موبایل</strong> الزامی است</p>
-                <p>• اگر نیرو هنوز در اهرم ثبت‌نام نکرده، وضعیت "در انتظار ثبت‌نام" خواهد بود</p>
-                <p>• پس از ثبت‌نام، وضعیت خودکار به "فعال" تغییر می‌کند</p>
-                <p>• نیروهای ثبت‌شده در تنظیمات حقوق گزارش روزانه قابل انتخاب هستند</p>
-              </AlertDescription>
-            </Alert>
-
-            {/* Add New Employee Form */}
-            <Card className="border-2 border-green-500/30">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-500/10">
-                    <Plus className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">افزودن نیروی جدید</CardTitle>
-                    <CardDescription>اطلاعات نیروی جدید را وارد کنید</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <Phone className="h-4 w-4" />
-                      شماره موبایل <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      type="tel"
-                      value={newPhoneNumber}
-                      onChange={(e) => setNewPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                      placeholder="09123456789"
-                      dir="ltr"
-                      className={!newPhoneNumber ? '' : isValidPhone ? 'border-green-500' : 'border-destructive'}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <User className="h-4 w-4" />
-                      نام و نام خانوادگی <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      value={newFullName}
-                      onChange={(e) => setNewFullName(e.target.value)}
-                      placeholder="نام کامل نیرو"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <Briefcase className="h-4 w-4" />
-                      سمت
-                    </Label>
-                    <Select value={newPosition} onValueChange={setNewPosition}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="انتخاب سمت" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {POSITIONS.map(pos => (
-                          <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <Building className="h-4 w-4" />
-                      واحد سازمانی
-                    </Label>
-                    <Select value={newDepartment} onValueChange={setNewDepartment}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="انتخاب واحد" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DEPARTMENTS.map(dep => (
-                          <SelectItem key={dep} value={dep}>{dep}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      تاریخ استخدام
-                    </Label>
-                    <Input
-                      type="date"
-                      value={newHireDate}
-                      onChange={(e) => setNewHireDate(e.target.value)}
-                      dir="ltr"
-                    />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2 lg:col-span-1">
-                    <Label>توضیحات</Label>
-                    <AutoResizeTextarea
-                      value={newNotes}
-                      onChange={(e) => setNewNotes(e.target.value)}
-                      placeholder="توضیحات اضافی..."
-                      className="min-h-[40px]"
-                    />
-                  </div>
-
-                  <div className="flex items-end lg:col-span-3">
-                    <Button
-                      onClick={handleAddEmployee}
-                      disabled={saving || !isValidPhone || !newFullName.trim()}
-                      className="gap-2 w-full md:w-auto"
-                    >
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      ثبت نیروی جدید
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Employees List */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Users className="h-5 w-5 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">لیست نیروهای ثبت‌شده ({employees.length})</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-                  </div>
-                ) : employees.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>هنوز نیرویی ثبت نشده است</p>
-                  </div>
-                ) : (
-                  <ScrollArea className="h-[400px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="text-right">نام</TableHead>
-                          <TableHead className="text-right">شماره موبایل</TableHead>
-                          <TableHead className="text-right">سمت</TableHead>
-                          <TableHead className="text-right">واحد</TableHead>
-                          <TableHead className="text-right">وضعیت</TableHead>
-                          <TableHead className="text-center w-[100px]">عملیات</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {employees.map((employee) => (
-                          <TableRow key={employee.id}>
-                            <TableCell>
-                              {editingId === employee.id ? (
-                                <Input
-                                  value={employee.full_name}
-                                  onChange={(e) => updateEmployeeField(employee.id, 'full_name', e.target.value)}
-                                  className="w-40"
-                                />
-                              ) : (
-                                <span className="font-medium">{employee.full_name}</span>
-                              )}
-                            </TableCell>
-                            <TableCell dir="ltr" className="text-left font-mono">
-                              {employee.phone_number}
-                            </TableCell>
-                            <TableCell>
-                              {editingId === employee.id ? (
-                                <Select 
-                                  value={employee.position || ''} 
-                                  onValueChange={(v) => updateEmployeeField(employee.id, 'position', v)}
-                                >
-                                  <SelectTrigger className="w-32">
-                                    <SelectValue placeholder="سمت" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {POSITIONS.map(pos => (
-                                      <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                employee.position || '—'
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {editingId === employee.id ? (
-                                <Select 
-                                  value={employee.department || ''} 
-                                  onValueChange={(v) => updateEmployeeField(employee.id, 'department', v)}
-                                >
-                                  <SelectTrigger className="w-32">
-                                    <SelectValue placeholder="واحد" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {DEPARTMENTS.map(dep => (
-                                      <SelectItem key={dep} value={dep}>{dep}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                employee.department || '—'
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {editingId === employee.id ? (
-                                <Select 
-                                  value={employee.status} 
-                                  onValueChange={(v) => updateEmployeeField(employee.id, 'status', v as HREmployee['status'])}
-                                >
-                                  <SelectTrigger className="w-40">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="active">فعال</SelectItem>
-                                    <SelectItem value="pending_registration">در انتظار ثبت‌نام</SelectItem>
-                                    <SelectItem value="inactive">غیرفعال</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                getStatusBadge(employee.status)
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center justify-center gap-1">
-                                {editingId === employee.id ? (
-                                  <>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleUpdateEmployee(employee)}
-                                      disabled={saving}
-                                      className="h-8 w-8 text-green-600 hover:text-green-700"
-                                    >
-                                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => {
-                                        setEditingId(null);
-                                        fetchEmployees();
-                                      }}
-                                      className="h-8 w-8"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => setEditingId(employee.id)}
-                                      className="h-8 w-8 text-blue-600 hover:text-blue-700"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleDeleteEmployee(employee.id)}
-                                      className="h-8 w-8 text-destructive hover:text-destructive/90"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
+            {content}
           </CardContent>
         </CollapsibleContent>
       </Collapsible>

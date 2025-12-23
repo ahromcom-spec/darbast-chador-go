@@ -45,6 +45,15 @@ const MODULE_DETAILS: Record<string, ModuleInfo> = {
     bgColor: 'bg-blue-50',
     icon: 'report',
   },
+  hr_management: {
+    key: 'hr_management',
+    name: 'ماژول مدیریت منابع انسانی',
+    description: 'ثبت و مدیریت نیروهای شرکت اهرم',
+    href: '/hr-management',
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    icon: 'users',
+  },
 };
 
 export function UserModulesTab() {
