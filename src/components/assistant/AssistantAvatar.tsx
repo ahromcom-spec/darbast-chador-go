@@ -340,18 +340,22 @@ export function AssistantAvatar() {
   }, [isOpen]);
 
   // Handle viewport resize/zoom to keep avatar in bounds
+  // Avatar can only move in the bottom-left quadrant (left half, bottom half)
   useEffect(() => {
     const clampPositionToViewport = () => {
       const vp = getViewportSize();
       // Avatar (64px) + label (~24px) + gap (4px) = ~92px total height
       const avatarTotalHeight = 96; // 64 (avatar) + 24 (label) + 8 (spacing)
       const avatarSize = 64;
-      const maxX = vp.width - avatarSize - 8;
-      const maxY = vp.height - avatarTotalHeight - 8; // Use total height including label
+      // Avatar restricted to left half of screen (0 to width/2 - avatarSize)
+      const maxX = (vp.width / 2) - avatarSize;
+      // Avatar restricted to bottom half of screen (height/2 to height - totalHeight)
+      const minY = vp.height / 2;
+      const maxY = vp.height - avatarTotalHeight - 8;
       
       setAvatarPosition(prev => ({
         x: Math.max(8, Math.min(maxX, prev.x)),
-        y: Math.max(8, Math.min(maxY, prev.y))
+        y: Math.max(minY, Math.min(maxY, prev.y))
       }));
       
       // Also clamp chat position if open
@@ -423,12 +427,16 @@ export function AssistantAvatar() {
     const newX = clientX - dragOffset.x;
     const newY = clientY - dragOffset.y;
     const avatarTotalHeight = 96; // 64 (avatar) + 24 (label) + 8 (spacing)
-    const maxX = vp.width - 80;
-    const maxY = vp.height - avatarTotalHeight - 8; // Use total height including label
+    const avatarSize = 64;
+    // Avatar restricted to left half of screen
+    const maxX = (vp.width / 2) - avatarSize;
+    // Avatar restricted to bottom half of screen
+    const minY = vp.height / 2;
+    const maxY = vp.height - avatarTotalHeight - 8;
     
     setAvatarPosition({
       x: Math.max(8, Math.min(maxX, newX)),
-      y: Math.max(8, Math.min(maxY, newY))
+      y: Math.max(minY, Math.min(maxY, newY))
     });
   }, [isDragging, dragOffset]);
 
