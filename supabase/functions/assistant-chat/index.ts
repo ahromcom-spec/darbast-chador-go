@@ -337,6 +337,15 @@ const SYSTEM_PROMPT = `تو منشی هوشمند و حرفه‌ای سایت ا
 6. کاربران را به صفحات مربوطه هدایت کن
 7. از افشای اطلاعات امنیتی یا داخلی سیستم خودداری کن
 8. اگر اطلاعات سفارشات کاربر را داری، می‌توانی به سوالات درباره سفارشات کاربر پاسخ دهی
+9. اگر اطلاعات کارکرد و حسابکتاب کاربر را داری، می‌توانی به سوالات درباره روزهای کاری، حضور، غیبت، اضافه‌کاری، دریافتی، پرداختی و حقوق کاربر پاسخ دهی
+
+📊 راهنمای پاسخ به سوالات کارکرد:
+- وقتی کاربر از کارکرد یا حقوق خود سوال کرد، اطلاعات بخش "کارکرد و حسابکتاب شما" را استفاده کن
+- اگر کاربر پرسید "چند روز کار کردم" یا "کارکرد من چقدره"، آمار روزهای حضور و غیبت را بگو
+- اگر پرسید "اضافه‌کاری من چقدره"، ساعات اضافه‌کاری را بگو
+- اگر پرسید "حقوقم چقدره" یا "چقدر کار کردم"، جمع کارکرد حقوق را بگو
+- اگر پرسید "مانده حسابم چیه" یا "طلبم چقدره"، مانده حساب را بگو
+- اگر تاریخ یا ماه خاصی سوال کرد (مثلاً "در دی ماه")، از آمار ماهانه استفاده کن
 
 ═══════════════════════════════════════
 🗺️ مسیرهای مهم سایت
@@ -347,6 +356,7 @@ const SYSTEM_PROMPT = `تو منشی هوشمند و حرفه‌ای سایت ا
 - پروفایل کاربری: /profile
 - سفارشات من: /user/orders
 - پروژه‌های من: /user/projects
+- حسابکتاب و کارکرد: /personnel-accounting (برای مشاهده کامل کارکرد، حقوق، دریافتی‌ها و پرداختی‌ها)
 - آدرس‌های من: در بخش پروفایل
 - تنظیمات اعلان: /settings/notifications
 - نصب اپلیکیشن: /settings/install-app
@@ -1061,6 +1071,173 @@ ${renewalOrders > 0 ? `- سفارشات تجدید/تمدید: ${renewalOrders} 
   }
 }
 
+// تابع برای گرفتن اطلاعات کارکرد و حسابکتاب خود کاربر
+async function getUserWorkRecordsContext(supabase: any, userId: string): Promise<string> {
+  try {
+    // گرفتن پروفایل کاربر
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, phone_number')
+      .eq('user_id', userId)
+      .single();
+
+    if (!profile?.phone_number) {
+      return '';
+    }
+
+    // بررسی اینکه کاربر در HR ثبت شده است یا نه
+    const { data: hrEmployee } = await supabase
+      .from('hr_employees')
+      .select('id, full_name')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!hrEmployee) {
+      return '';
+    }
+
+    // گرفتن رکوردهای کارکرد کاربر
+    const { data: workRecords, error: workError } = await supabase
+      .from('daily_report_staff')
+      .select('*, daily_reports(report_date)')
+      .eq('staff_user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (workError || !workRecords || workRecords.length === 0) {
+      return `
+═══════════════════════════════════════
+📊 کارکرد و حسابکتاب شما
+═══════════════════════════════════════
+شما دسترسی به ماژول حسابکتاب و کارکرد پرسنل را دارید.
+اما متأسفانه هنوز سابقه کارکردی برای شما ثبت نشده است.
+`;
+    }
+
+    // گرفتن تنظیمات حقوق کاربر
+    const { data: salarySetting } = await supabase
+      .from('staff_salary_settings')
+      .select('base_daily_salary, overtime_rate_fraction')
+      .eq('staff_code', profile.phone_number)
+      .maybeSingle();
+
+    // محاسبه آمار
+    let totalPresent = 0;
+    let totalAbsent = 0;
+    let totalOvertime = 0;
+    let totalReceived = 0;
+    let totalSpent = 0;
+
+    // گروه‌بندی بر اساس ماه شمسی
+    const monthlyStats: Record<string, { present: number; absent: number; overtime: number; received: number; spent: number; dates: string[] }> = {};
+
+    workRecords.forEach((record: any) => {
+      if (record.work_status === 'حاضر') totalPresent++;
+      if (record.work_status === 'غایب') totalAbsent++;
+      totalOvertime += Number(record.overtime_hours) || 0;
+      totalReceived += Number(record.amount_received) || 0;
+      totalSpent += Number(record.amount_spent) || 0;
+
+      // تبدیل تاریخ به ماه شمسی
+      const reportDate = record.daily_reports?.report_date;
+      if (reportDate) {
+        const date = new Date(reportDate);
+        const persianDate = date.toLocaleDateString('fa-IR');
+        const parts = persianDate.split('/');
+        const monthKey = `${parts[0]}/${parts[1]}`; // سال/ماه
+        
+        if (!monthlyStats[monthKey]) {
+          monthlyStats[monthKey] = { present: 0, absent: 0, overtime: 0, received: 0, spent: 0, dates: [] };
+        }
+        
+        if (record.work_status === 'حاضر') monthlyStats[monthKey].present++;
+        if (record.work_status === 'غایب') monthlyStats[monthKey].absent++;
+        monthlyStats[monthKey].overtime += Number(record.overtime_hours) || 0;
+        monthlyStats[monthKey].received += Number(record.amount_received) || 0;
+        monthlyStats[monthKey].spent += Number(record.amount_spent) || 0;
+        monthlyStats[monthKey].dates.push(persianDate);
+      }
+    });
+
+    const balance = totalReceived - totalSpent;
+
+    // محاسبه کارکرد حقوق
+    let salaryEarnings = 0;
+    let overtimeEarnings = 0;
+    let salaryInfo = '';
+
+    if (salarySetting) {
+      const dailySalary = Number(salarySetting.base_daily_salary);
+      const overtimeFraction = Number(salarySetting.overtime_rate_fraction);
+      const overtimeDenominator = overtimeFraction > 0 ? Math.round(1 / overtimeFraction) : 6;
+      const hourlyOvertime = dailySalary / overtimeDenominator;
+
+      salaryEarnings = totalPresent * dailySalary;
+      overtimeEarnings = Math.round(totalOvertime * hourlyOvertime);
+
+      salaryInfo = `
+💰 کارکرد حقوق:
+- حقوق روزانه تعیین‌شده: ${dailySalary.toLocaleString('fa-IR')} تومان
+- ضریب اضافه‌کاری: ۱/${overtimeDenominator}
+- حقوق روزهای حضور (${totalPresent} روز): ${salaryEarnings.toLocaleString('fa-IR')} تومان
+- اضافه‌کاری (${totalOvertime} ساعت): ${overtimeEarnings.toLocaleString('fa-IR')} تومان
+- جمع کارکرد حقوق: ${(salaryEarnings + overtimeEarnings).toLocaleString('fa-IR')} تومان
+`;
+    } else {
+      salaryInfo = `
+💰 کارکرد حقوق:
+⚠️ تنظیمات حقوق برای شما ثبت نشده است. برای محاسبه کارکرد، مدیر باید تنظیمات حقوق شما را ثبت کند.
+`;
+    }
+
+    let context = `
+═══════════════════════════════════════
+📊 کارکرد و حسابکتاب شما (${profile.full_name || 'کاربر'})
+═══════════════════════════════════════
+
+📋 آمار کلی:
+- تعداد کل ثبت‌ها: ${workRecords.length} رکورد
+- روزهای حضور: ${totalPresent} روز
+- روزهای غیبت: ${totalAbsent} روز
+- ساعات اضافه‌کاری: ${totalOvertime} ساعت
+
+💵 خلاصه مالی:
+- کل دریافتی: ${totalReceived.toLocaleString('fa-IR')} تومان
+- کل پرداختی: ${totalSpent.toLocaleString('fa-IR')} تومان
+- مانده حساب: ${balance >= 0 ? '+' : ''}${balance.toLocaleString('fa-IR')} تومان (${balance >= 0 ? 'طلب از شرکت' : 'بدهی به شرکت'})
+
+${salaryInfo}
+
+📅 تفکیک ماهانه:`;
+
+    // نمایش آمار ماهانه
+    const sortedMonths = Object.keys(monthlyStats).sort().reverse();
+    sortedMonths.slice(0, 3).forEach(month => {
+      const stats = monthlyStats[month];
+      const monthName = getJalaliMonthName(parseInt(month.split('/')[1]));
+      context += `
+🗓️ ${monthName} ${month.split('/')[0]}:
+   - حضور: ${stats.present} روز | غیبت: ${stats.absent} روز | اضافه‌کاری: ${stats.overtime} ساعت
+   - دریافت: ${stats.received.toLocaleString('fa-IR')} | پرداخت: ${stats.spent.toLocaleString('fa-IR')} تومان`;
+    });
+
+    context += `
+
+⚠️ نکته: این اطلاعات از گزارشات روزانه استخراج شده است. برای مشاهده جزئیات کامل به بخش "حسابکتاب و کارکرد" در پروفایل خود مراجعه کنید.
+`;
+
+    return context;
+  } catch (error) {
+    console.error('Error getting user work records context:', error);
+    return '';
+  }
+}
+
+// تابع کمکی برای نام ماه‌های شمسی
+function getJalaliMonthName(month: number): string {
+  const months = ['', 'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+  return months[month] || '';
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -1093,6 +1270,12 @@ serve(async (req) => {
       // اطلاعات سفارشات کاربر (همیشه)
       const ordersContext = await getUserOrdersContext(supabase, userId);
       contextualPrompt += ordersContext;
+      
+      // اطلاعات کارکرد و حسابکتاب شخصی کاربر (همیشه برای کاربرانی که HR هستند)
+      const workRecordsContext = await getUserWorkRecordsContext(supabase, userId);
+      if (workRecordsContext) {
+        contextualPrompt += workRecordsContext;
+      }
       
       // بررسی دسترسی به ماژول‌ها
       if (moduleKeys.length > 0) {
