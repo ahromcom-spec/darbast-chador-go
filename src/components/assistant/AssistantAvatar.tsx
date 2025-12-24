@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useLocation } from 'react-router-dom';
 import assistantImage from '@/assets/assistant-avatar.png';
 
 type MessageContent = {
@@ -194,6 +195,7 @@ const getViewportSize = () => {
 };
 
 export function AssistantAvatar() {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -201,15 +203,17 @@ export function AssistantAvatar() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   
-  // Drag state - separate for avatar and chat panel
-  const [avatarPosition, setAvatarPosition] = useState(() => {
+  // محاسبه پوزیشن پیش‌فرض اواتار - پایین سمت چپ
+  const getDefaultAvatarPosition = useCallback(() => {
     const vp = getViewportSize();
     // Avatar (64px) + label (~24px) + gap (4px) = ~92px total height
-    // Position higher from bottom to avoid footer/ticker overlap and keep label visible
     const isMobile = vp.width < 640;
-    const bottomOffset = isMobile ? 180 : 200; // Increased to account for label
-    return { x: 24, y: vp.height - bottomOffset };
-  });
+    const bottomOffset = isMobile ? 140 : 160;
+    return { x: 16, y: vp.height - bottomOffset };
+  }, []);
+  
+  // Drag state - separate for avatar and chat panel
+  const [avatarPosition, setAvatarPosition] = useState(getDefaultAvatarPosition);
   const [chatPosition, setChatPosition] = useState({ x: 24, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingChat, setIsDraggingChat] = useState(false);
@@ -288,7 +292,11 @@ export function AssistantAvatar() {
     loadMessages();
   }, [user?.id]);
 
-  // Scroll to bottom when messages change (including during streaming)
+  // ریست پوزیشن اواتار به پیش‌فرض با هر تغییر صفحه
+  useEffect(() => {
+    setAvatarPosition(getDefaultAvatarPosition());
+  }, [location.pathname, getDefaultAvatarPosition]);
+
   // NOTE: ScrollArea ref points to Root; we must scroll the Viewport element.
   useEffect(() => {
     if (!isOpen) return;

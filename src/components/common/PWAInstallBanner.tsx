@@ -17,20 +17,19 @@ export function PWAInstallBanner() {
   const { toast } = useToast();
   const [show, setShow] = useState(false);
   const location = useLocation();
+  // محاسبه پوزیشن پیش‌فرض - پایین سمت راست
+  const getDefaultPosition = () => {
+    const vp = getViewportSize();
+    const bannerWidth = 200;
+    const bannerHeight = 70;
+    // در پایین سمت راست صفحه
+    const x = vp.width - bannerWidth - 16;
+    const y = vp.height - bannerHeight - 80; // بالاتر از فوتر
+    return { x, y };
+  };
 
   // Drag state
-  // Banner starts in the right half and bottom half of the screen
-  const [position, setPosition] = useState(() => {
-    const vp = getViewportSize();
-    const bannerWidth = 300;
-    const bannerHeight = 80;
-    // Ensure banner is in right half and bottom half
-    const minX = vp.width / 2;
-    const minY = vp.height / 2;
-    const x = Math.max(minX, vp.width - bannerWidth - 20);
-    const y = Math.max(minY, vp.height - bannerHeight - 100);
-    return { x, y };
-  });
+  const [position, setPosition] = useState(getDefaultPosition);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
@@ -63,24 +62,25 @@ export function PWAInstallBanner() {
     }
     
     setShow(shouldShow);
+    
+    // ریست پوزیشن به پیش‌فرض با هر تغییر صفحه
+    setPosition(getDefaultPosition());
   }, [location.pathname, isStandalone]);
 
   // Update position on resize
-  // Banner restricted to right half and bottom half of screen
+  // Banner restricted to bottom half of screen
   useEffect(() => {
     const handleResize = () => {
       const vp = getViewportSize();
-      const bannerWidth = bannerRef.current?.offsetWidth || 300;
-      const bannerHeight = bannerRef.current?.offsetHeight || 80;
-      // Banner restricted to right half of screen (width/2 to width - bannerWidth)
-      const minX = vp.width / 2;
-      const maxX = vp.width - bannerWidth - 20;
-      // Banner restricted to bottom half of screen
+      const bannerWidth = bannerRef.current?.offsetWidth || 200;
+      const bannerHeight = bannerRef.current?.offsetHeight || 70;
+      // فقط محدود به پایین صفحه
       const minY = vp.height / 2;
-      const maxY = vp.height - bannerHeight - 20;
+      const maxX = vp.width - bannerWidth - 8;
+      const maxY = vp.height - bannerHeight - 8;
       
       setPosition(prev => ({
-        x: Math.max(minX, Math.min(maxX, prev.x)),
+        x: Math.max(8, Math.min(maxX, prev.x)),
         y: Math.max(minY, Math.min(maxY, prev.y))
       }));
     };
@@ -153,18 +153,16 @@ export function PWAInstallBanner() {
     const deltaY = clientY - dragStartRef.current.y;
 
     const vp = getViewportSize();
-    const bannerWidth = bannerRef.current?.offsetWidth || 300;
-    const bannerHeight = bannerRef.current?.offsetHeight || 80;
+    const bannerWidth = bannerRef.current?.offsetWidth || 200;
+    const bannerHeight = bannerRef.current?.offsetHeight || 70;
 
-    // Banner restricted to right half of screen
-    const minX = vp.width / 2;
-    const maxX = vp.width - bannerWidth - 10;
-    // Banner restricted to bottom half of screen
+    // فقط محدود به پایین صفحه
     const minY = vp.height / 2;
-    const maxY = vp.height - bannerHeight - 10;
+    const maxX = vp.width - bannerWidth - 8;
+    const maxY = vp.height - bannerHeight - 8;
 
     // Calculate new position with bounds
-    const newX = Math.max(minX, Math.min(maxX, dragStartRef.current.posX + deltaX));
+    const newX = Math.max(8, Math.min(maxX, dragStartRef.current.posX + deltaX));
     const newY = Math.max(minY, Math.min(maxY, dragStartRef.current.posY + deltaY));
 
     setPosition({ x: newX, y: newY });
