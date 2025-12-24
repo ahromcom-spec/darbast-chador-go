@@ -28,8 +28,16 @@ export function PWAInstallBanner() {
     return { x, y };
   };
 
-  // Drag state
-  const [position, setPosition] = useState(getDefaultPosition);
+  // Drag state - شروع از سمت راست
+  const [position, setPosition] = useState(() => {
+    const vp = getViewportSize();
+    const bannerWidth = 320;
+    const bannerHeight = 70;
+    return { 
+      x: Math.max(16, vp.width - bannerWidth - 16), 
+      y: vp.height - bannerHeight - 80 
+    };
+  });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
@@ -63,8 +71,14 @@ export function PWAInstallBanner() {
     
     setShow(shouldShow);
     
-    // ریست پوزیشن به پیش‌فرض با هر تغییر صفحه
-    setPosition(getDefaultPosition());
+    // ریست پوزیشن به پیش‌فرض سمت راست با هر تغییر صفحه
+    const vp = getViewportSize();
+    const bannerWidth = 320;
+    const bannerHeight = 70;
+    setPosition({ 
+      x: Math.max(16, vp.width - bannerWidth - 16), 
+      y: vp.height - bannerHeight - 80 
+    });
   }, [location.pathname, isStandalone]);
 
   // Update position on resize
