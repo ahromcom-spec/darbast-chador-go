@@ -17,13 +17,13 @@ export function PWAInstallBanner() {
   const { toast } = useToast();
   const [show, setShow] = useState(false);
   const location = useLocation();
-  // محاسبه پوزیشن پیش‌فرض - پایین سمت راست
+  // محاسبه پوزیشن پیش‌فرض - وسط پایین صفحه
   const getDefaultPosition = () => {
     const vp = getViewportSize();
-    const bannerWidth = 200;
+    const bannerWidth = 320; // عرض تقریبی بنر
     const bannerHeight = 70;
-    // در پایین سمت راست صفحه
-    const x = vp.width - bannerWidth - 16;
+    // در وسط پایین صفحه
+    const x = (vp.width - bannerWidth) / 2;
     const y = vp.height - bannerHeight - 80; // بالاتر از فوتر
     return { x, y };
   };
