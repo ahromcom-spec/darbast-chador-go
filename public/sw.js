@@ -9,10 +9,12 @@ const SHELL_FILES = [
   '/manifest.webmanifest',
   '/manifest.json',
   '/ahrom-pwa-icon.png',
+  '/ahrom-pwa-icon-new.png',
   '/ahrom-app-icon.png',
   '/ahrom-logo.png',
   '/ahrom-logo-original.png'
 ];
+
 
 // حداکثر تعداد آیتم‌ها در کش Runtime
 const MAX_RUNTIME_CACHE_SIZE = 50;
