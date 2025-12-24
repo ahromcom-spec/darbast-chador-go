@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -6,10 +6,10 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { UserPlus, Loader2, CheckCircle, Phone, User, AlertCircle } from 'lucide-react';
+import { UserPlus, Loader2, CheckCircle, Phone, User, AlertCircle, UserCheck } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export default function SiteRegistrationModule() {
   const { user } = useAuth();
@@ -19,6 +19,8 @@ export default function SiteRegistrationModule() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [registeredInfo, setRegisteredInfo] = useState<{ phone: string; name: string } | null>(null);
+  const [existingUser, setExistingUser] = useState<{ name: string } | null>(null);
+  const [checkingPhone, setCheckingPhone] = useState(false);
 
   // بررسی دسترسی به ماژول
   useEffect(() => {
@@ -86,6 +88,46 @@ export default function SiteRegistrationModule() {
     raw = raw.replace(/[^0-9]/g, '');
     return raw;
   };
+
+  const debouncedPhone = useDebounce(phoneNumber, 500);
+
+  // بررسی وجود کاربر با شماره موبایل
+  const checkExistingUser = useCallback(async (phone: string) => {
+    const normalizedPhone = normalizePhone(phone);
+    
+    if (!/^09[0-9]{9}$/.test(normalizedPhone)) {
+      setExistingUser(null);
+      return;
+    }
+
+    setCheckingPhone(true);
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, user_id')
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle();
+
+      if (profile?.user_id) {
+        setExistingUser({ name: profile.full_name || 'کاربر' });
+      } else {
+        setExistingUser(null);
+      }
+    } catch (error) {
+      console.error('Error checking existing user:', error);
+      setExistingUser(null);
+    } finally {
+      setCheckingPhone(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (debouncedPhone) {
+      checkExistingUser(debouncedPhone);
+    } else {
+      setExistingUser(null);
+    }
+  }, [debouncedPhone, checkExistingUser]);
 
   const handleRegister = async () => {
     const normalizedPhone = normalizePhone(phoneNumber);
@@ -207,11 +249,25 @@ export default function SiteRegistrationModule() {
                 dir="ltr"
                 className="text-left"
               />
+              {checkingPhone && (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  در حال بررسی...
+                </div>
+              )}
+              {existingUser && !checkingPhone && (
+                <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 py-2">
+                  <UserCheck className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
+                    این شماره قبلاً با نام <strong>{existingUser.name}</strong> در سایت ثبت‌نام شده است.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             <Button
               onClick={handleRegister}
-              disabled={loading || !phoneNumber.trim() || !fullName.trim()}
+              disabled={loading || !phoneNumber.trim() || !fullName.trim() || !!existingUser}
               className="w-full gap-2"
               size="lg"
             >
