@@ -159,6 +159,19 @@
     @apply bg-background text-foreground font-vazir;
     direction: rtl;
     position: relative;
+    /* Prevent zooming on touch devices */
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  html {
+    /* Prevent zoom gestures */
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    -ms-touch-action: manipulation;
   }
 
 
