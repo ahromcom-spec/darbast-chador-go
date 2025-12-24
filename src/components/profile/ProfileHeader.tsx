@@ -1,13 +1,18 @@
-import { User, Shield, Crown, Briefcase, Star } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { User, Shield, Crown, Briefcase, Star, Camera, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ProfileHeaderProps {
   user: SupabaseUser;
   fullName: string;
   roles?: string[];
   phoneNumber?: string;
+  avatarUrl?: string | null;
+  onAvatarUpdate?: (url: string) => void;
 }
 
 // Transliteration map for Persian to English
@@ -82,8 +87,11 @@ const getRoleIcon = (role: string) => {
   }
 };
 
-export function ProfileHeader({ user, fullName, roles = [], phoneNumber }: ProfileHeaderProps) {
+export function ProfileHeader({ user, fullName, roles = [], phoneNumber, avatarUrl, onAvatarUpdate }: ProfileHeaderProps) {
   const username = generateUsername(fullName);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
   
   // Sort roles to show مدیر عامل first
   const sortedRoles = [...roles].sort((a, b) => {
@@ -91,6 +99,74 @@ export function ProfileHeader({ user, fullName, roles = [], phoneNumber }: Profi
     if (b === 'مدیر عامل') return 1;
     return 0;
   });
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('لطفاً یک فایل تصویر انتخاب کنید');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('حجم فایل نباید بیشتر از 5 مگابایت باشد');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `avatar.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      // Delete old avatar if exists
+      await supabase.storage.from('avatars').remove([filePath]);
+
+      // Upload new avatar
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Add timestamp to bust cache
+      const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
+
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: urlWithTimestamp })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setCurrentAvatarUrl(urlWithTimestamp);
+      onAvatarUpdate?.(urlWithTimestamp);
+      toast.success('عکس پروفایل با موفقیت بروزرسانی شد');
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast.error('خطا در بارگذاری تصویر: ' + (error.message || 'خطای ناشناخته'));
+    } finally {
+      setUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
   
   return (
     <Card className="mb-6 overflow-hidden">
@@ -105,17 +181,44 @@ export function ProfileHeader({ user, fullName, roles = [], phoneNumber }: Profi
       
       <CardHeader className="pb-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          {/* Avatar */}
-          <div className={`h-20 w-20 rounded-full flex items-center justify-center shrink-0 ${
-            roles.includes('مدیر عامل') 
-              ? 'bg-gradient-to-br from-amber-400 to-yellow-500 ring-4 ring-amber-200' 
-              : 'bg-primary/10'
-          }`}>
-            {roles.includes('مدیر عامل') ? (
-              <Crown className="h-10 w-10 text-white" />
-            ) : (
-              <User className="h-10 w-10 text-primary" />
-            )}
+          {/* Avatar with upload capability */}
+          <div className="relative group">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <div 
+              onClick={handleAvatarClick}
+              className={`h-20 w-20 rounded-full flex items-center justify-center shrink-0 cursor-pointer overflow-hidden transition-all hover:opacity-80 ${
+                roles.includes('مدیر عامل') 
+                  ? 'bg-gradient-to-br from-amber-400 to-yellow-500 ring-4 ring-amber-200' 
+                  : 'bg-primary/10 ring-2 ring-primary/20'
+              }`}
+            >
+              {uploading ? (
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              ) : currentAvatarUrl ? (
+                <img 
+                  src={currentAvatarUrl} 
+                  alt={fullName || 'پروفایل کاربر'}
+                  className="h-full w-full object-cover"
+                />
+              ) : roles.includes('مدیر عامل') ? (
+                <Crown className="h-10 w-10 text-white" />
+              ) : (
+                <User className="h-10 w-10 text-primary" />
+              )}
+            </div>
+            {/* Camera overlay on hover */}
+            <div 
+              onClick={handleAvatarClick}
+              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              <Camera className="h-6 w-6 text-white" />
+            </div>
           </div>
           
           {/* User Info */}
