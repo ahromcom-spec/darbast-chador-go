@@ -145,11 +145,13 @@ export function ProfileHeader({ user, fullName, roles = [], phoneNumber, avatarU
       // Add timestamp to bust cache
       const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
 
-      // Update profile with new avatar URL
+      // Update/Insert profile with new avatar URL (handles missing profile row)
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: urlWithTimestamp })
-        .eq('user_id', user.id);
+        .upsert(
+          { user_id: user.id, avatar_url: urlWithTimestamp },
+          { onConflict: 'user_id' }
+        );
 
       if (updateError) throw updateError;
 
