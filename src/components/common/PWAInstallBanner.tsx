@@ -1,8 +1,9 @@
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
+import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 // Get viewport size
@@ -13,9 +14,9 @@ const getViewportSize = () => ({
 
 export function PWAInstallBanner() {
   const { canInstall, isStandalone, promptInstall } = usePWAInstall();
+  const { toast } = useToast();
   const [show, setShow] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
 
   // Drag state
   // Banner starts in the right half and bottom half of the screen
@@ -99,7 +100,7 @@ export function PWAInstallBanner() {
   const handleInstall = async () => {
     // اول سعی کن از پرامپت ذخیره شده استفاده کنی
     const promptEvent = (window as any).__deferredPrompt;
-    
+
     if (promptEvent && typeof promptEvent.prompt === 'function') {
       try {
         await promptEvent.prompt();
@@ -113,7 +114,7 @@ export function PWAInstallBanner() {
         console.error('PWA install prompt failed:', err);
       }
     }
-    
+
     // اگر پرامپت hook در دسترس باشد
     if (canInstall) {
       const result = await promptInstall();
@@ -122,9 +123,13 @@ export function PWAInstallBanner() {
       }
       return;
     }
-    
-    // اگر هیچکدام در دسترس نبود، به صفحه راهنما برو
-    navigate('/settings/install-app');
+
+    // اگر هنوز شرایط نصب فراهم نشده باشد، کاربر را بی‌دلیل به راهنما نبریم
+    toast({
+      title: 'نصب در ویندوز',
+      description:
+        'اگر آیکون نصب در نوار آدرس مرورگر Edge/Chrome نمایش داده می‌شود روی آن بزنید. اگر دیده نمی‌شود، یک‌بار صفحه را رفرش کنید.'
+    });
   };
 
   // Drag handlers
