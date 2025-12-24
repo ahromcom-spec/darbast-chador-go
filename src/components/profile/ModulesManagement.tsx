@@ -63,6 +63,14 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-purple-600',
     bgColor: 'bg-purple-50',
   },
+  {
+    key: 'site_registration',
+    name: 'ماژول ثبت‌نام در سایت اهرم',
+    description: 'ثبت‌نام کاربران جدید بدون نیاز به کد تایید',
+    href: '/site-registration',
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-50',
+  },
 ];
 
 export function ModulesManagement() {
