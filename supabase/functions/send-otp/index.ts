@@ -241,9 +241,10 @@ serve(async (req) => {
     const hasWWW = safeHost.startsWith('www.');
     const apexHost = hasWWW ? safeHost.slice(4) : safeHost;
     
-    // Format message: "اهرُم: ##### کد تایید @ahrom.ir #12345"
-    // The binding at the end enables Chrome/Android to auto-fill the code
-    const message = `اهرُم: ${code} کد تایید @ahrom.ir #${code}`;
+    // Format message with two lines for better readability:
+    // Line 1: "اهرم: ##### کد تایید"
+    // Line 2+3: blank line then Web OTP binding "@ahrom.ir #12345"
+    const message = `اهرم: ${code} کد تایید\n\n@ahrom.ir #${code}`;
     
     const rawSender = Deno.env.get('PARSGREEN_SENDER') || '';
     const senderNumber = /^[0-9]+$/.test(rawSender) ? rawSender : '90000319';
@@ -293,7 +294,7 @@ serve(async (req) => {
         console.log('SMS sent successfully via Parsgreen');
       } else if (result.containsFilteration) {
         // 2) Fallback: send simple message without Web OTP binding
-        const fallbackMessage = `اهرُم: ${code} کد تایید`;
+        const fallbackMessage = `اهرم: ${code} کد تایید`;
         const result2 = await sendOnce(fallbackMessage);
         if (result2.okFormat) {
           smsSent = true;
