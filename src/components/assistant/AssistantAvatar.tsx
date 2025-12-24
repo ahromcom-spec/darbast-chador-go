@@ -854,7 +854,7 @@ export function AssistantAvatar() {
           </button>
           <span className="absolute bottom-1 -right-0.5 w-[18px] h-[18px] bg-green-500 rounded-full border-2 border-background animate-pulse" />
         </div>
-        <span className="text-xs font-medium text-amber-600 bg-background/80 px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm whitespace-nowrap -mt-1">
+        <span className="text-xs font-medium text-[#1e3a5f] bg-background/80 px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm whitespace-nowrap -mt-1">
           دستیار اهرم
         </span>
       </div>
