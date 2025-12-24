@@ -19,6 +19,14 @@ const phoneSchema = z.object({
     .regex(/^09\d{9}$/, { message: 'فرمت صحیح: 09123456789' }),
 });
 
+const toAsciiDigits = (input: string) => {
+  const persian = '۰۱۲۳۴۵۶۷۸۹';
+  const arabic = '٠١٢٣٤٥٦٧٨٩';
+  return input
+    .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)));
+};
+
 export default function Login() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -88,16 +96,18 @@ export default function Login() {
     return () => ac.abort();
   }, [step, phoneNumber]);
 
-  // بررسی وجود شماره در لیست سفید
+  // بررسی وجود شماره در لیست سفید (از بک‌اند، برای اینکه وابسته به دسترسی کاربر نباشد)
   const checkWhitelist = async (phone: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase
-        .from('phone_whitelist')
-        .select('phone_number')
-        .eq('phone_number', phone)
-        .maybeSingle();
-      
-      return !!data && !error;
+      const { data, error } = await supabase.functions.invoke('verify-otp', {
+        body: {
+          phone_number: phone,
+          action: 'check_whitelist',
+        },
+      });
+
+      if (error || data?.error) return false;
+      return !!data?.is_whitelisted;
     } catch {
       return false;
     }
@@ -395,7 +405,7 @@ const handleResendOTP = async () => {
                       type="tel"
                       placeholder="09123456789"
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      onChange={(e) => setPhoneNumber(toAsciiDigits(e.target.value))}
                       maxLength={11}
                       dir="ltr"
                       className={`h-12 text-lg text-center ${errors.phone ? 'border-destructive' : ''}`}
