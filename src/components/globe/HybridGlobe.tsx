@@ -10,7 +10,9 @@ import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { OptimizedImage } from './OptimizedImage';
 import { ImageZoomModal } from '@/components/common/ImageZoomModal';
+import { MobileProjectPanel } from './MobileProjectPanel';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
 interface HierarchyMedia {
@@ -75,7 +77,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [mobileSelectedProject, setMobileSelectedProject] = useState<ProjectWithMedia | null>(null);
 
+  const isMobile = useIsMobile();
   const { projects: allProjects, loading, refetch } = useProjectsHierarchy();
   
   // مختصات مرکز استان قم
@@ -2410,13 +2414,24 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               setSelectedProject(project);
               setSelectedOrderForUpload(null);
               setSelectedMapLocation(null);
-              marker.openPopup();
+              // در موبایل از پنل تمام‌صفحه استفاده می‌کنیم
+              if (window.innerWidth < 768) {
+                setMobileSelectedProject(project);
+              } else {
+                marker.openPopup();
+              }
             }, 500);
           } else {
-            // اگر cluster expand شده یا پروژه تکی است، مستقیماً popup را باز کن
+            // اگر cluster expand شده یا پروژه تکی است
             setSelectedProject(project);
             setSelectedOrderForUpload(null);
             setSelectedMapLocation(null);
+            // در موبایل از پنل تمام‌صفحه استفاده می‌کنیم
+            if (window.innerWidth < 768) {
+              setMobileSelectedProject(project);
+            } else {
+              marker.openPopup();
+            }
           }
         });
 
@@ -2672,6 +2687,35 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* پنل تمام‌صفحه موبایل برای نمایش سفارشات پروژه */}
+      {mobileSelectedProject && (
+        <MobileProjectPanel
+          project={mobileSelectedProject}
+          onClose={() => {
+            setMobileSelectedProject(null);
+            setSelectedProject(null);
+          }}
+          onDeleteOrder={(orderId) => {
+            setDeleteOrderId(orderId);
+          }}
+          onDeleteProject={(projectId) => {
+            setDeleteProjectId(projectId);
+          }}
+          onAddMedia={(orderId) => {
+            setSelectedOrderForUpload(orderId);
+            setMobileSelectedProject(null);
+          }}
+          onViewImage={(images, index) => {
+            setZoomedImages(images);
+            setZoomedImageIndex(index);
+            setZoomedImage(images[index]);
+          }}
+          onViewVideo={(url) => {
+            window.open(url, '_blank');
+          }}
+        />
+      )}
     </div>
   );
 }
