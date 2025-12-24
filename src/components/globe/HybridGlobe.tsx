@@ -1841,21 +1841,36 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             </div>
           `;
 
+        // دکمه بستن برای موبایل - نمایش فقط در صفحات موبایل
+        const mobileCloseBtn = `
+          <button 
+            class="mobile-popup-close-btn popup-close-trigger" 
+            onclick="event.stopPropagation();"
+            aria-label="بستن"
+          >
+            <svg style="width:24px;height:24px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        `;
+
         const popupContent = `
-          <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px; max-width: 340px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
+          ${mobileCloseBtn}
+          <div class="mobile-popup-inner" style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
             ${locationHeader}
-            <strong style="font-size: 13px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
-            ${project.locations?.title ? `<div style="font-size: 12px; color: #667eea; font-weight: 600; margin-top: 6px; display: block;">${project.locations.title}</div>` : ''}
-            <span style="font-size: 11px; color: #6b7280; margin-top: 4px; display: block;">${project.locations?.address_line || ''}</span>
-            ${count > 1 ? `<div style="margin-top:8px;padding:5px 8px;background:#f3f4f6;border-radius:6px;text-align:center;font-size:10px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
+            <strong style="font-size: 15px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
+            ${project.locations?.title ? `<div style="font-size: 14px; color: #667eea; font-weight: 600; margin-top: 8px; display: block;">${project.locations.title}</div>` : ''}
+            <span style="font-size: 13px; color: #6b7280; margin-top: 6px; display: block;">${project.locations?.address_line || ''}</span>
+            ${count > 1 ? `<div style="margin-top:10px;padding:6px 10px;background:#f3f4f6;border-radius:8px;text-align:center;font-size:12px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
             ${ordersHTML}
           </div>
         `;
         
         marker.bindPopup(popupContent, {
-          maxWidth: 360,
+          maxWidth: window.innerWidth < 768 ? window.innerWidth : 360,
           className: 'custom-popup',
-          autoPan: false // جلوگیری از جابجایی خودکار نقشه هنگام باز شدن کادر
+          autoPan: false, // جلوگیری از جابجایی خودکار نقشه هنگام باز شدن کادر
+          closeButton: false // استفاده از دکمه سفارشی بستن
         });
 
         // اتصال event listeners بعد از باز شدن popup
@@ -1865,6 +1880,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           
           const popupElement = popup.getElement();
           if (!popupElement) return;
+          
+          // هندلر دکمه بستن برای موبایل
+          const closeBtn = popupElement.querySelector('.popup-close-trigger');
+          if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              marker.closePopup();
+            });
+          }
           
           // هندلر برای سفارشات (کلیک + گالری)
           if (project.orders) {
