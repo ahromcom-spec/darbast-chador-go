@@ -243,7 +243,7 @@ serve(async (req) => {
     
     // Format message: "اهرُم: ##### کد تایید @ahrom.ir #12345"
     // The binding at the end enables Chrome/Android to auto-fill the code
-    const message = `اهرُم: ${code} کد تایید @${apexHost} #${code}`;
+    const message = `اهرُم: ${code} کد تایید @ahrom.ir #${code}`;
     
     const rawSender = Deno.env.get('PARSGREEN_SENDER') || '';
     const senderNumber = /^[0-9]+$/.test(rawSender) ? rawSender : '90000319';
