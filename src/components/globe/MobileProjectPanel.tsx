@@ -116,9 +116,9 @@ export function MobileProjectPanel({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="text-primary-foreground hover:bg-white/20 h-12 w-12 rounded-full"
+            className="bg-white/20 hover:bg-white/40 text-white h-14 w-14 rounded-full shadow-lg border-2 border-white/50"
           >
-            <X className="h-6 w-6" />
+            <X className="h-8 w-8" strokeWidth={3} />
           </Button>
           <div className="flex-1 text-center px-2 min-w-0">
             <h2 className="text-base font-bold leading-tight break-words">
