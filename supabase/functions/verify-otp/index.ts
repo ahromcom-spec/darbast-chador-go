@@ -15,9 +15,9 @@ serve(async (req) => {
   }
 
   try {
-    const { phone_number, code, full_name, is_registration, is_password_login } = await req.json();
+    const { phone_number, code, full_name, is_registration, is_password_login, action } = await req.json();
 
-    if (!phone_number || !code) {
+    if (!phone_number || (action !== 'check_whitelist' && !code)) {
       return new Response(
         JSON.stringify({ error: 'شماره تلفن و کد/رمز عبور الزامی است' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -27,14 +27,22 @@ serve(async (req) => {
     // Normalize to Iranian mobile format: 09XXXXXXXXX (same as send-otp)
     const normalizeIranPhone = (input: string) => {
       // Security: Limit input length to prevent memory exhaustion
-      if (input.length > 20) return '';
-      
-      let raw = input.slice(0, 20).replace(/[^0-9]/g, '');
+      if (input.length > 40) return '';
+
+      const persian = '۰۱۲۳۴۵۶۷۸۹';
+      const arabic = '٠١٢٣٤٥٦٧٨٩';
+      const normalizedDigits = input
+        .slice(0, 40)
+        .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
+        .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)));
+
+      let raw = normalizedDigits.replace(/[^0-9+]/g, '');
       if (raw.startsWith('0098')) raw = '0' + raw.slice(4);
       else if (raw.startsWith('098')) raw = '0' + raw.slice(3);
       else if (raw.startsWith('98')) raw = '0' + raw.slice(2);
       else if (raw.startsWith('+98')) raw = '0' + raw.slice(3);
       if (raw.length === 10 && raw.startsWith('9')) raw = '0' + raw;
+      raw = raw.replace(/[^0-9]/g, '');
       return raw;
     };
 
@@ -81,15 +89,26 @@ serve(async (req) => {
 
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
-    // بررسی وجود در لیست سفید
-    const { data: whitelistData } = await supabase
+    // بررسی وجود در لیست سفید (با نرمال‌سازی برای جلوگیری از اختلاف فرمت)
+    const { data: whitelistRows } = await supabase
       .from('phone_whitelist')
       .select('phone_number, allowed_roles')
-      .eq('phone_number', normalizedPhone)
-      .maybeSingle();
+      .limit(1000);
+
+    const whitelistData = (whitelistRows ?? []).find((row: any) => {
+      const rowPhone = typeof row?.phone_number === 'string' ? row.phone_number : '';
+      return normalizeIranPhone(rowPhone) === normalizedPhone;
+    }) ?? null;
 
     const isWhitelistedPhone = !!whitelistData;
 
+    // فقط برای تصمیم‌گیری UI (قبل از ورود) — بدون افشای لیست یا نقش‌ها
+    if (action === 'check_whitelist') {
+      return new Response(
+        JSON.stringify({ success: true, is_whitelisted: isWhitelistedPhone }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     // اگر درخواست ورود با رمز عبور است
     if (is_password_login) {
       // فقط شماره‌های لیست سفید مجاز به ورود با رمز عبور هستند
