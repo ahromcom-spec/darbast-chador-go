@@ -1881,6 +1881,25 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           const popupElement = popup.getElement();
           if (!popupElement) return;
           
+          // اضافه کردن کلاس fullscreen برای موبایل
+          const isMobile = window.innerWidth < 768;
+          if (isMobile) {
+            popupElement.classList.add('mobile-fullscreen-popup');
+            // اطمینان از اینکه content-wrapper هم استایل درست می‌گیرد
+            const wrapper = popupElement.querySelector('.leaflet-popup-content-wrapper');
+            if (wrapper) {
+              (wrapper as HTMLElement).style.cssText = 'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;margin:0!important;padding:0!important;border-radius:0!important;background:#fff!important;overflow:hidden!important;';
+            }
+            const content = popupElement.querySelector('.leaflet-popup-content');
+            if (content) {
+              (content as HTMLElement).style.cssText = 'width:100vw!important;height:100vh!important;height:100dvh!important;margin:0!important;padding:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;background:#fff!important;';
+            }
+            const tip = popupElement.querySelector('.leaflet-popup-tip-container');
+            if (tip) {
+              (tip as HTMLElement).style.display = 'none';
+            }
+          }
+          
           // هندلر دکمه بستن برای موبایل
           const closeBtn = popupElement.querySelector('.popup-close-trigger');
           if (closeBtn) {
