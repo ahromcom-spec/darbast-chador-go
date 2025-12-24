@@ -124,11 +124,14 @@ export function PWAInstallBanner() {
       return;
     }
 
-    // اگر هنوز شرایط نصب فراهم نشده باشد، کاربر را بی‌دلیل به راهنما نبریم
+    // اگر هنوز شرایط نصب فراهم نشده باشد، پیام مناسب بده
+    const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+
     toast({
-      title: 'نصب در ویندوز',
-      description:
-        'اگر آیکون نصب در نوار آدرس مرورگر Edge/Chrome نمایش داده می‌شود روی آن بزنید. اگر دیده نمی‌شود، یک‌بار صفحه را رفرش کنید.'
+      title: isFirefox ? 'نصب در فایرفاکس' : 'نصب در ویندوز',
+      description: isFirefox
+        ? 'مرورگر Firefox در ویندوز نصب مستقیم برنامه (PWA) را پشتیبانی نمی‌کند. لطفاً با Chrome یا Edge امتحان کنید.'
+        : 'اگر آیکون نصب در نوار آدرس مرورگر Edge/Chrome نمایش داده می‌شود روی آن بزنید. اگر دیده نمی‌شود، یک‌بار صفحه را رفرش کنید.'
     });
   };
 
