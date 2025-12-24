@@ -97,15 +97,34 @@ export function PWAInstallBanner() {
   };
 
   const handleInstall = async () => {
+    // اول سعی کن از پرامپت ذخیره شده استفاده کنی
+    const promptEvent = (window as any).__deferredPrompt;
+    
+    if (promptEvent && typeof promptEvent.prompt === 'function') {
+      try {
+        await promptEvent.prompt();
+        const choiceResult = await promptEvent.userChoice;
+        (window as any).__deferredPrompt = null;
+        if (choiceResult.outcome === 'accepted') {
+          setShow(false);
+        }
+        return;
+      } catch (err) {
+        console.error('PWA install prompt failed:', err);
+      }
+    }
+    
+    // اگر پرامپت hook در دسترس باشد
     if (canInstall) {
       const result = await promptInstall();
       if (result.outcome === 'accepted') {
         setShow(false);
       }
-    } else {
-      // اگر پرامپت مستقیم در دسترس نباشد، کاربر را به صفحه راهنمای نصب ببریم
-      navigate('/settings/install-app');
+      return;
     }
+    
+    // اگر هیچکدام در دسترس نبود، به صفحه راهنما برو
+    navigate('/settings/install-app');
   };
 
   // Drag handlers
