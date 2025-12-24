@@ -387,4 +387,105 @@
   .leaflet-control {
     z-index: 5 !important;
   }
+
+  /* Full-screen popup for mobile devices */
+  @media (max-width: 768px) {
+    .custom-popup.leaflet-popup {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      margin: 0 !important;
+      transform: none !important;
+      z-index: 9999 !important;
+    }
+
+    .custom-popup .leaflet-popup-content-wrapper {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      box-shadow: none !important;
+    }
+
+    .custom-popup .leaflet-popup-content {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 100% !important;
+      max-height: 100vh !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+
+    .custom-popup .leaflet-popup-tip-container {
+      display: none !important;
+    }
+
+    .custom-popup .leaflet-popup-close-button {
+      display: none !important;
+    }
+
+    /* Style for the custom mobile close button */
+    .mobile-popup-close-btn {
+      position: fixed !important;
+      top: 12px !important;
+      left: 12px !important;
+      z-index: 10001 !important;
+      width: 44px !important;
+      height: 44px !important;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      color: white !important;
+      border: none !important;
+      border-radius: 50% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+      transition: all 0.2s ease !important;
+    }
+
+    .mobile-popup-close-btn:active {
+      transform: scale(0.95) !important;
+    }
+
+    /* Ensure popup inner content has proper padding on mobile */
+    .custom-popup .mobile-popup-inner {
+      padding: 70px 16px 24px 16px !important;
+      min-height: 100% !important;
+    }
+  }
+
+  /* Desktop popup styles */
+  @media (min-width: 769px) {
+    .custom-popup .leaflet-popup-content-wrapper {
+      background: white;
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .custom-popup .leaflet-popup-content {
+      margin: 0;
+    }
+
+    .mobile-popup-close-btn {
+      display: none !important;
+    }
+  }
 }
