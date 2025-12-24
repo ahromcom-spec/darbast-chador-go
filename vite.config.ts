@@ -15,9 +15,8 @@ export default defineConfig(({ mode }) => ({
     react(), 
     mode === "development" && componentTagger(),
     VitePWA({
-      disable: true, // موقتاً کاملاً غیرفعال
-      injectRegister: false,
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
       includeAssets: ['ahrom-pwa-icon.png', 'ahrom-app-icon.png', 'ahrom-logo.png'],
       manifest: {
         id: '/',
