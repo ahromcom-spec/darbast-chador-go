@@ -1561,7 +1561,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
         const marker = L.marker([lat, lng], { 
           icon: iconToUse,
-          opacity: count > 1 ? (expandedClusters.has(clusterKey) ? 1 : 0.85 - (index * 0.12)) : 0 // در حالت جمع شده، تراکم قابل مشاهده با کاهش opacity
+          opacity: count > 1 ? (expandedClusters.has(clusterKey) ? 1 : 0.85 - (index * 0.12)) : 1 // پروژه‌های تکی همیشه قابل مشاهده
         }).addTo(mapRef.current!);
 
         // ذخیره شناسه پروژه و اطلاعات cluster روی مارکر
