@@ -120,12 +120,12 @@ export function MobileProjectPanel({
           >
             <X className="h-6 w-6" />
           </Button>
-          <div className="flex-1 text-center px-4">
-            <h2 className="text-lg font-bold truncate">
+          <div className="flex-1 text-center px-2 min-w-0">
+            <h2 className="text-base font-bold leading-tight break-words">
               {project.title || 'پروژه'}
             </h2>
             {project.locations?.title && (
-              <p className="text-sm opacity-90 truncate">
+              <p className="text-sm opacity-90 mt-1">
                 {project.locations.title}
               </p>
             )}
