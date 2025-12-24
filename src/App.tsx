@@ -44,6 +44,7 @@ const PaymentHistory = lazy(() => import("@/pages/ceo/PaymentHistory"));
 const DailyReportModule = lazy(() => import("@/pages/ceo/DailyReportModule"));
 const HRManagementModule = lazy(() => import("@/pages/ceo/HRManagementModule"));
 const PersonnelAccountingModule = lazy(() => import("@/pages/ceo/PersonnelAccountingModule"));
+const SiteRegistrationModule = lazy(() => import("@/pages/ceo/SiteRegistrationModule"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -313,6 +314,12 @@ const App = () => {
               <Route path="/personnel-accounting" element={
                 <ProtectedRoute>
                   <PersonnelAccountingModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر جداگانه برای ماژول ثبت‌نام در سایت اهرم */}
+              <Route path="/site-registration" element={
+                <ProtectedRoute>
+                  <SiteRegistrationModule />
                 </ProtectedRoute>
               } />
               <Route path="/executive" element={

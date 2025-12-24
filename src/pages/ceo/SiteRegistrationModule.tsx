@@ -1,0 +1,235 @@
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { UserPlus, Loader2, CheckCircle, Phone, User, AlertCircle } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+export default function SiteRegistrationModule() {
+  const { user } = useAuth();
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [registeredInfo, setRegisteredInfo] = useState<{ phone: string; name: string } | null>(null);
+
+  // بررسی دسترسی به ماژول
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!user) {
+        setHasAccess(false);
+        return;
+      }
+
+      try {
+        // بررسی نقش CEO یا GM
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .in('role', ['ceo', 'general_manager', 'admin']);
+
+        if (roles && roles.length > 0) {
+          setHasAccess(true);
+          return;
+        }
+
+        // بررسی اختصاص ماژول
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('phone_number')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profile?.phone_number) {
+          const { data: assignment } = await supabase
+            .from('module_assignments')
+            .select('id')
+            .eq('module_key', 'site_registration')
+            .eq('assigned_phone_number', profile.phone_number)
+            .eq('is_active', true)
+            .single();
+
+          setHasAccess(!!assignment);
+        } else {
+          setHasAccess(false);
+        }
+      } catch (error) {
+        console.error('Error checking access:', error);
+        setHasAccess(false);
+      }
+    };
+
+    checkAccess();
+  }, [user]);
+
+  const normalizePhone = (phone: string) => {
+    const persian = '۰۱۲۳۴۵۶۷۸۹';
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    let normalized = phone
+      .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
+      .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)));
+    
+    let raw = normalized.replace(/[^0-9+]/g, '');
+    if (raw.startsWith('0098')) raw = '0' + raw.slice(4);
+    else if (raw.startsWith('098')) raw = '0' + raw.slice(3);
+    else if (raw.startsWith('98')) raw = '0' + raw.slice(2);
+    else if (raw.startsWith('+98')) raw = '0' + raw.slice(3);
+    if (raw.length === 10 && raw.startsWith('9')) raw = '0' + raw;
+    raw = raw.replace(/[^0-9]/g, '');
+    return raw;
+  };
+
+  const handleRegister = async () => {
+    const normalizedPhone = normalizePhone(phoneNumber);
+    
+    if (!/^09[0-9]{9}$/.test(normalizedPhone)) {
+      toast.error('شماره موبایل باید با 09 شروع شود و 11 رقم باشد');
+      return;
+    }
+
+    if (!fullName.trim()) {
+      toast.error('لطفاً نام و نام خانوادگی را وارد کنید');
+      return;
+    }
+
+    setLoading(true);
+    setSuccess(false);
+
+    try {
+      // فراخوانی edge function برای ثبت‌نام بدون OTP
+      const { data, error } = await supabase.functions.invoke('register-without-otp', {
+        body: {
+          phone_number: normalizedPhone,
+          full_name: fullName.trim(),
+          registered_by: user?.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      setSuccess(true);
+      setRegisteredInfo({ phone: normalizedPhone, name: fullName.trim() });
+      toast.success('کاربر با موفقیت ثبت‌نام شد');
+      setPhoneNumber('');
+      setFullName('');
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      toast.error(error.message || 'خطا در ثبت‌نام کاربر');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (hasAccess === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <div className="container mx-auto p-4 md:p-6 max-w-2xl">
+      <Card className="border-2 border-teal-500/30 shadow-lg">
+        <CardHeader className="text-center pb-2">
+          <div className="mx-auto p-3 rounded-full bg-teal-500/10 w-fit mb-3">
+            <UserPlus className="h-8 w-8 text-teal-600" />
+          </div>
+          <CardTitle className="text-xl md:text-2xl">ثبت‌نام در سایت اهرم</CardTitle>
+          <CardDescription className="mt-2">
+            ثبت‌نام کاربر جدید بدون نیاز به ارسال کد تایید
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-6 pt-4">
+          <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
+              توجه: با استفاده از این ماژول، کاربر مستقیماً در سایت ثبت‌نام می‌شود و کد تایید به شماره موبایل ارسال نمی‌شود.
+            </AlertDescription>
+          </Alert>
+
+          {success && registeredInfo && (
+            <Alert className="bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                کاربر <strong>{registeredInfo.name}</strong> با شماره{' '}
+                <span dir="ltr" className="font-mono">{registeredInfo.phone}</span>{' '}
+                با موفقیت ثبت‌نام شد.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                نام و نام خانوادگی
+              </Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="مثال: علی رضایی"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="text-right"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber" className="flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                شماره موبایل
+              </Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                placeholder="مثال: 09123456789"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                dir="ltr"
+                className="text-left"
+              />
+            </div>
+
+            <Button
+              onClick={handleRegister}
+              disabled={loading || !phoneNumber.trim() || !fullName.trim()}
+              className="w-full gap-2"
+              size="lg"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  در حال ثبت‌نام...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-5 w-5" />
+                  ثبت‌نام کاربر
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
