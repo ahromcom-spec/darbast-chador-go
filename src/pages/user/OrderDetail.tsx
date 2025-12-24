@@ -65,6 +65,7 @@ import { useProjectRatings, RatingCriteria } from "@/hooks/useRatings";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { z } from "zod";
 import { formatPersianDate, formatPersianDateTime, formatPersianDateTimeFull } from "@/lib/dateUtils";
 
@@ -201,6 +202,8 @@ export default function OrderDetail() {
   const [isOrderDetailsExpanded, setIsOrderDetailsExpanded] = useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
   const [isConfirmingPrice, setIsConfirmingPrice] = useState(false);
+  const [showAdvancePayment, setShowAdvancePayment] = useState(false);
+  const [advancePaymentAmount, setAdvancePaymentAmount] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -1632,88 +1635,260 @@ export default function OrderDetail() {
                      ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0) && 
                      !order.payment_confirmed_at &&
                      (!isExpertPricingRequest || customerHasConfirmedPrice) && (
-                      <div className="pt-4 border-t border-emerald-200 dark:border-emerald-800">
-                        <Button 
-                          className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-                          size="lg"
-                          onClick={async () => {
-                            const baseAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0;
-                            const paymentAmount = baseAmount + approvedRepairCost;
-                            if (!paymentAmount || paymentAmount <= 0) {
-                              toast({
-                                title: 'خطا',
-                                description: 'مبلغ پرداخت مشخص نیست',
-                                variant: 'destructive'
-                              });
-                              return;
-                            }
-                            
-                            try {
-                              toast({
-                                title: 'در حال اتصال به درگاه پرداخت',
-                                description: 'لطفاً صبر کنید...'
-                              });
-                              
-                              const { data, error } = await supabase.functions.invoke('zarinpal-payment', {
-                                body: {
-                                  order_id: order.id,
-                                  amount: paymentAmount,
-                                  description: `پرداخت سفارش ${order.code}${approvedRepairCost > 0 ? ' (شامل هزینه تعمیر)' : ''}`
-                                }
-                              });
-                              
-                              if (error) {
-                                console.error('Supabase function error:', error);
-                                
-                                if (error instanceof FunctionsHttpError) {
-                                  try {
-                                    const errorDetails = await error.context.json();
-                                    const gatewayMessage =
-                                      typeof errorDetails === 'object' && errorDetails !== null
-                                        ? (errorDetails.error || errorDetails.message || 'خطای ناشناخته از درگاه پرداخت')
-                                        : 'خطای ناشناخته از درگاه پرداخت';
-                                    
-                                    toast({
-                                      title: 'خطا در اتصال به درگاه',
-                                      description: gatewayMessage,
-                                      variant: 'destructive'
-                                    });
-                                  } catch (parseError) {
-                                    toast({
-                                      title: 'خطا در اتصال به درگاه',
-                                      description: 'پاسخی نامعتبر از درگاه پرداخت دریافت شد',
-                                      variant: 'destructive'
-                                    });
-                                  }
-                                } else {
-                                  toast({
-                                    title: 'خطا در اتصال به درگاه',
-                                    description: 'لطفاً مجدداً تلاش کنید',
-                                    variant: 'destructive'
-                                  });
-                                }
+                      <div className="pt-4 border-t border-emerald-200 dark:border-emerald-800 space-y-4">
+                        {/* دکمه‌های انتخاب نوع پرداخت */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button 
+                            className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            size="lg"
+                            onClick={async () => {
+                              const baseAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0;
+                              const paymentAmount = baseAmount + approvedRepairCost;
+                              if (!paymentAmount || paymentAmount <= 0) {
+                                toast({
+                                  title: 'خطا',
+                                  description: 'مبلغ پرداخت مشخص نیست',
+                                  variant: 'destructive'
+                                });
                                 return;
                               }
                               
-                              if (data?.payment_url) {
-                                window.location.href = data.payment_url;
-                              } else {
-                                throw new Error('URL پرداخت دریافت نشد');
+                              try {
+                                toast({
+                                  title: 'در حال اتصال به درگاه پرداخت',
+                                  description: 'لطفاً صبر کنید...'
+                                });
+                                
+                                const { data, error } = await supabase.functions.invoke('zarinpal-payment', {
+                                  body: {
+                                    order_id: order.id,
+                                    amount: paymentAmount,
+                                    description: `پرداخت کامل سفارش ${order.code}${approvedRepairCost > 0 ? ' (شامل هزینه تعمیر)' : ''}`
+                                  }
+                                });
+                                
+                                if (error) {
+                                  console.error('Supabase function error:', error);
+                                  
+                                  if (error instanceof FunctionsHttpError) {
+                                    try {
+                                      const errorDetails = await error.context.json();
+                                      const gatewayMessage =
+                                        typeof errorDetails === 'object' && errorDetails !== null
+                                          ? (errorDetails.error || errorDetails.message || 'خطای ناشناخته از درگاه پرداخت')
+                                          : 'خطای ناشناخته از درگاه پرداخت';
+                                      
+                                      toast({
+                                        title: 'خطا در اتصال به درگاه',
+                                        description: gatewayMessage,
+                                        variant: 'destructive'
+                                      });
+                                    } catch (parseError) {
+                                      toast({
+                                        title: 'خطا در اتصال به درگاه',
+                                        description: 'پاسخی نامعتبر از درگاه پرداخت دریافت شد',
+                                        variant: 'destructive'
+                                      });
+                                    }
+                                  } else {
+                                    toast({
+                                      title: 'خطا در اتصال به درگاه',
+                                      description: 'لطفاً مجدداً تلاش کنید',
+                                      variant: 'destructive'
+                                    });
+                                  }
+                                  return;
+                                }
+                                
+                                if (data?.payment_url) {
+                                  window.location.href = data.payment_url;
+                                } else {
+                                  throw new Error('URL پرداخت دریافت نشد');
+                                }
+                              } catch (error) {
+                                console.error('Payment error:', error);
+                                toast({
+                                  title: 'خطا در اتصال به درگاه',
+                                  description: 'لطفاً مجدداً تلاش کنید',
+                                  variant: 'destructive'
+                                });
                               }
-                            } catch (error) {
-                              console.error('Payment error:', error);
-                              toast({
-                                title: 'خطا در اتصال به درگاه',
-                                description: 'لطفاً مجدداً تلاش کنید',
-                                variant: 'destructive'
-                              });
+                            }}
+                          >
+                            <CreditCard className="h-5 w-5" />
+                            پرداخت کامل
+                          </Button>
+                          
+                          <Button 
+                            variant="outline"
+                            className="w-full gap-2 border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
+                            size="lg"
+                            onClick={() => {
+                              const baseAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0;
+                              const totalAmount = baseAmount + approvedRepairCost;
+                              // شروع از 30% مبلغ کل و گرد کردن به نزدیک‌ترین 100,000
+                              const minAmount = Math.ceil((totalAmount * 0.3) / 100000) * 100000;
+                              setAdvancePaymentAmount(minAmount);
+                              setShowAdvancePayment(!showAdvancePayment);
+                            }}
+                          >
+                            <CreditCard className="h-5 w-5" />
+                            پرداخت علی‌الحساب
+                          </Button>
+                        </div>
+
+                        {/* اسلایدر پرداخت علی‌الحساب */}
+                        {showAdvancePayment && (() => {
+                          const baseAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0;
+                          const totalAmount = baseAmount + approvedRepairCost;
+                          // حداقل 30% و گرد به 100,000
+                          const minAmount = Math.ceil((totalAmount * 0.3) / 100000) * 100000;
+                          // گرد کردن حداکثر به 100,000
+                          const maxAmount = Math.floor(totalAmount / 100000) * 100000;
+                          // تعداد گام‌ها
+                          const step = 100000;
+                          
+                          // تولید مقادیر رند برای اسلایدر
+                          const generateRoundValues = () => {
+                            const values = [];
+                            for (let i = minAmount; i <= maxAmount; i += step) {
+                              values.push(i);
                             }
-                          }}
-                        >
-                          <CreditCard className="h-5 w-5" />
-                          پرداخت آنلاین - {(((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || 0) + approvedRepairCost).toLocaleString('fa-IR')} تومان
-                        </Button>
-                        <p className="text-xs text-center text-muted-foreground mt-2">
+                            // اضافه کردن مبلغ کل اگر در لیست نیست
+                            if (values[values.length - 1] !== totalAmount) {
+                              values.push(totalAmount);
+                            }
+                            return values;
+                          };
+                          
+                          const roundValues = generateRoundValues();
+                          
+                          return (
+                            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                                  مبلغ علی‌الحساب
+                                </span>
+                                <span className="text-lg font-bold text-amber-600">
+                                  {advancePaymentAmount.toLocaleString('fa-IR')} تومان
+                                </span>
+                              </div>
+                              
+                              <Slider
+                                value={[advancePaymentAmount]}
+                                min={minAmount}
+                                max={totalAmount}
+                                step={step}
+                                onValueChange={(value) => setAdvancePaymentAmount(value[0])}
+                                className="w-full"
+                              />
+                              
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>حداقل: {minAmount.toLocaleString('fa-IR')} تومان</span>
+                                <span>مبلغ کل: {totalAmount.toLocaleString('fa-IR')} تومان</span>
+                              </div>
+                              
+                              {/* دکمه‌های مبالغ رند پیشنهادی */}
+                              <div className="flex flex-wrap gap-2">
+                                {roundValues.slice(0, 5).map((amount) => (
+                                  <Button
+                                    key={amount}
+                                    variant={advancePaymentAmount === amount ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setAdvancePaymentAmount(amount)}
+                                    className={advancePaymentAmount === amount 
+                                      ? "bg-amber-600 hover:bg-amber-700 text-white" 
+                                      : "border-amber-300 text-amber-700 hover:bg-amber-100"}
+                                  >
+                                    {amount.toLocaleString('fa-IR')}
+                                  </Button>
+                                ))}
+                              </div>
+                              
+                              <Button 
+                                className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                                size="lg"
+                                onClick={async () => {
+                                  if (!advancePaymentAmount || advancePaymentAmount <= 0) {
+                                    toast({
+                                      title: 'خطا',
+                                      description: 'مبلغ علی‌الحساب مشخص نیست',
+                                      variant: 'destructive'
+                                    });
+                                    return;
+                                  }
+                                  
+                                  try {
+                                    toast({
+                                      title: 'در حال اتصال به درگاه پرداخت',
+                                      description: 'لطفاً صبر کنید...'
+                                    });
+                                    
+                                    const { data, error } = await supabase.functions.invoke('zarinpal-payment', {
+                                      body: {
+                                        order_id: order.id,
+                                        amount: advancePaymentAmount,
+                                        description: `پرداخت علی‌الحساب سفارش ${order.code}`,
+                                        is_advance_payment: true
+                                      }
+                                    });
+                                    
+                                    if (error) {
+                                      console.error('Supabase function error:', error);
+                                      
+                                      if (error instanceof FunctionsHttpError) {
+                                        try {
+                                          const errorDetails = await error.context.json();
+                                          const gatewayMessage =
+                                            typeof errorDetails === 'object' && errorDetails !== null
+                                              ? (errorDetails.error || errorDetails.message || 'خطای ناشناخته از درگاه پرداخت')
+                                              : 'خطای ناشناخته از درگاه پرداخت';
+                                          
+                                          toast({
+                                            title: 'خطا در اتصال به درگاه',
+                                            description: gatewayMessage,
+                                            variant: 'destructive'
+                                          });
+                                        } catch (parseError) {
+                                          toast({
+                                            title: 'خطا در اتصال به درگاه',
+                                            description: 'پاسخی نامعتبر از درگاه پرداخت دریافت شد',
+                                            variant: 'destructive'
+                                          });
+                                        }
+                                      } else {
+                                        toast({
+                                          title: 'خطا در اتصال به درگاه',
+                                          description: 'لطفاً مجدداً تلاش کنید',
+                                          variant: 'destructive'
+                                        });
+                                      }
+                                      return;
+                                    }
+                                    
+                                    if (data?.payment_url) {
+                                      window.location.href = data.payment_url;
+                                    } else {
+                                      throw new Error('URL پرداخت دریافت نشد');
+                                    }
+                                  } catch (error) {
+                                    console.error('Payment error:', error);
+                                    toast({
+                                      title: 'خطا در اتصال به درگاه',
+                                      description: 'لطفاً مجدداً تلاش کنید',
+                                      variant: 'destructive'
+                                    });
+                                  }
+                                }}
+                              >
+                                <CreditCard className="h-5 w-5" />
+                                پرداخت {advancePaymentAmount.toLocaleString('fa-IR')} تومان
+                              </Button>
+                            </div>
+                          );
+                        })()}
+                        
+                        <p className="text-xs text-center text-muted-foreground">
                           پرداخت از طریق درگاه امن زرین‌پال انجام می‌شود
                         </p>
                       </div>
