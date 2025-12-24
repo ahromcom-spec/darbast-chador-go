@@ -367,6 +367,7 @@ const App = () => {
                 </ProtectedRoute>
               } />
               <Route path="/settings/install" element={<InstallApp />} />
+              <Route path="/settings/install-app" element={<InstallApp />} />
               
               {/* Reputation & Ratings */}
               <Route path="/reputation" element={
