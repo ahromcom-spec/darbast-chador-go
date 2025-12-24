@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useToast } from '@/hooks/use-toast';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Home } from 'lucide-react';
+import { Home, Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -22,9 +22,11 @@ const phoneSchema = z.object({
 export default function Login() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp' | 'not-registered'>('phone');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState<'phone' | 'otp' | 'password' | 'not-registered'>('phone');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ phone?: string; otp?: string }>({});
+  const [errors, setErrors] = useState<{ phone?: string; otp?: string; password?: string }>({});
   const [countdown, setCountdown] = useState(90);
   const [userExists, setUserExists] = useState<boolean | null>(null);
   
@@ -86,6 +88,21 @@ export default function Login() {
     return () => ac.abort();
   }, [step, phoneNumber]);
 
+  // بررسی وجود شماره در لیست سفید
+  const checkWhitelist = async (phone: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('phone_whitelist')
+        .select('phone_number')
+        .eq('phone_number', phone)
+        .maybeSingle();
+      
+      return !!data && !error;
+    } catch {
+      return false;
+    }
+  };
+
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -99,13 +116,27 @@ export default function Login() {
       }
     }
 
-    // بستن کیبورد و اطمینان از رندر فوری مرحله OTP
+    // بستن کیبورد
     (document.activeElement as HTMLElement | null)?.blur();
+    setLoading(true);
+
+    // بررسی وجود در لیست سفید
+    const isWhitelisted = await checkWhitelist(phoneNumber);
+    
+    if (isWhitelisted) {
+      // شماره در لیست سفید است - نمایش فرم رمز عبور
+      setLoading(false);
+      flushSync(() => {
+        setStep('password');
+      });
+      return;
+    }
+
+    // شماره عادی است - ارسال OTP
     flushSync(() => {
       setCountdown(90);
       setStep('otp');
     });
-    setLoading(true);
 
     // ارسال کد تایید (بک‌اند وضعیت ثبت‌نام را مشخص می‌کند)
     const { error, userExists } = await sendOTP(phoneNumber, false);
@@ -221,9 +252,62 @@ const handleResendOTP = async () => {
     navigate(from, { replace: true });
   };
 
+  const handleVerifyPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+
+    if (!password) {
+      setErrors({ password: 'رمز عبور را وارد کنید' });
+      return;
+    }
+
+    setLoading(true);
+
+    // استفاده از کانال verify-otp با رمز عبور به جای کد OTP
+    const { data, error } = await supabase.functions.invoke('verify-otp', {
+      body: { 
+        phone_number: phoneNumber,
+        code: password,
+        is_password_login: true
+      }
+    });
+    
+    setLoading(false);
+
+    if (error || data?.error) {
+      const errorMessage = data?.error || error?.message || 'رمز عبور اشتباه است';
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: errorMessage,
+      });
+      setErrors({ password: errorMessage });
+      return;
+    }
+
+    if (data?.session) {
+      const access_token = data.session.access_token as string | undefined;
+      const refresh_token = data.session.refresh_token as string | undefined;
+      if (access_token && refresh_token) {
+        await supabase.auth.setSession({
+          access_token,
+          refresh_token,
+        });
+      }
+    }
+
+    toast({
+      title: 'خوش آمدید',
+      description: 'با موفقیت وارد شدید.',
+    });
+
+    navigate(from, { replace: true });
+  };
+
   const handleBackToPhone = () => {
     setStep('phone');
     setOtpCode('');
+    setPassword('');
     setErrors({});
     setCountdown(90);
     setUserExists(null);
@@ -253,6 +337,8 @@ const handleResendOTP = async () => {
                   ? 'شماره موبایل خود را وارد کنید' 
                   : step === 'not-registered'
                   ? 'حساب کاربری یافت نشد'
+                  : step === 'password'
+                  ? 'رمز عبور خود را وارد کنید'
                   : 'کد تایید ارسال شده را وارد کنید'}
               </CardDescription>
             </CardHeader>
@@ -327,7 +413,7 @@ const handleResendOTP = async () => {
                     size="lg"
                     disabled={loading}
                   >
-                    {loading ? 'در حال ارسال...' : 'ارسال کد تایید'}
+                    {loading ? 'در حال بررسی...' : 'ادامه'}
                   </Button>
                   <div className="relative w-full">
                     <div className="absolute inset-0 flex items-center">
@@ -346,6 +432,77 @@ const handleResendOTP = async () => {
                     <Link to="/auth/register">
                       ثبت‌نام در اهرم
                     </Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    asChild
+                  >
+                    <Link to="/">
+                      <Home className="ml-2 h-4 w-4" />
+                      بازگشت به صفحه اصلی
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </form>
+            ) : step === 'password' ? (
+              <form onSubmit={handleVerifyPassword}>
+                <CardContent className="space-y-6 px-6">
+                  <div className="space-y-4">
+                    <Label className="text-base text-center block">رمز عبور</Label>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="رمز عبور خود را وارد کنید"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        dir="ltr"
+                        className={`h-12 text-lg text-center pl-12 ${errors.password ? 'border-destructive' : ''}`}
+                        autoFocus
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    
+                    <div className="text-center space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        ورود با شماره <span className="font-bold text-foreground" dir="ltr">{phoneNumber}</span>
+                      </p>
+                    </div>
+                    
+                    {errors.password && (
+                      <Alert variant="destructive">
+                        <AlertDescription className="text-center">{errors.password}</AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-3 px-6 pt-4">
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    size="lg"
+                    disabled={loading || !password}
+                  >
+                    {loading ? 'در حال بررسی...' : 'ورود'}
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleBackToPhone}
+                    disabled={loading}
+                  >
+                    تغییر شماره موبایل
                   </Button>
                   <Button
                     type="button"
@@ -433,13 +590,8 @@ const handleResendOTP = async () => {
                     onClick={handleResendOTP}
                     disabled={loading || countdown > 0}
                   >
-                    {countdown > 0 
-                      ? `ارسال مجدد (${countdown}s)` 
-                      : loading 
-                      ? 'در حال ارسال...' 
-                      : 'ارسال مجدد کد'}
+                    ارسال مجدد کد تایید
                   </Button>
-                  
                   <Button
                     type="button"
                     variant="ghost"
@@ -449,11 +601,9 @@ const handleResendOTP = async () => {
                   >
                     تغییر شماره موبایل
                   </Button>
-                  
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
                     className="w-full"
                     asChild
                   >

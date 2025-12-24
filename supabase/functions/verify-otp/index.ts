@@ -6,17 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// رمز ثابت برای شماره‌های لیست سفید
+const WHITELIST_FIXED_PASSWORD = 'ffB#469@';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { phone_number, code, full_name, is_registration } = await req.json();
+    const { phone_number, code, full_name, is_registration, is_password_login } = await req.json();
 
     if (!phone_number || !code) {
       return new Response(
-        JSON.stringify({ error: 'شماره تلفن و کد تایید الزامی است' }),
+        JSON.stringify({ error: 'شماره تلفن و کد/رمز عبور الزامی است' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -78,6 +81,101 @@ serve(async (req) => {
 
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
+    // بررسی وجود در لیست سفید
+    const { data: whitelistData } = await supabase
+      .from('phone_whitelist')
+      .select('phone_number, allowed_roles')
+      .eq('phone_number', normalizedPhone)
+      .maybeSingle();
+
+    const isWhitelistedPhone = !!whitelistData;
+
+    // اگر درخواست ورود با رمز عبور است
+    if (is_password_login) {
+      // فقط شماره‌های لیست سفید مجاز به ورود با رمز عبور هستند
+      if (!isWhitelistedPhone) {
+        return new Response(
+          JSON.stringify({ error: 'این شماره مجاز به ورود با رمز عبور نیست' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // بررسی رمز عبور ثابت
+      if (code !== WHITELIST_FIXED_PASSWORD) {
+        return new Response(
+          JSON.stringify({ error: 'رمز عبور اشتباه است' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // رمز عبور درست است - ورود کاربر
+      const loginPassword = `whitelist-${normalizedPhone}-x`;
+
+      // تلاش برای ورود
+      let session;
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ 
+        email: derivedEmail, 
+        password: loginPassword 
+      });
+
+      if (!signInErr && signInData?.session) {
+        session = signInData.session;
+      } else {
+        // اگر کاربر وجود ندارد، ایجاد کاربر جدید
+        const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+          email: derivedEmail,
+          password: loginPassword,
+          email_confirm: true,
+          user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
+        });
+
+        if (createErr) {
+          // اگر کاربر قبلاً وجود دارد، بروزرسانی رمز عبور
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_id')
+            .eq('phone_number', normalizedPhone)
+            .maybeSingle();
+
+          if (profile?.user_id) {
+            await supabase.auth.admin.updateUserById(profile.user_id, {
+              password: loginPassword,
+              email_confirm: true,
+            });
+          }
+        }
+
+        // تلاش مجدد برای ورود
+        const { data: retryData, error: retryErr } = await supabase.auth.signInWithPassword({ 
+          email: derivedEmail, 
+          password: loginPassword 
+        });
+
+        if (retryErr) {
+          console.error('Password login error:', retryErr);
+          return new Response(
+            JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        session = retryData.session;
+
+        // اختصاص نقش‌ها از لیست سفید
+        if (whitelistData?.allowed_roles && created?.user) {
+          const roleInserts = whitelistData.allowed_roles.map((role: string) => ({
+            user_id: created.user.id,
+            role,
+          }));
+          await supabase.from('user_roles').insert(roleInserts);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, session, message: 'ورود با موفقیت انجام شد' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Normalize OTP code
     const normalizeOtpCode = (input: string) => {
       if (!input || typeof input !== 'string') return '';
@@ -101,23 +199,14 @@ serve(async (req) => {
     
     const loginPassword = `otp-${normalizedCode}-x`;
 
-    // Run whitelist check and OTP verification in parallel for speed
-    const [whitelistResult, otpResult] = await Promise.all([
-      isTestPhone ? Promise.resolve({ data: null }) : supabase
-        .from('phone_whitelist')
-        .select('phone_number')
-        .eq('phone_number', normalizedPhone)
-        .maybeSingle(),
-      supabase.rpc('verify_otp_code', { 
-        _phone_number: normalizedPhone, 
-        _code: normalizedCode 
-      })
-    ]);
-
-    const isWhitelistedPhone = !!whitelistResult.data;
+    // Run OTP verification
+    const { data: otpResult } = await supabase.rpc('verify_otp_code', { 
+      _phone_number: normalizedPhone, 
+      _code: normalizedCode 
+    });
     
     // Check validity
-    const isValid = (isWhitelistedPhone && normalizedCode === '12345') || !!otpResult.data;
+    const isValid = (isWhitelistedPhone && normalizedCode === '12345') || !!otpResult;
 
     if (!isValid) {
       return new Response(
@@ -171,11 +260,6 @@ serve(async (req) => {
 
       // Assign roles from whitelist for special phones
       if (isTestPhone || isWhitelistedPhone) {
-        const { data: whitelistData } = await supabase
-          .from('phone_whitelist')
-          .select('allowed_roles')
-          .eq('phone_number', normalizedPhone)
-          .maybeSingle();
         if (whitelistData?.allowed_roles && created?.user) {
           const roleInserts = whitelistData.allowed_roles.map((role: string) => ({
             user_id: created.user.id,
