@@ -1,6 +1,6 @@
 {
   "id": "/",
-  "name": "خدمات ساختمانی و منزل اهرم",
+  "name": "اهرُم",
   "short_name": "اهرُم",
   "description": "سامانه مدیریت خدمات ساختمانی و منزل اهرم",
   "start_url": "/",
@@ -12,6 +12,12 @@
   "dir": "rtl",
   "lang": "fa",
   "icons": [
+    {
+      "src": "/ahrom-pwa-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/ahrom-pwa-icon-512.png",
       "sizes": "512x512",
