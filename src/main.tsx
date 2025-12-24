@@ -7,6 +7,42 @@ import { AuthProvider } from "./contexts/AuthContext";
 // ✅ Import Leaflet CSS globally for all maps
 import 'leaflet/dist/leaflet.css';
 
+// جلوگیری از زوم مرورگر (ویندوز/PWA) با Ctrl+Wheel / Ctrl +/-
+// نکته: روی دسکتاپ نمی‌توان "Zoom" مرورگر را به‌صورت کامل کنترل کرد، اما می‌توان کلیدها/ژست‌های زوم را بلاک کرد.
+(() => {
+  try {
+    // Ctrl/Cmd + mouse wheel (trackpad pinch usually triggers ctrl+wheel)
+    window.addEventListener(
+      'wheel',
+      (e) => {
+        if (e.ctrlKey || e.metaKey) e.preventDefault();
+      },
+      { passive: false }
+    );
+
+    // Ctrl/Cmd + (+/-/0)
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        if (!(e.ctrlKey || e.metaKey)) return;
+        const key = e.key;
+        if (key === '+' || key === '-' || key === '=' || key === '0') {
+          e.preventDefault();
+        }
+      },
+      { passive: false }
+    );
+
+    // iOS Safari gesture events (safe no-op elsewhere)
+    window.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false } as AddEventListenerOptions);
+    window.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false } as AddEventListenerOptions);
+    window.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false } as AddEventListenerOptions);
+
+  } catch {
+    // no-op
+  }
+})();
+
 // ثبت Service Worker برای PWA و Push Notifications (بدون انتظار برای window.load)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker
