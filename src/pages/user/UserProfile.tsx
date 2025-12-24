@@ -265,7 +265,7 @@ const fetchOrders = async () => {
         <PendingProjectInvites />
 
         {/* Profile Header */}
-        <ProfileHeader user={user} fullName={fullName} roles={roles} />
+        <ProfileHeader user={user} fullName={fullName} roles={roles} phoneNumber={phoneNumber} />
 
         {/* User Wallet */}
         <UserWallet />
