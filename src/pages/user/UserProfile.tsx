@@ -270,7 +270,14 @@ const fetchOrders = async () => {
         {/* User Wallet */}
         <UserWallet />
         {/* Tabs */}
-        <Tabs defaultValue={tabFromUrl} className="w-full">
+        <Tabs 
+          value={tabFromUrl} 
+          onValueChange={(value) => {
+            // Update URL with new tab value to maintain navigation history
+            navigate(`/profile?tab=${value}`, { replace: false });
+          }}
+          className="w-full"
+        >
           <TabsList className="grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 sm:grid-cols-6">
             <TabsTrigger 
               value="info" 
