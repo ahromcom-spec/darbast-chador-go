@@ -33,6 +33,7 @@ import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
 import { StaffSalarySettingsTab } from '@/components/ceo/StaffSalarySettingsTab';
 import { ExcelImportDialog } from '@/components/ceo/ExcelImportDialog';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
+import { OrderTimeline } from '@/components/orders/OrderTimeline';
 
 interface SavedReport {
   id: string;
@@ -2556,6 +2557,21 @@ export default function DailyReportModule() {
                       </div>
                     </div>
 
+                    {/* Order Timeline / Stages */}
+                    <OrderTimeline
+                      orderStatus={selectedOrderDetails.status}
+                      createdAt={selectedOrderDetails.created_at}
+                      approvedAt={selectedOrderDetails.approved_at}
+                      executionStartDate={selectedOrderDetails.execution_start_date}
+                      executionEndDate={selectedOrderDetails.execution_end_date}
+                      customerCompletionDate={selectedOrderDetails.customer_completion_date}
+                      rejectionReason={selectedOrderDetails.rejection_reason}
+                      executionStage={selectedOrderDetails.execution_stage}
+                      executionStageUpdatedAt={selectedOrderDetails.execution_stage_updated_at}
+                      paymentConfirmedAt={selectedOrderDetails.payment_confirmed_at}
+                      approvedCollectionDate={selectedOrderDetails.approved_collection_date}
+                    />
+
                     {/* Execution Schedule */}
                     {(selectedOrderDetails.execution_start_date || parsedNotes?.requested_date) && (
                       <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
@@ -2578,7 +2594,7 @@ export default function DailyReportModule() {
                       </div>
                     )}
 
-                    {/* Dimensions */}
+                    {/* Dimensions - Enhanced */}
                     {parsedNotes?.dimensions && parsedNotes.dimensions.length > 0 && (
                       <div className="p-4 border rounded-xl space-y-3">
                         <div className="flex items-center gap-2">
@@ -2587,17 +2603,17 @@ export default function DailyReportModule() {
                         </div>
                         <div className="space-y-2">
                           {parsedNotes.dimensions.map((dim: any, index: number) => (
-                            <div key={index} className="flex gap-4 text-sm p-2 bg-muted/30 rounded-lg">
-                              {dim.length && <span>طول: <strong>{dim.length}</strong></span>}
-                              {dim.width && <span>عرض: <strong>{dim.width}</strong></span>}
-                              {dim.height && <span>ارتفاع: <strong>{dim.height}</strong></span>}
+                            <div key={index} className="flex flex-wrap gap-4 text-sm p-3 bg-muted/30 rounded-lg">
+                              {dim.length && <span className="flex items-center gap-1">طول: <strong className="text-primary">{dim.length}</strong> متر</span>}
+                              {dim.width && <span className="flex items-center gap-1">عرض: <strong className="text-primary">{dim.width}</strong> متر</span>}
+                              {dim.height && <span className="flex items-center gap-1">ارتفاع: <strong className="text-primary">{dim.height}</strong> متر</span>}
                             </div>
                           ))}
                         </div>
                         {parsedNotes.totalArea && (
                           <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between mt-2">
                             <span className="text-sm text-muted-foreground">متراژ کل</span>
-                            <span className="font-bold">
+                            <span className="font-bold text-lg text-primary">
                               {parsedNotes.totalArea % 1 === 0 ? parsedNotes.totalArea : parsedNotes.totalArea.toFixed(2)} متر{parsedNotes.service_type === 'facade' ? ' مربع' : ' مکعب'}
                             </span>
                           </div>
@@ -2605,47 +2621,67 @@ export default function DailyReportModule() {
                       </div>
                     )}
 
-                    {/* Financial Info */}
-                    {paymentAmount > 0 && (
-                      <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 space-y-3">
+                    {/* Single Dimensions (if not array) */}
+                    {(!parsedNotes?.dimensions || parsedNotes.dimensions.length === 0) && (parsedNotes?.length || parsedNotes?.width || parsedNotes?.height) && (
+                      <div className="p-4 border rounded-xl space-y-3">
                         <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-green-600" />
-                          <h4 className="font-semibold text-green-800 dark:text-green-200">اطلاعات مالی</h4>
+                          <Hash className="h-4 w-4 text-primary" />
+                          <h4 className="font-semibold">ابعاد درخواستی (متر)</h4>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div className="p-3 bg-white/50 dark:bg-green-950/30 rounded-lg text-center">
-                            <span className="text-xs text-muted-foreground block mb-1">هزینه کل</span>
-                            <p className="font-bold text-lg text-green-700 dark:text-green-300">
-                              {paymentAmount.toLocaleString('fa-IR')} تومان
-                            </p>
-                          </div>
-                          {totalPaid > 0 && (
-                            <div className="p-3 bg-white/50 dark:bg-green-950/30 rounded-lg text-center">
-                              <span className="text-xs text-muted-foreground block mb-1">پرداخت شده</span>
-                              <p className="font-bold text-lg text-blue-600">
-                                {totalPaid.toLocaleString('fa-IR')} تومان
-                              </p>
-                            </div>
-                          )}
-                          {remaining > 0 && (
-                            <div className="p-3 bg-white/50 dark:bg-green-950/30 rounded-lg text-center">
-                              <span className="text-xs text-muted-foreground block mb-1">مانده</span>
-                              <p className="font-bold text-lg text-orange-600">
-                                {remaining.toLocaleString('fa-IR')} تومان
-                              </p>
-                            </div>
-                          )}
+                        <div className="flex flex-wrap gap-4 text-sm p-3 bg-muted/30 rounded-lg">
+                          {parsedNotes?.length && <span className="flex items-center gap-1">طول: <strong className="text-primary">{parsedNotes.length}</strong> متر</span>}
+                          {parsedNotes?.width && <span className="flex items-center gap-1">عرض: <strong className="text-primary">{parsedNotes.width}</strong> متر</span>}
+                          {parsedNotes?.height && <span className="flex items-center gap-1">ارتفاع: <strong className="text-primary">{parsedNotes.height}</strong> متر</span>}
                         </div>
                       </div>
                     )}
 
-                    {/* Notes & Description */}
-                    {(parsedNotes?.description || parsedNotes?.additional_notes || parsedNotes?.locationPurpose) && (
+                    {/* Scaffold Conditions */}
+                    {parsedNotes?.scaffold_conditions && Object.keys(parsedNotes.scaffold_conditions).length > 0 && (
+                      <div className="p-4 border rounded-xl space-y-3 bg-blue-50/50 dark:bg-blue-900/10">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                          <h4 className="font-semibold">شرایط داربست</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {Object.entries(parsedNotes.scaffold_conditions).map(([key, value]: [string, any]) => (
+                            <div key={key} className="p-2 bg-background/50 rounded-lg flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">{key}</span>
+                              <Badge variant={value === true ? 'default' : 'secondary'} className="text-xs">
+                                {value === true ? 'بله' : value === false ? 'خیر' : String(value)}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Scaffold Type */}
+                    {parsedNotes?.scaffold_type && (
+                      <div className="p-4 border rounded-xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Building className="h-4 w-4 text-primary" />
+                          <h4 className="font-semibold">نوع داربست</h4>
+                        </div>
+                        <Badge variant="outline" className="text-sm">
+                          {parsedNotes.scaffold_type}
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Activity Description / Notes & Description */}
+                    {(parsedNotes?.description || parsedNotes?.additional_notes || parsedNotes?.locationPurpose || parsedNotes?.activity_description) && (
                       <div className="p-4 border rounded-xl space-y-3">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-primary" />
-                          <h4 className="font-semibold">توضیحات مشتری</h4>
+                          <h4 className="font-semibold">توضیحات و شرح فعالیت</h4>
                         </div>
+                        {parsedNotes?.activity_description && (
+                          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                            <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1">شرح فعالیت</span>
+                            <p className="text-sm whitespace-pre-wrap">{parsedNotes.activity_description}</p>
+                          </div>
+                        )}
                         {parsedNotes?.locationPurpose && (
                           <div className="p-3 bg-muted/30 rounded-lg">
                             <span className="text-xs text-muted-foreground block mb-1">شرح محل نصب</span>
