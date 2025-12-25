@@ -456,7 +456,7 @@ export default function ExecutivePendingOrders() {
                 user_id: customerData.user_id,
                 title: '🔧 اجرای سفارش شروع شد',
                 body: `سفارش شما با کد ${orderCode} وارد مرحله اجرا شد.`,
-                link: '/user/my-orders',
+                link: '/profile?tab=orders',
                 type: 'info'
               }
             });
@@ -516,7 +516,7 @@ export default function ExecutivePendingOrders() {
                 user_id: customerData.user_id,
                 title: '✅ اجرای سفارش تکمیل شد',
                 body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد و در انتظار پرداخت است.`,
-                link: '/user/my-orders',
+                link: '/profile?tab=orders',
                 type: 'success'
               }
             });
@@ -734,7 +734,7 @@ export default function ExecutivePendingOrders() {
             _user_id: customerData.user_id,
             _title: notificationTitle,
             _body: notificationBody,
-            _link: '/user/my-orders',
+            _link: '/profile?tab=orders',
             _type: 'success'
           });
           await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
@@ -746,7 +746,7 @@ export default function ExecutivePendingOrders() {
                 user_id: customerData.user_id,
                 title: notificationTitle,
                 body: notificationBody,
-                url: '/user/my-orders'
+                url: '/profile?tab=orders'
               }
             });
           } catch (pushError) {

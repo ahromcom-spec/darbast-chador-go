@@ -212,7 +212,7 @@ export default function ExecutiveStageAwaitingCollection() {
                   user_id: customerData.user_id,
                   title: message.title,
                   body: message.body,
-                  link: '/user/my-orders',
+                  link: '/profile?tab=orders',
                   type: 'info'
                 }
               });
@@ -299,7 +299,7 @@ export default function ExecutiveStageAwaitingCollection() {
               _user_id: customerData.user_id,
               _title: notificationTitle,
               _body: notificationBody,
-              _link: '/user/my-orders',
+              _link: '/profile?tab=orders',
               _type: 'success'
             });
             
@@ -309,7 +309,7 @@ export default function ExecutiveStageAwaitingCollection() {
                 user_id: customerData.user_id,
                 title: notificationTitle,
                 body: notificationBody,
-                link: '/user/my-orders',
+                link: '/profile?tab=orders',
                 type: 'success'
               }
             });

@@ -205,7 +205,7 @@ export default function ExecutiveStageAwaitingPayment() {
                 _user_id: customerData.user_id,
                 _title: message.title,
                 _body: message.body,
-                _link: '/user/my-orders',
+                _link: '/profile?tab=orders',
                 _type: 'info'
               });
             } catch (e) { console.error('Notification error:', e); }

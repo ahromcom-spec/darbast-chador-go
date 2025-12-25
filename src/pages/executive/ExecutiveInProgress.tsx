@@ -208,7 +208,7 @@ export default function ExecutiveInProgress() {
                 _user_id: customerData.user_id,
                 _title: message.title,
                 _body: message.body,
-                _link: '/user/my-orders',
+                _link: '/profile?tab=orders',
                 _type: 'info'
               });
               await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
@@ -219,7 +219,7 @@ export default function ExecutiveInProgress() {
                   user_id: customerData.user_id,
                   title: message.title,
                   body: message.body,
-                  link: '/user/my-orders',
+                  link: '/profile?tab=orders',
                   type: 'info'
                 }
               });
@@ -289,7 +289,7 @@ export default function ExecutiveInProgress() {
           _user_id: customerData.user_id,
           _title: notificationTitle,
           _body: notificationBody,
-          _link: '/user/my-orders',
+          _link: '/profile?tab=orders',
           _type: 'success'
         });
         await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
@@ -301,7 +301,7 @@ export default function ExecutiveInProgress() {
               user_id: customerData.user_id,
               title: notificationTitle,
               body: notificationBody,
-              link: '/user/my-orders',
+              link: '/profile?tab=orders',
               type: 'success'
             }
           });

@@ -217,7 +217,7 @@ export default function ExecutiveReady() {
                 _user_id: customerData.user_id,
                 _title: message.title,
                 _body: message.body,
-                _link: '/user/my-orders',
+                _link: '/profile?tab=orders',
                 _type: 'info'
               });
               await supabase.rpc('send_notification', validated as any);
@@ -275,7 +275,7 @@ export default function ExecutiveReady() {
           _user_id: customerData.user_id,
           _title: '🚀 اجرای سفارش آغاز شد',
           _body: `سفارش شما با کد ${orderCode} در حال اجرا قرار گرفت و تیم اجرایی مشغول انجام کار هستند.`,
-          _link: '/user/my-orders',
+          _link: '/profile?tab=orders',
           _type: 'info'
         });
         await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });

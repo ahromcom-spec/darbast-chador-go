@@ -110,7 +110,7 @@ export const ExecutiveStageTimeline = ({
                 _user_id: customerData.user_id,
                 _title: message.title,
                 _body: message.body,
-                _link: '/user/my-orders',
+                _link: '/profile?tab=orders',
                 _type: 'info'
               });
               await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });

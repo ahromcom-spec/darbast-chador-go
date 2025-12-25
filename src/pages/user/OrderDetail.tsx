@@ -328,7 +328,7 @@ export default function OrderDetail() {
           description: "اطلاعات مشتری یافت نشد",
           variant: "destructive"
         });
-        navigate("/user/orders");
+        navigate("/profile?tab=orders");
         return;
       }
 
@@ -341,7 +341,7 @@ export default function OrderDetail() {
           description: "سفارش یافت نشد",
           variant: "destructive"
         });
-        navigate("/user/orders");
+        navigate("/profile?tab=orders");
         return;
       }
 
