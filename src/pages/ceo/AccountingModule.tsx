@@ -129,22 +129,27 @@ export default function AccountingModule() {
 
   const fetchCustomerAccounts = async () => {
     try {
-      // Get all customers with their orders
+      // Get all customers
       const { data: customers, error: customersError } = await supabase
         .from('customers')
-        .select(`
-          id,
-          user_id,
-          profiles!customers_user_id_fkey1(full_name, phone_number)
-        `);
+        .select('id, user_id');
 
       if (customersError) throw customersError;
 
-      // Get orders for each customer
+      // Get profiles separately
+      const userIds = customers?.map(c => c.user_id).filter(Boolean) || [];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, phone_number')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      // Get ALL orders (not just approved - include pending for full accounting)
       const { data: orders, error: ordersError } = await supabase
         .from('projects_v3')
         .select('customer_id, total_price, total_paid, created_at, status')
-        .in('status', ['approved', 'pending_execution', 'scheduled', 'in_progress', 'completed', 'paid', 'closed']);
+        .not('status', 'in', '(draft,rejected)');
 
       if (ordersError) throw ordersError;
 
@@ -159,6 +164,7 @@ export default function AccountingModule() {
       // Build customer accounts
       const accounts: CustomerAccount[] = (customers || []).map(customer => {
         const customerOrders = ordersByCustomer.get(customer.id) || [];
+        const profile = profileMap.get(customer.user_id);
         const totalPaid = customerOrders.reduce((sum, o) => sum + (o.total_paid || 0), 0);
         const totalPrice = customerOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
         const lastOrder = customerOrders.sort((a, b) => 
@@ -168,8 +174,8 @@ export default function AccountingModule() {
         return {
           id: customer.id,
           user_id: customer.user_id,
-          full_name: (customer.profiles as any)?.full_name || null,
-          phone_number: (customer.profiles as any)?.phone_number || null,
+          full_name: profile?.full_name || null,
+          phone_number: profile?.phone_number || null,
           total_orders: customerOrders.length,
           total_paid: totalPaid,
           total_remaining: Math.max(0, totalPrice - totalPaid),
@@ -203,29 +209,51 @@ export default function AccountingModule() {
 
       if (empError) throw empError;
 
-      // Get daily report staff records for each employee
-      const accounts: StaffAccount[] = [];
+      // Get ALL daily report staff records at once
+      const { data: allRecords, error: recordsError } = await supabase
+        .from('daily_report_staff')
+        .select('staff_user_id, staff_name, work_status, amount_received, amount_spent, overtime_hours');
+
+      if (recordsError) throw recordsError;
+
+      // Group records by staff_user_id and staff_name
+      const recordsByUserId = new Map<string, typeof allRecords>();
+      const recordsByName = new Map<string, typeof allRecords>();
       
-      for (const emp of employees || []) {
+      allRecords?.forEach(r => {
+        if (r.staff_user_id) {
+          const existing = recordsByUserId.get(r.staff_user_id) || [];
+          existing.push(r);
+          recordsByUserId.set(r.staff_user_id, existing);
+        }
+        if (r.staff_name) {
+          const existing = recordsByName.get(r.staff_name) || [];
+          existing.push(r);
+          recordsByName.set(r.staff_name, existing);
+        }
+      });
+
+      // Build staff accounts
+      const accounts: StaffAccount[] = (employees || []).map(emp => {
+        // First try to match by user_id, then by name
+        let records = emp.user_id ? recordsByUserId.get(emp.user_id) : null;
+        if (!records || records.length === 0) {
+          records = recordsByName.get(emp.full_name) || [];
+        }
+
         let totalPresent = 0;
         let totalReceived = 0;
         let totalSpent = 0;
+        let totalOvertime = 0;
 
-        if (emp.user_id) {
-          // Fetch work records by user_id
-          const { data: records } = await supabase
-            .from('daily_report_staff')
-            .select('work_status, amount_received, amount_spent')
-            .eq('staff_user_id', emp.user_id);
+        records.forEach(r => {
+          if (r.work_status === 'حاضر') totalPresent++;
+          totalReceived += r.amount_received || 0;
+          totalSpent += r.amount_spent || 0;
+          totalOvertime += r.overtime_hours || 0;
+        });
 
-          records?.forEach(r => {
-            if (r.work_status === 'حاضر') totalPresent++;
-            totalReceived += r.amount_received || 0;
-            totalSpent += r.amount_spent || 0;
-          });
-        }
-
-        accounts.push({
+        return {
           id: emp.id,
           user_id: emp.user_id,
           full_name: emp.full_name,
@@ -237,8 +265,8 @@ export default function AccountingModule() {
           total_received: totalReceived,
           total_spent: totalSpent,
           balance: totalSpent - totalReceived // مثبت = طلب از شرکت، منفی = بدهی به شرکت
-        });
-      }
+        };
+      });
 
       // Sort by balance descending (those who owe more first)
       accounts.sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
