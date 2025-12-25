@@ -846,6 +846,7 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
         status,
         execution_stage,
         payment_amount,
+        total_paid,
         payment_method,
         payment_confirmed_at,
         transaction_reference,
@@ -962,10 +963,9 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
       const paymentAmount = order.payment_amount ? Number(order.payment_amount) : 0;
       totalPaymentAmount += paymentAmount;
       
-      // اگر پرداخت تایید شده، به مجموع پرداختی اضافه کن
-      if (order.payment_confirmed_at) {
-        totalPaidAmount += paymentAmount;
-      }
+      // مبلغ پرداختی واقعی از فیلد total_paid خوانده شود (نه payment_confirmed_at)
+      const paidAmount = order.total_paid ? Number(order.total_paid) : 0;
+      totalPaidAmount += paidAmount;
 
       // شمارش وضعیت‌ها
       switch (order.status) {
