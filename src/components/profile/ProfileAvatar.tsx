@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, X, Loader2, Shield, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { Camera, Upload, X, Loader2, Shield, Plus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useImageModeration } from '@/hooks/useImageModeration';
 import { cn } from '@/lib/utils';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 
 interface ProfilePhoto {
   id: string;
@@ -28,17 +29,24 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loadingPhotos, setLoadingPhotos] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { checkImageWithToast, checking } = useImageModeration();
 
   const getInitials = (name: string) => {
     if (!name) return '؟';
-    return name.split(' ').map(n => n[0]).join('').slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .slice(0, 2);
   };
 
   // Fetch all profile photos
   useEffect(() => {
     fetchPhotos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const fetchPhotos = async () => {
@@ -51,10 +59,10 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
 
       if (error) throw error;
       setPhotos(data || []);
-      
+
       // Find the current avatar in the photos list
       if (avatarUrl && data) {
-        const currentPhotoIndex = data.findIndex(p => {
+        const currentPhotoIndex = data.findIndex((p) => {
           const photoUrl = getPublicUrl(p.file_path);
           return photoUrl === avatarUrl;
         });
@@ -120,27 +128,23 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
       const fileName = `gallery_${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('profile-images')
-        .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage.from('profile-images').upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-images')
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('profile-images').getPublicUrl(filePath);
 
       // Add to database with sort_order at the beginning (prepend)
-      const { error: dbError } = await supabase
-        .from('profile_photos')
-        .insert({
-          user_id: userId,
-          file_path: filePath,
-          file_size: file.size,
-          mime_type: file.type,
-          sort_order: 0, // New photos go first
-        });
+      const { error: dbError } = await supabase.from('profile_photos').insert({
+        user_id: userId,
+        file_path: filePath,
+        file_size: file.size,
+        mime_type: file.type,
+        sort_order: 0, // New photos go first
+      });
 
       if (dbError) {
         // Remove uploaded file if db insert fails
@@ -157,10 +161,7 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
       }
 
       // Update main avatar to the new photo
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('user_id', userId);
+      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('user_id', userId);
 
       if (updateError) throw updateError;
 
@@ -181,17 +182,14 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
 
   const handleSelectPhoto = async (index: number) => {
     if (index === currentIndex) return;
-    
+
     const photo = photos[index];
     if (!photo) return;
 
     const publicUrl = getPublicUrl(photo.file_path);
-    
+
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('user_id', userId);
+      const { error } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('user_id', userId);
 
       if (error) throw error;
 
@@ -206,44 +204,35 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
 
   const handleDeletePhoto = async (photo: ProfilePhoto, e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     setDeletingId(photo.id);
     try {
       // Delete from storage
       await supabase.storage.from('profile-images').remove([photo.file_path]);
 
       // Delete from database
-      const { error } = await supabase
-        .from('profile_photos')
-        .delete()
-        .eq('id', photo.id);
+      const { error } = await supabase.from('profile_photos').delete().eq('id', photo.id);
 
       if (error) throw error;
 
       // Update avatar if this was the current one
       const photoUrl = getPublicUrl(photo.file_path);
       if (avatarUrl === photoUrl) {
-        const remainingPhotos = photos.filter(p => p.id !== photo.id);
+        const remainingPhotos = photos.filter((p) => p.id !== photo.id);
         if (remainingPhotos.length > 0) {
           const newAvatarUrl = getPublicUrl(remainingPhotos[0].file_path);
-          await supabase
-            .from('profiles')
-            .update({ avatar_url: newAvatarUrl })
-            .eq('user_id', userId);
+          await supabase.from('profiles').update({ avatar_url: newAvatarUrl }).eq('user_id', userId);
           onAvatarUpdate(newAvatarUrl);
         } else {
-          await supabase
-            .from('profiles')
-            .update({ avatar_url: null })
-            .eq('user_id', userId);
+          await supabase.from('profiles').update({ avatar_url: null }).eq('user_id', userId);
           onAvatarUpdate(null);
         }
       }
 
       // Update state
-      const newPhotos = photos.filter(p => p.id !== photo.id);
+      const newPhotos = photos.filter((p) => p.id !== photo.id);
       setPhotos(newPhotos);
-      
+
       // Adjust current index if needed
       if (currentIndex >= newPhotos.length) {
         setCurrentIndex(Math.max(0, newPhotos.length - 1));
@@ -258,49 +247,60 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
     }
   };
 
-  const navigatePhoto = (direction: 'prev' | 'next') => {
-    if (photos.length <= 1) return;
-    
-    if (direction === 'prev') {
-      const newIndex = currentIndex > 0 ? currentIndex - 1 : photos.length - 1;
-      handleSelectPhoto(newIndex);
-    } else {
-      const newIndex = currentIndex < photos.length - 1 ? currentIndex + 1 : 0;
-      handleSelectPhoto(newIndex);
-    }
-  };
+  const imageUrls = photos.map((p) => getPublicUrl(p.file_path));
+  const canOpenViewer = Boolean(getCurrentImage());
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* Main Avatar with navigation */}
+      {/* Main Avatar */}
       <div className="relative group">
-        <Avatar className="h-24 w-24 border-4 border-primary/20">
-          <AvatarImage src={getCurrentImage() || undefined} alt={fullName} />
-          <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-            {getInitials(fullName)}
-          </AvatarFallback>
-        </Avatar>
-        
-        
+        <button
+          type="button"
+          onClick={() => {
+            if (canOpenViewer) setViewerOpen(true);
+          }}
+          className="rounded-full"
+          aria-label="باز کردن عکس پروفایل"
+        >
+          <Avatar className="h-24 w-24 border-4 border-primary/20">
+            <AvatarImage src={getCurrentImage() || undefined} alt={fullName} />
+            <AvatarFallback className="text-2xl bg-primary/10 text-primary">{getInitials(fullName)}</AvatarFallback>
+          </Avatar>
+        </button>
+
         {/* Photo counter */}
         {photos.length > 1 && (
           <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
             {currentIndex + 1}/{photos.length}
           </div>
         )}
-        
-        {/* Upload overlay */}
-        <div 
-          className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-          onClick={() => fileInputRef.current?.click()}
+
+        {/* Upload overlay (desktop hover) */}
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer pointer-events-none group-hover:pointer-events-auto"
+          onClick={(e) => {
+            e.stopPropagation();
+            fileInputRef.current?.click();
+          }}
+          aria-label="آپلود عکس جدید"
         >
-          {uploading || checking ? (
-            <Loader2 className="h-8 w-8 text-white animate-spin" />
-          ) : (
-            <Camera className="h-8 w-8 text-white" />
-          )}
+          {uploading || checking ? <Loader2 className="h-8 w-8 text-white animate-spin" /> : <Camera className="h-8 w-8 text-white" />}
         </div>
       </div>
+
+      <ImageZoomModal
+        imageUrl={getCurrentImage() || ''}
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        images={imageUrls}
+        initialIndex={currentIndex}
+        activeIndex={currentIndex}
+        onSelect={(index) => {
+          void handleSelectPhoto(index);
+          setViewerOpen(false);
+        }}
+        type="profile"
+      />
 
       {/* Photo thumbnails - Telegram style */}
       {photos.length > 0 && (
@@ -310,31 +310,21 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
               key={photo.id}
               onClick={() => handleSelectPhoto(index)}
               className={cn(
-                "relative w-8 h-8 rounded-full overflow-hidden border-2 transition-all hover:scale-110",
-                index === currentIndex 
-                  ? "border-primary ring-2 ring-primary/30" 
-                  : "border-muted hover:border-primary/50"
+                'relative w-8 h-8 rounded-full overflow-hidden border-2 transition-all hover:scale-110',
+                index === currentIndex ? 'border-primary ring-2 ring-primary/30' : 'border-muted hover:border-primary/50'
               )}
             >
-              <img
-                src={getPublicUrl(photo.file_path)}
-                alt=""
-                className="w-full h-full object-cover"
-              />
+              <img src={getPublicUrl(photo.file_path)} alt="" className="w-full h-full object-cover" />
               {/* Delete button on hover */}
-              <div 
+              <div
                 className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
                 onClick={(e) => handleDeletePhoto(photo, e)}
               >
-                {deletingId === photo.id ? (
-                  <Loader2 className="h-3 w-3 text-white animate-spin" />
-                ) : (
-                  <X className="h-3 w-3 text-white" />
-                )}
+                {deletingId === photo.id ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <X className="h-3 w-3 text-white" />}
               </div>
             </button>
           ))}
-          
+
           {/* Add more button */}
           {photos.length < MAX_PHOTOS && (
             <button
@@ -342,11 +332,7 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
               disabled={uploading || checking}
               className="w-8 h-8 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors"
             >
-              {uploading || checking ? (
-                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-              ) : (
-                <Plus className="h-3 w-3 text-muted-foreground" />
-              )}
+              {uploading || checking ? <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" /> : <Plus className="h-3 w-3 text-muted-foreground" />}
             </button>
           )}
         </div>
@@ -367,11 +353,7 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading || checking || photos.length >= MAX_PHOTOS}
         >
-          {checking ? (
-            <Shield className="h-4 w-4 ml-1 animate-pulse" />
-          ) : (
-            <Upload className="h-4 w-4 ml-1" />
-          )}
+          {checking ? <Shield className="h-4 w-4 ml-1 animate-pulse" /> : <Upload className="h-4 w-4 ml-1" />}
           {photos.length >= MAX_PHOTOS ? `حداکثر ${MAX_PHOTOS} عکس` : 'آپلود تصویر'}
         </Button>
         {photos.length > 0 && photos[currentIndex] && (
@@ -382,22 +364,17 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
             disabled={uploading || deletingId !== null}
             className="text-destructive hover:text-destructive"
           >
-            {deletingId === photos[currentIndex]?.id ? (
-              <Loader2 className="h-4 w-4 ml-1 animate-spin" />
-            ) : (
-              <X className="h-4 w-4 ml-1" />
-            )}
+            {deletingId === photos[currentIndex]?.id ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <X className="h-4 w-4 ml-1" />}
             حذف
           </Button>
         )}
       </div>
-      
+
       {/* Photo count info */}
       {photos.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {photos.length}/{MAX_PHOTOS} عکس • روی عکس‌های کوچک کلیک کنید تا تغییر کند
-        </p>
+        <p className="text-xs text-muted-foreground">{photos.length}/{MAX_PHOTOS} عکس • روی عکس‌های کوچک کلیک کنید تا تغییر کند</p>
       )}
     </div>
   );
 }
+

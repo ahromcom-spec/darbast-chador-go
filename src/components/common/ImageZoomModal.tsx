@@ -197,31 +197,10 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 
           {hasMultipleImages && (
             <>
-              {/* Right nav zone (Next) */}
-              <div className="absolute top-0 right-0 bottom-0 w-32 md:w-48 z-40 flex flex-col items-center justify-center gap-3">
-                {nextThumbUrl && (
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className="h-16 w-16 md:h-24 md:w-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg opacity-80 hover:opacity-100 transition-all hover:scale-105"
-                    aria-label="پیش‌نمایش عکس بعدی"
-                  >
-                    <img src={nextThumbUrl} alt="" className="h-full w-full object-cover" />
-                  </button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="bg-black/70 hover:bg-black/90 text-white rounded-full w-16 h-16 md:w-20 md:h-20 shadow-xl border-2 border-white/30 transition-all hover:scale-110"
-                  onClick={handleNext}
-                  aria-label="عکس بعدی"
-                >
-                  <ChevronRight className="h-8 w-8" />
-                </Button>
-              </div>
+              {/* RTL: right side = previous, left side = next */}
 
-              {/* Left nav zone (Prev) */}
-              <div className="absolute top-0 left-0 bottom-0 w-32 md:w-48 z-40 flex flex-col items-center justify-center gap-3">
+              {/* Right nav zone (Prev) */}
+              <div className="absolute top-0 right-0 bottom-0 w-32 md:w-48 z-40 flex flex-col items-center justify-center gap-3">
                 {prevThumbUrl && (
                   <button
                     type="button"
@@ -238,6 +217,29 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
                   className="bg-black/70 hover:bg-black/90 text-white rounded-full w-16 h-16 md:w-20 md:h-20 shadow-xl border-2 border-white/30 transition-all hover:scale-110"
                   onClick={handlePrev}
                   aria-label="عکس قبلی"
+                >
+                  <ChevronRight className="h-8 w-8" />
+                </Button>
+              </div>
+
+              {/* Left nav zone (Next) */}
+              <div className="absolute top-0 left-0 bottom-0 w-32 md:w-48 z-40 flex flex-col items-center justify-center gap-3">
+                {nextThumbUrl && (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="h-16 w-16 md:h-24 md:w-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg opacity-80 hover:opacity-100 transition-all hover:scale-105"
+                    aria-label="پیش‌نمایش عکس بعدی"
+                  >
+                    <img src={nextThumbUrl} alt="" className="h-full w-full object-cover" />
+                  </button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-black/70 hover:bg-black/90 text-white rounded-full w-16 h-16 md:w-20 md:h-20 shadow-xl border-2 border-white/30 transition-all hover:scale-110"
+                  onClick={handleNext}
+                  aria-label="عکس بعدی"
                 >
                   <ChevronLeft className="h-8 w-8" />
                 </Button>
