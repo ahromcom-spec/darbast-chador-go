@@ -97,6 +97,7 @@ export function RepairRequestDialog({
   const [pendingMediaPreviews, setPendingMediaPreviews] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pendingMediaInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   // Auto scroll to bottom of messages
@@ -855,7 +856,8 @@ export function RepairRequestDialog({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => document.getElementById('pending-media-upload')?.click()}
+                  type="button"
+                  onClick={() => pendingMediaInputRef.current?.click()}
                   className="gap-1"
                 >
                   <Upload className="h-4 w-4" />
@@ -863,7 +865,7 @@ export function RepairRequestDialog({
                 </Button>
               </div>
               <input
-                id="pending-media-upload"
+                ref={pendingMediaInputRef}
                 type="file"
                 accept="image/*,video/*"
                 multiple
