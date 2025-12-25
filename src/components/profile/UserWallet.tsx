@@ -303,7 +303,7 @@ export function UserWallet() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fa-IR').format(Math.abs(amount)) + ' ریال';
+    return new Intl.NumberFormat('fa-IR').format(Math.abs(amount)) + ' تومان';
   };
 
   const formatDate = (dateStr: string) => {
