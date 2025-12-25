@@ -862,7 +862,17 @@ export default function OrderDetail() {
     return null;
   }
 
-  const statusInfo = getStatusInfo(order.status);
+  const basePriceForPayment = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
+  const grandTotalForPayment = basePriceForPayment + approvedRepairCost;
+  const rawPaidForPayment = totalPaid || order.total_paid || 0;
+  const paidAmountForPayment = Math.min(Math.max(0, rawPaidForPayment), Math.max(0, grandTotalForPayment));
+  const remainingAmountForPayment = Math.max(0, Math.max(0, grandTotalForPayment) - paidAmountForPayment);
+  const isFullyPaidForPayment = grandTotalForPayment > 0 && remainingAmountForPayment <= 0;
+
+  const statusInfo =
+    order.status === 'paid' && !isFullyPaidForPayment
+      ? { label: 'پرداخت ناقص', icon: Clock, color: 'text-amber-600' }
+      : getStatusInfo(order.status);
   const StatusIcon = statusInfo.icon;
 
   return (
@@ -1552,10 +1562,11 @@ export default function OrderDetail() {
                 {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
                   const basePrice = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
                   const grandTotal = basePrice + approvedRepairCost;
-                  const paidAmount = totalPaid || order.total_paid || 0;
-                  const remainingAmount = grandTotal - paidAmount;
+                  const rawPaidAmount = totalPaid || order.total_paid || 0;
+                  const paidAmount = Math.min(Math.max(0, rawPaidAmount), Math.max(0, grandTotal));
+                  const remainingAmount = Math.max(0, Math.max(0, grandTotal) - paidAmount);
                   // isFullyPaid فقط بر اساس باقی‌مانده تعیین می‌شود - نه payment_confirmed_at
-                  const isFullyPaid = remainingAmount <= 0;
+                  const isFullyPaid = grandTotal > 0 && remainingAmount <= 0;
                   
                   return (
                   <Collapsible open={isPriceDetailsExpanded} onOpenChange={setIsPriceDetailsExpanded}>
@@ -1666,7 +1677,7 @@ export default function OrderDetail() {
                       )}
 
                     {/* دکمه پرداخت - فقط بعد از تایید سفارش و برای درخواست کارشناسی فقط بعد از تایید قیمت توسط مشتری */}
-                    {['approved', 'completed', 'in_progress', 'pending_execution', 'pending'].includes(order.status) && 
+                    {['approved', 'completed', 'in_progress', 'pending_execution', 'pending', 'paid'].includes(order.status) && 
                       grandTotal > 0 &&
                       remainingAmount > 0 &&
                       (!isExpertPricingRequest || customerHasConfirmedPrice) && (
@@ -2013,7 +2024,7 @@ export default function OrderDetail() {
 
           {/* Timeline */}
           <OrderTimeline
-            orderStatus={order.status}
+            orderStatus={order.status === 'paid' && remainingAmountForPayment > 0 ? 'awaiting_payment' : order.status}
             createdAt={order.created_at}
             approvedAt={order.approved_at}
             executionStartDate={order.execution_start_date}
@@ -2022,7 +2033,7 @@ export default function OrderDetail() {
             rejectionReason={order.rejection_reason}
             executionStage={order.execution_stage}
             executionStageUpdatedAt={order.execution_stage_updated_at}
-            paymentConfirmedAt={order.payment_confirmed_at}
+            paymentConfirmedAt={isFullyPaidForPayment ? order.payment_confirmed_at : null}
             approvedCollectionDate={approvedCollectionDate}
             approvals={approvals}
           />

@@ -164,15 +164,24 @@ export function MultiPaymentDialog({
 
       // Update total_paid in projects_v3
       const newTotalPaid = totalPaid + amount;
+      const nowIso = new Date().toISOString();
+
+      // فقط وقتی سفارش واقعاً تسویه شد payment_confirmed_at ثبت شود
+      const isSettled = !!totalPrice && newTotalPaid >= (totalPrice || 0);
+      const updatePayload: Record<string, any> = {
+        total_paid: newTotalPaid,
+        payment_method: 'cash',
+        updated_at: nowIso,
+      };
+
+      if (isSettled) {
+        updatePayload.payment_confirmed_at = nowIso;
+        updatePayload.payment_confirmed_by = user.id;
+      }
+
       const { error: updateError } = await supabase
         .from('projects_v3')
-        .update({
-          total_paid: newTotalPaid,
-          payment_confirmed_at: new Date().toISOString(),
-          payment_confirmed_by: user.id,
-          payment_method: 'cash',
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('id', orderId);
 
       if (updateError) {
