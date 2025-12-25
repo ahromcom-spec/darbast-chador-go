@@ -110,6 +110,7 @@ export const CustomerInvoice = () => {
           created_at,
           notes,
           is_archived,
+          total_paid,
           subcategories (name),
           provinces (name)
         `)
@@ -122,20 +123,52 @@ export const CustomerInvoice = () => {
 
       if (error) throw error;
 
+      // دریافت پرداخت‌های نقدی از جدول order_payments
+      const orderIds = (data || []).map(o => o.id);
+      let paymentsMap: Record<string, number> = {};
+      
+      if (orderIds.length > 0) {
+        const { data: payments } = await supabase
+          .from('order_payments')
+          .select('order_id, amount')
+          .in('order_id', orderIds);
+        
+        if (payments) {
+          payments.forEach(p => {
+            paymentsMap[p.order_id] = (paymentsMap[p.order_id] || 0) + p.amount;
+          });
+        }
+      }
+
       const processedOrders: OrderInvoice[] = (data || []).map(order => {
-        // استخراج علی‌الحساب از notes (اگر ذخیره شده باشد)
-        let advancePayment = 0;
-        try {
-          if (order.notes) {
-            const notesData = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
-            advancePayment = notesData?.advance_payment || 0;
+        const totalAmount = order.payment_amount || 0;
+        
+        // محاسبه پرداخت شده: اول از total_paid، بعد از order_payments، بعد از notes
+        let paidAmount = 0;
+        
+        if (order.payment_confirmed_at) {
+          // اگر تایید کامل شده، کل مبلغ پرداخت شده
+          paidAmount = totalAmount;
+        } else {
+          // استفاده از total_paid اگر موجود است
+          if (order.total_paid && order.total_paid > 0) {
+            paidAmount = order.total_paid;
+          } else if (paymentsMap[order.id]) {
+            // استفاده از جمع پرداخت‌های نقدی
+            paidAmount = paymentsMap[order.id];
+          } else {
+            // fallback به notes.advance_payment
+            try {
+              if (order.notes) {
+                const notesData = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+                paidAmount = notesData?.advance_payment || 0;
+              }
+            } catch {
+              paidAmount = 0;
+            }
           }
-        } catch {
-          advancePayment = 0;
         }
 
-        const totalAmount = order.payment_amount || 0;
-        const paidAmount = order.payment_confirmed_at ? totalAmount : advancePayment;
         const remaining = totalAmount - paidAmount;
 
         return {
@@ -148,7 +181,7 @@ export const CustomerInvoice = () => {
           created_at: order.created_at,
           subcategory: order.subcategories,
           province: order.provinces,
-          advance_payment: advancePayment,
+          advance_payment: paidAmount,
           remaining_amount: remaining > 0 ? remaining : 0,
         };
       });
