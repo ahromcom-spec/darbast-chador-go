@@ -13,8 +13,8 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = 'auto';
-        // Larger min height when focused on mobile
-        const minHeight = isFocused ? 80 : 50;
+        // Much larger min height when focused for better mobile usability
+        const minHeight = isFocused ? 120 : 50;
         textarea.style.height = `${Math.max(textarea.scrollHeight, minHeight)}px`;
       }
     }, [isFocused]);
@@ -53,11 +53,11 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     return (
       <textarea
         className={cn(
-          "flex w-full rounded-md border-2 border-input bg-background px-3 py-3 text-base ring-offset-background placeholder:text-muted-foreground placeholder:text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-hidden transition-all duration-300 shadow-sm hover:border-primary/50 text-right",
+          "flex w-full rounded-md border-2 border-input bg-background px-3 py-3 text-base ring-offset-background placeholder:text-muted-foreground placeholder:text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-hidden transition-all duration-300 ease-out shadow-sm hover:border-primary/50 text-right",
           // Base mobile-friendly styles
           "min-h-[50px] leading-relaxed",
-          // Larger and more readable when focused
-          isFocused && "min-h-[80px] text-base border-primary shadow-md scale-[1.02] z-10",
+          // Significantly larger and more visible when focused
+          isFocused && "min-h-[120px] text-lg border-primary border-3 shadow-lg ring-2 ring-primary/30 z-20 relative bg-white dark:bg-gray-900",
           className
         )}
         ref={setRefs}
