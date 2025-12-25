@@ -476,16 +476,16 @@ export default function AccountingModule() {
     }
   };
 
-  // تبدیل ریال به تومان و نمایش بدون رند کردن
+  // تبدیل ریال به تومان و نمایش بدون رند کردن - تومان در سمت چپ
   const formatCurrency = (amount: number) => {
     const toman = Math.round(amount / 10);
-    return 'تومان ' + new Intl.NumberFormat('fa-IR').format(toman);
+    return new Intl.NumberFormat('fa-IR').format(toman) + ' تومان';
   };
 
-  // نمایش کامل بدون رند کردن (برای حسابداری دقیق)
+  // نمایش کامل بدون رند کردن (برای حسابداری دقیق) - تومان در سمت چپ
   const formatCurrencyShort = (amount: number) => {
     const toman = Math.round(amount / 10);
-    return 'تومان ' + new Intl.NumberFormat('fa-IR').format(toman);
+    return new Intl.NumberFormat('fa-IR').format(toman) + ' تومان';
   };
 
   const formatDate = (dateStr: string | null) => {
