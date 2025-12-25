@@ -188,7 +188,8 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
                 variant="ghost"
                 size="icon"
                 className="absolute top-1/2 right-4 -translate-y-1/2 z-50 bg-black/70 hover:bg-black/90 text-white rounded-full w-14 h-14 shadow-lg border-2 border-white/20 transition-all hover:scale-110"
-                onClick={handlePrev}
+                onClick={handleNext}
+                aria-label="عکس بعدی"
               >
                 <ChevronRight className="h-7 w-7" />
               </Button>
@@ -197,13 +198,14 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
                 variant="ghost"
                 size="icon"
                 className="absolute top-1/2 left-4 -translate-y-1/2 z-50 bg-black/70 hover:bg-black/90 text-white rounded-full w-14 h-14 shadow-lg border-2 border-white/20 transition-all hover:scale-110"
-                onClick={handleNext}
+                onClick={handlePrev}
+                aria-label="عکس قبلی"
               >
                 <ChevronLeft className="h-7 w-7" />
               </Button>
 
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white px-5 py-2.5 rounded-full text-base font-semibold shadow-lg border border-white/20">
-                {currentIndex + 1} از {images.length}
+              <div dir="rtl" className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white px-5 py-2.5 rounded-full text-base font-semibold shadow-lg border border-white/20">
+                <span dir="ltr">{currentIndex + 1}</span> <span>از</span> <span dir="ltr">{images.length}</span>
               </div>
             </>
           )}
