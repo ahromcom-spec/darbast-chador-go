@@ -16,7 +16,6 @@ import { IncomingCallProvider } from "@/contexts/IncomingCallContext";
 import GlobalIncomingCallPopup from "@/components/calls/GlobalIncomingCallPopup";
 
 import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
-import { ZoomControl } from '@/components/common/ZoomControl';
 
 import Header from "./components/Header";
 import Home from "./pages/Home";
@@ -158,7 +157,6 @@ const App = () => {
               <Suspense fallback={<PageLoader />}>
                 <div className="min-h-screen bg-background">
                   <Header />
-                  <ZoomControl />
                 <Routes>
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
