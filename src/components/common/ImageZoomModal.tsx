@@ -243,24 +243,28 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
                 </Button>
               </div>
 
-              <div dir="rtl" className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white px-5 py-2.5 rounded-full text-base font-semibold shadow-lg border border-white/20">
+              <div dir="rtl" className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white px-4 py-1.5 rounded-full text-xs font-medium shadow-lg border border-white/20">
                 <span dir="ltr">{currentIndex + 1}</span> <span>از</span> <span dir="ltr">{images.length}</span>
-                {isActive && <span className="mr-2 text-xs font-medium opacity-80">عکس پروفایل</span>}
+                <span className="mr-2 opacity-80">
+                  {type === 'order' ? 'عکس سفارش' : 'عکس پروفایل'}
+                </span>
               </div>
             </>
           )}
 
-          {/* Explicit select button */}
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50">
-            <Button
-              type="button"
-              onClick={() => onSelect?.(currentIndex)}
-              disabled={!onSelect || isActive}
-              className="min-w-[190px]"
-            >
-              {isActive ? 'عکس پروفایل فعلی' : 'انتخاب به عنوان عکس پروفایل'}
-            </Button>
-          </div>
+          {/* Explicit select button - only show for profile type with onSelect */}
+          {type === 'profile' && onSelect && (
+            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50">
+              <Button
+                type="button"
+                onClick={() => onSelect?.(currentIndex)}
+                disabled={isActive}
+                className="min-w-[190px]"
+              >
+                {isActive ? 'عکس پروفایل فعلی' : 'انتخاب به عنوان عکس پروفایل'}
+              </Button>
+            </div>
+          )}
 
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-background/90 p-2 rounded-lg shadow-lg border border-border">
             <Button variant="ghost" size="icon" onClick={handleZoomOut} disabled={zoom <= 1}>
