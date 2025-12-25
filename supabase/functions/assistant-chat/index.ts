@@ -1401,7 +1401,123 @@ function getJalaliMonthName(month: number): string {
   return months[month] || '';
 }
 
+function isDebtQuestion(text: string): boolean {
+  const t = (text || '').replace(/\s+/g, ' ').trim();
+  if (!t) return false;
+
+  // پوشش رایج‌ترین سوالات کاربران درباره مانده/بدهی
+  return /(چقدر.*(بدهکار|بدهی|مانده|مونده))|((مانده|مونده).*(بدهی|حساب))|((بدهی|بدهکار).*(چقدر|مانده|مونده))|(حساب.*(مانده|مونده|بدهی|بدهکار))/i.test(t);
+}
+
+function buildSseTextStream(text: string): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`
+        )
+      );
+      controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+      controller.close();
+    },
+  });
+}
+
+async function computeActiveCustomerDebt(
+  supabase: any,
+  userId: string
+): Promise<{ remaining: number; total: number; paid: number; ordersCount: number } | null> {
+  const { data: customer, error: customerError } = await supabase
+    .from('customers')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (customerError) {
+    console.error('Debt calc customer error:', customerError);
+    return null;
+  }
+  if (!customer?.id) return null;
+
+  const { data: rawOrders, error: ordersError } = await supabase
+    .from('projects_v3')
+    .select('id, payment_amount, total_paid, notes, status, is_archived, is_deep_archived, archived_at, deep_archived_at')
+    .eq('customer_id', customer.id)
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (ordersError) {
+    console.error('Debt calc orders error:', ordersError);
+    return null;
+  }
+
+  const activeOrders = (rawOrders || []).filter((o: any) => {
+    const archived =
+      o?.is_archived === true ||
+      o?.is_deep_archived === true ||
+      o?.archived_at != null ||
+      o?.deep_archived_at != null;
+
+    const status = (o?.status || '').toLowerCase();
+    const rejected = status === 'rejected' || status === 'cancelled';
+
+    return !archived && !rejected;
+  });
+
+  const orderIds = activeOrders.map((o: any) => o.id).filter(Boolean);
+  const paymentsByOrder: Record<string, number> = {};
+
+  if (orderIds.length > 0) {
+    const { data: payments, error: payErr } = await supabase
+      .from('order_payments')
+      .select('order_id, amount')
+      .in('order_id', orderIds);
+
+    if (payErr) {
+      console.error('Debt calc payments error:', payErr);
+    }
+
+    (payments || []).forEach((p: any) => {
+      const oid = p.order_id as string;
+      paymentsByOrder[oid] = (paymentsByOrder[oid] || 0) + Number(p.amount || 0);
+    });
+  }
+
+  let total = 0;
+  let paid = 0;
+  let remaining = 0;
+
+  activeOrders.forEach((o: any) => {
+    const totalAmount = Number(o.payment_amount || 0);
+    if (!totalAmount || totalAmount <= 0) return;
+
+    const paidField = Number(o.total_paid || 0);
+    const cashPaid = Number(paymentsByOrder[o.id] || 0);
+
+    let notesAdvance = 0;
+    try {
+      if (o.notes) {
+        const notesObj = typeof o.notes === 'string' ? JSON.parse(o.notes) : o.notes;
+        notesAdvance = Number(notesObj?.advance_payment || 0);
+      }
+    } catch {
+      notesAdvance = 0;
+    }
+
+    const paidRaw = Math.max(paidField, cashPaid, notesAdvance);
+    const paidCapped = Math.min(paidRaw, totalAmount);
+
+    total += totalAmount;
+    paid += paidCapped;
+    remaining += Math.max(totalAmount - paidCapped, 0);
+  });
+
+  return { remaining, total, paid, ordersCount: activeOrders.length };
+}
+
 serve(async (req) => {
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -1411,7 +1527,32 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
+
+    // پاسخ قطعی برای سوالات «مانده/بدهی» تا خطای محاسبه توسط مدل رخ ندهد
+    const lastUserText = Array.isArray(messages)
+      ? (messages.slice().reverse().find((m: any) => m?.role === 'user')?.content ?? '')
+      : '';
+
+    if (
+      userId &&
+      SUPABASE_URL &&
+      SUPABASE_SERVICE_ROLE_KEY &&
+      typeof lastUserText === 'string' &&
+      isDebtQuestion(lastUserText)
+    ) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const debt = await computeActiveCustomerDebt(supabase, userId);
+
+      const remaining = Math.round(debt?.remaining || 0);
+      console.log('Debt quick-answer:', { userId, remaining, ordersCount: debt?.ordersCount || 0 });
+
+      const answer = `از حساب شما در حال حاضر ${remaining.toLocaleString('fa-IR')} تومان مانده بدهی مربوط به سفارشات فعال است.`;
+
+      return new Response(buildSseTextStream(answer), {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
