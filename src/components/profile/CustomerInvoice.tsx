@@ -22,9 +22,13 @@ interface OrderInvoice {
   created_at: string;
   subcategory: { name: string } | null;
   province: { name: string } | null;
-  // علی‌الحساب پرداخت شده (از فیلد notes یا جدول جداگانه)
+
+  // مجموع مبلغ پرداخت‌شده (نقدی/درگاه/سایر)
+  paid_amount: number;
+  // مبلغ علی‌الحساب (فقط وقتی سفارش کامل تسویه نشده باشد)
   advance_payment: number;
   remaining_amount: number;
+  is_fully_paid: boolean;
 }
 
 interface InvoiceSummary {
@@ -50,17 +54,28 @@ const getStatusLabel = (status: string) => {
 
 const getPaymentStatusBadge = (order: OrderInvoice) => {
   const totalAmount = order.payment_amount || 0;
-  const paidAmount = order.advance_payment || 0;
-  
-  // پرداخت کامل: فقط وقتی مبلغ پرداخت شده >= مبلغ کل باشد
-  if (paidAmount >= totalAmount && totalAmount > 0) {
-    return <Badge className="bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400 border border-green-500/50">✅ پرداخت کامل</Badge>;
+  const paidAmount = order.paid_amount || 0;
+
+  if (order.is_fully_paid && totalAmount > 0) {
+    return (
+      <Badge className="bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400 border border-green-500/50">
+        ✅ پرداخت کامل
+      </Badge>
+    );
   }
   if (paidAmount > 0) {
     const percentage = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
-    return <Badge className="bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400 border border-yellow-500/50">⏳ علی‌الحساب ({percentage}٪)</Badge>;
+    return (
+      <Badge className="bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400 border border-yellow-500/50">
+        ⏳ علی‌الحساب ({percentage}٪)
+      </Badge>
+    );
   }
-  return <Badge className="bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400 border border-red-500/50">❌ پرداخت نشده</Badge>;
+  return (
+    <Badge className="bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400 border border-red-500/50">
+      ❌ پرداخت نشده
+    </Badge>
+  );
 };
 
 export const CustomerInvoice = () => {
@@ -145,33 +160,34 @@ export const CustomerInvoice = () => {
       }
 
       const processedOrders: OrderInvoice[] = (data || []).map(order => {
-        const totalAmount = order.payment_amount || 0;
-        
-        // محاسبه پرداخت شده: اول از total_paid، بعد از order_payments، بعد از notes
-        let paidAmount = 0;
-        
-        // استفاده از total_paid اگر موجود است (منبع اصلی)
-        if (order.total_paid && order.total_paid > 0) {
-          paidAmount = order.total_paid;
-        } else if (paymentsMap[order.id]) {
-          // استفاده از جمع پرداخت‌های نقدی
-          paidAmount = paymentsMap[order.id];
-        } else {
-          // fallback به notes.advance_payment
-          try {
-            if (order.notes) {
-              const notesData = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
-              paidAmount = notesData?.advance_payment || 0;
-            }
-          } catch {
-            paidAmount = 0;
-          }
-        }
-        
-        // تعیین پرداخت کامل: فقط وقتی مبلغ پرداخت شده >= مبلغ کل باشد
-        const isFullyPaid = paidAmount >= totalAmount && totalAmount > 0;
+        const totalAmount = Number(order.payment_amount || 0);
 
-        const remaining = totalAmount - paidAmount;
+        // مبالغ پرداختی از منابع مختلف
+        const cashPaid = Number(paymentsMap[order.id] || 0);
+        const totalPaidField = Number(order.total_paid || 0);
+
+        let notesAdvance = 0;
+        try {
+          if (order.notes) {
+            const notesData = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+            notesAdvance = Number(notesData?.advance_payment || 0);
+          }
+        } catch {
+          notesAdvance = 0;
+        }
+
+        // پایه: بیشترین مقدار ثبت شده
+        let paidAmount = Math.max(totalPaidField, cashPaid, notesAdvance);
+
+        // اگر تایید پرداخت داریم ولی هیچ مبلغی ثبت نشده (مثلاً پرداخت درگاه)، کل مبلغ را پرداخت‌شده در نظر بگیر
+        if (paidAmount <= 0 && order.payment_confirmed_at && totalAmount > 0) {
+          paidAmount = totalAmount;
+        }
+
+        // جلوگیری از منفی/بیشتر از مبلغ کل
+        const paidCapped = totalAmount > 0 ? Math.min(paidAmount, totalAmount) : Math.max(paidAmount, 0);
+        const isFullyPaid = totalAmount > 0 && paidCapped >= totalAmount;
+        const remaining = Math.max(totalAmount - paidCapped, 0);
 
         return {
           id: order.id,
@@ -183,8 +199,10 @@ export const CustomerInvoice = () => {
           created_at: order.created_at,
           subcategory: order.subcategories,
           province: order.provinces,
-          advance_payment: paidAmount,
-          remaining_amount: remaining > 0 ? remaining : 0,
+          paid_amount: paidCapped,
+          advance_payment: isFullyPaid ? 0 : paidCapped,
+          remaining_amount: remaining,
+          is_fully_paid: isFullyPaid,
         };
       });
 
@@ -207,9 +225,11 @@ export const CustomerInvoice = () => {
       (acc, order) => ({
         totalOrders: acc.totalOrders + 1,
         totalAmount: acc.totalAmount + (order.payment_amount || 0),
-        totalPaid: acc.totalPaid + (order.payment_confirmed_at ? (order.payment_amount || 0) : 0),
-        totalAdvance: acc.totalAdvance + order.advance_payment,
-        totalRemaining: acc.totalRemaining + order.remaining_amount,
+        // مجموع واقعی پرداخت‌شده (کامل + علی‌الحساب)
+        totalPaid: acc.totalPaid + (order.paid_amount || 0),
+        // فقط علی‌الحساب
+        totalAdvance: acc.totalAdvance + (order.advance_payment || 0),
+        totalRemaining: acc.totalRemaining + (order.remaining_amount || 0),
       }),
       { totalOrders: 0, totalAmount: 0, totalPaid: 0, totalAdvance: 0, totalRemaining: 0 }
     );
@@ -218,9 +238,9 @@ export const CustomerInvoice = () => {
 
   const filteredOrders = orders.filter(order => {
     if (statusFilter !== 'all' && order.status !== statusFilter) return false;
-    if (paymentFilter === 'paid' && !order.payment_confirmed_at) return false;
-    if (paymentFilter === 'advance' && (order.advance_payment === 0 || order.payment_confirmed_at)) return false;
-    if (paymentFilter === 'unpaid' && (order.payment_confirmed_at || order.advance_payment > 0)) return false;
+    if (paymentFilter === 'paid' && !order.is_fully_paid) return false;
+    if (paymentFilter === 'advance' && !(order.advance_payment > 0 && !order.is_fully_paid)) return false;
+    if (paymentFilter === 'unpaid' && (order.paid_amount > 0 || order.is_fully_paid)) return false;
     return true;
   });
 
@@ -386,16 +406,16 @@ export const CustomerInvoice = () => {
                     <div className="bg-muted/30 rounded-lg p-4 space-y-3">
                       {/* نوار وضعیت پرداخت */}
                       <div className={`text-center py-2 rounded-lg font-bold text-sm ${
-                        order.payment_confirmed_at 
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
-                          : order.advance_payment > 0 
+                        order.is_fully_paid
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                          : order.paid_amount > 0
                             ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
                             : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                       }`}>
-                        {order.payment_confirmed_at 
-                          ? '✅ پرداخت کامل انجام شده' 
-                          : order.advance_payment > 0 
-                            ? `⏳ علی‌الحساب پرداخت شده (${Math.round((order.advance_payment / (order.payment_amount || 1)) * 100)}٪)`
+                        {order.is_fully_paid
+                          ? '✅ پرداخت کامل انجام شده'
+                          : order.paid_amount > 0
+                            ? `⏳ علی‌الحساب پرداخت شده (${Math.round((order.paid_amount / (order.payment_amount || 1)) * 100)}٪)`
                             : '❌ هنوز پرداختی انجام نشده'}
                       </div>
                       
@@ -406,17 +426,10 @@ export const CustomerInvoice = () => {
                       
                       <div className="flex justify-between items-center text-green-600 dark:text-green-400">
                         <span>پرداخت شده:</span>
-                        <span className="font-medium">
-                          {formatPrice(order.payment_confirmed_at ? (order.payment_amount || 0) : order.advance_payment)}
-                        </span>
+                        <span className="font-medium">{formatPrice(order.paid_amount)}</span>
                       </div>
 
-                      {order.advance_payment > 0 && !order.payment_confirmed_at && (
-                        <div className="flex justify-between items-center text-yellow-600 dark:text-yellow-400">
-                          <span>علی‌الحساب:</span>
-                          <span className="font-medium">{formatPrice(order.advance_payment)}</span>
-                        </div>
-                      )}
+
 
                       <Separator />
 
@@ -427,7 +440,7 @@ export const CustomerInvoice = () => {
                     </div>
 
                     {/* دکمه‌های عملیات */}
-                    {order.remaining_amount > 0 && !order.payment_confirmed_at && (
+                    {order.remaining_amount > 0 && !order.is_fully_paid && (
                       <div className="flex gap-2">
                         <Button 
                           onClick={() => handlePayment(order.id)}
