@@ -701,7 +701,7 @@ export default function ExecutiveOrders() {
         description: `سفارش به مرحله "${stage.label}" منتقل شد و به مشتری اطلاع داده شد.`
       });
 
-      fetchOrders();
+      // استیت قبلاً به‌روزرسانی شده - نیازی به fetchOrders نیست
     } catch (error: any) {
       console.error('Error changing stage:', error);
       toast({
@@ -1080,7 +1080,7 @@ export default function ExecutiveOrders() {
 
             return (
 
-            <Card key={order.id} className={`hover:shadow-lg transition-all duration-200 ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} ${
+            <Card key={order.id} className={`hover:shadow-lg transition-shadow duration-300 ease-in-out ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} ${
               (order.status === 'approved' || order.status === 'pending_execution') ? 'border-l-4 border-l-yellow-500' :
               order.status === 'in_progress' ? 'border-l-4 border-l-blue-500' :
               order.status === 'completed' ? 'border-l-4 border-l-purple-500' :
@@ -1136,7 +1136,7 @@ export default function ExecutiveOrders() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 transition-all duration-300 ease-in-out">
                 <Separator />
                 
                 {/* انتخاب مرحله سفارش */}
