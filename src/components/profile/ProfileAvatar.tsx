@@ -152,15 +152,18 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
         throw dbError;
       }
 
-      // Update sort_order for other photos in a single query using batch update
+      // Update sort_order for other photos using batch update
+      // This is done optimistically - we don't wait for each update
       if (photos.length > 0) {
-        const photoIds = photos.map(p => p.id);
-        await supabase.rpc('increment_photo_sort_orders', {
-          photo_ids: photoIds
-        }).catch(() => {
-          // Fallback: If RPC doesn't exist, skip reordering (photos will still work)
-          console.log('Sort order RPC not available, skipping reorder');
-        });
+        // Fire and forget - don't await to speed up upload
+        Promise.all(
+          photos.map(photo =>
+            supabase
+              .from('profile_photos')
+              .update({ sort_order: photo.sort_order + 1 })
+              .eq('id', photo.id)
+          )
+        ).catch(err => console.error('Error updating sort order:', err));
       }
 
       // Update main avatar to the new photo

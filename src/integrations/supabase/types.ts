@@ -4176,6 +4176,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_photo_sort_orders: {
+        Args: { photo_ids: string[] }
+        Returns: undefined
+      }
       log_audit:
         | {
             Args: {
