@@ -227,7 +227,7 @@ export function AssistantAvatar() {
   // Resize state
   const [chatSize, setChatSize] = useState({ width: 384, height: 512 }); // sm:w-96 = 384px, h-[32rem] = 512px
   const [isResizing, setIsResizing] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(true); // پیش‌فرض تمام صفحه
   const [previousChatState, setPreviousChatState] = useState<{
     position: { x: number; y: number };
     size: { width: number; height: number };
@@ -317,8 +317,8 @@ export function AssistantAvatar() {
   // Reset chat size and scroll to bottom when chat opens
   useEffect(() => {
     if (isOpen) {
-      // Reset to default size when opening
-      setChatSize({ width: 384, height: 512 });
+      // همیشه با فول‌اسکرین باز شود
+      setIsFullscreen(true);
 
       const scrollToBottom = () => {
         const root = scrollRef.current;
