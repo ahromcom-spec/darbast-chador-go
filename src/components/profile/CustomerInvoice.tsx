@@ -49,11 +49,15 @@ const getStatusLabel = (status: string) => {
 };
 
 const getPaymentStatusBadge = (order: OrderInvoice) => {
-  if (order.payment_confirmed_at) {
+  const totalAmount = order.payment_amount || 0;
+  const paidAmount = order.advance_payment || 0;
+  
+  // پرداخت کامل: فقط وقتی مبلغ پرداخت شده >= مبلغ کل باشد
+  if (paidAmount >= totalAmount && totalAmount > 0) {
     return <Badge className="bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400 border border-green-500/50">✅ پرداخت کامل</Badge>;
   }
-  if (order.advance_payment > 0) {
-    const percentage = order.payment_amount ? Math.round((order.advance_payment / order.payment_amount) * 100) : 0;
+  if (paidAmount > 0) {
+    const percentage = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
     return <Badge className="bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400 border border-yellow-500/50">⏳ علی‌الحساب ({percentage}٪)</Badge>;
   }
   return <Badge className="bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400 border border-red-500/50">❌ پرداخت نشده</Badge>;
@@ -146,28 +150,26 @@ export const CustomerInvoice = () => {
         // محاسبه پرداخت شده: اول از total_paid، بعد از order_payments، بعد از notes
         let paidAmount = 0;
         
-        if (order.payment_confirmed_at) {
-          // اگر تایید کامل شده، کل مبلغ پرداخت شده
-          paidAmount = totalAmount;
+        // استفاده از total_paid اگر موجود است (منبع اصلی)
+        if (order.total_paid && order.total_paid > 0) {
+          paidAmount = order.total_paid;
+        } else if (paymentsMap[order.id]) {
+          // استفاده از جمع پرداخت‌های نقدی
+          paidAmount = paymentsMap[order.id];
         } else {
-          // استفاده از total_paid اگر موجود است
-          if (order.total_paid && order.total_paid > 0) {
-            paidAmount = order.total_paid;
-          } else if (paymentsMap[order.id]) {
-            // استفاده از جمع پرداخت‌های نقدی
-            paidAmount = paymentsMap[order.id];
-          } else {
-            // fallback به notes.advance_payment
-            try {
-              if (order.notes) {
-                const notesData = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
-                paidAmount = notesData?.advance_payment || 0;
-              }
-            } catch {
-              paidAmount = 0;
+          // fallback به notes.advance_payment
+          try {
+            if (order.notes) {
+              const notesData = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+              paidAmount = notesData?.advance_payment || 0;
             }
+          } catch {
+            paidAmount = 0;
           }
         }
+        
+        // تعیین پرداخت کامل: فقط وقتی مبلغ پرداخت شده >= مبلغ کل باشد
+        const isFullyPaid = paidAmount >= totalAmount && totalAmount > 0;
 
         const remaining = totalAmount - paidAmount;
 
