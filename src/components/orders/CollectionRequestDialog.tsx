@@ -772,47 +772,100 @@ export function CollectionRequestDialog({
         ) : (
           // New Request Form
           <div className="space-y-4">
-            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                برای درخواست جمع‌آوری داربست، تاریخ مورد نظر خود را انتخاب کنید. 
-                پس از ثبت درخواست، مدیریت با شما هماهنگ خواهد کرد.
-              </p>
-            </div>
+            {isManager ? (
+              // Manager view - explicitly prompt for date entry
+              <>
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                    <span className="font-medium text-amber-800 dark:text-amber-200">تاریخ جمع‌آوری ثبت نشده</span>
+                  </div>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    مشتری هنوز تاریخ جمع‌آوری را ثبت نکرده است. لطفاً تاریخ جمع‌آوری را تعیین کنید تا درخواست ثبت شود.
+                  </p>
+                </div>
 
-            {/* Date Picker */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">تاریخ جمع‌آوری *</label>
-              <PersianDatePicker
-                value={requestedDate}
-                onChange={setRequestedDate}
-                placeholder="انتخاب تاریخ جمع‌آوری"
-                timeMode="ampm"
-              />
-            </div>
+                {/* Date Picker for Manager */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">تاریخ جمع‌آوری *</label>
+                  <PersianDatePicker
+                    value={requestedDate}
+                    onChange={setRequestedDate}
+                    placeholder="انتخاب تاریخ جمع‌آوری"
+                    timeMode="ampm"
+                  />
+                </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">توضیحات (اختیاری)</label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="اگر توضیحات خاصی دارید اینجا بنویسید..."
-                rows={3}
-              />
-            </div>
+                {/* Description */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">توضیحات (اختیاری)</label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="توضیحات اضافی..."
+                    rows={2}
+                  />
+                </div>
 
-            <Button
-              onClick={handleSubmitRequest}
-              disabled={submitting || !requestedDate}
-              className="w-full"
-            >
-              {submitting ? (
-                <LoadingSpinner className="h-4 w-4 mr-2" />
-              ) : (
-                <Package className="h-4 w-4 mr-2" />
-              )}
-              ثبت درخواست جمع‌آوری
-            </Button>
+                <Button
+                  onClick={handleSubmitRequest}
+                  disabled={submitting || !requestedDate}
+                  className="w-full"
+                >
+                  {submitting ? (
+                    <LoadingSpinner className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Package className="h-4 w-4 mr-2" />
+                  )}
+                  ثبت درخواست جمع‌آوری توسط مدیر
+                </Button>
+              </>
+            ) : (
+              // Customer view - normal request form
+              <>
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    برای درخواست جمع‌آوری داربست، تاریخ مورد نظر خود را انتخاب کنید. 
+                    پس از ثبت درخواست، مدیریت با شما هماهنگ خواهد کرد.
+                  </p>
+                </div>
+
+                {/* Date Picker */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">تاریخ جمع‌آوری *</label>
+                  <PersianDatePicker
+                    value={requestedDate}
+                    onChange={setRequestedDate}
+                    placeholder="انتخاب تاریخ جمع‌آوری"
+                    timeMode="ampm"
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">توضیحات (اختیاری)</label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="اگر توضیحات خاصی دارید اینجا بنویسید..."
+                    rows={3}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSubmitRequest}
+                  disabled={submitting || !requestedDate}
+                  className="w-full"
+                >
+                  {submitting ? (
+                    <LoadingSpinner className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Package className="h-4 w-4 mr-2" />
+                  )}
+                  ثبت درخواست جمع‌آوری
+                </Button>
+              </>
+            )}
           </div>
         )}
       </DialogContent>
