@@ -267,7 +267,7 @@ export const CustomerInvoice = () => {
   return (
     <div className="space-y-6">
       {/* خلاصه صورتحساب */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200">
           <CardContent className="p-4 text-center">
             <Receipt className="h-6 w-6 mx-auto mb-2 text-blue-600" />
@@ -289,14 +289,6 @@ export const CustomerInvoice = () => {
             <TrendingUp className="h-6 w-6 mx-auto mb-2 text-green-600" />
             <p className="text-xs text-muted-foreground">پرداخت شده</p>
             <p className="text-sm font-bold text-green-600">{formatPrice(summary.totalPaid)}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 border-yellow-200">
-          <CardContent className="p-4 text-center">
-            <CreditCard className="h-6 w-6 mx-auto mb-2 text-yellow-600" />
-            <p className="text-xs text-muted-foreground">علی‌الحساب</p>
-            <p className="text-sm font-bold text-yellow-600">{formatPrice(summary.totalAdvance)}</p>
           </CardContent>
         </Card>
 
