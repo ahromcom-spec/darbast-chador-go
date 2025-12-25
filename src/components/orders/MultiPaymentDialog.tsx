@@ -105,11 +105,24 @@ export function MultiPaymentDialog({
   };
 
   const handleAddPayment = async () => {
-    if (!paymentAmount || parseFloat(paymentAmount.replace(/,/g, '')) <= 0) {
+    const amount = parseFloat(paymentAmount.replace(/,/g, ''));
+    
+    if (!paymentAmount || amount <= 0) {
       toast({
         variant: 'destructive',
         title: 'خطا',
         description: 'لطفاً مبلغ پرداختی را وارد کنید'
+      });
+      return;
+    }
+
+    // بررسی که مبلغ پرداختی بیشتر از باقی‌مانده نباشد
+    const currentRemaining = (totalPrice || 0) - totalPaid;
+    if (amount > currentRemaining) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: `مبلغ پرداختی نمی‌تواند بیشتر از باقی‌مانده (${currentRemaining.toLocaleString('fa-IR')} تومان) باشد`
       });
       return;
     }
@@ -125,7 +138,6 @@ export function MultiPaymentDialog({
 
     setSubmitting(true);
     try {
-      const amount = parseFloat(paymentAmount.replace(/,/g, ''));
 
       // Insert payment record
       const { data: insertedPayment, error: paymentError } = await supabase
@@ -286,17 +298,30 @@ export function MultiPaymentDialog({
                 onChange={(e) => {
                   // فقط اعداد مجاز - حذف همه کاراکترها غیر عددی
                   const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                  const numericValue = parseInt(rawValue) || 0;
+                  
+                  // محدود کردن به حداکثر باقی‌مانده
+                  const maxAllowed = remainingAmount > 0 ? remainingAmount : 0;
+                  const limitedValue = Math.min(numericValue, maxAllowed);
+                  
                   // فرمت سه رقم سه رقم با کاما
-                  const formattedValue = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                  const formattedValue = limitedValue > 0 
+                    ? limitedValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                    : '';
                   setPaymentAmount(formattedValue);
                 }}
                 placeholder={remainingAmount > 0 ? remainingAmount.toLocaleString('en-US') : 'مبلغ را وارد کنید'}
                 className="mt-1.5"
                 dir="ltr"
+                disabled={remainingAmount <= 0}
               />
-              {remainingAmount > 0 && (
+              {remainingAmount > 0 ? (
                 <p className="text-xs text-muted-foreground mt-1">
-                  می‌توانید هر مبلغی را به عنوان علی‌الحساب ثبت کنید
+                  حداکثر مبلغ قابل ثبت: {remainingAmount.toLocaleString('fa-IR')} تومان
+                </p>
+              ) : (
+                <p className="text-xs text-green-600 mt-1">
+                  این سفارش تسویه شده است
                 </p>
               )}
             </div>
@@ -327,7 +352,7 @@ export function MultiPaymentDialog({
 
             <Button 
               onClick={handleAddPayment} 
-              disabled={submitting || !paymentAmount}
+              disabled={submitting || !paymentAmount || remainingAmount <= 0}
               className="w-full gap-2 bg-green-600 hover:bg-green-700"
             >
               <Wallet className="h-4 w-4" />
