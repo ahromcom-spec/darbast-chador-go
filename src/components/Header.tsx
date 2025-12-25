@@ -344,10 +344,10 @@ const Header = memo(() => {
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[180px]">
-                    <div className="px-3 py-2 border-b border-border/50 bg-primary/5">
-                      <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
-                      <p className="text-xs text-muted-foreground">اهرم من</p>
+                  <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[200px] mt-1">
+                    <div className="px-3 py-3 border-b border-border/50 bg-primary/5">
+                      <p className="text-sm font-semibold text-foreground leading-relaxed">{displayName}</p>
+                      <p className="text-xs text-muted-foreground mt-1">اهرم من</p>
                     </div>
                     <DropdownMenuItem 
                       onClick={() => {
@@ -459,10 +459,10 @@ const Header = memo(() => {
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[200px]">
+                  <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[220px] mt-1">
                     <div className="px-4 py-3 border-b border-border/50 bg-primary/5">
-                      <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
-                      <p className="text-xs text-muted-foreground">اهرم من</p>
+                      <p className="text-sm font-semibold text-foreground leading-relaxed">{displayName}</p>
+                      <p className="text-xs text-muted-foreground mt-1">اهرم من</p>
                     </div>
                     <DropdownMenuItem 
                       onClick={() => {
