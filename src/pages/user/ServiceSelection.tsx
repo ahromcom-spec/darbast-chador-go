@@ -1,21 +1,41 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
+import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ArrowRight, Package } from 'lucide-react';
+import { ArrowRight, Package, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+// مرکز استان قم
+const QOM_CENTER = { lat: 34.6416, lng: 50.8746 };
+
+// محاسبه فاصله با فرمول Haversine (بر حسب کیلومتر)
+const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 export default function ServiceSelection() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const { serviceTypes, loading } = useServiceTypesWithSubcategories();
+  const { getOrCreateProject } = useProjectsHierarchy();
 
   const [selectedServiceType, setSelectedServiceType] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get location data from navigation state
   const locationId = location.state?.locationId;
@@ -47,7 +67,7 @@ export default function ServiceSelection() {
     return formMap[subcategoryCode] || '/form-not-available';
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selectedServiceType || !selectedSubcategory) {
       toast({
         title: 'انتخاب نشده',
@@ -69,28 +89,62 @@ export default function ServiceSelection() {
       return;
     }
 
-    const formPath = getFormPath(selectedSubcategoryData.code);
-
-    // Navigate to the appropriate form with all necessary data
-    navigate(formPath, {
-      state: {
+    setIsSubmitting(true);
+    
+    try {
+      // ایجاد پروژه سلسله‌مراتبی برای لینک کردن سفارش به نقشه
+      const projectId = await getOrCreateProject(
         locationId,
-        serviceTypeId: selectedServiceType,
-        subcategoryId: selectedSubcategory,
-        serviceTypeName: selectedServiceTypeObj.name,
-        subcategoryName: selectedSubcategoryData.name,
-        // Pass location data to forms
-        provinceId: locationData?.province_id,
-        districtId: locationData?.district_id,
-        locationAddress: locationData?.address_line,
-        locationTitle: locationData?.title,
-        provinceName: locationData?.province_name,
-        districtName: locationData?.district_name,
-        lat: locationData?.lat,
-        lng: locationData?.lng,
-        distanceFromCenter,
+        selectedServiceType,
+        selectedSubcategory
+      );
+
+      // محاسبه فاصله از مرکز استان اگر موجود نباشد
+      let finalDistanceFromCenter = distanceFromCenter;
+      if (!finalDistanceFromCenter && locationData?.lat && locationData?.lng) {
+        finalDistanceFromCenter = calculateDistance(
+          locationData.lat,
+          locationData.lng,
+          QOM_CENTER.lat,
+          QOM_CENTER.lng
+        );
       }
-    });
+
+      const formPath = getFormPath(selectedSubcategoryData.code);
+
+      // Navigate to the appropriate form with all necessary data including hierarchyProjectId
+      navigate(formPath, {
+        state: {
+          hierarchyProjectId: projectId, // ✅ شناسه پروژه برای لینک کردن سفارش به نقشه
+          projectId,
+          locationId,
+          serviceTypeId: selectedServiceType,
+          subcategoryId: selectedSubcategory,
+          subcategoryCode: selectedSubcategoryData.code,
+          serviceName: selectedServiceTypeObj.name,
+          subcategoryName: selectedSubcategoryData.name,
+          // Pass location data to forms
+          provinceId: locationData?.province_id,
+          districtId: locationData?.district_id,
+          locationAddress: locationData?.address_line,
+          locationTitle: locationData?.title,
+          provinceName: locationData?.province_name,
+          districtName: locationData?.district_name,
+          lat: locationData?.lat,
+          lng: locationData?.lng,
+          distanceFromCenter: finalDistanceFromCenter,
+        }
+      });
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در ایجاد پروژه. لطفاً دوباره تلاش کنید.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -164,10 +218,17 @@ export default function ServiceSelection() {
 
             <Button
               onClick={handleContinue}
-              disabled={!selectedServiceType || !selectedSubcategory}
+              disabled={!selectedServiceType || !selectedSubcategory || isSubmitting}
               className="w-full"
             >
-              ادامه و ثبت سفارش
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  در حال ایجاد پروژه...
+                </>
+              ) : (
+                'ادامه و ثبت سفارش'
+              )}
             </Button>
           </CardContent>
         </Card>
