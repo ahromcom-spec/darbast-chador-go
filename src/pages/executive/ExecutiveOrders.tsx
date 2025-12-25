@@ -1284,18 +1284,29 @@ export default function ExecutiveOrders() {
                         <PackageOpen className="h-4 w-4" />
                         <span>درخواست جمع‌آوری ثبت نشده</span>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setCollectionDialogOpen(true);
-                        }}
-                        className="gap-1"
-                      >
-                        <Calendar className="h-3 w-3" />
-                        ثبت درخواست
-                      </Button>
+                      {/* دکمه فقط بعد از اجرای سفارش فعال می‌شود */}
+                      {(order.execution_stage === 'order_executed' || 
+                        order.execution_stage === 'awaiting_payment' || 
+                        order.execution_stage === 'awaiting_collection' || 
+                        order.execution_stage === 'in_collection' || 
+                        order.execution_stage === 'collected' ||
+                        order.status === 'completed' || 
+                        order.status === 'closed') ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setCollectionDialogOpen(true);
+                          }}
+                          className="gap-1"
+                        >
+                          <Calendar className="h-3 w-3" />
+                          ثبت درخواست
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">پس از اجرا فعال می‌شود</span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1461,19 +1472,27 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه درخواست جمع‌آوری - برای همه سفارشات (همان طور که در تب در انتظار جمع‌آوری است) */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      setCollectionDialogOpen(true);
-                    }}
-                    className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
-                  >
-                    <PackageOpen className="h-4 w-4" />
-                    درخواست جمع‌آوری
-                  </Button>
+                  {/* دکمه درخواست جمع‌آوری - فقط بعد از اجرای سفارش فعال می‌شود */}
+                  {(order.execution_stage === 'order_executed' || 
+                    order.execution_stage === 'awaiting_payment' || 
+                    order.execution_stage === 'awaiting_collection' || 
+                    order.execution_stage === 'in_collection' || 
+                    order.execution_stage === 'collected' ||
+                    order.status === 'completed' || 
+                    order.status === 'closed') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setCollectionDialogOpen(true);
+                      }}
+                      className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
+                    >
+                      <PackageOpen className="h-4 w-4" />
+                      درخواست جمع‌آوری
+                    </Button>
+                  )}
 
                   {order.status === 'paid' && !order.executive_completion_date && (
                     <Button
