@@ -15,6 +15,8 @@ interface ImageZoomModalProps {
   onSelect?: (index: number) => void;
   /** deprecated (no longer triggered by next/prev) */
   onImageChange?: (newIndex: number) => void;
+  /** type of gallery - 'profile' or 'order' */
+  type?: 'profile' | 'order';
 }
 
 export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({ 
