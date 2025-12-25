@@ -206,10 +206,14 @@ export function AssistantAvatar() {
   // محاسبه پوزیشن پیش‌فرض اواتار - پایین سمت چپ
   const getDefaultAvatarPosition = useCallback(() => {
     const vp = getViewportSize();
-    // Avatar (64px) + label (~24px) + gap (4px) = ~92px total height
+    // Avatar (64px) + label (~24px) + gap (8px) = ~96px total height + margin
+    const avatarTotalHeight = 120; // 64 (avatar) + 24 (label) + 32 (safe margin)
     const isMobile = vp.width < 640;
-    const bottomOffset = isMobile ? 140 : 160;
-    return { x: 16, y: vp.height - bottomOffset };
+    const bottomOffset = isMobile ? 160 : 180;
+    return { 
+      x: Math.max(16, 16), 
+      y: Math.min(vp.height - bottomOffset, vp.height - avatarTotalHeight) 
+    };
   }, []);
   
   // Drag state - separate for avatar and chat panel
@@ -349,17 +353,17 @@ export function AssistantAvatar() {
   useEffect(() => {
     const clampPositionToViewport = () => {
       const vp = getViewportSize();
-      // Avatar (64px) + label (~24px) + gap (4px) = ~92px total height
-      const avatarTotalHeight = 96; // 64 (avatar) + 24 (label) + 8 (spacing)
+      // Avatar (64px) + label (~24px) + gap (8px) + extra safe margin = ~120px total height
+      const avatarTotalHeight = 120; // 64 (avatar) + 24 (label) + 32 (safe margin)
       const avatarSize = 64;
       // Avatar restricted to left half of screen (0 to width/2 - avatarSize)
-      const maxX = (vp.width / 2) - avatarSize;
+      const maxX = (vp.width / 2) - avatarSize - 8;
       // Avatar restricted to bottom half of screen (height/2 to height - totalHeight)
       const minY = vp.height / 2;
-      const maxY = vp.height - avatarTotalHeight - 8;
+      const maxY = vp.height - avatarTotalHeight;
       
       setAvatarPosition(prev => ({
-        x: Math.max(8, Math.min(maxX, prev.x)),
+        x: Math.max(16, Math.min(maxX, prev.x)),
         y: Math.max(minY, Math.min(maxY, prev.y))
       }));
       
@@ -431,16 +435,16 @@ export function AssistantAvatar() {
     const vp = getViewportSize();
     const newX = clientX - dragOffset.x;
     const newY = clientY - dragOffset.y;
-    const avatarTotalHeight = 96; // 64 (avatar) + 24 (label) + 8 (spacing)
+    const avatarTotalHeight = 120; // 64 (avatar) + 24 (label) + 32 (safe margin)
     const avatarSize = 64;
     // Avatar restricted to left half of screen
-    const maxX = (vp.width / 2) - avatarSize;
+    const maxX = (vp.width / 2) - avatarSize - 8;
     // Avatar restricted to bottom half of screen
     const minY = vp.height / 2;
-    const maxY = vp.height - avatarTotalHeight - 8;
+    const maxY = vp.height - avatarTotalHeight;
     
     setAvatarPosition({
-      x: Math.max(8, Math.min(maxX, newX)),
+      x: Math.max(16, Math.min(maxX, newX)),
       y: Math.max(minY, Math.min(maxY, newY))
     });
   }, [isDragging, dragOffset]);
@@ -829,13 +833,15 @@ export function AssistantAvatar() {
         style={{
           left: `${avatarPosition.x}px`,
           top: `${avatarPosition.y}px`,
+          maxWidth: 'calc(100vw - 32px)',
+          maxHeight: 'calc(100vh - 32px)',
         }}
         className={cn(
-          "fixed z-50 flex flex-col items-center gap-1",
+          "fixed z-50 flex flex-col items-center gap-1 overflow-visible",
           isOpen && "hidden"
         )}
       >
-        <div className="relative">
+        <div className="relative overflow-visible">
           <button
             ref={avatarRef}
             onMouseDown={handleMouseDown}
@@ -845,7 +851,7 @@ export function AssistantAvatar() {
             className={cn(
               "w-[74px] h-[74px] rounded-full",
               "shadow-lg hover:shadow-2xl transition-shadow duration-300",
-              "overflow-hidden select-none",
+              "overflow-hidden select-none bg-white",
               isDragging ? "cursor-grabbing scale-110" : "cursor-grab"
             )}
             aria-label="باز کردن دستیار هوشمند"
@@ -853,7 +859,7 @@ export function AssistantAvatar() {
             <img 
               src={assistantImage} 
               alt="دستیار اهرم" 
-              className="w-full h-full object-cover pointer-events-none"
+              className="w-full h-full object-cover object-top pointer-events-none"
               draggable={false}
             />
           </button>
