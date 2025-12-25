@@ -109,10 +109,15 @@ export const CustomerInvoice = () => {
           payment_confirmed_at,
           created_at,
           notes,
+          is_archived,
           subcategories (name),
           provinces (name)
         `)
         .eq('customer_id', customer.id)
+        // فقط سفارشات غیر بایگانی را نمایش بده
+        .or('is_archived.is.null,is_archived.eq.false')
+        // سفارشات رد شده هم از صورتحساب حذف شوند
+        .neq('status', 'rejected')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
