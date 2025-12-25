@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useRef, useCallback } from "react";
 import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -25,6 +25,39 @@ const Header = memo(() => {
   const [profileDropdownOpenMobile, setProfileDropdownOpenMobile] = useState(false);
   const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  
+  // Scroll hide functionality
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
+
+  const handleScroll = useCallback(() => {
+    if (!ticking.current) {
+      window.requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY;
+        
+        // If at the top, always show header
+        if (currentScrollY < 50) {
+          setIsVisible(true);
+        } else if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+          // Scrolling down & past threshold - hide
+          setIsVisible(false);
+        } else if (currentScrollY < lastScrollY.current) {
+          // Scrolling up - show
+          setIsVisible(true);
+        }
+        
+        lastScrollY.current = currentScrollY;
+        ticking.current = false;
+      });
+      ticking.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
 
   // Fetch user avatar
   useEffect(() => {
@@ -70,7 +103,11 @@ const Header = memo(() => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
+    <header 
+      className={`sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg transition-transform duration-300 ${
+        isVisible ? 'translate-y-0' : '-translate-y-full'
+      }`}
+    >
       <div className="container mx-auto px-4 sm:px-6">
         {/* Mobile & Tablet Layout - Two Rows */}
         <div className="md:hidden">
