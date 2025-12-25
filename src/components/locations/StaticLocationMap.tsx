@@ -107,12 +107,21 @@ export default function StaticLocationMap({
         marker.bindPopup(popupContent).openPopup();
       }
 
-      // invalidateSize پس از mount کامل برای حل مشکل خطوط افقی
-      const timeoutId = setTimeout(() => {
+      // invalidateSize پس از mount کامل برای حل مشکل خطوط افقی - چندین بار
+      const invalidateSizeMultiple = () => {
         if (mapRef.current) {
           mapRef.current.invalidateSize({ animate: false });
         }
-      }, 100);
+      };
+
+      // صدا زدن چندین بار با تاخیرهای مختلف برای اطمینان از رندر صحیح
+      const timeouts = [
+        setTimeout(invalidateSizeMultiple, 50),
+        setTimeout(invalidateSizeMultiple, 150),
+        setTimeout(invalidateSizeMultiple, 300),
+        setTimeout(invalidateSizeMultiple, 500),
+        setTimeout(invalidateSizeMultiple, 1000),
+      ];
 
       // ResizeObserver برای container changes
       const resizeObserver = new ResizeObserver(() => {
@@ -121,11 +130,13 @@ export default function StaticLocationMap({
         }
       });
       
-      resizeObserver.observe(mapContainer.current);
+      if (mapContainer.current) {
+        resizeObserver.observe(mapContainer.current);
+      }
 
       // Cleanup
       return () => {
-        clearTimeout(timeoutId);
+        timeouts.forEach(t => clearTimeout(t));
         resizeObserver.disconnect();
         if (mapRef.current) {
           mapRef.current.remove();
@@ -138,14 +149,28 @@ export default function StaticLocationMap({
   }, [lat, lng, address, detailedAddress]);
 
   return (
-    <div 
-      ref={mapContainer} 
-      className="w-full h-full relative z-0"
-      style={{ 
-        minHeight: '400px',
-        // اطمینان از نمایش صحیح تایل‌ها
-        background: '#f0f0f0'
-      }}
-    />
+    <>
+      {/* CSS fix for Leaflet tiles */}
+      <style>{`
+        .leaflet-tile-pane img {
+          width: 256px !important;
+          height: 256px !important;
+        }
+        .leaflet-tile {
+          visibility: visible !important;
+        }
+        .leaflet-container {
+          background: #f0f0f0 !important;
+        }
+      `}</style>
+      <div 
+        ref={mapContainer} 
+        className="w-full h-full relative z-0"
+        style={{ 
+          minHeight: '400px',
+          background: '#f0f0f0'
+        }}
+      />
+    </>
   );
 }
