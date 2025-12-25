@@ -28,7 +28,7 @@ const ZarinpalCallback = () => {
           description: "اطلاعات پرداخت نامعتبر است. لطفاً با پشتیبانی تماس بگیرید.",
           variant: "destructive",
         });
-        navigate("/user/my-orders");
+        navigate("/profile?tab=orders");
         return;
       }
 
@@ -75,7 +75,7 @@ const ZarinpalCallback = () => {
           description: "لطفاً مجدداً تلاش کنید یا با پشتیبانی تماس بگیرید.",
           variant: "destructive",
         });
-        navigate("/user/my-orders");
+        navigate("/profile?tab=orders");
       }
     };
 

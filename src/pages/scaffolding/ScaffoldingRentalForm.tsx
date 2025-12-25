@@ -615,7 +615,7 @@ export default function ScaffoldingRentalForm() {
                         type="button"
                         size="lg"
                         className="flex-1"
-                        onClick={() => navigate('/user/my-orders')}
+                        onClick={() => navigate('/profile?tab=orders')}
                       >
                         مشاهده سفارشات من
                       </Button>

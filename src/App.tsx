@@ -97,13 +97,16 @@ const InstallApp = lazy(() => import("./pages/settings/InstallApp"));
 const SelectLocation = lazy(() => import("./pages/user/SelectLocation"));
 const NewLocation = lazy(() => import("./pages/user/NewLocation"));
 const ServiceSelection = lazy(() => import("./pages/user/ServiceSelection"));
-const MyOrders = lazy(() => import("./pages/user/MyOrders"));
 const MyProjectsHierarchy = lazy(() => import("./pages/user/MyProjectsHierarchy"));
 const ZarinpalCallback = lazy(() => import("./pages/payment/ZarinpalCallback"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
 const OrderTransferManagement = lazy(() => import("@/pages/admin/OrderTransferManagement"));
 const MapTest = lazy(() => import("@/pages/test/MapTest"));
+
+// Redirect component for old orders pages
+import { Navigate } from 'react-router-dom';
+const RedirectToProfileOrders = () => <Navigate to="/profile?tab=orders" replace />;
 
 
 const queryClient = new QueryClient({
@@ -220,14 +223,15 @@ const App = () => {
                   <ProjectDetail />
                 </ProtectedRoute>
               } />
+              {/* Redirect old orders pages to profile orders tab */}
               <Route path="/user/my-orders" element={
                 <ProtectedRoute>
-                  <MyOrders />
+                  <RedirectToProfileOrders />
                 </ProtectedRoute>
               } />
               <Route path="/user/orders" element={
                 <ProtectedRoute>
-                  <MyOrders />
+                  <RedirectToProfileOrders />
                 </ProtectedRoute>
               } />
               <Route path="/user/orders/:id" element={

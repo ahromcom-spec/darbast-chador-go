@@ -34,8 +34,8 @@ export const pageGuides: PageGuide[] = [
     customer: 'پروژه‌های من: لیست پروژه‌ها و وضعیت هر پروژه را ببینید.',
   },
   {
-    path: '/user/orders',
-    customer: 'سفارشات من: تمام سفارشات ثبت شده و وضعیت تایید آن‌ها را پیگیری کنید.',
+    path: '/profile',
+    customer: 'پروفایل کاربری: مشاهده سفارشات، صورتحساب و اطلاعات حساب کاربری.',
   },
   {
     path: '/contractor/dashboard',
