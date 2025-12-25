@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +14,7 @@ import { AdminImpersonationBanner } from "@/components/common/AdminImpersonation
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { IncomingCallProvider } from "@/contexts/IncomingCallContext";
 import GlobalIncomingCallPopup from "@/components/calls/GlobalIncomingCallPopup";
+import { useInternalZoom } from "@/hooks/useInternalZoom";
 
 import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
 
@@ -140,6 +141,12 @@ const PageLoader = () => (
   </div>
 );
 
+// Component to initialize internal zoom for Windows
+const ZoomInitializer = () => {
+  useInternalZoom();
+  return null;
+};
+
 const App = () => {
   return (
     <ErrorBoundary>
@@ -150,6 +157,7 @@ const App = () => {
           <BrowserRouter>
             <IncomingCallProvider>
               {/* <PageLoadProgress /> */}
+              <ZoomInitializer />
               <AdminImpersonationBanner />
               <OfflineIndicator />
               <GlobalIncomingCallPopup />
