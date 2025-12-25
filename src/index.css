@@ -168,23 +168,30 @@
     @apply border-border;
   }
 
+  html {
+    /* Smooth scrolling optimization */
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    /* Prevent zoom gestures */
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    -ms-touch-action: manipulation;
+  }
+
   body {
     @apply bg-background text-foreground font-vazir;
     direction: rtl;
     position: relative;
+    /* Prevent scroll jitter */
+    overscroll-behavior-y: contain;
+    overflow-x: hidden;
     /* Prevent zooming on touch devices */
     touch-action: pan-x pan-y;
     -webkit-text-size-adjust: 100%;
     -moz-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
     text-size-adjust: 100%;
-  }
-  
-  html {
-    /* Prevent zoom gestures */
-    touch-action: manipulation;
-    -webkit-text-size-adjust: 100%;
-    -ms-touch-action: manipulation;
   }
 
 
