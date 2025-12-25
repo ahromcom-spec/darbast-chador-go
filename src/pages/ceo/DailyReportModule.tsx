@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1340,9 +1340,13 @@ export default function DailyReportModule() {
   };
 
   // Fetch full order details for dialog
+  const [orderMedia, setOrderMedia] = useState<Array<{id: string; file_path: string; file_type: string; url: string}>>([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  
   const fetchOrderDetails = async (orderId: string) => {
     setLoadingOrderDetails(true);
     setOrderDetailsDialogOpen(true);
+    setOrderMedia([]);
     try {
       // First get the order
       const { data: orderData, error: orderError } = await supabase
@@ -1399,6 +1403,28 @@ export default function DailyReportModule() {
         locationInfo = hierarchyData?.locations;
       }
 
+      // Fetch order media (images and videos)
+      const { data: mediaData } = await supabase
+        .from('project_media')
+        .select('id, file_path, file_type, created_at')
+        .eq('project_id', orderId)
+        .order('created_at', { ascending: true });
+
+      if (mediaData && mediaData.length > 0) {
+        const mediaWithUrls = await Promise.all(
+          mediaData.map(async (media) => {
+            const { data: signedData } = await supabase.storage
+              .from('project-media')
+              .createSignedUrl(media.file_path, 3600);
+            return {
+              ...media,
+              url: signedData?.signedUrl || ''
+            };
+          })
+        );
+        setOrderMedia(mediaWithUrls.filter(m => m.url));
+      }
+
       setSelectedOrderDetails({
         ...orderData,
         subcategories: subcategoryInfo,
@@ -1411,6 +1437,74 @@ export default function DailyReportModule() {
       setOrderDetailsDialogOpen(false);
     } finally {
       setLoadingOrderDetails(false);
+    }
+  };
+
+  // Handle media upload for order
+  const handleOrderMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+    if (!selectedOrderDetails || !event.target.files?.length) return;
+    
+    setUploadingMedia(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user) {
+        toast.error('لطفاً دوباره وارد شوید');
+        return;
+      }
+
+      const file = event.target.files[0];
+      const maxSize = type === 'image' ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
+      
+      if (file.size > maxSize) {
+        toast.error(`حجم فایل بیشتر از ${type === 'image' ? '10' : '50'} مگابایت است`);
+        return;
+      }
+
+      const ext = file.name.split('.').pop() || '';
+      const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const storagePath = `${auth.user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('project-media')
+        .upload(storagePath, file, { contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      // Save to database
+      const { error: dbError } = await supabase
+        .from('project_media')
+        .insert({
+          project_id: selectedOrderDetails.id,
+          user_id: auth.user.id,
+          file_path: storagePath,
+          file_type: type,
+          file_size: file.size,
+          mime_type: file.type,
+        });
+
+      if (dbError) throw dbError;
+
+      // Refresh media list
+      const { data: signedData } = await supabase.storage
+        .from('project-media')
+        .createSignedUrl(storagePath, 3600);
+
+      if (signedData?.signedUrl) {
+        setOrderMedia(prev => [...prev, {
+          id: Date.now().toString(),
+          file_path: storagePath,
+          file_type: type,
+          url: signedData.signedUrl
+        }]);
+      }
+
+      toast.success('فایل با موفقیت آپلود شد');
+    } catch (error) {
+      console.error('Error uploading media:', error);
+      toast.error('خطا در آپلود فایل');
+    } finally {
+      setUploadingMedia(false);
+      event.target.value = '';
     }
   };
 
@@ -2422,6 +2516,87 @@ export default function DailyReportModule() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Media Section */}
+                <div className="p-4 border rounded-lg space-y-4 bg-purple-50 dark:bg-purple-900/20">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      تصاویر و ویدیوها
+                    </h4>
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        id="order-image-upload"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => handleOrderMediaUpload(e, 'image')}
+                        disabled={uploadingMedia}
+                      />
+                      <input
+                        type="file"
+                        id="order-video-upload"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => handleOrderMediaUpload(e, 'video')}
+                        disabled={uploadingMedia}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('order-image-upload')?.click()}
+                        disabled={uploadingMedia}
+                        className="gap-1"
+                      >
+                        {uploadingMedia ? <Loader2 className="h-3 w-3 animate-spin" /> : <ImageIcon className="h-3 w-3" />}
+                        عکس
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('order-video-upload')?.click()}
+                        disabled={uploadingMedia}
+                        className="gap-1"
+                      >
+                        {uploadingMedia ? <Loader2 className="h-3 w-3 animate-spin" /> : <Film className="h-3 w-3" />}
+                        ویدیو
+                      </Button>
+                    </div>
+                  </div>
+
+                  {orderMedia.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {orderMedia.map((media) => (
+                        <div key={media.id} className="relative aspect-video rounded-lg overflow-hidden border bg-black/5">
+                          {media.file_type === 'image' ? (
+                            <img
+                              src={media.url}
+                              alt="تصویر سفارش"
+                              className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => window.open(media.url, '_blank')}
+                            />
+                          ) : (
+                            <div className="relative w-full h-full">
+                              <video
+                                src={media.url}
+                                className="w-full h-full object-cover"
+                                controls
+                              />
+                              <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
+                                <Play className="h-3 w-3" />
+                                ویدیو
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground text-sm">
+                      هنوز تصویر یا ویدیویی برای این سفارش ثبت نشده است
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
