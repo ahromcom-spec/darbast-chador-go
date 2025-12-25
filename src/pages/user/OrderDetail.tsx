@@ -1667,10 +1667,9 @@ export default function OrderDetail() {
 
                     {/* دکمه پرداخت - فقط بعد از تایید سفارش و برای درخواست کارشناسی فقط بعد از تایید قیمت توسط مشتری */}
                     {['approved', 'completed', 'in_progress', 'pending_execution', 'pending'].includes(order.status) && 
-                     grandTotal > 0 &&
-                     remainingAmount > 0 &&
-                     !order.payment_confirmed_at &&
-                     (!isExpertPricingRequest || customerHasConfirmedPrice) && (
+                      grandTotal > 0 &&
+                      remainingAmount > 0 &&
+                      (!isExpertPricingRequest || customerHasConfirmedPrice) && (
                       <div className="pt-4 border-t border-emerald-200 dark:border-emerald-800 space-y-4">
                         {/* دکمه‌های انتخاب نوع پرداخت */}
                         <div className="grid grid-cols-2 gap-3">
@@ -1910,7 +1909,7 @@ export default function OrderDetail() {
                     )}
 
                     {/* نمایش وضعیت پرداخت شده */}
-                    {order.payment_confirmed_at && (
+                    {isFullyPaid && (
                       <div className="pt-4 border-t border-emerald-200 dark:border-emerald-800">
                         <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-lg">
                           <CheckCircle className="h-5 w-5" />
