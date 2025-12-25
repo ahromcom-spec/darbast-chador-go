@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
-import { Camera, Upload, X, Loader2 } from 'lucide-react';
+import { Camera, Upload, X, Loader2, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useImageModeration } from '@/hooks/useImageModeration';
 
 interface ProfileAvatarProps {
   userId: string;
@@ -15,6 +16,7 @@ interface ProfileAvatarProps {
 export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: ProfileAvatarProps) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { checkImageWithToast, checking } = useImageModeration();
 
   const getInitials = (name: string) => {
     if (!name) return '؟';
@@ -34,6 +36,15 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
     // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('حجم فایل نباید بیشتر از ۵ مگابایت باشد');
+      return;
+    }
+
+    // Check image content with AI moderation
+    const isSafe = await checkImageWithToast(file);
+    if (!isSafe) {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
 
@@ -126,7 +137,7 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
           className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           onClick={() => fileInputRef.current?.click()}
         >
-          {uploading ? (
+          {uploading || checking ? (
             <Loader2 className="h-8 w-8 text-white animate-spin" />
           ) : (
             <Camera className="h-8 w-8 text-white" />
@@ -147,9 +158,9 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
           variant="outline"
           size="sm"
           onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
+          disabled={uploading || checking}
         >
-          <Upload className="h-4 w-4 ml-1" />
+          {checking ? <Shield className="h-4 w-4 ml-1 animate-pulse" /> : <Upload className="h-4 w-4 ml-1" />}
           آپلود تصویر
         </Button>
         {avatarUrl && (

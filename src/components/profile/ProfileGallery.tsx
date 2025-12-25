@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, X, Loader2, Image as ImageIcon, GripVertical } from 'lucide-react';
+import { Plus, X, Loader2, Image as ImageIcon, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useImageModeration } from '@/hooks/useImageModeration';
 
 interface ProfilePhoto {
   id: string;
@@ -22,7 +23,9 @@ export function ProfileGallery({ userId }: ProfileGalleryProps) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [moderating, setModerating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { checkImageWithToast } = useImageModeration();
 
   useEffect(() => {
     fetchPhotos();
@@ -62,22 +65,43 @@ export function ProfileGallery({ userId }: ProfileGalleryProps) {
 
     const filesToUpload = Array.from(files).slice(0, remainingSlots);
 
+    setModerating(true);
+    
+    // First, moderate all images
+    const safeFiles: File[] = [];
+    for (const file of filesToUpload) {
+      // Validate file type
+      if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+        toast.error(`فایل ${file.name}: فرمت نامعتبر`);
+        continue;
+      }
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`فایل ${file.name}: حجم بیشتر از ۵ مگابایت`);
+        continue;
+      }
+
+      // Check image content with AI moderation
+      const isSafe = await checkImageWithToast(file);
+      if (isSafe) {
+        safeFiles.push(file);
+      }
+    }
+    
+    setModerating(false);
+    
+    if (safeFiles.length === 0) {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
     setUploading(true);
     try {
-      for (let i = 0; i < filesToUpload.length; i++) {
-        const file = filesToUpload[i];
-
-        // Validate file type
-        if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
-          toast.error(`فایل ${file.name}: فرمت نامعتبر`);
-          continue;
-        }
-
-        // Validate file size (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(`فایل ${file.name}: حجم بیشتر از ۵ مگابایت`);
-          continue;
-        }
+      for (let i = 0; i < safeFiles.length; i++) {
+        const file = safeFiles[i];
 
         // Upload file
         const fileExt = file.name.split('.').pop();
@@ -176,14 +200,16 @@ export function ProfileGallery({ userId }: ProfileGalleryProps) {
               variant="outline"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
+              disabled={uploading || moderating}
             >
-              {uploading ? (
+              {moderating ? (
+                <Shield className="h-4 w-4 ml-1 animate-pulse" />
+              ) : uploading ? (
                 <Loader2 className="h-4 w-4 ml-1 animate-spin" />
               ) : (
                 <Plus className="h-4 w-4 ml-1" />
               )}
-              افزودن عکس
+              {moderating ? 'بررسی محتوا...' : 'افزودن عکس'}
             </Button>
           )}
         </div>
