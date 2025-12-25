@@ -500,11 +500,17 @@ export default function AccountingModule() {
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
       pending: { label: 'در انتظار', variant: 'secondary' },
+      pending_execution: { label: 'در انتظار اجرا', variant: 'secondary' },
       approved: { label: 'تأیید شده', variant: 'default' },
       in_progress: { label: 'در حال اجرا', variant: 'default' },
+      awaiting_payment: { label: 'در انتظار پرداخت', variant: 'secondary' },
+      awaiting_collection: { label: 'در انتظار جمع‌آوری', variant: 'secondary' },
+      in_collection: { label: 'در حال جمع‌آوری', variant: 'default' },
       completed: { label: 'تکمیل شده', variant: 'default' },
       paid: { label: 'پرداخت شده', variant: 'default' },
       closed: { label: 'بسته شده', variant: 'outline' },
+      rejected: { label: 'رد شده', variant: 'destructive' },
+      cancelled: { label: 'لغو شده', variant: 'destructive' },
     };
     const config = statusMap[status] || { label: status, variant: 'secondary' as const };
     return <Badge variant={config.variant}>{config.label}</Badge>;
