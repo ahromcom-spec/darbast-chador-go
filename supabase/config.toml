@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.parse-excel-report]
 verify_jwt = true
+
+[functions.moderate-image]
+verify_jwt = true

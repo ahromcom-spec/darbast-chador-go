@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useImageModeration } from '@/hooks/useImageModeration';
 
 // NOTE: This component previously only stored files locally and showed a blob preview.
 // Root cause of user issue: videos with unsupported codecs showed a preview error and nothing was uploaded.
@@ -47,6 +48,8 @@ export function MediaUploader({
 }: MediaUploaderProps) {
   const { toast } = useToast();
   const [files, setFiles] = useState<MediaFile[]>([]);
+  const [moderating, setModerating] = useState(false);
+  const { checkImage } = useImageModeration();
 
   // Utilities
   const setFilePartial = (id: string, patch: Partial<MediaFile> | ((prev: MediaFile) => Partial<MediaFile>)) => {
@@ -241,6 +244,11 @@ export function MediaUploader({
     const currentVideos = files.filter(f => f.type === 'video').length;
 
     const newMedia: MediaFile[] = [];
+    
+    // For images, moderate first
+    if (type === 'image') {
+      setModerating(true);
+    }
 
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
@@ -258,6 +266,19 @@ export function MediaUploader({
       // Validate
       const isValid = type === 'image' ? validateImage(file) : validateVideo(file);
       if (!isValid) continue;
+      
+      // For images, check content moderation
+      if (type === 'image') {
+        const result = await checkImage(file);
+        if (!result.safe) {
+          toast({ 
+            title: 'تصویر نامناسب', 
+            description: result.reason || 'این تصویر حاوی محتوای نامناسب است و قابل آپلود نیست', 
+            variant: 'destructive' 
+          });
+          continue;
+        }
+      }
 
       const preview = URL.createObjectURL(file);
       const mediaItem: MediaFile = {
@@ -280,6 +301,10 @@ export function MediaUploader({
       }
       
       newMedia.push(mediaItem);
+    }
+    
+    if (type === 'image') {
+      setModerating(false);
     }
 
     if (newMedia.length) {
@@ -343,9 +368,24 @@ export function MediaUploader({
               تصاویر ({imageCount}/{maxImages})
             </Label>
             {imageCount < maxImages && (
-              <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('image-upload')?.click()}>
-                <Upload className="w-4 h-4 mr-2" />
-                افزودن عکس
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={() => document.getElementById('image-upload')?.click()}
+                disabled={moderating}
+              >
+                {moderating ? (
+                  <>
+                    <Shield className="w-4 h-4 mr-2 animate-pulse" />
+                    بررسی محتوا...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    افزودن عکس
+                  </>
+                )}
               </Button>
             )}
           </div>
