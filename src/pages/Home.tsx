@@ -9,6 +9,7 @@ import usePWAInstall from '@/hooks/usePWAInstall';
 import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import Snowfall from '@/components/effects/Snowfall';
 
 // Lazy load heavy components for better performance
 const HybridGlobe = lazy(() => import('@/components/globe/HybridGlobe'));
@@ -164,6 +165,9 @@ const Home = () => {
 
   return (
     <>
+      {/* افکت برف‌ریزی زمستانی */}
+      <Snowfall />
+      
       {/* Subcategory Selection Dialog - فقط در صورتی که داده‌های معتبر وجود داشته باشد نمایش داده شود */}
       {pendingServiceTypeObj && pendingServiceTypeObj.subcategories && pendingServiceTypeObj.subcategories.length > 0 && (
         <SubcategoryDialog

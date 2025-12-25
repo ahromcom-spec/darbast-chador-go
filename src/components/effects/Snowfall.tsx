@@ -38,12 +38,13 @@ const Snowfall = () => {
           className="absolute rounded-full bg-white animate-snowfall"
           style={{
             left: `${flake.x}%`,
+            top: '-10px',
             width: `${flake.size}px`,
             height: `${flake.size}px`,
             opacity: flake.opacity,
             animationDuration: `${flake.animationDuration}s`,
             animationDelay: `${flake.animationDelay}s`,
-            boxShadow: '0 0 4px rgba(255, 255, 255, 0.8)',
+            boxShadow: '0 0 6px rgba(255, 255, 255, 0.9)',
           }}
         />
       ))}
