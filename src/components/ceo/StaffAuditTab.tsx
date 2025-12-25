@@ -313,7 +313,7 @@ export function StaffAuditTab() {
   };
 
   const formatCurrency = (amount: number) => {
-    return 'تومان ' + amount.toLocaleString('fa-IR');
+    return amount.toLocaleString('fa-IR') + ' تومان';
   };
 
   const handleGeneratePdf = () => {
