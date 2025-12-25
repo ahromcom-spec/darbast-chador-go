@@ -31,9 +31,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           type={type}
           className={cn(
-            "flex h-12 w-full rounded-md border-2 border-input bg-background px-3 py-3 text-base text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground placeholder:text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm transition-all duration-300 hover:border-primary/50 text-right",
-            // Enhanced focus state for mobile
-            isFocused && "border-primary shadow-md scale-[1.02] z-10",
+            "flex h-12 w-full rounded-md border-2 border-input bg-background px-3 py-3 text-base text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground placeholder:text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm transition-all duration-300 ease-out hover:border-primary/50 text-right",
+            // Enhanced focus state for better mobile usability
+            isFocused && "h-14 text-lg border-primary border-3 shadow-lg ring-2 ring-primary/30 z-20 relative bg-white dark:bg-gray-900",
             error && "border-destructive",
             className,
           )}
