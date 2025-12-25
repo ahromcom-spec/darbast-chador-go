@@ -12,8 +12,7 @@ import { MainLayout } from '@/components/layouts/MainLayout';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
-import { ProfileHeader } from '@/components/profile/ProfileHeader';
-import { ProfileForm } from '@/components/profile/ProfileForm';
+import { UnifiedProfileCard } from '@/components/profile/UnifiedProfileCard';
 import { StaffRegistrationButton } from '@/components/staff/StaffRegistrationButton';
 import { StaffRequestDialog } from '@/components/staff/StaffRequestDialog';
 import { StatusBadge } from '@/components/common/StatusBadge';
@@ -40,7 +39,6 @@ import { IncomingTransferRequests } from '@/components/orders/IncomingTransferRe
 import { PendingCollaborationInvites } from '@/components/orders/PendingCollaborationInvites';
 import { PendingProjectInvites } from '@/components/projects/PendingProjectInvites';
 import { UserModulesTab } from '@/components/profile/UserModulesTab';
-import { ProfileBio } from '@/components/profile/ProfileBio';
 import { lazy } from 'react';
 
 const SalesCustomers = lazy(() => import('@/pages/sales/SalesCustomers'));
@@ -267,8 +265,16 @@ const fetchOrders = async () => {
         {/* Pending Project Invites */}
         <PendingProjectInvites />
 
-        {/* Profile Header */}
-        <ProfileHeader user={user} fullName={fullName} roles={roles} phoneNumber={phoneNumber} />
+        {/* Unified Profile Card */}
+        <UnifiedProfileCard 
+          user={user} 
+          fullName={fullName} 
+          roles={roles} 
+          phoneNumber={phoneNumber}
+          bio={bio}
+          onNameUpdate={handleProfileUpdate}
+          onBioUpdate={(newBio) => setBio(newBio)}
+        />
 
         {/* User Wallet */}
         <UserWallet />
@@ -340,19 +346,6 @@ const fetchOrders = async () => {
               <ManagerActivitySummary userId={user.id} />
             )}
 
-            <ProfileForm
-              userId={user.id}
-              initialFullName={fullName}
-              phoneNumber={phoneNumber}
-              onUpdate={handleProfileUpdate}
-            />
-
-            {/* Biography */}
-            <ProfileBio 
-              userId={user.id} 
-              initialBio={bio}
-              onUpdate={(newBio) => setBio(newBio)}
-            />
 
             {/* Manager Activity Details */}
             {isManager && (
