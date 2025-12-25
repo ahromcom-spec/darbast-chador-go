@@ -284,11 +284,13 @@ export function MultiPaymentDialog({
                 type="text"
                 value={paymentAmount}
                 onChange={(e) => {
-                  // فقط اعداد و کاما مجاز
-                  const val = e.target.value.replace(/[^0-9,]/g, '');
-                  setPaymentAmount(val);
+                  // فقط اعداد مجاز - حذف همه کاراکترها غیر عددی
+                  const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                  // فرمت سه رقم سه رقم با کاما
+                  const formattedValue = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                  setPaymentAmount(formattedValue);
                 }}
-                placeholder={remainingAmount > 0 ? remainingAmount.toLocaleString('fa-IR') : 'مبلغ را وارد کنید'}
+                placeholder={remainingAmount > 0 ? remainingAmount.toLocaleString('en-US') : 'مبلغ را وارد کنید'}
                 className="mt-1.5"
                 dir="ltr"
               />
