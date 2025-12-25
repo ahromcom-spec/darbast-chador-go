@@ -78,7 +78,7 @@ export default function UserProfile() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get('tab') || 'info';
+  const tabFromUrl = searchParams.get('tab') || 'orders';
   const { isContractor } = useContractorRole();
   const { isCEO } = useCEORole();
   const { isAdmin } = useAdminRole();
@@ -287,13 +287,7 @@ const fetchOrders = async () => {
           }}
           className="w-full"
         >
-          <TabsList className="grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 sm:grid-cols-6">
-            <TabsTrigger 
-              value="info" 
-              className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
-            >
-              اطلاعات کاربری
-            </TabsTrigger>
+          <TabsList className="grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 sm:grid-cols-5">
             <TabsTrigger 
               value="modules" 
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
@@ -328,42 +322,6 @@ const fetchOrders = async () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Profile Info Tab */}
-          <TabsContent value="info" className="space-y-4">
-            {/* CEO Management Section */}
-            {isCEO && (
-              <CEOManagementSection userId={user.id} userEmail={user.email || ''} />
-            )}
-
-            {/* Modules Management Section - Only for CEO */}
-            {isCEO && (
-              <ModulesManagement />
-            )}
-
-
-            {/* Manager Activity Summary */}
-            {isManager && (
-              <ManagerActivitySummary userId={user.id} />
-            )}
-
-
-            {/* Manager Activity Details */}
-            {isManager && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <ApprovalHistory userId={user.id} />
-                </div>
-                <div>
-                  <RecentActivityFeed userId={user.id} limit={8} />
-                </div>
-              </div>
-            )}
-
-            {/* Staff Registration */}
-            <div className="flex justify-center pt-4">
-              <StaffRegistrationButton onClick={() => setStaffDialogOpen(true)} />
-            </div>
-          </TabsContent>
 
           {/* Modules Tab */}
           <TabsContent value="modules" className="mt-4">
