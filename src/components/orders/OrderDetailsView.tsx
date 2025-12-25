@@ -145,12 +145,15 @@ export const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
         {isVideo ? (
           <video
             key={currentMedia?.id}
+            src={getMediaUrl(currentMedia)}
             controls
             playsInline
-            preload="metadata"
+            preload="auto"
             className="w-full max-h-64 object-contain"
+            onError={(e) => {
+              console.error('Video load error:', currentMedia.file_path, e);
+            }}
           >
-            <source src={getMediaUrl(currentMedia)} type={getVideoMimeType()} />
             مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
           </video>
         ) : (
