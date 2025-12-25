@@ -1748,20 +1748,17 @@ export default function OrderDetail() {
                           // تعداد گام‌ها
                           const step = 100000;
                           
-                          // تولید مقادیر رند برای اسلایدر
-                          const generateRoundValues = () => {
-                            const values = [];
-                            for (let i = minAmount; i <= maxAmount; i += step) {
-                              values.push(i);
-                            }
-                            // اضافه کردن مبلغ کل اگر در لیست نیست
-                            if (values[values.length - 1] !== totalAmount) {
-                              values.push(totalAmount);
-                            }
-                            return values;
+                          // تولید مقادیر پیشنهادی: ۴۰٪ و ۹۰٪
+                          const generateQuickAmounts = () => {
+                            const amount40 = Math.round((totalAmount * 0.4) / 100000) * 100000; // ۴۰٪ گرد به ۱۰۰,۰۰۰
+                            const amount90 = Math.round((totalAmount * 0.9) / 100000) * 100000; // ۹۰٪ گرد به ۱۰۰,۰۰۰
+                            return [
+                              { amount: amount40, label: '۴۰٪', percent: 40 },
+                              { amount: amount90, label: '۹۰٪', percent: 90 }
+                            ].filter(item => item.amount >= minAmount && item.amount <= totalAmount);
                           };
                           
-                          const roundValues = generateRoundValues();
+                          const quickAmounts = generateQuickAmounts();
                           
                           return (
                             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 space-y-4">
@@ -1788,19 +1785,19 @@ export default function OrderDetail() {
                                 <span>مبلغ کل: {totalAmount.toLocaleString('fa-IR')} تومان</span>
                               </div>
                               
-                              {/* دکمه‌های مبالغ رند پیشنهادی */}
-                              <div className="flex flex-wrap gap-2">
-                                {roundValues.slice(0, 5).map((amount) => (
+                              {/* دکمه‌های مبالغ پیشنهادی ۴۰٪ و ۹۰٪ */}
+                              <div className="flex flex-wrap gap-2 justify-center">
+                                {quickAmounts.map((item) => (
                                   <Button
-                                    key={amount}
-                                    variant={advancePaymentAmount === amount ? "default" : "outline"}
+                                    key={item.percent}
+                                    variant={advancePaymentAmount === item.amount ? "default" : "outline"}
                                     size="sm"
-                                    onClick={() => setAdvancePaymentAmount(amount)}
-                                    className={advancePaymentAmount === amount 
+                                    onClick={() => setAdvancePaymentAmount(item.amount)}
+                                    className={advancePaymentAmount === item.amount 
                                       ? "bg-amber-600 hover:bg-amber-700 text-white" 
                                       : "border-amber-300 text-amber-700 hover:bg-amber-100"}
                                   >
-                                    {amount.toLocaleString('fa-IR')}
+                                    {item.label} ({item.amount.toLocaleString('fa-IR')})
                                   </Button>
                                 ))}
                               </div>
