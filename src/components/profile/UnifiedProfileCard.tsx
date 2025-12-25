@@ -453,41 +453,6 @@ export function UnifiedProfileCard({
               </button>
             </div>
 
-            {/* Mini thumbnails */}
-            {photos.length > 0 && (
-              <div className="flex items-center gap-1 flex-wrap justify-center max-w-[100px]">
-                {photos.slice(0, 5).map((photo, index) => (
-                  <button
-                    key={photo.id}
-                    onClick={() => handleSelectPhoto(index)}
-                    className={cn(
-                      "relative w-5 h-5 rounded-full overflow-hidden border transition-all",
-                      index === currentIndex ? "border-primary ring-1 ring-primary/30" : "border-muted"
-                    )}
-                  >
-                    <img src={getPublicUrl(photo.file_path)} alt="" className="w-full h-full object-cover" />
-                    <div 
-                      className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                      onClick={(e) => handleDeletePhoto(photo, e)}
-                    >
-                      {deletingId === photo.id ? <Loader2 className="h-2 w-2 text-white animate-spin" /> : <X className="h-2 w-2 text-white" />}
-                    </div>
-                  </button>
-                ))}
-                {photos.length < MAX_PHOTOS && (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading || checking}
-                    className="w-5 h-5 rounded-full border border-dashed border-muted-foreground/30 flex items-center justify-center"
-                  >
-                    {uploading || checking ? <Loader2 className="h-2 w-2 animate-spin" /> : <Plus className="h-2 w-2 text-muted-foreground" />}
-                  </button>
-                )}
-                {photos.length > 5 && (
-                  <span className="text-[10px] text-muted-foreground">+{photos.length - 5}</span>
-                )}
-              </div>
-            )}
             
             <input
               ref={fileInputRef}
