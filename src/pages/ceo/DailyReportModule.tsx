@@ -1469,7 +1469,7 @@ export default function DailyReportModule() {
                                   <AutoResizeTextarea
                                     value={row.notes}
                                     onChange={(e) => updateOrderRow(index, 'notes', e.target.value)}
-                                    className="min-h-[40px] bg-white/50"
+                                    className="min-h-[50px] min-w-[120px] bg-white/50"
                                     placeholder="توضیحات..."
                                   />
                                 </TableCell>
@@ -1477,7 +1477,7 @@ export default function DailyReportModule() {
                                   <Input
                                     value={row.team_name}
                                     onChange={(e) => updateOrderRow(index, 'team_name', e.target.value)}
-                                    className="bg-white/50"
+                                    className="bg-white/50 min-w-[100px]"
                                     placeholder="نام اکیپ"
                                   />
                                 </TableCell>
@@ -1485,7 +1485,7 @@ export default function DailyReportModule() {
                                   <AutoResizeTextarea
                                     value={row.service_details}
                                     onChange={(e) => updateOrderRow(index, 'service_details', e.target.value)}
-                                    className="min-h-[40px] bg-white/50"
+                                    className="min-h-[50px] min-w-[140px] bg-white/50"
                                     placeholder="جزئیات خدمات..."
                                   />
                                 </TableCell>
@@ -1493,7 +1493,7 @@ export default function DailyReportModule() {
                                   <AutoResizeTextarea
                                     value={row.activity_description}
                                     onChange={(e) => updateOrderRow(index, 'activity_description', e.target.value)}
-                                    className="min-h-[40px] bg-white/50"
+                                    className="min-h-[50px] min-w-[140px] bg-white/50"
                                     placeholder="شرح فعالیت..."
                                   />
                                 </TableCell>
@@ -1586,7 +1586,7 @@ export default function DailyReportModule() {
                                     }
                                   }}
                                   placeholder="توضیحات..."
-                                  className="min-w-[100px] min-h-[36px]"
+                                  className="min-w-[120px] min-h-[50px]"
                                   maxLength={300}
                                 />
                               </TableCell>
@@ -1599,7 +1599,7 @@ export default function DailyReportModule() {
                                     }
                                   }}
                                   placeholder="توضیحات..."
-                                  className="min-w-[100px] min-h-[36px]"
+                                  className="min-w-[120px] min-h-[50px]"
                                   maxLength={300}
                                 />
                               </TableCell>
@@ -1618,7 +1618,7 @@ export default function DailyReportModule() {
                                         toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                                       }
                                     }}
-                                    className="min-w-[120px] pl-12 text-left"
+                                    className="min-w-[130px] pl-12 text-left"
                                     dir="ltr"
                                     placeholder="0"
                                   />
@@ -1634,7 +1634,7 @@ export default function DailyReportModule() {
                                     }
                                   }}
                                   placeholder="توضیحات..."
-                                  className="min-w-[100px] min-h-[36px]"
+                                  className="min-w-[120px] min-h-[50px]"
                                   maxLength={300}
                                 />
                               </TableCell>
@@ -1653,7 +1653,7 @@ export default function DailyReportModule() {
                                         toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                                       }
                                     }}
-                                    className="min-w-[120px] pl-12 text-left"
+                                    className="min-w-[130px] pl-12 text-left"
                                     dir="ltr"
                                     placeholder="0"
                                   />
@@ -1678,7 +1678,7 @@ export default function DailyReportModule() {
                                           toast.error('اضافه‌کاری نمی‌تواند بیشتر از ۱۵ ساعت باشد');
                                         }
                                       }}
-                                      className="min-w-[80px] pl-10 text-left"
+                                      className="min-w-[90px] pl-10 text-left"
                                       dir="ltr"
                                       placeholder="0"
                                     />
