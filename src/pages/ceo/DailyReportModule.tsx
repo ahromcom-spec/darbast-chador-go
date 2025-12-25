@@ -2745,33 +2745,53 @@ export default function DailyReportModule() {
                       </div>
                     )}
 
-                    {/* Activity Description / Notes & Description */}
-                    {(parsedNotes?.description || parsedNotes?.additional_notes || parsedNotes?.locationPurpose || parsedNotes?.activity_description) && (
-                      <div className="p-4 border rounded-xl space-y-3">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-primary" />
-                          <h4 className="font-semibold">توضیحات و شرح فعالیت</h4>
-                        </div>
-                        {parsedNotes?.activity_description && (
-                          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                            <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1">شرح فعالیت</span>
-                            <p className="text-sm whitespace-pre-wrap">{parsedNotes.activity_description}</p>
-                          </div>
-                        )}
-                        {parsedNotes?.locationPurpose && (
-                          <div className="p-3 bg-muted/30 rounded-lg">
-                            <span className="text-xs text-muted-foreground block mb-1">شرح محل نصب</span>
-                            <p className="text-sm whitespace-pre-wrap">{parsedNotes.locationPurpose}</p>
-                          </div>
-                        )}
-                        {(parsedNotes?.description || parsedNotes?.additional_notes) && (
-                          <div className="p-3 bg-muted/30 rounded-lg">
-                            <span className="text-xs text-muted-foreground block mb-1">توضیحات تکمیلی</span>
-                            <p className="text-sm whitespace-pre-wrap">{parsedNotes?.description || parsedNotes?.additional_notes}</p>
-                          </div>
-                        )}
+                    {/* Activity Description / Notes & Description - Always show section */}
+                    <div className="p-4 border rounded-xl space-y-3 bg-orange-50/50 dark:bg-orange-900/10">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-orange-600" />
+                        <h4 className="font-semibold text-orange-800 dark:text-orange-200">شرح محل و فعالیت</h4>
                       </div>
-                    )}
+                      
+                      {/* شرح فعالیت - from daily report */}
+                      <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1 font-medium">شرح فعالیت</span>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {parsedNotes?.activity_description || selectedOrderDetails.activity_description || 'ثبت نشده'}
+                        </p>
+                      </div>
+                      
+                      {/* شرح محل نصب - locationPurpose */}
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <span className="text-xs text-blue-700 dark:text-blue-300 block mb-1 font-medium">شرح محل نصب</span>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {parsedNotes?.locationPurpose || parsedNotes?.location_purpose || 'ثبت نشده'}
+                        </p>
+                      </div>
+                      
+                      {/* توضیحات سفارش */}
+                      <div className="p-3 bg-muted/50 rounded-lg border">
+                        <span className="text-xs text-muted-foreground block mb-1 font-medium">توضیحات سفارش</span>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {selectedOrderDetails.notes || parsedNotes?.description || parsedNotes?.additional_notes || 'ثبت نشده'}
+                        </p>
+                      </div>
+                      
+                      {/* یادداشت‌های اضافی */}
+                      {parsedNotes?.notes && (
+                        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                          <span className="text-xs text-purple-700 dark:text-purple-300 block mb-1 font-medium">یادداشت‌های اضافی</span>
+                          <p className="text-sm whitespace-pre-wrap">{parsedNotes.notes}</p>
+                        </div>
+                      )}
+                      
+                      {/* جزئیات سرویس - from daily report orders */}
+                      {selectedOrderDetails.service_details && (
+                        <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
+                          <span className="text-xs text-teal-700 dark:text-teal-300 block mb-1 font-medium">جزئیات سرویس</span>
+                          <p className="text-sm whitespace-pre-wrap">{selectedOrderDetails.service_details}</p>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Dates */}
                     <div className="p-4 border rounded-xl">
