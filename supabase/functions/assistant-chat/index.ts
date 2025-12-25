@@ -1516,6 +1516,26 @@ async function computeActiveCustomerDebt(
   return { remaining, total, paid, ordersCount: activeOrders.length };
 }
 
+/**
+ * تشخیص سوالات مربوط به سفارشات و حسابکتاب
+ * این سوالات نباید از حافظه چت استفاده کنند چون داده‌ها دائماً تغییر می‌کنند
+ */
+function isOrderOrAccountingQuestion(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  const keywords = [
+    'سفارش', 'سفارشات', 'سفارشاتم',
+    'حساب', 'حسابکتاب', 'حسابم', 
+    'بدهی', 'بدهکار', 'طلبکار', 'مانده', 'باقی‌مانده',
+    'پرداخت', 'پرداختی', 'پرداختم',
+    'هزینه', 'مبلغ', 'قیمت', 'فاکتور',
+    'چقدر', 'چند تا', 'چند سفارش',
+    'کد سفارش', 'شماره سفارش',
+    'وضعیت سفارش', 'مرحله سفارش',
+    'آدرس سفارش', 'لوکیشن سفارش',
+  ];
+  return keywords.some(kw => lower.includes(kw));
+}
+
 serve(async (req) => {
 
   if (req.method === "OPTIONS") {
