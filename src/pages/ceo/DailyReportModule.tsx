@@ -168,6 +168,11 @@ export default function DailyReportModule() {
   const [reportToArchive, setReportToArchive] = useState<SavedReport | null>(null);
   const [unarchiving, setUnarchiving] = useState(false);
 
+  // Order details dialog state
+  const [orderDetailsDialogOpen, setOrderDetailsDialogOpen] = useState(false);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
+  const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
+
   // Bulk delete hook
   const {
     selectedReportIds,
@@ -1334,6 +1339,33 @@ export default function DailyReportModule() {
     }
   };
 
+  // Fetch full order details for dialog
+  const fetchOrderDetails = async (orderId: string) => {
+    setLoadingOrderDetails(true);
+    setOrderDetailsDialogOpen(true);
+    try {
+      const { data, error } = await supabase
+        .from('projects_v3')
+        .select(`
+          *,
+          locations:location_id(title, address_line, lat, lng),
+          subcategories:subcategory_id(name, service_types(name, service_categories(name))),
+          profiles:created_by(full_name, phone_number)
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (error) throw error;
+      setSelectedOrderDetails(data);
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      toast.error('خطا در دریافت جزئیات سفارش');
+      setOrderDetailsDialogOpen(false);
+    } finally {
+      setLoadingOrderDetails(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-amber-500/5">
       <div className="container mx-auto px-4 py-6 space-y-6">
@@ -1509,11 +1541,11 @@ export default function DailyReportModule() {
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        onClick={() => window.open(`/orders/${row.order_id}`, '_blank')}
+                                        onClick={() => fetchOrderDetails(row.order_id)}
                                         title="مشاهده جزئیات سفارش"
                                         className="shrink-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
                                       >
-                                        <ExternalLink className="h-4 w-4" />
+                                        <Eye className="h-4 w-4" />
                                       </Button>
                                     )}
                                   </div>
@@ -2162,6 +2194,209 @@ export default function DailyReportModule() {
             <StaffSalarySettingsTab />
           </TabsContent>
         </Tabs>
+
+        {/* Order Details Dialog */}
+        <AlertDialog open={orderDetailsDialogOpen} onOpenChange={setOrderDetailsDialogOpen}>
+          <AlertDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-blue-600" />
+                مشخصات سفارش
+              </AlertDialogTitle>
+            </AlertDialogHeader>
+            
+            {loadingOrderDetails ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : selectedOrderDetails ? (
+              <div className="space-y-4 text-right">
+                {/* Order Code & Status */}
+                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <Badge variant="outline" className="text-sm">
+                    {selectedOrderDetails.status === 'closed' ? 'بسته شده' :
+                     selectedOrderDetails.status === 'in_progress' ? 'در حال اجرا' :
+                     selectedOrderDetails.status === 'pending' ? 'در انتظار تایید' :
+                     selectedOrderDetails.status === 'pending_execution' ? 'در انتظار اجرا' :
+                     selectedOrderDetails.status === 'awaiting_payment' ? 'در انتظار پرداخت' :
+                     selectedOrderDetails.status === 'awaiting_collection' ? 'در انتظار جمع‌آوری' :
+                     selectedOrderDetails.status}
+                  </Badge>
+                  <span className="font-bold text-blue-600 text-lg">{selectedOrderDetails.code}</span>
+                </div>
+
+                {/* Customer Info */}
+                <div className="p-4 border rounded-lg space-y-3">
+                  <h4 className="font-semibold text-sm text-muted-foreground">اطلاعات مشتری</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">نام مشتری:</span>
+                      <p className="font-medium">{selectedOrderDetails.profiles?.full_name || 'نامشخص'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">شماره تماس:</span>
+                      <p className="font-medium" dir="ltr">{selectedOrderDetails.profiles?.phone_number || 'نامشخص'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Service Info */}
+                <div className="p-4 border rounded-lg space-y-3">
+                  <h4 className="font-semibold text-sm text-muted-foreground">اطلاعات خدمات</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">نوع خدمات:</span>
+                      <p className="font-medium">{selectedOrderDetails.subcategories?.service_types?.name || 'نامشخص'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">زیرمجموعه:</span>
+                      <p className="font-medium">{selectedOrderDetails.subcategories?.name || 'نامشخص'}</p>
+                    </div>
+                    {selectedOrderDetails.subcategories?.service_types?.service_categories?.name && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">دسته‌بندی:</span>
+                        <p className="font-medium">{selectedOrderDetails.subcategories.service_types.service_categories.name}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Location Info */}
+                <div className="p-4 border rounded-lg space-y-3">
+                  <h4 className="font-semibold text-sm text-muted-foreground">اطلاعات مکان</h4>
+                  <div className="text-sm space-y-2">
+                    {selectedOrderDetails.locations?.title && (
+                      <div>
+                        <span className="text-muted-foreground">عنوان:</span>
+                        <p className="font-medium">{selectedOrderDetails.locations.title}</p>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-muted-foreground">آدرس:</span>
+                      <p className="font-medium">{selectedOrderDetails.locations?.address_line || selectedOrderDetails.address || 'نامشخص'}</p>
+                    </div>
+                    {selectedOrderDetails.detailed_address && (
+                      <div>
+                        <span className="text-muted-foreground">آدرس تکمیلی:</span>
+                        <p className="font-medium">{selectedOrderDetails.detailed_address}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dimensions */}
+                {(selectedOrderDetails.length || selectedOrderDetails.width || selectedOrderDetails.height) && (
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <h4 className="font-semibold text-sm text-muted-foreground">ابعاد</h4>
+                    <div className="grid grid-cols-3 gap-3 text-sm">
+                      {selectedOrderDetails.length && (
+                        <div>
+                          <span className="text-muted-foreground">طول:</span>
+                          <p className="font-medium">{selectedOrderDetails.length} متر</p>
+                        </div>
+                      )}
+                      {selectedOrderDetails.width && (
+                        <div>
+                          <span className="text-muted-foreground">عرض:</span>
+                          <p className="font-medium">{selectedOrderDetails.width} متر</p>
+                        </div>
+                      )}
+                      {selectedOrderDetails.height && (
+                        <div>
+                          <span className="text-muted-foreground">ارتفاع:</span>
+                          <p className="font-medium">{selectedOrderDetails.height} متر</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Financial Info */}
+                {(selectedOrderDetails.total_price || selectedOrderDetails.prepayment) && (
+                  <div className="p-4 border rounded-lg space-y-3 bg-green-50 dark:bg-green-900/20">
+                    <h4 className="font-semibold text-sm text-muted-foreground">اطلاعات مالی</h4>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {selectedOrderDetails.total_price && (
+                        <div>
+                          <span className="text-muted-foreground">مبلغ کل:</span>
+                          <p className="font-medium text-green-700">{Math.round(selectedOrderDetails.total_price / 10).toLocaleString('fa-IR')} تومان</p>
+                        </div>
+                      )}
+                      {selectedOrderDetails.prepayment && (
+                        <div>
+                          <span className="text-muted-foreground">پیش‌پرداخت:</span>
+                          <p className="font-medium">{Math.round(selectedOrderDetails.prepayment / 10).toLocaleString('fa-IR')} تومان</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Activity & Notes */}
+                {(selectedOrderDetails.activity_description || selectedOrderDetails.notes) && (
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <h4 className="font-semibold text-sm text-muted-foreground">توضیحات</h4>
+                    {selectedOrderDetails.activity_description && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">شرح فعالیت:</span>
+                        <p className="font-medium mt-1 whitespace-pre-wrap">{selectedOrderDetails.activity_description}</p>
+                      </div>
+                    )}
+                    {selectedOrderDetails.notes && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">یادداشت:</span>
+                        <p className="font-medium mt-1 whitespace-pre-wrap">{selectedOrderDetails.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Dates */}
+                <div className="p-4 border rounded-lg space-y-3">
+                  <h4 className="font-semibold text-sm text-muted-foreground">تاریخ‌ها</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {selectedOrderDetails.created_at && (
+                      <div>
+                        <span className="text-muted-foreground">تاریخ ثبت:</span>
+                        <p className="font-medium">{formatPersianDate(selectedOrderDetails.created_at)}</p>
+                      </div>
+                    )}
+                    {selectedOrderDetails.start_date && (
+                      <div>
+                        <span className="text-muted-foreground">تاریخ شروع:</span>
+                        <p className="font-medium">{formatPersianDate(selectedOrderDetails.start_date)}</p>
+                      </div>
+                    )}
+                    {selectedOrderDetails.end_date && (
+                      <div>
+                        <span className="text-muted-foreground">تاریخ پایان:</span>
+                        <p className="font-medium">{formatPersianDate(selectedOrderDetails.end_date)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                اطلاعاتی یافت نشد
+              </div>
+            )}
+
+            <AlertDialogFooter className="flex gap-2 sm:gap-0">
+              <AlertDialogCancel>بستن</AlertDialogCancel>
+              {selectedOrderDetails && (
+                <Button 
+                  variant="outline"
+                  onClick={() => window.open(`/orders/${selectedOrderDetails.id}`, '_blank')}
+                  className="gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  مشاهده کامل
+                </Button>
+              )}
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
