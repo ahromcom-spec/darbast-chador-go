@@ -33,6 +33,12 @@ import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 // Helper to parse order notes safely - handles double-stringified JSON
 const parseOrderNotes = (notes: any): any => {
   if (!notes) return null;
+  
+  // If notes is already an object, return it directly
+  if (typeof notes === 'object' && notes !== null) {
+    return notes;
+  }
+  
   try {
     let parsed = notes;
     // First parse if it's a string
