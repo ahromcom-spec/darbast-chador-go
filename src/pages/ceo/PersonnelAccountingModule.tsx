@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowRight, 
   Calculator, 
   Calendar, 
   Clock, 
@@ -23,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns-jalali';
 import { faIR } from 'date-fns-jalali/locale';
+import { ModuleHeader } from '@/components/common/ModuleHeader';
 
 interface StaffWorkRecord {
   id: string;
@@ -499,29 +499,13 @@ export default function PersonnelAccountingModule() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
-        <div className="container max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/profile')}
-              className="shrink-0"
-            >
-              <ArrowRight className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold">حسابکتاب و کارکرد</h1>
-              <p className="text-sm text-muted-foreground">
-                {userName || 'کاربر'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
+        <ModuleHeader
+          title="حسابکتاب و کارکرد"
+          description={userName || 'کاربر'}
+          icon={<Calculator className="h-5 w-5" />}
+          backTo="/profile"
+        />
         {/* User Info Card */}
         <Card className="border-2 border-primary/20">
           <CardContent className="p-6">

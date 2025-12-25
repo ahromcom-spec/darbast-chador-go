@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +32,7 @@ import { format } from 'date-fns-jalali';
 import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
 import { StaffSalarySettingsTab } from '@/components/ceo/StaffSalarySettingsTab';
 import { ExcelImportDialog } from '@/components/ceo/ExcelImportDialog';
+import { ModuleHeader } from '@/components/common/ModuleHeader';
 
 interface SavedReport {
   id: string;
@@ -1337,41 +1338,36 @@ export default function DailyReportModule() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-amber-500/5">
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowRight className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold">گزارش روزانه شرکت اهرم</h1>
-              <p className="text-sm text-muted-foreground">ثبت گزارش فعالیت‌های روزانه</p>
+        <ModuleHeader
+          title="گزارش روزانه شرکت اهرم"
+          description="ثبت گزارش فعالیت‌های روزانه"
+          icon={<FileText className="h-5 w-5" />}
+          backTo="/profile?tab=modules"
+          action={
+            <div className="flex items-center gap-3">
+              <ExcelImportDialog
+                onImportComplete={handleExcelImport}
+                knownStaffMembers={staffMembers}
+              />
+              {autoSaveStatus !== 'idle' && (
+                <div className="flex items-center gap-2 text-sm">
+                  {autoSaveStatus === 'saving' && (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                      <span className="text-muted-foreground">در حال ذخیره...</span>
+                    </>
+                  )}
+                  {autoSaveStatus === 'saved' && (
+                    <>
+                      <Check className="h-4 w-4 text-green-600" />
+                      <span className="text-green-600">ذخیره شد</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Excel Import Button */}
-            <ExcelImportDialog
-              onImportComplete={handleExcelImport}
-              knownStaffMembers={staffMembers}
-            />
-            {/* Auto-save status indicator */}
-            {autoSaveStatus !== 'idle' && (
-              <div className="flex items-center gap-2 text-sm">
-                {autoSaveStatus === 'saving' && (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
-                    <span className="text-muted-foreground">در حال ذخیره...</span>
-                  </>
-                )}
-                {autoSaveStatus === 'saved' && (
-                  <>
-                    <Check className="h-4 w-4 text-green-600" />
-                    <span className="text-green-600">ذخیره شد</span>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+          }
+        />
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

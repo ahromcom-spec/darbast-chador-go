@@ -7,9 +7,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserPlus, Loader2, CheckCircle, Phone, User, AlertCircle, UserCheck } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/useDebounce';
+import { ModuleHeader } from '@/components/common/ModuleHeader';
 
 export default function SiteRegistrationModule() {
   const { user } = useAuth();
@@ -188,18 +189,15 @@ export default function SiteRegistrationModule() {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 max-w-2xl">
+    <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-6">
+      <ModuleHeader
+        title="ثبت‌نام در سایت اهرم"
+        description="ثبت‌نام کاربر جدید بدون نیاز به ارسال کد تایید"
+        icon={<UserPlus className="h-5 w-5" />}
+        backTo="/profile?tab=modules"
+      />
+      
       <Card className="border-2 border-teal-500/30 shadow-lg">
-        <CardHeader className="text-center pb-2">
-          <div className="mx-auto p-3 rounded-full bg-teal-500/10 w-fit mb-3">
-            <UserPlus className="h-8 w-8 text-teal-600" />
-          </div>
-          <CardTitle className="text-xl md:text-2xl">ثبت‌نام در سایت اهرم</CardTitle>
-          <CardDescription className="mt-2">
-            ثبت‌نام کاربر جدید بدون نیاز به ارسال کد تایید
-          </CardDescription>
-        </CardHeader>
-
         <CardContent className="space-y-6 pt-4">
           <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
             <AlertCircle className="h-4 w-4 text-amber-600" />
