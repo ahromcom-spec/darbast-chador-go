@@ -11,6 +11,7 @@ const SYSTEM_PROMPT = `تو منشی هوشمند و حرفه‌ای سایت ا
 ⚠️ قانون بسیار مهم درباره سفارشات:
 - «سفارش بایگانی‌شده» اگر هرکدام از این‌ها برقرار باشد: is_archived=true یا is_deep_archived=true یا archived_at != null یا deep_archived_at != null.
 - تو حق نداری درباره سفارشات بایگانی‌شده هیچ اطلاعات، آمار یا جزئیاتی ارائه کنی.
+- برای سوالات «چقدر بدهکارم/مانده حسابم چقدر است»، فقط از عدد «مانده بدهی» که از سفارشات فعالِ همین پرامپت محاسبه شده استفاده کن.
 - اگر کاربر درباره سفارشی پرسید که در سفارشات فعال پیدا نمی‌شود، فقط بگو: «این سفارش در لیست سفارشات فعال شما وجود ندارد یا بایگانی شده است.»
 
 ═══════════════════════════════════════
@@ -750,21 +751,30 @@ async function getStaffListContext(supabase: any): Promise<string> {
 // تابع برای گرفتن سفارشات اخیر (برای ماژول اجرا)
 async function getRecentOrdersContext(supabase: any): Promise<string> {
   try {
-    const { data: orders, error } = await supabase
+    const { data: rawOrders, error } = await supabase
       .from("projects_v3")
       .select(`
-        id, code, status, execution_stage, address, 
+        id, code, status, execution_stage, address,
         customer_name, customer_phone, total_price, total_paid,
         created_at, execution_start_date, execution_end_date,
+        is_archived, is_deep_archived, archived_at, deep_archived_at,
         provinces:province_id (name),
         subcategories:subcategory_id (name)
       `)
-      .or("is_deep_archived.is.null,is_deep_archived.eq.false")
-      .or("is_archived.is.null,is_archived.eq.false")
-      .is("archived_at", null)
-      .is("deep_archived_at", null)
       .order("created_at", { ascending: false })
-      .limit(15);
+      .limit(50);
+
+    const orders = (rawOrders || [])
+      .filter((o: any) => {
+        const archived =
+          o?.is_archived === true ||
+          o?.is_deep_archived === true ||
+          o?.archived_at != null ||
+          o?.deep_archived_at != null;
+        return !archived;
+      })
+      .slice(0, 15);
+
     
     if (error || !orders || orders.length === 0) {
       return '\n📦 سفارشات: هنوز سفارشی ثبت نشده است.';
@@ -844,7 +854,7 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
       .single();
 
     // سفارشات کاربر را با تمام جزئیات بگیریم
-    const { data: orders, error: ordersError } = await supabase
+    const { data: rawOrders, error: ordersError } = await supabase
       .from('projects_v3')
       .select(`
         id,
@@ -868,6 +878,9 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
         executive_completion_date,
         closed_at,
         is_archived,
+        is_deep_archived,
+        archived_at,
+        deep_archived_at,
         is_renewal,
         original_order_id,
         customer_name,
@@ -883,11 +896,21 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
         )
       `)
       .eq('customer_id', customer.id)
-      .or('is_deep_archived.is.null,is_deep_archived.eq.false')
-      .or('is_archived.is.null,is_archived.eq.false')
-      .is('archived_at', null)
-      .is('deep_archived_at', null)
       .order('created_at', { ascending: false });
+
+    const orders = (rawOrders || []).filter((o: any) => {
+      const archived =
+        o?.is_archived === true ||
+        o?.is_deep_archived === true ||
+        o?.archived_at != null ||
+        o?.deep_archived_at != null;
+
+      const status = (o?.status || '').toLowerCase();
+      const rejected = status === 'rejected' || status === 'cancelled';
+
+      return !archived && !rejected;
+    });
+
 
     if (ordersError) {
       console.error('Error fetching orders:', ordersError);
