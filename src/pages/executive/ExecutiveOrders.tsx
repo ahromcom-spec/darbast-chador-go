@@ -585,6 +585,16 @@ export default function ExecutiveOrders() {
         updateData.execution_stage = null;
         updateData.execution_confirmed_at = null;
         updateData.closed_at = null;
+        
+        // کپی قیمت از notes.estimated_price به payment_amount و total_price اگر خالی هستند
+        const notesObj = orderData?.notes && typeof orderData.notes === 'object'
+          ? orderData.notes as any
+          : parseOrderNotes(orderData?.notes as any);
+        const estimatedPrice = notesObj?.estimated_price || notesObj?.total_price || notesObj?.manager_set_price;
+        if (estimatedPrice && estimatedPrice > 0 && (!orderData?.payment_amount || orderData.payment_amount === 0)) {
+          updateData.payment_amount = estimatedPrice;
+          updateData.total_price = estimatedPrice;
+        }
       } else if (newStage === 'in_progress') {
         // شروع اجرا
         if (!updateData.approved_at) {
