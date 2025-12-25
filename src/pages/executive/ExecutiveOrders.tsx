@@ -526,9 +526,37 @@ export default function ExecutiveOrders() {
       // دریافت اطلاعات سفارش برای ارسال اعلان
       const { data: orderData } = await supabase
         .from('projects_v3')
-        .select('customer_id, code')
+        .select('customer_id, code, notes, payment_amount')
         .eq('id', orderId)
         .single();
+
+      // جلوگیری از تایید سفارش «درخواست قیمت کارشناسی» قبل از ثبت و تایید قیمت
+      if (newStage === 'pending_execution') {
+        const notesObj =
+          (orderData as any)?.notes && typeof (orderData as any).notes === 'object'
+            ? (orderData as any).notes
+            : parseOrderNotes(((orderData as any)?.notes ?? null) as any);
+
+        const isExpertPricingRequest = notesObj?.is_expert_pricing_request === true;
+        if (isExpertPricingRequest) {
+          const priceSetByManager = notesObj?.price_set_by_manager === true;
+          const amountRaw = (orderData as any)?.payment_amount ?? notesObj?.manager_set_price;
+          const amountNumber = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
+          const hasPaymentAmount = Number.isFinite(amountNumber) && amountNumber > 0;
+          const customerPriceConfirmed = notesObj?.customer_price_confirmed === true;
+
+          const canApprove = priceSetByManager && hasPaymentAmount && customerPriceConfirmed;
+          if (!canApprove) {
+            toast({
+              variant: 'destructive',
+              title: 'امکان تایید سفارش نیست',
+              description:
+                'این سفارش «درخواست قیمت کارشناسی» است؛ ابتدا قیمت را ثبت کنید و پس از تایید مشتری، تایید سفارش فعال می‌شود.'
+            });
+            return;
+          }
+        }
+      }
 
       // به‌روزرسانی status و execution_stage با مقادیر صحیح
       const updateData: Record<string, any> = {
@@ -1034,7 +1062,24 @@ export default function ExecutiveOrders() {
         ) : (
           filteredOrders.map((order) => {
             const isSelected = selectedOrderIds.has(order.id);
+
+            const notesObj =
+              (order as any)?.notes && typeof (order as any).notes === 'object'
+                ? (order as any).notes
+                : parseOrderNotes((order as any)?.notes ?? null);
+
+            const isExpertPricingRequest = notesObj?.is_expert_pricing_request === true;
+            const priceSetByManager = notesObj?.price_set_by_manager === true;
+            const amountRaw = (order as any)?.payment_amount ?? notesObj?.manager_set_price;
+            const amountNumber = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
+            const hasPaymentAmount = Number.isFinite(amountNumber) && amountNumber > 0;
+            const customerPriceConfirmed = notesObj?.customer_price_confirmed === true;
+
+            // برای درخواست کارشناسی: فقط وقتی قیمت ثبت شده و مشتری تایید کرده باشد، اجازه تایید سفارش بده
+            const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount && customerPriceConfirmed);
+
             return (
+
             <Card key={order.id} className={`hover:shadow-lg transition-all duration-200 ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} ${
               (order.status === 'approved' || order.status === 'pending_execution') ? 'border-l-4 border-l-yellow-500' :
               order.status === 'in_progress' ? 'border-l-4 border-l-blue-500' :
@@ -1300,7 +1345,11 @@ export default function ExecutiveOrders() {
                     <Button
                       onClick={() => handleStageChange(order.id, 'pending_execution')}
                       size="sm"
-                      className="gap-2 bg-green-600 hover:bg-green-700"
+                      disabled={!canApprove}
+                      title={!canApprove ? 'ابتدا باید قیمت ثبت شود و مشتری آن را تایید کند' : 'تایید سفارش'}
+                      className={`gap-2 bg-green-600 hover:bg-green-700 ${
+                        !canApprove ? 'opacity-50 cursor-not-allowed hover:bg-green-600' : ''
+                      }`}
                     >
                       <CheckCircle className="h-4 w-4" />
                       تایید سفارش
