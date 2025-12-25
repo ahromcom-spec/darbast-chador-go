@@ -367,6 +367,10 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
     parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type || ''
   );
 
+  // Track if price has been modified since last save (for save button state)
+  const [savedPaymentAmount, setSavedPaymentAmount] = useState(order.payment_amount?.toString() || '');
+  const isPriceChanged = paymentAmount !== savedPaymentAmount;
+
   // Check if this is an expert pricing request
   const isExpertPricingRequest = parsedNotes?.is_expert_pricing_request === true;
 
@@ -399,6 +403,9 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
         .eq('id', order.id);
 
       if (error) throw error;
+
+      // بعد از ذخیره موفق، مقدار ذخیره شده قیمت را آپدیت کن تا دکمه غیرفعال شود
+      setSavedPaymentAmount(paymentAmount);
 
       toast({ title: 'موفق', description: 'اطلاعات سفارش به‌روزرسانی شد' });
       setIsEditing(false);
@@ -467,11 +474,14 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
               />
               <Button 
                 onClick={handleSave} 
-                disabled={saving || !paymentAmount}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-6"
+                disabled={saving || !paymentAmount || !isPriceChanged}
+                title={!isPriceChanged ? 'قیمت ذخیره شده است' : 'ذخیره قیمت'}
+                className={`bg-amber-600 hover:bg-amber-700 text-white px-6 ${
+                  !isPriceChanged ? 'opacity-50 cursor-not-allowed hover:bg-amber-600' : ''
+                }`}
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
-                ذخیره قیمت
+                {!isPriceChanged ? 'ذخیره شده ✓' : 'ذخیره قیمت'}
               </Button>
             </div>
           </div>
