@@ -1763,20 +1763,28 @@ export default function OrderDetail() {
                             {paidAmount > 0 ? `پرداخت الباقی (${remainingAmount.toLocaleString('fa-IR')})` : 'پرداخت کامل'}
                           </Button>
                           
-                          <Button 
-                            variant="outline"
-                            className="w-full gap-2 border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
-                            size="lg"
-                            onClick={() => {
-                              // شروع از 30% مبلغ الباقی و گرد کردن به نزدیک‌ترین 100,000
-                              const minAmount = Math.ceil((remainingAmount * 0.3) / 100000) * 100000;
-                              setAdvancePaymentAmount(Math.min(minAmount, remainingAmount));
-                              setShowAdvancePayment(!showAdvancePayment);
-                            }}
-                          >
-                            <CreditCard className="h-5 w-5" />
-                            پرداخت علی‌الحساب
-                          </Button>
+                          {/* دکمه پرداخت علی‌الحساب - فقط اگر ۵۰٪ یا بیشتر پرداخت نشده و مانده ≥ ۱۰ میلیون */}
+                          {(() => {
+                            const paidPercentage = grandTotal > 0 ? (paidAmount / grandTotal) * 100 : 0;
+                            const showAdvanceButton = paidPercentage < 50 || remainingAmount >= 10_000_000;
+                            if (!showAdvanceButton) return null;
+                            return (
+                              <Button 
+                                variant="outline"
+                                className="w-full gap-2 border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
+                                size="lg"
+                                onClick={() => {
+                                  // شروع از 30% مبلغ الباقی و گرد کردن به نزدیک‌ترین 100,000
+                                  const minAmount = Math.ceil((remainingAmount * 0.3) / 100000) * 100000;
+                                  setAdvancePaymentAmount(Math.min(minAmount, remainingAmount));
+                                  setShowAdvancePayment(!showAdvancePayment);
+                                }}
+                              >
+                                <CreditCard className="h-5 w-5" />
+                                پرداخت علی‌الحساب
+                              </Button>
+                            );
+                          })()}
                         </div>
 
                         {/* اسلایدر پرداخت علی‌الحساب */}
