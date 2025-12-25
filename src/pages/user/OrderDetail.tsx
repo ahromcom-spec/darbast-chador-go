@@ -1554,7 +1554,8 @@ export default function OrderDetail() {
                   const grandTotal = basePrice + approvedRepairCost;
                   const paidAmount = totalPaid || order.total_paid || 0;
                   const remainingAmount = grandTotal - paidAmount;
-                  const isFullyPaid = remainingAmount <= 0 || order.payment_confirmed_at;
+                  // isFullyPaid فقط بر اساس باقی‌مانده تعیین می‌شود - نه payment_confirmed_at
+                  const isFullyPaid = remainingAmount <= 0;
                   
                   return (
                   <Collapsible open={isPriceDetailsExpanded} onOpenChange={setIsPriceDetailsExpanded}>
