@@ -1631,23 +1631,38 @@ ${accessibleTopics.map(topic => `• ${topic}`).join("\n")}
     }
 
     // ساخت پیام‌ها با پشتیبانی از تصویر
-    const formattedMessages = messages.map((msg: { role: string; content: string }, index: number) => {
+    // نکته مهم: برای سوالات «سفارشات/حسابکتاب»، تاریخچه چت را نادیده می‌گیریم
+    // تا مدل تحت تاثیر پاسخ‌های قدیمی قرار نگیرد (چون داده‌ها دائماً تغییر می‌کنند).
+    const shouldIgnoreChatHistory =
+      !!userId && typeof lastUserText === 'string' && isOrderOrAccountingQuestion(lastUserText);
+
+    if (shouldIgnoreChatHistory) {
+      console.log('Ignoring chat history for order/accounting question');
+    }
+
+    const baseMessages = shouldIgnoreChatHistory
+      ? [{ role: 'user', content: lastUserText }]
+      : (Array.isArray(messages) ? messages : []);
+
+    const formattedMessages = baseMessages.map((msg: { role: string; content: string }, index: number) => {
       // اگر تصویر داریم و این آخرین پیام کاربر است
-      if (imageBase64 && msg.role === 'user' && index === messages.length - 1) {
+      if (imageBase64 && msg.role === 'user' && index === baseMessages.length - 1) {
         return {
           role: msg.role,
           content: [
             {
-              type: "text",
-              text: msg.content + "\n\nتوضیح مهم: کاربر یک تصویر از سایت اهرم فرستاده است. اگر تصویر مربوط به کره زمین طلایی است، توضیح بده که این کره نماد گستردگی خدمات اهرم در سراسر ایران است و نشان‌دهنده کیفیت طلایی خدمات ماست. اگر تصویر مربوط به بخش دیگری از سایت است، آن را توضیح بده. اگر تصویر اصلاً مربوط به سایت نیست، مودبانه بگو که فقط درباره خدمات اهرم می‌توانی کمک کنی."
+              type: 'text',
+              text:
+                msg.content +
+                "\n\nتوضیح مهم: کاربر یک تصویر از سایت اهرم فرستاده است. اگر تصویر مربوط به کره زمین طلایی است، توضیح بده که این کره نماد گستردگی خدمات اهرم در سراسر ایران است و نشان‌دهنده کیفیت طلایی خدمات ماست. اگر تصویر مربوط به بخش دیگری از سایت است، آن را توضیح بده. اگر تصویر اصلاً مربوط به سایت نیست، مودبانه بگو که فقط درباره خدمات اهرم می‌توانی کمک کنی.",
             },
             {
-              type: "image_url",
+              type: 'image_url',
               image_url: {
-                url: `data:image/jpeg;base64,${imageBase64}`
-              }
-            }
-          ]
+                url: `data:image/jpeg;base64,${imageBase64}`,
+              },
+            },
+          ],
         };
       }
       return { role: msg.role, content: msg.content };
