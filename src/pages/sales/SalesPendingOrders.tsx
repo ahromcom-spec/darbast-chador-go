@@ -38,6 +38,7 @@ interface Order {
   customer_id?: string;
   executed_by?: string | null;
   approved_by?: string | null;
+  payment_amount?: number | null;
 }
 
 export default function SalesPendingOrders() {
@@ -237,6 +238,16 @@ export default function SalesPendingOrders() {
 
   const OrderCardWithApprovals = ({ order }: { order: Order }) => {
     const { approvals, loading: approvalsLoading } = useOrderApprovals(order.id);
+    
+    // Check if this is an expert pricing request and if price has been set
+    const orderNotes = parseOrderNotes(order.notes);
+    const isExpertPricingRequest = orderNotes?.is_expert_pricing_request === true;
+    const priceSetByManager = orderNotes?.price_set_by_manager === true;
+    const hasPaymentAmount = order.payment_amount && order.payment_amount > 0;
+    const customerPriceConfirmed = orderNotes?.customer_price_confirmed === true;
+    
+    // For expert pricing requests, approval is disabled until price is set AND customer confirms price
+    const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount && customerPriceConfirmed);
 
     return (
       <Card className="hover:shadow-md transition-shadow">
@@ -262,6 +273,43 @@ export default function SalesPendingOrders() {
 
           <ApprovalProgress approvals={approvals} loading={approvalsLoading} />
 
+          {/* Expert pricing status indicator */}
+          {isExpertPricingRequest && !priceSetByManager && !hasPaymentAmount && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 text-sm">
+                <X className="h-4 w-4" />
+                <span className="font-medium">ابتدا قیمت را برای این سفارش تعیین کنید</span>
+              </div>
+              <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">
+                از طریق "جزئیات" قیمت را وارد و ذخیره کنید.
+              </p>
+            </div>
+          )}
+
+          {isExpertPricingRequest && priceSetByManager && hasPaymentAmount && !customerPriceConfirmed && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 text-sm">
+                <Eye className="h-4 w-4" />
+                <span className="font-medium">قیمت تعیین شده: {Number(order.payment_amount).toLocaleString('fa-IR')} تومان</span>
+              </div>
+              <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">
+                در انتظار تایید قیمت توسط مشتری. پس از تایید مشتری می‌توانید سفارش را تایید کنید.
+              </p>
+            </div>
+          )}
+
+          {isExpertPricingRequest && canApprove && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
+                <CheckCircle className="h-4 w-4" />
+                <span className="font-medium">قیمت تعیین شده: {Number(order.payment_amount).toLocaleString('fa-IR')} تومان - مشتری تایید کرده</span>
+              </div>
+              <p className="text-xs text-green-600 dark:text-green-500 mt-1">
+                قیمت سفارش تعیین شده و مشتری تایید کرده است. می‌توانید سفارش را تایید کنید.
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-2 flex-wrap pt-2">
             <Button
               variant="outline"
@@ -280,7 +328,9 @@ export default function SalesPendingOrders() {
                 setSelectedOrder(order);
                 setActionType('approve');
               }}
-              className="gap-2"
+              disabled={!canApprove}
+              className={`gap-2 ${canApprove ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}
+              title={!canApprove ? 'ابتدا باید قیمت سفارش تعیین شود و مشتری تایید کند' : 'تایید سفارش'}
             >
               <CheckCircle className="h-4 w-4" />
               تایید
