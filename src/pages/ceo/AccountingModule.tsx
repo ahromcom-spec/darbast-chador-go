@@ -196,7 +196,7 @@ export default function AccountingModule() {
       let query = supabase
         .from('projects_v3')
         .select(`
-          id, customer_id, code, address, total_price, total_paid, 
+          id, customer_id, code, address, payment_amount, total_paid, 
           created_at, status, is_archived, is_deep_archived,
           hierarchy_project_id,
           subcategory:subcategories(name, service_type:service_types_v3(name))
@@ -267,7 +267,8 @@ export default function AccountingModule() {
             const firstOrder = projectOrders[0];
             const subcategoryData = firstOrder?.subcategory as any;
             
-            const projectTotalPrice = projectOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
+            // استفاده از payment_amount به جای total_price (مطابق صورتحساب مشتری)
+            const projectTotalPrice = projectOrders.reduce((sum, o) => sum + (o.payment_amount || 0), 0);
             const projectTotalPaid = projectOrders.reduce((sum, o) => sum + (o.total_paid || 0), 0);
 
             projects.push({
@@ -282,9 +283,9 @@ export default function AccountingModule() {
               orders: projectOrders.map(o => ({
                 id: o.id,
                 code: o.code,
-                total_price: o.total_price || 0,
+                total_price: o.payment_amount || 0,
                 total_paid: o.total_paid || 0,
-                remaining: Math.max(0, (o.total_price || 0) - (o.total_paid || 0)),
+                remaining: Math.max(0, (o.payment_amount || 0) - (o.total_paid || 0)),
                 status: o.status,
                 created_at: o.created_at,
                 is_archived: o.is_archived || false,
@@ -309,8 +310,9 @@ export default function AccountingModule() {
         // Sort addresses by remaining amount
         addresses.sort((a, b) => b.remaining - a.remaining);
 
+        // استفاده از payment_amount به جای total_price (مطابق صورتحساب مشتری)
         const totalPaid = customerOrders.reduce((sum, o) => sum + (o.total_paid || 0), 0);
-        const totalPrice = customerOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
+        const totalPrice = customerOrders.reduce((sum, o) => sum + (o.payment_amount || 0), 0);
         const lastOrder = customerOrders.sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )[0];
