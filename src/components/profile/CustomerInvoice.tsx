@@ -257,7 +257,7 @@ export const CustomerInvoice = () => {
   };
 
   const formatPrice = (price: number) => {
-    return 'تومان ' + new Intl.NumberFormat('fa-IR').format(price);
+    return new Intl.NumberFormat('fa-IR').format(price) + ' تومان';
   };
 
   if (loading) {
