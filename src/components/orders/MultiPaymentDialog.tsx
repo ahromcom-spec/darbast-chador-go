@@ -116,15 +116,18 @@ export function MultiPaymentDialog({
       return;
     }
 
-    // بررسی که مبلغ پرداختی بیشتر از باقی‌مانده نباشد
-    const currentRemaining = (totalPrice || 0) - totalPaid;
-    if (amount > currentRemaining) {
-      toast({
-        variant: 'destructive',
-        title: 'خطا',
-        description: `مبلغ پرداختی نمی‌تواند بیشتر از باقی‌مانده (${currentRemaining.toLocaleString('fa-IR')} تومان) باشد`
-      });
-      return;
+    // بررسی که مبلغ پرداختی بیشتر از باقی‌مانده نباشد (فقط اگر قیمت تعیین شده باشد)
+    const priceIsSet = totalPrice !== null && totalPrice !== undefined && totalPrice > 0;
+    if (priceIsSet) {
+      const currentRemaining = totalPrice - totalPaid;
+      if (amount > currentRemaining) {
+        toast({
+          variant: 'destructive',
+          title: 'خطا',
+          description: `مبلغ پرداختی نمی‌تواند بیشتر از باقی‌مانده (${currentRemaining.toLocaleString('fa-IR')} تومان) باشد`
+        });
+        return;
+      }
     }
 
     if (!user?.id) {
@@ -236,7 +239,11 @@ export function MultiPaymentDialog({
     }
   };
 
-  const remainingAmount = (totalPrice || 0) - totalPaid;
+  // اگر totalPrice صفر یا تعیین نشده باشد، مانده را نامحدود در نظر بگیر (امکان ثبت پرداخت بدون قیمت مشخص)
+  const hasPriceSet = totalPrice !== null && totalPrice !== undefined && totalPrice > 0;
+  const remainingAmount = hasPriceSet ? (totalPrice - totalPaid) : Infinity;
+  const displayRemaining = hasPriceSet ? remainingAmount : null;
+  const isSettled = hasPriceSet && remainingAmount <= 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -273,18 +280,22 @@ export function MultiPaymentDialog({
               <p className="font-bold text-green-600 dark:text-green-400">
                 {totalPaid > 0 ? totalPaid.toLocaleString('fa-IR') : '۰'}
               </p>
-              {totalPaid > 0 && remainingAmount > 0 && (
+              {totalPaid > 0 && !isSettled && (
                 <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">علی‌الحساب</p>
               )}
             </div>
             <div className={`p-3 rounded-lg border text-center ${
-              remainingAmount > 0 
+              !isSettled 
                 ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800' 
                 : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
             }`}>
               <p className="text-xs text-muted-foreground mb-1">مانده</p>
-              <p className={`font-bold ${remainingAmount > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {remainingAmount > 0 ? remainingAmount.toLocaleString('fa-IR') : 'تسویه'}
+              <p className={`font-bold ${!isSettled ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                {isSettled 
+                  ? 'تسویه' 
+                  : displayRemaining !== null 
+                    ? displayRemaining.toLocaleString('fa-IR')
+                    : '—'}
               </p>
             </div>
           </div>
@@ -309,9 +320,12 @@ export function MultiPaymentDialog({
                   const rawValue = e.target.value.replace(/[^0-9]/g, '');
                   const numericValue = parseInt(rawValue) || 0;
                   
-                  // محدود کردن به حداکثر باقی‌مانده
-                  const maxAllowed = remainingAmount > 0 ? remainingAmount : 0;
-                  const limitedValue = Math.min(numericValue, maxAllowed);
+                  // اگر قیمت تعیین شده، محدود به باقی‌مانده، در غیر این صورت نامحدود
+                  let limitedValue = numericValue;
+                  if (hasPriceSet && remainingAmount !== Infinity) {
+                    const maxAllowed = remainingAmount > 0 ? remainingAmount : 0;
+                    limitedValue = Math.min(numericValue, maxAllowed);
+                  }
                   
                   // فرمت سه رقم سه رقم با کاما
                   const formattedValue = limitedValue > 0 
@@ -319,12 +333,16 @@ export function MultiPaymentDialog({
                     : '';
                   setPaymentAmount(formattedValue);
                 }}
-                placeholder={remainingAmount > 0 ? remainingAmount.toLocaleString('en-US') : 'مبلغ را وارد کنید'}
+                placeholder="مبلغ را وارد کنید"
                 className="mt-1.5"
                 dir="ltr"
-                disabled={remainingAmount <= 0}
+                disabled={isSettled}
               />
-              {remainingAmount > 0 ? (
+              {!hasPriceSet ? (
+                <p className="text-xs text-amber-600 mt-1">
+                  قیمت سفارش هنوز تعیین نشده - هر مبلغی قابل ثبت است
+                </p>
+              ) : !isSettled ? (
                 <p className="text-xs text-muted-foreground mt-1">
                   حداکثر مبلغ قابل ثبت: {remainingAmount.toLocaleString('fa-IR')} تومان
                 </p>
@@ -361,7 +379,7 @@ export function MultiPaymentDialog({
 
             <Button 
               onClick={handleAddPayment} 
-              disabled={submitting || !paymentAmount || remainingAmount <= 0}
+              disabled={submitting || !paymentAmount || isSettled}
               className="w-full gap-2 bg-green-600 hover:bg-green-700"
             >
               <Wallet className="h-4 w-4" />
