@@ -368,7 +368,7 @@ export function UnifiedProfileCard({
       imageUrl={getCurrentImage() || ''}
       isOpen={zoomModalOpen}
       onClose={() => setZoomModalOpen(false)}
-      images={photoUrls}
+      images={photoUrls.length > 0 ? photoUrls : (avatarUrl ? [avatarUrl] : [])}
       initialIndex={currentIndex}
       onImageChange={handleZoomImageChange}
     />
@@ -387,7 +387,11 @@ export function UnifiedProfileCard({
             <div className="relative group">
               <Avatar 
                 className="h-20 w-20 border-2 border-primary/20 cursor-pointer"
-                onClick={() => photos.length > 0 && setZoomModalOpen(true)}
+                onClick={() => {
+                  if (photos.length > 0 || avatarUrl) {
+                    setZoomModalOpen(true);
+                  }
+                }}
               >
                 <AvatarImage src={getCurrentImage() || undefined} alt={fullName} />
                 <AvatarFallback className="text-xl bg-primary/10 text-primary">
