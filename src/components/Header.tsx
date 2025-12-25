@@ -2,8 +2,10 @@ import { useState, useEffect, memo } from "react";
 import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import ahromLogo from "@/assets/ahrom-logo.png";
 import contactButton from "@/assets/contact-button.png";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -22,6 +24,24 @@ const Header = memo(() => {
   const [contactDropdownOpenDesktop, setContactDropdownOpenDesktop] = useState(false);
   const [profileDropdownOpenMobile, setProfileDropdownOpenMobile] = useState(false);
   const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Fetch user avatar
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      if (!user?.id) {
+        setAvatarUrl(null);
+        return;
+      }
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setAvatarUrl(data?.avatar_url || null);
+    };
+    fetchAvatar();
+  }, [user?.id]);
   
   // بستن تمام منوهای کشویی هنگام تغییر مسیر
   const location = useLocation();
@@ -135,7 +155,12 @@ const Header = memo(() => {
                       size="sm"
                       className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary"
                     >
-                      <User className="h-4 w-4" />
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                          {displayName?.charAt(0) || <User className="h-3 w-3" />}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="text-xs sm:text-sm">اهرم من</span>
                       <ChevronDown className="h-3 w-3" />
                     </Button>
@@ -314,7 +339,12 @@ const Header = memo(() => {
                       variant="outline"
                       className="gap-2 border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary font-medium"
                     >
-                      <User className="h-4 w-4" />
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          {displayName?.charAt(0) || <User className="h-3 w-3" />}
+                        </AvatarFallback>
+                      </Avatar>
                       <span>اهرم من</span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
