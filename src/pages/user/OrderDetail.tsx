@@ -1614,8 +1614,8 @@ export default function OrderDetail() {
                         </p>
                       )}
 
-                    {/* دکمه پرداخت - فقط بعد از تایید سفارش و برای درخواست کارشناسی فقط بعد از تایید قیمت توسط مشتری */}
-                    {['approved', 'completed', 'in_progress', 'pending_execution', 'pending', 'paid'].includes(order.status) && 
+                    {/* دکمه پرداخت - فقط بعد از تایید سفارش توسط مدیریت اهرم و برای درخواست کارشناسی فقط بعد از تایید قیمت توسط مشتری */}
+                    {['approved', 'completed', 'in_progress', 'pending_execution', 'paid'].includes(order.status) && 
                       grandTotal > 0 &&
                       remainingAmount > 0 &&
                       (!isExpertPricingRequest || customerHasConfirmedPrice) && (
