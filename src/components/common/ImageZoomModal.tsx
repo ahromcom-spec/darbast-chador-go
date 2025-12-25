@@ -187,8 +187,8 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden">
-        <div className="relative w-full h-[90vh] bg-black/95 flex items-center justify-center">
+      <DialogContent className="w-screen h-screen max-w-none max-h-none p-0 overflow-hidden border-0 rounded-none">
+        <div className="relative w-full h-full bg-black flex items-center justify-center">
           <Button
             variant="ghost"
             size="icon"
@@ -296,7 +296,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 
           <div 
             ref={imageContainerRef}
-            className="overflow-hidden p-6 max-w-[92vw] max-h-[82vh]"
+            className="overflow-hidden p-4 w-full h-full flex items-center justify-center"
             style={{ 
               cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : (hasMultipleImages ? 'grab' : 'default'),
               touchAction: zoom > 1 ? 'none' : 'pan-x'
@@ -312,7 +312,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
             <img
               src={currentImageUrl}
               alt="تصویر"
-              className="select-none transition-none max-w-[88vw] max-h-[78vh] object-contain"
+              className="select-none transition-none max-w-[95vw] max-h-[90vh] object-contain"
               style={{ 
                 transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
                 transformOrigin: 'center center'
