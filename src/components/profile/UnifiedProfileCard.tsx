@@ -366,6 +366,7 @@ export function UnifiedProfileCard({
       initialIndex={currentIndex}
       activeIndex={currentIndex}
       onSelect={photos.length > 0 ? (idx) => handleSelectPhoto(idx) : undefined}
+      type="profile"
     />
     <Card className="mb-6 overflow-hidden">
       {/* CEO Banner */}
