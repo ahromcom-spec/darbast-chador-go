@@ -117,12 +117,30 @@ export function MediaUploader({
 
       console.log('در حال آپلود فایل:', { fileName, storagePath, fileSize: media.file.size, fileType: media.file.type });
 
-      // Simulate progress for better UX (Supabase client doesn't expose upload progress)
+      // Simulate progress with fast start, slow finish for better UX
+      // Supabase client doesn't expose upload progress, so we simulate
+      let progressStep = 0;
       const progressInterval = setInterval(() => {
-        setFilePartial(media.id, (prev) => ({
-          uploadProgress: Math.min((prev.uploadProgress || 0) + 10, 90)
-        }));
-      }, 200);
+        setFilePartial(media.id, (prev) => {
+          const current = prev.uploadProgress || 0;
+          progressStep++;
+          
+          // Fast start (0-60%): larger increments, shorter intervals
+          // Slow finish (60-90%): smaller increments
+          let increment: number;
+          if (current < 30) {
+            increment = 8; // Very fast start
+          } else if (current < 60) {
+            increment = 5; // Moderate speed
+          } else if (current < 80) {
+            increment = 2; // Slow down
+          } else {
+            increment = 0.5; // Very slow near end
+          }
+          
+          return { uploadProgress: Math.min(current + increment, 90) };
+        });
+      }, 100); // Faster interval for smoother animation
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('order-media')
@@ -411,15 +429,22 @@ export function MediaUploader({
 
                   {/* Upload Progress Overlay */}
                   {file.status === 'uploading' && (
-                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2">
-                      <Loader2 className="w-8 h-8 text-white animate-spin" />
-                      <div className="w-3/4 bg-white/20 rounded-full h-2 overflow-hidden">
+                    <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-3">
+                      <div className="relative">
+                        <Loader2 className="w-10 h-10 text-white animate-spin" />
+                        <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold">
+                          {Math.round(file.uploadProgress || 0)}%
+                        </span>
+                      </div>
+                      <div className="w-4/5 bg-white/20 rounded-full h-3 overflow-hidden shadow-inner">
                         <div 
-                          className="h-full bg-white transition-all duration-300"
+                          className="h-full bg-gradient-to-r from-blue-400 to-green-400 rounded-full transition-all duration-150 ease-out"
                           style={{ width: `${file.uploadProgress || 0}%` }}
                         />
                       </div>
-                      <span className="text-white text-sm font-medium">{file.uploadProgress || 0}%</span>
+                      <span className="text-white text-sm font-semibold">
+                        در حال آپلود: {Math.round(file.uploadProgress || 0)}%
+                      </span>
                     </div>
                   )}
 
@@ -507,14 +532,21 @@ export function MediaUploader({
                   {/* Upload Progress Overlay for Videos */}
                   {file.status === 'uploading' && (
                     <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-3 z-10">
-                      <Loader2 className="w-10 h-10 text-white animate-spin" />
-                      <div className="w-3/4 bg-white/20 rounded-full h-3 overflow-hidden">
+                      <div className="relative">
+                        <Loader2 className="w-12 h-12 text-white animate-spin" />
+                        <span className="absolute inset-0 flex items-center justify-center text-white text-sm font-bold">
+                          {Math.round(file.uploadProgress || 0)}%
+                        </span>
+                      </div>
+                      <div className="w-4/5 bg-white/20 rounded-full h-3 overflow-hidden shadow-inner">
                         <div 
-                          className="h-full bg-white transition-all duration-300"
+                          className="h-full bg-gradient-to-r from-blue-400 to-green-400 rounded-full transition-all duration-150 ease-out"
                           style={{ width: `${file.uploadProgress || 0}%` }}
                         />
                       </div>
-                      <span className="text-white text-base font-medium">در حال آپلود: {file.uploadProgress || 0}%</span>
+                      <span className="text-white text-base font-semibold">
+                        در حال آپلود: {Math.round(file.uploadProgress || 0)}%
+                      </span>
                     </div>
                   )}
 
