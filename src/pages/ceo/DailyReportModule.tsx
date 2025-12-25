@@ -1410,7 +1410,7 @@ export default function DailyReportModule() {
     setOrderDetailsDialogOpen(true);
     setOrderMedia([]);
     try {
-      // First get the order
+      // First get the order with all related data
       const { data: orderData, error: orderError } = await supabase
         .from('projects_v3')
         .select('*')
@@ -1424,15 +1424,43 @@ export default function DailyReportModule() {
         return;
       }
 
-      // Get subcategory info if exists
+      // Get subcategory info with full service type info
       let subcategoryInfo = null;
       if (orderData.subcategory_id) {
         const { data: subData } = await supabase
           .from('subcategories')
-          .select('name, service_types:service_type_id(name, service_categories:category_id(name))')
+          .select(`
+            name, 
+            code,
+            service_types:service_type_id(
+              name, 
+              code,
+              service_categories:category_id(name)
+            )
+          `)
           .eq('id', orderData.subcategory_id)
           .maybeSingle();
         subcategoryInfo = subData;
+      }
+
+      // Get province and district info
+      let provinceInfo = null;
+      let districtInfo = null;
+      if (orderData.province_id) {
+        const { data: provData } = await supabase
+          .from('provinces')
+          .select('name')
+          .eq('id', orderData.province_id)
+          .maybeSingle();
+        provinceInfo = provData;
+      }
+      if (orderData.district_id) {
+        const { data: distData } = await supabase
+          .from('districts')
+          .select('name')
+          .eq('id', orderData.district_id)
+          .maybeSingle();
+        districtInfo = distData;
       }
 
       // Get customer profile info
@@ -1440,17 +1468,17 @@ export default function DailyReportModule() {
       if (orderData.customer_id) {
         const { data: customerData } = await supabase
           .from('customers')
-          .select('user_id')
+          .select('user_id, customer_code')
           .eq('id', orderData.customer_id)
           .maybeSingle();
         
         if (customerData?.user_id) {
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('full_name, phone_number')
+            .select('full_name, phone_number, avatar_url')
             .eq('user_id', customerData.user_id)
             .maybeSingle();
-          profileInfo = profileData;
+          profileInfo = { ...profileData, customer_code: customerData.customer_code };
         }
       }
 
@@ -1459,10 +1487,31 @@ export default function DailyReportModule() {
       if (orderData.hierarchy_project_id) {
         const { data: hierarchyData } = await supabase
           .from('projects_hierarchy')
-          .select('location_id, locations:location_id(title, address_line, lat, lng)')
+          .select('location_id, title, locations:location_id(title, address_line, lat, lng)')
           .eq('id', orderData.hierarchy_project_id)
           .maybeSingle();
         locationInfo = hierarchyData?.locations;
+      }
+
+      // Get order approvals
+      let approvalsInfo: any[] = [];
+      const { data: approvalsData } = await supabase
+        .from('order_approvals')
+        .select('approver_role, approved_at, approver_user_id')
+        .eq('order_id', orderId);
+      if (approvalsData) {
+        approvalsInfo = approvalsData;
+      }
+
+      // Get order payments
+      let paymentsInfo: any[] = [];
+      const { data: paymentsData } = await supabase
+        .from('order_payments')
+        .select('amount, payment_method, created_at, notes')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false });
+      if (paymentsData) {
+        paymentsInfo = paymentsData;
       }
 
       // Fetch order media (images and videos)
@@ -1490,8 +1539,12 @@ export default function DailyReportModule() {
       setSelectedOrderDetails({
         ...orderData,
         subcategories: subcategoryInfo,
+        provinces: provinceInfo,
+        districts: districtInfo,
         profiles: profileInfo,
-        locations: locationInfo
+        locations: locationInfo,
+        approvals: approvalsInfo,
+        payments: paymentsInfo
       });
     } catch (error) {
       console.error('Error fetching order details:', error);
@@ -2538,21 +2591,44 @@ export default function DailyReportModule() {
                           <p className="font-medium text-left">{selectedOrderDetails.customer_phone || selectedOrderDetails.profiles?.phone_number || parsedNotes?.phoneNumber || 'نامشخص'}</p>
                         </div>
                       </div>
+                      {selectedOrderDetails.profiles?.customer_code && (
+                        <div className="p-2 bg-primary/10 rounded-lg text-center">
+                          <span className="text-xs text-muted-foreground">کد مشتری: </span>
+                          <span className="font-bold text-primary">{selectedOrderDetails.profiles.customer_code}</span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Location Info */}
+                    {/* Location Info with Province & District */}
                     <div className="p-4 border rounded-xl space-y-3">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-primary" />
                         <h4 className="font-semibold">آدرس محل</h4>
                       </div>
                       <div className="space-y-2">
+                        {/* Province & District */}
+                        {(selectedOrderDetails.provinces?.name || selectedOrderDetails.districts?.name) && (
+                          <div className="flex gap-2 flex-wrap">
+                            {selectedOrderDetails.provinces?.name && (
+                              <Badge variant="secondary" className="text-xs">{selectedOrderDetails.provinces.name}</Badge>
+                            )}
+                            {selectedOrderDetails.districts?.name && (
+                              <Badge variant="outline" className="text-xs">{selectedOrderDetails.districts.name}</Badge>
+                            )}
+                          </div>
+                        )}
                         {selectedOrderDetails.locations?.title && (
                           <p className="text-sm font-semibold text-primary">{selectedOrderDetails.locations.title}</p>
                         )}
                         <p className="text-sm">{selectedOrderDetails.address || selectedOrderDetails.locations?.address_line || 'نامشخص'}</p>
                         {selectedOrderDetails.detailed_address && (
                           <p className="text-sm text-muted-foreground">{selectedOrderDetails.detailed_address}</p>
+                        )}
+                        {/* Show coordinates if available */}
+                        {(selectedOrderDetails.location_lat && selectedOrderDetails.location_lng) && (
+                          <div className="p-2 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+                            <span>موقعیت: {selectedOrderDetails.location_lat.toFixed(6)}, {selectedOrderDetails.location_lng.toFixed(6)}</span>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -2714,8 +2790,82 @@ export default function DailyReportModule() {
                             <p className="font-medium text-green-700 dark:text-green-300">{formatPersianDate(selectedOrderDetails.approved_at)}</p>
                           </div>
                         )}
+                        {selectedOrderDetails.execution_start_date && (
+                          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <span className="text-xs text-muted-foreground block">شروع اجرا</span>
+                            <p className="font-medium text-blue-700 dark:text-blue-300">{formatPersianDate(selectedOrderDetails.execution_start_date)}</p>
+                          </div>
+                        )}
+                        {selectedOrderDetails.execution_stage_updated_at && (
+                          <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                            <span className="text-xs text-muted-foreground block">آخرین تغییر مرحله</span>
+                            <p className="font-medium text-amber-700 dark:text-amber-300">{formatPersianDate(selectedOrderDetails.execution_stage_updated_at)}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
+
+                    {/* Order Approvals */}
+                    {selectedOrderDetails.approvals && selectedOrderDetails.approvals.length > 0 && (
+                      <div className="p-4 border rounded-xl space-y-3 bg-emerald-50/50 dark:bg-emerald-900/10">
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-emerald-600" />
+                          <h4 className="font-semibold">تاییدیه‌های مدیران</h4>
+                        </div>
+                        <div className="space-y-2">
+                          {selectedOrderDetails.approvals.map((approval: any, idx: number) => {
+                            const roleNames: Record<string, string> = {
+                              'ceo': 'مدیرعامل',
+                              'sales_manager': 'مدیر فروش',
+                              'scaffold_executive_manager': 'مدیر اجرایی',
+                              'general_manager': 'مدیر کل',
+                              'executive_manager_scaffold_execution_with_materials': 'مدیر اجرایی داربست با اجناس',
+                              'rental_executive_manager': 'مدیر کرایه داربست'
+                            };
+                            return (
+                              <div key={idx} className="flex items-center justify-between p-2 bg-background/50 rounded-lg text-sm">
+                                <span>{roleNames[approval.approver_role] || approval.approver_role}</span>
+                                {approval.approved_at ? (
+                                  <Badge variant="default" className="bg-emerald-500 text-white text-xs">
+                                    تایید شده - {formatPersianDate(approval.approved_at)}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs">در انتظار</Badge>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment History */}
+                    {selectedOrderDetails.payments && selectedOrderDetails.payments.length > 0 && (
+                      <div className="p-4 border rounded-xl space-y-3 bg-violet-50/50 dark:bg-violet-900/10">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-violet-600" />
+                          <h4 className="font-semibold">تاریخچه پرداخت‌ها</h4>
+                        </div>
+                        <div className="space-y-2">
+                          {selectedOrderDetails.payments.map((payment: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between p-3 bg-background/50 rounded-lg text-sm">
+                              <div>
+                                <p className="font-bold text-violet-700 dark:text-violet-300">
+                                  {payment.amount?.toLocaleString('fa-IR')} تومان
+                                </p>
+                                {payment.payment_method && (
+                                  <span className="text-xs text-muted-foreground">روش: {payment.payment_method}</span>
+                                )}
+                                {payment.notes && (
+                                  <p className="text-xs text-muted-foreground mt-1">{payment.notes}</p>
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground">{formatPersianDate(payment.created_at)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Media Section */}
                     <div className="p-4 border rounded-xl space-y-4 bg-purple-50/50 dark:bg-purple-900/10">
