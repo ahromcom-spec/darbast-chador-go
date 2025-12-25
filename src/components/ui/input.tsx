@@ -7,16 +7,23 @@ export interface InputProps extends React.ComponentProps<"input"> {
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, validatePhone, ...props }, ref) => {
+  ({ className, type, validatePhone, onFocus, onBlur, ...props }, ref) => {
     const [error, setError] = React.useState<string>("");
+    const [isFocused, setIsFocused] = React.useState(false);
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+      setIsFocused(true);
+      onFocus?.(e);
+    };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      setIsFocused(false);
       if (validatePhone && e.target.value && !validateIranianPhone(e.target.value)) {
         setError("شماره تلفن باید 11 رقم و با 09 شروع شود");
       } else {
         setError("");
       }
-      props.onBlur?.(e);
+      onBlur?.(e);
     };
 
     return (
@@ -24,11 +31,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           type={type}
           className={cn(
-            "flex h-10 w-full rounded-md border-2 border-input bg-background px-3 py-2 text-base text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground placeholder:text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm shadow-sm transition-colors hover:border-primary/50 text-right",
+            "flex h-12 w-full rounded-md border-2 border-input bg-background px-3 py-3 text-base text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground placeholder:text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm transition-all duration-300 hover:border-primary/50 text-right",
+            // Enhanced focus state for mobile
+            isFocused && "border-primary shadow-md scale-[1.02] z-10",
             error && "border-destructive",
             className,
           )}
           ref={ref}
+          onFocus={handleFocus}
           onBlur={handleBlur}
           {...props}
         />
