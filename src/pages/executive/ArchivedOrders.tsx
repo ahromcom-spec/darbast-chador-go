@@ -266,20 +266,6 @@ export default function ArchivedOrders() {
                       <ArchiveX className="h-4 w-4 ml-2" />
                       بایگانی عمیق
                     </Button>
-                    
-                    {canDelete && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setShowDeleteDialog(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 ml-2" />
-                        حذف دائمی
-                      </Button>
-                    )}
                   </div>
                 </div>
               </CardContent>
