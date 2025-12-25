@@ -59,13 +59,14 @@ const Header = memo(() => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
-  // Fetch user avatar
+  // Fetch user avatar and subscribe to changes
   useEffect(() => {
+    if (!user?.id) {
+      setAvatarUrl(null);
+      return;
+    }
+
     const fetchAvatar = async () => {
-      if (!user?.id) {
-        setAvatarUrl(null);
-        return;
-      }
       const { data } = await supabase
         .from('profiles')
         .select('avatar_url')
@@ -73,7 +74,31 @@ const Header = memo(() => {
         .maybeSingle();
       setAvatarUrl(data?.avatar_url || null);
     };
+    
     fetchAvatar();
+
+    // Subscribe to realtime changes on the profiles table
+    const channel = supabase
+      .channel(`profile-avatar-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.new && 'avatar_url' in payload.new) {
+            setAvatarUrl(payload.new.avatar_url as string | null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
   
   // بستن تمام منوهای کشویی هنگام تغییر مسیر
