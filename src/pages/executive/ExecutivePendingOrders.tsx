@@ -58,7 +58,7 @@ const parseOrderNotes = (notes: any): any => {
 
 // Component to display order media with signed URLs
 const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
-  const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string }>>([]);
+  const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string; mime_type?: string }>>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
@@ -68,7 +68,7 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
       try {
         const { data, error } = await supabase
           .from('project_media')
-          .select('id, file_path, file_type')
+          .select('id, file_path, file_type, mime_type')
           .eq('project_id', orderId)
           .order('created_at', { ascending: true });
         
@@ -135,22 +135,42 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
   };
 
   const currentMedia = media[currentIndex];
-  const isVideo = currentMedia?.file_type?.includes('video');
+  // چک کردن نوع ویدیو با بررسی file_type، mime_type و file_path
+  const isVideo = currentMedia?.file_type === 'video' || 
+                  currentMedia?.file_type?.includes('video') || 
+                  currentMedia?.mime_type?.includes('video') ||
+                  currentMedia?.file_path?.toLowerCase().endsWith('.mp4') ||
+                  currentMedia?.file_path?.toLowerCase().endsWith('.webm') ||
+                  currentMedia?.file_path?.toLowerCase().endsWith('.mov');
+
+  // تعیین MIME type برای ویدیو
+  const getVideoMimeType = () => {
+    if (currentMedia?.mime_type) return currentMedia.mime_type;
+    const path = currentMedia?.file_path?.toLowerCase() || '';
+    if (path.endsWith('.webm')) return 'video/webm';
+    if (path.endsWith('.mov')) return 'video/quicktime';
+    return 'video/mp4';
+  };
 
   return (
     <div className="space-y-2">
       <Label className="text-xs text-muted-foreground flex items-center gap-2">
         <ImageIcon className="h-3 w-3" />
-        تصاویر و فایل‌های سفارش ({media.length})
+        تصاویر و فایل‌ها ({media.length})
       </Label>
       <div className="relative bg-black/5 rounded-lg overflow-hidden min-h-[200px]">
         {mediaUrls[currentMedia?.id] ? (
           isVideo ? (
             <video
-              src={getMediaUrl(currentMedia)}
+              key={currentMedia?.id}
               controls
+              playsInline
+              preload="metadata"
               className="w-full max-h-80 object-contain"
-            />
+            >
+              <source src={getMediaUrl(currentMedia)} type={getVideoMimeType()} />
+              مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
+            </video>
           ) : (
             <img
               src={getMediaUrl(currentMedia)}
