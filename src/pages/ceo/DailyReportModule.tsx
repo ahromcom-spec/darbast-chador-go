@@ -1344,19 +1344,67 @@ export default function DailyReportModule() {
     setLoadingOrderDetails(true);
     setOrderDetailsDialogOpen(true);
     try {
-      const { data, error } = await supabase
+      // First get the order
+      const { data: orderData, error: orderError } = await supabase
         .from('projects_v3')
-        .select(`
-          *,
-          locations:location_id(title, address_line, lat, lng),
-          subcategories:subcategory_id(name, service_types(name, service_categories(name))),
-          profiles:created_by(full_name, phone_number)
-        `)
+        .select('*')
         .eq('id', orderId)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      setSelectedOrderDetails(data);
+      if (orderError) throw orderError;
+      if (!orderData) {
+        toast.error('سفارش یافت نشد');
+        setOrderDetailsDialogOpen(false);
+        return;
+      }
+
+      // Get subcategory info if exists
+      let subcategoryInfo = null;
+      if (orderData.subcategory_id) {
+        const { data: subData } = await supabase
+          .from('subcategories')
+          .select('name, service_types:service_type_id(name, service_categories:category_id(name))')
+          .eq('id', orderData.subcategory_id)
+          .maybeSingle();
+        subcategoryInfo = subData;
+      }
+
+      // Get customer profile info
+      let profileInfo = null;
+      if (orderData.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', orderData.customer_id)
+          .maybeSingle();
+        
+        if (customerData?.user_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('full_name, phone_number')
+            .eq('user_id', customerData.user_id)
+            .maybeSingle();
+          profileInfo = profileData;
+        }
+      }
+
+      // Get location info from hierarchy project if exists
+      let locationInfo = null;
+      if (orderData.hierarchy_project_id) {
+        const { data: hierarchyData } = await supabase
+          .from('projects_hierarchy')
+          .select('location_id, locations:location_id(title, address_line, lat, lng)')
+          .eq('id', orderData.hierarchy_project_id)
+          .maybeSingle();
+        locationInfo = hierarchyData?.locations;
+      }
+
+      setSelectedOrderDetails({
+        ...orderData,
+        subcategories: subcategoryInfo,
+        profiles: profileInfo,
+        locations: locationInfo
+      });
     } catch (error) {
       console.error('Error fetching order details:', error);
       toast.error('خطا در دریافت جزئیات سفارش');
