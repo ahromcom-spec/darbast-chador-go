@@ -1789,10 +1789,20 @@ export default function OrderDetail() {
 
                         {/* اسلایدر پرداخت علی‌الحساب */}
                         {showAdvancePayment && (() => {
-                          // حداقل 30% و گرد به 100,000
-                          const minAdvanceAmount = Math.ceil((remainingAmount * 0.3) / 100000) * 100000;
+                          // حداقل ۲ میلیون تومان برای علی‌الحساب
+                          const MIN_ADVANCE_THRESHOLD = 2_000_000;
+                          // حداقل ۳۰٪ باقی‌مانده، ولی حداقل ۲ میلیون تومان
+                          const minAdvanceAmount = Math.max(
+                            MIN_ADVANCE_THRESHOLD,
+                            Math.ceil((remainingAmount * 0.3) / 100000) * 100000
+                          );
                           // گرد کردن حداکثر به 100,000
                           const maxAdvanceAmount = Math.floor(remainingAmount / 100000) * 100000;
+                          
+                          // اگر حداقل مبلغ بیشتر از باقی‌مانده باشد، علی‌الحساب امکان‌پذیر نیست
+                          if (minAdvanceAmount > remainingAmount) {
+                            return null;
+                          }
                           
                           // تولید مقادیر پیشنهادی: ۴۰٪ و ۹۰٪
                           const generateQuickAmounts = () => {

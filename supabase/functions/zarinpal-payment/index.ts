@@ -42,7 +42,7 @@ serve(async (req) => {
     // Verify order belongs to user and is approved
     const { data: order, error: orderError } = await supabaseClient
       .from('projects_v3')
-      .select('id, customer_id, status, payment_confirmed_at, code')
+      .select('id, customer_id, status, payment_confirmed_at, code, payment_amount, total_paid, notes')
       .eq('id', order_id)
       .single();
 
@@ -60,9 +60,25 @@ serve(async (req) => {
       throw new Error('Order status does not allow payment');
     }
 
-    if (order.payment_confirmed_at) {
+    // بررسی باقی‌مانده حساب - اگر هنوز مانده دارد، اجازه پرداخت بده
+    let estimatedPrice = 0;
+    try {
+      const notesObj = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+      estimatedPrice = notesObj?.estimated_price || notesObj?.estimatedPrice || notesObj?.total_price || notesObj?.manager_set_price || 0;
+    } catch (e) {
+      console.log('Could not parse notes for estimated_price');
+    }
+    
+    const totalPrice = order.payment_amount || estimatedPrice || 0;
+    const totalPaid = order.total_paid || 0;
+    const remainingAmount = totalPrice - totalPaid;
+
+    // فقط اگر واقعاً تسویه شده باشد (مانده صفر یا کمتر) خطا بده
+    if (remainingAmount <= 0) {
       throw new Error('Order has already been paid');
     }
+
+    console.log(`Order ${order_id}: totalPrice=${totalPrice}, totalPaid=${totalPaid}, remainingAmount=${remainingAmount}, requestedAmount=${amount}`);
 
     // Verify order belongs to user
     const { data: customer } = await supabaseClient
