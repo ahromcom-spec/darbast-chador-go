@@ -354,12 +354,6 @@ export function UnifiedProfileCard({
     }
   };
 
-  const handleZoomImageChange = async (newIndex: number) => {
-    if (newIndex !== currentIndex && photos[newIndex]) {
-      await handleSelectPhoto(newIndex);
-    }
-  };
-
   const photoUrls = photos.map(p => getPublicUrl(p.file_path));
 
   return (
@@ -370,7 +364,8 @@ export function UnifiedProfileCard({
       onClose={() => setZoomModalOpen(false)}
       images={photoUrls.length > 0 ? photoUrls : (avatarUrl ? [avatarUrl] : [])}
       initialIndex={currentIndex}
-      onImageChange={handleZoomImageChange}
+      activeIndex={currentIndex}
+      onSelect={photos.length > 0 ? (idx) => handleSelectPhoto(idx) : undefined}
     />
     <Card className="mb-6 overflow-hidden">
       {/* CEO Banner */}
