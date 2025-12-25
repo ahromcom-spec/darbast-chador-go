@@ -80,7 +80,7 @@ export const ExpertPricingRequestDialog = ({
       const fileName = `${user!.id}/${orderId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('order-media')
+        .from('project-media')
         .upload(fileName, file);
 
       if (uploadError) {

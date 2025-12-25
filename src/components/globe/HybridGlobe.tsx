@@ -526,7 +526,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         setUploadProgress(Math.round(startProgress));
 
         const { error: uploadErr } = await supabase.storage
-          .from('order-media')
+          .from('project-media')
           .upload(filePath, file, { 
             contentType: file.type, 
             upsert: false, 
@@ -1540,7 +1540,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         if (firstOrderImage) {
           const url1 = supabase.storage
-            .from('order-media')
+            .from('project-media')
             .getPublicUrl(firstOrderImage.file_path).data.publicUrl;
           
           console.debug('[HybridGlobe] Marker thumbnail URL:', url1);
@@ -1586,7 +1586,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 <div id="gallery-${project.id}" class="swipeable-gallery" style="position:relative;touch-action:pan-y;">
                   <div style="overflow:hidden;border-radius:8px;background:#f9fafb;position:relative;">
                     ${images.map((m, idx) => {
-                      const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                      const url = supabase.storage.from('project-media').getPublicUrl(m.file_path).data.publicUrl;
                       return `<img 
                         id="img-${project.id}-${idx}" 
                         src="${url}" 
@@ -1617,7 +1617,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               ${videos.length > 0 ? `
                 <div style="margin-top: 12px;">
                   ${videos.map(m => {
-                    const url = supabase.storage.from('order-media').getPublicUrl(m.file_path).data.publicUrl;
+                    const url = supabase.storage.from('project-media').getPublicUrl(m.file_path).data.publicUrl;
                     return `
                       <div class="video-player-${project.id}" data-url="${url}" style="position:relative;width:100%;height:200px;background:#000;border-radius:8px;overflow:hidden;cursor:pointer;margin-bottom:8px;">
                         <video src="${url}" style="width:100%;height:100%;object-fit:contain;" preload="none"></video>
@@ -1681,7 +1681,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                       <div style="overflow:hidden;border-radius:6px;background:#f9fafb;position:relative;height:160px;">
                         ${allMedia.map((m, idx) => {
                           const { data: baseData } = supabase.storage
-                            .from('order-media')
+                            .from('project-media')
                             .getPublicUrl(m.file_path);
                           const baseUrl = baseData.publicUrl;
                           const isVideo = m.file_type === 'video';
@@ -1689,7 +1689,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                           const thumbUrl = isVideo
                             ? baseUrl
                             : supabase.storage
-                                .from('order-media')
+                                .from('project-media')
                                 .getPublicUrl(m.file_path, {
                                   transform: { width: 400, quality: 70 },
                                 }).data.publicUrl;
@@ -2045,7 +2045,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
                   // حذف از storage (در صورت امکان)
                   const { error: storageError } = await supabase.storage
-                    .from('order-media')
+                    .from('project-media')
                     .remove([mediaPath]);
 
                   if (storageError) {
