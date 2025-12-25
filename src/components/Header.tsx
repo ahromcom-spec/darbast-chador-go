@@ -102,13 +102,20 @@ const Header = memo(() => {
     }
   };
 
+  // Calculate the height of the first header for smooth positioning
+  const firstHeaderHeight = isVisible ? 0 : -80; // Approximate height in pixels
+
   return (
     <>
-      {/* First Header - Logo row - Hides on scroll */}
+      {/* First Header - Logo row - Slides up on scroll */}
       <div 
-        className={`sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border/30 shadow-sm transition-all duration-300 ${
-          isVisible ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0 overflow-hidden border-b-0'
-        }`}
+        className="bg-card/95 backdrop-blur-sm border-b border-border/30 shadow-sm transition-transform duration-300 ease-out"
+        style={{ 
+          transform: isVisible ? 'translateY(0)' : 'translateY(-100%)',
+          position: isVisible ? 'relative' : 'absolute',
+          width: '100%',
+          zIndex: 50
+        }}
       >
         <div className="container mx-auto px-4 sm:px-6">
           {/* Mobile & Tablet Layout - First Row */}
@@ -251,8 +258,8 @@ const Header = memo(() => {
         </div>
       </div>
 
-      {/* Second Header - User menu row - Always visible */}
-      <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
+      {/* Second Header - User menu row - Always visible and always on top */}
+      <header className="sticky top-0 z-[60] bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
         <div className="container mx-auto px-4 sm:px-6">
           {/* Mobile & Tablet Layout - Second Row */}
           <div className="md:hidden">
