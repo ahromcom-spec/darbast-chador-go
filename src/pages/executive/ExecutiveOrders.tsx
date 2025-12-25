@@ -236,7 +236,7 @@ export default function ExecutiveOrders() {
           location_lat,
           location_lng
         `)
-        .in('status', ['pending', 'approved', 'pending_execution', 'in_progress', 'completed', 'closed'])
+        .in('status', ['pending', 'approved', 'pending_execution', 'in_progress', 'completed', 'closed', 'rejected'])
         // فقط سفارشات غیر بایگانی را نمایش بده
         .or('is_archived.is.null,is_archived.eq.false')
         .order('code', { ascending: false });
@@ -841,7 +841,8 @@ export default function ExecutiveOrders() {
       approved: { label: 'آماده اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
       in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
       completed: { label: 'اتمام سفارش', className: 'bg-teal-500/10 text-teal-600' },
-      closed: { label: 'بسته شده', className: 'bg-gray-500/10 text-gray-600' }
+      closed: { label: 'بسته شده', className: 'bg-gray-500/10 text-gray-600' },
+      rejected: { label: 'رد شده', className: 'bg-red-500/10 text-red-600' }
     };
 
     return statusMap[order.status] || { label: order.status, className: '' };
@@ -860,7 +861,8 @@ export default function ExecutiveOrders() {
       approved: { label: 'آماده اجرا', className: 'bg-yellow-500/10 text-yellow-600' },
       in_progress: { label: 'در حال اجرا', className: 'bg-blue-500/10 text-blue-600' },
       completed: { label: 'اتمام سفارش', className: 'bg-teal-500/10 text-teal-600' },
-      closed: { label: 'بسته شده', className: 'bg-gray-500/10 text-gray-600' }
+      closed: { label: 'بسته شده', className: 'bg-gray-500/10 text-gray-600' },
+      rejected: { label: 'رد شده', className: 'bg-red-500/10 text-red-600' }
     };
 
     const { label, className } = statusMap[status] || { label: status, className: '' };
@@ -1013,6 +1015,14 @@ export default function ExecutiveOrders() {
               >
                 در حال اجرا ({orders.filter(o => o.status === 'in_progress').length})
               </Button>
+              <Button
+                variant={statusFilter === 'rejected' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('rejected')}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                رد شده ({orders.filter(o => o.status === 'rejected').length})
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1081,6 +1091,7 @@ export default function ExecutiveOrders() {
             return (
 
             <Card key={order.id} className={`hover:shadow-lg transition-shadow duration-300 ease-in-out ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} ${
+              order.status === 'rejected' ? 'border-l-4 border-l-red-500' :
               (order.status === 'approved' || order.status === 'pending_execution') ? 'border-l-4 border-l-yellow-500' :
               order.status === 'in_progress' ? 'border-l-4 border-l-blue-500' :
               order.status === 'completed' ? 'border-l-4 border-l-purple-500' :
@@ -1350,6 +1361,22 @@ export default function ExecutiveOrders() {
                     <Users className="h-4 w-4" />
                     افزودن پرسنل
                   </Button>
+
+                  {/* دکمه بایگانی - برای سفارشات رد شده */}
+                  {order.status === 'rejected' && (
+                    <Button
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setArchiveDialogOpen(true);
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 text-amber-600 border-amber-300 hover:bg-amber-50"
+                    >
+                      <Archive className="h-4 w-4" />
+                      بایگانی
+                    </Button>
+                  )}
 
                   {/* دکمه تایید سفارش - برای pending */}
                   {order.status === 'pending' && (
