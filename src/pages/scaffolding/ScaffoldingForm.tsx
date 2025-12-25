@@ -140,10 +140,10 @@ export default function ScaffoldingForm() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Hero Background Image */}
+    <div className="relative min-h-screen w-full">
+      {/* Hero Background Image - Fixed position so it stays while scrolling */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat -z-10"
         style={{ 
           backgroundImage: 'url(/hero-background.webp)',
         }}
