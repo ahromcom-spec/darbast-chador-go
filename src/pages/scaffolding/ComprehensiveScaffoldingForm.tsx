@@ -1006,16 +1006,29 @@ export default function ComprehensiveScaffoldingForm({
         finalSubcategoryId = propSubcategoryId || subcategoryId || navState?.subcategoryId || pendingSel?.subcategoryId || null;
       }
 
-      // اگر هنوز مشخص نشد، بر اساس نام‌ها یا کد زیرشاخه تلاش کن
+      // اگر هنوز مشخص نشد، بر اساس نام‌ها یا کد زیرشاخه تلاش کن - به صورت موازی
       if (!finalServiceTypeId || !finalSubcategoryId) {
-        // تلاش بر اساس نام نوع خدمت
-        if (!finalServiceTypeId && navState?.serviceName) {
-          const { data: st } = await supabase
-            .from('service_types_v3')
-            .select('id')
-            .ilike('name', navState.serviceName)
-            .maybeSingle();
-          if (st) finalServiceTypeId = st.id;
+        const subCode = navState?.subcategoryCode || pendingSel?.subcategoryCode;
+        
+        // اجرای کوئری‌ها به صورت موازی برای سرعت بیشتر
+        const [serviceTypeResult, subcategoryByCodeResult] = await Promise.all([
+          // تلاش بر اساس نام نوع خدمت
+          (!finalServiceTypeId && navState?.serviceName) 
+            ? supabase.from('service_types_v3').select('id').ilike('name', navState.serviceName).maybeSingle()
+            : Promise.resolve({ data: null }),
+          // تلاش بر اساس کد زیرشاخه
+          subCode 
+            ? supabase.from('subcategories').select('id, service_type_id').eq('code', subCode).maybeSingle()
+            : Promise.resolve({ data: null })
+        ]);
+
+        if (serviceTypeResult?.data) {
+          finalServiceTypeId = serviceTypeResult.data.id;
+        }
+        
+        if (subcategoryByCodeResult?.data) {
+          finalServiceTypeId = finalServiceTypeId || subcategoryByCodeResult.data.service_type_id;
+          finalSubcategoryId = subcategoryByCodeResult.data.id;
         }
 
         // تلاش بر اساس نام زیرشاخه در صورت داشتن serviceTypeId
@@ -1027,20 +1040,6 @@ export default function ComprehensiveScaffoldingForm({
             .ilike('name', navState.subcategoryName)
             .maybeSingle();
           if (sc) finalSubcategoryId = sc.id;
-        }
-
-        // تلاش بر اساس کد زیرشاخه (در state یا حافظه) اگر هنوز نامشخص است
-        if ((!finalServiceTypeId || !finalSubcategoryId) && (navState?.subcategoryCode || pendingSel?.subcategoryCode)) {
-          const subCode = navState?.subcategoryCode || pendingSel?.subcategoryCode;
-          const { data: sc2 } = await supabase
-            .from('subcategories')
-            .select('id, service_type_id')
-            .eq('code', subCode)
-            .maybeSingle();
-          if (sc2) {
-            finalServiceTypeId = sc2.service_type_id;
-            finalSubcategoryId = sc2.id;
-          }
         }
 
         // پیش‌فرض امن: اگر هنوز زیرشاخه مشخص نشده، زیرشاخه "با مصالح" (کد 10) را انتخاب کن
