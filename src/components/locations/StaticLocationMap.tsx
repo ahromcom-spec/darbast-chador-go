@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -17,28 +17,51 @@ export default function StaticLocationMap({
 }: StaticLocationMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
+    if (!mapContainer.current) return;
+    
+    // اگر نقشه قبلاً ساخته شده، آن را پاک کن
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+
+    // اعتبارسنجی مختصات
+    const validLat = lat >= -90 && lat <= 90 ? lat : 34.6416;
+    const validLng = lng >= -180 && lng <= 180 ? lng : 50.8746;
 
     try {
       // Initialize map
       const map = L.map(mapContainer.current, {
-        center: [lat, lng],
+        center: [validLat, validLng],
         zoom: 16,
         zoomControl: true,
         scrollWheelZoom: true,
         dragging: true,
-        attributionControl: true
+        attributionControl: true,
+        preferCanvas: true
       });
 
       mapRef.current = map;
 
-      // Add OpenStreetMap tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      // Add OpenStreetMap tile layer with error handling
+      const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
-      }).addTo(map);
+        maxZoom: 19,
+        crossOrigin: 'anonymous'
+      });
+
+      tileLayer.on('load', () => {
+        setIsReady(true);
+      });
+
+      tileLayer.on('tileerror', (e) => {
+        console.warn('Tile load error, trying fallback:', e);
+      });
+
+      tileLayer.addTo(map);
 
       // Custom marker icon
       const customIcon = L.divIcon({
@@ -69,7 +92,7 @@ export default function StaticLocationMap({
       });
 
       // Add marker
-      const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+      const marker = L.marker([validLat, validLng], { icon: customIcon }).addTo(map);
 
       // Add popup with address
       if (address) {
@@ -84,8 +107,26 @@ export default function StaticLocationMap({
         marker.bindPopup(popupContent).openPopup();
       }
 
+      // invalidateSize پس از mount کامل برای حل مشکل خطوط افقی
+      const timeoutId = setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize({ animate: false });
+        }
+      }, 100);
+
+      // ResizeObserver برای container changes
+      const resizeObserver = new ResizeObserver(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize({ animate: false });
+        }
+      });
+      
+      resizeObserver.observe(mapContainer.current);
+
       // Cleanup
       return () => {
+        clearTimeout(timeoutId);
+        resizeObserver.disconnect();
         if (mapRef.current) {
           mapRef.current.remove();
           mapRef.current = null;
@@ -100,7 +141,11 @@ export default function StaticLocationMap({
     <div 
       ref={mapContainer} 
       className="w-full h-full relative z-0"
-      style={{ minHeight: '400px' }}
+      style={{ 
+        minHeight: '400px',
+        // اطمینان از نمایش صحیح تایل‌ها
+        background: '#f0f0f0'
+      }}
     />
   );
 }
