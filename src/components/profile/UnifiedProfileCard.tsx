@@ -404,10 +404,10 @@ export function UnifiedProfileCard({
                       e.stopPropagation();
                       navigatePhoto('prev');
                     }}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-20 p-1.5 bg-background/90 rounded-full shadow opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-20 h-8 w-8 flex items-center justify-center bg-background/95 hover:bg-background rounded-full shadow-md border border-border/50 opacity-100 transition-all hover:scale-110 active:scale-95"
                     aria-label="عکس قبلی"
                   >
-                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
                   <button
                     type="button"
@@ -416,10 +416,10 @@ export function UnifiedProfileCard({
                       e.stopPropagation();
                       navigatePhoto('next');
                     }}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 z-20 p-1.5 bg-background/90 rounded-full shadow opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-20 h-8 w-8 flex items-center justify-center bg-background/95 hover:bg-background rounded-full shadow-md border border-border/50 opacity-100 transition-all hover:scale-110 active:scale-95"
                     aria-label="عکس بعدی"
                   >
-                    <ChevronRight className="h-3.5 w-3.5" />
+                    <ChevronRight className="h-5 w-5" />
                   </button>
                 </>
               )}
