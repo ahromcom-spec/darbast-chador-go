@@ -614,14 +614,10 @@ export function AssistantAvatar() {
   const handleAvatarClick = () => {
     if (!hasMoved) {
       const vp = getViewportSize();
-      const defaultChatHeight = 512;
-      const defaultChatWidth = 384;
-      
-      // Position chat above avatar, clamped to viewport
-      const chatX = Math.max(8, Math.min(vp.width - defaultChatWidth - 8, avatarPosition.x));
-      const chatY = Math.max(8, Math.min(vp.height - defaultChatHeight - 8, avatarPosition.y - defaultChatHeight - 20));
-      
-      setChatPosition({ x: chatX, y: chatY });
+      // Open in fullscreen by default
+      setChatPosition({ x: 0, y: 0 });
+      setChatSize({ width: vp.width, height: vp.height });
+      setIsFullscreen(true);
       setIsOpen(true);
     }
   };
@@ -881,7 +877,8 @@ export function AssistantAvatar() {
             height: `${chatSize.height}px`,
           }}
           className={cn(
-            "fixed z-50 bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300",
+            "fixed z-[100] bg-background border border-border shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300",
+            isFullscreen ? "rounded-none" : "rounded-2xl",
             (isDraggingChat || isResizing) && "transition-none"
           )}
         >
