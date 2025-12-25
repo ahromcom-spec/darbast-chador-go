@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowRight, 
   Calculator, 
   Loader2,
   Users,
@@ -19,7 +18,8 @@ import {
   ChevronUp,
   Banknote,
   Receipt,
-  Clock
+  Clock,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +32,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns-jalali';
 import { faIR } from 'date-fns-jalali/locale';
+import { ModuleHeader } from '@/components/common/ModuleHeader';
 import {
   Collapsible,
   CollapsibleContent,
@@ -401,33 +402,13 @@ export default function AccountingModule() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-to-l from-emerald-600 to-teal-700 text-white">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/profile?tab=modules')}
-              className="text-white hover:bg-white/10"
-            >
-              <ArrowRight className="ml-2 h-5 w-5" />
-              بازگشت
-            </Button>
-            <div className="text-center flex-1">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Calculator className="h-6 w-6" />
-                <h1 className="text-2xl font-bold">ماژول حسابداری جامع</h1>
-              </div>
-              <p className="text-emerald-100 text-sm">
-                مدیریت حساب‌های مشتریان، نیروها و پرسنل
-              </p>
-            </div>
-            <div className="w-24" />
-          </div>
-        </div>
-      </div>
-
       <div className="container mx-auto px-4 py-6 space-y-6">
+        <ModuleHeader
+          title="ماژول حسابداری جامع"
+          description="مدیریت حساب‌های مشتریان، نیروها و پرسنل"
+          icon={<Calculator className="h-5 w-5" />}
+          backTo="/profile?tab=modules"
+        />
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/20 dark:to-background">
