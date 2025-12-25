@@ -213,12 +213,15 @@ const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMe
             {isVideo ? (
               <video
                 key={currentMedia?.id}
+                src={getMediaUrl(currentMedia)}
                 controls
                 playsInline
-                preload="metadata"
+                preload="auto"
                 className="w-full h-full max-h-[400px] object-contain"
+                onError={(e) => {
+                  console.error('Video load error:', currentMedia.file_path, e);
+                }}
               >
-                <source src={getMediaUrl(currentMedia)} type={getVideoMimeType()} />
                 مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
               </video>
             ) : (
