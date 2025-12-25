@@ -114,23 +114,41 @@ export function MultiPaymentDialog({
       return;
     }
 
+    if (!user?.id) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'لطفاً ابتدا وارد سیستم شوید'
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const amount = parseFloat(paymentAmount.replace(/,/g, ''));
 
       // Insert payment record
-      const { error: paymentError } = await supabase
+      const { data: insertedPayment, error: paymentError } = await supabase
         .from('order_payments')
         .insert({
           order_id: orderId,
           amount,
           payment_method: 'cash',
           receipt_number: receiptNumber || null,
-          notes: notes || null,
-          paid_by: user?.id
-        });
+          notes: notes || 'پرداخت نقدی / علی‌الحساب',
+          paid_by: user.id
+        })
+        .select('id')
+        .single();
 
-      if (paymentError) throw paymentError;
+      if (paymentError) {
+        console.error('Payment insert error:', paymentError);
+        throw new Error(`خطا در ثبت پرداخت: ${paymentError.message}`);
+      }
+
+      if (!insertedPayment) {
+        throw new Error('پرداخت ثبت نشد - لطفاً دوباره تلاش کنید');
+      }
 
       // Update total_paid in projects_v3
       const newTotalPaid = totalPaid + amount;
@@ -139,13 +157,16 @@ export function MultiPaymentDialog({
         .update({
           total_paid: newTotalPaid,
           payment_confirmed_at: new Date().toISOString(),
-          payment_confirmed_by: user?.id,
+          payment_confirmed_by: user.id,
           payment_method: 'cash',
           updated_at: new Date().toISOString()
         })
         .eq('id', orderId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Order update error:', updateError);
+        // Still continue - payment was recorded
+      }
 
       // Send notification to customer
       if (customerId) {
@@ -182,12 +203,12 @@ export function MultiPaymentDialog({
       // Refresh payments
       fetchPayments();
       onPaymentSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding payment:', error);
       toast({
         variant: 'destructive',
-        title: 'خطا',
-        description: 'ثبت پرداخت با خطا مواجه شد'
+        title: 'خطا در ثبت پرداخت',
+        description: error.message || 'ثبت پرداخت با خطا مواجه شد. لطفاً دوباره تلاش کنید.'
       });
     } finally {
       setSubmitting(false);
@@ -229,8 +250,11 @@ export function MultiPaymentDialog({
             <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
               <p className="text-xs text-muted-foreground mb-1">پرداخت شده</p>
               <p className="font-bold text-green-600 dark:text-green-400">
-                {totalPaid.toLocaleString('fa-IR')}
+                {totalPaid > 0 ? totalPaid.toLocaleString('fa-IR') : '۰'}
               </p>
+              {totalPaid > 0 && remainingAmount > 0 && (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">علی‌الحساب</p>
+              )}
             </div>
             <div className={`p-3 rounded-lg border text-center ${
               remainingAmount > 0 
@@ -259,11 +283,20 @@ export function MultiPaymentDialog({
                 id="payment-amount"
                 type="text"
                 value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
+                onChange={(e) => {
+                  // فقط اعداد و کاما مجاز
+                  const val = e.target.value.replace(/[^0-9,]/g, '');
+                  setPaymentAmount(val);
+                }}
                 placeholder={remainingAmount > 0 ? remainingAmount.toLocaleString('fa-IR') : 'مبلغ را وارد کنید'}
                 className="mt-1.5"
                 dir="ltr"
               />
+              {remainingAmount > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  می‌توانید هر مبلغی را به عنوان علی‌الحساب ثبت کنید
+                </p>
+              )}
             </div>
 
             <div>
@@ -285,7 +318,7 @@ export function MultiPaymentDialog({
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="توضیحات اضافی"
+                placeholder="مثلاً: علی‌الحساب، پرداخت نقدی"
                 className="mt-1.5"
               />
             </div>
