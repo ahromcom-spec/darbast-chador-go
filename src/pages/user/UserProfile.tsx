@@ -325,7 +325,18 @@ const fetchOrders = async () => {
 
           {/* Modules Tab */}
           <TabsContent value="modules" className="mt-4">
-            <UserModulesTab />
+            <div className="space-y-6">
+              {/* CEO/Admin can manage modules for others */}
+              {(isCEO || isAdmin || isGeneralManager) && (
+                <>
+                  <CEOManagementSection userId={user.id} userEmail={user.email} />
+                  <ModulesManagement />
+                </>
+              )}
+              
+              {/* User's own assigned modules */}
+              <UserModulesTab />
+            </div>
           </TabsContent>
 
 {/* Projects Tab */}
