@@ -292,10 +292,7 @@ export function AssistantAvatar() {
     loadMessages();
   }, [user?.id]);
 
-  // ریست پوزیشن اواتار به پیش‌فرض با هر تغییر صفحه
-  useEffect(() => {
-    setAvatarPosition(getDefaultAvatarPosition());
-  }, [location.pathname, getDefaultAvatarPosition]);
+  // Note: Avatar position persists between page navigations
 
   // NOTE: ScrollArea ref points to Root; we must scroll the Viewport element.
   useEffect(() => {
