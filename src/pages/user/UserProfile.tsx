@@ -40,6 +40,8 @@ import { IncomingTransferRequests } from '@/components/orders/IncomingTransferRe
 import { PendingCollaborationInvites } from '@/components/orders/PendingCollaborationInvites';
 import { PendingProjectInvites } from '@/components/projects/PendingProjectInvites';
 import { UserModulesTab } from '@/components/profile/UserModulesTab';
+import { ProfileBio } from '@/components/profile/ProfileBio';
+import { ProfileGallery } from '@/components/profile/ProfileGallery';
 import { lazy } from 'react';
 
 const SalesCustomers = lazy(() => import('@/pages/sales/SalesCustomers'));
@@ -93,6 +95,7 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [bio, setBio] = useState<string | null>(null);
   const [staffDialogOpen, setStaffDialogOpen] = useState(false);
 
   const isManager = isCEO || isAdmin || isGeneralManager || isSalesManager || isFinanceManager || isExecutiveManager;
@@ -120,13 +123,14 @@ export default function UserProfile() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, phone_number')
+        .select('full_name, phone_number, bio')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (error) throw error;
       setFullName(data?.full_name || '');
       setPhoneNumber(data?.phone_number || '');
+      setBio(data?.bio || null);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -343,6 +347,16 @@ const fetchOrders = async () => {
               phoneNumber={phoneNumber}
               onUpdate={handleProfileUpdate}
             />
+
+            {/* Biography */}
+            <ProfileBio 
+              userId={user.id} 
+              initialBio={bio}
+              onUpdate={(newBio) => setBio(newBio)}
+            />
+
+            {/* Gallery */}
+            <ProfileGallery userId={user.id} />
 
             {/* Manager Activity Details */}
             {isManager && (

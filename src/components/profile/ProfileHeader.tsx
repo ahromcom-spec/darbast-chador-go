@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { User, Shield, Crown, Briefcase, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { User as SupabaseUser } from '@supabase/supabase-js';
+import { ProfileAvatar } from './ProfileAvatar';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProfileHeaderProps {
   user: SupabaseUser;
@@ -83,6 +86,7 @@ const getRoleIcon = (role: string) => {
 };
 
 export function ProfileHeader({ user, fullName, roles = [], phoneNumber }: ProfileHeaderProps) {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const username = generateUsername(fullName);
   
   // Sort roles to show مدیر عامل first
@@ -91,6 +95,25 @@ export function ProfileHeader({ user, fullName, roles = [], phoneNumber }: Profi
     if (b === 'مدیر عامل') return 1;
     return 0;
   });
+
+  useEffect(() => {
+    const fetchAvatarUrl = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
+    };
+    fetchAvatarUrl();
+  }, [user.id]);
+
+  const handleAvatarUpdate = (url: string | null) => {
+    setAvatarUrl(url);
+  };
   
   return (
     <Card className="mb-6 overflow-hidden">
@@ -105,18 +128,13 @@ export function ProfileHeader({ user, fullName, roles = [], phoneNumber }: Profi
       
       <CardHeader className="pb-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          {/* Avatar */}
-          <div className={`h-20 w-20 rounded-full flex items-center justify-center shrink-0 ${
-            roles.includes('مدیر عامل') 
-              ? 'bg-gradient-to-br from-amber-400 to-yellow-500 ring-4 ring-amber-200' 
-              : 'bg-primary/10'
-          }`}>
-            {roles.includes('مدیر عامل') ? (
-              <Crown className="h-10 w-10 text-white" />
-            ) : (
-              <User className="h-10 w-10 text-primary" />
-            )}
-          </div>
+          {/* Avatar with upload capability */}
+          <ProfileAvatar 
+            userId={user.id}
+            avatarUrl={avatarUrl}
+            fullName={fullName}
+            onAvatarUpdate={handleAvatarUpdate}
+          />
           
           {/* User Info */}
           <div className="flex-1 space-y-2">
