@@ -281,23 +281,6 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
           </AvatarFallback>
         </Avatar>
         
-        {/* Navigation arrows */}
-        {photos.length > 1 && (
-          <>
-            <button
-              onClick={() => navigatePhoto('next')}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 p-1 bg-background/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => navigatePhoto('prev')}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 p-1 bg-background/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </>
-        )}
         
         {/* Photo counter */}
         {photos.length > 1 && (
