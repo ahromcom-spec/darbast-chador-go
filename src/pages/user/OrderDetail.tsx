@@ -1771,31 +1771,21 @@ export default function OrderDetail() {
                                 </span>
                               </div>
                               
-                              <Slider
-                                value={[advancePaymentAmount]}
-                                min={minAmount}
-                                max={totalAmount}
-                                step={step}
-                                onValueChange={(value) => setAdvancePaymentAmount(value[0])}
-                                className="w-full"
-                              />
-                              
-                              <div className="flex justify-between text-xs text-muted-foreground">
-                                <span>حداقل: {minAmount.toLocaleString('fa-IR')} تومان</span>
-                                <span>مبلغ کل: {totalAmount.toLocaleString('fa-IR')} تومان</span>
+                              <div className="text-center text-xs text-muted-foreground mb-2">
+                                مبلغ کل: {totalAmount.toLocaleString('fa-IR')} تومان
                               </div>
                               
                               {/* دکمه‌های مبالغ پیشنهادی ۴۰٪ و ۹۰٪ */}
-                              <div className="flex flex-wrap gap-2 justify-center">
+                              <div className="flex flex-wrap gap-3 justify-center">
                                 {quickAmounts.map((item) => (
                                   <Button
                                     key={item.percent}
                                     variant={advancePaymentAmount === item.amount ? "default" : "outline"}
-                                    size="sm"
+                                    size="lg"
                                     onClick={() => setAdvancePaymentAmount(item.amount)}
-                                    className={advancePaymentAmount === item.amount 
+                                    className={`min-w-[140px] ${advancePaymentAmount === item.amount 
                                       ? "bg-amber-600 hover:bg-amber-700 text-white" 
-                                      : "border-amber-300 text-amber-700 hover:bg-amber-100"}
+                                      : "border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-400"}`}
                                   >
                                     {item.label} ({item.amount.toLocaleString('fa-IR')})
                                   </Button>
