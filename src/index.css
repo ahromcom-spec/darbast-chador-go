@@ -514,4 +514,39 @@
       display: none !important;
     }
   }
+
+  /* 
+   * Leaflet tile gap fix - removes white lines between tiles
+   * This is a global fix that applies to all Leaflet maps in the app
+   */
+  .leaflet-tile-pane {
+    transform: translate3d(0, 0, 0);
+  }
+
+  .leaflet-tile-pane img {
+    width: 256.5px !important;
+    height: 256.5px !important;
+    outline: none !important;
+    border: none !important;
+  }
+
+  .leaflet-tile {
+    visibility: visible !important;
+    outline: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .leaflet-tile-container {
+    transform: translate3d(0, 0, 0);
+  }
+
+  .leaflet-pane,
+  .leaflet-tile-pane,
+  .leaflet-tile-container,
+  .leaflet-tile {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
 }

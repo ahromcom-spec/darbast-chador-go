@@ -149,28 +149,13 @@ export default function StaticLocationMap({
   }, [lat, lng, address, detailedAddress]);
 
   return (
-    <>
-      {/* CSS fix for Leaflet tiles */}
-      <style>{`
-        .leaflet-tile-pane img {
-          width: 256px !important;
-          height: 256px !important;
-        }
-        .leaflet-tile {
-          visibility: visible !important;
-        }
-        .leaflet-container {
-          background: #f0f0f0 !important;
-        }
-      `}</style>
-      <div 
-        ref={mapContainer} 
-        className="w-full h-full relative z-0"
-        style={{ 
-          minHeight: '400px',
-          background: '#f0f0f0'
-        }}
-      />
-    </>
+    <div 
+      ref={mapContainer} 
+      className="w-full h-full relative z-0"
+      style={{ 
+        minHeight: '400px',
+        background: '#f5f5f5'
+      }}
+    />
   );
 }
