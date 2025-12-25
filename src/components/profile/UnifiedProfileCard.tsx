@@ -418,17 +418,26 @@ export function UnifiedProfileCard({
                 </div>
               )}
               
-              {/* Camera overlay */}
-              <div 
-                className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                onClick={() => fileInputRef.current?.click()}
+              {/* Upload button (does not block avatar click) */}
+              <button
+                type="button"
+                aria-label="افزودن عکس"
+                disabled={uploading || checking}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                className={cn(
+                  "absolute -bottom-1 -right-1 h-7 w-7 rounded-full border border-border bg-background/90 shadow flex items-center justify-center transition",
+                  (uploading || checking) && "opacity-70 cursor-not-allowed"
+                )}
               >
                 {uploading || checking ? (
-                  <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 ) : (
-                  <Camera className="h-6 w-6 text-white" />
+                  <Camera className="h-4 w-4 text-foreground" />
                 )}
-              </div>
+              </button>
             </div>
 
             {/* Mini thumbnails */}
