@@ -91,6 +91,7 @@ interface Order {
   payment_method?: string;
   payment_confirmed_at?: string;
   transaction_reference?: string;
+  total_paid?: number;
   customer_completion_date?: string;
   executive_completion_date?: string;
   location_lat?: number;
@@ -204,6 +205,7 @@ export default function OrderDetail() {
   const [isConfirmingPrice, setIsConfirmingPrice] = useState(false);
   const [showAdvancePayment, setShowAdvancePayment] = useState(false);
   const [advancePaymentAmount, setAdvancePaymentAmount] = useState(0);
+  const [totalPaid, setTotalPaid] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -479,6 +481,9 @@ export default function OrderDetail() {
       } else {
         setApprovedCollectionDate(null);
       }
+
+      // Set total_paid from order data
+      setTotalPaid(orderData.total_paid || 0);
 
     } catch (error: any) {
       toast({
@@ -1544,7 +1549,14 @@ export default function OrderDetail() {
                 )}
 
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
-                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0) && (
+                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
+                  const basePrice = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
+                  const grandTotal = basePrice + approvedRepairCost;
+                  const paidAmount = totalPaid || order.total_paid || 0;
+                  const remainingAmount = grandTotal - paidAmount;
+                  const isFullyPaid = remainingAmount <= 0 || order.payment_confirmed_at;
+                  
+                  return (
                   <Collapsible open={isPriceDetailsExpanded} onOpenChange={setIsPriceDetailsExpanded}>
                     <section className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-4">
                       {/* Summary View */}
@@ -1552,15 +1564,17 @@ export default function OrderDetail() {
                         <h3 className="font-semibold">هزینه قرارداد</h3>
                         <div className="flex items-center gap-3">
                           <span className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300">
-                            {(approvedRepairCost > 0 
-                              ? (((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || 0) + approvedRepairCost)
-                              : ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || 0)
-                            )?.toLocaleString('fa-IR')} تومان
+                            {grandTotal?.toLocaleString('fa-IR')} تومان
                           </span>
-                          {order.payment_confirmed_at ? (
+                          {isFullyPaid ? (
                             <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 gap-1">
                               <CheckCircle className="h-3 w-3" />
                               پرداخت شده
+                            </Badge>
+                          ) : paidAmount > 0 ? (
+                            <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 gap-1">
+                              <Clock className="h-3 w-3" />
+                              پرداخت ناقص
                             </Badge>
                           ) : (
                             <Badge variant="secondary" className="gap-1">
@@ -1570,6 +1584,26 @@ export default function OrderDetail() {
                           )}
                         </div>
                       </div>
+
+                      {/* نمایش مبلغ پرداخت شده و الباقی */}
+                      {paidAmount > 0 && (
+                        <div className="grid grid-cols-2 gap-3 mt-3">
+                          <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                            <span className="text-xs text-green-700 dark:text-green-300 block mb-1">پرداخت شده</span>
+                            <span className="text-lg font-bold text-green-700 dark:text-green-300">
+                              {paidAmount.toLocaleString('fa-IR')} تومان
+                            </span>
+                          </div>
+                          {remainingAmount > 0 && (
+                            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                              <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1">باقی‌مانده</span>
+                              <span className="text-lg font-bold text-amber-700 dark:text-amber-300">
+                                {remainingAmount.toLocaleString('fa-IR')} تومان
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Collapsible Price Details */}
                       <CollapsibleContent className="space-y-4">
@@ -1631,8 +1665,9 @@ export default function OrderDetail() {
                       )}
 
                     {/* دکمه پرداخت - فقط بعد از تایید سفارش و برای درخواست کارشناسی فقط بعد از تایید قیمت توسط مشتری */}
-                    {['approved', 'completed', 'in_progress', 'pending_execution'].includes(order.status) && 
-                     ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0) && 
+                    {['approved', 'completed', 'in_progress', 'pending_execution', 'pending'].includes(order.status) && 
+                     grandTotal > 0 &&
+                     remainingAmount > 0 &&
                      !order.payment_confirmed_at &&
                      (!isExpertPricingRequest || customerHasConfirmedPrice) && (
                       <div className="pt-4 border-t border-emerald-200 dark:border-emerald-800 space-y-4">
@@ -1642,9 +1677,7 @@ export default function OrderDetail() {
                             className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                             size="lg"
                             onClick={async () => {
-                              const baseAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0;
-                              const paymentAmount = baseAmount + approvedRepairCost;
-                              if (!paymentAmount || paymentAmount <= 0) {
+                              if (!remainingAmount || remainingAmount <= 0) {
                                 toast({
                                   title: 'خطا',
                                   description: 'مبلغ پرداخت مشخص نیست',
@@ -1662,8 +1695,8 @@ export default function OrderDetail() {
                                 const { data, error } = await supabase.functions.invoke('zarinpal-payment', {
                                   body: {
                                     order_id: order.id,
-                                    amount: paymentAmount,
-                                    description: `پرداخت کامل سفارش ${order.code}${approvedRepairCost > 0 ? ' (شامل هزینه تعمیر)' : ''}`
+                                    amount: remainingAmount,
+                                    description: `پرداخت ${paidAmount > 0 ? 'الباقی ' : 'کامل '}سفارش ${order.code}${approvedRepairCost > 0 ? ' (شامل هزینه تعمیر)' : ''}`
                                   }
                                 });
                                 
@@ -1716,7 +1749,7 @@ export default function OrderDetail() {
                             }}
                           >
                             <CreditCard className="h-5 w-5" />
-                            پرداخت کامل
+                            {paidAmount > 0 ? `پرداخت الباقی (${remainingAmount.toLocaleString('fa-IR')})` : 'پرداخت کامل'}
                           </Button>
                           
                           <Button 
@@ -1724,11 +1757,9 @@ export default function OrderDetail() {
                             className="w-full gap-2 border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
                             size="lg"
                             onClick={() => {
-                              const baseAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0;
-                              const totalAmount = baseAmount + approvedRepairCost;
-                              // شروع از 30% مبلغ کل و گرد کردن به نزدیک‌ترین 100,000
-                              const minAmount = Math.ceil((totalAmount * 0.3) / 100000) * 100000;
-                              setAdvancePaymentAmount(minAmount);
+                              // شروع از 30% مبلغ الباقی و گرد کردن به نزدیک‌ترین 100,000
+                              const minAmount = Math.ceil((remainingAmount * 0.3) / 100000) * 100000;
+                              setAdvancePaymentAmount(Math.min(minAmount, remainingAmount));
                               setShowAdvancePayment(!showAdvancePayment);
                             }}
                           >
@@ -1739,23 +1770,19 @@ export default function OrderDetail() {
 
                         {/* اسلایدر پرداخت علی‌الحساب */}
                         {showAdvancePayment && (() => {
-                          const baseAmount = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0;
-                          const totalAmount = baseAmount + approvedRepairCost;
                           // حداقل 30% و گرد به 100,000
-                          const minAmount = Math.ceil((totalAmount * 0.3) / 100000) * 100000;
+                          const minAdvanceAmount = Math.ceil((remainingAmount * 0.3) / 100000) * 100000;
                           // گرد کردن حداکثر به 100,000
-                          const maxAmount = Math.floor(totalAmount / 100000) * 100000;
-                          // تعداد گام‌ها
-                          const step = 100000;
+                          const maxAdvanceAmount = Math.floor(remainingAmount / 100000) * 100000;
                           
                           // تولید مقادیر پیشنهادی: ۴۰٪ و ۹۰٪
                           const generateQuickAmounts = () => {
-                            const amount40 = Math.round((totalAmount * 0.4) / 100000) * 100000; // ۴۰٪ گرد به ۱۰۰,۰۰۰
-                            const amount90 = Math.round((totalAmount * 0.9) / 100000) * 100000; // ۹۰٪ گرد به ۱۰۰,۰۰۰
+                            const amount40 = Math.round((remainingAmount * 0.4) / 100000) * 100000; // ۴۰٪ گرد به ۱۰۰,۰۰۰
+                            const amount90 = Math.round((remainingAmount * 0.9) / 100000) * 100000; // ۹۰٪ گرد به ۱۰۰,۰۰۰
                             return [
                               { amount: amount40, label: '۴۰٪', percent: 40 },
                               { amount: amount90, label: '۹۰٪', percent: 90 }
-                            ].filter(item => item.amount >= minAmount && item.amount <= totalAmount);
+                            ].filter(item => item.amount >= minAdvanceAmount && item.amount <= remainingAmount);
                           };
                           
                           const quickAmounts = generateQuickAmounts();
@@ -1772,7 +1799,7 @@ export default function OrderDetail() {
                               </div>
                               
                               <div className="text-center text-xs text-muted-foreground mb-2">
-                                مبلغ کل: {totalAmount.toLocaleString('fa-IR')} تومان
+                                مبلغ باقی‌مانده: {remainingAmount.toLocaleString('fa-IR')} تومان
                               </div>
                               
                               {/* دکمه‌های مبالغ پیشنهادی ۴۰٪ و ۹۰٪ */}
@@ -1897,7 +1924,8 @@ export default function OrderDetail() {
                     )}
                     </section>
                   </Collapsible>
-                )}
+                  );
+                })()}
 
                 {/* بلوک تاریخ‌های مهم - کادر جداگانه */}
                 {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime || parsedNotes?.rental_start_date || parsedNotes?.rental_end_date) && (
