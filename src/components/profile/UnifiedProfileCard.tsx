@@ -345,6 +345,43 @@ export function UnifiedProfileCard({
     }
   };
 
+  const handleDeletePhotoByIndex = async (index: number) => {
+    const photo = photos[index];
+    if (!photo) return;
+    
+    setDeletingId(photo.id);
+    setZoomModalOpen(false);
+    
+    try {
+      await supabase.storage.from('profile-images').remove([photo.file_path]);
+      await supabase.from('profile_photos').delete().eq('id', photo.id);
+
+      const photoUrl = getPublicUrl(photo.file_path);
+      if (avatarUrl === photoUrl) {
+        const remainingPhotos = photos.filter(p => p.id !== photo.id);
+        if (remainingPhotos.length > 0) {
+          const newUrl = getPublicUrl(remainingPhotos[0].file_path);
+          await supabase.from('profiles').update({ avatar_url: newUrl }).eq('user_id', user.id);
+          setAvatarUrl(newUrl);
+        } else {
+          await supabase.from('profiles').update({ avatar_url: null }).eq('user_id', user.id);
+          setAvatarUrl(null);
+        }
+      }
+
+      const newPhotos = photos.filter(p => p.id !== photo.id);
+      setPhotos(newPhotos);
+      if (currentIndex >= newPhotos.length) {
+        setCurrentIndex(Math.max(0, newPhotos.length - 1));
+      }
+      toast.success('حذف شد');
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      toast.error('خطا');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const photoUrls = photos.map(p => getPublicUrl(p.file_path));
 
@@ -358,6 +395,12 @@ export function UnifiedProfileCard({
       initialIndex={currentIndex}
       activeIndex={currentIndex}
       onSelect={photos.length > 0 ? (idx) => handleSelectPhoto(idx) : undefined}
+      onDelete={photos.length > 0 ? (idx) => {
+        const photo = photos[idx];
+        if (photo) {
+          handleDeletePhotoByIndex(idx);
+        }
+      } : undefined}
       type="profile"
     />
     <Card className="mb-6 overflow-hidden">

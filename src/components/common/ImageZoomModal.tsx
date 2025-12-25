@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ImageZoomModalProps {
@@ -13,6 +13,8 @@ interface ImageZoomModalProps {
   activeIndex?: number;
   /** called when user explicitly selects current image */
   onSelect?: (index: number) => void;
+  /** called when user wants to delete current image */
+  onDelete?: (index: number) => void;
   /** deprecated (no longer triggered by next/prev) */
   onImageChange?: (newIndex: number) => void;
   /** type of gallery - 'profile' or 'order' */
@@ -27,6 +29,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
   initialIndex = 0,
   activeIndex,
   onSelect,
+  onDelete,
   type = 'profile'
 }) => {
   const [zoom, setZoom] = useState(1);
@@ -254,17 +257,30 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
             </>
           )}
 
-          {/* Explicit select button - only show for profile type with onSelect */}
-          {type === 'profile' && onSelect && (
-            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50">
-              <Button
-                type="button"
-                onClick={() => onSelect?.(currentIndex)}
-                disabled={isActive}
-                className="min-w-[190px]"
-              >
-                {isActive ? 'عکس پروفایل فعلی' : 'انتخاب به عنوان عکس پروفایل'}
-              </Button>
+          {/* Action buttons - only show for profile type */}
+          {type === 'profile' && (onSelect || onDelete) && (
+            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50 flex gap-2">
+              {onSelect && (
+                <Button
+                  type="button"
+                  onClick={() => onSelect?.(currentIndex)}
+                  disabled={isActive}
+                  className="min-w-[180px]"
+                >
+                  {isActive ? 'عکس پروفایل فعلی' : 'انتخاب به عنوان عکس پروفایل'}
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => onDelete?.(currentIndex)}
+                  className="gap-1"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  حذف عکس
+                </Button>
+              )}
             </div>
           )}
 
