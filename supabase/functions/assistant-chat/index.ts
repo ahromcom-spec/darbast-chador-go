@@ -9,7 +9,7 @@ const corsHeaders = {
 const SYSTEM_PROMPT = `تو منشی هوشمند و حرفه‌ای سایت اهرم هستی. نام تو "دستیار اهرم" است. تو باید به همه سوالات کاربران درباره سایت، خدمات، و نحوه استفاده از آن پاسخ دهی.
 
 ⚠️ قانون بسیار مهم درباره سفارشات:
-- «سفارش بایگانی‌شده» (is_archived=true یا is_deep_archived=true) جزو سفارشات فعال نیست.
+- «سفارش بایگانی‌شده» اگر هرکدام از این‌ها برقرار باشد: is_archived=true یا is_deep_archived=true یا archived_at != null یا deep_archived_at != null.
 - تو حق نداری درباره سفارشات بایگانی‌شده هیچ اطلاعات، آمار یا جزئیاتی ارائه کنی.
 - اگر کاربر درباره سفارشی پرسید که در سفارشات فعال پیدا نمی‌شود، فقط بگو: «این سفارش در لیست سفارشات فعال شما وجود ندارد یا بایگانی شده است.»
 
@@ -759,8 +759,10 @@ async function getRecentOrdersContext(supabase: any): Promise<string> {
         provinces:province_id (name),
         subcategories:subcategory_id (name)
       `)
-      .eq("is_deep_archived", false)
-      .eq("is_archived", false)
+      .or("is_deep_archived.is.null,is_deep_archived.eq.false")
+      .or("is_archived.is.null,is_archived.eq.false")
+      .is("archived_at", null)
+      .is("deep_archived_at", null)
       .order("created_at", { ascending: false })
       .limit(15);
     
@@ -881,8 +883,10 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
         )
       `)
       .eq('customer_id', customer.id)
-      .eq('is_deep_archived', false)
-      .eq('is_archived', false)
+      .or('is_deep_archived.is.null,is_deep_archived.eq.false')
+      .or('is_archived.is.null,is_archived.eq.false')
+      .is('archived_at', null)
+      .is('deep_archived_at', null)
       .order('created_at', { ascending: false });
 
     if (ordersError) {
