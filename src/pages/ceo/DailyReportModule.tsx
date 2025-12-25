@@ -920,10 +920,26 @@ export default function DailyReportModule() {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
 
-      // اگر آخرین ردیف ویرایش شد و مقداری وارد شد، یک ردیف جدید اضافه کن
-      const isLastRow = index === prev.length - 1;
-      const hasContent = value && value.trim().length > 0;
-      if (isLastRow && hasContent) {
+      // بررسی آیا یک ردیف خالی در انتها وجود دارد
+      const isRowEmpty = (row: OrderReportRow) => 
+        !row.order_id && 
+        !row.activity_description?.trim() && 
+        !row.service_details?.trim() && 
+        !row.team_name?.trim() && 
+        !row.notes?.trim();
+
+      // تعداد ردیف‌های خالی در انتها را شمارش کن
+      let emptyRowsAtEnd = 0;
+      for (let i = updated.length - 1; i >= 0; i--) {
+        if (isRowEmpty(updated[i])) {
+          emptyRowsAtEnd++;
+        } else {
+          break;
+        }
+      }
+
+      // اگر هیچ ردیف خالی در انتها نیست، یک ردیف خالی اضافه کن
+      if (emptyRowsAtEnd === 0) {
         updated.push({
           order_id: '',
           activity_description: '',
@@ -932,6 +948,12 @@ export default function DailyReportModule() {
           notes: '',
           row_color: ROW_COLORS[updated.length % ROW_COLORS.length].value
         });
+      }
+      // اگر بیش از یک ردیف خالی در انتها هست، اضافی‌ها را حذف کن
+      else if (emptyRowsAtEnd > 1) {
+        // فقط یک ردیف خالی در انتها نگه دار
+        const rowsToRemove = emptyRowsAtEnd - 1;
+        updated.splice(updated.length - rowsToRemove, rowsToRemove);
       }
 
       return updated;
@@ -974,19 +996,33 @@ export default function DailyReportModule() {
         }
       }
 
-      // آخرین ردیف غیر صندوق را پیدا کن
+      // بررسی آیا یک ردیف خالی (غیر صندوق) وجود دارد
+      const isRowEmpty = (row: StaffReportRow) => 
+        !row.is_cash_box &&
+        !row.staff_user_id &&
+        !row.staff_name?.trim() &&
+        !row.receiving_notes?.trim() &&
+        !row.spending_notes?.trim() &&
+        !row.notes?.trim() &&
+        (row.overtime_hours ?? 0) === 0 &&
+        (row.amount_received ?? 0) === 0 &&
+        (row.amount_spent ?? 0) === 0;
+
+      // ردیف‌های غیر صندوق را بررسی کن
       const nonCashBoxRows = updated.filter((r) => !r.is_cash_box);
-      const lastNonCashBoxIndex = updated.findIndex(
-        (r, i) => !r.is_cash_box && i === updated.lastIndexOf(nonCashBoxRows[nonCashBoxRows.length - 1])
-      );
+      
+      // تعداد ردیف‌های خالی غیر صندوق در انتها را شمارش کن
+      let emptyRowsAtEnd = 0;
+      for (let i = nonCashBoxRows.length - 1; i >= 0; i--) {
+        if (isRowEmpty(nonCashBoxRows[i])) {
+          emptyRowsAtEnd++;
+        } else {
+          break;
+        }
+      }
 
-      // اگر آخرین ردیف غیر صندوق ویرایش شد و مقداری وارد شد، یک ردیف جدید اضافه کن
-      const isLastNonCashBoxRow = index === lastNonCashBoxIndex;
-      const hasContent =
-        (typeof value === 'string' && value.trim().length > 0) ||
-        (typeof value === 'number' && value > 0);
-
-      if (isLastNonCashBoxRow && hasContent && !updated[index].is_cash_box) {
+      // اگر هیچ ردیف خالی غیر صندوق در انتها نیست، یک ردیف خالی اضافه کن
+      if (emptyRowsAtEnd === 0) {
         updated.push({
           staff_user_id: null,
           staff_name: '',
@@ -999,6 +1035,18 @@ export default function DailyReportModule() {
           notes: '',
           is_cash_box: false
         });
+      }
+      // اگر بیش از یک ردیف خالی غیر صندوق در انتها هست، اضافی‌ها را حذف کن
+      else if (emptyRowsAtEnd > 1) {
+        const rowsToRemove = emptyRowsAtEnd - 1;
+        // ردیف‌های خالی اضافی را از آرایه اصلی حذف کن
+        let removed = 0;
+        for (let i = updated.length - 1; i >= 0 && removed < rowsToRemove; i--) {
+          if (isRowEmpty(updated[i])) {
+            updated.splice(i, 1);
+            removed++;
+          }
+        }
       }
 
       return updated;
