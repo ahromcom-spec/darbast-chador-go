@@ -176,13 +176,9 @@ export const CustomerInvoice = () => {
           notesAdvance = 0;
         }
 
-        // پایه: بیشترین مقدار ثبت شده
-        let paidAmount = Math.max(totalPaidField, cashPaid, notesAdvance);
-
-        // اگر تایید پرداخت داریم ولی هیچ مبلغی ثبت نشده (مثلاً پرداخت درگاه)، کل مبلغ را پرداخت‌شده در نظر بگیر
-        if (paidAmount <= 0 && order.payment_confirmed_at && totalAmount > 0) {
-          paidAmount = totalAmount;
-        }
+        // پایه: بیشترین مقدار ثبت شده - بدون اتکا به payment_confirmed_at
+        // چون payment_confirmed_at ممکن است به اشتباه ست شده باشد
+        const paidAmount = Math.max(totalPaidField, cashPaid, notesAdvance);
 
         // جلوگیری از منفی/بیشتر از مبلغ کل
         const paidCapped = totalAmount > 0 ? Math.min(paidAmount, totalAmount) : Math.max(paidAmount, 0);
