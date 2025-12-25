@@ -46,6 +46,7 @@ const statusMap: Record<string, string> = {
   'awaiting_collection': 'در انتظار جمع‌آوری',
   'in_collection': 'در حال جمع‌آوری',
   'completed': 'اتمام سفارش',
+  'paid': 'پرداخت شد',
   'closed': 'بسته شده',
   'rejected': 'رد شده',
 };
@@ -100,6 +101,7 @@ export const OrderTimeline = ({
     in_progress: 2,
     order_executed: 3,
     awaiting_payment: 4, // در انتظار پرداخت
+    paid: 5, // پرداخت انجام شده (مرحله بعدی: جمع‌آوری)
     awaiting_collection: 5,
     in_collection: 6,
     collected: 7,
@@ -130,7 +132,7 @@ export const OrderTimeline = ({
   };
 
   // تعیین وضعیت تایید شده یا نه
-  const isApprovedOrBeyond = currentStageNumber >= 1 || !!executionStage || ['approved', 'pending_execution', 'in_progress', 'completed', 'closed'].includes(orderStatus);
+  const isApprovedOrBeyond = currentStageNumber >= 1 || !!executionStage || ['approved', 'pending_execution', 'in_progress', 'completed', 'paid', 'closed'].includes(orderStatus);
 
   const steps: TimelineStep[] = [
     {
