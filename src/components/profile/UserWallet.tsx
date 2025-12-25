@@ -134,8 +134,12 @@ export function UserWallet() {
       if (customer) {
         const { data: orders } = await supabase
           .from('projects_v3')
-          .select('payment_amount, payment_confirmed_at, notes, total_paid')
-          .eq('customer_id', customer.id);
+          .select('payment_amount, payment_confirmed_at, notes, total_paid, status, is_archived')
+          .eq('customer_id', customer.id)
+          // فقط سفارشات غیر بایگانی را در نظر بگیر
+          .or('is_archived.is.null,is_archived.eq.false')
+          // سفارشات رد شده هم از حسابداری حذف شوند
+          .neq('status', 'rejected');
 
         if (orders) {
           orders.forEach(order => {
