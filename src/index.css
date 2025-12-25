@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Snowfall Animation */
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10px) rotate(0deg);
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+  }
+}
+
+.animate-snowfall {
+  animation: snowfall linear infinite;
+}
 /* Persian RTL Design System - Inspired by traditional Persian architecture and modern construction */
 
 @layer base {

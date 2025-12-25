@@ -2,6 +2,7 @@ import { useState } from 'react';
 import InteractiveGlobe from '@/components/globe/InteractiveGlobe';
 import goldenGlobe from '@/assets/golden-globe-rotating.png';
 import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
+import Snowfall from '@/components/effects/Snowfall';
 
 const Index = () => {
   const [showGlobe, setShowGlobe] = useState(false);
@@ -12,6 +13,8 @@ const Index = () => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
+      {/* افکت برف‌ریزی زمستانی */}
+      <Snowfall />
       {/* آواتار دستیار هوشمند */}
       <AssistantAvatar />
       {/* Hero Background Image */}
