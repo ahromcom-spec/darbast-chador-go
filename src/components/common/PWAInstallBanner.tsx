@@ -70,15 +70,6 @@ export function PWAInstallBanner() {
     }
     
     setShow(shouldShow);
-    
-    // ریست پوزیشن به پیش‌فرض سمت راست با هر تغییر صفحه
-    const vp = getViewportSize();
-    const bannerWidth = 320;
-    const bannerHeight = 70;
-    setPosition({ 
-      x: Math.max(16, vp.width - bannerWidth - 16), 
-      y: vp.height - bannerHeight - 80 
-    });
   }, [location.pathname, isStandalone]);
 
   // Update position on resize
@@ -265,17 +256,17 @@ export function PWAInstallBanner() {
       onTouchStart={handleTouchStart}
     >
       <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-lg">
-        <div className="p-2 sm:p-4 flex items-center gap-2 sm:gap-3">
+        <div className="p-2 sm:p-3 flex items-center gap-2 sm:gap-3">
           <div className="flex-shrink-0 p-1.5 sm:p-2 rounded-lg bg-primary/10">
             <Download className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 whitespace-nowrap">
             <h3 className="font-semibold text-xs sm:text-sm">نصب برنامه اهرم</h3>
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 hidden sm:block">
+            <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
               برای تجربه بهتر، برنامه را نصب کنید
             </p>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <Button
               onClick={handleInstall}
               size="sm"
