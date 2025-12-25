@@ -26,7 +26,8 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
   images = [],
   initialIndex = 0,
   activeIndex,
-  onSelect
+  onSelect,
+  type = 'profile'
 }) => {
   const [zoom, setZoom] = useState(1);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
