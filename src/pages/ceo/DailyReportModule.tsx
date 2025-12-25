@@ -802,7 +802,7 @@ export default function DailyReportModule() {
           .select('*')
           .eq('daily_report_id', reportIdToLoad);
 
-        const normalizedStaff: StaffReportRow[] = (staffData || []).map((s: any) => {
+        const allStaff: StaffReportRow[] = (staffData || []).map((s: any) => {
           const staffCode = extractStaffCode(s.staff_name || '');
 
           return {
@@ -821,9 +821,19 @@ export default function DailyReportModule() {
           };
         });
 
-        const hasCashBox = normalizedStaff.some((s) => s.is_cash_box);
-        if (!hasCashBox) {
-          normalizedStaff.unshift({
+        // فقط یک سطر صندوق نگه‌دار و بقیه را فیلتر کن
+        const cashBoxRows = allStaff.filter((s) => s.is_cash_box);
+        const nonCashBoxRows = allStaff.filter((s) => !s.is_cash_box);
+        
+        // فقط اولین سطر صندوق را نگه‌دار (یا یکی جدید بساز)
+        const normalizedStaff: StaffReportRow[] = [];
+        
+        if (cashBoxRows.length > 0) {
+          // فقط اولین سطر صندوق را اضافه کن
+          normalizedStaff.push(cashBoxRows[0]);
+        } else {
+          // اگر سطر صندوق وجود نداشت، یکی اضافه کن
+          normalizedStaff.push({
             staff_user_id: null,
             staff_name: 'کارت صندوق اهرم',
             work_status: 'کارکرده',
@@ -836,6 +846,9 @@ export default function DailyReportModule() {
             is_cash_box: true,
           });
         }
+        
+        // سطرهای غیر صندوق را اضافه کن
+        normalizedStaff.push(...nonCashBoxRows);
 
         const hasAnyNonCashRow = normalizedStaff.some((s) => !s.is_cash_box);
         if (!hasAnyNonCashRow) {
