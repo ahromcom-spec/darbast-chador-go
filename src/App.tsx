@@ -46,6 +46,7 @@ const DailyReportModule = lazy(() => import("@/pages/ceo/DailyReportModule"));
 const HRManagementModule = lazy(() => import("@/pages/ceo/HRManagementModule"));
 const PersonnelAccountingModule = lazy(() => import("@/pages/ceo/PersonnelAccountingModule"));
 const SiteRegistrationModule = lazy(() => import("@/pages/ceo/SiteRegistrationModule"));
+const AccountingModule = lazy(() => import("@/pages/ceo/AccountingModule"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -328,6 +329,12 @@ const App = () => {
               <Route path="/site-registration" element={
                 <ProtectedRoute>
                   <SiteRegistrationModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر جداگانه برای ماژول حسابداری جامع */}
+              <Route path="/comprehensive-accounting" element={
+                <ProtectedRoute>
+                  <AccountingModule />
                 </ProtectedRoute>
               } />
               <Route path="/executive" element={
