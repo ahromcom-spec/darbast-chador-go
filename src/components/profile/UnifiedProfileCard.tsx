@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Shield, Crown, Briefcase, Star, Edit2, Save, X, Camera, Loader2, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -119,6 +120,7 @@ export function UnifiedProfileCard({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { checkImageWithToast, checking } = useImageModeration();
   
@@ -352,7 +354,24 @@ export function UnifiedProfileCard({
     }
   };
 
+  const handleZoomImageChange = async (newIndex: number) => {
+    if (newIndex !== currentIndex && photos[newIndex]) {
+      await handleSelectPhoto(newIndex);
+    }
+  };
+
+  const photoUrls = photos.map(p => getPublicUrl(p.file_path));
+
   return (
+    <>
+    <ImageZoomModal
+      imageUrl={getCurrentImage() || ''}
+      isOpen={zoomModalOpen}
+      onClose={() => setZoomModalOpen(false)}
+      images={photoUrls}
+      initialIndex={currentIndex}
+      onImageChange={handleZoomImageChange}
+    />
     <Card className="mb-6 overflow-hidden">
       {/* CEO Banner */}
       {roles.includes('مدیر عامل') && (
@@ -364,10 +383,12 @@ export function UnifiedProfileCard({
       
       <CardContent className="p-4">
         <div className="flex gap-4">
-          {/* Avatar Section - Compact */}
           <div className="flex flex-col items-center gap-2 shrink-0">
             <div className="relative group">
-              <Avatar className="h-20 w-20 border-2 border-primary/20">
+              <Avatar 
+                className="h-20 w-20 border-2 border-primary/20 cursor-pointer"
+                onClick={() => photos.length > 0 && setZoomModalOpen(true)}
+              >
                 <AvatarImage src={getCurrentImage() || undefined} alt={fullName} />
                 <AvatarFallback className="text-xl bg-primary/10 text-primary">
                   {getInitials(fullName)}
@@ -538,5 +559,6 @@ export function UnifiedProfileCard({
         )}
       </CardContent>
     </Card>
+    </>
   );
 }

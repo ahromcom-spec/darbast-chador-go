@@ -9,6 +9,7 @@ interface ImageZoomModalProps {
   onClose: () => void;
   images?: string[];
   initialIndex?: number;
+  onImageChange?: (newIndex: number) => void;
 }
 
 export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({ 
@@ -16,7 +17,8 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
   isOpen, 
   onClose,
   images = [],
-  initialIndex = 0
+  initialIndex = 0,
+  onImageChange
 }) => {
   const [zoom, setZoom] = useState(1);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -48,17 +50,21 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 
   const handleNext = () => {
     if (hasMultipleImages) {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
+      const newIndex = (currentIndex + 1) % images.length;
+      setCurrentIndex(newIndex);
       setZoom(1);
       setPosition({ x: 0, y: 0 });
+      onImageChange?.(newIndex);
     }
   };
 
   const handlePrev = () => {
     if (hasMultipleImages) {
-      setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+      const newIndex = (currentIndex - 1 + images.length) % images.length;
+      setCurrentIndex(newIndex);
       setZoom(1);
       setPosition({ x: 0, y: 0 });
+      onImageChange?.(newIndex);
     }
   };
 
