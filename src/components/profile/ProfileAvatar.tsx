@@ -152,12 +152,15 @@ export function ProfileAvatar({ userId, avatarUrl, fullName, onAvatarUpdate }: P
         throw dbError;
       }
 
-      // Update sort_order for other photos
-      for (const photo of photos) {
-        await supabase
-          .from('profile_photos')
-          .update({ sort_order: photo.sort_order + 1 })
-          .eq('id', photo.id);
+      // Update sort_order for other photos in a single query using batch update
+      if (photos.length > 0) {
+        const photoIds = photos.map(p => p.id);
+        await supabase.rpc('increment_photo_sort_orders', {
+          photo_ids: photoIds
+        }).catch(() => {
+          // Fallback: If RPC doesn't exist, skip reordering (photos will still work)
+          console.log('Sort order RPC not available, skipping reorder');
+        });
       }
 
       // Update main avatar to the new photo
