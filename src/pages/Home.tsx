@@ -249,16 +249,15 @@ const Home = () => {
         </script>
       </div>
 
-      <div className="min-h-screen flex flex-col relative bg-background">
+      <div className="min-h-[calc(100vh-80px)] flex flex-col relative bg-background">
         {/* Background Image */}
         <div 
-          className="fixed inset-0 z-0" 
+          className="absolute inset-0 z-0" 
           style={{
             backgroundImage: 'url(/hero-background.webp)',
             backgroundSize: 'cover',
             backgroundPosition: 'center center',
-            backgroundRepeat: 'no-repeat',
-            backgroundAttachment: 'fixed'
+            backgroundRepeat: 'no-repeat'
           }} 
           role="presentation" 
           aria-hidden="true" 
@@ -266,16 +265,15 @@ const Home = () => {
           {/* Mobile-specific background adjustment */}
           <style dangerouslySetInnerHTML={{ __html: `
             @media (max-width: 768px) {
-              .fixed.inset-0.z-0 {
+              .absolute.inset-0.z-0 {
                 /* Show more buildings by positioning toward the sea/buildings side */
                 background-size: cover !important;
                 background-position: 80% center !important;
-                background-attachment: scroll !important;
               }
             }
           `}} />
         </div>
-        <div className="fixed inset-0 bg-black/10 z-0" aria-hidden="true" />
+        <div className="absolute inset-0 bg-black/10 z-0" aria-hidden="true" />
 
 
         {/* Main Content */}
