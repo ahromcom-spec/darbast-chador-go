@@ -41,7 +41,6 @@ import { PendingCollaborationInvites } from '@/components/orders/PendingCollabor
 import { PendingProjectInvites } from '@/components/projects/PendingProjectInvites';
 import { UserModulesTab } from '@/components/profile/UserModulesTab';
 import { ProfileBio } from '@/components/profile/ProfileBio';
-import { ProfileGallery } from '@/components/profile/ProfileGallery';
 import { lazy } from 'react';
 
 const SalesCustomers = lazy(() => import('@/pages/sales/SalesCustomers'));
@@ -354,9 +353,6 @@ const fetchOrders = async () => {
               initialBio={bio}
               onUpdate={(newBio) => setBio(newBio)}
             />
-
-            {/* Gallery */}
-            <ProfileGallery userId={user.id} />
 
             {/* Manager Activity Details */}
             {isManager && (
