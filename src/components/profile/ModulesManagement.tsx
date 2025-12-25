@@ -71,6 +71,14 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-teal-600',
     bgColor: 'bg-teal-50',
   },
+  {
+    key: 'comprehensive_accounting',
+    name: 'ماژول حسابداری جامع',
+    description: 'مدیریت حساب‌های مشتریان، نیروها و پرسنل',
+    href: '/comprehensive-accounting',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+  },
 ];
 
 export function ModulesManagement() {
