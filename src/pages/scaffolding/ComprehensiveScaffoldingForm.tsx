@@ -778,9 +778,9 @@ export default function ComprehensiveScaffoldingForm({
       const fileName = `${user!.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = fileName;
 
-      // Upload to storage
+      // Upload to storage (bucket: project-media)
       const { error: uploadError } = await supabase.storage
-        .from('order-media')
+        .from('project-media')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false,
@@ -810,7 +810,7 @@ export default function ComprehensiveScaffoldingForm({
           const thumbnailFileName = `${user!.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(7)}_thumb.jpg`;
           
           const { error: thumbUploadError } = await supabase.storage
-            .from('order-media')
+            .from('project-media')
             .upload(thumbnailFileName, thumbnailBlob, {
               cacheControl: '3600',
               upsert: false,

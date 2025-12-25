@@ -683,9 +683,9 @@ export default function OrderDetail() {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
         try {
-          // Upload to storage
+          // Upload to storage (bucket: project-media)
           const { error: uploadError } = await supabase.storage
-            .from('order-media')
+            .from('project-media')
             .upload(filePath, file);
 
           if (uploadError) throw uploadError;
@@ -749,9 +749,9 @@ export default function OrderDetail() {
 
     setDeletingMediaId(mediaId);
     try {
-      // حذف از storage
+      // حذف از storage (bucket: project-media)
       const { error: storageError } = await supabase.storage
-        .from('order-media')
+        .from('project-media')
         .remove([mediaPath]);
       
       if (storageError) {
@@ -2214,7 +2214,7 @@ export default function OrderDetail() {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {mediaFiles.filter(m => m.file_type === 'image').map((media) => {
                     const { data } = supabase.storage
-                      .from('order-media')
+                      .from('project-media')
                       .getPublicUrl(media.file_path);
                     
                     return (
@@ -2254,12 +2254,12 @@ export default function OrderDetail() {
                   })}
                   {mediaFiles.filter(m => m.file_type === 'video').map((media) => {
                     const { data } = supabase.storage
-                      .from('order-media')
+                      .from('project-media')
                       .getPublicUrl(media.file_path);
                     
                     // Get thumbnail if available
                     const thumbnailData = media.thumbnail_path 
-                      ? supabase.storage.from('order-media').getPublicUrl(media.thumbnail_path)
+                      ? supabase.storage.from('project-media').getPublicUrl(media.thumbnail_path)
                       : null;
                     
                     const handleDownload = async () => {

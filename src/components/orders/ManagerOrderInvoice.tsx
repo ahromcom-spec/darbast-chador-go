@@ -91,7 +91,7 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         for (const item of mediaData) {
           try {
             const { data: signedData } = await supabase.storage
-              .from('order-media')
+              .from('project-media')
               .createSignedUrl(item.file_path, 3600);
             if (signedData?.signedUrl) {
               urls[item.id] = signedData.signedUrl;

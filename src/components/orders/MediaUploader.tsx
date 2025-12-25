@@ -7,9 +7,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useImageModeration } from '@/hooks/useImageModeration';
 
-// NOTE: This component previously only stored files locally and showed a blob preview.
-// Root cause of user issue: videos with unsupported codecs showed a preview error and nothing was uploaded.
-// Fix: implement real upload to Cloud storage (bucket: order-media) with status UI and graceful preview fallback.
+// NOTE: فایل‌های سفارش در bucket 'project-media' ذخیره می‌شوند
+// توضیح: تمام مدیا‌ی سفارشات در این bucket آپلود می‌شود
+const MEDIA_BUCKET = 'project-media';
 
 interface MediaFile {
   file: File;
@@ -143,8 +143,8 @@ export function MediaUploader({
       }, 100); // Faster interval for smoother animation
 
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('order-media')
-        .upload(storagePath, media.file, { 
+        .from(MEDIA_BUCKET)
+        .upload(storagePath, media.file, {
           contentType: media.file.type, 
           upsert: false 
         });
@@ -178,7 +178,7 @@ export function MediaUploader({
 
       console.log('آپلود موفق:', uploadData);
 
-      const { data: publicData } = supabase.storage.from('order-media').getPublicUrl(storagePath);
+      const { data: publicData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(storagePath);
       
       // If projectId is provided, save record to project_media table
       if (projectId) {
@@ -354,7 +354,7 @@ export function MediaUploader({
     const target = files.find(f => f.id === id);
     if (target?.storagePath) {
       // Try deleting from storage if it was uploaded
-      await supabase.storage.from('order-media').remove([target.storagePath]).catch(() => {});
+      await supabase.storage.from(MEDIA_BUCKET).remove([target.storagePath]).catch(() => {});
     }
     setFiles(prev => {
       const updated = prev.filter(f => f.id !== id);

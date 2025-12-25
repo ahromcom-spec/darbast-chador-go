@@ -228,7 +228,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
 
         const publicUrl = path
           ? supabase.storage
-              .from('order-media')
+              .from('project-media')
               .getPublicUrl(path, { transform: { width: 240, quality: 70 } }).data.publicUrl
           : null;
 

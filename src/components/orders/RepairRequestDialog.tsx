@@ -268,7 +268,7 @@ export function RepairRequestDialog({
           const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
           const { error: uploadError } = await supabase.storage
-            .from('order-media')
+            .from('project-media')
             .upload(filePath, file);
 
           if (uploadError) {
@@ -332,7 +332,7 @@ export function RepairRequestDialog({
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
         const { error: uploadError } = await supabase.storage
-          .from('order-media')
+          .from('project-media')
           .upload(filePath, file);
 
         if (uploadError) throw uploadError;
@@ -372,7 +372,7 @@ export function RepairRequestDialog({
 
   const handleDeleteMedia = async (mediaId: string, filePath: string) => {
     try {
-      await supabase.storage.from('order-media').remove([filePath]);
+      await supabase.storage.from('project-media').remove([filePath]);
 
       const { error } = await supabase
         .from('repair_request_media')
@@ -724,7 +724,7 @@ export function RepairRequestDialog({
               ) : (
                 <div className="grid grid-cols-3 gap-2">
                   {media.map((m) => {
-                    const { data } = supabase.storage.from('order-media').getPublicUrl(m.file_path);
+                    const { data } = supabase.storage.from('project-media').getPublicUrl(m.file_path);
                     return (
                       <div key={m.id} className="relative aspect-square rounded-lg overflow-hidden border group">
                         {m.file_type === 'image' ? (

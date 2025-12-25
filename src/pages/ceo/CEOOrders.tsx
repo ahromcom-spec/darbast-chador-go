@@ -452,7 +452,7 @@ export const CEOOrders = () => {
   // Helper function to get public URL for media
   const getMediaUrl = (filePath: string) => {
     const { data } = supabase.storage
-      .from('order-media')
+      .from('project-media')
       .getPublicUrl(filePath);
     return data.publicUrl;
   };
