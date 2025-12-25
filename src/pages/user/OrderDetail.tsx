@@ -392,23 +392,6 @@ export default function OrderDetail() {
         }
       }
 
-      // اگر location_lat/lng خالی یا صفر باشد اما hierarchy_project_id داشته باشیم، مختصات را از لوکیشن پروژه سلسله‌مراتبی بگیر
-      if ((!orderData.location_lat || !orderData.location_lng || orderData.location_lat === 0 || orderData.location_lng === 0) && orderData.hierarchy_project_id) {
-        const { data: hierarchyData } = await supabase
-          .from('projects_hierarchy')
-          .select('locations(lat, lng)')
-          .eq('id', orderData.hierarchy_project_id)
-          .maybeSingle();
-        
-        if (hierarchyData?.locations) {
-          const loc = hierarchyData.locations as { lat: number; lng: number };
-          if (loc.lat && loc.lng && loc.lat !== 0 && loc.lng !== 0) {
-            enrichedOrder.location_lat = loc.lat;
-            enrichedOrder.location_lng = loc.lng;
-          }
-        }
-      }
-
       setOrder(enrichedOrder as Order);
 
       // Parse notes if exists
@@ -1992,7 +1975,7 @@ export default function OrderDetail() {
           )}
 
           {/* نقشه موقعیت پروژه */}
-          {order.location_lat && order.location_lng && order.location_lat !== 0 && order.location_lng !== 0 && (
+          {order.location_lat && order.location_lng && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

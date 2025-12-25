@@ -6,11 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// رمز ثابت برای شماره‌های لیست سفید - خوانده شده از متغیر محیطی
-const WHITELIST_FIXED_PASSWORD = Deno.env.get('WHITELIST_PASSWORD');
-if (!WHITELIST_FIXED_PASSWORD) {
-  console.error('CRITICAL: WHITELIST_PASSWORD environment variable is not configured');
-}
+// رمز ثابت برای شماره‌های لیست سفید
+const WHITELIST_FIXED_PASSWORD = 'ffB#469@';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {

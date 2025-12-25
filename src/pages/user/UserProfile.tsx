@@ -93,7 +93,6 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [staffDialogOpen, setStaffDialogOpen] = useState(false);
 
   const isManager = isCEO || isAdmin || isGeneralManager || isSalesManager || isFinanceManager || isExecutiveManager;
@@ -121,14 +120,13 @@ export default function UserProfile() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, phone_number, avatar_url')
+        .select('full_name, phone_number')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (error) throw error;
       setFullName(data?.full_name || '');
       setPhoneNumber(data?.phone_number || '');
-      setAvatarUrl(data?.avatar_url || null);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -267,14 +265,7 @@ const fetchOrders = async () => {
         <PendingProjectInvites />
 
         {/* Profile Header */}
-        <ProfileHeader 
-          user={user} 
-          fullName={fullName} 
-          roles={roles} 
-          phoneNumber={phoneNumber} 
-          avatarUrl={avatarUrl}
-          onAvatarUpdate={setAvatarUrl}
-        />
+        <ProfileHeader user={user} fullName={fullName} roles={roles} phoneNumber={phoneNumber} />
 
         {/* User Wallet */}
         <UserWallet />
