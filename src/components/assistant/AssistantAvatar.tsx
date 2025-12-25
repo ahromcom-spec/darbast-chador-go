@@ -315,10 +315,14 @@ export function AssistantAvatar() {
 
   // Scroll to bottom when chat opens (with delay to ensure render)
   // Reset chat size and scroll to bottom when chat opens
+  // تشخیص موبایل
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
   useEffect(() => {
     if (isOpen) {
-      // همیشه با فول‌اسکرین باز شود
-      setIsFullscreen(true);
+      // فقط در موبایل فول‌اسکرین باز شود، در دسکتاپ پنل معمولی
+      const checkMobile = window.innerWidth < 640;
+      setIsFullscreen(checkMobile);
 
       const scrollToBottom = () => {
         const root = scrollRef.current;
