@@ -875,6 +875,7 @@ async function getUserOrdersContext(supabase: any, userId: string): Promise<stri
       `)
       .eq('customer_id', customer.id)
       .eq('is_deep_archived', false)
+      .eq('is_archived', false)
       .order('created_at', { ascending: false });
 
     if (ordersError) {
