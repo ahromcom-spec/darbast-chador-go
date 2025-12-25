@@ -50,12 +50,13 @@ const getStatusLabel = (status: string) => {
 
 const getPaymentStatusBadge = (order: OrderInvoice) => {
   if (order.payment_confirmed_at) {
-    return <Badge className="bg-green-500/20 text-green-700">پرداخت کامل</Badge>;
+    return <Badge className="bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400 border border-green-500/50">✅ پرداخت کامل</Badge>;
   }
   if (order.advance_payment > 0) {
-    return <Badge className="bg-yellow-500/20 text-yellow-700">علی‌الحساب</Badge>;
+    const percentage = order.payment_amount ? Math.round((order.advance_payment / order.payment_amount) * 100) : 0;
+    return <Badge className="bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400 border border-yellow-500/50">⏳ علی‌الحساب ({percentage}٪)</Badge>;
   }
-  return <Badge className="bg-red-500/20 text-red-700">پرداخت نشده</Badge>;
+  return <Badge className="bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400 border border-red-500/50">❌ پرداخت نشده</Badge>;
 };
 
 export const CustomerInvoice = () => {
@@ -343,26 +344,43 @@ export const CustomerInvoice = () => {
 
                     {/* جزئیات مالی */}
                     <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                      {/* نوار وضعیت پرداخت */}
+                      <div className={`text-center py-2 rounded-lg font-bold text-sm ${
+                        order.payment_confirmed_at 
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
+                          : order.advance_payment > 0 
+                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                      }`}>
+                        {order.payment_confirmed_at 
+                          ? '✅ پرداخت کامل انجام شده' 
+                          : order.advance_payment > 0 
+                            ? `⏳ علی‌الحساب پرداخت شده (${Math.round((order.advance_payment / (order.payment_amount || 1)) * 100)}٪)`
+                            : '❌ هنوز پرداختی انجام نشده'}
+                      </div>
+                      
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">مبلغ کل سفارش:</span>
                         <span className="font-bold">{formatPrice(order.payment_amount || 0)}</span>
                       </div>
                       
-                      <div className="flex justify-between items-center text-green-600">
+                      <div className="flex justify-between items-center text-green-600 dark:text-green-400">
                         <span>پرداخت شده:</span>
                         <span className="font-medium">
-                          {formatPrice(order.payment_confirmed_at ? (order.payment_amount || 0) : 0)}
+                          {formatPrice(order.payment_confirmed_at ? (order.payment_amount || 0) : order.advance_payment)}
                         </span>
                       </div>
 
-                      <div className="flex justify-between items-center text-yellow-600">
-                        <span>علی‌الحساب:</span>
-                        <span className="font-medium">{formatPrice(order.advance_payment)}</span>
-                      </div>
+                      {order.advance_payment > 0 && !order.payment_confirmed_at && (
+                        <div className="flex justify-between items-center text-yellow-600 dark:text-yellow-400">
+                          <span>علی‌الحساب:</span>
+                          <span className="font-medium">{formatPrice(order.advance_payment)}</span>
+                        </div>
+                      )}
 
                       <Separator />
 
-                      <div className="flex justify-between items-center text-red-600 text-lg">
+                      <div className="flex justify-between items-center text-red-600 dark:text-red-400 text-lg">
                         <span className="font-bold">مانده بدهی:</span>
                         <span className="font-bold">{formatPrice(order.remaining_amount)}</span>
                       </div>

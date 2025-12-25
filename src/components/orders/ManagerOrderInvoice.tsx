@@ -605,6 +605,23 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
           </tbody>
         </table>
 
+        <!-- Payment Status Section -->
+        <table class="main-info-table" style="margin-top: 8px;">
+          <tr>
+            <td class="label-cell" colspan="6" style="text-align:center; font-size:12px;">💰 وضعیت پرداخت</td>
+          </tr>
+          <tr>
+            <td class="label-cell">وضعیت:</td>
+            <td class="value-cell" style="font-weight:bold; ${parsedNotes?.total_paid >= grandTotal ? 'color:#16a34a;' : parsedNotes?.total_paid > 0 ? 'color:#ca8a04;' : 'color:#dc2626;'}">
+              ${parsedNotes?.total_paid >= grandTotal ? '✅ پرداخت کامل' : parsedNotes?.total_paid > 0 ? '⏳ علی‌الحساب پرداخت شده' : '❌ پرداخت نشده'}
+            </td>
+            <td class="label-cell">مبلغ پرداخت شده:</td>
+            <td class="value-cell" style="color:#16a34a; font-weight:bold;">${(parsedNotes?.total_paid || 0).toLocaleString('fa-IR')} تومان</td>
+            <td class="label-cell">مانده:</td>
+            <td class="value-cell" style="color:#dc2626; font-weight:bold;">${Math.max(0, grandTotal - (parsedNotes?.total_paid || 0)).toLocaleString('fa-IR')} تومان</td>
+          </tr>
+        </table>
+
         ${media.length > 0 ? `
           <div class="images-section">
             <div class="images-title">🖼️ تصاویر پیوست (${media.length} تصویر)</div>
