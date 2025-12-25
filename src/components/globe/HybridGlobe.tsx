@@ -2615,6 +2615,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         imageUrl={zoomedImage || ''}
         images={zoomedImages}
         initialIndex={zoomedImageIndex}
+        type="order"
         onClose={() => {
           setZoomedImage(null);
           setZoomedImages([]);
