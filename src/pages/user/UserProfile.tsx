@@ -137,26 +137,22 @@ const fetchOrders = async () => {
   if (!user) return;
 
   try {
-    // Legacy orders (if any)
-    const { data: legacyOrders, error: legacyError } = await supabase
-      .from('service_requests')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    // Fetch all data in parallel for speed
+    const [legacyRes, projectsRes, scaffoldingRes] = await Promise.all([
+      supabase.from('service_requests').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+      supabase.rpc('get_my_projects_v3'),
+      supabase.from('scaffolding_requests').select('id, created_at, address, status, details').eq('user_id', user.id).order('created_at', { ascending: false })
+    ]);
 
-    if (legacyError) {
-      console.error('Error fetching legacy orders:', legacyError);
-    } else {
-      setOrders(legacyOrders || []);
+    // Process legacy orders
+    if (!legacyRes.error) {
+      setOrders(legacyRes.data || []);
     }
 
-    // New projects-based orders (projects_v3) using security definer function
-    const { data: projects, error: projectsError } = await supabase.rpc('get_my_projects_v3');
-
+    // Process projects
     let normalizedProjects: ProjectOrder[] = [];
-    
-    if (!projectsError && projects) {
-      normalizedProjects = (projects || []).map((p: any) => {
+    if (!projectsRes.error && projectsRes.data) {
+      normalizedProjects = (projectsRes.data || []).map((p: any) => {
         let estimated_price: number | null = null;
         try {
           const n = typeof p.notes === 'string' ? JSON.parse(p.notes) : p.notes;
@@ -171,25 +167,14 @@ const fetchOrders = async () => {
           estimated_price,
         } as ProjectOrder;
       });
-    } else if (projectsError) {
-      console.error('Error fetching projects_v3:', projectsError);
     }
 
-    // New simple scaffolding requests (form reset)
-    const { data: sreqs, error: sreqsError } = await supabase
-      .from('scaffolding_requests')
-      .select('id, created_at, address, status, details')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (sreqsError) {
-      console.error('Error fetching scaffolding_requests:', sreqsError);
-      setScaffoldingRequests([]);
-    } else {
-      setScaffoldingRequests(sreqs || []);
+    // Process scaffolding requests
+    if (!scaffoldingRes.error) {
+      const sreqs = scaffoldingRes.data || [];
+      setScaffoldingRequests(sreqs);
       
-      // ترکیب scaffolding requests با project orders
-      const scaffoldingAsOrders: ProjectOrder[] = (sreqs || []).map(req => {
+      const scaffoldingAsOrders: ProjectOrder[] = sreqs.map(req => {
         let estimatedPrice = null;
         try {
           const details = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
@@ -207,12 +192,13 @@ const fetchOrders = async () => {
         };
       });
       
-      // ترکیب همه سفارشات
       const allOrders = [...normalizedProjects, ...scaffoldingAsOrders].sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
       
       setProjectOrders(allOrders);
+    } else {
+      setProjectOrders(normalizedProjects);
     }
   } catch (error) {
     console.error('Error fetching orders:', error);

@@ -315,15 +315,14 @@ export default function OrderDetail() {
         return;
       }
 
-      // Get customer ID
-      const { data: customer, error: customerError } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Get customer ID and order data in parallel
+      const [customerRes, orderRes] = await Promise.all([
+        supabase.from("customers").select("id").eq("user_id", user.id).maybeSingle(),
+        supabase.rpc('get_my_projects_v3').eq('id', id).maybeSingle()
+      ]);
 
-      if (customerError) throw customerError;
-      if (!customer) {
+      if (customerRes.error) throw customerRes.error;
+      if (!customerRes.data) {
         toast({
           title: "خطا",
           description: "اطلاعات مشتری یافت نشد",
@@ -333,13 +332,8 @@ export default function OrderDetail() {
         return;
       }
 
-      // Fetch order using security definer function to ensure visibility
-      const { data: orderData, error: orderError } = await supabase
-        .rpc('get_my_projects_v3')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (orderError) throw orderError;
+      if (orderRes.error) throw orderRes.error;
+      const orderData = orderRes.data;
       
       if (!orderData) {
         toast({
@@ -351,47 +345,40 @@ export default function OrderDetail() {
         return;
       }
 
-      // Fetch subcategory info separately since RPC doesn't join it
+      // Fetch all related data in parallel for speed
+      const [subcategoryRes, provinceRes, districtRes, mediaRes, approvalsRes, repairRes, collectionRes] = await Promise.all([
+        orderData.subcategory_id 
+          ? supabase.from('subcategories').select('name, code, service_types_v3:service_type_id(name, code)').eq('id', orderData.subcategory_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+        orderData.province_id 
+          ? supabase.from('provinces').select('name, code').eq('id', orderData.province_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+        orderData.district_id 
+          ? supabase.from('districts').select('name').eq('id', orderData.district_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+        supabase.from('project_media').select('*').eq('project_id', id).order('created_at', { ascending: false }),
+        supabase.from('order_approvals').select('approver_role, approved_at, approver_user_id').eq('order_id', id).order('created_at', { ascending: true }),
+        supabase.from('repair_requests').select('final_cost, status').eq('order_id', id).in('status', ['approved', 'completed']),
+        supabase.from('collection_requests').select('requested_date, status').eq('order_id', id).eq('status', 'approved').order('created_at', { ascending: false }).limit(1).maybeSingle()
+      ]);
+
+      // Build enriched order
       let enrichedOrder: any = { ...orderData };
-      if (orderData.subcategory_id) {
-        const { data: subcategoryData } = await supabase
-          .from('subcategories')
-          .select('name, code, service_types_v3:service_type_id(name, code)')
-          .eq('id', orderData.subcategory_id)
-          .maybeSingle();
-        
-        if (subcategoryData) {
-          enrichedOrder.subcategory = {
-            name: subcategoryData.name,
-            code: subcategoryData.code,
-            service_type: subcategoryData.service_types_v3 as any
-          };
-        }
+      
+      if (subcategoryRes.data) {
+        enrichedOrder.subcategory = {
+          name: subcategoryRes.data.name,
+          code: subcategoryRes.data.code,
+          service_type: subcategoryRes.data.service_types_v3 as any
+        };
       }
-
-      // Fetch province/district info
-      if (orderData.province_id) {
-        const { data: provinceData } = await supabase
-          .from('provinces')
-          .select('name, code')
-          .eq('id', orderData.province_id)
-          .maybeSingle();
-        
-        if (provinceData) {
-          enrichedOrder.province = provinceData;
-        }
+      
+      if (provinceRes.data) {
+        enrichedOrder.province = provinceRes.data;
       }
-
-      if (orderData.district_id) {
-        const { data: districtData } = await supabase
-          .from('districts')
-          .select('name')
-          .eq('id', orderData.district_id)
-          .maybeSingle();
-        
-        if (districtData) {
-          enrichedOrder.district = districtData;
-        }
+      
+      if (districtRes.data) {
+        enrichedOrder.district = districtRes.data;
       }
 
       setOrder(enrichedOrder as Order);
@@ -401,27 +388,15 @@ export default function OrderDetail() {
       if (orderData.notes) {
         try {
           let notes = orderData.notes;
-          
-          // Handle string that needs parsing
-          if (typeof notes === 'string') {
-            notes = JSON.parse(notes);
-          }
-          
-          // Handle double-stringified JSON (stored as '"{...}"')
-          if (typeof notes === 'string') {
-            notes = JSON.parse(notes);
-          }
-          
-          // Ensure we have an object
+          if (typeof notes === 'string') notes = JSON.parse(notes);
+          if (typeof notes === 'string') notes = JSON.parse(notes);
           if (notes && typeof notes === 'object') {
-            console.log('Parsed notes:', notes);
             setParsedNotes(notes);
           } else {
-            console.warn('Notes is not a valid object:', notes);
             setParsedNotes(null);
           }
         } catch (e) {
-          console.error('Error parsing notes:', e, 'Raw notes:', orderData.notes);
+          console.error('Error parsing notes:', e);
           setParsedNotes(null);
           setNotesParseError(true);
         }
@@ -429,60 +404,23 @@ export default function OrderDetail() {
         setParsedNotes(null);
       }
 
-
-      // Fetch media files
-      const { data: mediaData } = await supabase
-        .from('project_media')
-        .select('*')
-        .eq('project_id', id)
-        .order('created_at', { ascending: false });
-
-      if (mediaData) {
-        setMediaFiles(mediaData as MediaFile[]);
-      }
-
-      // Fetch order approvals
-      const { data: approvalsData } = await supabase
-        .from('order_approvals')
-        .select('approver_role, approved_at, approver_user_id')
-        .eq('order_id', id)
-        .order('created_at', { ascending: true });
-
-      if (approvalsData) {
-        setApprovals(approvalsData as Approval[]);
-      }
-
-      // Fetch approved/completed repair costs
-      const { data: repairData } = await supabase
-        .from('repair_requests')
-        .select('final_cost, status')
-        .eq('order_id', id)
-        .in('status', ['approved', 'completed']);
-
-      if (repairData && repairData.length > 0) {
-        const totalRepairCost = repairData.reduce((sum, r) => sum + (r.final_cost || 0), 0);
+      // Set fetched data
+      if (mediaRes.data) setMediaFiles(mediaRes.data as MediaFile[]);
+      if (approvalsRes.data) setApprovals(approvalsRes.data as Approval[]);
+      
+      if (repairRes.data && repairRes.data.length > 0) {
+        const totalRepairCost = repairRes.data.reduce((sum, r) => sum + (r.final_cost || 0), 0);
         setApprovedRepairCost(totalRepairCost);
       } else {
         setApprovedRepairCost(0);
       }
 
-      // Fetch approved collection request date
-      const { data: collectionData } = await supabase
-        .from('collection_requests')
-        .select('requested_date, status')
-        .eq('order_id', id)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (collectionData?.requested_date) {
-        setApprovedCollectionDate(collectionData.requested_date);
+      if (collectionRes.data?.requested_date) {
+        setApprovedCollectionDate(collectionRes.data.requested_date);
       } else {
         setApprovedCollectionDate(null);
       }
 
-      // Set total_paid from order data
       setTotalPaid(orderData.total_paid || 0);
 
     } catch (error: any) {
