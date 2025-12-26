@@ -1880,49 +1880,49 @@ export default function DailyReportModule() {
           {/* New Report Tab */}
           <TabsContent value="new-report" className="space-y-6 mt-6">
             {/* Date Picker with Navigation */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
-              {/* دکمه‌های ناوبری */}
-              <div className="flex items-center gap-1 sm:gap-2 order-1 sm:order-none">
-                {/* دکمه روز قبل */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const prevDay = new Date(reportDate);
-                    prevDay.setDate(prevDay.getDate() - 1);
-                    setReportDate(prevDay);
-                  }}
-                  className="gap-1 px-2 sm:px-3 text-xs sm:text-sm"
-                >
-                  <span className="text-base sm:text-lg">←</span>
-                  <span className="hidden xs:inline">روز قبل</span>
-                  <span className="xs:hidden">قبل</span>
-                </Button>
-                
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-between">
+              {/* دکمه‌های ناوبری - سمت چپ */}
+              <div className="flex items-center gap-2 sm:gap-3">
                 {/* دکمه روز بعد */}
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="default"
+                  size="lg"
                   onClick={() => {
                     const nextDay = new Date(reportDate);
                     nextDay.setDate(nextDay.getDate() + 1);
                     setReportDate(nextDay);
                   }}
-                  className="gap-1 px-2 sm:px-3 text-xs sm:text-sm"
+                  className="gap-2 px-4 sm:px-6 py-3 text-base sm:text-lg font-bold shadow-md hover:shadow-lg transition-all"
                 >
-                  <span className="hidden xs:inline">روز بعد</span>
-                  <span className="xs:hidden">بعد</span>
-                  <span className="text-base sm:text-lg">→</span>
+                  <span className="text-xl">→</span>
+                  روز بعد
+                </Button>
+                
+                {/* دکمه روز قبل */}
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => {
+                    const prevDay = new Date(reportDate);
+                    prevDay.setDate(prevDay.getDate() - 1);
+                    setReportDate(prevDay);
+                  }}
+                  className="gap-2 px-4 sm:px-6 py-3 text-base sm:text-lg font-bold border-2 shadow-md hover:shadow-lg transition-all"
+                >
+                  روز قبل
+                  <span className="text-xl">←</span>
                 </Button>
               </div>
               
-              <PersianDatePicker
-                value={reportDate.toISOString()}
-                onChange={(date) => date && setReportDate(new Date(date))}
-                timeMode="none"
-              />
-              
-              <Label className="text-xs sm:text-sm font-medium order-first sm:order-none">تاریخ گزارش:</Label>
+              {/* تاریخ گزارش - سمت راست */}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <PersianDatePicker
+                  value={reportDate.toISOString()}
+                  onChange={(date) => date && setReportDate(new Date(date))}
+                  timeMode="none"
+                />
+                <Label className="text-sm sm:text-base font-medium">تاریخ گزارش:</Label>
+              </div>
             </div>
 
             {loading ? (
