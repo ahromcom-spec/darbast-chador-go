@@ -1732,14 +1732,14 @@ export default function DailyReportModule() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {orderReports.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground border border-blue-200">
-                                هنوز سفارشی اضافه نشده است
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            orderReports.map((row, index) => (
+                          {(orderReports.length === 0 ? [{
+                            order_id: '',
+                            activity_description: '',
+                            service_details: '',
+                            team_name: '',
+                            notes: '',
+                            row_color: ROW_COLORS[0].value,
+                          }] : orderReports).map((row, index) => (
                               <TableRow key={index} className={`${getRowColorClass(row.row_color)} even:opacity-90`}>
                                 <TableCell className="border border-blue-200">
                                   <Button
@@ -1808,8 +1808,7 @@ export default function DailyReportModule() {
                                   </div>
                                 </TableCell>
                               </TableRow>
-                            ))
-                          )}
+                            ))}
                         </TableBody>
                       </Table>
                     </div>
