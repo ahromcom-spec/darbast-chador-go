@@ -1880,8 +1880,8 @@ export default function DailyReportModule() {
           {/* New Report Tab */}
           <TabsContent value="new-report" className="space-y-6 mt-6">
             {/* Date Picker with Navigation */}
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-between">
-              {/* دکمه‌های ناوبری - سمت چپ */}
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-end">
+              {/* همه در یک ردیف - سمت راست */}
               <div className="flex items-center gap-2 sm:gap-3">
                 {/* دکمه روز بعد */}
                 <Button
@@ -1894,7 +1894,7 @@ export default function DailyReportModule() {
                   }}
                   className="gap-2 px-4 sm:px-6 py-3 text-base sm:text-lg font-bold shadow-md hover:shadow-lg transition-all"
                 >
-                  <span className="text-xl">→</span>
+                  <span className="text-2xl sm:text-3xl font-bold">→</span>
                   روز بعد
                 </Button>
                 
@@ -1910,17 +1910,16 @@ export default function DailyReportModule() {
                   className="gap-2 px-4 sm:px-6 py-3 text-base sm:text-lg font-bold border-2 shadow-md hover:shadow-lg transition-all"
                 >
                   روز قبل
-                  <span className="text-xl">←</span>
+                  <span className="text-2xl sm:text-3xl font-bold">←</span>
                 </Button>
-              </div>
-              
-              {/* تاریخ گزارش - سمت راست */}
-              <div className="flex items-center gap-2 sm:gap-3">
+                
+                {/* تاریخ گزارش */}
                 <PersianDatePicker
                   value={reportDate.toISOString()}
                   onChange={(date) => date && setReportDate(new Date(date))}
                   timeMode="none"
                 />
+                
                 <Label className="text-sm sm:text-base font-medium">تاریخ گزارش:</Label>
               </div>
             </div>
