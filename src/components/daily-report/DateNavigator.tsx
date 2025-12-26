@@ -24,26 +24,26 @@ export function DateNavigator({ reportDate, onDateChange }: DateNavigatorProps) 
     <div className="flex items-center gap-3 justify-end">
       {/* Navigation buttons on the left */}
       <div className="flex items-center gap-2">
-        {/* Previous day button - leftmost */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={goToPreviousDay}
-          className="gap-1 px-3"
-        >
-          <span className="text-lg">←</span>
-          روز قبل
-        </Button>
-        
-        {/* Next day button */}
+        {/* Next day button - leftmost */}
         <Button
           variant="outline"
           size="sm"
           onClick={goToNextDay}
           className="gap-1 px-3"
         >
-          روز بعد
           <span className="text-lg">→</span>
+          روز بعد
+        </Button>
+        
+        {/* Previous day button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={goToPreviousDay}
+          className="gap-1 px-3"
+        >
+          روز قبل
+          <span className="text-lg">←</span>
         </Button>
       </div>
       
