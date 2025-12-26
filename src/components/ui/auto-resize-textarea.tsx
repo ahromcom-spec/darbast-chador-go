@@ -55,8 +55,8 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
       <textarea
         className={cn(
           "flex w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground placeholder:text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-300 ease-out shadow-sm hover:border-primary/50 text-right",
-          // When not focused: single line with ellipsis for overflow, min-width for ~30 chars
-          !isFocused && "min-h-[44px] max-h-[44px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[200px]",
+          // When not focused: allow wrapping, limit height to ~2 lines, min-width for ~50 chars
+          !isFocused && "min-h-[44px] max-h-[60px] overflow-hidden whitespace-pre-wrap break-words min-w-[300px]",
           // When focused: expand to show full content
           isFocused && "min-h-[100px] overflow-auto whitespace-pre-wrap text-base border-primary border-3 shadow-xl ring-2 ring-primary/40 z-20 relative bg-white dark:bg-gray-900",
           className
