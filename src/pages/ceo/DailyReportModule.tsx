@@ -222,12 +222,13 @@ export default function DailyReportModule() {
   const staffTableScrollRef = useRef<HTMLDivElement>(null);
 
   // Scroll tables to rightmost position on data load (for RTL)
+  // In RTL, scrollLeft = 0 is the rightmost position
   useEffect(() => {
     if (!loading && orderTableScrollRef.current) {
-      orderTableScrollRef.current.scrollLeft = -orderTableScrollRef.current.scrollWidth;
+      orderTableScrollRef.current.scrollLeft = 0;
     }
     if (!loading && staffTableScrollRef.current) {
-      staffTableScrollRef.current.scrollLeft = -staffTableScrollRef.current.scrollWidth;
+      staffTableScrollRef.current.scrollLeft = 0;
     }
   }, [loading, orderReports.length, staffReports.length]);
 
