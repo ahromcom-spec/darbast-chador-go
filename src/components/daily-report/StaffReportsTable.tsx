@@ -86,10 +86,10 @@ export function StaffReportsTable({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Scroll to rightmost position on mount (for RTL layout)
+  // In RTL, scrollLeft = 0 is the rightmost position
   useEffect(() => {
     if (scrollContainerRef.current) {
-      // For RTL, scroll to rightmost = scrollLeft at its minimum (most negative) value
-      scrollContainerRef.current.scrollLeft = -scrollContainerRef.current.scrollWidth;
+      scrollContainerRef.current.scrollLeft = 0;
     }
   }, [staffReports.length]);
 
