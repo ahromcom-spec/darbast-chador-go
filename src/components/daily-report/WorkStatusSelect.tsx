@@ -22,6 +22,7 @@ export function WorkStatusSelect({
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const portalRootRef = useRef<HTMLElement | null>(null);
 
   const [position, setPosition] = useState<{
     left: number;
@@ -43,19 +44,7 @@ export function WorkStatusSelect({
     const triggerEl = triggerRef.current;
     if (!triggerEl) return;
 
-    // On mobile (pinch-zoom / keyboard), layout viewport and visual viewport can diverge.
-    // Using VisualViewport offsets keeps the dropdown anchored to the trigger.
-    const vv = window.visualViewport;
-    const viewportOffsetLeft = vv?.offsetLeft ?? 0;
-    const viewportOffsetTop = vv?.offsetTop ?? 0;
-    const viewportWidth = vv?.width ?? window.innerWidth;
-    const viewportHeight = vv?.height ?? window.innerHeight;
-
     const rect = triggerEl.getBoundingClientRect();
-    const triggerLeft = rect.left + viewportOffsetLeft;
-    const triggerRight = rect.right + viewportOffsetLeft;
-    const triggerTop = rect.top + viewportOffsetTop;
-    const triggerBottom = rect.bottom + viewportOffsetTop;
 
     const VIEWPORT_MARGIN = 8;
     const OFFSET = 0;
@@ -63,7 +52,59 @@ export function WorkStatusSelect({
     const boundaryEl = triggerEl.closest('[data-dropdown-boundary]') as
       | HTMLElement
       | null;
-    const boundaryRect = boundaryEl?.getBoundingClientRect();
+    portalRootRef.current = boundaryEl;
+
+    const isRTL =
+      document.documentElement.dir === "rtl" || !!triggerEl.closest('[dir="rtl"]');
+
+    // IMPORTANT: In our app we apply internal zoom (CSS `zoom`) on Windows.
+    // Positioning `fixed` portals against the viewport can drift at 115%.
+    // If we have an explicit boundary (Daily Report cards), render & position INSIDE it.
+    if (boundaryEl) {
+      const b = boundaryEl.getBoundingClientRect();
+
+      const width = Math.min(rect.width, Math.max(120, b.width - VIEWPORT_MARGIN * 2));
+
+      let left = isRTL ? rect.right - b.left - width : rect.left - b.left;
+      left = Math.max(
+        VIEWPORT_MARGIN,
+        Math.min(left, b.width - VIEWPORT_MARGIN - width),
+      );
+
+      const spaceAbove = rect.top - b.top - VIEWPORT_MARGIN;
+      const spaceBelow = b.bottom - rect.bottom - VIEWPORT_MARGIN;
+      const openBelow = spaceBelow >= 160 || spaceBelow >= spaceAbove;
+
+      if (openBelow) {
+        setPosition({
+          left,
+          width,
+          top: rect.bottom - b.top + OFFSET,
+          bottom: undefined,
+        });
+      } else {
+        setPosition({
+          left,
+          width,
+          top: undefined,
+          bottom: b.bottom - rect.top + OFFSET,
+        });
+      }
+
+      return;
+    }
+
+    // Fallback (no boundary): use VisualViewport offsets for mobile pinch-zoom.
+    const vv = window.visualViewport;
+    const viewportOffsetLeft = vv?.offsetLeft ?? 0;
+    const viewportOffsetTop = vv?.offsetTop ?? 0;
+    const viewportWidth = vv?.width ?? window.innerWidth;
+    const viewportHeight = vv?.height ?? window.innerHeight;
+
+    const triggerLeft = rect.left + viewportOffsetLeft;
+    const triggerRight = rect.right + viewportOffsetLeft;
+    const triggerTop = rect.top + viewportOffsetTop;
+    const triggerBottom = rect.bottom + viewportOffsetTop;
 
     const viewportBoundLeft = viewportOffsetLeft + VIEWPORT_MARGIN;
     const viewportBoundRight = viewportOffsetLeft + viewportWidth - VIEWPORT_MARGIN;
@@ -71,36 +112,13 @@ export function WorkStatusSelect({
     const viewportBoundBottom =
       viewportOffsetTop + viewportHeight - VIEWPORT_MARGIN;
 
-    const boundLeft = Math.max(
-      viewportBoundLeft,
-      (boundaryRect?.left ?? viewportBoundLeft - viewportOffsetLeft) +
-        viewportOffsetLeft,
-    );
-    const boundRight = Math.min(
-      viewportBoundRight,
-      (boundaryRect?.right ?? viewportBoundRight - viewportOffsetLeft) +
-        viewportOffsetLeft,
-    );
-    const boundTop = Math.max(
-      viewportBoundTop,
-      (boundaryRect?.top ?? viewportBoundTop - viewportOffsetTop) + viewportOffsetTop,
-    );
-    const boundBottom = Math.min(
-      viewportBoundBottom,
-      (boundaryRect?.bottom ?? viewportBoundBottom - viewportOffsetTop) +
-        viewportOffsetTop,
-    );
-
-    const isRTL =
-      document.documentElement.dir === "rtl" || !!triggerEl.closest('[dir="rtl"]');
-
-    const width = Math.min(rect.width, Math.max(120, boundRight - boundLeft));
+    const width = Math.min(rect.width, Math.max(120, viewportBoundRight - viewportBoundLeft));
 
     let left = isRTL ? triggerRight - width : triggerLeft;
-    left = Math.max(boundLeft, Math.min(left, boundRight - width));
+    left = Math.max(viewportBoundLeft, Math.min(left, viewportBoundRight - width));
 
-    const spaceAbove = triggerTop - boundTop;
-    const spaceBelow = boundBottom - triggerBottom;
+    const spaceAbove = triggerTop - viewportBoundTop;
+    const spaceBelow = viewportBoundBottom - triggerBottom;
     const openBelow = spaceBelow >= 160 || spaceBelow >= spaceAbove;
 
     if (openBelow) {
@@ -111,13 +129,12 @@ export function WorkStatusSelect({
         bottom: undefined,
       });
     } else {
-      // IMPORTANT: bottom is relative to the *layout* viewport (window.innerHeight).
-      // triggerTop is already translated into layout-viewport coordinates.
+      // bottom is relative to layout viewport
       setPosition({
         left,
         width,
         top: undefined,
-        bottom: window.innerHeight - triggerTop + OFFSET,
+        bottom: window.innerHeight - rect.top + OFFSET,
       });
     }
   };
@@ -204,7 +221,10 @@ export function WorkStatusSelect({
         ? createPortal(
             <div
               ref={dropdownRef}
-              className="fixed z-[99999] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+              className={cn(
+                portalRootRef.current ? "absolute" : "fixed",
+                "z-[99999] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
+              )}
               style={{
                 left: position.left,
                 width: position.width,
@@ -232,7 +252,7 @@ export function WorkStatusSelect({
                 ))}
               </div>
             </div>,
-            document.body,
+            portalRootRef.current ?? document.body,
           )
         : null}
     </div>
