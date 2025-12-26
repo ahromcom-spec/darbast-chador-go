@@ -40,61 +40,84 @@ export function WorkStatusSelect({
   );
 
   const updatePosition = () => {
-    if (!triggerRef.current) return;
+    const triggerEl = triggerRef.current;
+    if (!triggerEl) return;
 
-    const rect = triggerRef.current.getBoundingClientRect();
+    // On mobile (pinch-zoom / keyboard), layout viewport and visual viewport can diverge.
+    // Using VisualViewport offsets keeps the dropdown anchored to the trigger.
+    const vv = window.visualViewport;
+    const viewportOffsetLeft = vv?.offsetLeft ?? 0;
+    const viewportOffsetTop = vv?.offsetTop ?? 0;
+    const viewportWidth = vv?.width ?? window.innerWidth;
+    const viewportHeight = vv?.height ?? window.innerHeight;
+
+    const rect = triggerEl.getBoundingClientRect();
+    const triggerLeft = rect.left + viewportOffsetLeft;
+    const triggerRight = rect.right + viewportOffsetLeft;
+    const triggerTop = rect.top + viewportOffsetTop;
+    const triggerBottom = rect.bottom + viewportOffsetTop;
 
     const VIEWPORT_MARGIN = 8;
     const OFFSET = 0;
 
-    const boundaryEl = triggerRef.current.closest(
-      '[data-dropdown-boundary]'
-    ) as HTMLElement | null;
+    const boundaryEl = triggerEl.closest('[data-dropdown-boundary]') as
+      | HTMLElement
+      | null;
     const boundaryRect = boundaryEl?.getBoundingClientRect();
 
+    const viewportBoundLeft = viewportOffsetLeft + VIEWPORT_MARGIN;
+    const viewportBoundRight = viewportOffsetLeft + viewportWidth - VIEWPORT_MARGIN;
+    const viewportBoundTop = viewportOffsetTop + VIEWPORT_MARGIN;
+    const viewportBoundBottom =
+      viewportOffsetTop + viewportHeight - VIEWPORT_MARGIN;
+
     const boundLeft = Math.max(
-      VIEWPORT_MARGIN,
-      boundaryRect?.left ?? VIEWPORT_MARGIN,
+      viewportBoundLeft,
+      (boundaryRect?.left ?? viewportBoundLeft - viewportOffsetLeft) +
+        viewportOffsetLeft,
     );
     const boundRight = Math.min(
-      window.innerWidth - VIEWPORT_MARGIN,
-      boundaryRect?.right ?? window.innerWidth - VIEWPORT_MARGIN,
+      viewportBoundRight,
+      (boundaryRect?.right ?? viewportBoundRight - viewportOffsetLeft) +
+        viewportOffsetLeft,
     );
     const boundTop = Math.max(
-      VIEWPORT_MARGIN,
-      boundaryRect?.top ?? VIEWPORT_MARGIN,
+      viewportBoundTop,
+      (boundaryRect?.top ?? viewportBoundTop - viewportOffsetTop) + viewportOffsetTop,
     );
     const boundBottom = Math.min(
-      window.innerHeight - VIEWPORT_MARGIN,
-      boundaryRect?.bottom ?? window.innerHeight - VIEWPORT_MARGIN,
+      viewportBoundBottom,
+      (boundaryRect?.bottom ?? viewportBoundBottom - viewportOffsetTop) +
+        viewportOffsetTop,
     );
 
     const isRTL =
-      document.documentElement.dir === "rtl" ||
-      !!triggerRef.current.closest('[dir="rtl"]');
+      document.documentElement.dir === "rtl" || !!triggerEl.closest('[dir="rtl"]');
 
     const width = Math.min(rect.width, Math.max(120, boundRight - boundLeft));
 
-    let left = isRTL ? rect.right - width : rect.left;
+    let left = isRTL ? triggerRight - width : triggerLeft;
     left = Math.max(boundLeft, Math.min(left, boundRight - width));
 
-    const spaceAbove = rect.top - boundTop;
-    const spaceBelow = boundBottom - rect.bottom;
+    const spaceAbove = triggerTop - boundTop;
+    const spaceBelow = boundBottom - triggerBottom;
     const openBelow = spaceBelow >= 160 || spaceBelow >= spaceAbove;
 
     if (openBelow) {
       setPosition({
         left,
         width,
-        top: rect.bottom + OFFSET,
+        top: triggerBottom + OFFSET,
         bottom: undefined,
       });
     } else {
+      // IMPORTANT: bottom is relative to the *layout* viewport (window.innerHeight).
+      // triggerTop is already translated into layout-viewport coordinates.
       setPosition({
         left,
         width,
         top: undefined,
-        bottom: window.innerHeight - rect.top + OFFSET,
+        bottom: window.innerHeight - triggerTop + OFFSET,
       });
     }
   };
@@ -119,18 +142,25 @@ export function WorkStatusSelect({
   useEffect(() => {
     if (!open) return;
 
-    const onResize = () => updatePosition();
+    const onViewportChange = () => updatePosition();
     const onScroll = (e: Event) => {
       const target = e.target as Node | null;
       if (target && dropdownRef.current?.contains(target)) return;
       updatePosition();
     };
 
-    window.addEventListener("resize", onResize);
+    window.addEventListener("resize", onViewportChange);
     window.addEventListener("scroll", onScroll, true);
+
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", onViewportChange);
+    vv?.addEventListener("scroll", onViewportChange);
+
     return () => {
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", onViewportChange);
       window.removeEventListener("scroll", onScroll, true);
+      vv?.removeEventListener("resize", onViewportChange);
+      vv?.removeEventListener("scroll", onViewportChange);
     };
   }, [open]);
 
