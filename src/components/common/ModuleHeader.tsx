@@ -22,21 +22,21 @@ export function ModuleHeader({
 
   return (
     <div className="bg-gradient-to-l from-primary/10 via-primary/5 to-transparent border-b border-border mb-6 -mx-4 px-4 sm:-mx-6 sm:px-6">
-      <div className="flex items-center justify-between py-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 py-4">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           {icon && (
-            <div className="bg-primary/10 p-2 rounded-lg">
+            <div className="bg-primary/10 p-2 rounded-lg shrink-0">
               <span className="text-primary">{icon}</span>
             </div>
           )}
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">{title}</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold text-foreground whitespace-nowrap">{title}</h1>
             {description && (
-              <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 whitespace-nowrap">{description}</p>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {action}
           <Button 
             onClick={() => navigate(backTo)} 
