@@ -122,7 +122,11 @@ export function PersianDatePicker({
           {formatDisplayDate()}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 z-[9999]" align="start">
+      <PopoverContent 
+        className="w-auto p-0 z-[9999]" 
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <Calendar
           mode="single"
           selected={selectedDate}
@@ -136,7 +140,6 @@ export function PersianDatePicker({
             maxDate.setDate(maxDate.getDate() + 10);
             return date < minDate || date > maxDate;
           }}
-          initialFocus
           className="p-3 pointer-events-auto"
         />
         {actualTimeMode === 'ampm' && (
