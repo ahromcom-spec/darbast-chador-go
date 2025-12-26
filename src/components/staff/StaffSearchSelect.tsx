@@ -59,7 +59,13 @@ export function StaffSearchSelect({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0, maxHeight: 350 });
+  const [position, setPosition] = useState<{ left: number; width: number; maxHeight: number; top?: number; bottom?: number }>({
+    top: 0,
+    bottom: undefined,
+    left: 0,
+    width: 0,
+    maxHeight: 350,
+  });
 
   // Fetch HR employees and salary settings staff, and match with profiles for user_id
   useEffect(() => {
@@ -212,15 +218,14 @@ export function StaffSearchSelect({
     const rect = triggerRef.current.getBoundingClientRect();
 
     const VIEWPORT_MARGIN = 8;
-    const OFFSET = 6;
-    const MAX_HEIGHT = Math.min(350, window.innerHeight - VIEWPORT_MARGIN * 2);
-
-    const MIN_WIDTH = 320;
-    const width = Math.max(rect.width, MIN_WIDTH);
+    const OFFSET = 4;
 
     const isRTL =
       document.documentElement.dir === 'rtl' ||
       !!triggerRef.current.closest('[dir="rtl"]');
+
+    const maxAllowedWidth = Math.max(240, window.innerWidth - VIEWPORT_MARGIN * 2);
+    const width = Math.min(Math.max(rect.width, 320), maxAllowedWidth);
 
     let left = isRTL ? rect.right - width : rect.left;
     left = Math.max(
@@ -228,17 +233,30 @@ export function StaffSearchSelect({
       Math.min(left, window.innerWidth - width - VIEWPORT_MARGIN)
     );
 
-    const spaceAbove = rect.top;
-    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top - VIEWPORT_MARGIN - OFFSET;
+    const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN - OFFSET;
 
-    const openBelow = spaceBelow >= MAX_HEIGHT || spaceBelow >= spaceAbove;
-    let top = openBelow ? rect.bottom + OFFSET : rect.top - MAX_HEIGHT - OFFSET;
-    top = Math.max(
-      VIEWPORT_MARGIN,
-      Math.min(top, window.innerHeight - MAX_HEIGHT - VIEWPORT_MARGIN)
-    );
+    const openBelow = spaceBelow >= 220 || spaceBelow >= spaceAbove;
 
-    setPosition({ top, left, width, maxHeight: MAX_HEIGHT });
+    if (openBelow) {
+      const maxHeight = Math.min(350, Math.max(180, spaceBelow));
+      setPosition({
+        top: rect.bottom + OFFSET,
+        bottom: undefined,
+        left,
+        width,
+        maxHeight,
+      });
+    } else {
+      const maxHeight = Math.min(350, Math.max(180, spaceAbove));
+      setPosition({
+        top: undefined,
+        bottom: window.innerHeight - rect.top + OFFSET,
+        left,
+        width,
+        maxHeight,
+      });
+    }
   };
 
   const handleToggle = () => {
@@ -320,6 +338,7 @@ export function StaffSearchSelect({
             className="fixed bg-background border rounded-lg shadow-xl overflow-hidden"
             style={{
               top: position.top,
+              bottom: position.bottom,
               left: position.left,
               width: position.width,
               zIndex: 99999,
@@ -335,11 +354,14 @@ export function StaffSearchSelect({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="جستجو با نام یا کد پرسنل..."
-                  className="pr-10 text-sm"
+                  compactFocus
+                  className="pr-10 text-sm h-10"
                 />
               </div>
             </div>
-            <ScrollArea className="max-h-[280px]">
+            <ScrollArea
+              style={{ maxHeight: Math.max(140, position.maxHeight - 64) }}
+            >
               {loading ? (
                 <div className="py-6 flex items-center justify-center text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin ml-2" />
