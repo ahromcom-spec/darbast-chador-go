@@ -60,6 +60,7 @@ export function StaffSearchSelect({
   const isMobile = useIsMobile();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const portalRootRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [position, setPosition] = useState<{ left: number; width: number; maxHeight: number; top?: number; bottom?: number }>({
     top: 0,
@@ -215,39 +216,65 @@ export function StaffSearchSelect({
   };
 
   const updatePosition = () => {
-    if (!triggerRef.current) return;
+    const triggerEl = triggerRef.current;
+    if (!triggerEl) return;
 
-    const rect = triggerRef.current.getBoundingClientRect();
+    const rect = triggerEl.getBoundingClientRect();
 
     const VIEWPORT_MARGIN = 8;
     const OFFSET = 4;
 
-    const boundaryEl = triggerRef.current.closest(
-      '[data-dropdown-boundary]'
-    ) as HTMLElement | null;
-    const boundaryRect = boundaryEl?.getBoundingClientRect();
-
-    // Clamp to boundary if provided; otherwise clamp to viewport.
-    const boundLeft = Math.max(
-      VIEWPORT_MARGIN,
-      boundaryRect?.left ?? VIEWPORT_MARGIN,
-    );
-    const boundRight = Math.min(
-      window.innerWidth - VIEWPORT_MARGIN,
-      boundaryRect?.right ?? window.innerWidth - VIEWPORT_MARGIN,
-    );
-    const boundTop = Math.max(
-      VIEWPORT_MARGIN,
-      boundaryRect?.top ?? VIEWPORT_MARGIN,
-    );
-    const boundBottom = Math.min(
-      window.innerHeight - VIEWPORT_MARGIN,
-      boundaryRect?.bottom ?? window.innerHeight - VIEWPORT_MARGIN,
-    );
+    const boundaryEl = triggerEl.closest('[data-dropdown-boundary]') as HTMLElement | null;
+    portalRootRef.current = boundaryEl;
 
     const isRTL =
-      document.documentElement.dir === 'rtl' ||
-      !!triggerRef.current.closest('[dir="rtl"]');
+      document.documentElement.dir === 'rtl' || !!triggerEl.closest('[dir="rtl"]');
+
+    // Position inside boundary (Daily Report cards) to avoid CSS `zoom` coordinate issues.
+    if (boundaryEl) {
+      const b = boundaryEl.getBoundingClientRect();
+
+      const availableWidth = Math.max(200, b.width - VIEWPORT_MARGIN * 2);
+      const width = Math.min(Math.max(rect.width, 320), availableWidth);
+
+      let left = isRTL ? rect.right - b.left - width : rect.left - b.left;
+      left = Math.max(
+        VIEWPORT_MARGIN,
+        Math.min(left, b.width - VIEWPORT_MARGIN - width),
+      );
+
+      const spaceAbove = rect.top - b.top - OFFSET - VIEWPORT_MARGIN;
+      const spaceBelow = b.bottom - rect.bottom - OFFSET - VIEWPORT_MARGIN;
+      const openBelow = spaceBelow >= 220 || spaceBelow >= spaceAbove;
+
+      if (openBelow) {
+        const maxHeight = Math.min(520, Math.max(180, spaceBelow));
+        setPosition({
+          top: rect.bottom - b.top + OFFSET,
+          bottom: undefined,
+          left,
+          width,
+          maxHeight,
+        });
+      } else {
+        const maxHeight = Math.min(520, Math.max(180, spaceAbove));
+        setPosition({
+          top: undefined,
+          bottom: b.bottom - rect.top + OFFSET,
+          left,
+          width,
+          maxHeight,
+        });
+      }
+
+      return;
+    }
+
+    // Fallback: fixed to viewport
+    const boundLeft = VIEWPORT_MARGIN;
+    const boundRight = window.innerWidth - VIEWPORT_MARGIN;
+    const boundTop = VIEWPORT_MARGIN;
+    const boundBottom = window.innerHeight - VIEWPORT_MARGIN;
 
     const availableWidth = Math.max(200, boundRight - boundLeft);
     const width = Math.min(Math.max(rect.width, 320), availableWidth);
@@ -365,7 +392,9 @@ export function StaffSearchSelect({
         createPortal(
           <div
             ref={dropdownRef}
-            className="fixed bg-background border rounded-lg shadow-xl overflow-hidden"
+            className={(portalRootRef.current
+              ? 'absolute'
+              : 'fixed') + ' bg-background border rounded-lg shadow-xl overflow-hidden'}
             style={{
               top: position.top,
               bottom: position.bottom,
@@ -431,7 +460,7 @@ export function StaffSearchSelect({
               )}
             </ScrollArea>
           </div>,
-          document.body,
+          portalRootRef.current ?? document.body,
         )}
     </div>
   );
