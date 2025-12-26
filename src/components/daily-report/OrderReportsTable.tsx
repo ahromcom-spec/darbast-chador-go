@@ -51,7 +51,7 @@ export function OrderReportsTable({
   }, [orderReports.length]);
 
   return (
-    <Card className="border-2 border-blue-500/30">
+    <Card data-dropdown-boundary className="border-2 border-blue-500/30">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

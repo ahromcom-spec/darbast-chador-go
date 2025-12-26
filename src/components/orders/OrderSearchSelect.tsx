@@ -87,21 +87,41 @@ export function OrderSearchSelect({
     const VIEWPORT_MARGIN = 8;
     const OFFSET = 4;
 
+    const boundaryEl = triggerRef.current.closest(
+      '[data-dropdown-boundary]'
+    ) as HTMLElement | null;
+    const boundaryRect = boundaryEl?.getBoundingClientRect();
+
+    // Clamp to boundary if provided; otherwise clamp to viewport.
+    const boundLeft = Math.max(
+      VIEWPORT_MARGIN,
+      boundaryRect?.left ?? VIEWPORT_MARGIN,
+    );
+    const boundRight = Math.min(
+      window.innerWidth - VIEWPORT_MARGIN,
+      boundaryRect?.right ?? window.innerWidth - VIEWPORT_MARGIN,
+    );
+    const boundTop = Math.max(
+      VIEWPORT_MARGIN,
+      boundaryRect?.top ?? VIEWPORT_MARGIN,
+    );
+    const boundBottom = Math.min(
+      window.innerHeight - VIEWPORT_MARGIN,
+      boundaryRect?.bottom ?? window.innerHeight - VIEWPORT_MARGIN,
+    );
+
     const isRTL =
       document.documentElement.dir === 'rtl' ||
       !!triggerRef.current.closest('[dir="rtl"]');
 
-    const maxAllowedWidth = Math.max(260, window.innerWidth - VIEWPORT_MARGIN * 2);
-    const width = Math.min(Math.max(rect.width, 350), maxAllowedWidth);
+    const availableWidth = Math.max(220, boundRight - boundLeft);
+    const width = Math.min(Math.max(rect.width, 350), availableWidth);
 
     let left = isRTL ? rect.right - width : rect.left;
-    left = Math.max(
-      VIEWPORT_MARGIN,
-      Math.min(left, window.innerWidth - width - VIEWPORT_MARGIN)
-    );
+    left = Math.max(boundLeft, Math.min(left, boundRight - width));
 
-    const spaceAbove = rect.top - VIEWPORT_MARGIN - OFFSET;
-    const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN - OFFSET;
+    const spaceAbove = rect.top - boundTop - OFFSET;
+    const spaceBelow = boundBottom - rect.bottom - OFFSET;
 
     const openBelow = spaceBelow >= 240 || spaceBelow >= spaceAbove;
 
