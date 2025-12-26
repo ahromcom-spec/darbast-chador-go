@@ -255,18 +255,19 @@ export function ModulesManagement() {
                     key={module.key}
                     className="p-4 rounded-lg border-2 border-border bg-background"
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${module.bgColor}`}>
+                    <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                      <div className={`p-2 rounded-lg ${module.bgColor} flex-shrink-0`}>
                         <Building2 className={`h-5 w-5 ${module.color}`} />
                       </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-sm mb-1">{module.name}</div>
-                        <div className="text-xs text-muted-foreground">{module.description}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm whitespace-normal leading-relaxed">{module.name}</div>
+                        <div className="text-xs text-muted-foreground whitespace-normal leading-relaxed">{module.description}</div>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(module.href)}
+                        className="flex-shrink-0"
                       >
                         ورود به ماژول
                       </Button>
