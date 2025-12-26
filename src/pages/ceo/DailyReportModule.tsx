@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useZoom } from '@/contexts/ZoomContext';
 import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { Button } from '@/components/ui/button';
@@ -1840,16 +1839,8 @@ export default function DailyReportModule() {
     }
   };
 
-  const { zoomLevel, isWindows } = useZoom();
-  
-  // Calculate counter-zoom to keep this page at 100%
-  const counterZoom = isWindows && zoomLevel !== 1 ? (1 / zoomLevel) : 1;
-
   return (
-    <div 
-      className="min-h-screen bg-gradient-to-br from-background via-background to-amber-500/5"
-      style={{ zoom: counterZoom }}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-amber-500/5">
       <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full">
         {/* Header */}
         <ModuleHeader
@@ -2058,22 +2049,22 @@ export default function DailyReportModule() {
                                     );
                                   })()}
                                 </TableCell>
-                                <TableCell className="border border-blue-200 w-[15%]">
+                                <TableCell className="border border-blue-200">
                                   <AutoResizeTextarea
                                     value={`${row.activity_description || ''}${row.activity_description && row.service_details ? '\n' : ''}${row.service_details || ''}`}
                                     onChange={(e) => {
                                       updateOrderRow(index, 'activity_description', e.target.value);
                                       updateOrderRow(index, 'service_details', '');
                                     }}
-                                    className="min-h-[50px] w-full bg-background/50"
+                                    className="min-h-[50px] min-w-[50ch] bg-background/50"
                                     placeholder="شرح فعالیت و ابعاد..."
                                   />
                                 </TableCell>
-                                <TableCell className="border border-blue-200 w-[15%]">
-                                  <AutoResizeTextarea
-                                    value={row.team_name || ''}
+                                <TableCell className="border border-blue-200">
+                                  <Input
+                                    value={row.team_name}
                                     onChange={(e) => updateOrderRow(index, 'team_name', e.target.value)}
-                                    className="min-h-[40px] w-full bg-background/50"
+                                    className="bg-background/50 min-w-[40ch]"
                                     placeholder="نام اکیپ"
                                   />
                                 </TableCell>
