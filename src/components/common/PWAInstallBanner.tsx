@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { useLocation } from 'react-router-dom';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // Get viewport size
 const getViewportSize = () => ({
@@ -17,33 +17,10 @@ export function PWAInstallBanner() {
   const { toast } = useToast();
   const [show, setShow] = useState(false);
   const location = useLocation();
-  // محاسبه پوزیشن پیش‌فرض - پایین‌ترین و راست‌ترین ممکن
-  const getDefaultPosition = useCallback(() => {
-    const vp = getViewportSize();
-    const bannerWidth = 320;
-    const bannerHeight = 70;
-    const bottomMargin = 24;
-    const rightMargin = 16;
-    return { 
-      x: vp.width - bannerWidth - rightMargin, 
-      y: vp.height - bannerHeight - bottomMargin 
-    };
-  }, []);
-
-  // Drag state - شروع از راست‌ترین و پایین‌ترین موقعیت
-  const [position, setPosition] = useState(() => {
-    const vp = getViewportSize();
-    const bannerWidth = 320;
-    const bannerHeight = 70;
-    const bottomMargin = 24;
-    const rightMargin = 16;
-    return { 
-      x: vp.width - bannerWidth - rightMargin, 
-      y: vp.height - bannerHeight - bottomMargin 
-    };
-  });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
+  // ثابت در راست-پایین با فاصله مشخص از footer و آواتار
+  // فاصله از پایین: 80px (بالای footer)، فاصله از راست: 16px
+  const BOTTOM_OFFSET = 80; // فاصله از پایین viewport (بالای فوتر)
+  const RIGHT_OFFSET = 16;  // فاصله از راست
   const bannerRef = useRef<HTMLDivElement>(null);
 
   // بررسی و نمایش بنر بر اساس وضعیت نصب و localStorage
@@ -75,28 +52,6 @@ export function PWAInstallBanner() {
     
     setShow(shouldShow);
   }, [location.pathname, isStandalone]);
-
-  // Update position on resize - همیشه پایین‌ترین و راست‌ترین
-  useEffect(() => {
-    const handleResize = () => {
-      const vp = getViewportSize();
-      const bannerWidth = bannerRef.current?.offsetWidth || 320;
-      const bannerHeight = bannerRef.current?.offsetHeight || 70;
-      const bottomMargin = 24;
-      const rightMargin = 16;
-      
-      // همیشه بنر در پایین‌ترین و راست‌ترین موقعیت باشد
-      setPosition({
-        x: vp.width - bannerWidth - rightMargin,
-        y: vp.height - bannerHeight - bottomMargin
-      });
-    };
-
-    window.addEventListener('resize', handleResize);
-    // اجرای اولیه برای تنظیم موقعیت درست
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const handleDismiss = () => {
     setShow(false);
@@ -143,105 +98,6 @@ export function PWAInstallBanner() {
         : 'اگر آیکون نصب در نوار آدرس مرورگر Edge/Chrome نمایش داده می‌شود روی آن بزنید. اگر دیده نمی‌شود، یک‌بار صفحه را رفرش کنید.'
     });
   };
-
-  // Drag handlers
-  const handleDragStart = useCallback((clientX: number, clientY: number) => {
-    dragStartRef.current = {
-      x: clientX,
-      y: clientY,
-      posX: position.x,
-      posY: position.y
-    };
-    setIsDragging(true);
-  }, [position]);
-
-  const handleDragMove = useCallback((clientX: number, clientY: number) => {
-    if (!dragStartRef.current || !isDragging) return;
-
-    const deltaX = clientX - dragStartRef.current.x;
-    const deltaY = clientY - dragStartRef.current.y;
-
-    const vp = getViewportSize();
-    const bannerWidth = bannerRef.current?.offsetWidth || 320;
-    const bannerHeight = bannerRef.current?.offsetHeight || 70;
-    const bottomMargin = 24;
-
-    // محدود به سمت راست و پایین صفحه
-    const minX = vp.width / 2;
-    const minY = vp.height / 2;
-    const maxX = vp.width - bannerWidth - 8;
-    const maxY = vp.height - bannerHeight - bottomMargin;
-
-    // Calculate new position with bounds
-    const newX = Math.max(minX, Math.min(maxX, dragStartRef.current.posX + deltaX));
-    const newY = Math.max(minY, Math.min(maxY, dragStartRef.current.posY + deltaY));
-
-    setPosition({ x: newX, y: newY });
-  }, [isDragging]);
-
-  const handleDragEnd = useCallback(() => {
-    setIsDragging(false);
-    dragStartRef.current = null;
-  }, []);
-
-  // Mouse events
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Don't start drag if clicking on buttons
-    if ((e.target as HTMLElement).closest('button')) return;
-    e.preventDefault();
-    handleDragStart(e.clientX, e.clientY);
-  };
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      e.preventDefault();
-      handleDragMove(e.clientX, e.clientY);
-    };
-
-    const handleMouseUp = () => {
-      handleDragEnd();
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, handleDragMove, handleDragEnd]);
-
-  // Touch events
-  const handleTouchStart = (e: React.TouchEvent) => {
-    // Don't start drag if touching buttons
-    if ((e.target as HTMLElement).closest('button')) return;
-    const touch = e.touches[0];
-    handleDragStart(touch.clientX, touch.clientY);
-  };
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      handleDragMove(touch.clientX, touch.clientY);
-    };
-
-    const handleTouchEnd = () => {
-      handleDragEnd();
-    };
-
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [isDragging, handleDragMove, handleDragEnd]);
-
   // فقط در صفحه اصلی نمایش بده
   if (!show || location.pathname !== '/') {
     return null;
@@ -250,16 +106,12 @@ export function PWAInstallBanner() {
   return (
     <div 
       ref={bannerRef}
-      className="fixed z-50 select-none"
+      className="fixed z-40 select-none"
       style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        touchAction: 'none',
-        cursor: isDragging ? 'grabbing' : 'grab'
+        right: `${RIGHT_OFFSET}px`,
+        bottom: `${BOTTOM_OFFSET}px`,
       }}
       data-pwa-install-banner
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
     >
       <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-lg">
         <div className="p-2 sm:p-3 flex items-center gap-2 sm:gap-3">
