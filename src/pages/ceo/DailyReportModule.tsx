@@ -2056,7 +2056,7 @@ export default function DailyReportModule() {
                                       updateOrderRow(index, 'activity_description', e.target.value);
                                       updateOrderRow(index, 'service_details', '');
                                     }}
-                                    className="min-h-[50px] min-w-[30ch] bg-background/50"
+                                    className="min-h-[50px] min-w-[50ch] bg-background/50"
                                     placeholder="شرح فعالیت و ابعاد..."
                                   />
                                 </TableCell>
@@ -2064,7 +2064,7 @@ export default function DailyReportModule() {
                                   <Input
                                     value={row.team_name}
                                     onChange={(e) => updateOrderRow(index, 'team_name', e.target.value)}
-                                    className="bg-background/50 min-w-[30ch]"
+                                    className="bg-background/50 min-w-[40ch]"
                                     placeholder="نام اکیپ"
                                   />
                                 </TableCell>
@@ -2072,7 +2072,7 @@ export default function DailyReportModule() {
                                   <AutoResizeTextarea
                                     value={row.notes}
                                     onChange={(e) => updateOrderRow(index, 'notes', e.target.value)}
-                                    className="min-h-[50px] min-w-[30ch] bg-background/50"
+                                    className="min-h-[50px] min-w-[40ch] bg-background/50"
                                     placeholder="توضیحات..."
                                   />
                                 </TableCell>
