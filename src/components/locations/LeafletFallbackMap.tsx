@@ -71,7 +71,14 @@ export default function LeafletFallbackMap({
 
   return (
     <MapErrorBoundary>
-      <div className="h-full w-full relative rounded-lg overflow-hidden border-2 border-primary/20 shadow-lg">
+      <div 
+        className="h-full w-full relative rounded-lg overflow-hidden border-2 border-primary/20 shadow-lg"
+        style={{
+          // جلوگیری از تداخل CSS zoom با نقشه
+          zoom: 1,
+          transform: 'translateZ(0)'
+        }}
+      >
         <MapContainer
           center={center}
           zoom={defaultZoom}

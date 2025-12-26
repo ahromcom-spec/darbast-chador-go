@@ -605,7 +605,7 @@ export function InteractiveLocationMap({
       )}
 
       {/* نقشه */}
-      <div className="relative h-[500px] w-full rounded-xl overflow-hidden border-2 shadow-lg">
+      <div className="relative h-[500px] w-full rounded-xl overflow-hidden border-2 shadow-lg" style={{ zoom: 1, transform: 'translateZ(0)' }}>
         {useFallback ? (
           <SimpleLeafletMap
             onLocationSelect={(lat, lng, distance) => {

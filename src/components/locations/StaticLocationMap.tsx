@@ -154,7 +154,10 @@ export default function StaticLocationMap({
       className="w-full h-full relative z-0"
       style={{ 
         minHeight: '400px',
-        background: '#f5f5f5'
+        background: '#f5f5f5',
+        // جلوگیری از تداخل CSS zoom با نقشه
+        zoom: 1,
+        transform: 'translateZ(0)'
       }}
     />
   );

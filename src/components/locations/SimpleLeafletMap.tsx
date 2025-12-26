@@ -331,7 +331,12 @@ export default function SimpleLeafletMap({
       <div
         ref={mapContainer}
         className="w-full rounded-lg border border-border"
-        style={{ minHeight: '420px' }}
+        style={{ 
+          minHeight: '420px',
+          // جلوگیری از تداخل CSS zoom با نقشه
+          zoom: 1,
+          transform: 'translateZ(0)'
+        }}
       />
 
       {selectedPos && (
