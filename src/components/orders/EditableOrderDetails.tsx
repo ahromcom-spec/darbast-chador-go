@@ -26,6 +26,7 @@ import { OrderCollaboratorsList } from './OrderCollaboratorsList';
 import { OrderTimeline } from './OrderTimeline';
 import { ManagerOwnershipChain } from './ManagerOwnershipChain';
 import { CustomerOwnershipChain } from './CustomerOwnershipChain';
+import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -211,19 +212,14 @@ const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMe
         <div className="relative bg-muted/30 rounded-lg overflow-hidden border">
           <div className="aspect-video flex items-center justify-center bg-black/5 min-h-[200px]">
             {isVideo ? (
-              <video
+              <CentralizedVideoPlayer
                 key={currentMedia?.id}
                 src={getMediaUrl(currentMedia)}
-                controls
-                playsInline
-                preload="auto"
-                className="w-full h-full max-h-[400px] object-contain"
-                onError={(e) => {
-                  console.error('Video load error:', currentMedia.file_path, e);
-                }}
-              >
-                مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
-              </video>
+                filePath={currentMedia.file_path}
+                bucket="project-media"
+                className="w-full h-full max-h-[400px]"
+                showControls={true}
+              />
             ) : (
               <img
                 src={getMediaUrl(currentMedia)}

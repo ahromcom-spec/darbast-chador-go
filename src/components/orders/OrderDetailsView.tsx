@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { ImageIcon, ChevronLeft, ChevronRight, Ruler, FileText, Layers, User, Phone, MapPin, Calendar, Banknote } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 
 // Helper to parse order notes safely (handles double-stringified JSON)
 export const parseOrderNotes = (notes: string | null | undefined): any => {
@@ -143,19 +144,14 @@ export const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
       </Label>
       <div className="relative bg-black/5 rounded-lg overflow-hidden">
         {isVideo ? (
-          <video
+          <CentralizedVideoPlayer
             key={currentMedia?.id}
             src={getMediaUrl(currentMedia)}
-            controls
-            playsInline
-            preload="auto"
-            className="w-full max-h-64 object-contain"
-            onError={(e) => {
-              console.error('Video load error:', currentMedia.file_path, e);
-            }}
-          >
-            مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
-          </video>
+            filePath={currentMedia.file_path}
+            bucket="project-media"
+            className="w-full max-h-64"
+            showControls={true}
+          />
         ) : (
           <img
             src={getMediaUrl(currentMedia)}
