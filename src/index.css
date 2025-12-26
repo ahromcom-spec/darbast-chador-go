@@ -18,7 +18,7 @@
 /* Cross-browser compatibility - Desktop & Mobile (Chrome, Edge, Firefox) */
 html {
   /* Consistent font sizing across all browsers */
-  font-size: 16px;
+  font-size: 16px !important;
   -webkit-text-size-adjust: 100%;
   -moz-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
@@ -26,37 +26,62 @@ html {
   /* Prevent font scaling in landscape */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Windows desktop browser fixes */
-  zoom: 1;
-  -ms-zoom: 1;
+  /* Windows desktop browser fixes - normalize zoom */
+  zoom: 1 !important;
+  -ms-zoom: 1 !important;
+  /* Reset transform scale */
+  transform: scale(1);
+  transform-origin: top left;
 }
 
 /* Ensure body fills viewport consistently */
 body {
   min-height: 100vh;
   min-height: 100dvh; /* Dynamic viewport height for mobile */
-  font-size: 1rem;
+  font-size: 1rem !important;
   line-height: 1.5;
   /* Firefox specific fixes for Windows */
   -moz-osx-font-smoothing: grayscale;
+  /* Force consistent rendering */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Edge & Firefox desktop Windows specific fixes */
-@supports (-moz-appearance: none) {
-  /* Firefox specific */
+/* Firefox desktop Windows specific fixes */
+@-moz-document url-prefix() {
   html {
     font-size: 16px !important;
+    zoom: 1 !important;
+  }
+  body {
+    font-size: 1rem !important;
+    zoom: 1 !important;
+  }
+  * {
+    zoom: 1 !important;
+  }
+}
+
+/* Edge specific fixes - using Chromium Edge detection */
+@supports (-webkit-appearance: none) and (not (-moz-appearance: none)) {
+  html {
+    font-size: 16px !important;
+    zoom: 1 !important;
   }
   body {
     font-size: 1rem !important;
   }
 }
 
+/* Legacy Edge specific */
 @supports (-ms-ime-align: auto) {
-  /* Edge specific */
   html {
     font-size: 16px !important;
     zoom: 1 !important;
+    -ms-zoom: 1 !important;
+  }
+  body {
+    font-size: 1rem !important;
   }
 }
 
