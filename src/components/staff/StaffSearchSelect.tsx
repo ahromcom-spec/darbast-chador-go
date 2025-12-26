@@ -1,14 +1,10 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, User, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
+import { createPortal } from 'react-dom';
 
 // لیست ثابت پرسنل اهرم با کد
 const AHROM_STAFF_LIST = [
@@ -60,6 +56,10 @@ export function StaffSearchSelect({
   const [hrStaff, setHrStaff] = useState<StaffMember[]>([]);
   const [salaryStaff, setSalaryStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
 
   // Fetch HR employees and salary settings staff, and match with profiles for user_id
   useEffect(() => {
@@ -206,94 +206,144 @@ export function StaffSearchSelect({
     onValueChange('', '');
   };
 
+  // Update position when opening
+  useEffect(() => {
+    if (open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const dropdownHeight = 350; // Approximate height
+      const spaceAbove = rect.top;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      
+      // Prefer showing above if there's more space or not enough space below
+      const showAbove = spaceAbove > spaceBelow || spaceBelow < dropdownHeight;
+      
+      setPosition({
+        top: showAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: Math.max(rect.width, 320)
+      });
+      
+      // Focus search input
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 10);
+    }
+  }, [open]);
+
+  // Handle click outside
+  useEffect(() => {
+    if (!open) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={false}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between bg-white/50 hover:bg-white/70 text-right"
-        >
-          <span className="truncate flex-1 text-right">
-            {selectedStaff
-              ? `${selectedStaff.name} - ${selectedStaff.code}`
-              : placeholder}
-          </span>
-          {selectedStaff ? (
-            <X
-              className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
-              onClick={handleClear}
-            />
-          ) : (
-            <User className="h-4 w-4 shrink-0 opacity-50" />
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent 
-        className="w-[320px] sm:w-[350px] p-0 z-[9999] bg-background border shadow-lg" 
-        align="end"
-        side="top"
-        sideOffset={4}
-        avoidCollisions={true}
-        collisionPadding={8}
-        style={{ pointerEvents: 'auto' }}
+    <div className="relative">
+      <Button
+        ref={triggerRef}
+        variant="outline"
+        role="combobox"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="w-full justify-between bg-white/50 hover:bg-white/70 text-right min-w-[180px]"
       >
-        <div className="p-3 border-b">
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="جستجو با نام یا کد پرسنل..."
-              className="pr-10 text-sm"
-              autoFocus
-            />
+        <span className="truncate flex-1 text-right">
+          {selectedStaff
+            ? `${selectedStaff.name} - ${selectedStaff.code}`
+            : placeholder}
+        </span>
+        {selectedStaff ? (
+          <X
+            className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
+            onClick={handleClear}
+          />
+        ) : (
+          <User className="h-4 w-4 shrink-0 opacity-50" />
+        )}
+      </Button>
+      
+      {open && createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed bg-background border rounded-lg shadow-xl overflow-hidden"
+          style={{
+            top: position.top,
+            left: position.left,
+            width: position.width,
+            zIndex: 99999,
+            maxHeight: '350px'
+          }}
+          dir="rtl"
+        >
+          <div className="p-3 border-b bg-background">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={searchInputRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="جستجو با نام یا کد پرسنل..."
+                className="pr-10 text-sm"
+              />
+            </div>
           </div>
-        </div>
-        <ScrollArea className="h-[300px] overflow-y-auto">
-          {loading ? (
-            <div className="py-6 flex items-center justify-center text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin ml-2" />
-              <span>در حال بارگذاری...</span>
-            </div>
-          ) : sortedStaff.length === 0 ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">
-              پرسنلی یافت نشد
-            </div>
-          ) : (
-            <div className="p-1 bg-background">
-              {sortedStaff.map((staff) => (
-                <button
-                  key={staff.code}
-                  type="button"
-                  onClick={() => handleSelect(staff)}
-                  className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer ${
-                    value === staff.code ? 'bg-amber-100 dark:bg-amber-900/30' : ''
-                  }`}
-                >
-                  <div className="font-medium flex items-center gap-2">
-                    <span className={`font-bold text-xs px-1.5 py-0.5 rounded ${
-                      staff.source === 'salary' 
-                        ? 'text-green-600 bg-green-100 dark:bg-green-900/30' 
-                        : staff.source === 'hr'
-                        ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
-                        : 'text-amber-600 bg-amber-100 dark:bg-amber-900/30'
-                    }`}>
-                      {staff.code}
-                    </span>
-                    <span>{staff.name}</span>
-                    {staff.fullCode && staff.fullCode !== staff.code && (
-                      <span className="text-xs text-muted-foreground">({staff.fullCode})</span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-      </PopoverContent>
-    </Popover>
+          <ScrollArea className="max-h-[280px]">
+            {loading ? (
+              <div className="py-6 flex items-center justify-center text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin ml-2" />
+                <span>در حال بارگذاری...</span>
+              </div>
+            ) : sortedStaff.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                پرسنلی یافت نشد
+              </div>
+            ) : (
+              <div className="p-1 bg-background">
+                {sortedStaff.map((staff) => (
+                  <button
+                    key={staff.code}
+                    type="button"
+                    onClick={() => handleSelect(staff)}
+                    className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer ${
+                      value === staff.code ? 'bg-amber-100 dark:bg-amber-900/30' : ''
+                    }`}
+                  >
+                    <div className="font-medium flex items-center gap-2">
+                      <span className={`font-bold text-xs px-1.5 py-0.5 rounded ${
+                        staff.source === 'salary' 
+                          ? 'text-green-600 bg-green-100 dark:bg-green-900/30' 
+                          : staff.source === 'hr'
+                          ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
+                          : 'text-amber-600 bg-amber-100 dark:bg-amber-900/30'
+                      }`}>
+                        {staff.code}
+                      </span>
+                      <span>{staff.name}</span>
+                      {staff.fullCode && staff.fullCode !== staff.code && (
+                        <span className="text-xs text-muted-foreground">({staff.fullCode})</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>,
+        document.body
+      )}
+    </div>
   );
 }
 
