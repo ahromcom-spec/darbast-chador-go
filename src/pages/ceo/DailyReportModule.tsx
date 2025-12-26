@@ -1813,8 +1813,23 @@ export default function DailyReportModule() {
           <TabsContent value="new-report" className="space-y-6 mt-6">
             {/* Date Picker with Navigation */}
             <div className="flex items-center gap-3 justify-end">
-              <Label className="text-sm font-medium">تاریخ گزارش:</Label>
+              {/* دکمه‌های ناوبری در سمت چپ */}
               <div className="flex items-center gap-2">
+                {/* دکمه روز قبل - سمت چپ‌ترین */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const prevDay = new Date(reportDate);
+                    prevDay.setDate(prevDay.getDate() - 1);
+                    setReportDate(prevDay);
+                  }}
+                  className="gap-1 px-3"
+                >
+                  <span className="text-lg">→</span>
+                  روز قبل
+                </Button>
+                
                 {/* دکمه روز بعد */}
                 <Button
                   variant="outline"
@@ -1829,28 +1844,15 @@ export default function DailyReportModule() {
                   روز بعد
                   <span className="text-lg">←</span>
                 </Button>
-                
-                <PersianDatePicker
-                  value={reportDate.toISOString()}
-                  onChange={(date) => date && setReportDate(new Date(date))}
-                  timeMode="none"
-                />
-                
-                {/* دکمه روز قبل */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const prevDay = new Date(reportDate);
-                    prevDay.setDate(prevDay.getDate() - 1);
-                    setReportDate(prevDay);
-                  }}
-                  className="gap-1 px-3"
-                >
-                  <span className="text-lg">→</span>
-                  روز قبل
-                </Button>
               </div>
+              
+              <PersianDatePicker
+                value={reportDate.toISOString()}
+                onChange={(date) => date && setReportDate(new Date(date))}
+                timeMode="none"
+              />
+              
+              <Label className="text-sm font-medium">تاریخ گزارش:</Label>
             </div>
 
             {loading ? (
