@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { Button } from '@/components/ui/button';
@@ -143,11 +143,23 @@ const fromDbWorkStatus = (value: unknown): 'کارکرده' | 'غایب' => {
 };
 export default function DailyReportModule() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [reportDate, setReportDate] = useState<Date>(new Date());
+  
+  // Initialize reportDate from URL parameter if available
+  const [reportDate, setReportDate] = useState<Date>(() => {
+    const dateParam = searchParams.get('date');
+    if (dateParam) {
+      const parsed = new Date(dateParam);
+      if (!isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+    return new Date();
+  });
   const [orders, setOrders] = useState<Order[]>([]);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [orderReports, setOrderReports] = useState<OrderReportRow[]>([]);
@@ -2564,8 +2576,8 @@ export default function DailyReportModule() {
                     size="sm"
                     onClick={() => {
                       setOrderDetailsDialogOpen(false);
-                      // Navigate to order detail with return path
-                      window.location.href = `/orders/${selectedOrderDetails.id}?returnTo=/ceo/daily-report`;
+                      // Navigate to order detail with return path including report date
+                      navigate(`/orders/${selectedOrderDetails.id}?returnTo=/ceo/daily-report?date=${reportDate}`);
                     }}
                     className="gap-2"
                   >
