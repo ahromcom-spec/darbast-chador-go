@@ -37,6 +37,7 @@ export interface Order {
   customer_phone?: string | null;
   address: string;
   subcategory_name?: string;
+  activity_description?: string;
 }
 
 export interface StaffMember {
@@ -241,6 +242,7 @@ export function useDailyReport() {
           customer_phone,
           address,
           subcategory_id,
+          activity_description,
           subcategories!projects_v3_subcategory_id_fkey(name)
         `)
         .in('status', ['pending', 'pending_execution', 'in_progress', 'scheduled', 'approved'] as any[])
@@ -254,7 +256,8 @@ export function useDailyReport() {
         customer_name: o.customer_name,
         customer_phone: o.customer_phone,
         address: o.address,
-        subcategory_name: o.subcategories?.name
+        subcategory_name: o.subcategories?.name,
+        activity_description: o.activity_description || ''
       })));
     } catch (error) {
       console.error('Error fetching orders:', error);

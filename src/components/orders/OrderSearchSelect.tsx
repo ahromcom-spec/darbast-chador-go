@@ -13,6 +13,7 @@ interface Order {
   customer_phone?: string | null;
   address: string;
   subcategory_name?: string;
+  activity_description?: string;
 }
 
 interface OrderSearchSelectProps {
@@ -54,13 +55,15 @@ export function OrderSearchSelect({
       const customerPhone = order.customer_phone?.toLowerCase() || '';
       const address = order.address?.toLowerCase() || '';
       const subcategory = order.subcategory_name?.toLowerCase() || '';
+      const activityDesc = order.activity_description?.toLowerCase() || '';
 
       return (
         code.includes(searchLower) ||
         customerName.includes(searchLower) ||
         customerPhone.includes(searchLower) ||
         address.includes(searchLower) ||
-        subcategory.includes(searchLower)
+        subcategory.includes(searchLower) ||
+        activityDesc.includes(searchLower)
       );
     });
   }, [orders, search]);
@@ -257,6 +260,11 @@ export function OrderSearchSelect({
                         )}
                         {order.address}
                       </div>
+                      {order.activity_description && (
+                        <div className="text-xs text-green-600 mt-0.5 line-clamp-1">
+                          شرح: {order.activity_description}
+                        </div>
+                      )}
                       {order.customer_phone && (
                         <div className="text-xs text-muted-foreground">
                           {order.customer_phone}
