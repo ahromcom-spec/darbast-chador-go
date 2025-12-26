@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -207,8 +207,12 @@ export default function OrderDetail() {
   const [advancePaymentAmount, setAdvancePaymentAmount] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Get return path from URL params
+  const returnTo = searchParams.get('returnTo');
    
   // معیارهای ثابت امتیازدهی - بدون نیاز به کوئری دیتابیس
   const staffCriteria: RatingCriteria[] = [
@@ -818,7 +822,13 @@ export default function OrderDetail() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Button
           variant="ghost"
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            if (returnTo) {
+              navigate(returnTo);
+            } else {
+              navigate(-1);
+            }
+          }}
           className="mb-6 gap-2"
         >
           <ArrowRight className="h-4 w-4" />

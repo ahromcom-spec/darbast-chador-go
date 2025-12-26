@@ -2454,25 +2454,36 @@ export default function DailyReportModule() {
 
         {/* Order Details Dialog */}
         <AlertDialog open={orderDetailsDialogOpen} onOpenChange={setOrderDetailsDialogOpen}>
-          <AlertDialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <AlertDialogHeader className="pb-4 border-b">
-              <AlertDialogTitle className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-blue-600" />
-                  مشخصات کامل سفارش
-                </div>
+          <AlertDialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+            {/* Close button at top */}
+            <div className="flex items-center justify-between pb-4 border-b sticky top-0 bg-background z-10">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-blue-600" />
+                <h2 className="font-bold text-lg">مشخصات کامل سفارش</h2>
+              </div>
+              <div className="flex items-center gap-2">
                 {selectedOrderDetails && (
                   <Button 
-                    variant="outline"
+                    variant="default"
                     size="sm"
-                    onClick={() => window.open(`/orders/${selectedOrderDetails.id}`, '_blank')}
+                    onClick={() => {
+                      setOrderDetailsDialogOpen(false);
+                      // Navigate to order detail with return path
+                      window.location.href = `/orders/${selectedOrderDetails.id}?returnTo=/ceo/daily-report`;
+                    }}
                     className="gap-2"
                   >
                     <ExternalLink className="h-4 w-4" />
-                    مشاهده کامل
+                    مشاهده و ویرایش کامل
                   </Button>
                 )}
-              </AlertDialogTitle>
+                <AlertDialogCancel className="m-0 p-2 h-8 w-8 rounded-full">
+                  <X className="h-4 w-4" />
+                </AlertDialogCancel>
+              </div>
+            </div>
+            <AlertDialogHeader className="sr-only">
+              <AlertDialogTitle>مشخصات کامل سفارش</AlertDialogTitle>
             </AlertDialogHeader>
             
             {loadingOrderDetails ? (
@@ -2977,7 +2988,7 @@ export default function DailyReportModule() {
               </div>
             )}
 
-            <AlertDialogFooter className="pt-4 border-t">
+            <AlertDialogFooter className="sr-only">
               <AlertDialogCancel>بستن</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
