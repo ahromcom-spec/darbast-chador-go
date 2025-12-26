@@ -2562,7 +2562,7 @@ export default function DailyReportModule() {
 
         {/* Order Details Dialog */}
         <AlertDialog open={orderDetailsDialogOpen} onOpenChange={setOrderDetailsDialogOpen}>
-          <AlertDialogContent className="w-[95vw] max-w-2xl max-h-[90vh] p-0 flex flex-col fixed top-4 translate-y-0 data-[state=open]:slide-in-from-top-2">
+          <AlertDialogContent className="w-[95vw] max-w-2xl h-[calc(100vh-2rem)] p-0 flex flex-col fixed top-4 translate-y-0 data-[state=open]:slide-in-from-top-2">
             {/* Close button at top - Fixed header */}
             <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-2">
@@ -2596,12 +2596,11 @@ export default function DailyReportModule() {
               </div>
             </div>
             
-            {/* Scrollable content area with visible scrollbars */}
-            <div className="flex-1 overflow-auto p-4" style={{ scrollbarWidth: 'auto', scrollbarColor: 'hsl(var(--primary)) transparent' }}>
+            {/* Scrollable content area - vertical scroll only */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4" style={{ scrollbarWidth: 'auto', scrollbarColor: 'hsl(var(--primary)) transparent' }}>
               <style>{`
                 .order-details-scroll::-webkit-scrollbar {
                   width: 10px;
-                  height: 10px;
                 }
                 .order-details-scroll::-webkit-scrollbar-track {
                   background: hsl(var(--muted));
