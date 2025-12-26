@@ -218,6 +218,18 @@ export default function DailyReportModule() {
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
+  const orderTableScrollRef = useRef<HTMLDivElement>(null);
+  const staffTableScrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll tables to rightmost position on data load (for RTL)
+  useEffect(() => {
+    if (!loading && orderTableScrollRef.current) {
+      orderTableScrollRef.current.scrollLeft = -orderTableScrollRef.current.scrollWidth;
+    }
+    if (!loading && staffTableScrollRef.current) {
+      staffTableScrollRef.current.scrollLeft = -staffTableScrollRef.current.scrollWidth;
+    }
+  }, [loading, orderReports.length, staffReports.length]);
 
   // LocalStorage key for backup
   const getLocalStorageKey = useCallback(() => {
@@ -1817,36 +1829,38 @@ export default function DailyReportModule() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-5">
-            <TabsTrigger value="new-report" className="gap-2">
-              <FileText className="h-4 w-4" />
-              ثبت گزارش
-            </TabsTrigger>
-            <TabsTrigger value="saved-reports" className="gap-2">
-              <History className="h-4 w-4" />
-              گزارشات ذخیره شده
-            </TabsTrigger>
-            <TabsTrigger value="archived-reports" className="gap-2">
-              <Archive className="h-4 w-4" />
-              بایگانی
-            </TabsTrigger>
-            <TabsTrigger value="staff-audit" className="gap-2">
-              <Calculator className="h-4 w-4" />
-              حسابرسی نیروها
-            </TabsTrigger>
-            <TabsTrigger value="salary-settings" className="gap-2">
-              <Settings className="h-4 w-4" />
-              تنظیمات حقوق
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 pb-2">
+            <TabsList className="inline-flex w-max min-w-full sm:grid sm:w-full sm:max-w-3xl sm:grid-cols-5 gap-1">
+              <TabsTrigger value="new-report" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span>ثبت گزارش</span>
+              </TabsTrigger>
+              <TabsTrigger value="saved-reports" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+                <History className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span>گزارشات ذخیره شده</span>
+              </TabsTrigger>
+              <TabsTrigger value="archived-reports" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+                <Archive className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span>بایگانی</span>
+              </TabsTrigger>
+              <TabsTrigger value="staff-audit" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+                <Calculator className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span>حسابرسی نیروها</span>
+              </TabsTrigger>
+              <TabsTrigger value="salary-settings" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span>تنظیمات حقوق</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* New Report Tab */}
           <TabsContent value="new-report" className="space-y-6 mt-6">
             {/* Date Picker with Navigation */}
-            <div className="flex items-center gap-3 justify-end">
-              {/* دکمه‌های ناوبری در سمت چپ */}
-              <div className="flex items-center gap-2">
-                {/* دکمه روز قبل - سمت چپ‌ترین */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
+              {/* دکمه‌های ناوبری */}
+              <div className="flex items-center gap-1 sm:gap-2 order-1 sm:order-none">
+                {/* دکمه روز قبل */}
                 <Button
                   variant="outline"
                   size="sm"
@@ -1855,10 +1869,11 @@ export default function DailyReportModule() {
                     prevDay.setDate(prevDay.getDate() - 1);
                     setReportDate(prevDay);
                   }}
-                  className="gap-1 px-3"
+                  className="gap-1 px-2 sm:px-3 text-xs sm:text-sm"
                 >
-                  <span className="text-lg">←</span>
-                  روز قبل
+                  <span className="text-base sm:text-lg">←</span>
+                  <span className="hidden xs:inline">روز قبل</span>
+                  <span className="xs:hidden">قبل</span>
                 </Button>
                 
                 {/* دکمه روز بعد */}
@@ -1870,10 +1885,11 @@ export default function DailyReportModule() {
                     nextDay.setDate(nextDay.getDate() + 1);
                     setReportDate(nextDay);
                   }}
-                  className="gap-1 px-3"
+                  className="gap-1 px-2 sm:px-3 text-xs sm:text-sm"
                 >
-                  روز بعد
-                  <span className="text-lg">→</span>
+                  <span className="hidden xs:inline">روز بعد</span>
+                  <span className="xs:hidden">بعد</span>
+                  <span className="text-base sm:text-lg">→</span>
                 </Button>
               </div>
               
@@ -1883,7 +1899,7 @@ export default function DailyReportModule() {
                 timeMode="none"
               />
               
-              <Label className="text-sm font-medium">تاریخ گزارش:</Label>
+              <Label className="text-xs sm:text-sm font-medium order-first sm:order-none">تاریخ گزارش:</Label>
             </div>
 
             {loading ? (
@@ -1909,7 +1925,7 @@ export default function DailyReportModule() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="overflow-x-auto">
+                    <div ref={orderTableScrollRef} className="overflow-x-auto" dir="rtl">
                       <Table className="table-auto border-collapse border border-blue-300">
                         <TableHeader>
                           <TableRow className="bg-blue-100 dark:bg-blue-900/30">
@@ -2023,7 +2039,7 @@ export default function DailyReportModule() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="overflow-visible">
+                    <div ref={staffTableScrollRef} className="overflow-x-auto" dir="rtl">
                       <Table className="table-auto border-collapse border border-amber-300">
                         <TableHeader>
                           <TableRow className="bg-amber-100 dark:bg-amber-900/30">

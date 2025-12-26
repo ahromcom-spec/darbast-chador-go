@@ -88,10 +88,10 @@ export function StaffReportsTable({
   // Scroll to rightmost position on mount (for RTL layout)
   useEffect(() => {
     if (scrollContainerRef.current) {
-      // For RTL, scrollLeft = 0 is the rightmost position
-      scrollContainerRef.current.scrollLeft = 0;
+      // For RTL, scroll to rightmost = scrollLeft at its minimum (most negative) value
+      scrollContainerRef.current.scrollLeft = -scrollContainerRef.current.scrollWidth;
     }
-  }, []);
+  }, [staffReports.length]);
 
   return (
     <Card className="border-2 border-amber-500/30">
