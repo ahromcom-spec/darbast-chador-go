@@ -256,8 +256,11 @@ export default function DailyReportModule() {
   }, [user, getLocalStorageKey]);
 
   // Save to localStorage on every change (immediate)
+  // جلوگیری از ذخیره‌سازی وقتی فرم خالی است یا در حال لود هستیم
   useEffect(() => {
     if (isInitialLoadRef.current) return;
+    // اگر فرم کاملا خالی است، ذخیره نکن (هنگام تغییر تاریخ)
+    if (orderReports.length === 0 && staffReports.length === 0) return;
     saveToLocalStorage();
   }, [orderReports, staffReports, saveToLocalStorage]);
 
@@ -278,6 +281,10 @@ export default function DailyReportModule() {
     // وقتی کاربر هنوز لود نشده باشد، fetchExistingReport اجرا نمی‌شود
     // و بعد از login نیز دوباره اجرا نمی‌شد؛ بنابراین user را هم در dependency می‌آوریم.
     if (user && reportDate) {
+      // ابتدا فرم را پاک کن تا داده‌های تاریخ قبلی نمایش داده نشود
+      setOrderReports([]);
+      setStaffReports([]);
+      setExistingReportId(null);
       isInitialLoadRef.current = true;
       fetchExistingReport();
     }
@@ -285,7 +292,11 @@ export default function DailyReportModule() {
 
   // Auto-save function
   const performAutoSave = useCallback(async () => {
-    if (!user || loading) return;
+    // جلوگیری از auto-save در حین لود یا وقتی فرم خالی است (هنگام تغییر تاریخ)
+    if (!user || loading || isInitialLoadRef.current) return;
+    
+    // اگر فرم کاملا خالی است، auto-save انجام نده
+    if (orderReports.length === 0 && staffReports.length === 0) return;
 
     // Check if there's any meaningful data to save
     const hasOrderData = orderReports.some((r) => r.order_id);
@@ -414,11 +425,14 @@ export default function DailyReportModule() {
 
   // Auto-save with debounce when data changes
   useEffect(() => {
-    // Skip auto-save on initial load
+    // Skip auto-save on initial load or when form is empty (during date change)
     if (isInitialLoadRef.current) {
       isInitialLoadRef.current = false;
       return;
     }
+    
+    // اگر فرم کاملا خالی است، auto-save انجام نده (هنگام تغییر تاریخ)
+    if (orderReports.length === 0 && staffReports.length === 0) return;
 
     // Clear existing timer
     if (autoSaveTimerRef.current) {
