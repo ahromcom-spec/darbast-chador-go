@@ -263,7 +263,7 @@ export function StaffReportsTable({
                         <SelectTrigger className="min-w-[90px] w-auto">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-background">
+                        <SelectContent position="popper" sideOffset={0} className="bg-background z-[9999]">
                           <SelectItem value="کارکرده">کارکرده</SelectItem>
                           <SelectItem value="غایب">غایب</SelectItem>
                         </SelectContent>
