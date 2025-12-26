@@ -55,6 +55,7 @@ interface Order {
   customer_phone?: string | null;
   address: string;
   subcategory_name?: string;
+  activity_description?: string;
 }
 
 interface StaffMember {
@@ -805,6 +806,7 @@ export default function DailyReportModule() {
           customer_name,
           customer_phone,
           address,
+          notes,
           subcategory_id,
           subcategories!projects_v3_subcategory_id_fkey(name)
         `)
@@ -813,13 +815,26 @@ export default function DailyReportModule() {
 
       if (error) throw error;
 
+      // Extract activity description from notes JSON
+      const extractActivityDescription = (notes: any): string => {
+        if (!notes) return '';
+        try {
+          const parsed = typeof notes === 'string' ? JSON.parse(notes) : notes;
+          // Try locationPurpose first (for facade scaffolding), then description
+          return parsed.locationPurpose || parsed.description || '';
+        } catch {
+          return '';
+        }
+      };
+
       setOrders((data || []).map((o: any) => ({
         id: o.id,
         code: o.code,
         customer_name: o.customer_name,
         customer_phone: o.customer_phone,
         address: o.address,
-        subcategory_name: o.subcategories?.name
+        subcategory_name: o.subcategories?.name,
+        activity_description: extractActivityDescription(o.notes)
       })));
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -2664,7 +2679,7 @@ export default function DailyReportModule() {
 
         {/* Order Details Dialog */}
         <AlertDialog open={orderDetailsDialogOpen} onOpenChange={setOrderDetailsDialogOpen}>
-          <AlertDialogContent className="w-[100vw] max-w-[100vw] h-[100dvh] max-h-[100dvh] p-0 flex flex-col fixed inset-0 translate-y-0 rounded-none data-[state=open]:slide-in-from-bottom-0">
+          <AlertDialogContent className="!fixed !inset-0 !left-0 !top-0 !translate-x-0 !translate-y-0 !w-[100vw] !max-w-[100vw] !h-[100dvh] !max-h-[100dvh] !p-0 !flex !flex-col !rounded-none !border-0 data-[state=open]:animate-none data-[state=closed]:animate-none overflow-hidden">
             {/* Close button at top - Fixed header */}
             <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-2">

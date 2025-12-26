@@ -277,7 +277,7 @@ export function OrderSearchSelect({
                   ref={searchInputRef}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="جستجو با نام مشتری، کد، آدرس..."
+                  placeholder="جستجو با نام مشتری، کد، آدرس، شرح محل..."
                   compactFocus
                   className="pr-10 text-sm h-10"
                 />
@@ -310,12 +310,12 @@ export function OrderSearchSelect({
                         {order.address}
                       </div>
                       {order.activity_description && (
-                        <div className="text-xs text-green-600 mt-0.5 line-clamp-1">
-                          شرح: {order.activity_description}
+                        <div className="text-xs text-green-700 dark:text-green-400 mt-1 p-1.5 bg-green-50 dark:bg-green-900/30 rounded-md line-clamp-2 border border-green-200 dark:border-green-800">
+                          <span className="font-medium">شرح محل و فعالیت:</span> {order.activity_description}
                         </div>
                       )}
                       {order.customer_phone && (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground mt-0.5">
                           {order.customer_phone}
                         </div>
                       )}
