@@ -2576,8 +2576,9 @@ export default function DailyReportModule() {
                     size="sm"
                     onClick={() => {
                       setOrderDetailsDialogOpen(false);
-                      // Navigate to order detail with return path including report date
-                      navigate(`/orders/${selectedOrderDetails.id}?returnTo=/ceo/daily-report?date=${reportDate}`);
+                      // Navigate to order detail with properly encoded return path including report date
+                      const returnPath = encodeURIComponent(`/daily-report?date=${reportDate}`);
+                      navigate(`/orders/${selectedOrderDetails.id}?returnTo=${returnPath}`);
                     }}
                     className="gap-2"
                   >
