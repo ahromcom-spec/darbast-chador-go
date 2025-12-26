@@ -59,7 +59,7 @@ export function StaffSearchSelect({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0, maxHeight: 350 });
 
   // Fetch HR employees and salary settings staff, and match with profiles for user_id
   useEffect(() => {
@@ -70,7 +70,7 @@ export function StaffSearchSelect({
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('user_id, phone_number, full_name');
-        
+
         const phoneToUserMap = new Map<string, string>();
         profilesData?.forEach(p => {
           if (p.phone_number && p.user_id) {
@@ -93,7 +93,7 @@ export function StaffSearchSelect({
             // Try to find user_id by matching phone number in staff_name
             const phoneMatch = (s.staff_name || '').match(/09\d{9}/);
             const matchedUserId = phoneMatch ? phoneToUserMap.get(phoneMatch[0]) : null;
-            
+
             return {
               code: s.staff_code || '',
               name: s.staff_name || '',
@@ -117,7 +117,7 @@ export function StaffSearchSelect({
             if (!userId && h.phone_number) {
               userId = phoneToUserMap.get(h.phone_number) || null;
             }
-            
+
             return {
               code: h.phone_number || '',
               name: h.full_name || '',
@@ -170,18 +170,18 @@ export function StaffSearchSelect({
 
   const filteredStaff = useMemo(() => {
     // First filter out excluded codes (but allow current value)
-    const availableStaff = allStaff.filter(staff => 
+    const availableStaff = allStaff.filter(staff =>
       staff.code === value || !excludeCodes.includes(staff.code)
     );
-    
+
     if (!search.trim()) return availableStaff;
-    
+
     const searchLower = search.toLowerCase().trim();
     return availableStaff.filter(staff => {
       const code = staff.code.toLowerCase();
       const name = staff.name.toLowerCase();
       const fullCode = staff.fullCode.toLowerCase();
-      
+
       return (
         code.includes(searchLower) ||
         name.includes(searchLower) ||
@@ -206,37 +206,76 @@ export function StaffSearchSelect({
     onValueChange('', '');
   };
 
-  // Update position when opening
-  useEffect(() => {
-    if (open && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const dropdownHeight = 350; // Approximate height
-      const spaceAbove = rect.top;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      
-      // Prefer showing above if there's more space or not enough space below
-      const showAbove = spaceAbove > spaceBelow || spaceBelow < dropdownHeight;
-      
-      setPosition({
-        top: showAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
-        left: rect.left,
-        width: Math.max(rect.width, 320)
-      });
-      
-      // Focus search input
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 10);
+  const updatePosition = () => {
+    if (!triggerRef.current) return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+
+    const VIEWPORT_MARGIN = 8;
+    const OFFSET = 6;
+    const MAX_HEIGHT = Math.min(350, window.innerHeight - VIEWPORT_MARGIN * 2);
+
+    const MIN_WIDTH = 320;
+    const width = Math.max(rect.width, MIN_WIDTH);
+
+    const isRTL =
+      document.documentElement.dir === 'rtl' ||
+      !!triggerRef.current.closest('[dir="rtl"]');
+
+    let left = isRTL ? rect.right - width : rect.left;
+    left = Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(left, window.innerWidth - width - VIEWPORT_MARGIN)
+    );
+
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+
+    const openBelow = spaceBelow >= MAX_HEIGHT || spaceBelow >= spaceAbove;
+    let top = openBelow ? rect.bottom + OFFSET : rect.top - MAX_HEIGHT - OFFSET;
+    top = Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(top, window.innerHeight - MAX_HEIGHT - VIEWPORT_MARGIN)
+    );
+
+    setPosition({ top, left, width, maxHeight: MAX_HEIGHT });
+  };
+
+  const handleToggle = () => {
+    if (open) {
+      setOpen(false);
+      return;
     }
+    updatePosition();
+    setOpen(true);
+  };
+
+  // Focus the search input when opened
+  useEffect(() => {
+    if (!open) return;
+    const t = window.setTimeout(() => searchInputRef.current?.focus(), 0);
+    return () => window.clearTimeout(t);
+  }, [open]);
+
+  // Keep dropdown anchored when any scroll happens (including table scroll) and on resize
+  useEffect(() => {
+    if (!open) return;
+    const handler = () => updatePosition();
+    window.addEventListener('resize', handler);
+    window.addEventListener('scroll', handler, true);
+    return () => {
+      window.removeEventListener('resize', handler);
+      window.removeEventListener('scroll', handler, true);
+    };
   }, [open]);
 
   // Handle click outside
   useEffect(() => {
     if (!open) return;
-    
+
     const handleClickOutside = (e: MouseEvent) => {
       if (
-        dropdownRef.current && 
+        dropdownRef.current &&
         !dropdownRef.current.contains(e.target as Node) &&
         triggerRef.current &&
         !triggerRef.current.contains(e.target as Node)
@@ -244,7 +283,7 @@ export function StaffSearchSelect({
         setOpen(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
@@ -256,7 +295,7 @@ export function StaffSearchSelect({
         variant="outline"
         role="combobox"
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
+        onClick={handleToggle}
         className="w-full justify-between bg-white/50 hover:bg-white/70 text-right min-w-[180px]"
       >
         <span className="truncate flex-1 text-right">
@@ -273,76 +312,77 @@ export function StaffSearchSelect({
           <User className="h-4 w-4 shrink-0 opacity-50" />
         )}
       </Button>
-      
-      {open && createPortal(
-        <div
-          ref={dropdownRef}
-          className="fixed bg-background border rounded-lg shadow-xl overflow-hidden"
-          style={{
-            top: position.top,
-            left: position.left,
-            width: position.width,
-            zIndex: 99999,
-            maxHeight: '350px'
-          }}
-          dir="rtl"
-        >
-          <div className="p-3 border-b bg-background">
-            <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                ref={searchInputRef}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="جستجو با نام یا کد پرسنل..."
-                className="pr-10 text-sm"
-              />
+
+      {open && position.width > 0 &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className="fixed bg-background border rounded-lg shadow-xl overflow-hidden"
+            style={{
+              top: position.top,
+              left: position.left,
+              width: position.width,
+              zIndex: 99999,
+              maxHeight: position.maxHeight,
+            }}
+            dir="rtl"
+          >
+            <div className="p-3 border-b bg-background">
+              <div className="relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  ref={searchInputRef}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="جستجو با نام یا کد پرسنل..."
+                  className="pr-10 text-sm"
+                />
+              </div>
             </div>
-          </div>
-          <ScrollArea className="max-h-[280px]">
-            {loading ? (
-              <div className="py-6 flex items-center justify-center text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin ml-2" />
-                <span>در حال بارگذاری...</span>
-              </div>
-            ) : sortedStaff.length === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                پرسنلی یافت نشد
-              </div>
-            ) : (
-              <div className="p-1 bg-background">
-                {sortedStaff.map((staff) => (
-                  <button
-                    key={staff.code}
-                    type="button"
-                    onClick={() => handleSelect(staff)}
-                    className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer ${
-                      value === staff.code ? 'bg-amber-100 dark:bg-amber-900/30' : ''
-                    }`}
-                  >
-                    <div className="font-medium flex items-center gap-2">
-                      <span className={`font-bold text-xs px-1.5 py-0.5 rounded ${
-                        staff.source === 'salary' 
-                          ? 'text-green-600 bg-green-100 dark:bg-green-900/30' 
-                          : staff.source === 'hr'
-                          ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
-                          : 'text-amber-600 bg-amber-100 dark:bg-amber-900/30'
-                      }`}>
-                        {staff.code}
-                      </span>
-                      <span>{staff.name}</span>
-                      {staff.fullCode && staff.fullCode !== staff.code && (
-                        <span className="text-xs text-muted-foreground">({staff.fullCode})</span>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </div>,
-        document.body
-      )}
+            <ScrollArea className="max-h-[280px]">
+              {loading ? (
+                <div className="py-6 flex items-center justify-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin ml-2" />
+                  <span>در حال بارگذاری...</span>
+                </div>
+              ) : sortedStaff.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  پرسنلی یافت نشد
+                </div>
+              ) : (
+                <div className="p-1 bg-background">
+                  {sortedStaff.map((staff) => (
+                    <button
+                      key={staff.code}
+                      type="button"
+                      onClick={() => handleSelect(staff)}
+                      className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer ${
+                        value === staff.code ? 'bg-amber-100 dark:bg-amber-900/30' : ''
+                      }`}
+                    >
+                      <div className="font-medium flex items-center gap-2">
+                        <span className={`font-bold text-xs px-1.5 py-0.5 rounded ${
+                          staff.source === 'salary'
+                            ? 'text-green-600 bg-green-100 dark:bg-green-900/30'
+                            : staff.source === 'hr'
+                              ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
+                              : 'text-amber-600 bg-amber-100 dark:bg-amber-900/30'
+                        }`}>
+                          {staff.code}
+                        </span>
+                        <span>{staff.name}</span>
+                        {staff.fullCode && staff.fullCode !== staff.code && (
+                          <span className="text-xs text-muted-foreground">({staff.fullCode})</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
