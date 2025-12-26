@@ -2733,12 +2733,13 @@ export default function DailyReportModule() {
                   </Button>
                 )}
                 <Button
-                  variant="ghost"
-                  size="icon"
+                  variant="destructive"
+                  size="default"
                   onClick={() => setOrderDetailsDialogOpen(false)}
-                  className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive"
+                  className="gap-2 px-4"
                 >
                   <X className="h-5 w-5" />
+                  بستن
                 </Button>
               </div>
             </div>
