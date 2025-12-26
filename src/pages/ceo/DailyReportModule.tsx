@@ -197,6 +197,57 @@ export default function DailyReportModule() {
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
 
+  // LocalStorage key for backup
+  const getLocalStorageKey = useCallback(() => {
+    const dateStr = reportDate.toISOString().split('T')[0];
+    return `daily_report_backup_${user?.id}_${dateStr}`;
+  }, [reportDate, user]);
+
+  // Save to localStorage as backup
+  const saveToLocalStorage = useCallback(() => {
+    if (!user) return;
+    try {
+      const backupData = {
+        orderReports,
+        staffReports,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem(getLocalStorageKey(), JSON.stringify(backupData));
+    } catch (e) {
+      console.error('Error saving to localStorage:', e);
+    }
+  }, [orderReports, staffReports, user, getLocalStorageKey]);
+
+  // Load from localStorage backup
+  const loadFromLocalStorage = useCallback(() => {
+    if (!user) return null;
+    try {
+      const data = localStorage.getItem(getLocalStorageKey());
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.error('Error loading from localStorage:', e);
+    }
+    return null;
+  }, [user, getLocalStorageKey]);
+
+  // Clear localStorage backup after successful database save
+  const clearLocalStorageBackup = useCallback(() => {
+    if (!user) return;
+    try {
+      localStorage.removeItem(getLocalStorageKey());
+    } catch (e) {
+      console.error('Error clearing localStorage backup:', e);
+    }
+  }, [user, getLocalStorageKey]);
+
+  // Save to localStorage on every change (immediate)
+  useEffect(() => {
+    if (isInitialLoadRef.current) return;
+    saveToLocalStorage();
+  }, [orderReports, staffReports, saveToLocalStorage]);
+
   useEffect(() => {
     fetchOrders();
     fetchStaffMembers();
@@ -336,13 +387,17 @@ export default function DailyReportModule() {
         if (insertStaffError) throw insertStaffError;
       }
 
+      // Clear localStorage backup after successful database save
+      clearLocalStorageBackup();
+      
       setAutoSaveStatus('saved');
       setTimeout(() => setAutoSaveStatus('idle'), 2000);
     } catch (error) {
       console.error('Auto-save error:', error);
+      // Data is still safe in localStorage
       setAutoSaveStatus('idle');
     }
-  }, [user, loading, reportDate, existingReportId, orderReports, staffReports]);
+  }, [user, loading, reportDate, existingReportId, orderReports, staffReports, clearLocalStorageBackup]);
 
   // Auto-save with debounce when data changes
   useEffect(() => {
@@ -357,10 +412,10 @@ export default function DailyReportModule() {
       clearTimeout(autoSaveTimerRef.current);
     }
 
-    // Set new timer for auto-save (debounce 2 seconds)
+    // Set new timer for auto-save (debounce 1 second for faster saving)
     autoSaveTimerRef.current = setTimeout(() => {
       performAutoSave();
-    }, 2000);
+    }, 1000);
 
     return () => {
       if (autoSaveTimerRef.current) {
@@ -724,6 +779,12 @@ export default function DailyReportModule() {
       setLoading(true);
       const dateStr = reportDate.toISOString().split('T')[0];
 
+      // First check localStorage for unsaved backup data
+      const localBackup = loadFromLocalStorage();
+      const hasLocalBackup = localBackup && 
+        ((localBackup.orderReports && localBackup.orderReports.some((r: any) => r.order_id)) ||
+         (localBackup.staffReports && localBackup.staffReports.length > 0));
+
       const isManager = await isManagerUser(user.id);
 
       let reportIdToLoad: string | null = null;
@@ -868,47 +929,83 @@ export default function DailyReportModule() {
         }
 
         setStaffReports(normalizedStaff);
+        
+        // Merge with localStorage backup if exists and is newer
+        if (hasLocalBackup && localBackup.savedAt) {
+          const backupTime = new Date(localBackup.savedAt).getTime();
+          const oneMinuteAgo = Date.now() - 60000;
+          
+          // If backup is recent (within 1 minute), it might have unsaved changes
+          if (backupTime > oneMinuteAgo) {
+            // Check if backup has more data than database
+            const backupOrdersWithData = (localBackup.orderReports || []).filter((r: any) => r.order_id);
+            const dbOrdersCount = orderData?.length || 0;
+            
+            if (backupOrdersWithData.length > dbOrdersCount) {
+              // Restore from backup - it has more data
+              setOrderReports(localBackup.orderReports);
+              setStaffReports(localBackup.staffReports);
+              toast.success('داده‌های ذخیره نشده بازیابی شدند');
+            }
+          }
+        }
       } else {
         setExistingReportId(null);
-        setOrderReports([
-          {
-            order_id: '',
-            activity_description: '',
-            service_details: '',
-            team_name: '',
-            notes: '',
-            row_color: ROW_COLORS[0].value,
-          },
-        ]);
-        setStaffReports([
-          {
-            staff_user_id: null,
-            staff_name: 'کارت صندوق اهرم',
-            work_status: 'کارکرده',
-            overtime_hours: 0,
-            amount_received: 0,
-            receiving_notes: '',
-            amount_spent: 0,
-            spending_notes: '',
-            notes: '',
-            is_cash_box: true,
-          },
-          {
-            staff_user_id: null,
-            staff_name: '',
-            work_status: 'غایب',
-            overtime_hours: 0,
-            amount_received: 0,
-            receiving_notes: '',
-            amount_spent: 0,
-            spending_notes: '',
-            notes: '',
-            is_cash_box: false,
-          },
-        ]);
+        
+        // Check if there's a localStorage backup to restore
+        if (hasLocalBackup) {
+          setOrderReports(localBackup.orderReports);
+          setStaffReports(localBackup.staffReports);
+          toast.success('داده‌های ذخیره نشده قبلی بازیابی شدند');
+        } else {
+          setOrderReports([
+            {
+              order_id: '',
+              activity_description: '',
+              service_details: '',
+              team_name: '',
+              notes: '',
+              row_color: ROW_COLORS[0].value,
+            },
+          ]);
+          setStaffReports([
+            {
+              staff_user_id: null,
+              staff_name: 'کارت صندوق اهرم',
+              work_status: 'کارکرده',
+              overtime_hours: 0,
+              amount_received: 0,
+              receiving_notes: '',
+              amount_spent: 0,
+              spending_notes: '',
+              notes: '',
+              is_cash_box: true,
+            },
+            {
+              staff_user_id: null,
+              staff_name: '',
+              work_status: 'غایب',
+              overtime_hours: 0,
+              amount_received: 0,
+              receiving_notes: '',
+              amount_spent: 0,
+              spending_notes: '',
+              notes: '',
+              is_cash_box: false,
+            },
+          ]);
+        }
       }
     } catch (error) {
       console.error('Error fetching report:', error);
+      
+      // On error, try to restore from localStorage
+      const localBackup = loadFromLocalStorage();
+      if (localBackup) {
+        setOrderReports(localBackup.orderReports || []);
+        setStaffReports(localBackup.staffReports || []);
+        toast.info('داده‌ها از حافظه محلی بازیابی شدند');
+      }
     } finally {
       setLoading(false);
     }
