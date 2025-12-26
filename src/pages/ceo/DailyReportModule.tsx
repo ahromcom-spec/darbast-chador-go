@@ -2917,13 +2917,13 @@ export default function DailyReportModule() {
                         </p>
                       </div>
                       
-                      {/* توضیحات سفارش */}
-                      <div className="p-3 bg-muted/50 rounded-lg border">
-                        <span className="text-xs text-muted-foreground block mb-1 font-medium">توضیحات سفارش</span>
-                        <p className="text-sm whitespace-pre-wrap">
-                          {selectedOrderDetails.notes || parsedNotes?.description || parsedNotes?.additional_notes || 'ثبت نشده'}
-                        </p>
-                      </div>
+                      {/* توضیحات سفارش - فقط نمایش متن واقعی، نه JSON خام */}
+                      {parsedNotes?.description && typeof parsedNotes.description === 'string' && !parsedNotes.description.includes('{') && (
+                        <div className="p-3 bg-muted/50 rounded-lg border">
+                          <span className="text-xs text-muted-foreground block mb-1 font-medium">توضیحات سفارش</span>
+                          <p className="text-sm whitespace-pre-wrap">{parsedNotes.description}</p>
+                        </div>
+                      )}
                       
                       {/* یادداشت‌های اضافی */}
                       {parsedNotes?.notes && (
