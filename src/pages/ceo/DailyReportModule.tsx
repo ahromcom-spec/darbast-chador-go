@@ -1959,6 +1959,7 @@ export default function DailyReportModule() {
                             >
                               سفارش مشتری را انتخاب کنید
                             </TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">مشخصات سفارش</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">شرح فعالیت امروز و ابعاد</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">اکیپ</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">توضیحات</TableHead>
@@ -1995,6 +1996,34 @@ export default function DailyReportModule() {
                                       </Button>
                                     )}
                                   </div>
+                                </TableCell>
+                                <TableCell className="border border-blue-200">
+                                  {(() => {
+                                    const selectedOrder = orders.find(o => o.id === row.order_id);
+                                    if (!selectedOrder) return <span className="text-muted-foreground text-sm">ابتدا سفارش انتخاب کنید</span>;
+                                    return (
+                                      <div className="text-xs space-y-1 min-w-[25ch] p-2 bg-background/50 rounded border border-blue-100">
+                                        {selectedOrder.subcategory_name && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium text-blue-700">نوع خدمات:</span>
+                                            <span>{selectedOrder.subcategory_name}</span>
+                                          </div>
+                                        )}
+                                        {selectedOrder.address && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium text-blue-700">آدرس:</span>
+                                            <span className="line-clamp-2">{selectedOrder.address}</span>
+                                          </div>
+                                        )}
+                                        {selectedOrder.activity_description && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium text-blue-700">شرح محل:</span>
+                                            <span className="line-clamp-2">{selectedOrder.activity_description}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
                                   <AutoResizeTextarea
