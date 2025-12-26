@@ -34,6 +34,7 @@ import { StaffSalarySettingsTab } from '@/components/ceo/StaffSalarySettingsTab'
 import { ExcelImportDialog } from '@/components/ceo/ExcelImportDialog';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
+import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
 
 interface SavedReport {
   id: string;
@@ -1511,7 +1512,7 @@ export default function DailyReportModule() {
   };
 
   // Fetch full order details for dialog
-  const [orderMedia, setOrderMedia] = useState<Array<{id: string; file_path: string; file_type: string; url: string}>>([]);
+  const [orderMedia, setOrderMedia] = useState<Array<{id: string; file_path: string; file_type: string; url: string; mime_type?: string}>>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   
   const fetchOrderDetails = async (orderId: string) => {
@@ -1623,10 +1624,10 @@ export default function DailyReportModule() {
         paymentsInfo = paymentsData;
       }
 
-      // Fetch order media (images and videos)
+      // Fetch order media (images and videos) with mime_type for proper video handling
       const { data: mediaData } = await supabase
         .from('project_media')
-        .select('id, file_path, file_type, created_at')
+        .select('id, file_path, file_type, mime_type, created_at')
         .eq('project_id', orderId)
         .order('created_at', { ascending: true });
 
@@ -1643,6 +1644,8 @@ export default function DailyReportModule() {
           })
         );
         setOrderMedia(mediaWithUrls.filter(m => m.url));
+      } else {
+        setOrderMedia([]);
       }
 
       setSelectedOrderDetails({
@@ -3080,39 +3083,18 @@ export default function DailyReportModule() {
                         </div>
                       </div>
 
-                      {orderMedia.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {orderMedia.map((media) => (
-                            <div key={media.id} className="relative aspect-video rounded-lg overflow-hidden border bg-black/5 group">
-                              {media.file_type === 'image' ? (
-                                <img
-                                  src={media.url}
-                                  alt="تصویر سفارش"
-                                  className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                  onClick={() => window.open(media.url, '_blank')}
-                                />
-                              ) : (
-                                <div className="relative w-full h-full">
-                                  <video
-                                    src={media.url}
-                                    className="w-full h-full object-cover"
-                                    controls
-                                  />
-                                  <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                                    <Play className="h-3 w-3" />
-                                    ویدیو
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground text-sm border-2 border-dashed rounded-lg">
-                          <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          هنوز تصویر یا ویدیویی برای این سفارش ثبت نشده است
-                        </div>
-                      )}
+                      {/* Use centralized MediaGallery component */}
+                      <MediaGallery
+                        media={orderMedia.map(m => ({
+                          id: m.id,
+                          file_path: m.file_path,
+                          file_type: m.file_type,
+                          mime_type: m.mime_type,
+                          url: m.url
+                        } as MediaItem))}
+                        layout="grid"
+                        emptyMessage="هنوز تصویر یا ویدیویی برای این سفارش ثبت نشده است"
+                      />
                     </div>
                   </div>
                 );
