@@ -142,6 +142,15 @@ const toDbWorkStatus = (value: unknown): 'حاضر' | 'غایب' => {
 const fromDbWorkStatus = (value: unknown): 'کارکرده' | 'غایب' => {
   return value === 'حاضر' ? 'کارکرده' : 'غایب';
 };
+
+// تبدیل تاریخ به فرمت YYYY-MM-DD با استفاده از تاریخ محلی (نه UTC)
+// این تابع مهم است چون toISOString() از UTC استفاده می‌کند و ممکن است تاریخ را اشتباه نشان دهد
+const toLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 export default function DailyReportModule() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -212,7 +221,7 @@ export default function DailyReportModule() {
 
   // LocalStorage key for backup
   const getLocalStorageKey = useCallback(() => {
-    const dateStr = reportDate.toISOString().split('T')[0];
+    const dateStr = toLocalDateString(reportDate);
     return `daily_report_backup_${user?.id}_${dateStr}`;
   }, [reportDate, user]);
 
@@ -334,7 +343,7 @@ export default function DailyReportModule() {
 
     try {
       setAutoSaveStatus('saving');
-      const dateStr = reportDate.toISOString().split('T')[0];
+      const dateStr = toLocalDateString(reportDate);
 
       let reportId = existingReportId;
 
@@ -804,7 +813,7 @@ export default function DailyReportModule() {
 
     try {
       setLoading(true);
-      const dateStr = reportDate.toISOString().split('T')[0];
+      const dateStr = toLocalDateString(reportDate);
 
       // First check localStorage for unsaved backup data
       const localBackup = loadFromLocalStorage();
@@ -1217,7 +1226,7 @@ export default function DailyReportModule() {
 
     try {
       setSaving(true);
-      const dateStr = reportDate.toISOString().split('T')[0];
+      const dateStr = toLocalDateString(reportDate);
 
       let reportId = existingReportId;
 
