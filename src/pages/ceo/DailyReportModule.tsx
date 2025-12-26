@@ -815,11 +815,9 @@ export default function DailyReportModule() {
       setLoading(true);
       const dateStr = toLocalDateString(reportDate);
 
-      // First check localStorage for unsaved backup data
-      const localBackup = loadFromLocalStorage();
-      const hasLocalBackup = localBackup && 
-        ((localBackup.orderReports && localBackup.orderReports.some((r: any) => r.order_id)) ||
-         (localBackup.staffReports && localBackup.staffReports.length > 0));
+      // مهم: وقتی تاریخ عوض می‌شود، نباید داده‌های localStorage تاریخ قبل را بخوانیم
+      // فقط داده‌های دیتابیس برای این تاریخ خاص لود شود
+      // localStorage فقط برای بازیابی داده‌های ذخیره‌نشده همین تاریخ استفاده می‌شود
 
       const isManager = await isManagerUser(user.id);
 
@@ -966,84 +964,108 @@ export default function DailyReportModule() {
 
         setStaffReports(normalizedStaff);
         
-        // Merge with localStorage backup if exists and is newer
-        if (hasLocalBackup && localBackup.savedAt) {
-          const backupTime = new Date(localBackup.savedAt).getTime();
-          const oneMinuteAgo = Date.now() - 60000;
-          
-          // If backup is recent (within 1 minute), it might have unsaved changes
-          if (backupTime > oneMinuteAgo) {
-            // Check if backup has more data than database
-            const backupOrdersWithData = (localBackup.orderReports || []).filter((r: any) => r.order_id);
-            const dbOrdersCount = orderData?.length || 0;
-            
-            if (backupOrdersWithData.length > dbOrdersCount) {
-              // Restore from backup - it has more data
-              setOrderReports(localBackup.orderReports);
-              setStaffReports(localBackup.staffReports);
-              toast.success('داده‌های ذخیره نشده بازیابی شدند');
-            }
-          }
-        }
-      } else {
-        setExistingReportId(null);
+        // پس از لود از دیتابیس، localStorage این تاریخ را پاک کن
+        // تا داده‌های قدیمی با داده‌های جدید دیتابیس قاطی نشوند
+        clearLocalStorageBackup();
         
-        // Check if there's a localStorage backup to restore
-        if (hasLocalBackup) {
-          setOrderReports(localBackup.orderReports);
-          setStaffReports(localBackup.staffReports);
-          toast.success('داده‌های ذخیره نشده قبلی بازیابی شدند');
-        } else {
-          setOrderReports([
-            {
-              order_id: '',
-              activity_description: '',
-              service_details: '',
-              team_name: '',
-              notes: '',
-              row_color: ROW_COLORS[0].value,
-            },
-          ]);
-          setStaffReports([
-            {
-              staff_user_id: null,
-              staff_name: 'کارت صندوق اهرم',
-              work_status: 'کارکرده',
-              overtime_hours: 0,
-              amount_received: 0,
-              receiving_notes: '',
-              amount_spent: 0,
-              spending_notes: '',
-              notes: '',
-              is_cash_box: true,
-            },
-            {
-              staff_user_id: null,
-              staff_name: '',
-              work_status: 'غایب',
-              overtime_hours: 0,
-              amount_received: 0,
-              receiving_notes: '',
-              amount_spent: 0,
-              spending_notes: '',
-              notes: '',
-              is_cash_box: false,
-            },
-          ]);
-        }
+        // بعد از لود موفق، اجازه auto-save بده
+        setTimeout(() => {
+          isInitialLoadRef.current = false;
+        }, 500);
+      } else {
+        // گزارشی برای این تاریخ در دیتابیس وجود ندارد
+        // یک فرم خالی ایجاد کن (localStorage استفاده نشود چون تاریخ جدید است)
+        setExistingReportId(null);
+        clearLocalStorageBackup(); // پاک کردن localStorage این تاریخ
+        
+        setOrderReports([
+          {
+            order_id: '',
+            activity_description: '',
+            service_details: '',
+            team_name: '',
+            notes: '',
+            row_color: ROW_COLORS[0].value,
+          },
+        ]);
+        setStaffReports([
+          {
+            staff_user_id: null,
+            staff_name: 'کارت صندوق اهرم',
+            work_status: 'کارکرده',
+            overtime_hours: 0,
+            amount_received: 0,
+            receiving_notes: '',
+            amount_spent: 0,
+            spending_notes: '',
+            notes: '',
+            is_cash_box: true,
+          },
+          {
+            staff_user_id: null,
+            staff_name: '',
+            work_status: 'غایب',
+            overtime_hours: 0,
+            amount_received: 0,
+            receiving_notes: '',
+            amount_spent: 0,
+            spending_notes: '',
+            notes: '',
+            is_cash_box: false,
+          },
+        ]);
+        
+        // بعد از لود موفق، اجازه auto-save بده
+        setTimeout(() => {
+          isInitialLoadRef.current = false;
+        }, 500);
       }
     } catch (error) {
       console.error('Error fetching report:', error);
-      
-      // On error, try to restore from localStorage
-      const localBackup = loadFromLocalStorage();
-      if (localBackup) {
-        setOrderReports(localBackup.orderReports || []);
-        setStaffReports(localBackup.staffReports || []);
-        toast.info('داده‌ها از حافظه محلی بازیابی شدند');
-      }
+      // در صورت خطا، فرم خالی نشان بده (نه localStorage)
+      setOrderReports([
+        {
+          order_id: '',
+          activity_description: '',
+          service_details: '',
+          team_name: '',
+          notes: '',
+          row_color: ROW_COLORS[0].value,
+        },
+      ]);
+      setStaffReports([
+        {
+          staff_user_id: null,
+          staff_name: 'کارت صندوق اهرم',
+          work_status: 'کارکرده',
+          overtime_hours: 0,
+          amount_received: 0,
+          receiving_notes: '',
+          amount_spent: 0,
+          spending_notes: '',
+          notes: '',
+          is_cash_box: true,
+        },
+        {
+          staff_user_id: null,
+          staff_name: '',
+          work_status: 'غایب',
+          overtime_hours: 0,
+          amount_received: 0,
+          receiving_notes: '',
+          amount_spent: 0,
+          spending_notes: '',
+          notes: '',
+          is_cash_box: false,
+        },
+      ]);
+      toast.error('خطا در دریافت گزارش');
     } finally {
       setLoading(false);
+      // بعد از اتمام لود، اجازه auto-save بده
+      setTimeout(() => {
+        isInitialLoadRef.current = false;
+      }, 500);
     }
   };
 
