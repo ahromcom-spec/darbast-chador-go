@@ -210,7 +210,7 @@ export function AssistantAvatar() {
   const FOOTER_HEIGHT = 60; // ارتفاع فوتر برای جلوگیری از overlap
   
   // Avatar position state - draggable within bottom-left quarter
-  const [avatarPosition, setAvatarPosition] = useState({ x: 16, y: 0 }); // y will be calculated
+  const [avatarPosition, setAvatarPosition] = useState({ x: 16, y: 80 }); // Initialize with proper bottom offset
   const [isDraggingAvatar, setIsDraggingAvatar] = useState(false);
   const [avatarDragOffset, setAvatarDragOffset] = useState({ x: 0, y: 0 });
   
