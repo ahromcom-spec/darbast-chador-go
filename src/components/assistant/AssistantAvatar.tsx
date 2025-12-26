@@ -203,12 +203,18 @@ export function AssistantAvatar() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   
-  // موقعیت ثابت آواتار - چپ-پایین با فاصله از footer
-  // فاصله از پایین: 80px (بالای footer)، فاصله از چپ: 16px
-  const AVATAR_BOTTOM_OFFSET = 80; // فاصله از پایین viewport
-  const AVATAR_LEFT_OFFSET = 16;   // فاصله از چپ
+  // موقعیت آواتار - قابل جابجایی در یک‌چهارم چپ-پایین صفحه
+  // Avatar draggable in bottom-left quarter only
+  const AVATAR_SIZE = 74; // اندازه آواتار
+  const AVATAR_PADDING = 16; // حداقل فاصله از لبه‌ها
+  const FOOTER_HEIGHT = 60; // ارتفاع فوتر برای جلوگیری از overlap
   
-  // Avatar uses fixed positioning, no need for drag state
+  // Avatar position state - draggable within bottom-left quarter
+  const [avatarPosition, setAvatarPosition] = useState({ x: 16, y: 0 }); // y will be calculated
+  const [isDraggingAvatar, setIsDraggingAvatar] = useState(false);
+  const [avatarDragOffset, setAvatarDragOffset] = useState({ x: 0, y: 0 });
+  
+  // Chat panel state
   const [chatPosition, setChatPosition] = useState({ x: 24, y: 100 });
   const [isDraggingChat, setIsDraggingChat] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -226,7 +232,7 @@ export function AssistantAvatar() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const avatarRef = useRef<HTMLButtonElement>(null);
+  const avatarRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
   
   const auth = useAuth();
@@ -341,10 +347,17 @@ export function AssistantAvatar() {
     }
   }, [isOpen]);
 
-  // Handle viewport resize to clamp chat position
+  // Handle viewport resize to clamp positions
   useEffect(() => {
-    const clampChatPosition = () => {
+    const clampPositions = () => {
       const vp = getViewportSize();
+      
+      // Clamp avatar position to bottom-left quarter
+      const maxAvatarX = vp.width / 2 - AVATAR_SIZE - AVATAR_PADDING;
+      setAvatarPosition(prev => ({
+        x: Math.max(AVATAR_PADDING, Math.min(maxAvatarX, prev.x)),
+        y: Math.max(FOOTER_HEIGHT, Math.min(vp.height / 2 - AVATAR_SIZE, prev.y))
+      }));
       
       // Only clamp chat position if open
       if (isOpen) {
@@ -358,17 +371,20 @@ export function AssistantAvatar() {
     // Listen to visualViewport changes (handles zoom)
     const viewport = window.visualViewport;
     if (viewport) {
-      viewport.addEventListener('resize', clampChatPosition);
+      viewport.addEventListener('resize', clampPositions);
     }
     
     // Also listen to window resize
-    window.addEventListener('resize', clampChatPosition);
+    window.addEventListener('resize', clampPositions);
+    
+    // Initialize avatar position on mount
+    clampPositions();
     
     return () => {
       if (viewport) {
-        viewport.removeEventListener('resize', clampChatPosition);
+        viewport.removeEventListener('resize', clampPositions);
       }
-      window.removeEventListener('resize', clampChatPosition);
+      window.removeEventListener('resize', clampPositions);
     };
   }, [isOpen, chatSize]);
 
@@ -462,8 +478,76 @@ export function AssistantAvatar() {
     handleResizeStart(touch.clientX, touch.clientY);
   };
 
-  // Avatar click handler - no drag functionality needed since position is fixed
+  // Avatar drag handlers - constrained to bottom-left quarter
+  const avatarDragStartPos = useRef({ x: 0, y: 0 });
+  const didAvatarDrag = useRef(false);
+  
+  const handleAvatarDragStart = useCallback((clientX: number, clientY: number) => {
+    setIsDraggingAvatar(true);
+    didAvatarDrag.current = false;
+    avatarDragStartPos.current = { x: clientX, y: clientY };
+    const vp = getViewportSize();
+    // avatarPosition.y is from bottom, convert to screen coordinates
+    const avatarTop = vp.height - avatarPosition.y - AVATAR_SIZE - 20; // 20 for label
+    setAvatarDragOffset({
+      x: clientX - avatarPosition.x,
+      y: clientY - avatarTop
+    });
+  }, [avatarPosition]);
+
+  const handleAvatarDragMove = useCallback((clientX: number, clientY: number) => {
+    if (!isDraggingAvatar) return;
+    
+    // Check if actually moved (more than 5px)
+    const dx = clientX - avatarDragStartPos.current.x;
+    const dy = clientY - avatarDragStartPos.current.y;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      didAvatarDrag.current = true;
+    }
+    
+    const vp = getViewportSize();
+    // Constrain to bottom-left quarter
+    const maxX = vp.width / 2 - AVATAR_SIZE - AVATAR_PADDING; // Left half only
+    const minY = vp.height / 2; // Bottom half only (Y from top)
+    
+    const newX = clientX - avatarDragOffset.x;
+    const newYFromTop = clientY - avatarDragOffset.y;
+    
+    // Clamp X to left quarter
+    const clampedX = Math.max(AVATAR_PADDING, Math.min(maxX, newX));
+    // Clamp Y to bottom half (convert to bottom-based)
+    const clampedYFromTop = Math.max(minY, Math.min(vp.height - FOOTER_HEIGHT - AVATAR_SIZE - 20, newYFromTop));
+    const clampedYFromBottom = vp.height - clampedYFromTop - AVATAR_SIZE - 20;
+    
+    setAvatarPosition({
+      x: clampedX,
+      y: Math.max(FOOTER_HEIGHT, clampedYFromBottom)
+    });
+  }, [isDraggingAvatar, avatarDragOffset]);
+
+  const handleAvatarDragEnd = useCallback(() => {
+    setIsDraggingAvatar(false);
+  }, []);
+
+  // Avatar mouse/touch handlers
+  const handleAvatarMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleAvatarDragStart(e.clientX, e.clientY);
+  };
+
+  const handleAvatarTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleAvatarDragStart(touch.clientX, touch.clientY);
+  };
+
+  const handleAvatarTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleAvatarDragMove(touch.clientX, touch.clientY);
+  };
+
+  // Avatar click handler
   const handleAvatarClick = () => {
+    if (didAvatarDrag.current) return; // Don't open if was dragging
     const vp = getViewportSize();
     // Open in fullscreen by default
     setChatPosition({ x: 0, y: 0 });
@@ -488,30 +572,36 @@ export function AssistantAvatar() {
     handleChatDragMove(touch.clientX, touch.clientY);
   };
 
-  // Global mouse/touch move and up for chat panel
+  // Global mouse/touch move and up for chat panel and avatar
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDraggingAvatar) handleAvatarDragMove(e.clientX, e.clientY);
       if (isDraggingChat) handleChatDragMove(e.clientX, e.clientY);
       if (isResizing) handleResizeMove(e.clientX, e.clientY);
     };
 
     const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (isDraggingAvatar && e.touches[0]) {
+        handleAvatarDragMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
       if (isResizing && e.touches[0]) {
         handleResizeMove(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
 
     const handleGlobalMouseUp = () => {
+      handleAvatarDragEnd();
       handleDragEnd();
       handleResizeEnd();
     };
 
     const handleGlobalTouchEnd = () => {
+      handleAvatarDragEnd();
       handleDragEnd();
       handleResizeEnd();
     };
 
-    if (isDraggingChat || isResizing) {
+    if (isDraggingAvatar || isDraggingChat || isResizing) {
       document.addEventListener('mousemove', handleGlobalMouseMove);
       document.addEventListener('touchmove', handleGlobalTouchMove);
       document.addEventListener('mouseup', handleGlobalMouseUp);
@@ -524,7 +614,7 @@ export function AssistantAvatar() {
       document.removeEventListener('mouseup', handleGlobalMouseUp);
       document.removeEventListener('touchend', handleGlobalTouchEnd);
     };
-  }, [isDraggingChat, isResizing, handleChatDragMove, handleResizeMove, handleDragEnd, handleResizeEnd]);
+  }, [isDraggingAvatar, isDraggingChat, isResizing, handleAvatarDragMove, handleAvatarDragEnd, handleChatDragMove, handleResizeMove, handleDragEnd, handleResizeEnd]);
 
   const getUserRole = useCallback(() => {
     if (!user) return 'guest';
@@ -728,25 +818,29 @@ export function AssistantAvatar() {
 
   return (
     <>
-      {/* دکمه آواتار - ثابت در چپ-پایین */}
+      {/* دکمه آواتار - قابل جابجایی در یک‌چهارم چپ-پایین */}
       <div
+        onMouseDown={handleAvatarMouseDown}
+        onTouchStart={handleAvatarTouchStart}
+        onTouchMove={handleAvatarTouchMove}
+        onClick={handleAvatarClick}
         style={{
-          left: `${AVATAR_LEFT_OFFSET}px`,
-          bottom: `${AVATAR_BOTTOM_OFFSET}px`,
+          left: `${avatarPosition.x}px`,
+          bottom: `${avatarPosition.y}px`,
         }}
         className={cn(
-          "fixed z-40 flex flex-col items-center gap-1 overflow-visible",
-          isOpen && "hidden"
+          "fixed z-40 flex flex-col items-center gap-1 overflow-visible touch-none",
+          isOpen && "hidden",
+          isDraggingAvatar ? "cursor-grabbing" : "cursor-grab"
         )}
       >
         <div className="relative overflow-visible">
-          <button
+          <div
             ref={avatarRef}
-            onClick={handleAvatarClick}
             className={cn(
               "w-[74px] h-[74px] rounded-full",
               "shadow-lg hover:shadow-2xl transition-shadow duration-300",
-              "overflow-hidden select-none bg-white cursor-pointer"
+              "overflow-hidden select-none bg-white"
             )}
             aria-label="باز کردن دستیار هوشمند"
           >
@@ -756,7 +850,7 @@ export function AssistantAvatar() {
               className="w-full h-full object-cover object-top pointer-events-none"
               draggable={false}
             />
-          </button>
+          </div>
           <span className="absolute bottom-1 -right-0.5 w-[18px] h-[18px] bg-green-500 rounded-full border-2 border-background animate-pulse" />
         </div>
         <span className="text-xs font-medium text-[#1e3a5f] bg-background/80 px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm whitespace-nowrap -mt-1">
