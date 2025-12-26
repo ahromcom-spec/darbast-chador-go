@@ -1811,14 +1811,46 @@ export default function DailyReportModule() {
 
           {/* New Report Tab */}
           <TabsContent value="new-report" className="space-y-6 mt-6">
-            {/* Date Picker */}
+            {/* Date Picker with Navigation */}
             <div className="flex items-center gap-3 justify-end">
               <Label className="text-sm font-medium">تاریخ گزارش:</Label>
-              <PersianDatePicker
-                value={reportDate.toISOString()}
-                onChange={(date) => date && setReportDate(new Date(date))}
-                timeMode="none"
-              />
+              <div className="flex items-center gap-2">
+                {/* دکمه روز بعد */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const nextDay = new Date(reportDate);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    setReportDate(nextDay);
+                  }}
+                  className="gap-1 px-3"
+                >
+                  روز بعد
+                  <span className="text-lg">←</span>
+                </Button>
+                
+                <PersianDatePicker
+                  value={reportDate.toISOString()}
+                  onChange={(date) => date && setReportDate(new Date(date))}
+                  timeMode="none"
+                />
+                
+                {/* دکمه روز قبل */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const prevDay = new Date(reportDate);
+                    prevDay.setDate(prevDay.getDate() - 1);
+                    setReportDate(prevDay);
+                  }}
+                  className="gap-1 px-3"
+                >
+                  <span className="text-lg">→</span>
+                  روز قبل
+                </Button>
+              </div>
             </div>
 
             {loading ? (
