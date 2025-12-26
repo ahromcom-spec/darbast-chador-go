@@ -50,18 +50,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     );
   },
 );
-          ref={ref}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          {...props}
-        />
-        {error && (
-          <p className="text-sm text-destructive mt-1">{error}</p>
-        )}
-      </div>
-    );
-  },
-);
 Input.displayName = "Input";
 
 export { Input };
