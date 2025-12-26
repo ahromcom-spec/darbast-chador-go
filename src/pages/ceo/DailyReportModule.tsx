@@ -1332,6 +1332,30 @@ export default function DailyReportModule() {
           console.error('Error inserting order reports:', orderError);
           throw orderError;
         }
+
+        // همچنین گزارش‌ها را در جدول order_daily_logs ذخیره کنید
+        for (const r of ordersToInsert) {
+          if (r.order_id && user?.id) {
+            const logData = {
+              order_id: r.order_id,
+              report_date: reportDate.toISOString().split('T')[0],
+              activity_description: r.activity_description || null,
+              team_name: r.team_name || null,
+              notes: r.notes || null,
+              created_by: user.id
+            };
+            
+            // استفاده از upsert برای جلوگیری از تکرار
+            const { error: logError } = await supabase
+              .from('order_daily_logs')
+              .upsert(logData, { onConflict: 'order_id,report_date' });
+            
+            if (logError) {
+              console.error('Error saving order daily log:', logError);
+              // ادامه بده حتی اگر خطا داشت
+            }
+          }
+        }
       }
 
       // Delete existing staff reports and insert new ones

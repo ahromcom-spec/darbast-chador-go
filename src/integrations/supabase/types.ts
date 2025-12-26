@@ -1346,6 +1346,50 @@ export type Database = {
           },
         ]
       }
+      order_daily_logs: {
+        Row: {
+          activity_description: string | null
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          order_id: string
+          report_date: string
+          team_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_description?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          report_date: string
+          team_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_description?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          report_date?: string
+          team_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_daily_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_messages: {
         Row: {
           audio_path: string | null
