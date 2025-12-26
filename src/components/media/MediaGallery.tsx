@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight, Image as ImageIcon, Play, X, ZoomIn, Download, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CentralizedVideoPlayer } from './CentralizedVideoPlayer';
 
 export interface MediaItem {
   id: string;
@@ -364,8 +365,10 @@ export const MediaGallery = ({
                 onClick={() => setFullscreenMedia(item)}
               >
                 {isVideo ? (
-                  <VideoPlayer
+                  <CentralizedVideoPlayer
                     src={url}
+                    filePath={item.file_path}
+                    bucket={bucket}
                     className="w-full h-full"
                     showControls={false}
                     muted
@@ -403,8 +406,10 @@ export const MediaGallery = ({
               </button>
               
               {fullscreenMedia && isMediaVideo(fullscreenMedia) ? (
-                <VideoPlayer
+                <CentralizedVideoPlayer
                   src={getMediaUrl(fullscreenMedia)}
+                  filePath={fullscreenMedia.file_path}
+                  bucket={bucket}
                   className="w-full max-h-[80vh]"
                   showControls
                   autoPlay
@@ -436,8 +441,10 @@ export const MediaGallery = ({
       
       <div className="relative bg-black/5 rounded-lg overflow-hidden">
         {isCurrentVideo ? (
-          <VideoPlayer
+          <CentralizedVideoPlayer
             src={getMediaUrl(currentMedia)}
+            filePath={currentMedia.file_path}
+            bucket={bucket}
             className="w-full max-h-64"
             showControls
           />
