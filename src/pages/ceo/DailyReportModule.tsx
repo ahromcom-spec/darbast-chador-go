@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useZoom } from '@/contexts/ZoomContext';
 import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { Button } from '@/components/ui/button';
@@ -1839,8 +1840,16 @@ export default function DailyReportModule() {
     }
   };
 
+  const { zoomLevel, isWindows } = useZoom();
+  
+  // Calculate counter-zoom to keep this page at 100%
+  const counterZoom = isWindows && zoomLevel !== 1 ? (1 / zoomLevel) : 1;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-amber-500/5">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-background via-background to-amber-500/5"
+      style={{ zoom: counterZoom }}
+    >
       <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full">
         {/* Header */}
         <ModuleHeader
