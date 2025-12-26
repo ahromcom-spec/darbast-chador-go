@@ -74,32 +74,80 @@ export const ExpertPricingRequestDialog = ({
   };
 
   const uploadMedia = async (orderId: string, files: File[]) => {
+    const uploadResults: { success: boolean; fileName: string }[] = [];
+    
     for (const file of files) {
       const fileType = file.type.startsWith('video/') ? 'video' : 'image';
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user!.id}/${orderId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileExt = file.name.split('.').pop() || (fileType === 'video' ? 'mp4' : 'jpg');
+      const safeFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const storagePath = `${user!.id}/${orderId}/${safeFileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('project-media')
-        .upload(fileName, file);
-
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        continue;
-      }
-
-      const { error: dbError } = await supabase.from('project_media').insert({
-        project_id: orderId,
-        user_id: user!.id,
-        file_path: fileName,
-        file_type: fileType,
-        file_size: file.size,
-        mime_type: file.type
+      console.log('Uploading file:', { 
+        originalName: file.name,
+        storagePath, 
+        fileType, 
+        fileSize: file.size, 
+        mimeType: file.type 
       });
 
-      if (dbError) {
-        console.error('DB error saving media:', dbError);
+      try {
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('project-media')
+          .upload(storagePath, file, {
+            contentType: file.type,
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Upload error for', file.name, ':', uploadError);
+          uploadResults.push({ success: false, fileName: file.name });
+          toast({
+            title: 'خطا در آپلود',
+            description: `آپلود فایل ${file.name} با خطا مواجه شد`,
+            variant: 'destructive'
+          });
+          continue;
+        }
+
+        console.log('Upload successful:', uploadData);
+
+        const { error: dbError } = await supabase.from('project_media').insert({
+          project_id: orderId,
+          user_id: user!.id,
+          file_path: storagePath,
+          file_type: fileType,
+          file_size: file.size,
+          mime_type: file.type
+        });
+
+        if (dbError) {
+          console.error('DB error saving media:', dbError);
+          uploadResults.push({ success: false, fileName: file.name });
+        } else {
+          console.log('Media record saved to database');
+          uploadResults.push({ success: true, fileName: file.name });
+        }
+      } catch (error) {
+        console.error('Unexpected error uploading', file.name, ':', error);
+        uploadResults.push({ success: false, fileName: file.name });
       }
+    }
+
+    // نمایش نتیجه آپلود
+    const successCount = uploadResults.filter(r => r.success).length;
+    const failCount = uploadResults.filter(r => !r.success).length;
+    
+    if (successCount > 0 && failCount === 0) {
+      toast({
+        title: '✅ آپلود موفق',
+        description: `${successCount} فایل با موفقیت آپلود شد`
+      });
+    } else if (failCount > 0 && successCount > 0) {
+      toast({
+        title: '⚠️ آپلود ناقص',
+        description: `${successCount} فایل آپلود شد، ${failCount} فایل با خطا مواجه شد`,
+        variant: 'destructive'
+      });
     }
   };
 
@@ -308,7 +356,16 @@ export const ExpertPricingRequestDialog = ({
               <ImageIcon className="h-4 w-4" />
               عکس و فیلم از محل کار
             </Label>
-            <MediaUploader onFilesChange={handleFilesChange} disableAutoUpload={true} maxImages={6} maxVideos={5} />
+            <MediaUploader 
+              onFilesChange={handleFilesChange} 
+              disableAutoUpload={true} 
+              maxImages={6} 
+              maxVideos={5}
+              maxVideoSize={100}
+            />
+            <p className="text-xs text-muted-foreground">
+              ویدیو: حداکثر 100 مگابایت - تصویر: حداکثر 10 مگابایت
+            </p>
           </div>
 
           {/* Submit Button */}
