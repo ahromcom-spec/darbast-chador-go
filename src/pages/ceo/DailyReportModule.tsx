@@ -1907,21 +1907,6 @@ export default function DailyReportModule() {
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-end">
               {/* همه در یک ردیف - سمت راست */}
               <div className="flex items-center gap-2 sm:gap-3">
-                {/* دکمه روز بعد */}
-                <Button
-                  variant="default"
-                  size="lg"
-                  onClick={() => {
-                    const nextDay = new Date(reportDate);
-                    nextDay.setDate(nextDay.getDate() + 1);
-                    setReportDate(nextDay);
-                  }}
-                  className="gap-2 px-4 sm:px-6 py-3 text-base sm:text-lg font-bold shadow-md hover:shadow-lg transition-all"
-                >
-                  <span className="text-2xl sm:text-3xl font-bold">→</span>
-                  روز بعد
-                </Button>
-                
                 {/* دکمه روز قبل */}
                 <Button
                   variant="outline"
@@ -1936,7 +1921,22 @@ export default function DailyReportModule() {
                   روز قبل
                   <span className="text-2xl sm:text-3xl font-bold">←</span>
                 </Button>
-                
+
+                {/* دکمه روز بعد */}
+                <Button
+                  variant="default"
+                  size="lg"
+                  onClick={() => {
+                    const nextDay = new Date(reportDate);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    setReportDate(nextDay);
+                  }}
+                  className="gap-2 px-4 sm:px-6 py-3 text-base sm:text-lg font-bold shadow-md hover:shadow-lg transition-all"
+                >
+                  <span className="text-2xl sm:text-3xl font-bold">→</span>
+                  روز بعد
+                </Button>
+
                 {/* تاریخ گزارش */}
                 <PersianDatePicker
                   value={reportDate.toISOString()}
