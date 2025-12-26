@@ -25,6 +25,7 @@ import OrderChat from "@/components/orders/OrderChat";
 import VoiceCall from "@/components/orders/VoiceCall";
 import CallHistory from "@/components/calls/CallHistory";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import { OrderDailyLogs } from "@/components/orders/OrderDailyLogs";
 import StaticLocationMap from "@/components/locations/StaticLocationMap";
 import {
   ArrowRight,
@@ -2003,6 +2004,9 @@ export default function OrderDetail() {
             approvedCollectionDate={approvedCollectionDate}
             approvals={approvals}
           />
+
+          {/* گزارش‌های روزانه */}
+          <OrderDailyLogs orderId={order.id} />
 
           {/* Status Messages */}
           {order.status === 'pending' && (
