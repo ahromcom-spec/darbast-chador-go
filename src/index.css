@@ -15,6 +15,27 @@
 .animate-snowfall {
   animation: snowfall linear infinite;
 }
+/* Cross-browser mobile compatibility - Edge & Firefox fix */
+html {
+  /* Consistent font sizing across all browsers */
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Prevent font scaling in landscape */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure body fills viewport consistently */
+body {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
 /* Persian RTL Design System - Inspired by traditional Persian architecture and modern construction */
 
 @layer base {
