@@ -17,25 +17,29 @@ export function PWAInstallBanner() {
   const { toast } = useToast();
   const [show, setShow] = useState(false);
   const location = useLocation();
-  // محاسبه پوزیشن پیش‌فرض - پایین سمت راست
-  const getDefaultPosition = () => {
+  // محاسبه پوزیشن پیش‌فرض - پایین‌ترین و راست‌ترین ممکن
+  const getDefaultPosition = useCallback(() => {
     const vp = getViewportSize();
     const bannerWidth = 320;
     const bannerHeight = 70;
-    // در پایین سمت راست صفحه
-    const x = vp.width - bannerWidth - 16;
-    const y = vp.height - bannerHeight - 80;
-    return { x, y };
-  };
+    const bottomMargin = 24;
+    const rightMargin = 16;
+    return { 
+      x: vp.width - bannerWidth - rightMargin, 
+      y: vp.height - bannerHeight - bottomMargin 
+    };
+  }, []);
 
-  // Drag state - شروع از سمت راست
+  // Drag state - شروع از راست‌ترین و پایین‌ترین موقعیت
   const [position, setPosition] = useState(() => {
     const vp = getViewportSize();
     const bannerWidth = 320;
     const bannerHeight = 70;
+    const bottomMargin = 24;
+    const rightMargin = 16;
     return { 
-      x: Math.max(16, vp.width - bannerWidth - 16), 
-      y: vp.height - bannerHeight - 80 
+      x: vp.width - bannerWidth - rightMargin, 
+      y: vp.height - bannerHeight - bottomMargin 
     };
   });
   const [isDragging, setIsDragging] = useState(false);
@@ -72,25 +76,25 @@ export function PWAInstallBanner() {
     setShow(shouldShow);
   }, [location.pathname, isStandalone]);
 
-  // Update position on resize
-  // Banner restricted to bottom half of screen
+  // Update position on resize - همیشه پایین‌ترین و راست‌ترین
   useEffect(() => {
     const handleResize = () => {
       const vp = getViewportSize();
-      const bannerWidth = bannerRef.current?.offsetWidth || 200;
+      const bannerWidth = bannerRef.current?.offsetWidth || 320;
       const bannerHeight = bannerRef.current?.offsetHeight || 70;
-      // فقط محدود به پایین صفحه
-      const minY = vp.height / 2;
-      const maxX = vp.width - bannerWidth - 8;
-      const maxY = vp.height - bannerHeight - 8;
+      const bottomMargin = 24;
+      const rightMargin = 16;
       
-      setPosition(prev => ({
-        x: Math.max(8, Math.min(maxX, prev.x)),
-        y: Math.max(minY, Math.min(maxY, prev.y))
-      }));
+      // همیشه بنر در پایین‌ترین و راست‌ترین موقعیت باشد
+      setPosition({
+        x: vp.width - bannerWidth - rightMargin,
+        y: vp.height - bannerHeight - bottomMargin
+      });
     };
 
     window.addEventListener('resize', handleResize);
+    // اجرای اولیه برای تنظیم موقعیت درست
+    handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -158,16 +162,18 @@ export function PWAInstallBanner() {
     const deltaY = clientY - dragStartRef.current.y;
 
     const vp = getViewportSize();
-    const bannerWidth = bannerRef.current?.offsetWidth || 200;
+    const bannerWidth = bannerRef.current?.offsetWidth || 320;
     const bannerHeight = bannerRef.current?.offsetHeight || 70;
+    const bottomMargin = 24;
 
-    // فقط محدود به پایین صفحه
+    // محدود به سمت راست و پایین صفحه
+    const minX = vp.width / 2;
     const minY = vp.height / 2;
     const maxX = vp.width - bannerWidth - 8;
-    const maxY = vp.height - bannerHeight - 8;
+    const maxY = vp.height - bannerHeight - bottomMargin;
 
     // Calculate new position with bounds
-    const newX = Math.max(8, Math.min(maxX, dragStartRef.current.posX + deltaX));
+    const newX = Math.max(minX, Math.min(maxX, dragStartRef.current.posX + deltaX));
     const newY = Math.max(minY, Math.min(maxY, dragStartRef.current.posY + deltaY));
 
     setPosition({ x: newX, y: newY });
