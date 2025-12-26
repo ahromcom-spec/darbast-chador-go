@@ -89,7 +89,7 @@ export function OrderReportsTable({
                     <AutoResizeTextarea
                       value={row.notes}
                       onChange={(e) => onUpdateRow(index, 'notes', e.target.value)}
-                      className="min-h-[50px] min-w-[120px] bg-white/50"
+                      className="min-h-[50px] min-w-[30ch] bg-background/50"
                       placeholder="توضیحات..."
                     />
                   </TableCell>
@@ -97,7 +97,7 @@ export function OrderReportsTable({
                     <Input
                       value={row.team_name}
                       onChange={(e) => onUpdateRow(index, 'team_name', e.target.value)}
-                      className="bg-white/50 min-w-[100px]"
+                      className="bg-background/50 min-w-[30ch]"
                       placeholder="نام اکیپ"
                     />
                   </TableCell>
@@ -105,7 +105,7 @@ export function OrderReportsTable({
                     <AutoResizeTextarea
                       value={row.service_details}
                       onChange={(e) => onUpdateRow(index, 'service_details', e.target.value)}
-                      className="min-h-[50px] min-w-[150px] bg-white/50"
+                      className="min-h-[50px] min-w-[30ch] bg-background/50"
                       placeholder="جزئیات خدمات..."
                     />
                   </TableCell>
@@ -113,7 +113,7 @@ export function OrderReportsTable({
                     <AutoResizeTextarea
                       value={row.activity_description}
                       onChange={(e) => onUpdateRow(index, 'activity_description', e.target.value)}
-                      className="min-h-[50px] min-w-[150px] bg-white/50"
+                      className="min-h-[50px] min-w-[30ch] bg-background/50"
                       placeholder="شرح فعالیت..."
                     />
                   </TableCell>
