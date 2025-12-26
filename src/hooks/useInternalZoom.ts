@@ -31,15 +31,18 @@ export const useInternalZoom = () => {
 
     const zoomValue = ZOOM_LEVELS[zoomIndex];
     const root = document.documentElement;
-    
-    // Use CSS zoom for Windows browsers (well supported in Chrome, Edge, Firefox)
+    const body = document.body;
+
+    // Use CSS zoom for Windows browsers (well supported in Chrome, Edge)
     root.style.zoom = String(zoomValue);
-    
+    if (body) body.style.zoom = String(zoomValue);
+
     // Save to localStorage
     localStorage.setItem(STORAGE_KEY, String(zoomIndex));
 
     return () => {
       root.style.zoom = '';
+      if (body) body.style.zoom = '';
     };
   }, [zoomIndex, isWindows]);
 
