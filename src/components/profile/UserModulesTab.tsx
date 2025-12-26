@@ -178,34 +178,37 @@ export function UserModulesTab() {
           // Use assignment.module_name as fallback if MODULE_DETAILS doesn't have the name
           const displayName = MODULE_DETAILS[assignment.module_key]?.name || assignment.module_name || assignment.module_key;
           return (
-            <Card
-              key={assignment.id}
-              className="border-2 border-primary/20 hover:border-primary/40 transition-all cursor-pointer group"
-              onClick={() => navigate(moduleInfo.href)}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl ${moduleInfo.bgColor} group-hover:scale-105 transition-transform`}>
-                    <Building2 className={`h-8 w-8 ${moduleInfo.color}`} />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-lg text-foreground mb-1">
-                      {displayName}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {moduleInfo.description}
-                    </p>
-                  </div>
-                  <Button
-                    variant="default"
-                    className="gap-2 group-hover:translate-x-[-4px] transition-transform"
-                  >
-                    <span>ورود به ماژول</span>
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                <Card
+                  key={assignment.id}
+                  className="border-2 border-primary/20 hover:border-primary/40 transition-all cursor-pointer group"
+                  onClick={() => navigate(moduleInfo.href)}
+                >
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className={`p-2.5 sm:p-3 rounded-xl ${moduleInfo.bgColor} group-hover:scale-105 transition-transform flex-shrink-0`}>
+                          <Building2 className={`h-6 w-6 sm:h-8 sm:w-8 ${moduleInfo.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-sm sm:text-lg text-foreground mb-0.5 sm:mb-1 whitespace-normal leading-relaxed">
+                            {displayName}
+                          </h4>
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
+                            {moduleInfo.description}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="gap-2 group-hover:translate-x-[-4px] transition-transform w-full sm:w-auto flex-shrink-0"
+                      >
+                        <span>ورود به ماژول</span>
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
           );
         })}
       </div>
