@@ -2679,9 +2679,9 @@ export default function DailyReportModule() {
 
         {/* Order Details Dialog */}
         <AlertDialog open={orderDetailsDialogOpen} onOpenChange={setOrderDetailsDialogOpen}>
-          <AlertDialogContent className="!fixed !inset-0 !left-0 !top-0 !translate-x-0 !translate-y-0 !w-[100vw] !max-w-[100vw] !h-[100dvh] !max-h-[100dvh] !p-0 !flex !flex-col !rounded-none !border-0 data-[state=open]:animate-none data-[state=closed]:animate-none overflow-hidden">
-            {/* Close button at top - Fixed header */}
-            <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-10 shrink-0">
+          <AlertDialogContent className="fixed inset-0 w-screen h-screen max-w-none max-h-none p-0 flex flex-col rounded-none border-0 translate-x-0 translate-y-0 data-[state=open]:slide-in-from-bottom-0">
+            {/* Header with close button */}
+            <div className="flex items-center justify-between p-4 border-b bg-background shrink-0">
               <div className="flex items-center gap-2">
                 <Package className="h-5 w-5 text-blue-600" />
                 <h2 className="font-bold text-lg">مشخصات کامل سفارش</h2>
@@ -2693,7 +2693,6 @@ export default function DailyReportModule() {
                     size="sm"
                     onClick={() => {
                       setOrderDetailsDialogOpen(false);
-                      // Navigate to order detail with properly encoded return path including report date
                       const returnPath = encodeURIComponent(`/daily-report?date=${reportDate}`);
                       navigate(`/orders/${selectedOrderDetails.id}?returnTo=${returnPath}`);
                     }}
@@ -2714,29 +2713,12 @@ export default function DailyReportModule() {
               </div>
             </div>
             
-            {/* Scrollable content area - vertical scroll only */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4" style={{ scrollbarWidth: 'auto', scrollbarColor: 'hsl(var(--primary)) transparent' }}>
-              <style>{`
-                .order-details-scroll::-webkit-scrollbar {
-                  width: 10px;
-                }
-                .order-details-scroll::-webkit-scrollbar-track {
-                  background: hsl(var(--muted));
-                  border-radius: 5px;
-                }
-                .order-details-scroll::-webkit-scrollbar-thumb {
-                  background: hsl(var(--primary) / 0.5);
-                  border-radius: 5px;
-                }
-                .order-details-scroll::-webkit-scrollbar-thumb:hover {
-                  background: hsl(var(--primary) / 0.7);
-                }
-              `}</style>
-              <div className="order-details-scroll">
-            
             <AlertDialogHeader className="sr-only">
               <AlertDialogTitle>مشخصات کامل سفارش</AlertDialogTitle>
             </AlertDialogHeader>
+            
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto p-4">
             
             {loadingOrderDetails ? (
               <div className="flex items-center justify-center py-12">
@@ -3274,8 +3256,6 @@ export default function DailyReportModule() {
                 اطلاعاتی یافت نشد
               </div>
             )}
-            
-              </div>
             </div>
 
             <AlertDialogFooter className="sr-only">
