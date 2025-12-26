@@ -141,7 +141,7 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder="توضیحات..."
-                      className="min-w-[120px] min-h-[50px]"
+                      className="min-w-[30ch] min-h-[50px]"
                       maxLength={300}
                     />
                   </TableCell>
@@ -154,7 +154,7 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder="توضیحات..."
-                      className="min-w-[120px] min-h-[50px]"
+                      className="min-w-[30ch] min-h-[50px]"
                       maxLength={300}
                     />
                   </TableCell>
@@ -189,7 +189,7 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder="توضیحات..."
-                      className="min-w-[120px] min-h-[50px]"
+                      className="min-w-[30ch] min-h-[50px]"
                       maxLength={300}
                     />
                   </TableCell>
