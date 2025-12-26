@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Plus, Trash2, Package, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +40,16 @@ export function OrderReportsTable({
       }] 
     : orderReports;
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to rightmost position on mount (for RTL layout)
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      // For RTL, scrollLeft = 0 is the rightmost position
+      scrollContainerRef.current.scrollLeft = 0;
+    }
+  }, []);
+
   return (
     <Card className="border-2 border-blue-500/30">
       <CardHeader className="pb-3">
@@ -56,7 +67,7 @@ export function OrderReportsTable({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        <div ref={scrollContainerRef} className="overflow-x-auto" dir="rtl">
           <Table className="table-auto border-collapse border border-blue-300">
             <TableHeader>
               <TableRow className="bg-blue-100 dark:bg-blue-900/30">
