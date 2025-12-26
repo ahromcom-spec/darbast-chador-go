@@ -1798,7 +1798,7 @@ export default function DailyReportModule() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-amber-500/5">
-      <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full">
         {/* Header */}
         <ModuleHeader
           title="گزارش روزانه شرکت اهرم"
@@ -1913,22 +1913,23 @@ export default function DailyReportModule() {
             ) : (
               <>
                 {/* Order Reports Table */}
-                <Card className="border-2 border-blue-500/30">
-                  <CardHeader className="pb-3">
+                <Card className="border-2 border-blue-500/30 -mx-2 sm:mx-0 rounded-none sm:rounded-lg">
+                  <CardHeader className="pb-3 px-2 sm:px-6">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-blue-500/10">
-                          <Package className="h-5 w-5 text-blue-600" />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10">
+                          <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         </div>
-                        <CardTitle className="text-lg">گزارش سفارشات مشتری</CardTitle>
+                        <CardTitle className="text-base sm:text-lg">گزارش سفارشات مشتری</CardTitle>
                       </div>
-                      <Button size="sm" onClick={addOrderRow} className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        افزودن ردیف
+                      <Button size="sm" onClick={addOrderRow} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden xs:inline">افزودن ردیف</span>
+                        <span className="xs:hidden">ردیف</span>
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-0 sm:px-6">
                     <div ref={orderTableScrollRef} className="overflow-x-auto" dir="rtl">
                       <Table className="table-auto border-collapse border border-blue-300">
                         <TableHeader>
@@ -2032,22 +2033,23 @@ export default function DailyReportModule() {
                 </Card>
 
                 {/* Staff Reports Table */}
-                <Card className="border-2 border-amber-500/30">
-                  <CardHeader className="pb-3">
+                <Card className="border-2 border-amber-500/30 -mx-2 sm:mx-0 rounded-none sm:rounded-lg">
+                  <CardHeader className="pb-3 px-2 sm:px-6">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-amber-500/10">
-                          <User className="h-5 w-5 text-amber-600" />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-1.5 sm:p-2 rounded-lg bg-amber-500/10">
+                          <User className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
                         </div>
-                        <CardTitle className="text-lg">گزارش نیروها</CardTitle>
+                        <CardTitle className="text-base sm:text-lg">گزارش نیروها</CardTitle>
                       </div>
-                      <Button size="sm" onClick={addStaffRow} className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        افزودن نیرو
+                      <Button size="sm" onClick={addStaffRow} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden xs:inline">افزودن نیرو</span>
+                        <span className="xs:hidden">نیرو</span>
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-0 sm:px-6">
                     <div ref={staffTableScrollRef} className="overflow-x-auto" dir="rtl">
                       <Table className="table-auto border-collapse border border-amber-300">
                         <TableHeader>
