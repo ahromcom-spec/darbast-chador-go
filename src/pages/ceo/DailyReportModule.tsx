@@ -1940,11 +1940,9 @@ export default function DailyReportModule() {
                             >
                               سفارش مشتری را انتخاب کنید
                             </TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">شرح فعالیت امروز</TableHead>
-                            <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">تعداد، ابعاد و متراژ خدمات</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">شرح فعالیت امروز و ابعاد</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">اکیپ</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">توضیحات</TableHead>
-                            <TableHead className="whitespace-nowrap px-2 border border-blue-300">رنگ</TableHead>
                             <TableHead className="w-[50px] border border-blue-300"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1981,18 +1979,13 @@ export default function DailyReportModule() {
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
                                   <AutoResizeTextarea
-                                    value={row.activity_description}
-                                    onChange={(e) => updateOrderRow(index, 'activity_description', e.target.value)}
+                                    value={`${row.activity_description || ''}${row.activity_description && row.service_details ? '\n' : ''}${row.service_details || ''}`}
+                                    onChange={(e) => {
+                                      updateOrderRow(index, 'activity_description', e.target.value);
+                                      updateOrderRow(index, 'service_details', '');
+                                    }}
                                     className="min-h-[50px] min-w-[30ch] bg-background/50"
-                                    placeholder="شرح فعالیت..."
-                                  />
-                                </TableCell>
-                                <TableCell className="border border-blue-200">
-                                  <AutoResizeTextarea
-                                    value={row.service_details}
-                                    onChange={(e) => updateOrderRow(index, 'service_details', e.target.value)}
-                                    className="min-h-[50px] min-w-[30ch] bg-background/50"
-                                    placeholder="جزئیات خدمات..."
+                                    placeholder="شرح فعالیت و ابعاد..."
                                   />
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
@@ -2010,9 +2003,6 @@ export default function DailyReportModule() {
                                     className="min-h-[50px] min-w-[30ch] bg-background/50"
                                     placeholder="توضیحات..."
                                   />
-                                </TableCell>
-                                <TableCell className="border border-blue-200">
-                                  <div className={`w-6 h-6 rounded ${getRowColorClass(row.row_color)}`}></div>
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
                                   <Button
