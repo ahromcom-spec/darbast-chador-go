@@ -2453,9 +2453,9 @@ export default function DailyReportModule() {
 
         {/* Order Details Dialog */}
         <AlertDialog open={orderDetailsDialogOpen} onOpenChange={setOrderDetailsDialogOpen}>
-          <AlertDialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
-            {/* Close button at top */}
-            <div className="flex items-center justify-between pb-4 border-b sticky top-0 bg-background z-10">
+          <AlertDialogContent className="w-[95vw] max-w-2xl max-h-[85vh] p-0 flex flex-col">
+            {/* Close button at top - Fixed header */}
+            <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-2">
                 <Package className="h-5 w-5 text-blue-600" />
                 <h2 className="font-bold text-lg">مشخصات کامل سفارش</h2>
@@ -2476,11 +2476,38 @@ export default function DailyReportModule() {
                     مشاهده و ویرایش کامل
                   </Button>
                 )}
-                <AlertDialogCancel className="m-0 p-2 h-8 w-8 rounded-full">
-                  <X className="h-4 w-4" />
-                </AlertDialogCancel>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setOrderDetailsDialogOpen(false)}
+                  className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
             </div>
+            
+            {/* Scrollable content area with visible scrollbars */}
+            <div className="flex-1 overflow-auto p-4" style={{ scrollbarWidth: 'auto', scrollbarColor: 'hsl(var(--primary)) transparent' }}>
+              <style>{`
+                .order-details-scroll::-webkit-scrollbar {
+                  width: 10px;
+                  height: 10px;
+                }
+                .order-details-scroll::-webkit-scrollbar-track {
+                  background: hsl(var(--muted));
+                  border-radius: 5px;
+                }
+                .order-details-scroll::-webkit-scrollbar-thumb {
+                  background: hsl(var(--primary) / 0.5);
+                  border-radius: 5px;
+                }
+                .order-details-scroll::-webkit-scrollbar-thumb:hover {
+                  background: hsl(var(--primary) / 0.7);
+                }
+              `}</style>
+              <div className="order-details-scroll">
+            
             <AlertDialogHeader className="sr-only">
               <AlertDialogTitle>مشخصات کامل سفارش</AlertDialogTitle>
             </AlertDialogHeader>
@@ -2986,6 +3013,9 @@ export default function DailyReportModule() {
                 اطلاعاتی یافت نشد
               </div>
             )}
+            
+              </div>
+            </div>
 
             <AlertDialogFooter className="sr-only">
               <AlertDialogCancel>بستن</AlertDialogCancel>
