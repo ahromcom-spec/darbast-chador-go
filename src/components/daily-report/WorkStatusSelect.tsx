@@ -47,20 +47,39 @@ export function WorkStatusSelect({
     const VIEWPORT_MARGIN = 8;
     const OFFSET = 0;
 
+    const boundaryEl = triggerRef.current.closest(
+      '[data-dropdown-boundary]'
+    ) as HTMLElement | null;
+    const boundaryRect = boundaryEl?.getBoundingClientRect();
+
+    const boundLeft = Math.max(
+      VIEWPORT_MARGIN,
+      boundaryRect?.left ?? VIEWPORT_MARGIN,
+    );
+    const boundRight = Math.min(
+      window.innerWidth - VIEWPORT_MARGIN,
+      boundaryRect?.right ?? window.innerWidth - VIEWPORT_MARGIN,
+    );
+    const boundTop = Math.max(
+      VIEWPORT_MARGIN,
+      boundaryRect?.top ?? VIEWPORT_MARGIN,
+    );
+    const boundBottom = Math.min(
+      window.innerHeight - VIEWPORT_MARGIN,
+      boundaryRect?.bottom ?? window.innerHeight - VIEWPORT_MARGIN,
+    );
+
     const isRTL =
       document.documentElement.dir === "rtl" ||
       !!triggerRef.current.closest('[dir="rtl"]');
 
-    const width = rect.width;
+    const width = Math.min(rect.width, Math.max(120, boundRight - boundLeft));
 
     let left = isRTL ? rect.right - width : rect.left;
-    left = Math.max(
-      VIEWPORT_MARGIN,
-      Math.min(left, window.innerWidth - width - VIEWPORT_MARGIN),
-    );
+    left = Math.max(boundLeft, Math.min(left, boundRight - width));
 
-    const spaceAbove = rect.top - VIEWPORT_MARGIN;
-    const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
+    const spaceAbove = rect.top - boundTop;
+    const spaceBelow = boundBottom - rect.bottom;
     const openBelow = spaceBelow >= 160 || spaceBelow >= spaceAbove;
 
     if (openBelow) {
