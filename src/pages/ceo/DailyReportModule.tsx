@@ -776,7 +776,7 @@ export default function DailyReportModule() {
           subcategory_id,
           subcategories!projects_v3_subcategory_id_fkey(name)
         `)
-        .in('status', ['pending_execution', 'in_progress', 'scheduled', 'approved'])
+        .in('status', ['pending', 'pending_execution', 'in_progress', 'scheduled', 'approved'] as any[])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
