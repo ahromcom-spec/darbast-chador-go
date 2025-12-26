@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { StaffReportRow, StaffMember } from '@/hooks/useDailyReport';
+import { WorkStatusSelect } from '@/components/daily-report/WorkStatusSelect';
 
 interface StaffReportsTableProps {
   staffReports: StaffReportRow[];
@@ -256,18 +256,11 @@ export function StaffReportsTable({
                     {row.is_cash_box ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
-                      <Select
+                      <WorkStatusSelect
                         value={row.work_status}
-                        onValueChange={(value: 'کارکرده' | 'غایب') => onUpdateRow(index, 'work_status', value)}
-                      >
-                        <SelectTrigger className="min-w-[90px] w-auto">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent position="popper" sideOffset={0} className="bg-background z-[9999]">
-                          <SelectItem value="کارکرده">کارکرده</SelectItem>
-                          <SelectItem value="غایب">غایب</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        onValueChange={(value) => onUpdateRow(index, 'work_status', value)}
+                        className="min-w-[90px] w-auto"
+                      />
                     )}
                   </TableCell>
                   <TableCell className="border border-amber-200">
