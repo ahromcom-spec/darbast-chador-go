@@ -2058,22 +2058,22 @@ export default function DailyReportModule() {
                                     );
                                   })()}
                                 </TableCell>
-                                <TableCell className="border border-blue-200">
+                                <TableCell className="border border-blue-200 w-[15%]">
                                   <AutoResizeTextarea
                                     value={`${row.activity_description || ''}${row.activity_description && row.service_details ? '\n' : ''}${row.service_details || ''}`}
                                     onChange={(e) => {
                                       updateOrderRow(index, 'activity_description', e.target.value);
                                       updateOrderRow(index, 'service_details', '');
                                     }}
-                                    className="min-h-[50px] min-w-[50ch] bg-background/50"
+                                    className="min-h-[50px] w-full bg-background/50"
                                     placeholder="شرح فعالیت و ابعاد..."
                                   />
                                 </TableCell>
-                                <TableCell className="border border-blue-200">
-                                  <Input
-                                    value={row.team_name}
+                                <TableCell className="border border-blue-200 w-[15%]">
+                                  <AutoResizeTextarea
+                                    value={row.team_name || ''}
                                     onChange={(e) => updateOrderRow(index, 'team_name', e.target.value)}
-                                    className="bg-background/50 min-w-[40ch]"
+                                    className="min-h-[40px] w-full bg-background/50"
                                     placeholder="نام اکیپ"
                                   />
                                 </TableCell>
