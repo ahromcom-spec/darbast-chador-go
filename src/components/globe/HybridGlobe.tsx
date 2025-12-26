@@ -1560,7 +1560,23 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             popupAnchor: [0, -56],
           });
         } else {
-          console.debug('[HybridGlobe] No image found for project, using default icon:', project.id);
+          // استفاده از لوگوی اهرم به عنوان تصویر پیش‌فرض برای پروژه‌های بدون عکس
+          console.debug('[HybridGlobe] No image found for project, using default logo:', project.id);
+          
+          const defaultLogoHtml = `
+            <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #d97706;background:linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);position:relative;display:flex;align-items:center;justify-content:center;">
+              <img src="/ahrom-logo.png" alt="لوگوی اهرم" loading="lazy" style="width:44px;height:44px;object-fit:contain" onerror="this.style.display='none'"/>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(217,119,6,0.8));height:16px;display:flex;align-items:center;justify-content:center;">
+                <span style="color:#fff;font-size:9px;font-weight:bold;">بدون عکس</span>
+              </div>
+            </div>`;
+          iconToUse = L.divIcon({
+            html: defaultLogoHtml,
+            className: 'project-thumb-icon project-no-image',
+            iconSize: [56, 56],
+            iconAnchor: [28, 56],
+            popupAnchor: [0, -56],
+          });
         }
 
         const marker = L.marker([lat, lng], { 
