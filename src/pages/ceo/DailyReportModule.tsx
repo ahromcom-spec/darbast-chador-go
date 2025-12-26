@@ -1904,8 +1904,18 @@ export default function DailyReportModule() {
           {/* New Report Tab */}
           <TabsContent value="new-report" className="space-y-6 mt-6">
             {/* Date Picker with Navigation */}
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-end">
-              {/* همه در یک ردیف - سمت راست */}
+            <div className="flex flex-col items-end gap-3">
+              {/* ردیف اول - تاریخ و لیبل */}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <PersianDatePicker
+                  value={reportDate.toISOString()}
+                  onChange={(date) => date && setReportDate(new Date(date))}
+                  timeMode="none"
+                />
+                <Label className="text-sm sm:text-base font-medium">تاریخ گزارش:</Label>
+              </div>
+
+              {/* ردیف دوم - دکمه‌ها */}
               <div className="flex items-center gap-2 sm:gap-3">
                 {/* دکمه روز قبل */}
                 <Button
@@ -1936,15 +1946,6 @@ export default function DailyReportModule() {
                   <span className="text-2xl sm:text-3xl font-bold">→</span>
                   روز بعد
                 </Button>
-
-                {/* تاریخ گزارش */}
-                <PersianDatePicker
-                  value={reportDate.toISOString()}
-                  onChange={(date) => date && setReportDate(new Date(date))}
-                  timeMode="none"
-                />
-                
-                <Label className="text-sm sm:text-base font-medium">تاریخ گزارش:</Label>
               </div>
             </div>
 
