@@ -3993,6 +3993,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      daily_report_contains_staff: {
+        Args: { p_report_id: string; p_user_id: string }
+        Returns: boolean
+      }
       generate_customer_code: { Args: never; Returns: string }
       generate_project_code: {
         Args: {
