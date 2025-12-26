@@ -364,19 +364,50 @@ export default function DailyReportModule() {
       let reportId = existingReportId;
 
       if (!reportId) {
-        // Create new report
-        const { data: newReport, error: createError } = await supabase
+        // First check if a report already exists for this date (unique constraint enforced)
+        const { data: existingReport } = await supabase
           .from('daily_reports')
-          .insert({
-            report_date: dateStr,
-            created_by: user.id
-          })
           .select('id')
-          .single();
+          .eq('report_date', dateStr)
+          .maybeSingle();
 
-        if (createError) throw createError;
-        reportId = newReport.id;
-        setExistingReportId(reportId);
+        if (existingReport?.id) {
+          // Use existing report for this date
+          reportId = existingReport.id;
+          setExistingReportId(reportId);
+        } else {
+          // Create new report (only if none exists for this date)
+          const { data: newReport, error: createError } = await supabase
+            .from('daily_reports')
+            .insert({
+              report_date: dateStr,
+              created_by: user.id
+            })
+            .select('id')
+            .single();
+
+          if (createError) {
+            // If unique constraint violation, try fetching again
+            if (createError.code === '23505') {
+              const { data: retry } = await supabase
+                .from('daily_reports')
+                .select('id')
+                .eq('report_date', dateStr)
+                .single();
+              if (retry?.id) {
+                reportId = retry.id;
+                setExistingReportId(reportId);
+              } else {
+                throw createError;
+              }
+            } else {
+              throw createError;
+            }
+          } else {
+            reportId = newReport.id;
+            setExistingReportId(reportId);
+          }
+        }
       }
 
       // Delete existing order reports and insert new ones
@@ -835,59 +866,31 @@ export default function DailyReportModule() {
       // فقط داده‌های دیتابیس برای این تاریخ خاص لود شود
       // localStorage فقط برای بازیابی داده‌های ذخیره‌نشده همین تاریخ استفاده می‌شود
 
+      // With unique constraint on report_date, there's only ONE report per date
+      // Simply fetch the report for this date (regardless of who created it)
+      const { data: existingReport, error: existingError } = await supabase
+        .from('daily_reports')
+        .select('id')
+        .eq('report_date', dateStr)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+
+      let reportIdToLoad: string | null = existingReport?.id ?? null;
+
+      // For non-managers, also verify they have access (their staff record in the report)
       const isManager = await isManagerUser(user.id);
-
-      let reportIdToLoad: string | null = null;
-
-      // Managers: prefer their own report for that date, otherwise take latest.
-      if (isManager) {
-        const { data: myReport, error: myReportError } = await supabase
-          .from('daily_reports')
+      if (!isManager && reportIdToLoad) {
+        const { data: staffRow } = await supabase
+          .from('daily_report_staff')
           .select('id')
-          .eq('report_date', dateStr)
-          .eq('created_by', user.id)
+          .eq('daily_report_id', reportIdToLoad)
+          .eq('staff_user_id', user.id)
           .maybeSingle();
 
-        if (myReportError) throw myReportError;
-
-        if (myReport?.id) {
-          reportIdToLoad = myReport.id;
-        } else {
-          const { data: anyReport, error: anyReportError } = await supabase
-            .from('daily_reports')
-            .select('id')
-            .eq('report_date', dateStr)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (anyReportError) throw anyReportError;
-          reportIdToLoad = anyReport?.id ?? null;
-        }
-      } else {
-        // Staff: load the report of that date which contains a row for them.
-        const { data: candidateReports, error: candidatesError } = await supabase
-          .from('daily_reports')
-          .select('id')
-          .eq('report_date', dateStr)
-          .order('created_at', { ascending: false });
-
-        if (candidatesError) throw candidatesError;
-
-        const candidateIds = (candidateReports || []).map((r: any) => r.id);
-
-        if (candidateIds.length > 0) {
-          const { data: staffRow, error: staffRowError } = await supabase
-            .from('daily_report_staff')
-            .select('daily_report_id')
-            .eq('staff_user_id', user.id)
-            .in('daily_report_id', candidateIds)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (staffRowError) throw staffRowError;
-          reportIdToLoad = staffRow?.daily_report_id ?? null;
+        if (!staffRow) {
+          // Non-manager has no staff record in this report - don't load it
+          reportIdToLoad = null;
         }
       }
 
