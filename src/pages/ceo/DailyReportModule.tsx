@@ -2941,22 +2941,78 @@ export default function DailyReportModule() {
                     )}
 
                     {/* Scaffold Conditions */}
-                    {parsedNotes?.scaffold_conditions && Object.keys(parsedNotes.scaffold_conditions).length > 0 && (
-                      <div className="p-4 border rounded-xl space-y-3 bg-blue-50/50 dark:bg-blue-900/10">
+                    {parsedNotes?.scaffold_conditions && Object.keys(parsedNotes.scaffold_conditions).length > 0 && (() => {
+                      const conditionLabels: Record<string, string> = {
+                        'platformHeight': 'روی سکو',
+                        'vehicleDistance': 'فاصله خودرو از پای کار',
+                        'hasPlatform': 'دارای سکو',
+                        'hasLadder': 'دارای نردبان',
+                        'hasSafetyNet': 'دارای تور ایمنی',
+                        'hasWheels': 'دارای چرخ',
+                        'hasRailing': 'دارای نرده',
+                        'needsAnchor': 'نیاز به لنگر',
+                        'needsProtection': 'نیاز به حفاظ',
+                        'hasConsole': 'دارای کنسول',
+                        'hasBracket': 'دارای براکت',
+                        'hasGuardRail': 'دارای گاردریل',
+                        'platformOnBase': 'سکوی پای داربست',
+                        'onPlatform': 'روی سکو'
+                      };
+                      return (
+                        <div className="p-4 border rounded-xl space-y-3 bg-blue-50/50 dark:bg-blue-900/10">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                            <h4 className="font-semibold">شرایط داربست</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {Object.entries(parsedNotes.scaffold_conditions).map(([key, value]: [string, any]) => (
+                              <div key={key} className="p-2 bg-background/50 rounded-lg flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">{conditionLabels[key] || key}</span>
+                                <Badge variant={value === true ? 'default' : 'secondary'} className="text-xs">
+                                  {value === true ? 'بله' : value === false ? 'خیر' : typeof value === 'number' ? `${value} متر` : String(value)}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Platform Height & Vehicle Distance - Separate fields */}
+                    {(parsedNotes?.platformHeight || parsedNotes?.vehicleDistance || parsedNotes?.platform_height || parsedNotes?.vehicle_distance) && (
+                      <div className="p-4 border rounded-xl space-y-3 bg-indigo-50/50 dark:bg-indigo-900/10">
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                          <h4 className="font-semibold">شرایط داربست</h4>
+                          <Building className="h-4 w-4 text-indigo-600" />
+                          <h4 className="font-semibold">شرایط محل پروژه</h4>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {Object.entries(parsedNotes.scaffold_conditions).map(([key, value]: [string, any]) => (
-                            <div key={key} className="p-2 bg-background/50 rounded-lg flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">{key}</span>
-                              <Badge variant={value === true ? 'default' : 'secondary'} className="text-xs">
-                                {value === true ? 'بله' : value === false ? 'خیر' : String(value)}
+                          {(parsedNotes?.platformHeight || parsedNotes?.platform_height) && (
+                            <div className="p-3 bg-background/50 rounded-lg flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">ارتفاع سکو</span>
+                              <Badge variant="outline" className="text-xs font-bold">
+                                {parsedNotes.platformHeight || parsedNotes.platform_height} متر
                               </Badge>
                             </div>
-                          ))}
+                          )}
+                          {(parsedNotes?.vehicleDistance || parsedNotes?.vehicle_distance) && (
+                            <div className="p-3 bg-background/50 rounded-lg flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">فاصله خودرو از پای کار</span>
+                              <Badge variant="outline" className="text-xs font-bold">
+                                {parsedNotes.vehicleDistance || parsedNotes.vehicle_distance} متر
+                              </Badge>
+                            </div>
+                          )}
                         </div>
+                      </div>
+                    )}
+
+                    {/* On Platform (boolean) */}
+                    {(parsedNotes?.onPlatform !== undefined || parsedNotes?.on_platform !== undefined) && (
+                      <div className="p-3 bg-purple-50/50 dark:bg-purple-900/10 rounded-lg flex items-center justify-between text-sm border border-purple-200 dark:border-purple-800">
+                        <span className="text-purple-700 dark:text-purple-300 font-medium">روی سکو</span>
+                        <Badge variant={parsedNotes.onPlatform === true || parsedNotes.on_platform === true ? 'default' : 'secondary'} className="text-xs">
+                          {parsedNotes.onPlatform === true || parsedNotes.on_platform === true ? 'بله' : 'خیر'}
+                        </Badge>
                       </div>
                     )}
 
