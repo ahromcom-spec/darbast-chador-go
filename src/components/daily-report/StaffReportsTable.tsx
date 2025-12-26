@@ -114,15 +114,15 @@ export function StaffReportsTable({
           <Table className="table-auto border-collapse border border-amber-300">
             <TableHeader>
               <TableRow className="bg-amber-100 dark:bg-amber-900/30">
-                <TableHead className="w-[50px] border border-amber-300"></TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات مبلغ خرج کرد</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">مبلغ خرج کرده شده در کار</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات دریافتی</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">مبلغ دریافتی</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">اضافه کاری</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">کارکرد</TableHead>
                 <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">نیروها</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">کارکرد</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">اضافه کاری</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">مبلغ دریافتی</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات دریافتی</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">مبلغ خرج کرده شده در کار</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات مبلغ خرج کرد</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات</TableHead>
+                <TableHead className="w-[50px] border border-amber-300"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -132,36 +132,91 @@ export function StaffReportsTable({
                   className={row.is_cash_box ? 'bg-amber-50 dark:bg-amber-900/20' : 'even:bg-amber-50/50'}
                 >
                   <TableCell className="border border-amber-200">
-                    {!row.is_cash_box && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onRemoveRow(index)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    {row.is_cash_box ? (
+                      <div className="font-semibold text-amber-700">{row.staff_name}</div>
+                    ) : (
+                      <StaffSearchSelect
+                        value={row.staff_user_id || ''}
+                        onValueChange={(code, name, userId) => handleStaffSelect(index, code, name, userId)}
+                        placeholder="انتخاب نیرو"
+                        excludeCodes={staffReports
+                          .filter((r, i) => i !== index && r.staff_user_id)
+                          .map(r => r.staff_user_id as string)}
+                      />
                     )}
                   </TableCell>
                   <TableCell className="border border-amber-200">
-                    <AutoResizeTextarea
-                      value={row.notes}
-                      onChange={(e) => {
-                        if (e.target.value.length <= 300) {
-                          onUpdateRow(index, 'notes', e.target.value);
-                        }
-                      }}
-                      placeholder="توضیحات..."
-                      className="min-w-[30ch] min-h-[50px]"
-                      maxLength={300}
-                    />
+                    {row.is_cash_box ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <Select
+                        value={row.work_status}
+                        onValueChange={(value: 'کارکرده' | 'غایب') => onUpdateRow(index, 'work_status', value)}
+                      >
+                        <SelectTrigger className="min-w-[90px] w-auto">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background">
+                          <SelectItem value="کارکرده">کارکرده</SelectItem>
+                          <SelectItem value="غایب">غایب</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </TableCell>
+                  <TableCell className="border border-amber-200">
+                    {row.is_cash_box ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={row.overtime_hours === 0 ? '' : row.overtime_hours.toString()}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/^0+(?=\d)/, '');
+                            const numVal = parseFloat(val) || 0;
+                            if (numVal <= 15) {
+                              onUpdateRow(index, 'overtime_hours', numVal);
+                            } else {
+                              toast.error('اضافه‌کاری نمی‌تواند بیشتر از ۱۵ ساعت باشد');
+                            }
+                          }}
+                          className="min-w-[90px] pl-10 text-left"
+                          dir="ltr"
+                          placeholder="0"
+                        />
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">ساعت</span>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="border border-amber-200">
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+                          const numVal = parseInt(val) || 0;
+                          if (numVal <= 300000000) {
+                            onUpdateRow(index, 'amount_received', numVal);
+                          } else {
+                            toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                          }
+                        }}
+                        className="min-w-[130px] pl-12 text-left"
+                        dir="ltr"
+                        placeholder="0"
+                      />
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
+                    </div>
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     <AutoResizeTextarea
-                      value={row.spending_notes}
+                      value={row.receiving_notes}
                       onChange={(e) => {
                         if (e.target.value.length <= 300) {
-                          onUpdateRow(index, 'spending_notes', e.target.value);
+                          onUpdateRow(index, 'receiving_notes', e.target.value);
                         }
                       }}
                       placeholder="توضیحات..."
@@ -193,10 +248,10 @@ export function StaffReportsTable({
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     <AutoResizeTextarea
-                      value={row.receiving_notes}
+                      value={row.spending_notes}
                       onChange={(e) => {
                         if (e.target.value.length <= 300) {
-                          onUpdateRow(index, 'receiving_notes', e.target.value);
+                          onUpdateRow(index, 'spending_notes', e.target.value);
                         }
                       }}
                       placeholder="توضیحات..."
@@ -205,83 +260,28 @@ export function StaffReportsTable({
                     />
                   </TableCell>
                   <TableCell className="border border-amber-200">
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                          const numVal = parseInt(val) || 0;
-                          if (numVal <= 300000000) {
-                            onUpdateRow(index, 'amount_received', numVal);
-                          } else {
-                            toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
-                          }
-                        }}
-                        className="min-w-[130px] pl-12 text-left"
-                        dir="ltr"
-                        placeholder="0"
-                      />
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
-                    </div>
+                    <AutoResizeTextarea
+                      value={row.notes}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 300) {
+                          onUpdateRow(index, 'notes', e.target.value);
+                        }
+                      }}
+                      placeholder="توضیحات..."
+                      className="min-w-[30ch] min-h-[50px]"
+                      maxLength={300}
+                    />
                   </TableCell>
                   <TableCell className="border border-amber-200">
-                    {row.is_cash_box ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <div className="relative">
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          value={row.overtime_hours === 0 ? '' : row.overtime_hours.toString()}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/^0+(?=\d)/, '');
-                            const numVal = parseFloat(val) || 0;
-                            if (numVal <= 15) {
-                              onUpdateRow(index, 'overtime_hours', numVal);
-                            } else {
-                              toast.error('اضافه‌کاری نمی‌تواند بیشتر از ۱۵ ساعت باشد');
-                            }
-                          }}
-                          className="min-w-[90px] pl-10 text-left"
-                          dir="ltr"
-                          placeholder="0"
-                        />
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">ساعت</span>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="border border-amber-200">
-                    {row.is_cash_box ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <Select
-                        value={row.work_status}
-                        onValueChange={(value: 'کارکرده' | 'غایب') => onUpdateRow(index, 'work_status', value)}
+                    {!row.is_cash_box && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onRemoveRow(index)}
+                        className="text-destructive hover:text-destructive"
                       >
-                        <SelectTrigger className="min-w-[90px] w-auto">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background">
-                          <SelectItem value="کارکرده">کارکرده</SelectItem>
-                          <SelectItem value="غایب">غایب</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </TableCell>
-                  <TableCell className="border border-amber-200">
-                    {row.is_cash_box ? (
-                      <div className="font-semibold text-amber-700">{row.staff_name}</div>
-                    ) : (
-                      <StaffSearchSelect
-                        value={row.staff_user_id || ''}
-                        onValueChange={(code, name, userId) => handleStaffSelect(index, code, name, userId)}
-                        placeholder="انتخاب نیرو"
-                        excludeCodes={staffReports
-                          .filter((r, i) => i !== index && r.staff_user_id)
-                          .map(r => r.staff_user_id as string)}
-                      />
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     )}
                   </TableCell>
                 </TableRow>
@@ -289,14 +289,13 @@ export function StaffReportsTable({
 
               {/* Summary Row */}
               <TableRow className="bg-amber-200 dark:bg-amber-800/40 font-bold">
-                <TableCell className="border border-amber-300"></TableCell>
-                <TableCell className="border border-amber-300" colSpan={2}></TableCell>
-                <TableCell className="border border-amber-300">{totals.totalSpent.toLocaleString('fa-IR')} تومان</TableCell>
-                <TableCell className="border border-amber-300"></TableCell>
-                <TableCell className="border border-amber-300">{totals.totalReceived.toLocaleString('fa-IR')} تومان</TableCell>
-                <TableCell className="border border-amber-300">{totals.totalOvertime} ساعت</TableCell>
-                <TableCell className="border border-amber-300">{totals.presentCount} نیرو</TableCell>
                 <TableCell className="border border-amber-300 text-right">جمع:</TableCell>
+                <TableCell className="border border-amber-300">{totals.presentCount} نیرو</TableCell>
+                <TableCell className="border border-amber-300">{totals.totalOvertime} ساعت</TableCell>
+                <TableCell className="border border-amber-300">{totals.totalReceived.toLocaleString('fa-IR')} تومان</TableCell>
+                <TableCell className="border border-amber-300"></TableCell>
+                <TableCell className="border border-amber-300">{totals.totalSpent.toLocaleString('fa-IR')} تومان</TableCell>
+                <TableCell className="border border-amber-300" colSpan={3}></TableCell>
               </TableRow>
 
               {/* Balance Row */}
