@@ -1826,7 +1826,7 @@ export default function DailyReportModule() {
                   }}
                   className="gap-1 px-3"
                 >
-                  <span className="text-lg">→</span>
+                  <span className="text-lg">←</span>
                   روز قبل
                 </Button>
                 
@@ -1842,7 +1842,7 @@ export default function DailyReportModule() {
                   className="gap-1 px-3"
                 >
                   روز بعد
-                  <span className="text-lg">←</span>
+                  <span className="text-lg">→</span>
                 </Button>
               </div>
               
