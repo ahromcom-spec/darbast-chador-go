@@ -230,6 +230,18 @@ export function useDailyReport() {
     }
   }, [user, getLocalStorageKey]);
 
+  // Extract activity description from notes JSON
+  const extractActivityDescription = (notes: any): string => {
+    if (!notes) return '';
+    try {
+      const parsed = typeof notes === 'string' ? JSON.parse(notes) : notes;
+      // Try locationPurpose first (for facade scaffolding), then description (for expert pricing)
+      return parsed.locationPurpose || parsed.description || '';
+    } catch {
+      return '';
+    }
+  };
+
   // Fetch orders from database
   const fetchOrders = useCallback(async () => {
     try {
@@ -242,7 +254,7 @@ export function useDailyReport() {
           customer_phone,
           address,
           subcategory_id,
-          activity_description,
+          notes,
           subcategories!projects_v3_subcategory_id_fkey(name)
         `)
         .in('status', ['pending', 'pending_execution', 'in_progress', 'scheduled', 'approved'] as any[])
@@ -257,7 +269,7 @@ export function useDailyReport() {
         customer_phone: o.customer_phone,
         address: o.address,
         subcategory_name: o.subcategories?.name,
-        activity_description: o.activity_description || ''
+        activity_description: extractActivityDescription(o.notes)
       })));
     } catch (error) {
       console.error('Error fetching orders:', error);
