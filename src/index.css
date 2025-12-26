@@ -15,7 +15,7 @@
 .animate-snowfall {
   animation: snowfall linear infinite;
 }
-/* Cross-browser mobile compatibility - Edge & Firefox fix */
+/* Cross-browser compatibility - Desktop & Mobile (Chrome, Edge, Firefox) */
 html {
   /* Consistent font sizing across all browsers */
   font-size: 16px;
@@ -26,6 +26,9 @@ html {
   /* Prevent font scaling in landscape */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Windows desktop browser fixes */
+  zoom: 1;
+  -ms-zoom: 1;
 }
 
 /* Ensure body fills viewport consistently */
@@ -34,6 +37,27 @@ body {
   min-height: 100dvh; /* Dynamic viewport height for mobile */
   font-size: 1rem;
   line-height: 1.5;
+  /* Firefox specific fixes for Windows */
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Edge & Firefox desktop Windows specific fixes */
+@supports (-moz-appearance: none) {
+  /* Firefox specific */
+  html {
+    font-size: 16px !important;
+  }
+  body {
+    font-size: 1rem !important;
+  }
+}
+
+@supports (-ms-ime-align: auto) {
+  /* Edge specific */
+  html {
+    font-size: 16px !important;
+    zoom: 1 !important;
+  }
 }
 
 /* Persian RTL Design System - Inspired by traditional Persian architecture and modern construction */
