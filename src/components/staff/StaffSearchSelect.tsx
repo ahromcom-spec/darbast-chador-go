@@ -231,10 +231,12 @@ export function StaffSearchSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[350px] p-0 z-[9999] bg-background border shadow-lg" 
-        align="start"
-        side="bottom"
+        className="w-[320px] sm:w-[350px] p-0 z-[9999] bg-background border shadow-lg" 
+        align="end"
+        side="top"
         sideOffset={4}
+        avoidCollisions={true}
+        collisionPadding={8}
         style={{ pointerEvents: 'auto' }}
       >
         <div className="p-3 border-b">
