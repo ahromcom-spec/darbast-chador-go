@@ -71,18 +71,63 @@ export function OrderReportsTable({
           <Table className="table-auto border-collapse border border-blue-300">
             <TableHeader>
               <TableRow className="bg-blue-100 dark:bg-blue-900/30">
-                <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">سفارش مشتری را انتخاب کنید</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">شرح فعالیت امروز</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">تعداد، ابعاد و متراژ خدمات</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">اکیپ</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">توضیحات</TableHead>
-                <TableHead className="whitespace-nowrap px-2 border border-blue-300">رنگ</TableHead>
                 <TableHead className="w-[50px] border border-blue-300"></TableHead>
+                <TableHead className="whitespace-nowrap px-2 border border-blue-300">رنگ</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">توضیحات</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">اکیپ</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">تعداد، ابعاد و متراژ خدمات</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">شرح فعالیت امروز</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">سفارش مشتری را انتخاب کنید</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {displayRows.map((row, index) => (
                 <TableRow key={index} className={`${getRowColorClass(row.row_color)} even:opacity-90`}>
+                  <TableCell className="border border-blue-200">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onRemoveRow(index)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                  <TableCell className="border border-blue-200">
+                    <div className={`w-6 h-6 rounded ${getRowColorClass(row.row_color)}`}></div>
+                  </TableCell>
+                  <TableCell className="border border-blue-200">
+                    <AutoResizeTextarea
+                      value={row.notes}
+                      onChange={(e) => onUpdateRow(index, 'notes', e.target.value)}
+                      className="min-h-[50px] min-w-[30ch] bg-background/50"
+                      placeholder="توضیحات..."
+                    />
+                  </TableCell>
+                  <TableCell className="border border-blue-200">
+                    <Input
+                      value={row.team_name}
+                      onChange={(e) => onUpdateRow(index, 'team_name', e.target.value)}
+                      className="bg-background/50 min-w-[30ch]"
+                      placeholder="نام اکیپ"
+                    />
+                  </TableCell>
+                  <TableCell className="border border-blue-200">
+                    <AutoResizeTextarea
+                      value={row.service_details}
+                      onChange={(e) => onUpdateRow(index, 'service_details', e.target.value)}
+                      className="min-h-[50px] min-w-[30ch] bg-background/50"
+                      placeholder="جزئیات خدمات..."
+                    />
+                  </TableCell>
+                  <TableCell className="border border-blue-200">
+                    <AutoResizeTextarea
+                      value={row.activity_description}
+                      onChange={(e) => onUpdateRow(index, 'activity_description', e.target.value)}
+                      className="min-h-[50px] min-w-[30ch] bg-background/50"
+                      placeholder="شرح فعالیت..."
+                    />
+                  </TableCell>
                   <TableCell className="border border-blue-200">
                     <div className="flex items-center gap-2">
                       <OrderSearchSelect
@@ -106,51 +151,6 @@ export function OrderReportsTable({
                         </Button>
                       )}
                     </div>
-                  </TableCell>
-                  <TableCell className="border border-blue-200">
-                    <AutoResizeTextarea
-                      value={row.activity_description}
-                      onChange={(e) => onUpdateRow(index, 'activity_description', e.target.value)}
-                      className="min-h-[50px] min-w-[30ch] bg-background/50"
-                      placeholder="شرح فعالیت..."
-                    />
-                  </TableCell>
-                  <TableCell className="border border-blue-200">
-                    <AutoResizeTextarea
-                      value={row.service_details}
-                      onChange={(e) => onUpdateRow(index, 'service_details', e.target.value)}
-                      className="min-h-[50px] min-w-[30ch] bg-background/50"
-                      placeholder="جزئیات خدمات..."
-                    />
-                  </TableCell>
-                  <TableCell className="border border-blue-200">
-                    <Input
-                      value={row.team_name}
-                      onChange={(e) => onUpdateRow(index, 'team_name', e.target.value)}
-                      className="bg-background/50 min-w-[30ch]"
-                      placeholder="نام اکیپ"
-                    />
-                  </TableCell>
-                  <TableCell className="border border-blue-200">
-                    <AutoResizeTextarea
-                      value={row.notes}
-                      onChange={(e) => onUpdateRow(index, 'notes', e.target.value)}
-                      className="min-h-[50px] min-w-[30ch] bg-background/50"
-                      placeholder="توضیحات..."
-                    />
-                  </TableCell>
-                  <TableCell className="border border-blue-200">
-                    <div className={`w-6 h-6 rounded ${getRowColorClass(row.row_color)}`}></div>
-                  </TableCell>
-                  <TableCell className="border border-blue-200">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onRemoveRow(index)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
