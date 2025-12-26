@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { createPortal } from 'react-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // لیست ثابت پرسنل اهرم با کد
 const AHROM_STAFF_LIST = [
@@ -56,6 +57,7 @@ export function StaffSearchSelect({
   const [hrStaff, setHrStaff] = useState<StaffMember[]>([]);
   const [salaryStaff, setSalaryStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +66,7 @@ export function StaffSearchSelect({
     bottom: undefined,
     left: 0,
     width: 0,
-    maxHeight: 350,
+    maxHeight: 520,
   });
 
   // Fetch HR employees and salary settings staff, and match with profiles for user_id
@@ -239,7 +241,7 @@ export function StaffSearchSelect({
     const openBelow = spaceBelow >= 220 || spaceBelow >= spaceAbove;
 
     if (openBelow) {
-      const maxHeight = Math.min(350, Math.max(180, spaceBelow));
+      const maxHeight = Math.min(520, Math.max(180, spaceBelow));
       setPosition({
         top: rect.bottom + OFFSET,
         bottom: undefined,
@@ -248,7 +250,7 @@ export function StaffSearchSelect({
         maxHeight,
       });
     } else {
-      const maxHeight = Math.min(350, Math.max(180, spaceAbove));
+      const maxHeight = Math.min(520, Math.max(180, spaceAbove));
       setPosition({
         top: undefined,
         bottom: window.innerHeight - rect.top + OFFSET,
@@ -268,22 +270,30 @@ export function StaffSearchSelect({
     setOpen(true);
   };
 
-  // Focus the search input when opened
+  // On mobile we don't auto-focus the search input (prevents keyboard covering the screen)
   useEffect(() => {
-    if (!open) return;
+    if (!open || isMobile) return;
     const t = window.setTimeout(() => searchInputRef.current?.focus(), 0);
     return () => window.clearTimeout(t);
-  }, [open]);
+  }, [open, isMobile]);
 
-  // Keep dropdown anchored when any scroll happens (including table scroll) and on resize
+  // Keep dropdown anchored when outer scroll happens (table/page) and on resize.
+  // We ignore scroll events that originate from inside the dropdown itself so the list can scroll smoothly.
   useEffect(() => {
     if (!open) return;
-    const handler = () => updatePosition();
-    window.addEventListener('resize', handler);
-    window.addEventListener('scroll', handler, true);
+
+    const onResize = () => updatePosition();
+    const onScroll = (e: Event) => {
+      const target = e.target as Node | null;
+      if (target && dropdownRef.current?.contains(target)) return;
+      updatePosition();
+    };
+
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onScroll, true);
     return () => {
-      window.removeEventListener('resize', handler);
-      window.removeEventListener('scroll', handler, true);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onScroll, true);
     };
   }, [open]);
 
@@ -359,9 +369,7 @@ export function StaffSearchSelect({
                 />
               </div>
             </div>
-            <ScrollArea
-              style={{ maxHeight: Math.max(140, position.maxHeight - 64) }}
-            >
+            <ScrollArea style={{ height: Math.max(140, position.maxHeight - 64) }}>
               {loading ? (
                 <div className="py-6 flex items-center justify-center text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin ml-2" />
