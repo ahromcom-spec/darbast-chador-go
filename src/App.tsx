@@ -14,7 +14,7 @@ import { AdminImpersonationBanner } from "@/components/common/AdminImpersonation
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { IncomingCallProvider } from "@/contexts/IncomingCallContext";
 import GlobalIncomingCallPopup from "@/components/calls/GlobalIncomingCallPopup";
-import { useInternalZoom } from "@/hooks/useInternalZoom";
+import { ZoomProvider } from "@/contexts/ZoomContext";
 
 import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
 
@@ -145,11 +145,6 @@ const PageLoader = () => (
   </div>
 );
 
-// Component to initialize internal zoom for Windows
-const ZoomInitializer = () => {
-  useInternalZoom();
-  return null;
-};
 
 const App = () => {
   return (
@@ -159,11 +154,10 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <IncomingCallProvider>
-              {/* <PageLoadProgress /> */}
-              <ZoomInitializer />
-              <AdminImpersonationBanner />
-              <OfflineIndicator />
+            <ZoomProvider>
+              <IncomingCallProvider>
+                {/* <PageLoadProgress /> */}
+                <AdminImpersonationBanner />
               <GlobalIncomingCallPopup />
               
               <Suspense fallback={<PageLoader />}>
@@ -429,8 +423,9 @@ const App = () => {
               </div>
               <AssistantAvatar />
             </Suspense>
-            </IncomingCallProvider>
-        </BrowserRouter>
+              </IncomingCallProvider>
+            </ZoomProvider>
+          </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
     </ErrorBoundary>

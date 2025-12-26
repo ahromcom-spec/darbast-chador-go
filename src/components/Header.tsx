@@ -1,5 +1,5 @@
 import { useState, useEffect, memo, useRef, useCallback } from "react";
-import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt } from "lucide-react";
+import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,12 +10,14 @@ import ahromLogo from "@/assets/ahrom-logo.png";
 import contactButton from "@/assets/contact-button.png";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useToast } from "@/hooks/use-toast";
+import { useZoom } from "@/contexts/ZoomContext";
 
 const Header = memo(() => {
   const navigate = useNavigate();
   const auth = useAuth();
   const user = auth?.user || null;
   const { toast } = useToast();
+  const { isWindows, zoomIn, zoomOut, resetZoom, zoomPercentage } = useZoom();
   
   // نمایش نام کاربر فقط وقتی لاگین شده
   const displayName = user?.user_metadata?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
@@ -161,6 +163,44 @@ const Header = memo(() => {
   if (isGlobeVisible && location.pathname === '/') {
     return null;
   }
+
+  const ZoomControls = isWindows ? (
+    <div className="flex items-center gap-1 rounded-full border border-border/60 bg-background/40 p-1">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 rounded-full"
+        onClick={zoomOut}
+        aria-label="کوچک‌نمایی ۱۵٪"
+        title="کوچک‌نمایی ۱۵٪"
+      >
+        <Minus className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-8 rounded-full px-2 font-semibold tabular-nums"
+        onClick={resetZoom}
+        aria-label="بازنشانی زوم"
+        title="بازنشانی زوم"
+      >
+        {zoomPercentage}%
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 rounded-full"
+        onClick={zoomIn}
+        aria-label="بزرگ‌نمایی ۱۵٪"
+        title="بزرگ‌نمایی ۱۵٪"
+      >
+        <Plus className="h-4 w-4" />
+      </Button>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -323,6 +363,7 @@ const Header = memo(() => {
             <div className="flex items-center justify-end gap-2 py-0.5 pr-2">
             {user ? (
               <>
+                {ZoomControls}
                 <div data-tour="notifications">
                   <NotificationBell />
                 </div>
@@ -414,6 +455,7 @@ const Header = memo(() => {
               </>
             ) : (
               <>
+                {ZoomControls}
                 <Button
                   variant="outline"
                   size="sm"
@@ -439,6 +481,7 @@ const Header = memo(() => {
           <div className="flex items-center justify-end gap-4 py-1 pr-4">
             {user ? (
               <>
+                {ZoomControls}
                 <div data-tour="notifications">
                   <NotificationBell />
                 </div>
@@ -529,6 +572,8 @@ const Header = memo(() => {
               </>
             ) : (
               <>
+                {ZoomControls}
+
                 <Button
                   onClick={() => navigate("/auth/register")}
                   className="gap-2 font-medium"
