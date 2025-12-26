@@ -18,7 +18,7 @@
 /* Cross-browser compatibility - Desktop & Mobile (Chrome, Edge, Firefox) */
 html {
   /* Consistent font sizing across all browsers */
-  font-size: 16px !important;
+  font-size: 16px;
   -webkit-text-size-adjust: 100%;
   -moz-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
@@ -26,63 +26,24 @@ html {
   /* Prevent font scaling in landscape */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Windows desktop browser fixes - normalize zoom */
-  zoom: 1 !important;
-  -ms-zoom: 1 !important;
-  /* Reset transform scale */
-  transform: scale(1);
-  transform-origin: top left;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
 }
 
 /* Ensure body fills viewport consistently */
 body {
   min-height: 100vh;
   min-height: 100dvh; /* Dynamic viewport height for mobile */
-  font-size: 1rem !important;
+  font-size: 1rem;
   line-height: 1.5;
   /* Firefox specific fixes for Windows */
   -moz-osx-font-smoothing: grayscale;
   /* Force consistent rendering */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-}
-
-/* Firefox desktop Windows specific fixes */
-@-moz-document url-prefix() {
-  html {
-    font-size: 16px !important;
-    zoom: 1 !important;
-  }
-  body {
-    font-size: 1rem !important;
-    zoom: 1 !important;
-  }
-  * {
-    zoom: 1 !important;
-  }
-}
-
-/* Edge specific fixes - using Chromium Edge detection */
-@supports (-webkit-appearance: none) and (not (-moz-appearance: none)) {
-  html {
-    font-size: 16px !important;
-    zoom: 1 !important;
-  }
-  body {
-    font-size: 1rem !important;
-  }
-}
-
-/* Legacy Edge specific */
-@supports (-ms-ime-align: auto) {
-  html {
-    font-size: 16px !important;
-    zoom: 1 !important;
-    -ms-zoom: 1 !important;
-  }
-  body {
-    font-size: 1rem !important;
-  }
+  /* Prevent scroll locking */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Persian RTL Design System - Inspired by traditional Persian architecture and modern construction */
