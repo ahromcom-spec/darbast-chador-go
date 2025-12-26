@@ -94,7 +94,7 @@ export function StaffReportsTable({
   }, [staffReports.length]);
 
   return (
-    <Card data-dropdown-boundary className="border-2 border-amber-500/30">
+    <Card data-dropdown-boundary className="relative border-2 border-amber-500/30">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
