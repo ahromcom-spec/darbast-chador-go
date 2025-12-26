@@ -203,16 +203,16 @@ export function AssistantAvatar() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   
-  // محاسبه پوزیشن پیش‌فرض اواتار - پایین سمت چپ
+  // محاسبه پوزیشن پیش‌فرض اواتار - پایین‌ترین و چپ‌ترین ممکن
   const getDefaultAvatarPosition = useCallback(() => {
     const vp = getViewportSize();
     // Avatar (64px) + label (~24px) + gap (8px) = ~96px total height + margin
     const avatarTotalHeight = 120; // 64 (avatar) + 24 (label) + 32 (safe margin)
     const isMobile = vp.width < 640;
-    const bottomOffset = isMobile ? 160 : 180;
+    const bottomMargin = isMobile ? 24 : 32;
     return { 
-      x: Math.max(16, 16), 
-      y: Math.min(vp.height - bottomOffset, vp.height - avatarTotalHeight) 
+      x: 16, // چپ‌ترین موقعیت
+      y: vp.height - avatarTotalHeight - bottomMargin // پایین‌ترین موقعیت
     };
   }, []);
   
@@ -352,24 +352,19 @@ export function AssistantAvatar() {
     }
   }, [isOpen]);
 
-  // Handle viewport resize/zoom to keep avatar in bounds
-  // Avatar can only move in the bottom-left quadrant (left half, bottom half)
+  // Handle viewport resize/zoom to keep avatar at bottom-left corner
   useEffect(() => {
     const clampPositionToViewport = () => {
       const vp = getViewportSize();
-      // Avatar (64px) + label (~24px) + gap (8px) + extra safe margin = ~120px total height
-      const avatarTotalHeight = 120; // 64 (avatar) + 24 (label) + 32 (safe margin)
-      const avatarSize = 64;
-      // Avatar restricted to left half of screen (0 to width/2 - avatarSize)
-      const maxX = (vp.width / 2) - avatarSize - 8;
-      // Avatar restricted to bottom half of screen (height/2 to height - totalHeight)
-      const minY = vp.height / 2;
-      const maxY = vp.height - avatarTotalHeight;
+      const avatarTotalHeight = 120;
+      const isMobile = vp.width < 640;
+      const bottomMargin = isMobile ? 24 : 32;
       
-      setAvatarPosition(prev => ({
-        x: Math.max(16, Math.min(maxX, prev.x)),
-        y: Math.max(minY, Math.min(maxY, prev.y))
-      }));
+      // همیشه آواتار در پایین‌ترین و چپ‌ترین موقعیت باشد
+      setAvatarPosition({
+        x: 16, // چپ‌ترین
+        y: vp.height - avatarTotalHeight - bottomMargin // پایین‌ترین
+      });
       
       // Also clamp chat position if open
       if (isOpen) {
@@ -439,13 +434,15 @@ export function AssistantAvatar() {
     const vp = getViewportSize();
     const newX = clientX - dragOffset.x;
     const newY = clientY - dragOffset.y;
-    const avatarTotalHeight = 120; // 64 (avatar) + 24 (label) + 32 (safe margin)
+    const avatarTotalHeight = 120;
     const avatarSize = 64;
-    // Avatar restricted to left half of screen
+    const isMobile = vp.width < 640;
+    const bottomMargin = isMobile ? 24 : 32;
+    // محدود به سمت چپ صفحه
     const maxX = (vp.width / 2) - avatarSize - 8;
-    // Avatar restricted to bottom half of screen
+    // محدود به پایین صفحه
     const minY = vp.height / 2;
-    const maxY = vp.height - avatarTotalHeight;
+    const maxY = vp.height - avatarTotalHeight - bottomMargin;
     
     setAvatarPosition({
       x: Math.max(16, Math.min(maxX, newX)),
