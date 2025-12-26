@@ -2679,7 +2679,7 @@ export default function DailyReportModule() {
 
         {/* Order Details Dialog */}
         <AlertDialog open={orderDetailsDialogOpen} onOpenChange={setOrderDetailsDialogOpen}>
-          <AlertDialogContent className="!fixed !inset-0 !left-0 !top-0 !translate-x-0 !translate-y-0 !w-[100vw] !max-w-[100vw] !h-[100dvh] !max-h-[100dvh] !p-0 !flex !flex-col !rounded-none !border-0 data-[state=open]:animate-none data-[state=closed]:animate-none overflow-hidden">
+          <AlertDialogContent className="!max-w-2xl !w-[95vw] !max-h-[90vh] !p-0 !flex !flex-col overflow-hidden"  style={{ maxHeight: '90vh' }}>
             {/* Close button at top - Fixed header */}
             <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-2">
