@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,6 +50,13 @@ export function MediaUploader({
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [moderating, setModerating] = useState(false);
   const { checkImage } = useImageModeration();
+  
+  // Unique IDs for file inputs to prevent conflicts when multiple uploaders exist
+  const uniqueId = useId();
+  const imageInputId = `image-upload-${uniqueId}`;
+  const videoInputId = `video-upload-${uniqueId}`;
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Utilities
   const setFilePartial = (id: string, patch: Partial<MediaFile> | ((prev: MediaFile) => Partial<MediaFile>)) => {
@@ -390,7 +397,7 @@ export function MediaUploader({
                 type="button" 
                 variant="outline" 
                 size="sm" 
-                onClick={() => document.getElementById('image-upload')?.click()}
+                onClick={() => imageInputRef.current?.click()}
                 disabled={moderating}
               >
                 {moderating ? (
@@ -408,7 +415,8 @@ export function MediaUploader({
             )}
           </div>
           <input
-            id="image-upload"
+            ref={imageInputRef}
+            id={imageInputId}
             type="file"
             accept="image/jpeg,image/jpg,image/png,image/webp"
             multiple
@@ -477,16 +485,17 @@ export function MediaUploader({
               ویدیوها ({videoCount}/{maxVideos})
             </Label>
             {videoCount < maxVideos && (
-              <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('video-upload')?.click()}>
+              <Button type="button" variant="outline" size="sm" onClick={() => videoInputRef.current?.click()}>
                 <Upload className="w-4 h-4 mr-2" />
                 افزودن ویدیو
               </Button>
             )}
           </div>
           <input
-            id="video-upload"
+            ref={videoInputRef}
+            id={videoInputId}
             type="file"
-            accept="video/*"
+            accept="video/mp4,video/webm,video/mov,video/avi,video/quicktime,video/*"
             multiple
             className="hidden"
             onChange={(e) => handleFileSelect(e, 'video')}

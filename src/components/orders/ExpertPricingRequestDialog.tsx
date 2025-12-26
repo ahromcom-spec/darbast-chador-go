@@ -74,38 +74,56 @@ export const ExpertPricingRequestDialog = ({
   };
 
   const uploadMedia = async (orderId: string, files: File[]) => {
-    const uploadResults: { success: boolean; fileName: string }[] = [];
+    const uploadResults: { success: boolean; fileName: string; error?: string }[] = [];
     
     for (const file of files) {
-      const fileType = file.type.startsWith('video/') ? 'video' : 'image';
-      const fileExt = file.name.split('.').pop() || (fileType === 'video' ? 'mp4' : 'jpg');
+      const isVideo = file.type.startsWith('video/') || 
+                     file.name.toLowerCase().endsWith('.mp4') ||
+                     file.name.toLowerCase().endsWith('.mov') ||
+                     file.name.toLowerCase().endsWith('.webm') ||
+                     file.name.toLowerCase().endsWith('.avi');
+      const fileType = isVideo ? 'video' : 'image';
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || (isVideo ? 'mp4' : 'jpg');
       const safeFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
       const storagePath = `${user!.id}/${orderId}/${safeFileName}`;
+
+      // Determine correct content type
+      let contentType = file.type;
+      if (!contentType || contentType === 'application/octet-stream') {
+        // Fallback content type based on extension
+        const extMap: Record<string, string> = {
+          'mp4': 'video/mp4',
+          'mov': 'video/quicktime',
+          'webm': 'video/webm',
+          'avi': 'video/x-msvideo',
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'webp': 'image/webp'
+        };
+        contentType = extMap[fileExt] || (isVideo ? 'video/mp4' : 'image/jpeg');
+      }
 
       console.log('Uploading file:', { 
         originalName: file.name,
         storagePath, 
         fileType, 
         fileSize: file.size, 
-        mimeType: file.type 
+        mimeType: contentType,
+        isVideo
       });
 
       try {
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('project-media')
           .upload(storagePath, file, {
-            contentType: file.type,
+            contentType: contentType,
             upsert: false
           });
 
         if (uploadError) {
           console.error('Upload error for', file.name, ':', uploadError);
-          uploadResults.push({ success: false, fileName: file.name });
-          toast({
-            title: 'خطا در آپلود',
-            description: `آپلود فایل ${file.name} با خطا مواجه شد`,
-            variant: 'destructive'
-          });
+          uploadResults.push({ success: false, fileName: file.name, error: uploadError.message });
           continue;
         }
 
@@ -117,19 +135,19 @@ export const ExpertPricingRequestDialog = ({
           file_path: storagePath,
           file_type: fileType,
           file_size: file.size,
-          mime_type: file.type
+          mime_type: contentType
         });
 
         if (dbError) {
           console.error('DB error saving media:', dbError);
-          uploadResults.push({ success: false, fileName: file.name });
+          uploadResults.push({ success: false, fileName: file.name, error: dbError.message });
         } else {
-          console.log('Media record saved to database');
+          console.log('Media record saved to database:', { fileType, storagePath });
           uploadResults.push({ success: true, fileName: file.name });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Unexpected error uploading', file.name, ':', error);
-        uploadResults.push({ success: false, fileName: file.name });
+        uploadResults.push({ success: false, fileName: file.name, error: error?.message });
       }
     }
 
@@ -146,6 +164,12 @@ export const ExpertPricingRequestDialog = ({
       toast({
         title: '⚠️ آپلود ناقص',
         description: `${successCount} فایل آپلود شد، ${failCount} فایل با خطا مواجه شد`,
+        variant: 'destructive'
+      });
+    } else if (failCount > 0 && successCount === 0) {
+      toast({
+        title: '❌ خطا در آپلود',
+        description: `هیچ فایلی آپلود نشد. ${uploadResults[0]?.error || 'خطای نامشخص'}`,
         variant: 'destructive'
       });
     }
