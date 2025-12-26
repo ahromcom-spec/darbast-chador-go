@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { createPortal } from 'react-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Order {
   id: string;
@@ -29,6 +30,7 @@ export function OrderSearchSelect({
 }: OrderSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const isMobile = useIsMobile();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -37,7 +39,7 @@ export function OrderSearchSelect({
     bottom: undefined,
     left: 0,
     width: 0,
-    maxHeight: 350,
+    maxHeight: 520,
   });
 
   const selectedOrder = orders.find(o => o.id === value);
@@ -101,7 +103,7 @@ export function OrderSearchSelect({
     const openBelow = spaceBelow >= 240 || spaceBelow >= spaceAbove;
 
     if (openBelow) {
-      const maxHeight = Math.min(350, Math.max(180, spaceBelow));
+      const maxHeight = Math.min(520, Math.max(180, spaceBelow));
       setPosition({
         top: rect.bottom + OFFSET,
         bottom: undefined,
@@ -110,7 +112,7 @@ export function OrderSearchSelect({
         maxHeight,
       });
     } else {
-      const maxHeight = Math.min(350, Math.max(180, spaceAbove));
+      const maxHeight = Math.min(520, Math.max(180, spaceAbove));
       setPosition({
         top: undefined,
         bottom: window.innerHeight - rect.top + OFFSET,
@@ -130,22 +132,30 @@ export function OrderSearchSelect({
     setOpen(true);
   };
 
-  // Focus the search input when opened
+  // On mobile we don't auto-focus the search input (prevents keyboard covering the screen)
   useEffect(() => {
-    if (!open) return;
+    if (!open || isMobile) return;
     const t = window.setTimeout(() => searchInputRef.current?.focus(), 0);
     return () => window.clearTimeout(t);
-  }, [open]);
+  }, [open, isMobile]);
 
-  // Keep dropdown anchored when any scroll happens (including table scroll) and on resize
+  // Keep dropdown anchored when outer scroll happens (table/page) and on resize.
+  // We ignore scroll events that originate from inside the dropdown itself so the list can scroll smoothly.
   useEffect(() => {
     if (!open) return;
-    const handler = () => updatePosition();
-    window.addEventListener('resize', handler);
-    window.addEventListener('scroll', handler, true);
+
+    const onResize = () => updatePosition();
+    const onScroll = (e: Event) => {
+      const target = e.target as Node | null;
+      if (target && dropdownRef.current?.contains(target)) return;
+      updatePosition();
+    };
+
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onScroll, true);
     return () => {
-      window.removeEventListener('resize', handler);
-      window.removeEventListener('scroll', handler, true);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onScroll, true);
     };
   }, [open]);
 
@@ -221,7 +231,7 @@ export function OrderSearchSelect({
                 />
               </div>
             </div>
-            <ScrollArea style={{ maxHeight: Math.max(140, position.maxHeight - 64) }}>
+            <ScrollArea style={{ height: Math.max(140, position.maxHeight - 64) }}>
               {filteredOrders.length === 0 ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   سفارشی یافت نشد
