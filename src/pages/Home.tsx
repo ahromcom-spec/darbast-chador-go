@@ -344,13 +344,11 @@ const Home = () => {
       </div>
       </div>
 
-      {/* Bottom Banners - PWA Install */}
+      {/* PWA Install Banner - Bottom Right - بدون Wrapper */}
       {!showGlobe && (
-        <div className="fixed bottom-4 left-4 right-4 z-50 flex flex-col gap-3 max-w-md mx-auto md:left-auto md:right-4 md:mx-0">
-          <Suspense fallback={null}>
-            <PWAInstallBanner />
-          </Suspense>
-        </div>
+        <Suspense fallback={null}>
+          <PWAInstallBanner />
+        </Suspense>
       )}
 
     </>
