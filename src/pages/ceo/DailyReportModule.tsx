@@ -27,6 +27,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrderSearchSelect } from '@/components/orders/OrderSearchSelect';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
+import { WorkStatusSelect } from '@/components/daily-report/WorkStatusSelect';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { format } from 'date-fns-jalali';
 import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
@@ -2026,7 +2027,7 @@ export default function DailyReportModule() {
                 </Card>
 
                 {/* Staff Reports Table */}
-                <Card className="border-2 border-amber-500/30 -mx-2 sm:mx-0 rounded-none sm:rounded-lg">
+                <Card data-dropdown-boundary className="relative border-2 border-amber-500/30 -mx-2 sm:mx-0 rounded-none sm:rounded-lg">
                   <CardHeader className="pb-3 px-2 sm:px-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 sm:gap-3">
@@ -2130,18 +2131,11 @@ export default function DailyReportModule() {
                                 {row.is_cash_box ? (
                                   <span className="text-muted-foreground">—</span>
                                 ) : (
-                                  <Select
+                                  <WorkStatusSelect
                                     value={row.work_status}
-                                    onValueChange={(value: 'کارکرده' | 'غایب') => updateStaffRow(index, 'work_status', value)}
-                                  >
-                                    <SelectTrigger className="min-w-[90px] w-auto">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-background">
-                                      <SelectItem value="کارکرده">کارکرده</SelectItem>
-                                      <SelectItem value="غایب">غایب</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                    onValueChange={(value) => updateStaffRow(index, 'work_status', value)}
+                                    className="min-w-[90px] w-auto"
+                                  />
                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
