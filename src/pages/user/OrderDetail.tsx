@@ -49,6 +49,7 @@ import {
   Printer,
   ArrowLeftRight,
   Users,
+  User,
   ChevronDown,
   ChevronUp,
   CalendarDays
@@ -141,6 +142,7 @@ interface MediaFile {
   file_type: 'image' | 'video';
   thumbnail_path?: string;
   created_at: string;
+  user_id: string;
 }
 
 const orderNotesSchema = z.object({
@@ -181,6 +183,7 @@ export default function OrderDetail() {
   const [completionDate, setCompletionDate] = useState('');
   const [isRenewing, setIsRenewing] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [mediaUploaderNames, setMediaUploaderNames] = useState<Record<string, string>>({});
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; poster?: string } | null>(null);
   const [showRatingForm, setShowRatingForm] = useState(false);
@@ -423,7 +426,27 @@ export default function OrderDetail() {
       }
 
       // Set fetched data
-      if (mediaRes.data) setMediaFiles(mediaRes.data as MediaFile[]);
+      if (mediaRes.data) {
+        const mediaData = mediaRes.data as MediaFile[];
+        setMediaFiles(mediaData);
+        
+        // Fetch uploader names for media
+        const userIds = [...new Set(mediaData.map(m => m.user_id).filter(Boolean))];
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, phone_number')
+            .in('user_id', userIds);
+          
+          if (profiles) {
+            const names: Record<string, string> = {};
+            profiles.forEach(p => {
+              names[p.user_id] = p.full_name || p.phone_number || 'کاربر';
+            });
+            setMediaUploaderNames(names);
+          }
+        }
+      }
       if (approvalsRes.data) setApprovals(approvalsRes.data as Approval[]);
       
       if (repairRes.data && repairRes.data.length > 0) {
@@ -2297,38 +2320,57 @@ export default function OrderDetail() {
                       .from('project-media')
                       .getPublicUrl(media.file_path);
                     
+                    const isOwnMedia = user?.id === media.user_id;
+                    const uploaderName = mediaUploaderNames[media.user_id] || 'نامشخص';
+                    
                     return (
                       <div 
                         key={media.id} 
-                        className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer hover:ring-2 hover:ring-primary transition-all group"
-                        onClick={() => setSelectedImage(data.publicUrl)}
+                        className="relative rounded-lg overflow-hidden border cursor-pointer hover:ring-2 hover:ring-primary transition-all group"
                       >
-                        <img
-                          src={data.publicUrl}
-                          alt="تصویر سفارش"
-                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                        <div 
+                          className="aspect-square"
+                          onClick={() => setSelectedImage(data.publicUrl)}
+                        >
+                          <img
+                            src={data.publicUrl}
+                            alt="تصویر سفارش"
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                          
+                          {/* دکمه حذف - فقط برای عکس‌های خود کاربر */}
+                          {(!order.approved_at) && isOwnMedia && (
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteMedia(media.id, media.file_path);
+                              }}
+                              disabled={deletingMediaId === media.id}
+                            >
+                              {deletingMediaId === media.id ? (
+                                <Clock className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
                         
-                        {/* دکمه حذف */}
-                        {(!order.approved_at) && (
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteMedia(media.id, media.file_path);
-                            }}
-                            disabled={deletingMediaId === media.id}
-                          >
-                            {deletingMediaId === media.id ? (
-                              <Clock className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <X className="h-4 w-4" />
-                            )}
-                          </Button>
-                        )}
+                        {/* اطلاعات آپلودکننده */}
+                        <div className="p-2 bg-muted/50 text-xs text-muted-foreground border-t">
+                          <div className="flex items-center gap-1 mb-1">
+                            <User className="h-3 w-3" />
+                            <span className="truncate">{uploaderName}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{formatPersianDateTime(media.created_at)}</span>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
@@ -2428,6 +2470,9 @@ export default function OrderDetail() {
                       ? supabase.storage.from('project-media').getPublicUrl(media.thumbnail_path)
                       : null;
                     
+                    const isOwnMedia = user?.id === media.user_id;
+                    const uploaderName = mediaUploaderNames[media.user_id] || 'نامشخص';
+                    
                     const handleDownload = async () => {
                       try {
                         const response = await fetch(data.publicUrl);
@@ -2447,9 +2492,9 @@ export default function OrderDetail() {
                     };
                     
                     return (
-                      <div key={media.id} className="relative group">
+                      <div key={media.id} className="relative group rounded-lg overflow-hidden border">
                         <div 
-                          className="aspect-video rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                          className="aspect-video bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                           onClick={() => window.open(data.publicUrl, '_blank')}
                         >
                           {thumbnailData?.data.publicUrl ? (
@@ -2484,8 +2529,8 @@ export default function OrderDetail() {
                           )}
                         </div>
                         
-                        {/* دکمه حذف */}
-                        {!order.approved_at && (
+                        {/* دکمه حذف - فقط برای ویدیوهای خود کاربر */}
+                        {!order.approved_at && isOwnMedia && (
                           <Button
                             variant="destructive"
                             size="icon"
@@ -2505,7 +2550,7 @@ export default function OrderDetail() {
                         )}
                         
                         {/* دکمه دانلود */}
-                        <div className="absolute bottom-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-12 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             size="sm"
                             variant="secondary"
@@ -2520,10 +2565,22 @@ export default function OrderDetail() {
                           </Button>
                         </div>
                         
-                        {/* اطلاعات فایل */}
-                        <div className="absolute bottom-3 right-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
-                          <Film className="w-3.5 h-3.5" />
-                          ویدیو
+                        {/* اطلاعات آپلودکننده */}
+                        <div className="p-2 bg-muted/50 text-xs text-muted-foreground border-t">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              <span className="truncate">{uploaderName}</span>
+                            </div>
+                            <div className="flex items-center gap-1 bg-black/70 text-white px-2 py-0.5 rounded-full">
+                              <Film className="w-3 h-3" />
+                              ویدیو
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{formatPersianDateTime(media.created_at)}</span>
+                          </div>
                         </div>
                       </div>
                     );

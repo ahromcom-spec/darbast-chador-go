@@ -59,7 +59,8 @@ const parseOrderNotes = (notes: any): any => {
 
 // Component to display order media with signed URLs
 const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
-  const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string; mime_type?: string; created_at: string }>>([]);
+  const { user } = useAuth();
+  const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string; mime_type?: string; created_at: string; user_id: string }>>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
@@ -67,18 +68,36 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
   const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [videoDurations, setVideoDurations] = useState<Record<string, number>>({});
+  const [uploaderNames, setUploaderNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchMedia = async () => {
       try {
         const { data, error } = await supabase
           .from('project_media')
-          .select('id, file_path, file_type, mime_type, created_at')
+          .select('id, file_path, file_type, mime_type, created_at, user_id')
           .eq('project_id', orderId)
           .order('created_at', { ascending: true });
         
         if (error) throw error;
         setMedia(data || []);
+
+        // Fetch uploader names
+        if (data && data.length > 0) {
+          const userIds = [...new Set(data.map(m => m.user_id))];
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, phone_number')
+            .in('user_id', userIds);
+          
+          if (profiles) {
+            const names: Record<string, string> = {};
+            profiles.forEach(p => {
+              names[p.user_id] = p.full_name || p.phone_number || 'کاربر';
+            });
+            setUploaderNames(names);
+          }
+        }
       } catch (err) {
         console.error('Error fetching media:', err);
       } finally {
@@ -295,25 +314,31 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
           )}
         </div>
         
-        {/* Media Info - Upload Time & Duration */}
+        {/* Media Info - Upload Time, Duration & Uploader */}
         {currentMedia && (
-          <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>آپلود: {formatUploadTime(currentMedia.created_at)}</span>
+          <div className="flex flex-col gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span>آپلود: {formatUploadTime(currentMedia.created_at)}</span>
+              </div>
+              {isVideo && videoDurations[currentMedia.id] && (
+                <div className="flex items-center gap-1">
+                  <Film className="h-3 w-3" />
+                  <span>مدت: {formatDuration(videoDurations[currentMedia.id])}</span>
+                </div>
+              )}
+              {!isVideo && (
+                <div className="flex items-center gap-1">
+                  <ImageIcon className="h-3 w-3" />
+                  <span>عکس</span>
+                </div>
+              )}
             </div>
-            {isVideo && videoDurations[currentMedia.id] && (
-              <div className="flex items-center gap-1">
-                <Film className="h-3 w-3" />
-                <span>مدت: {formatDuration(videoDurations[currentMedia.id])}</span>
-              </div>
-            )}
-            {!isVideo && (
-              <div className="flex items-center gap-1">
-                <ImageIcon className="h-3 w-3" />
-                <span>عکس</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1 border-t border-border/30 pt-2">
+              <User className="h-3 w-3" />
+              <span>آپلود شده توسط: {uploaderNames[currentMedia.user_id] || 'نامشخص'}</span>
+            </div>
           </div>
         )}
       </div>
