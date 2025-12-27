@@ -26,8 +26,7 @@ import VoiceCall from "@/components/orders/VoiceCall";
 import CallHistory from "@/components/calls/CallHistory";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { OrderDailyLogs } from "@/components/orders/OrderDailyLogs";
-import StaticLocationMap from "@/components/locations/StaticLocationMap";
-import { LocationMapModal } from "@/components/locations/LocationMapModal";
+import { OrderLocationEditor } from "@/components/locations/OrderLocationEditor";
 import {
   ArrowRight,
   MapPin,
@@ -101,6 +100,8 @@ interface Order {
   executive_completion_date?: string;
   location_lat?: number;
   location_lng?: number;
+  location_confirmed_by_customer?: boolean;
+  location_confirmed_at?: string;
   hierarchy_project_id?: string;
   subcategory_id?: string;
   province_id?: string;
@@ -219,8 +220,6 @@ export default function OrderDetail() {
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
   const [showEditExpertPricingDialog, setShowEditExpertPricingDialog] = useState(false);
-  const [showLocationEditModal, setShowLocationEditModal] = useState(false);
-  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
   const [isOrderDetailsExpanded, setIsOrderDetailsExpanded] = useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
@@ -845,42 +844,6 @@ export default function OrderDetail() {
       });
     } finally {
       setIsConfirmingPrice(false);
-    }
-  };
-
-  // Handler for updating order location
-  const handleLocationUpdate = async (lat: number, lng: number) => {
-    if (!order) return;
-    
-    setIsUpdatingLocation(true);
-    try {
-      const { error } = await supabase
-        .from('projects_v3')
-        .update({ 
-          location_lat: lat, 
-          location_lng: lng,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', order.id);
-
-      if (error) throw error;
-
-      toast({
-        title: '✓ موقعیت بروزرسانی شد',
-        description: 'موقعیت سفارش با موفقیت تغییر کرد.',
-      });
-
-      // Refresh order details
-      await fetchOrderDetails();
-    } catch (error: any) {
-      console.error('Error updating location:', error);
-      toast({
-        title: 'خطا',
-        description: 'خطا در بروزرسانی موقعیت',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUpdatingLocation(false);
     }
   };
 
@@ -2074,48 +2037,17 @@ export default function OrderDetail() {
 
           {/* نقشه موقعیت پروژه */}
           {order.location_lat && order.location_lng && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    موقعیت پروژه بر روی نقشه
-                  </div>
-                  {canEdit && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowLocationEditModal(true)}
-                      disabled={isUpdatingLocation}
-                      className="gap-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                      ویرایش موقعیت
-                    </Button>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px] rounded-lg overflow-hidden border-2 border-border">
-                  <StaticLocationMap
-                    lat={order.location_lat}
-                    lng={order.location_lng}
-                    address={order.address}
-                    detailedAddress={order.detailed_address}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Location Edit Modal */}
-          {order.location_lat && order.location_lng && (
-            <LocationMapModal
-              isOpen={showLocationEditModal}
-              onClose={() => setShowLocationEditModal(false)}
-              onLocationSelect={handleLocationUpdate}
-              initialLat={order.location_lat}
-              initialLng={order.location_lng}
+            <OrderLocationEditor
+              orderId={order.id}
+              locationLat={order.location_lat}
+              locationLng={order.location_lng}
+              address={order.address}
+              detailedAddress={order.detailed_address}
+              orderStatus={order.status}
+              locationConfirmedByCustomer={order.location_confirmed_by_customer}
+              locationConfirmedAt={order.location_confirmed_at}
+              isManager={false}
+              onLocationUpdated={fetchOrderDetails}
             />
           )}
 
