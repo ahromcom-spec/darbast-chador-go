@@ -27,6 +27,7 @@ import { OrderTimeline } from './OrderTimeline';
 import { ManagerOwnershipChain } from './ManagerOwnershipChain';
 import { CustomerOwnershipChain } from './CustomerOwnershipChain';
 import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
+import { OrderMediaSection } from './OrderMediaSection';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -42,247 +43,6 @@ const ceilingSubtypeLabels: Record<string, string> = {
   slab: 'دال و وافل'
 };
 
-// Manager Media Gallery with upload and delete
-const ManagerMediaGallery = ({ orderId, onMediaChange }: { orderId: string; onMediaChange?: () => void }) => {
-  const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string; mime_type?: string }>>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const { toast } = useToast();
-
-  const fetchMedia = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('project_media')
-        .select('id, file_path, file_type, mime_type')
-        .eq('project_id', orderId)
-        .order('created_at', { ascending: true });
-      
-      if (error) throw error;
-      setMedia(data || []);
-    } catch (err) {
-      console.error('Error fetching media:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMedia();
-  }, [orderId]);
-
-  // For public bucket, use public URL directly (bucket: project-media)
-  const getMediaUrl = (mediaItem: { file_path: string }) => {
-    const { data } = supabase.storage.from('project-media').getPublicUrl(mediaItem.file_path);
-    return data.publicUrl;
-  };
-
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    setUploading(true);
-    try {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth?.user) throw new Error('Not authenticated');
-
-      for (const file of Array.from(files)) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-        const filePath = `${orderId}/${fileName}`;
-
-        // Upload to storage (bucket: project-media)
-        const { error: uploadError } = await supabase.storage
-          .from('project-media')
-          .upload(filePath, file, { contentType: file.type });
-
-        if (uploadError) throw uploadError;
-
-        // Insert media record
-        const fileType = file.type.startsWith('video/') ? 'video' : 'image';
-        const { error: insertError } = await supabase
-          .from('project_media')
-          .insert({
-            project_id: orderId,
-            user_id: auth.user.id,
-            file_path: filePath,
-            file_type: fileType,
-            mime_type: file.type,
-            file_size: file.size
-          });
-
-        if (insertError) throw insertError;
-      }
-
-      toast({ title: 'موفق', description: 'فایل‌ها با موفقیت آپلود شدند' });
-      fetchMedia();
-      onMediaChange?.();
-    } catch (err: any) {
-      console.error('Upload error:', err);
-      toast({ variant: 'destructive', title: 'خطا', description: err.message || 'خطا در آپلود فایل' });
-    } finally {
-      setUploading(false);
-      event.target.value = '';
-    }
-  };
-
-  const handleDelete = async (mediaId: string, filePath: string) => {
-    try {
-      // Delete from storage (bucket: project-media)
-      await supabase.storage.from('project-media').remove([filePath]);
-      
-      // Delete record
-      const { error } = await supabase
-        .from('project_media')
-        .delete()
-        .eq('id', mediaId);
-
-      if (error) throw error;
-
-      toast({ title: 'موفق', description: 'فایل حذف شد' });
-      fetchMedia();
-      setCurrentIndex(0);
-      onMediaChange?.();
-    } catch (err: any) {
-      console.error('Delete error:', err);
-      toast({ variant: 'destructive', title: 'خطا', description: 'خطا در حذف فایل' });
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center p-4">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  const currentMedia = media[currentIndex];
-  // چک کردن نوع ویدیو با بررسی file_type، mime_type و file_path
-  const isVideo = currentMedia?.file_type === 'video' || 
-                  currentMedia?.file_type?.includes('video') || 
-                  currentMedia?.mime_type?.includes('video') ||
-                  currentMedia?.file_path?.toLowerCase().endsWith('.mp4') ||
-                  currentMedia?.file_path?.toLowerCase().endsWith('.webm') ||
-                  currentMedia?.file_path?.toLowerCase().endsWith('.mov');
-
-  // تعیین MIME type برای ویدیو
-  const getVideoMimeType = () => {
-    if (currentMedia?.mime_type) return currentMedia.mime_type;
-    const path = currentMedia?.file_path?.toLowerCase() || '';
-    if (path.endsWith('.webm')) return 'video/webm';
-    if (path.endsWith('.mov')) return 'video/quicktime';
-    return 'video/mp4';
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium flex items-center gap-2">
-          <ImageIcon className="h-4 w-4" />
-          تصاویر و فایل‌ها ({media.length})
-        </Label>
-        <div className="flex items-center gap-2">
-          <input
-            type="file"
-            id={`media-upload-${orderId}`}
-            accept="image/*,video/*"
-            multiple
-            className="hidden"
-            onChange={handleUpload}
-          />
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={() => document.getElementById(`media-upload-${orderId}`)?.click()}
-            disabled={uploading}
-          >
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            <span className="mr-1">افزودن</span>
-          </Button>
-        </div>
-      </div>
-
-      {media.length === 0 ? (
-        <div className="text-center text-muted-foreground text-sm p-6 bg-muted/50 rounded-lg border-2 border-dashed border-muted-foreground/20">
-          <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-          هنوز تصویری ثبت نشده است
-        </div>
-      ) : (
-        <div className="relative bg-muted/30 rounded-lg overflow-hidden border">
-          <div className="aspect-video flex items-center justify-center bg-black/5 min-h-[200px]">
-            {isVideo ? (
-              <CentralizedVideoPlayer
-                key={currentMedia?.id}
-                src={getMediaUrl(currentMedia)}
-                filePath={currentMedia.file_path}
-                bucket="project-media"
-                className="w-full h-full max-h-[400px]"
-                showControls={true}
-              />
-            ) : (
-              <img
-                src={getMediaUrl(currentMedia)}
-                alt={`تصویر ${currentIndex + 1}`}
-                className="w-full h-full max-h-[400px] object-contain"
-                onError={(e) => {
-                  console.error('Image load error:', currentMedia.file_path);
-                  (e.target as HTMLImageElement).src = '/placeholder.svg';
-                }}
-              />
-            )}
-          </div>
-          
-          {/* Delete button */}
-          <Button
-            variant="destructive"
-            size="icon"
-            className="absolute top-3 left-3 h-9 w-9 shadow-lg"
-            onClick={() => handleDelete(currentMedia.id, currentMedia.file_path)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-
-          {/* Navigation controls */}
-          {media.length > 1 && (
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3">
-              <div className="flex items-center justify-between">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-10 w-10 bg-background/90 hover:bg-background shadow-lg"
-                  onClick={() => setCurrentIndex(i => (i + 1) % media.length)}
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                
-                <div className="bg-background/90 px-4 py-2 rounded-full text-sm font-medium shadow-lg">
-                  {currentIndex + 1} از {media.length}
-                </div>
-                
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-10 w-10 bg-background/90 hover:bg-background shadow-lg"
-                  onClick={() => setCurrentIndex(i => (i - 1 + media.length) % media.length)}
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-          )}
-          
-          {/* Image counter badge */}
-          {media.length === 1 && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-background/90 px-4 py-2 rounded-full text-sm font-medium shadow-lg">
-              تصویر ۱
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
 
 interface EditableOrderDetailsProps {
   order: {
@@ -949,8 +709,13 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
       {/* لیست همکاران سفارش - قابل مشاهده برای مدیران */}
       <OrderCollaboratorsList orderId={order.id} showForManagers={true} />
 
-      {/* Media Gallery with upload/delete for managers */}
-      <ManagerMediaGallery orderId={order.id} onMediaChange={onUpdate} />
+      {/* Media Section with separate images/videos and upload/delete for managers */}
+      <OrderMediaSection 
+        orderId={order.id} 
+        canUpload={true} 
+        canDelete={true} 
+        onMediaChange={onUpdate} 
+      />
 
       {/* Voice Call for managers to call customers */}
       <VoiceCall 
