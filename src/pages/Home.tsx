@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ServiceTypeSelector } from '@/components/common/ServiceTypeSelector';
 import { SubcategoryDialog } from '@/components/common/SubcategoryDialog';
@@ -12,7 +12,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import Snowfall from '@/components/effects/Snowfall';
 
 // Lazy load heavy components for better performance
-const HybridGlobe = lazy(() => import('@/components/globe/HybridGlobe'));
 const PWAInstallBanner = lazy(() => import('@/components/common/PWAInstallBanner').then(m => ({ default: m.PWAInstallBanner })));
 
 const Home = () => {
@@ -21,20 +20,12 @@ const Home = () => {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
   const [pendingServiceTypeId, setPendingServiceTypeId] = useState<string>('');
-  const [showGlobe, setShowGlobe] = useState(() => {
-    return localStorage.getItem('showGlobeMap') === 'true';
-  });
   
   const { canInstall, isIOS, promptInstall } = usePWAInstall();
   const { toast } = useToast();
   const { navigate } = useNavigation();
   const { user } = useAuth();
   const { serviceTypes, loading: servicesLoading } = useServiceTypesWithSubcategories();
-
-  // ذخیره وضعیت نقشه در localStorage
-  useEffect(() => {
-    localStorage.setItem('showGlobeMap', showGlobe ? 'true' : 'false');
-  }, [showGlobe]);
 
   const handleServiceTypeChange = useCallback((value: string) => {
     const [serviceTypeId, subcategoryCode] = value.split(':');
@@ -147,21 +138,6 @@ const Home = () => {
       });
     }
   };
-
-  if (showGlobe) {
-    return (
-      <Suspense fallback={
-        <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            <p className="text-lg font-semibold">در حال بارگذاری کره زمین...</p>
-          </div>
-        </div>
-      }>
-        <HybridGlobe onClose={() => setShowGlobe(false)} />
-      </Suspense>
-    );
-  }
 
   return (
     <>
@@ -318,7 +294,7 @@ const Home = () => {
             {user && !servicesLoading && (
               <div className="flex justify-center mt-6">
                 <button
-                  onClick={() => setShowGlobe(true)}
+                  onClick={() => navigate('/globe')}
                   className="group relative w-[112px] h-[112px] transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-0"
                   aria-label="نمایش پروژه‌ها روی کره زمین"
                 >
@@ -347,11 +323,9 @@ const Home = () => {
       </div>
 
       {/* PWA Install Banner - Bottom Right - بدون Wrapper */}
-      {!showGlobe && (
-        <Suspense fallback={null}>
-          <PWAInstallBanner />
-        </Suspense>
-      )}
+      <Suspense fallback={null}>
+        <PWAInstallBanner />
+      </Suspense>
 
     </>
   );

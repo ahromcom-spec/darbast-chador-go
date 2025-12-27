@@ -33,32 +33,6 @@ const Header = memo(() => {
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
 
-  // Check if globe map is currently shown
-  const [isGlobeVisible, setIsGlobeVisible] = useState(() => {
-    return localStorage.getItem('showGlobeMap') === 'true';
-  });
-
-  // Listen for globe visibility changes
-  useEffect(() => {
-    const checkGlobeVisibility = () => {
-      const isGlobeShowing = localStorage.getItem('showGlobeMap') === 'true';
-      setIsGlobeVisible(isGlobeShowing);
-    };
-
-    // Check on mount and when storage changes
-    checkGlobeVisibility();
-    
-    // Listen to storage events (for cross-tab updates)
-    window.addEventListener('storage', checkGlobeVisibility);
-    
-    // Polling to catch same-tab localStorage changes
-    const interval = setInterval(checkGlobeVisibility, 200);
-    
-    return () => {
-      window.removeEventListener('storage', checkGlobeVisibility);
-      clearInterval(interval);
-    };
-  }, []);
 
   const handleScroll = useCallback(() => {
     if (!ticking.current) {
@@ -159,8 +133,8 @@ const Header = memo(() => {
   // Calculate the height of the first header for smooth positioning
   const firstHeaderHeight = isVisible ? 0 : -80; // Approximate height in pixels
 
-  // Hide header when globe map is visible on home page
-  if (isGlobeVisible && location.pathname === '/') {
+  // Hide header when on globe page
+  if (location.pathname === '/globe') {
     return null;
   }
 
