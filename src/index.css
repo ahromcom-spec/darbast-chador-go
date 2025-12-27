@@ -574,16 +574,31 @@ body {
   /* 
    * Leaflet tile gap fix - removes white lines between tiles
    * This is a global fix that applies to all Leaflet maps in the app
+   * Also fixes issues when browser/page zoom is not 100%
    */
+  .leaflet-container {
+    /* Prevent CSS zoom from affecting map rendering */
+    zoom: 1 !important;
+    transform: translateZ(0) !important;
+    will-change: transform;
+    -webkit-transform: translateZ(0);
+    isolation: isolate;
+    background: #e8e8e8 !important;
+  }
+
   .leaflet-tile-pane {
     transform: translate3d(0, 0, 0);
   }
 
-  .leaflet-tile-pane img {
+  .leaflet-tile-pane img,
+  .leaflet-tile img {
     width: 256.5px !important;
     height: 256.5px !important;
     outline: none !important;
     border: none !important;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    display: block !important;
   }
 
   .leaflet-tile {
@@ -592,6 +607,7 @@ body {
     border: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .leaflet-tile-container {
@@ -604,5 +620,11 @@ body {
   .leaflet-tile {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+  }
+
+  /* Ensure tiles load properly with different zoom levels */
+  .leaflet-fade-anim .leaflet-tile,
+  .leaflet-zoom-anim .leaflet-tile {
+    will-change: opacity, transform;
   }
 }
