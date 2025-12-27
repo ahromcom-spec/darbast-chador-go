@@ -57,18 +57,18 @@ const parseOrderNotes = (notes: any): any => {
   }
 };
 
-// Component to display order media with signed URLs
+// Component to display order media with signed URLs - styled like OrderDetail
 const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string; mime_type?: string; created_at: string; user_id: string }>>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
   const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
   const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
-  const [videoDurations, setVideoDurations] = useState<Record<string, number>>({});
   const [uploaderNames, setUploaderNames] = useState<Record<string, string>>({});
+  const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchMedia = async () => {
@@ -77,7 +77,7 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
           .from('project_media')
           .select('id, file_path, file_type, mime_type, created_at, user_id')
           .eq('project_id', orderId)
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: false });
         
         if (error) throw error;
         setMedia(data || []);
@@ -137,65 +137,75 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
     }
   }, [media]);
 
-  // Get video durations
-  useEffect(() => {
-    const getVideoDurations = async () => {
-      const durations: Record<string, number> = {};
-      for (const item of media) {
-        const isItemVideo = item.file_type === 'video' || 
-                            item.file_type?.includes('video') || 
-                            item.mime_type?.includes('video') ||
-                            item.file_path?.toLowerCase().endsWith('.mp4') ||
-                            item.file_path?.toLowerCase().endsWith('.webm') ||
-                            item.file_path?.toLowerCase().endsWith('.mov');
-        
-        if (isItemVideo && mediaUrls[item.id]) {
-          try {
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-            video.src = mediaUrls[item.id];
-            await new Promise<void>((resolve) => {
-              video.onloadedmetadata = () => {
-                durations[item.id] = video.duration;
-                resolve();
-              };
-              video.onerror = () => resolve();
-              setTimeout(resolve, 3000); // timeout after 3 seconds
-            });
-          } catch (err) {
-            console.error('Error getting video duration:', err);
-          }
-        }
-      }
-      setVideoDurations(durations);
-    };
-    
-    if (Object.keys(mediaUrls).length > 0) {
-      getVideoDurations();
-    }
-  }, [media, mediaUrls]);
-
-  // Format duration to mm:ss
-  const formatDuration = (seconds: number) => {
-    if (!isFinite(seconds) || isNaN(seconds)) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   // Format upload time
   const formatUploadTime = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
       return date.toLocaleDateString('fa-IR', {
         year: 'numeric',
-        month: 'short',
-        day: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
         hour: '2-digit',
         minute: '2-digit'
       });
     } catch {
       return '';
+    }
+  };
+
+  // Check if item is video
+  const isVideo = (item: typeof media[0]) => {
+    return item.file_type === 'video' || 
+           item.file_type?.includes('video') || 
+           item.mime_type?.includes('video') ||
+           item.file_path?.toLowerCase().endsWith('.mp4') ||
+           item.file_path?.toLowerCase().endsWith('.webm') ||
+           item.file_path?.toLowerCase().endsWith('.mov');
+  };
+
+  // Handle delete media
+  const handleDeleteMedia = async (mediaId: string, filePath: string) => {
+    if (deletingMediaId) return;
+    
+    setDeletingMediaId(mediaId);
+    try {
+      // Delete from storage
+      await supabase.storage.from('project-media').remove([filePath]);
+      
+      // Delete from database
+      const { error } = await supabase
+        .from('project_media')
+        .delete()
+        .eq('id', mediaId);
+      
+      if (error) throw error;
+      
+      setMedia(prev => prev.filter(m => m.id !== mediaId));
+      toast({ title: 'موفق', description: 'فایل حذف شد' });
+    } catch (error) {
+      console.error('Error deleting media:', error);
+      toast({ title: 'خطا', description: 'خطا در حذف فایل', variant: 'destructive' });
+    } finally {
+      setDeletingMediaId(null);
+    }
+  };
+
+  // Handle video download
+  const handleDownload = async (url: string, fileName: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = fileName || 'video.mp4';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(objectUrl);
+      document.body.removeChild(a);
+      toast({ title: 'موفق', description: 'دانلود شروع شد' });
+    } catch (error) {
+      toast({ title: 'خطا', description: 'خطا در دانلود', variant: 'destructive' });
     }
   };
 
@@ -216,128 +226,181 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
     );
   }
 
-  const getMediaUrl = (mediaItem: { id: string; file_path: string }) => {
-    return mediaUrls[mediaItem.id] || '';
-  };
-
-  const currentMedia = media[currentIndex];
-  // چک کردن نوع ویدیو با بررسی file_type، mime_type و file_path
-  const isVideo = currentMedia?.file_type === 'video' || 
-                  currentMedia?.file_type?.includes('video') || 
-                  currentMedia?.mime_type?.includes('video') ||
-                  currentMedia?.file_path?.toLowerCase().endsWith('.mp4') ||
-                  currentMedia?.file_path?.toLowerCase().endsWith('.webm') ||
-                  currentMedia?.file_path?.toLowerCase().endsWith('.mov');
-
-  const handleMediaClick = (mediaItem: typeof currentMedia, url: string) => {
-    const isMediaVideo = mediaItem?.file_type === 'video' || 
-                         mediaItem?.file_type?.includes('video') || 
-                         mediaItem?.mime_type?.includes('video') ||
-                         mediaItem?.file_path?.toLowerCase().endsWith('.mp4') ||
-                         mediaItem?.file_path?.toLowerCase().endsWith('.webm') ||
-                         mediaItem?.file_path?.toLowerCase().endsWith('.mov');
-    
-    if (isMediaVideo) {
-      setSelectedVideoUrl(url);
-      setSelectedVideoPath(mediaItem.file_path);
-    } else {
-      setSelectedImageUrl(url);
-    }
-  };
+  const images = media.filter(m => !isVideo(m));
+  const videos = media.filter(m => isVideo(m));
 
   return (
     <>
-      <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground flex items-center gap-2">
-          <ImageIcon className="h-3 w-3" />
-          تصاویر و فایل‌ها ({media.length})
-        </Label>
-        <div className="relative bg-black/5 rounded-lg overflow-hidden min-h-[200px]">
-          {mediaUrls[currentMedia?.id] ? (
-            isVideo ? (
-              <div 
-                className="relative w-full min-h-[200px] flex items-center justify-center bg-black/10 cursor-pointer group"
-                onClick={() => handleMediaClick(currentMedia, getMediaUrl(currentMedia))}
-              >
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                  <div className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
-                    <Play className="h-8 w-8 ml-1" fill="currentColor" />
+      <div className="space-y-6">
+        {/* Images Section */}
+        {images.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">تصاویر پروژه ({images.length})</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {images.map((item) => {
+                const url = mediaUrls[item.id] || '';
+                const uploaderName = uploaderNames[item.user_id] || 'نامشخص';
+                const isOwnMedia = user?.id === item.user_id;
+                
+                return (
+                  <div 
+                    key={item.id} 
+                    className="relative rounded-lg overflow-hidden border cursor-pointer hover:ring-2 hover:ring-primary transition-all group"
+                  >
+                    <div 
+                      className="aspect-square"
+                      onClick={() => url && setSelectedImageUrl(url)}
+                    >
+                      {url ? (
+                        <img
+                          src={url}
+                          alt="تصویر سفارش"
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                      
+                      {/* Delete button - only for own media */}
+                      {isOwnMedia && (
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteMedia(item.id, item.file_path);
+                          }}
+                          disabled={deletingMediaId === item.id}
+                        >
+                          {deletingMediaId === item.id ? (
+                            <Clock className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* Uploader info */}
+                    <div className="p-2 bg-muted/50 text-xs text-muted-foreground border-t">
+                      <div className="flex items-center gap-1 mb-1">
+                        <User className="h-3 w-3" />
+                        <span className="truncate">{uploaderName}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{formatUploadTime(item.created_at)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-sm text-muted-foreground bg-background/80 px-3 py-1 rounded-full">
-                    برای مشاهده ویدیو کلیک کنید
-                  </span>
-                </div>
-                <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                  <Film className="h-3 w-3" />
-                  ویدیو
-                  {videoDurations[currentMedia?.id] && (
-                    <span className="mr-1">({formatDuration(videoDurations[currentMedia.id])})</span>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <img
-                src={getMediaUrl(currentMedia)}
-                alt={`تصویر ${currentIndex + 1}`}
-                className="w-full max-h-80 object-contain cursor-pointer"
-                onClick={() => handleMediaClick(currentMedia, getMediaUrl(currentMedia))}
-              />
-            )
-          ) : (
-            <div className="flex justify-center items-center h-48">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                );
+              })}
             </div>
-          )}
-          
-          {media.length > 1 && (
-            <>
-              <Button
-                variant="outline"
-                size="icon"
-                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
-                onClick={() => setCurrentIndex(i => (i + 1) % media.length)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
-                onClick={() => setCurrentIndex(i => (i - 1 + media.length) % media.length)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/80 px-2 py-1 rounded text-xs">
-                {currentIndex + 1} / {media.length}
-              </div>
-            </>
-          )}
-        </div>
-        
-        {/* Media Info - Upload Time, Duration & Uploader */}
-        {currentMedia && (
-          <div className="flex flex-col gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                <span>آپلود: {formatUploadTime(currentMedia.created_at)}</span>
-              </div>
-              {isVideo && videoDurations[currentMedia.id] && (
-                <div className="flex items-center gap-1">
-                  <Film className="h-3 w-3" />
-                  <span>مدت: {formatDuration(videoDurations[currentMedia.id])}</span>
-                </div>
-              )}
-              {!isVideo && (
-                <div className="flex items-center gap-1">
-                  <ImageIcon className="h-3 w-3" />
-                  <span>عکس</span>
-                </div>
-              )}
+          </div>
+        )}
+
+        {/* Videos Section */}
+        {videos.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Film className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">ویدیوهای پروژه ({videos.length})</span>
             </div>
-            <div className="flex items-center gap-1 border-t border-border/30 pt-2">
-              <User className="h-3 w-3" />
-              <span>آپلود شده توسط: {uploaderNames[currentMedia.user_id] || 'نامشخص'}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {videos.map((item) => {
+                const url = mediaUrls[item.id] || '';
+                const uploaderName = uploaderNames[item.user_id] || 'نامشخص';
+                const isOwnMedia = user?.id === item.user_id;
+                const fileName = item.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه';
+                
+                return (
+                  <div key={item.id} className="relative group rounded-lg overflow-hidden border">
+                    <div 
+                      className="aspect-video bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                      onClick={() => {
+                        if (url) {
+                          setSelectedVideoUrl(url);
+                          setSelectedVideoPath(item.file_path);
+                        }
+                      }}
+                    >
+                      <div className="relative w-full h-full bg-black/5 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <Film className="w-16 h-16 text-primary opacity-60" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
+                            <Play className="w-8 h-8 text-primary" fill="currentColor" />
+                          </div>
+                        </div>
+                        <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
+                          {fileName}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Delete button - only for own media */}
+                    {isOwnMedia && (
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-12 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteMedia(item.id, item.file_path);
+                        }}
+                        disabled={deletingMediaId === item.id}
+                      >
+                        {deletingMediaId === item.id ? (
+                          <Clock className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <X className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                    
+                    {/* Download button */}
+                    <div className="absolute bottom-14 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="shadow-lg bg-white/95 hover:bg-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (url) handleDownload(url, fileName);
+                        }}
+                      >
+                        <Eye className="w-4 h-4 ml-1" />
+                        دانلود
+                      </Button>
+                    </div>
+                    
+                    {/* Uploader info */}
+                    <div className="p-2 bg-muted/50 text-xs text-muted-foreground border-t">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span className="truncate">{uploaderName}</span>
+                        </div>
+                        <div className="flex items-center gap-1 bg-black/70 text-white px-2 py-0.5 rounded-full">
+                          <Film className="w-3 h-3" />
+                          ویدیو
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{formatUploadTime(item.created_at)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
