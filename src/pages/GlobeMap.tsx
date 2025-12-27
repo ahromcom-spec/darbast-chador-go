@@ -1,11 +1,10 @@
-import React, { lazy, Suspense, useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { RefreshCw, AlertCircle } from 'lucide-react';
-
-const HybridGlobe = lazy(() => import('@/components/globe/HybridGlobe'));
+import HybridGlobe from '@/components/globe/HybridGlobe';
 
 // Error boundary برای مدیریت خطاهای Globe
 class GlobeErrorBoundary extends React.Component<
@@ -83,16 +82,7 @@ const GlobeMap = () => {
 
   return (
     <GlobeErrorBoundary key={retryKey} onRetry={handleRetry}>
-      <Suspense fallback={
-        <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            <p className="text-lg font-semibold">در حال بارگذاری کره زمین...</p>
-          </div>
-        </div>
-      }>
-        <HybridGlobe onClose={handleClose} />
-      </Suspense>
+      <HybridGlobe onClose={handleClose} />
     </GlobeErrorBoundary>
   );
 };
