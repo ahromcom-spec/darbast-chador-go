@@ -71,6 +71,7 @@ import { Slider } from "@/components/ui/slider";
 import { z } from "zod";
 import { formatPersianDate, formatPersianDateTime, formatPersianDateTimeFull } from "@/lib/dateUtils";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { EditExpertPricingDialog } from "@/components/orders/EditExpertPricingDialog";
 
 interface Order {
   id: string;
@@ -216,6 +217,7 @@ export default function OrderDetail() {
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
+  const [showEditExpertPricingDialog, setShowEditExpertPricingDialog] = useState(false);
   const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
   const [isOrderDetailsExpanded, setIsOrderDetailsExpanded] = useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
@@ -911,7 +913,14 @@ export default function OrderDetail() {
             )}
             {canEdit && (
               <Button
-                onClick={() => navigate(`/scaffolding/form?edit=${order.id}`)}
+                onClick={() => {
+                  // اگر سفارش کارشناسی قیمت‌گذاری است، دیالوگ ویرایش کارشناسی را باز کن
+                  if (isExpertPricingRequest) {
+                    setShowEditExpertPricingDialog(true);
+                  } else {
+                    navigate(`/scaffolding/form?edit=${order.id}`);
+                  }
+                }}
                 size="sm"
               >
                 <Edit className="h-4 w-4 ml-2" />
@@ -2919,6 +2928,22 @@ export default function OrderDetail() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Edit Expert Pricing Dialog */}
+          {order && isExpertPricingRequest && (
+            <EditExpertPricingDialog
+              open={showEditExpertPricingDialog}
+              onOpenChange={setShowEditExpertPricingDialog}
+              orderId={order.id}
+              orderData={{
+                address: order.address,
+                detailed_address: order.detailed_address,
+                notes: order.notes,
+                subcategory: order.subcategory
+              }}
+              onSuccess={fetchOrderDetails}
+            />
+          )}
 
         </div>
       </div>
