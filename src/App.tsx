@@ -20,7 +20,7 @@ import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
 
 import Header from "./components/Header";
 import Home from "./pages/Home";
-
+import GlobeMap from "@/pages/GlobeMap";
 // Lazy load all pages for better performance
 const AdminLayout = lazy(() => import("@/pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
@@ -103,7 +103,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
 const OrderTransferManagement = lazy(() => import("@/pages/admin/OrderTransferManagement"));
 const MapTest = lazy(() => import("@/pages/test/MapTest"));
-const GlobeMap = lazy(() => import("@/pages/GlobeMap"));
+// GlobeMap is imported eagerly (see above) to avoid first-load chunk errors on some mobile browsers.
 
 // Redirect component for old orders pages
 import { Navigate } from 'react-router-dom';
