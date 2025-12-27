@@ -60,12 +60,8 @@ export default function StaticLocationMap({
   ];
 
   const handleNavigate = () => {
-    if (isMobile) {
-      setShowNavSheet(true);
-    } else {
-      // در دسکتاپ مستقیم گوگل مپ باز شود
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${validLat},${validLng}`, '_blank');
-    }
+    // همیشه Sheet انتخاب اپلیکیشن مسیریاب نمایش داده شود
+    setShowNavSheet(true);
   };
 
   const openNavigationApp = (url: string) => {
