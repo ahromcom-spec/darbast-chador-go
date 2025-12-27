@@ -335,8 +335,8 @@ const Home = () => {
         </main>
         
 
-        {/* Footer */}
-        <footer className="relative z-10 border-t bg-card/80 backdrop-blur-md py-4 px-4">
+        {/* Footer - Fixed at bottom */}
+        <footer className="fixed bottom-0 left-0 right-0 z-20 border-t bg-card/95 backdrop-blur-md py-3 px-4">
           <div className="container mx-auto text-center">
             <p className="text-xs sm:text-sm text-muted-foreground">
               © {new Date().getFullYear()} اهرم - تمامی حقوق محفوظ است
