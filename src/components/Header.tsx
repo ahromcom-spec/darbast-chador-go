@@ -1,5 +1,5 @@
 import { useState, useEffect, memo, useRef, useCallback } from "react";
-import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt, Minus, Plus } from "lucide-react";
+import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt, Minus, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -137,6 +137,25 @@ const Header = memo(() => {
   if (location.pathname === '/globe') {
     return null;
   }
+
+  const handleRefresh = useCallback(() => {
+    // Clear react-query cache and reload all data
+    window.location.reload();
+  }, []);
+
+  const RefreshButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 rounded-full border border-border/60 bg-background/40 hover:bg-primary/10"
+      onClick={handleRefresh}
+      aria-label="بروزرسانی صفحه"
+      title="بروزرسانی صفحه"
+    >
+      <RefreshCw className="h-4 w-4" />
+    </Button>
+  );
 
   const ZoomControls = isWindows ? (
     <div className="flex items-center gap-1 rounded-full border border-border/60 bg-background/40 p-1">
@@ -337,6 +356,7 @@ const Header = memo(() => {
             <div className="flex items-center justify-end gap-2 py-0.5 pr-2">
             {user ? (
               <>
+                {RefreshButton}
                 {ZoomControls}
                 <div data-tour="notifications">
                   <NotificationBell />
@@ -455,6 +475,7 @@ const Header = memo(() => {
           <div className="flex items-center justify-end gap-4 py-1 pr-4">
             {user ? (
               <>
+                {RefreshButton}
                 {ZoomControls}
                 <div data-tour="notifications">
                   <NotificationBell />
