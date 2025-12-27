@@ -59,20 +59,21 @@ const parseOrderNotes = (notes: any): any => {
 
 // Component to display order media with signed URLs
 const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
-  const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string; mime_type?: string }>>([]);
+  const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string; mime_type?: string; created_at: string }>>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
   const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
   const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  const [videoDurations, setVideoDurations] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const fetchMedia = async () => {
       try {
         const { data, error } = await supabase
           .from('project_media')
-          .select('id, file_path, file_type, mime_type')
+          .select('id, file_path, file_type, mime_type, created_at')
           .eq('project_id', orderId)
           .order('created_at', { ascending: true });
         
@@ -116,6 +117,68 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
       fetchUrls();
     }
   }, [media]);
+
+  // Get video durations
+  useEffect(() => {
+    const getVideoDurations = async () => {
+      const durations: Record<string, number> = {};
+      for (const item of media) {
+        const isItemVideo = item.file_type === 'video' || 
+                            item.file_type?.includes('video') || 
+                            item.mime_type?.includes('video') ||
+                            item.file_path?.toLowerCase().endsWith('.mp4') ||
+                            item.file_path?.toLowerCase().endsWith('.webm') ||
+                            item.file_path?.toLowerCase().endsWith('.mov');
+        
+        if (isItemVideo && mediaUrls[item.id]) {
+          try {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.src = mediaUrls[item.id];
+            await new Promise<void>((resolve) => {
+              video.onloadedmetadata = () => {
+                durations[item.id] = video.duration;
+                resolve();
+              };
+              video.onerror = () => resolve();
+              setTimeout(resolve, 3000); // timeout after 3 seconds
+            });
+          } catch (err) {
+            console.error('Error getting video duration:', err);
+          }
+        }
+      }
+      setVideoDurations(durations);
+    };
+    
+    if (Object.keys(mediaUrls).length > 0) {
+      getVideoDurations();
+    }
+  }, [media, mediaUrls]);
+
+  // Format duration to mm:ss
+  const formatDuration = (seconds: number) => {
+    if (!isFinite(seconds) || isNaN(seconds)) return '';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Format upload time
+  const formatUploadTime = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('fa-IR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '';
+    }
+  };
 
   if (loading) {
     return (
@@ -188,6 +251,9 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
                 <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
                   <Film className="h-3 w-3" />
                   ویدیو
+                  {videoDurations[currentMedia?.id] && (
+                    <span className="mr-1">({formatDuration(videoDurations[currentMedia.id])})</span>
+                  )}
                 </div>
               </div>
             ) : (
@@ -228,6 +294,28 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
             </>
           )}
         </div>
+        
+        {/* Media Info - Upload Time & Duration */}
+        {currentMedia && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>آپلود: {formatUploadTime(currentMedia.created_at)}</span>
+            </div>
+            {isVideo && videoDurations[currentMedia.id] && (
+              <div className="flex items-center gap-1">
+                <Film className="h-3 w-3" />
+                <span>مدت: {formatDuration(videoDurations[currentMedia.id])}</span>
+              </div>
+            )}
+            {!isVideo && (
+              <div className="flex items-center gap-1">
+                <ImageIcon className="h-3 w-3" />
+                <span>عکس</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Video Player Dialog */}
