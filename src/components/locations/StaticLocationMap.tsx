@@ -84,7 +84,7 @@ export default function StaticLocationMap({
     }
 
     try {
-      // Initialize map
+      // Initialize map with improved settings
       const map = L.map(mapContainer.current, {
         center: [validLat, validLng],
         zoom: 16,
@@ -92,27 +92,77 @@ export default function StaticLocationMap({
         scrollWheelZoom: true,
         dragging: true,
         attributionControl: true,
-        preferCanvas: true
+        preferCanvas: true,
+        // Additional settings for better tile loading
+        fadeAnimation: true,
+        zoomAnimation: true,
+        markerZoomAnimation: true,
       });
 
       mapRef.current = map;
 
-      // Add OpenStreetMap tile layer with error handling
-      const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19,
-        crossOrigin: 'anonymous'
-      });
+      // Use multiple tile sources with fallback
+      const tileSources = [
+        {
+          url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          options: {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19,
+            crossOrigin: 'anonymous' as const,
+            subdomains: ['a', 'b', 'c'],
+            updateWhenIdle: false,
+            updateWhenZooming: false,
+            keepBuffer: 4,
+          }
+        },
+        {
+          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          options: {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19,
+            crossOrigin: 'anonymous' as const,
+            updateWhenIdle: false,
+            updateWhenZooming: false,
+            keepBuffer: 4,
+          }
+        },
+        {
+          url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+          options: {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19,
+            subdomains: ['a', 'b', 'c', 'd'],
+            updateWhenIdle: false,
+            keepBuffer: 4,
+          }
+        }
+      ];
 
-      tileLayer.on('load', () => {
-        setIsReady(true);
-      });
+      let tileLayerAdded = false;
+      for (const source of tileSources) {
+        try {
+          const tileLayer = L.tileLayer(source.url, source.options);
+          
+          tileLayer.on('load', () => {
+            setIsReady(true);
+          });
+          
+          tileLayer.on('tileerror', (e) => {
+            console.warn('Tile load error:', e);
+          });
+          
+          tileLayer.addTo(map);
+          tileLayerAdded = true;
+          console.log('[StaticLocationMap] Tile layer added:', source.url);
+          break;
+        } catch (err) {
+          console.warn('[StaticLocationMap] Tile source failed:', source.url, err);
+        }
+      }
 
-      tileLayer.on('tileerror', (e) => {
-        console.warn('Tile load error, trying fallback:', e);
-      });
-
-      tileLayer.addTo(map);
+      if (!tileLayerAdded) {
+        console.error('[StaticLocationMap] All tile sources failed');
+      }
 
       // Custom marker icon
       const customIcon = L.divIcon({
@@ -203,13 +253,15 @@ export default function StaticLocationMap({
     <div className="relative">
       <div 
         ref={mapContainer} 
-        className="w-full h-full relative z-0"
+        className="w-full h-full relative"
         style={{ 
           minHeight: '400px',
-          background: '#f5f5f5',
-          // جلوگیری از تداخل CSS zoom با نقشه
-          zoom: 1,
-          transform: 'translateZ(0)'
+          background: '#e8e8e8',
+          /* Prevent CSS zoom from affecting map */
+          zoom: '1',
+          transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
+          isolation: 'isolate',
         }}
       />
       
