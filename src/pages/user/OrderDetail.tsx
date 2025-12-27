@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError } from "@supabase/supabase-js";
@@ -69,6 +69,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { z } from "zod";
 import { formatPersianDate, formatPersianDateTime, formatPersianDateTimeFull } from "@/lib/dateUtils";
+import { useFileUpload } from "@/hooks/useFileUpload";
 
 interface Order {
   id: string;
@@ -189,12 +190,18 @@ export default function OrderDetail() {
   const [ratedUserName, setRatedUserName] = useState<string>('');
   const [showMediaUpload, setShowMediaUpload] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [uploadingImages, setUploadingImages] = useState(false);
-  const [uploadingVideos, setUploadingVideos] = useState(false);
-  const [imageUploadProgress, setImageUploadProgress] = useState(0);
-  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
-  const imageUploadCancelledRef = useRef(false);
-  const videoUploadCancelledRef = useRef(false);
+
+  // هوک آپلود عکس با پیشرفت واقعی
+  const imageUpload = useFileUpload({ 
+    bucket: 'project-media', 
+    onComplete: () => fetchOrderDetails() 
+  });
+  
+  // هوک آپلود ویدیو با پیشرفت واقعی
+  const videoUpload = useFileUpload({ 
+    bucket: 'project-media', 
+    onComplete: () => fetchOrderDetails() 
+  });
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -609,225 +616,21 @@ export default function OrderDetail() {
     }
   };
 
-  const handleCancelImageUpload = () => {
-    imageUploadCancelledRef.current = true;
-  };
-
-  const handleCancelVideoUpload = () => {
-    videoUploadCancelledRef.current = true;
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!order || !files || files.length === 0) return;
-
-    setUploadingImages(true);
-    setImageUploadProgress(0);
-    imageUploadCancelledRef.current = false;
+    if (!order || !files || files.length === 0 || !user) return;
     
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "خطا",
-          description: "لطفاً وارد سیستم شوید",
-          variant: "destructive"
-        });
-        return;
-      }
+    await imageUpload.uploadFiles(files, 'image', order.id, user.id);
+    e.target.value = '';
+  }, [order, user, imageUpload]);
 
-      let successCount = 0;
-      let errorCount = 0;
-      const totalFiles = files.length;
-
-      for (let i = 0; i < files.length; i++) {
-        // بررسی لغو شدن آپلود
-        if (imageUploadCancelledRef.current) {
-          toast({
-            title: "لغو شد",
-            description: `آپلود لغو شد. ${successCount} عکس آپلود شده`,
-          });
-          break;
-        }
-
-        const file = files[i];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
-
-        try {
-          const { error: uploadError } = await supabase.storage
-            .from('project-media')
-            .upload(filePath, file);
-
-          if (uploadError) throw uploadError;
-
-          const { error: dbError } = await supabase
-            .from('project_media')
-            .insert({
-              project_id: order.id,
-              file_path: filePath,
-              file_type: 'image',
-              file_size: file.size,
-              mime_type: file.type,
-              user_id: user.id
-            });
-
-          if (dbError) throw dbError;
-          
-          successCount++;
-        } catch (err) {
-          console.error('Error uploading file:', file.name, err);
-          errorCount++;
-        }
-        
-        // Update progress with ease-out effect (faster at start, slower at end)
-        const linearProgress = ((i + 1) / totalFiles) * 100;
-        const easedProgress = 100 * (1 - Math.pow(1 - linearProgress / 100, 0.5));
-        setImageUploadProgress(Math.min(easedProgress, 95));
-      }
-
-      // Complete the progress
-      if (!imageUploadCancelledRef.current) {
-        setImageUploadProgress(100);
-
-        if (successCount > 0) {
-          toast({
-            title: "✓ موفق",
-            description: `${successCount} عکس با موفقیت آپلود شد${errorCount > 0 ? ` (${errorCount} فایل با خطا مواجه شد)` : ''}`,
-          });
-        } else {
-          toast({
-            title: "خطا",
-            description: "هیچ عکسی آپلود نشد",
-            variant: "destructive",
-          });
-        }
-      }
-      
-      await fetchOrderDetails();
-    } catch (error: any) {
-      console.error('Error uploading images:', error);
-      toast({
-        title: "خطا",
-        description: error.message || "خطا در آپلود عکس‌ها",
-        variant: "destructive",
-      });
-    } finally {
-      setTimeout(() => {
-        setUploadingImages(false);
-        setImageUploadProgress(0);
-        imageUploadCancelledRef.current = false;
-      }, 500);
-      e.target.value = '';
-    }
-  };
-
-  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!order || !files || files.length === 0) return;
-
-    setUploadingVideos(true);
-    setVideoUploadProgress(0);
-    videoUploadCancelledRef.current = false;
+    if (!order || !files || files.length === 0 || !user) return;
     
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "خطا",
-          description: "لطفاً وارد سیستم شوید",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      let successCount = 0;
-      let errorCount = 0;
-      const totalFiles = files.length;
-
-      for (let i = 0; i < files.length; i++) {
-        // بررسی لغو شدن آپلود
-        if (videoUploadCancelledRef.current) {
-          toast({
-            title: "لغو شد",
-            description: `آپلود لغو شد. ${successCount} ویدیو آپلود شده`,
-          });
-          break;
-        }
-
-        const file = files[i];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
-
-        try {
-          const { error: uploadError } = await supabase.storage
-            .from('project-media')
-            .upload(filePath, file);
-
-          if (uploadError) throw uploadError;
-
-          const { error: dbError } = await supabase
-            .from('project_media')
-            .insert({
-              project_id: order.id,
-              file_path: filePath,
-              file_type: 'video',
-              file_size: file.size,
-              mime_type: file.type,
-              user_id: user.id
-            });
-
-          if (dbError) throw dbError;
-          
-          successCount++;
-        } catch (err) {
-          console.error('Error uploading file:', file.name, err);
-          errorCount++;
-        }
-        
-        // Update progress with ease-out effect (faster at start, slower at end)
-        const linearProgress = ((i + 1) / totalFiles) * 100;
-        const easedProgress = 100 * (1 - Math.pow(1 - linearProgress / 100, 0.5));
-        setVideoUploadProgress(Math.min(easedProgress, 95));
-      }
-
-      // Complete the progress
-      if (!videoUploadCancelledRef.current) {
-        setVideoUploadProgress(100);
-
-        if (successCount > 0) {
-          toast({
-            title: "✓ موفق",
-            description: `${successCount} ویدیو با موفقیت آپلود شد${errorCount > 0 ? ` (${errorCount} فایل با خطا مواجه شد)` : ''}`,
-          });
-        } else {
-          toast({
-            title: "خطا",
-            description: "هیچ ویدیویی آپلود نشد",
-            variant: "destructive",
-          });
-        }
-      }
-      
-      await fetchOrderDetails();
-    } catch (error: any) {
-      console.error('Error uploading videos:', error);
-      toast({
-        title: "خطا",
-        description: error.message || "خطا در آپلود ویدیوها",
-        variant: "destructive",
-      });
-    } finally {
-      setTimeout(() => {
-        setUploadingVideos(false);
-        setVideoUploadProgress(0);
-        videoUploadCancelledRef.current = false;
-      }, 500);
-      e.target.value = '';
-    }
-  };
+    await videoUpload.uploadFiles(files, 'video', order.id, user.id);
+    e.target.value = '';
+  }, [order, user, videoUpload]);
 
   const handleDeleteMedia = async (mediaId: string, mediaPath: string) => {
     if (!confirm('آیا از حذف این رسانه اطمینان دارید؟')) {
@@ -2326,11 +2129,11 @@ export default function OrderDetail() {
                 <Button
                   variant="default"
                   onClick={() => document.getElementById('image-upload-input')?.click()}
-                  disabled={uploadingImages}
+                  disabled={imageUpload.isUploading}
                   className="gap-2"
                   size="sm"
                 >
-                  {uploadingImages ? (
+                  {imageUpload.isUploading ? (
                     <>
                       <Clock className="h-4 w-4 animate-spin" />
                       در حال آپلود عکس...
@@ -2344,7 +2147,7 @@ export default function OrderDetail() {
                 </Button>
               </div>
               {/* نوار پیشرفت آپلود عکس */}
-              {uploadingImages && (
+              {imageUpload.isUploading && (
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
@@ -2352,21 +2155,21 @@ export default function OrderDetail() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={handleCancelImageUpload}
+                        onClick={imageUpload.cancelUpload}
                         className="h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
                         <X className="h-3 w-3 ml-1" />
                         لغو
                       </Button>
                     </div>
-                    <span className="font-medium text-primary">{Math.round(imageUploadProgress)}%</span>
+                    <span className="font-medium text-primary">{imageUpload.progress.percentage}%</span>
                   </div>
                   <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
                     <div 
                       className="h-full bg-primary rounded-full"
                       style={{ 
-                        width: `${imageUploadProgress}%`,
-                        transition: 'width 0.3s cubic-bezier(0.0, 0.0, 0.2, 1)'
+                        width: `${imageUpload.progress.percentage}%`,
+                        transition: 'width 0.15s linear'
                       }}
                     />
                   </div>
@@ -2381,7 +2184,7 @@ export default function OrderDetail() {
                 multiple
                 className="hidden"
                 onChange={handleImageUpload}
-                disabled={uploadingImages}
+                disabled={imageUpload.isUploading}
               />
               
               {mediaFiles.filter(m => m.file_type === 'image').length === 0 ? (
@@ -2447,11 +2250,11 @@ export default function OrderDetail() {
                 <Button
                   variant="default"
                   onClick={() => document.getElementById('video-upload-input')?.click()}
-                  disabled={uploadingVideos}
+                  disabled={videoUpload.isUploading}
                   className="gap-2"
                   size="sm"
                 >
-                  {uploadingVideos ? (
+                  {videoUpload.isUploading ? (
                     <>
                       <Clock className="h-4 w-4 animate-spin" />
                       در حال آپلود ویدیو...
@@ -2465,7 +2268,7 @@ export default function OrderDetail() {
                 </Button>
               </div>
               {/* نوار پیشرفت آپلود ویدیو */}
-              {uploadingVideos && (
+              {videoUpload.isUploading && (
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
@@ -2473,21 +2276,21 @@ export default function OrderDetail() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={handleCancelVideoUpload}
+                        onClick={videoUpload.cancelUpload}
                         className="h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
                         <X className="h-3 w-3 ml-1" />
                         لغو
                       </Button>
                     </div>
-                    <span className="font-medium text-primary">{Math.round(videoUploadProgress)}%</span>
+                    <span className="font-medium text-primary">{videoUpload.progress.percentage}%</span>
                   </div>
                   <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
                     <div 
                       className="h-full bg-primary rounded-full"
                       style={{ 
-                        width: `${videoUploadProgress}%`,
-                        transition: 'width 0.3s cubic-bezier(0.0, 0.0, 0.2, 1)'
+                        width: `${videoUpload.progress.percentage}%`,
+                        transition: 'width 0.15s linear'
                       }}
                     />
                   </div>
@@ -2502,7 +2305,7 @@ export default function OrderDetail() {
                 multiple
                 className="hidden"
                 onChange={handleVideoUpload}
-                disabled={uploadingVideos}
+                disabled={videoUpload.isUploading}
               />
               
               {mediaFiles.filter(m => m.file_type === 'video').length === 0 ? (
