@@ -25,6 +25,7 @@ import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { useAuth } from '@/contexts/AuthContext';
 import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
+import { OrderLocationEditor } from '@/components/locations/OrderLocationEditor';
 
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 // IMPORTANT: pending_execution باید به status = 'pending_execution' در دیتابیس مپ شود
@@ -112,6 +113,8 @@ interface Order {
   customer_phone: string;
   location_lat?: number | null;
   location_lng?: number | null;
+  location_confirmed_by_customer?: boolean;
+  location_confirmed_at?: string | null;
   notes?: string | null;
   payment_amount?: number | null;
   total_price?: number | null;
@@ -234,7 +237,9 @@ export default function ExecutiveOrders() {
           approved_by,
           subcategory_id,
           location_lat,
-          location_lng
+          location_lng,
+          location_confirmed_by_customer,
+          location_confirmed_at
         `)
         .in('status', ['pending', 'approved', 'pending_execution', 'in_progress', 'completed', 'closed', 'rejected'])
         // فقط سفارشات غیر بایگانی را نمایش بده
@@ -317,6 +322,8 @@ export default function ExecutiveOrders() {
             customer_phone: customerPhone,
             location_lat: projectLat,
             location_lng: projectLng,
+            location_confirmed_by_customer: order.location_confirmed_by_customer,
+            location_confirmed_at: order.location_confirmed_at,
             notes: order.notes,
             payment_amount: order.payment_amount,
             total_price: order.total_price,
@@ -1672,7 +1679,26 @@ export default function ExecutiveOrders() {
             <DialogDescription>اطلاعات جامع سفارش</DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={fetchOrders} />
+            <>
+              <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={fetchOrders} />
+              {/* نقشه موقعیت پروژه با امکان ویرایش */}
+              {selectedOrder.location_lat && selectedOrder.location_lng && (
+                <div className="mt-4">
+                  <OrderLocationEditor
+                    orderId={selectedOrder.id}
+                    locationLat={selectedOrder.location_lat}
+                    locationLng={selectedOrder.location_lng}
+                    address={selectedOrder.address}
+                    detailedAddress={selectedOrder.detailed_address || undefined}
+                    orderStatus={selectedOrder.status}
+                    locationConfirmedByCustomer={selectedOrder.location_confirmed_by_customer}
+                    locationConfirmedAt={selectedOrder.location_confirmed_at || undefined}
+                    isManager={true}
+                    onLocationUpdated={fetchOrders}
+                  />
+                </div>
+              )}
+            </>
           )}
           <Separator />
           <DialogFooter className="gap-2 flex-wrap">

@@ -2238,6 +2238,8 @@ export type Database = {
           is_archived: boolean | null
           is_deep_archived: boolean | null
           is_renewal: boolean | null
+          location_confirmed_at: string | null
+          location_confirmed_by_customer: boolean | null
           location_lat: number | null
           location_lng: number | null
           notes: string | null
@@ -2291,6 +2293,8 @@ export type Database = {
           is_archived?: boolean | null
           is_deep_archived?: boolean | null
           is_renewal?: boolean | null
+          location_confirmed_at?: string | null
+          location_confirmed_by_customer?: boolean | null
           location_lat?: number | null
           location_lng?: number | null
           notes?: string | null
@@ -2344,6 +2348,8 @@ export type Database = {
           is_archived?: boolean | null
           is_deep_archived?: boolean | null
           is_renewal?: boolean | null
+          location_confirmed_at?: string | null
+          location_confirmed_by_customer?: boolean | null
           location_lat?: number | null
           location_lng?: number | null
           notes?: string | null
@@ -4011,6 +4017,8 @@ export type Database = {
           is_archived: boolean | null
           is_deep_archived: boolean | null
           is_renewal: boolean | null
+          location_confirmed_at: string | null
+          location_confirmed_by_customer: boolean | null
           location_lat: number | null
           location_lng: number | null
           notes: string | null
@@ -4131,6 +4139,8 @@ export type Database = {
           is_archived: boolean | null
           is_deep_archived: boolean | null
           is_renewal: boolean | null
+          location_confirmed_at: string | null
+          location_confirmed_by_customer: boolean | null
           location_lat: number | null
           location_lng: number | null
           notes: string | null
