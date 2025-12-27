@@ -834,53 +834,62 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   }, [fetchProjectMedia]);
 
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
+    // تاخیر کوتاه برای اطمینان از mount شدن کامل container
+    const initTimeout = setTimeout(() => {
+      if (!mapContainer.current || mapRef.current) return;
 
-    let map: L.Map;
-    
-    try {
-      console.log('[Map] Initializing Leaflet map...');
+      let map: L.Map;
       
-      // بررسی پشتیبانی از Leaflet
-      if (typeof L === 'undefined') {
-        console.error('[Map] Leaflet library not loaded');
+      try {
+        console.log('[Map] Initializing Leaflet map...');
+        
+        // بررسی پشتیبانی از Leaflet
+        if (typeof L === 'undefined') {
+          console.error('[Map] Leaflet library not loaded');
+          toast({
+            title: 'خطای نقشه',
+            description: 'کتابخانه نقشه بارگذاری نشد. لطفاً صفحه را رفرش کنید.',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        // بررسی اندازه container قبل از ایجاد نقشه
+        const containerRect = mapContainer.current.getBoundingClientRect();
+        if (containerRect.width === 0 || containerRect.height === 0) {
+          console.warn('[Map] Container has zero dimensions, waiting...');
+          return;
+        }
+
+        // ایجاد نقشه با مرکز ایران - بهینه‌سازی شده برای سازگاری بیشتر
+        map = L.map(mapContainer.current, {
+          center: [32.4279, 53.6880],
+          zoom: 6,
+          minZoom: 5,
+          maxZoom: 22,
+          scrollWheelZoom: true,
+          zoomControl: true,
+          preferCanvas: true, // استفاده از Canvas برای عملکرد بهتر
+          renderer: L.canvas({ tolerance: 5 }), // بهینه‌سازی رندرینگ
+          trackResize: true,
+          // تنظیمات اضافی برای سازگاری بهتر
+          attributionControl: true,
+          fadeAnimation: true,
+          zoomAnimation: true,
+          markerZoomAnimation: true,
+        });
+
+        mapRef.current = map;
+        console.log('[Map] Leaflet map initialized successfully');
+      } catch (error) {
+        console.error('[Map] Error initializing map:', error);
         toast({
           title: 'خطای نقشه',
-          description: 'کتابخانه نقشه بارگذاری نشد. لطفاً صفحه را رفرش کنید.',
+          description: 'نقشه قابل اجرا نیست. لطفاً مرورگر خود را به‌روزرسانی کنید.',
           variant: 'destructive'
         });
         return;
       }
-
-      // ایجاد نقشه با مرکز ایران - بهینه‌سازی شده برای سازگاری بیشتر
-      map = L.map(mapContainer.current, {
-        center: [32.4279, 53.6880],
-        zoom: 6,
-        minZoom: 5,
-        maxZoom: 22,
-        scrollWheelZoom: true,
-        zoomControl: true,
-        preferCanvas: true, // استفاده از Canvas برای عملکرد بهتر
-        renderer: L.canvas({ tolerance: 5 }), // بهینه‌سازی رندرینگ
-        trackResize: true,
-        // تنظیمات اضافی برای سازگاری بهتر
-        attributionControl: true,
-        fadeAnimation: true,
-        zoomAnimation: true,
-        markerZoomAnimation: true,
-      });
-
-      mapRef.current = map;
-      console.log('[Map] Leaflet map initialized successfully');
-    } catch (error) {
-      console.error('[Map] Error initializing map:', error);
-      toast({
-        title: 'خطای نقشه',
-        description: 'نقشه قابل اجرا نیست. لطفاً مرورگر خود را به‌روزرسانی کنید.',
-        variant: 'destructive'
-      });
-      return;
-    }
 
     if (!map) return;
 
@@ -1217,9 +1226,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     map.whenReady(() => {
       setMapReady(true);
     });
+    }, 50); // پایان setTimeout
 
     return () => {
-      clearTimeout(longPressTimer);
+      clearTimeout(initTimeout);
       setMapReady(false);
       if (tempMarkerRef.current && mapRef.current) {
         mapRef.current.removeLayer(tempMarkerRef.current);
