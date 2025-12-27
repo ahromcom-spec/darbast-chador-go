@@ -2109,13 +2109,15 @@ export default function OrderDetail() {
           )}
 
           {/* Location Edit Modal */}
-          <LocationMapModal
-            isOpen={showLocationEditModal}
-            onClose={() => setShowLocationEditModal(false)}
-            onLocationSelect={handleLocationUpdate}
-            initialLat={order.location_lat || 34.6416}
-            initialLng={order.location_lng || 50.8746}
-          />
+          {order.location_lat && order.location_lng && (
+            <LocationMapModal
+              isOpen={showLocationEditModal}
+              onClose={() => setShowLocationEditModal(false)}
+              onLocationSelect={handleLocationUpdate}
+              initialLat={order.location_lat}
+              initialLng={order.location_lng}
+            />
+          )}
 
           {/* Timeline */}
           <OrderTimeline
