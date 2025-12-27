@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeftRight, Users, Clock, Archive, CheckSquare, Square } from 'lucide-react';
+import { CheckCircle, X, Eye, Search, MapPin, Phone, User, Ruler, FileText, Banknote, Wrench, Image as ImageIcon, ChevronLeft, ChevronRight, ArrowLeftRight, Users, Clock, Archive, CheckSquare, Square, Play, Film } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { useToast } from '@/hooks/use-toast';
@@ -29,6 +29,7 @@ import { sendNotificationSchema } from '@/lib/rpcValidation';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
+import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 
 // Helper to parse order notes safely - handles double-stringified JSON
 const parseOrderNotes = (notes: any): any => {
@@ -62,6 +63,9 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
+  const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
+  const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchMedia = async () => {
@@ -143,72 +147,129 @@ const OrderMediaGallery = ({ orderId }: { orderId: string }) => {
                   currentMedia?.file_path?.toLowerCase().endsWith('.webm') ||
                   currentMedia?.file_path?.toLowerCase().endsWith('.mov');
 
-  // تعیین MIME type برای ویدیو
-  const getVideoMimeType = () => {
-    if (currentMedia?.mime_type) return currentMedia.mime_type;
-    const path = currentMedia?.file_path?.toLowerCase() || '';
-    if (path.endsWith('.webm')) return 'video/webm';
-    if (path.endsWith('.mov')) return 'video/quicktime';
-    return 'video/mp4';
+  const handleMediaClick = (mediaItem: typeof currentMedia, url: string) => {
+    const isMediaVideo = mediaItem?.file_type === 'video' || 
+                         mediaItem?.file_type?.includes('video') || 
+                         mediaItem?.mime_type?.includes('video') ||
+                         mediaItem?.file_path?.toLowerCase().endsWith('.mp4') ||
+                         mediaItem?.file_path?.toLowerCase().endsWith('.webm') ||
+                         mediaItem?.file_path?.toLowerCase().endsWith('.mov');
+    
+    if (isMediaVideo) {
+      setSelectedVideoUrl(url);
+      setSelectedVideoPath(mediaItem.file_path);
+    } else {
+      setSelectedImageUrl(url);
+    }
   };
 
   return (
-    <div className="space-y-2">
-      <Label className="text-xs text-muted-foreground flex items-center gap-2">
-        <ImageIcon className="h-3 w-3" />
-        تصاویر و فایل‌ها ({media.length})
-      </Label>
-      <div className="relative bg-black/5 rounded-lg overflow-hidden min-h-[200px]">
-        {mediaUrls[currentMedia?.id] ? (
-          isVideo ? (
-            <video
-              key={currentMedia?.id}
-              controls
-              playsInline
-              preload="metadata"
-              className="w-full max-h-80 object-contain"
-            >
-              <source src={getMediaUrl(currentMedia)} type={getVideoMimeType()} />
-              مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
-            </video>
+    <>
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground flex items-center gap-2">
+          <ImageIcon className="h-3 w-3" />
+          تصاویر و فایل‌ها ({media.length})
+        </Label>
+        <div className="relative bg-black/5 rounded-lg overflow-hidden min-h-[200px]">
+          {mediaUrls[currentMedia?.id] ? (
+            isVideo ? (
+              <div 
+                className="relative w-full min-h-[200px] flex items-center justify-center bg-black/10 cursor-pointer group"
+                onClick={() => handleMediaClick(currentMedia, getMediaUrl(currentMedia))}
+              >
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                  <div className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
+                    <Play className="h-8 w-8 ml-1" fill="currentColor" />
+                  </div>
+                  <span className="text-sm text-muted-foreground bg-background/80 px-3 py-1 rounded-full">
+                    برای مشاهده ویدیو کلیک کنید
+                  </span>
+                </div>
+                <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                  <Film className="h-3 w-3" />
+                  ویدیو
+                </div>
+              </div>
+            ) : (
+              <img
+                src={getMediaUrl(currentMedia)}
+                alt={`تصویر ${currentIndex + 1}`}
+                className="w-full max-h-80 object-contain cursor-pointer"
+                onClick={() => handleMediaClick(currentMedia, getMediaUrl(currentMedia))}
+              />
+            )
           ) : (
-            <img
-              src={getMediaUrl(currentMedia)}
-              alt={`تصویر ${currentIndex + 1}`}
-              className="w-full max-h-80 object-contain"
-            />
-          )
-        ) : (
-          <div className="flex justify-center items-center h-48">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-          </div>
-        )}
-        
-        {media.length > 1 && (
-          <>
-            <Button
-              variant="outline"
-              size="icon"
-              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
-              onClick={() => setCurrentIndex(i => (i + 1) % media.length)}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
-              onClick={() => setCurrentIndex(i => (i - 1 + media.length) % media.length)}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/80 px-2 py-1 rounded text-xs">
-              {currentIndex + 1} / {media.length}
+            <div className="flex justify-center items-center h-48">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
-          </>
-        )}
+          )}
+          
+          {media.length > 1 && (
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
+                onClick={() => setCurrentIndex(i => (i + 1) % media.length)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80"
+                onClick={() => setCurrentIndex(i => (i - 1 + media.length) % media.length)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/80 px-2 py-1 rounded text-xs">
+                {currentIndex + 1} / {media.length}
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Video Player Dialog */}
+      <Dialog open={!!selectedVideoUrl} onOpenChange={(open) => !open && setSelectedVideoUrl(null)}>
+        <DialogContent className="max-w-4xl w-[95vw] p-0 bg-black overflow-hidden">
+          <DialogHeader className="p-4 pb-2 bg-gradient-to-b from-black/80 to-transparent absolute top-0 left-0 right-0 z-10">
+            <DialogTitle className="text-white text-sm flex items-center gap-2">
+              <Film className="h-4 w-4" />
+              پخش ویدیو
+            </DialogTitle>
+          </DialogHeader>
+          {selectedVideoUrl && (
+            <div className="aspect-video w-full">
+              <CentralizedVideoPlayer
+                src={selectedVideoUrl}
+                filePath={selectedVideoPath || undefined}
+                bucket="project-media"
+                className="w-full h-full"
+                autoPlay
+                showControls
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Viewer Dialog */}
+      <Dialog open={!!selectedImageUrl} onOpenChange={(open) => !open && setSelectedImageUrl(null)}>
+        <DialogContent className="max-w-4xl w-[95vw] p-2 bg-black/95">
+          <DialogHeader className="sr-only">
+            <DialogTitle>مشاهده تصویر</DialogTitle>
+          </DialogHeader>
+          {selectedImageUrl && (
+            <img
+              src={selectedImageUrl}
+              alt="تصویر بزرگ"
+              className="w-full h-auto max-h-[85vh] object-contain rounded"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
