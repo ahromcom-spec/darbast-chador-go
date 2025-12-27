@@ -88,79 +88,101 @@ export function NavigationMapDialog({
     setHasArrived(false);
     setDistanceToDestination(null);
 
-    try {
-      const map = L.map(mapContainer.current, {
-        center: [destinationLat, destinationLng],
-        zoom: 14,
-        zoomControl: true,
-        scrollWheelZoom: true,
-        dragging: true,
-        preferCanvas: true,
-        fadeAnimation: true,
-        zoomAnimation: true,
-      });
+    // Small delay to ensure dialog is fully rendered
+    const initTimer = setTimeout(() => {
+      if (!mapContainer.current) return;
 
-      mapRef.current = map;
+      try {
+        const map = L.map(mapContainer.current, {
+          center: [destinationLat, destinationLng],
+          zoom: 14,
+          zoomControl: true,
+          scrollWheelZoom: true,
+          dragging: true,
+          preferCanvas: true,
+          fadeAnimation: true,
+          zoomAnimation: true,
+        });
 
-      // Add tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19,
-        crossOrigin: 'anonymous' as const,
-        subdomains: ['a', 'b', 'c'],
-      }).addTo(map);
+        mapRef.current = map;
 
-      // Custom destination marker
-      const destIcon = L.divIcon({
-        className: 'destination-marker',
-        html: `
-          <div style="
-            width: 40px;
-            height: 40px;
-            background: hsl(var(--destructive));
-            border: 3px solid white;
-            border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">
+        // Add tile layer with multiple fallbacks
+        const tileConfigs = [
+          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png'
+        ];
+
+        for (const tileUrl of tileConfigs) {
+          try {
+            L.tileLayer(tileUrl, {
+              attribution: '© OpenStreetMap contributors',
+              maxZoom: 19,
+              subdomains: ['a', 'b', 'c'],
+            }).addTo(map);
+            break;
+          } catch (e) {
+            console.warn('Tile failed:', tileUrl);
+          }
+        }
+
+        // Custom destination marker
+        const destIcon = L.divIcon({
+          className: 'destination-marker',
+          html: `
             <div style="
-              transform: rotate(45deg);
-              color: white;
-              font-size: 20px;
-              font-weight: bold;
-            ">🏠</div>
-          </div>
-        `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 40]
-      });
+              width: 40px;
+              height: 40px;
+              background: #dc2626;
+              border: 3px solid white;
+              border-radius: 50% 50% 50% 0;
+              transform: rotate(-45deg);
+              box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <div style="
+                transform: rotate(45deg);
+                color: white;
+                font-size: 20px;
+                font-weight: bold;
+              ">🏠</div>
+            </div>
+          `,
+          iconSize: [40, 40],
+          iconAnchor: [20, 40]
+        });
 
-      const destMarker = L.marker([destinationLat, destinationLng], { icon: destIcon }).addTo(map);
-      if (destinationAddress) {
-        destMarker.bindPopup(`<div style="padding: 8px; max-width: 200px;"><strong>مقصد:</strong><br/>${destinationAddress}</div>`).openPopup();
+        const destMarker = L.marker([destinationLat, destinationLng], { icon: destIcon }).addTo(map);
+        if (destinationAddress) {
+          destMarker.bindPopup(`<div style="padding: 8px; max-width: 200px;"><strong>مقصد:</strong><br/>${destinationAddress}</div>`).openPopup();
+        }
+        destMarkerRef.current = destMarker;
+
+        // Multiple invalidateSize calls to ensure proper rendering
+        const invalidateTimes = [100, 200, 400, 800, 1200];
+        invalidateTimes.forEach(time => {
+          setTimeout(() => {
+            if (mapRef.current) {
+              mapRef.current.invalidateSize({ animate: false });
+            }
+          }, time);
+        });
+
+      } catch (error) {
+        console.error('Error initializing navigation map:', error);
       }
-      destMarkerRef.current = destMarker;
+    }, 150);
 
-      // Invalidate size after mount
-      setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.invalidateSize({ animate: false });
-        }
-      }, 100);
-
-      // Cleanup
-      return () => {
-        if (mapRef.current) {
-          mapRef.current.remove();
-          mapRef.current = null;
-        }
-      };
-    } catch (error) {
-      console.error('Error initializing navigation map:', error);
-    }
+    // Cleanup
+    return () => {
+      clearTimeout(initTimer);
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
   }, [open, destinationLat, destinationLng, destinationAddress]);
 
   // Update user marker position
@@ -405,8 +427,8 @@ export function NavigationMapDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden">
-        <DialogHeader className="px-4 pt-4 pb-2 border-b">
+      <DialogContent className="max-w-[95vw] w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col">
+        <DialogHeader className="px-4 pt-4 pb-2 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <Navigation className="h-5 w-5 text-primary" />
@@ -426,14 +448,13 @@ export function NavigationMapDialog({
           </div>
         </DialogHeader>
 
-        <div className="relative flex-1 h-full">
+        <div className="relative flex-1 overflow-hidden" style={{ minHeight: '500px' }}>
           {/* Map Container */}
           <div 
             ref={mapContainer} 
-            className="w-full h-full"
+            className="absolute inset-0"
             style={{ 
-              minHeight: 'calc(90vh - 60px)',
-              background: '#e8e8e8',
+              background: '#f0f0f0',
               zoom: '1',
               transform: 'translateZ(0)',
             }}
