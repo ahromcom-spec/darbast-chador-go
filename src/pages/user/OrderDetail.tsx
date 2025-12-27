@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError } from "@supabase/supabase-js";
@@ -193,6 +193,8 @@ export default function OrderDetail() {
   const [uploadingVideos, setUploadingVideos] = useState(false);
   const [imageUploadProgress, setImageUploadProgress] = useState(0);
   const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const imageUploadCancelledRef = useRef(false);
+  const videoUploadCancelledRef = useRef(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -607,12 +609,21 @@ export default function OrderDetail() {
     }
   };
 
+  const handleCancelImageUpload = () => {
+    imageUploadCancelledRef.current = true;
+  };
+
+  const handleCancelVideoUpload = () => {
+    videoUploadCancelledRef.current = true;
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!order || !files || files.length === 0) return;
 
     setUploadingImages(true);
     setImageUploadProgress(0);
+    imageUploadCancelledRef.current = false;
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -630,6 +641,15 @@ export default function OrderDetail() {
       const totalFiles = files.length;
 
       for (let i = 0; i < files.length; i++) {
+        // بررسی لغو شدن آپلود
+        if (imageUploadCancelledRef.current) {
+          toast({
+            title: "لغو شد",
+            description: `آپلود لغو شد. ${successCount} عکس آپلود شده`,
+          });
+          break;
+        }
+
         const file = files[i];
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
@@ -668,22 +688,24 @@ export default function OrderDetail() {
       }
 
       // Complete the progress
-      setImageUploadProgress(100);
+      if (!imageUploadCancelledRef.current) {
+        setImageUploadProgress(100);
 
-      if (successCount > 0) {
-        toast({
-          title: "✓ موفق",
-          description: `${successCount} عکس با موفقیت آپلود شد${errorCount > 0 ? ` (${errorCount} فایل با خطا مواجه شد)` : ''}`,
-        });
-        
-        await fetchOrderDetails();
-      } else {
-        toast({
-          title: "خطا",
-          description: "هیچ عکسی آپلود نشد",
-          variant: "destructive",
-        });
+        if (successCount > 0) {
+          toast({
+            title: "✓ موفق",
+            description: `${successCount} عکس با موفقیت آپلود شد${errorCount > 0 ? ` (${errorCount} فایل با خطا مواجه شد)` : ''}`,
+          });
+        } else {
+          toast({
+            title: "خطا",
+            description: "هیچ عکسی آپلود نشد",
+            variant: "destructive",
+          });
+        }
       }
+      
+      await fetchOrderDetails();
     } catch (error: any) {
       console.error('Error uploading images:', error);
       toast({
@@ -695,6 +717,7 @@ export default function OrderDetail() {
       setTimeout(() => {
         setUploadingImages(false);
         setImageUploadProgress(0);
+        imageUploadCancelledRef.current = false;
       }, 500);
       e.target.value = '';
     }
@@ -706,6 +729,7 @@ export default function OrderDetail() {
 
     setUploadingVideos(true);
     setVideoUploadProgress(0);
+    videoUploadCancelledRef.current = false;
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -723,6 +747,15 @@ export default function OrderDetail() {
       const totalFiles = files.length;
 
       for (let i = 0; i < files.length; i++) {
+        // بررسی لغو شدن آپلود
+        if (videoUploadCancelledRef.current) {
+          toast({
+            title: "لغو شد",
+            description: `آپلود لغو شد. ${successCount} ویدیو آپلود شده`,
+          });
+          break;
+        }
+
         const file = files[i];
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
@@ -761,22 +794,24 @@ export default function OrderDetail() {
       }
 
       // Complete the progress
-      setVideoUploadProgress(100);
+      if (!videoUploadCancelledRef.current) {
+        setVideoUploadProgress(100);
 
-      if (successCount > 0) {
-        toast({
-          title: "✓ موفق",
-          description: `${successCount} ویدیو با موفقیت آپلود شد${errorCount > 0 ? ` (${errorCount} فایل با خطا مواجه شد)` : ''}`,
-        });
-        
-        await fetchOrderDetails();
-      } else {
-        toast({
-          title: "خطا",
-          description: "هیچ ویدیویی آپلود نشد",
-          variant: "destructive",
-        });
+        if (successCount > 0) {
+          toast({
+            title: "✓ موفق",
+            description: `${successCount} ویدیو با موفقیت آپلود شد${errorCount > 0 ? ` (${errorCount} فایل با خطا مواجه شد)` : ''}`,
+          });
+        } else {
+          toast({
+            title: "خطا",
+            description: "هیچ ویدیویی آپلود نشد",
+            variant: "destructive",
+          });
+        }
       }
+      
+      await fetchOrderDetails();
     } catch (error: any) {
       console.error('Error uploading videos:', error);
       toast({
@@ -788,6 +823,7 @@ export default function OrderDetail() {
       setTimeout(() => {
         setUploadingVideos(false);
         setVideoUploadProgress(0);
+        videoUploadCancelledRef.current = false;
       }, 500);
       e.target.value = '';
     }
@@ -2311,7 +2347,18 @@ export default function OrderDetail() {
               {uploadingImages && (
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">در حال آپلود عکس...</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">در حال آپلود عکس...</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelImageUpload}
+                        className="h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <X className="h-3 w-3 ml-1" />
+                        لغو
+                      </Button>
+                    </div>
                     <span className="font-medium text-primary">{Math.round(imageUploadProgress)}%</span>
                   </div>
                   <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -2421,7 +2468,18 @@ export default function OrderDetail() {
               {uploadingVideos && (
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">در حال آپلود ویدیو...</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">در حال آپلود ویدیو...</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelVideoUpload}
+                        className="h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <X className="h-3 w-3 ml-1" />
+                        لغو
+                      </Button>
+                    </div>
                     <span className="font-medium text-primary">{Math.round(videoUploadProgress)}%</span>
                   </div>
                   <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
