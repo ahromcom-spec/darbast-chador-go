@@ -341,7 +341,14 @@ export function OrderOwnershipChain({
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span>{item.to_name}</span>
                         {item.to_phone && (
-                          <span className="text-muted-foreground" dir="ltr">({item.to_phone})</span>
+                          <a 
+                            href={`tel:${item.to_phone}`} 
+                            className="text-primary hover:underline flex items-center gap-1" 
+                            dir="ltr"
+                          >
+                            <Phone className="h-3 w-3" />
+                            {item.to_phone}
+                          </a>
                         )}
                         {item.is_current_owner && (
                           <Badge variant="outline" className="text-xs">مالک فعلی</Badge>
@@ -364,7 +371,14 @@ export function OrderOwnershipChain({
                           <span className="text-muted-foreground">به:</span>
                           <span>{item.to_name || 'کاربر'}</span>
                           {item.to_phone && (
-                            <span className="text-muted-foreground" dir="ltr">({item.to_phone})</span>
+                            <a 
+                              href={`tel:${item.to_phone}`} 
+                              className="text-primary hover:underline flex items-center gap-1" 
+                              dir="ltr"
+                            >
+                              <Phone className="h-3 w-3" />
+                              {item.to_phone}
+                            </a>
                           )}
                         </div>
                       </div>
@@ -382,7 +396,14 @@ export function OrderOwnershipChain({
                           <span className="text-muted-foreground">همکار:</span>
                           <span>{item.to_name || 'کاربر'}</span>
                           {item.to_phone && (
-                            <span className="text-muted-foreground" dir="ltr">({item.to_phone})</span>
+                            <a 
+                              href={`tel:${item.to_phone}`} 
+                              className="text-primary hover:underline flex items-center gap-1" 
+                              dir="ltr"
+                            >
+                              <Phone className="h-3 w-3" />
+                              {item.to_phone}
+                            </a>
                           )}
                         </div>
                       </div>
@@ -394,7 +415,14 @@ export function OrderOwnershipChain({
                           <Briefcase className="h-4 w-4 text-muted-foreground" />
                           <span>{item.to_name}</span>
                           {item.to_phone && (
-                            <span className="text-muted-foreground" dir="ltr">({item.to_phone})</span>
+                            <a 
+                              href={`tel:${item.to_phone}`} 
+                              className="text-primary hover:underline flex items-center gap-1" 
+                              dir="ltr"
+                            >
+                              <Phone className="h-3 w-3" />
+                              {item.to_phone}
+                            </a>
                           )}
                         </div>
                         {item.role && (
