@@ -22,6 +22,8 @@ export const LocationMapModal = ({
 }: LocationMapModalProps) => {
   const [position, setPosition] = useState<[number, number]>([initialLat, initialLng]);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [mapStatus, setMapStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [mapInitKey, setMapInitKey] = useState(0);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -35,19 +37,32 @@ export const LocationMapModal = ({
 
   // Initialize map when dialog opens
   useEffect(() => {
-    if (!isOpen || !mapContainerRef.current) {
-      return;
-    }
+    if (!isOpen) return;
 
-    // Small delay to ensure container is ready
-    const initTimeout = setTimeout(() => {
-      if (!mapContainerRef.current) return;
-      
+    setIsMapReady(false);
+    setMapStatus('loading');
+
+    let disposed = false;
+    let readyFallback: number | undefined;
+
+    // Small delay to ensure dialog animation finished and container has size
+    const initTimeout = window.setTimeout(() => {
+      const containerEl = mapContainerRef.current;
+      if (!containerEl || disposed) return;
+
       try {
+        console.log('[LocationMapModal] init');
+
         // Remove existing map if any
         if (mapRef.current) {
           mapRef.current.remove();
           mapRef.current = null;
+        }
+
+        // Clear container to prevent "Map container is already initialized" issues
+        containerEl.innerHTML = '';
+        if ((containerEl as any)._leaflet_id) {
+          delete (containerEl as any)._leaflet_id;
         }
 
         // Create custom icon
@@ -79,7 +94,7 @@ export const LocationMapModal = ({
         });
 
         // Initialize map
-        const map = L.map(mapContainerRef.current, {
+        const map = L.map(containerEl, {
           center: [initialLat, initialLng],
           zoom: 15,
           zoomControl: true,
@@ -96,11 +111,11 @@ export const LocationMapModal = ({
         }).addTo(map);
 
         // Add draggable marker
-        const marker = L.marker([initialLat, initialLng], { 
+        const marker = L.marker([initialLat, initialLng], {
           icon: customIcon,
-          draggable: true 
+          draggable: true,
         }).addTo(map);
-        
+
         markerRef.current = marker;
 
         // Update position on marker drag
@@ -116,27 +131,50 @@ export const LocationMapModal = ({
           setPosition([lat, lng]);
         });
 
-        // Invalidate size after render
-        setTimeout(() => {
-          map.invalidateSize();
+        map.whenReady(() => {
+          if (disposed) return;
           setIsMapReady(true);
-        }, 100);
+          setMapStatus('ready');
+          window.setTimeout(() => {
+            map.invalidateSize({ animate: false });
+          }, 50);
+        });
 
+        // Fallback: even if whenReady doesn't fire due to sizing issues, show map UI
+        readyFallback = window.setTimeout(() => {
+          if (disposed) return;
+          if (!mapRef.current) return;
+          setIsMapReady(true);
+          setMapStatus('ready');
+          mapRef.current.invalidateSize({ animate: false });
+        }, 1200);
       } catch (error) {
-        console.error('Error initializing map:', error);
+        console.error('[LocationMapModal] Error initializing map:', error);
+        if (!disposed) {
+          setMapStatus('error');
+          setIsMapReady(false);
+        }
       }
-    }, 200);
+    }, 150);
 
     return () => {
-      clearTimeout(initTimeout);
+      disposed = true;
+      window.clearTimeout(initTimeout);
+      if (readyFallback) window.clearTimeout(readyFallback);
+
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
       markerRef.current = null;
       setIsMapReady(false);
+      setMapStatus('idle');
     };
-  }, [isOpen, initialLat, initialLng]);
+  }, [isOpen, initialLat, initialLng, mapInitKey]);
+
+  const handleRetry = () => {
+    setMapInitKey((k) => k + 1);
+  };
 
   const handleConfirm = () => {
     onLocationSelect(position[0], position[1]);
@@ -159,16 +197,26 @@ export const LocationMapModal = ({
           </p>
           
           <div className="h-[450px] w-full rounded-lg overflow-hidden border-2 border-border relative">
-            {!isMapReady && (
+            {mapStatus !== 'ready' && (
               <div className="absolute inset-0 bg-muted flex items-center justify-center z-10">
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-muted-foreground">در حال بارگذاری نقشه...</p>
-                </div>
+                {mapStatus === 'error' ? (
+                  <div className="flex flex-col items-center gap-3 text-center p-6">
+                    <p className="text-sm font-medium">خطا در بارگذاری نقشه</p>
+                    <p className="text-xs text-muted-foreground">لطفاً دوباره تلاش کنید.</p>
+                    <Button variant="outline" size="sm" onClick={handleRetry}>
+                      تلاش مجدد
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-muted-foreground">در حال آماده‌سازی نقشه...</p>
+                  </div>
+                )}
               </div>
             )}
-            <div 
-              ref={mapContainerRef} 
+            <div
+              ref={mapContainerRef}
               className="h-full w-full"
               style={{ minHeight: '450px' }}
             />
