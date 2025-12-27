@@ -189,6 +189,10 @@ export default function OrderDetail() {
   const [ratedUserName, setRatedUserName] = useState<string>('');
   const [showMediaUpload, setShowMediaUpload] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingVideos, setUploadingVideos] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState(0);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -603,11 +607,12 @@ export default function OrderDetail() {
     }
   };
 
-  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!order || !files || files.length === 0) return;
 
-    setUploadingMedia(true);
+    setUploadingImages(true);
+    setImageUploadProgress(0);
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -622,29 +627,27 @@ export default function OrderDetail() {
 
       let successCount = 0;
       let errorCount = 0;
+      const totalFiles = files.length;
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
-        const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
         try {
-          // Upload to storage (bucket: project-media)
           const { error: uploadError } = await supabase.storage
             .from('project-media')
             .upload(filePath, file);
 
           if (uploadError) throw uploadError;
 
-          // Save to database
           const { error: dbError } = await supabase
             .from('project_media')
             .insert({
               project_id: order.id,
               file_path: filePath,
-              file_type: fileType,
+              file_type: 'image',
               file_size: file.size,
               mime_type: file.type,
               user_id: user.id
@@ -657,35 +660,135 @@ export default function OrderDetail() {
           console.error('Error uploading file:', file.name, err);
           errorCount++;
         }
+        
+        // Update progress with ease-out effect (faster at start, slower at end)
+        const linearProgress = ((i + 1) / totalFiles) * 100;
+        const easedProgress = 100 * (1 - Math.pow(1 - linearProgress / 100, 0.5));
+        setImageUploadProgress(Math.min(easedProgress, 95));
       }
+
+      // Complete the progress
+      setImageUploadProgress(100);
 
       if (successCount > 0) {
         toast({
           title: "✓ موفق",
-          description: `${successCount} فایل با موفقیت آپلود شد${errorCount > 0 ? ` (${errorCount} فایل با خطا مواجه شد)` : ''}`,
+          description: `${successCount} عکس با موفقیت آپلود شد${errorCount > 0 ? ` (${errorCount} فایل با خطا مواجه شد)` : ''}`,
         });
         
-        // Refresh media files
         await fetchOrderDetails();
       } else {
         toast({
           title: "خطا",
-          description: "هیچ فایلی آپلود نشد",
+          description: "هیچ عکسی آپلود نشد",
           variant: "destructive",
         });
       }
-      
-      setShowMediaUpload(false);
     } catch (error: any) {
-      console.error('Error uploading media:', error);
+      console.error('Error uploading images:', error);
       toast({
         title: "خطا",
-        description: error.message || "خطا در آپلود فایل‌ها",
+        description: error.message || "خطا در آپلود عکس‌ها",
         variant: "destructive",
       });
     } finally {
-      setUploadingMedia(false);
-      // Reset input
+      setTimeout(() => {
+        setUploadingImages(false);
+        setImageUploadProgress(0);
+      }, 500);
+      e.target.value = '';
+    }
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!order || !files || files.length === 0) return;
+
+    setUploadingVideos(true);
+    setVideoUploadProgress(0);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "خطا",
+          description: "لطفاً وارد سیستم شوید",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+      const totalFiles = files.length;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
+
+        try {
+          const { error: uploadError } = await supabase.storage
+            .from('project-media')
+            .upload(filePath, file);
+
+          if (uploadError) throw uploadError;
+
+          const { error: dbError } = await supabase
+            .from('project_media')
+            .insert({
+              project_id: order.id,
+              file_path: filePath,
+              file_type: 'video',
+              file_size: file.size,
+              mime_type: file.type,
+              user_id: user.id
+            });
+
+          if (dbError) throw dbError;
+          
+          successCount++;
+        } catch (err) {
+          console.error('Error uploading file:', file.name, err);
+          errorCount++;
+        }
+        
+        // Update progress with ease-out effect (faster at start, slower at end)
+        const linearProgress = ((i + 1) / totalFiles) * 100;
+        const easedProgress = 100 * (1 - Math.pow(1 - linearProgress / 100, 0.5));
+        setVideoUploadProgress(Math.min(easedProgress, 95));
+      }
+
+      // Complete the progress
+      setVideoUploadProgress(100);
+
+      if (successCount > 0) {
+        toast({
+          title: "✓ موفق",
+          description: `${successCount} ویدیو با موفقیت آپلود شد${errorCount > 0 ? ` (${errorCount} فایل با خطا مواجه شد)` : ''}`,
+        });
+        
+        await fetchOrderDetails();
+      } else {
+        toast({
+          title: "خطا",
+          description: "هیچ ویدیویی آپلود نشد",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error uploading videos:', error);
+      toast({
+        title: "خطا",
+        description: error.message || "خطا در آپلود ویدیوها",
+        variant: "destructive",
+      });
+    } finally {
+      setTimeout(() => {
+        setUploadingVideos(false);
+        setVideoUploadProgress(0);
+      }, 500);
       e.target.value = '';
     }
   };
@@ -2187,14 +2290,14 @@ export default function OrderDetail() {
                 <Button
                   variant="default"
                   onClick={() => document.getElementById('image-upload-input')?.click()}
-                  disabled={uploadingMedia}
+                  disabled={uploadingImages}
                   className="gap-2"
                   size="sm"
                 >
-                  {uploadingMedia ? (
+                  {uploadingImages ? (
                     <>
                       <Clock className="h-4 w-4 animate-spin" />
-                      در حال آپلود...
+                      در حال آپلود عکس...
                     </>
                   ) : (
                     <>
@@ -2204,6 +2307,24 @@ export default function OrderDetail() {
                   )}
                 </Button>
               </div>
+              {/* نوار پیشرفت آپلود عکس */}
+              {uploadingImages && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">در حال آپلود عکس...</span>
+                    <span className="font-medium text-primary">{Math.round(imageUploadProgress)}%</span>
+                  </div>
+                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div 
+                      className="h-full bg-primary rounded-full"
+                      style={{ 
+                        width: `${imageUploadProgress}%`,
+                        transition: 'width 0.3s cubic-bezier(0.0, 0.0, 0.2, 1)'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <input
@@ -2212,8 +2333,8 @@ export default function OrderDetail() {
                 accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                 multiple
                 className="hidden"
-                onChange={handleMediaUpload}
-                disabled={uploadingMedia}
+                onChange={handleImageUpload}
+                disabled={uploadingImages}
               />
               
               {mediaFiles.filter(m => m.file_type === 'image').length === 0 ? (
@@ -2279,14 +2400,14 @@ export default function OrderDetail() {
                 <Button
                   variant="default"
                   onClick={() => document.getElementById('video-upload-input')?.click()}
-                  disabled={uploadingMedia}
+                  disabled={uploadingVideos}
                   className="gap-2"
                   size="sm"
                 >
-                  {uploadingMedia ? (
+                  {uploadingVideos ? (
                     <>
                       <Clock className="h-4 w-4 animate-spin" />
-                      در حال آپلود...
+                      در حال آپلود ویدیو...
                     </>
                   ) : (
                     <>
@@ -2296,6 +2417,24 @@ export default function OrderDetail() {
                   )}
                 </Button>
               </div>
+              {/* نوار پیشرفت آپلود ویدیو */}
+              {uploadingVideos && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">در حال آپلود ویدیو...</span>
+                    <span className="font-medium text-primary">{Math.round(videoUploadProgress)}%</span>
+                  </div>
+                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div 
+                      className="h-full bg-primary rounded-full"
+                      style={{ 
+                        width: `${videoUploadProgress}%`,
+                        transition: 'width 0.3s cubic-bezier(0.0, 0.0, 0.2, 1)'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <input
@@ -2304,8 +2443,8 @@ export default function OrderDetail() {
                 accept="video/mp4,video/webm,video/mov,video/avi,video/quicktime,video/*"
                 multiple
                 className="hidden"
-                onChange={handleMediaUpload}
-                disabled={uploadingMedia}
+                onChange={handleVideoUpload}
+                disabled={uploadingVideos}
               />
               
               {mediaFiles.filter(m => m.file_type === 'video').length === 0 ? (
