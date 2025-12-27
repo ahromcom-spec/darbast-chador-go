@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Navigation, Locate, AlertCircle, Loader2, X, MapPin } from 'lucide-react';
+import { Navigation, Locate, AlertCircle, Loader2, X, MapPin, CheckCircle, Volume2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,6 +13,19 @@ interface NavigationMapDialogProps {
   destinationLat: number;
   destinationLng: number;
   destinationAddress?: string;
+}
+
+// Calculate distance between two points (Haversine formula)
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000; // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in meters
 }
 
 export function NavigationMapDialog({
@@ -27,15 +40,39 @@ export function NavigationMapDialog({
   const userMarkerRef = useRef<L.Marker | null>(null);
   const destMarkerRef = useRef<L.Marker | null>(null);
   const routeLineRef = useRef<L.Polyline | null>(null);
+  const shadowLineRef = useRef<L.Polyline | null>(null);
+  const watchIdRef = useRef<number | null>(null);
   
   const [isLocating, setIsLocating] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [routeDistance, setRouteDistance] = useState<number | null>(null);
   const [routeDuration, setRouteDuration] = useState<number | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
+  const [hasArrived, setHasArrived] = useState(false);
+  const [distanceToDestination, setDistanceToDestination] = useState<number | null>(null);
   
   const { toast } = useToast();
+
+  // Cleanup watch position on unmount or close
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, []);
+
+  // Stop tracking when dialog closes
+  useEffect(() => {
+    if (!open && watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+      setIsTracking(false);
+    }
+  }, [open]);
 
   // Initialize map
   useEffect(() => {
@@ -46,6 +83,10 @@ export function NavigationMapDialog({
       mapRef.current.remove();
       mapRef.current = null;
     }
+
+    // Reset state
+    setHasArrived(false);
+    setDistanceToDestination(null);
 
     try {
       const map = L.map(mapContainer.current, {
@@ -122,103 +163,39 @@ export function NavigationMapDialog({
     }
   }, [open, destinationLat, destinationLng, destinationAddress]);
 
-  // Get user location
-  const getUserLocation = () => {
-    setIsLocating(true);
-    setLocationError(null);
+  // Update user marker position
+  const updateUserMarker = useCallback((lat: number, lng: number) => {
+    if (!mapRef.current) return;
 
-    if (!navigator.geolocation) {
-      setLocationError('مرورگر شما از موقعیت‌یابی پشتیبانی نمی‌کند');
-      setIsLocating(false);
-      return;
+    // Remove previous user marker
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
     }
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
-        setIsLocating(false);
+    // Custom user marker (blue pulsing dot)
+    const userIcon = L.divIcon({
+      className: 'user-location-marker',
+      html: `
+        <div class="user-marker-pulse" style="
+          width: 24px;
+          height: 24px;
+          background: hsl(var(--primary));
+          border: 4px solid white;
+          border-radius: 50%;
+          box-shadow: 0 0 10px rgba(0,0,0,0.3), 0 0 40px hsl(var(--primary) / 0.4);
+        "></div>
+      `,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
 
-        // Add user marker on map
-        if (mapRef.current) {
-          // Remove previous user marker
-          if (userMarkerRef.current) {
-            userMarkerRef.current.remove();
-          }
+    const userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(mapRef.current);
+    userMarker.bindPopup('<div style="padding: 8px;"><strong>موقعیت شما</strong></div>');
+    userMarkerRef.current = userMarker;
+  }, []);
 
-          // Custom user marker (blue dot)
-          const userIcon = L.divIcon({
-            className: 'user-location-marker',
-            html: `
-              <div style="
-                width: 24px;
-                height: 24px;
-                background: hsl(var(--primary));
-                border: 4px solid white;
-                border-radius: 50%;
-                box-shadow: 0 0 10px rgba(0,0,0,0.3), 0 0 40px hsl(var(--primary) / 0.4);
-                animation: pulse 2s infinite;
-              "></div>
-              <style>
-                @keyframes pulse {
-                  0% { box-shadow: 0 0 10px rgba(0,0,0,0.3), 0 0 40px hsl(var(--primary) / 0.4); }
-                  50% { box-shadow: 0 0 15px rgba(0,0,0,0.4), 0 0 60px hsl(var(--primary) / 0.6); }
-                  100% { box-shadow: 0 0 10px rgba(0,0,0,0.3), 0 0 40px hsl(var(--primary) / 0.4); }
-                }
-              </style>
-            `,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
-          });
-
-          const userMarker = L.marker([latitude, longitude], { icon: userIcon }).addTo(mapRef.current);
-          userMarker.bindPopup('<div style="padding: 8px;"><strong>موقعیت شما</strong></div>');
-          userMarkerRef.current = userMarker;
-
-          // Fit bounds to show both markers
-          const bounds = L.latLngBounds(
-            [latitude, longitude],
-            [destinationLat, destinationLng]
-          );
-          mapRef.current.fitBounds(bounds, { padding: [50, 50] });
-
-          // Calculate route
-          await calculateRoute(latitude, longitude);
-        }
-      },
-      (error) => {
-        setIsLocating(false);
-        let errorMessage = 'خطا در دریافت موقعیت';
-        
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'لطفاً دسترسی به موقعیت را در تنظیمات مرورگر فعال کنید';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'موقعیت در دسترس نیست. لطفاً GPS را روشن کنید';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'زمان درخواست موقعیت به پایان رسید';
-            break;
-        }
-        
-        setLocationError(errorMessage);
-        toast({
-          title: 'خطا در موقعیت‌یابی',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
-      }
-    );
-  };
-
-  // Calculate route
-  const calculateRoute = async (userLat: number, userLng: number) => {
+  // Calculate and draw route
+  const calculateRoute = useCallback(async (userLat: number, userLng: number) => {
     setIsCalculatingRoute(true);
     
     try {
@@ -237,9 +214,12 @@ export function NavigationMapDialog({
         const durationMinutes = Math.round((distanceKm / 40) * 60);
         setRouteDuration(durationMinutes);
 
-        // Remove previous route
+        // Remove previous routes
         if (routeLineRef.current) {
           routeLineRef.current.remove();
+        }
+        if (shadowLineRef.current) {
+          shadowLineRef.current.remove();
         }
 
         // Draw route on map
@@ -247,23 +227,25 @@ export function NavigationMapDialog({
           const coordinates = (data.geometry.coordinates as [number, number][])
             .map((coord) => [coord[1], coord[0]] as [number, number]);
           
-          const routeLine = L.polyline(coordinates, {
-            color: 'hsl(var(--primary))',
-            weight: 6,
-            opacity: 0.8,
-            lineCap: 'round',
-            lineJoin: 'round',
-          }).addTo(mapRef.current);
-
-          // Add a subtle shadow for depth
-          L.polyline(coordinates, {
+          // Shadow line for depth
+          const shadowLine = L.polyline(coordinates, {
             color: 'rgba(0,0,0,0.3)',
             weight: 10,
             opacity: 0.3,
             lineCap: 'round',
             lineJoin: 'round',
-          }).addTo(mapRef.current).bringToBack();
+          }).addTo(mapRef.current);
+          shadowLine.bringToBack();
+          shadowLineRef.current = shadowLine;
 
+          // Main route line
+          const routeLine = L.polyline(coordinates, {
+            color: '#2563eb',
+            weight: 6,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round',
+          }).addTo(mapRef.current);
           routeLineRef.current = routeLine;
 
           // Fit bounds to show entire route
@@ -273,15 +255,137 @@ export function NavigationMapDialog({
       }
     } catch (error) {
       console.error('Error calculating route:', error);
-      toast({
-        title: 'خطا در محاسبه مسیر',
-        description: 'مسیر جاده‌ای محاسبه نشد',
-        variant: 'destructive'
-      });
     } finally {
       setIsCalculatingRoute(false);
     }
-  };
+  }, [destinationLat, destinationLng]);
+
+  // Check if user has arrived (within 50 meters)
+  const checkArrival = useCallback((lat: number, lng: number) => {
+    const distance = calculateDistance(lat, lng, destinationLat, destinationLng);
+    setDistanceToDestination(distance);
+    
+    if (distance <= 50 && !hasArrived) {
+      setHasArrived(true);
+      
+      // Stop tracking
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+        setIsTracking(false);
+      }
+      
+      // Show arrival notification
+      toast({
+        title: '🎉 به مقصد رسیدید!',
+        description: destinationAddress || 'شما به مقصد خود رسیده‌اید',
+      });
+
+      // Try to play a sound
+      try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQwPT5W7zqlrFxxRlLPGpGshKVWYq7qYaiE0XqKorIddMlKkqKyDUT9cp6aljlFNY6uhmpFYWmeopp2QX2dlp6Wck2NlaKGjnJhpaGijoZ2WanBopaGdmXJwaaOgn5t3dGqgn5+bfHlqnp2fnYB+bJubnZ6DgG6Zmp6fhYNvl5mfnoeGb5WYnp2Ih3CTl52biYlxk5abnouLc5GVmpyMjXSPlpmajI91jZWYmI2PeIuTlpaNkHqJkpWUjpF8h5GTk46Rf4WQkpGNkYKDj5CQjJGEgo2PjoyQhoGLjo2LkImAiY2Mi5CJf4eMi4qPiH+GioqKjoiAhYmJiY6Jf4SIiImNioCDh4eHjIuBgoaHh4yLgYGFhoWLioKAhIWFi4qDf4OEhIqJhH+CgwOJiYV+gYMDiImFfoGCA4iJhX6BgQOHiIV+gYEDh4iFfoCBA4eHhH5/gAOGhoR9f38DhoWDfX5+A4WFg3x9fgOEhIJ8fH0DhIOCe3t8A4OCgXp6fAOCgYB5eXsDgYB/eHh6A4CAf3d3eQN/f351dngDfn59dHV3A31+fHNzdgN8fXtycnUDe3x6cXFzA3p7eXBwcgN5enhubnEDeHl3bW1wA3d4dm1scAN2d3VrbG8DdXZ0amtvA3R1c2lqbgNzdHJoaG0DcnNxZ2dsA3FycGZmagNwcW9lZWkDb3BuZGRoA25vbWNjZwNtbmxiYmYDbG1rYWFlA2tsamBgZANqamleX2MDaWloXl5iA2hoZ11dYQNnZ2ZcXGADZmZlW1tfA2VlZFpaXgNkZGNZWV0DY2NiWFhcA2JiYVdXWwNhYWBWVloDYGBfVVVZA19fXlRUWANeXl1TU1cDXV1cUlJWA1xcW1FRVQNbW1pQUFQDWlpZT09TA1lZWE5OUgNYWFdNTVEDV1dWTExQA1ZWVUtLTwNVVVRKSk4DVFRTSUlNA1NTUkhITANSUlFHR0sDUVFQRkZKA1BQTYV/A09PT0RERgNOTk5DQ0UDTU1NQkJEA0xMTEFBQwNLS0tAQEIDSkpKPz9BA0lJST4+QANISEg9PT8DR0dHPDw+A0ZGRT09PQNFRkQ7Ozw=');
+        audio.play().catch(() => {});
+      } catch {}
+    }
+  }, [destinationLat, destinationLng, destinationAddress, hasArrived, toast]);
+
+  // Start live tracking
+  const startTracking = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationError('مرورگر شما از موقعیت‌یابی پشتیبانی نمی‌کند');
+      return;
+    }
+
+    setIsLocating(true);
+    setLocationError(null);
+    setHasArrived(false);
+
+    // First get current position
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+        setIsLocating(false);
+        setIsTracking(true);
+
+        // Update marker
+        updateUserMarker(latitude, longitude);
+
+        // Calculate initial route
+        await calculateRoute(latitude, longitude);
+
+        // Check if already at destination
+        checkArrival(latitude, longitude);
+
+        // Start watching position for live updates
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          async (pos) => {
+            const { latitude: lat, longitude: lng } = pos.coords;
+            setUserLocation({ lat, lng });
+            
+            // Update marker position
+            updateUserMarker(lat, lng);
+            
+            // Check arrival
+            checkArrival(lat, lng);
+
+            // Recalculate route every update
+            await calculateRoute(lat, lng);
+            
+            // Center map on user
+            if (mapRef.current) {
+              mapRef.current.panTo([lat, lng], { animate: true });
+            }
+          },
+          (error) => {
+            console.error('Watch position error:', error);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      },
+      (error) => {
+        setIsLocating(false);
+        let errorMessage = 'خطا در دریافت موقعیت';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'لطفاً دسترسی به موقعیت را در تنظیمات مرورگر فعال کنید. ابتدا روی آیکون قفل در نوار آدرس کلیک کرده و موقعیت را مجاز کنید.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'موقعیت در دسترس نیست. لطفاً GPS را روشن کنید';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'زمان درخواست موقعیت به پایان رسید. دوباره تلاش کنید';
+            break;
+        }
+        
+        setLocationError(errorMessage);
+        toast({
+          title: 'خطا در موقعیت‌یابی',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      }
+    );
+  }, [updateUserMarker, calculateRoute, checkArrival, toast]);
+
+  // Stop tracking
+  const stopTracking = useCallback(() => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setIsTracking(false);
+  }, []);
 
   // Open in navigation apps
   const openInGoogleMaps = () => {
@@ -289,6 +393,14 @@ export function NavigationMapDialog({
       ? `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${destinationLat},${destinationLng}`
       : `https://www.google.com/maps/dir/?api=1&destination=${destinationLat},${destinationLng}`;
     window.open(url, '_blank');
+  };
+
+  // Format distance for display
+  const formatDistance = (meters: number) => {
+    if (meters < 1000) {
+      return `${Math.round(meters)} متر`;
+    }
+    return `${(meters / 1000).toFixed(1)} کیلومتر`;
   };
 
   return (
@@ -304,7 +416,10 @@ export function NavigationMapDialog({
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                stopTracking();
+                onOpenChange(false);
+              }}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -324,27 +439,50 @@ export function NavigationMapDialog({
             }}
           />
 
-          {/* Location Button */}
+          {/* Arrived Banner */}
+          {hasArrived && (
+            <div className="absolute top-4 left-4 right-4 z-[1000] bg-green-500 text-white p-4 rounded-xl shadow-lg flex items-center gap-3 animate-pulse">
+              <CheckCircle className="h-8 w-8 flex-shrink-0" />
+              <div>
+                <p className="font-bold text-lg">🎉 به مقصد رسیدید!</p>
+                <p className="text-sm opacity-90">{destinationAddress || 'شما به مقصد خود رسیده‌اید'}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Control Buttons */}
           <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-            <Button
-              onClick={getUserLocation}
-              disabled={isLocating}
-              className="gap-2 shadow-lg"
-              variant={userLocation ? "secondary" : "default"}
-            >
-              {isLocating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Locate className="h-4 w-4" />
-              )}
-              {userLocation ? 'به‌روزرسانی موقعیت' : 'موقعیت من'}
-            </Button>
+            {!isTracking ? (
+              <Button
+                onClick={startTracking}
+                disabled={isLocating}
+                className="gap-2 shadow-lg"
+                size="lg"
+              >
+                {isLocating ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Locate className="h-5 w-5" />
+                )}
+                {isLocating ? 'در حال یافتن موقعیت...' : 'شروع مسیریابی'}
+              </Button>
+            ) : (
+              <Button
+                onClick={stopTracking}
+                variant="destructive"
+                className="gap-2 shadow-lg"
+                size="lg"
+              >
+                <X className="h-5 w-5" />
+                توقف مسیریابی
+              </Button>
+            )}
             
             {userLocation && (
               <Button
                 onClick={openInGoogleMaps}
                 className="gap-2 shadow-lg"
-                variant="outline"
+                variant="secondary"
               >
                 <Navigation className="h-4 w-4" />
                 Google Maps
@@ -354,14 +492,29 @@ export function NavigationMapDialog({
 
           {/* Location Error */}
           {locationError && (
-            <div className="absolute top-4 left-4 right-20 z-[1000] bg-destructive/90 text-destructive-foreground p-3 rounded-lg shadow-lg flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <p className="text-sm">{locationError}</p>
+            <div className="absolute top-20 left-4 right-4 z-[1000] bg-destructive/95 text-destructive-foreground p-4 rounded-lg shadow-lg">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-6 w-6 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold mb-1">دسترسی به موقعیت</p>
+                  <p className="text-sm">{locationError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Live Distance Panel */}
+          {isTracking && distanceToDestination !== null && !hasArrived && (
+            <div className="absolute top-20 left-4 z-[1000] bg-primary text-primary-foreground p-3 rounded-xl shadow-lg">
+              <div className="text-center">
+                <p className="text-xs opacity-80">فاصله تا مقصد</p>
+                <p className="font-bold text-xl">{formatDistance(distanceToDestination)}</p>
+              </div>
             </div>
           )}
 
           {/* Route Info Panel */}
-          {(routeDistance || isCalculatingRoute) && (
+          {(routeDistance || isCalculatingRoute) && !hasArrived && (
             <div className="absolute bottom-4 left-4 right-4 z-[1000] bg-background/95 backdrop-blur border rounded-xl p-4 shadow-lg">
               {isCalculatingRoute ? (
                 <div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -369,12 +522,12 @@ export function NavigationMapDialog({
                   <span>در حال محاسبه مسیر...</span>
                 </div>
               ) : (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-5 w-5 text-primary" />
                       <div>
-                        <p className="text-xs text-muted-foreground">فاصله</p>
+                        <p className="text-xs text-muted-foreground">فاصله مسیر</p>
                         <p className="font-bold text-lg text-primary">
                           {routeDistance?.toFixed(1)} کیلومتر
                         </p>
@@ -392,10 +545,12 @@ export function NavigationMapDialog({
                       </div>
                     )}
                   </div>
-                  <Button onClick={openInGoogleMaps} className="gap-2">
-                    <Navigation className="h-4 w-4" />
-                    شروع مسیریابی
-                  </Button>
+                  {isTracking && (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                      <span className="text-sm font-medium">مسیریابی فعال</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -403,12 +558,16 @@ export function NavigationMapDialog({
 
           {/* Instructions */}
           {!userLocation && !isLocating && !locationError && (
-            <div className="absolute bottom-4 left-4 right-4 z-[1000] bg-primary/10 border border-primary/20 rounded-xl p-4 shadow-lg text-center">
-              <Locate className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <p className="font-medium text-primary">روی دکمه "موقعیت من" کلیک کنید</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                برای نمایش مسیر، ابتدا موقعیت خود را فعال کنید
+            <div className="absolute bottom-4 left-4 right-4 z-[1000] bg-primary/10 border border-primary/20 rounded-xl p-5 shadow-lg text-center">
+              <Locate className="h-12 w-12 mx-auto mb-3 text-primary animate-bounce" />
+              <p className="font-bold text-lg text-primary mb-2">شروع مسیریابی</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                روی دکمه "شروع مسیریابی" کلیک کنید تا موقعیت شما پیدا شود و مسیر تا مقصد نمایش داده شود
               </p>
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-sm text-amber-800 dark:text-amber-200">
+                <p className="font-medium mb-1">⚠️ توجه:</p>
+                <p>اگر اولین بار است، مرورگر از شما اجازه دسترسی به موقعیت را می‌خواهد. لطفاً "مجاز" را بزنید.</p>
+              </div>
             </div>
           )}
         </div>
