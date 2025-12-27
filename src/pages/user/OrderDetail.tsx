@@ -2176,17 +2176,20 @@ export default function OrderDetail() {
           )}
 
 
-          {/* بخش نمایش عکس‌ها و ویدیوها */}
+          {/* بخش نمایش عکس‌ها */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>تصاویر و ویدیوهای پروژه</CardTitle>
-                {/* امکان آپلود عکس برای همه سفارشات - برای مشتری و مدیر */}
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  تصاویر پروژه
+                </CardTitle>
                 <Button
                   variant="default"
-                  onClick={() => document.getElementById('media-upload-input')?.click()}
+                  onClick={() => document.getElementById('image-upload-input')?.click()}
                   disabled={uploadingMedia}
                   className="gap-2"
+                  size="sm"
                 >
                   {uploadingMedia ? (
                     <>
@@ -2196,7 +2199,7 @@ export default function OrderDetail() {
                   ) : (
                     <>
                       <Upload className="h-4 w-4" />
-                      افزودن عکس/ویدیو
+                      افزودن عکس
                     </>
                   )}
                 </Button>
@@ -2204,20 +2207,19 @@ export default function OrderDetail() {
             </CardHeader>
             <CardContent>
               <input
-                id="media-upload-input"
+                id="image-upload-input"
                 type="file"
-                accept="image/*,video/*"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                 multiple
                 className="hidden"
                 onChange={handleMediaUpload}
                 disabled={uploadingMedia}
               />
               
-              {mediaFiles.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Upload className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>هنوز عکس یا ویدیویی اضافه نشده است</p>
-                  <p className="text-sm mt-2">برای افزودن، روی دکمه بالا کلیک کنید</p>
+              {mediaFiles.filter(m => m.file_type === 'image').length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <Upload className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">هنوز عکسی اضافه نشده است</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -2239,7 +2241,7 @@ export default function OrderDetail() {
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                         
-                        {/* دکمه حذف - فقط برای سفارش‌های تایید نشده توسط مدیر */}
+                        {/* دکمه حذف */}
                         {(!order.approved_at) && (
                           <Button
                             variant="destructive"
@@ -2261,12 +2263,63 @@ export default function OrderDetail() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* بخش نمایش ویدیوها */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Film className="h-5 w-5" />
+                  ویدیوهای پروژه
+                </CardTitle>
+                <Button
+                  variant="default"
+                  onClick={() => document.getElementById('video-upload-input')?.click()}
+                  disabled={uploadingMedia}
+                  className="gap-2"
+                  size="sm"
+                >
+                  {uploadingMedia ? (
+                    <>
+                      <Clock className="h-4 w-4 animate-spin" />
+                      در حال آپلود...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      افزودن ویدیو
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <input
+                id="video-upload-input"
+                type="file"
+                accept="video/mp4,video/webm,video/mov,video/avi,video/quicktime,video/*"
+                multiple
+                className="hidden"
+                onChange={handleMediaUpload}
+                disabled={uploadingMedia}
+              />
+              
+              {mediaFiles.filter(m => m.file_type === 'video').length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <Film className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">هنوز ویدیویی اضافه نشده است</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {mediaFiles.filter(m => m.file_type === 'video').map((media) => {
                     const { data } = supabase.storage
                       .from('project-media')
                       .getPublicUrl(media.file_path);
                     
-                    // Get thumbnail if available
                     const thumbnailData = media.thumbnail_path 
                       ? supabase.storage.from('project-media').getPublicUrl(media.thumbnail_path)
                       : null;
@@ -2290,9 +2343,9 @@ export default function OrderDetail() {
                     };
                     
                     return (
-                      <div key={media.id} className="relative">
+                      <div key={media.id} className="relative group">
                         <div 
-                          className="aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all group"
+                          className="aspect-video rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                           onClick={() => window.open(data.publicUrl, '_blank')}
                         >
                           {thumbnailData?.data.publicUrl ? (
@@ -2307,7 +2360,6 @@ export default function OrderDetail() {
                                   <Play className="w-8 h-8 text-primary fill-primary" />
                                 </div>
                               </div>
-                              {/* Label showing video name */}
                               <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
                                 {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
                               </div>
@@ -2321,7 +2373,6 @@ export default function OrderDetail() {
                                   <Play className="w-8 h-8 text-primary fill-primary" />
                                 </div>
                               </div>
-                              {/* Label showing video name even without thumbnail */}
                               <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
                                 {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
                               </div>
@@ -2329,7 +2380,7 @@ export default function OrderDetail() {
                           )}
                         </div>
                         
-                        {/* دکمه حذف - فقط برای سفارش‌های تایید نشده */}
+                        {/* دکمه حذف */}
                         {!order.approved_at && (
                           <Button
                             variant="destructive"
@@ -2349,7 +2400,7 @@ export default function OrderDetail() {
                           </Button>
                         )}
                         
-                        {/* Action buttons */}
+                        {/* دکمه دانلود */}
                         <div className="absolute bottom-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             size="sm"
@@ -2365,8 +2416,8 @@ export default function OrderDetail() {
                           </Button>
                         </div>
                         
-                        {/* File info badge */}
-                        <div className="absolute bottom-3 left-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
+                        {/* اطلاعات فایل */}
+                        <div className="absolute bottom-3 right-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
                           <Film className="w-3.5 h-3.5" />
                           ویدیو
                         </div>
