@@ -616,21 +616,113 @@ export default function OrderDetail() {
     }
   };
 
+  // ثابت‌های محدودیت آپلود
+  const MAX_IMAGES = 6;
+  const MAX_VIDEOS = 6;
+  const MAX_IMAGE_SIZE_MB = 10;
+  const MAX_VIDEO_SIZE_MB = 70;
+  const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+  const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
+
+  // تعداد فعلی عکس و ویدیو
+  const currentImageCount = mediaFiles.filter(m => m.file_type === 'image').length;
+  const currentVideoCount = mediaFiles.filter(m => m.file_type === 'video').length;
+
   const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!order || !files || files.length === 0 || !user) return;
     
+    // بررسی محدودیت تعداد
+    const remainingSlots = MAX_IMAGES - currentImageCount;
+    if (remainingSlots <= 0) {
+      toast({
+        title: 'محدودیت تعداد',
+        description: `حداکثر ${MAX_IMAGES} عکس مجاز است. شما قبلاً ${currentImageCount} عکس آپلود کرده‌اید.`,
+        variant: 'destructive'
+      });
+      e.target.value = '';
+      return;
+    }
+    
+    if (files.length > remainingSlots) {
+      toast({
+        title: 'تعداد بیش از حد مجاز',
+        description: `فقط ${remainingSlots} عکس دیگر می‌توانید آپلود کنید. (${currentImageCount} از ${MAX_IMAGES} استفاده شده)`,
+        variant: 'destructive'
+      });
+      e.target.value = '';
+      return;
+    }
+    
+    // بررسی حجم فایل‌ها
+    const oversizedFiles: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].size > MAX_IMAGE_SIZE_BYTES) {
+        oversizedFiles.push(`${files[i].name} (${(files[i].size / 1024 / 1024).toFixed(1)} مگابایت)`);
+      }
+    }
+    
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: 'حجم بیش از حد مجاز',
+        description: `حداکثر حجم هر عکس ${MAX_IMAGE_SIZE_MB} مگابایت است. فایل‌های زیر بیش از حد مجاز هستند: ${oversizedFiles.join('، ')}`,
+        variant: 'destructive'
+      });
+      e.target.value = '';
+      return;
+    }
+    
     await imageUpload.uploadFiles(files, 'image', order.id, user.id);
     e.target.value = '';
-  }, [order, user, imageUpload]);
+  }, [order, user, imageUpload, currentImageCount, toast]);
 
   const handleVideoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!order || !files || files.length === 0 || !user) return;
     
+    // بررسی محدودیت تعداد
+    const remainingSlots = MAX_VIDEOS - currentVideoCount;
+    if (remainingSlots <= 0) {
+      toast({
+        title: 'محدودیت تعداد',
+        description: `حداکثر ${MAX_VIDEOS} ویدیو مجاز است. شما قبلاً ${currentVideoCount} ویدیو آپلود کرده‌اید.`,
+        variant: 'destructive'
+      });
+      e.target.value = '';
+      return;
+    }
+    
+    if (files.length > remainingSlots) {
+      toast({
+        title: 'تعداد بیش از حد مجاز',
+        description: `فقط ${remainingSlots} ویدیو دیگر می‌توانید آپلود کنید. (${currentVideoCount} از ${MAX_VIDEOS} استفاده شده)`,
+        variant: 'destructive'
+      });
+      e.target.value = '';
+      return;
+    }
+    
+    // بررسی حجم فایل‌ها
+    const oversizedFiles: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].size > MAX_VIDEO_SIZE_BYTES) {
+        oversizedFiles.push(`${files[i].name} (${(files[i].size / 1024 / 1024).toFixed(1)} مگابایت)`);
+      }
+    }
+    
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: 'حجم بیش از حد مجاز',
+        description: `حداکثر حجم هر ویدیو ${MAX_VIDEO_SIZE_MB} مگابایت است. فایل‌های زیر بیش از حد مجاز هستند: ${oversizedFiles.join('، ')}`,
+        variant: 'destructive'
+      });
+      e.target.value = '';
+      return;
+    }
+    
     await videoUpload.uploadFiles(files, 'video', order.id, user.id);
     e.target.value = '';
-  }, [order, user, videoUpload]);
+  }, [order, user, videoUpload, currentVideoCount, toast]);
 
   const handleDeleteMedia = async (mediaId: string, mediaPath: string) => {
     if (!confirm('آیا از حذف این رسانه اطمینان دارید؟')) {
@@ -2122,14 +2214,20 @@ export default function OrderDetail() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  تصاویر پروژه
-                </CardTitle>
+                <div className="flex items-center gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5" />
+                    تصاویر پروژه
+                  </CardTitle>
+                  <Badge variant={currentImageCount >= MAX_IMAGES ? "destructive" : "secondary"} className="text-xs">
+                    {currentImageCount} از {MAX_IMAGES}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">(حداکثر {MAX_IMAGE_SIZE_MB}MB هر عکس)</span>
+                </div>
                 <Button
                   variant="default"
                   onClick={() => document.getElementById('image-upload-input')?.click()}
-                  disabled={imageUpload.isUploading}
+                  disabled={imageUpload.isUploading || currentImageCount >= MAX_IMAGES}
                   className="gap-2"
                   size="sm"
                 >
@@ -2243,14 +2341,20 @@ export default function OrderDetail() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Film className="h-5 w-5" />
-                  ویدیوهای پروژه
-                </CardTitle>
+                <div className="flex items-center gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Film className="h-5 w-5" />
+                    ویدیوهای پروژه
+                  </CardTitle>
+                  <Badge variant={currentVideoCount >= MAX_VIDEOS ? "destructive" : "secondary"} className="text-xs">
+                    {currentVideoCount} از {MAX_VIDEOS}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">(حداکثر {MAX_VIDEO_SIZE_MB}MB هر ویدیو)</span>
+                </div>
                 <Button
                   variant="default"
                   onClick={() => document.getElementById('video-upload-input')?.click()}
-                  disabled={videoUpload.isUploading}
+                  disabled={videoUpload.isUploading || currentVideoCount >= MAX_VIDEOS}
                   className="gap-2"
                   size="sm"
                 >
