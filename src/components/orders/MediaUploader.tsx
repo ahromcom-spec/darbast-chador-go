@@ -3,6 +3,7 @@ import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as Link
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -470,36 +471,31 @@ export function MediaUploader({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {files.filter(f => f.type === 'video').map((file) => (
                 <div key={file.id} className="relative group aspect-video rounded-lg overflow-hidden border bg-muted">
-                  {/* Show thumbnail if available, otherwise video preview */}
-                  {file.thumbnail && !file.previewError ? (
-                    <div className="relative w-full h-full">
-                      <img
-                        src={file.thumbnail}
-                        alt="پیش‌نمایش ویدیو"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                        <Film className="w-12 h-12 text-white opacity-80" />
-                      </div>
-                      {/* Label showing video name */}
-                      <div className="absolute top-2 left-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded truncate">
-                        {file.file.name}
-                      </div>
-                    </div>
-                  ) : !file.previewError ? (
-                    <video
+                  {/* Video preview / player */}
+                  {!file.previewError ? (
+                    <CentralizedVideoPlayer
                       src={file.remoteUrl || file.preview}
-                      className="w-full h-full object-cover"
-                      controls
+                      thumbnail={file.thumbnail}
+                      className="w-full h-full"
+                      showControls
                       onError={() => setFilePartial(file.id, { previewError: true })}
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex flex-col items-center justify-center gap-3">
+                    <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex flex-col items-center justify-center gap-3 p-4">
                       <Film className="w-16 h-16 text-white/70" />
                       <span className="text-white/80 text-sm font-medium">ویدیو</span>
-                      <div className="text-white/60 text-xs px-3 text-center truncate max-w-full">
+                      <div className="text-white/60 text-xs text-center truncate w-full">
                         {file.file.name}
                       </div>
+                      <Button type="button" variant="secondary" size="sm" asChild>
+                        <a href={file.remoteUrl || file.preview} target="_blank" rel="noopener noreferrer">
+                          <LinkIcon className="w-4 h-4 ml-2" />
+                          باز کردن ویدیو
+                        </a>
+                      </Button>
+                      <p className="text-[11px] leading-relaxed text-white/60 text-center">
+                        اگر ویدیو در اینجا پخش نمی‌شود، معمولاً به‌خاطر فرمت/کُدِک است؛ از دکمه بالا برای باز کردن یا دانلود استفاده کنید.
+                      </p>
                     </div>
                   )}
 
