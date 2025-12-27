@@ -2039,6 +2039,7 @@ export default function OrderDetail() {
           {order.location_lat && order.location_lng && (
             <OrderLocationEditor
               orderId={order.id}
+              hierarchyProjectId={order.hierarchy_project_id}
               locationLat={order.location_lat}
               locationLng={order.location_lng}
               address={order.address}

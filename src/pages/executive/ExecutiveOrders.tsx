@@ -111,6 +111,7 @@ interface Order {
   created_at: string;
   customer_name: string;
   customer_phone: string;
+  hierarchy_project_id?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;
   location_confirmed_by_customer?: boolean;
@@ -320,6 +321,7 @@ export default function ExecutiveOrders() {
             created_at: order.created_at,
             customer_name: customerName,
             customer_phone: customerPhone,
+            hierarchy_project_id: order.hierarchy_project_id,
             location_lat: projectLat,
             location_lng: projectLng,
             location_confirmed_by_customer: order.location_confirmed_by_customer,
@@ -1686,6 +1688,7 @@ export default function ExecutiveOrders() {
                 <div className="mt-4">
                   <OrderLocationEditor
                     orderId={selectedOrder.id}
+                    hierarchyProjectId={selectedOrder.hierarchy_project_id}
                     locationLat={selectedOrder.location_lat}
                     locationLng={selectedOrder.location_lng}
                     address={selectedOrder.address}

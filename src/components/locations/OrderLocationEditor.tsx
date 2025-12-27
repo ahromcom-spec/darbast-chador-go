@@ -10,6 +10,8 @@ import { MapPin, Edit, Check, Save, Lock } from 'lucide-react';
 
 interface OrderLocationEditorProps {
   orderId: string;
+  /** projects_hierarchy.id (برای بروزرسانی lat/lng آدرس روی کره زمین) */
+  hierarchyProjectId?: string | null;
   locationLat: number;
   locationLng: number;
   address: string;
@@ -23,6 +25,7 @@ interface OrderLocationEditorProps {
 
 export function OrderLocationEditor({
   orderId,
+  hierarchyProjectId,
   locationLat,
   locationLng,
   address,
@@ -48,6 +51,29 @@ export function OrderLocationEditor({
   // آیا مشتری می‌تواند موقعیت را تایید کند؟ فقط قبل از تایید مدیر و اگر هنوز تایید نکرده باشد
   const canCustomerConfirm = !isManager && !isOrderApproved && !locationConfirmedByCustomer;
 
+  // همگام‌سازی مختصات آدرس (locations) برای بروزرسانی موقعیت روی «نقشه کره زمین»
+  const syncHierarchyLocation = async (lat: number, lng: number) => {
+    if (!hierarchyProjectId) return;
+
+    const { data: hierarchy, error: hierarchyError } = await supabase
+      .from('projects_hierarchy')
+      .select('location_id')
+      .eq('id', hierarchyProjectId)
+      .maybeSingle();
+
+    if (hierarchyError) throw hierarchyError;
+
+    const locationId = (hierarchy as any)?.location_id as string | undefined;
+    if (!locationId) return;
+
+    const { error: locationError } = await supabase
+      .from('locations')
+      .update({ lat, lng, updated_at: new Date().toISOString() })
+      .eq('id', locationId);
+
+    if (locationError) throw locationError;
+  };
+
   // ذخیره موقعیت جدید
   const handleSaveLocation = async () => {
     if (!pendingLocation) return;
@@ -59,11 +85,14 @@ export function OrderLocationEditor({
         .update({
           location_lat: pendingLocation.lat,
           location_lng: pendingLocation.lng,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // بروزرسانی lat/lng آدرس مرتبط (برای نقشه کره زمین)
+      await syncHierarchyLocation(pendingLocation.lat, pendingLocation.lng);
 
       toast({
         title: '✓ موقعیت ذخیره شد',
@@ -92,7 +121,7 @@ export function OrderLocationEditor({
       const updateData: any = {
         location_confirmed_by_customer: true,
         location_confirmed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       if (pendingLocation) {
@@ -106,6 +135,11 @@ export function OrderLocationEditor({
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // اگر مختصات جدید انتخاب شده، lat/lng آدرس مرتبط را هم بروزرسانی کنیم
+      if (pendingLocation) {
+        await syncHierarchyLocation(pendingLocation.lat, pendingLocation.lng);
+      }
 
       toast({
         title: '✓ موقعیت تایید شد',
