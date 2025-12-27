@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button';
-import { Navigation, Route } from 'lucide-react';
+import { Navigation } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { NavigationMapDialog } from './NavigationMapDialog';
 
 interface StaticLocationMapProps {
   lat: number;
@@ -24,9 +23,7 @@ export default function StaticLocationMap({
 }: StaticLocationMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const [isReady, setIsReady] = useState(false);
   const [showNavSheet, setShowNavSheet] = useState(false);
-  const [showNavigationMap, setShowNavigationMap] = useState(false);
   const isMobile = useIsMobile();
 
   // اعتبارسنجی مختصات
@@ -146,7 +143,7 @@ export default function StaticLocationMap({
           const tileLayer = L.tileLayer(source.url, source.options);
           
           tileLayer.on('load', () => {
-            setIsReady(true);
+            console.log('[StaticLocationMap] Tiles loaded');
           });
           
           tileLayer.on('tileerror', (e) => {
@@ -267,36 +264,19 @@ export default function StaticLocationMap({
         }}
       />
       
-      {/* Navigation Buttons */}
+      {/* Navigation Button */}
       {showNavigationButton && (
-        <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+        <div className="absolute bottom-4 right-4 z-10">
           <Button
-            onClick={() => setShowNavigationMap(true)}
+            onClick={handleNavigate}
             className="gap-2 shadow-lg"
             variant="default"
           >
-            <Route className="h-4 w-4" />
-            مسیریابی داخلی
-          </Button>
-          <Button
-            onClick={handleNavigate}
-            variant="outline"
-            className="gap-2 shadow-lg bg-background/90"
-          >
             <Navigation className="h-4 w-4" />
-            اپ‌های مسیریاب
+            مسیریابی
           </Button>
         </div>
       )}
-
-      {/* Navigation Map Dialog */}
-      <NavigationMapDialog
-        open={showNavigationMap}
-        onOpenChange={setShowNavigationMap}
-        destinationLat={validLat}
-        destinationLng={validLng}
-        destinationAddress={address}
-      />
 
       {/* Navigation Apps Sheet (Mobile) */}
       <Sheet open={showNavSheet} onOpenChange={setShowNavSheet}>
