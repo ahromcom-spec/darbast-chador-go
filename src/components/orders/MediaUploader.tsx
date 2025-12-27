@@ -1,11 +1,10 @@
 import { useState, useId, useRef } from 'react';
-import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon, Shield } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useImageModeration } from '@/hooks/useImageModeration';
 
 // NOTE: فایل‌های سفارش در bucket 'project-media' ذخیره می‌شوند
 // توضیح: تمام مدیا‌ی سفارشات در این bucket آپلود می‌شود
@@ -48,8 +47,6 @@ export function MediaUploader({
 }: MediaUploaderProps) {
   const { toast } = useToast();
   const [files, setFiles] = useState<MediaFile[]>([]);
-  const [moderating, setModerating] = useState(false);
-  const { checkImage } = useImageModeration();
   
   // Unique IDs for file inputs to prevent conflicts when multiple uploaders exist
   const uniqueId = useId();
@@ -269,11 +266,6 @@ export function MediaUploader({
     const currentVideos = files.filter(f => f.type === 'video').length;
 
     const newMedia: MediaFile[] = [];
-    
-    // For images, moderate first
-    if (type === 'image') {
-      setModerating(true);
-    }
 
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
@@ -288,22 +280,9 @@ export function MediaUploader({
         break;
       }
 
-      // Validate
+      // Validate size only
       const isValid = type === 'image' ? validateImage(file) : validateVideo(file);
       if (!isValid) continue;
-      
-      // For images, check content moderation
-      if (type === 'image') {
-        const result = await checkImage(file);
-        if (!result.safe) {
-          toast({ 
-            title: 'تصویر نامناسب', 
-            description: result.reason || 'این تصویر حاوی محتوای نامناسب است و قابل آپلود نیست', 
-            variant: 'destructive' 
-          });
-          continue;
-        }
-      }
 
       const preview = URL.createObjectURL(file);
       const mediaItem: MediaFile = {
@@ -326,10 +305,6 @@ export function MediaUploader({
       }
       
       newMedia.push(mediaItem);
-    }
-    
-    if (type === 'image') {
-      setModerating(false);
     }
 
     if (newMedia.length) {
@@ -398,19 +373,9 @@ export function MediaUploader({
                 variant="outline" 
                 size="sm" 
                 onClick={() => imageInputRef.current?.click()}
-                disabled={moderating}
               >
-                {moderating ? (
-                  <>
-                    <Shield className="w-4 h-4 mr-2 animate-pulse" />
-                    بررسی محتوا...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    افزودن عکس
-                  </>
-                )}
+                <Upload className="w-4 h-4 mr-2" />
+                افزودن عکس
               </Button>
             )}
           </div>
