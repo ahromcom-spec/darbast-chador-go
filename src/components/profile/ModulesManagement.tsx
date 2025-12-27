@@ -132,6 +132,16 @@ export function ModulesManagement() {
     }
   };
 
+  // Mapping module keys to required roles
+  const MODULE_TO_ROLE: Record<string, string> = {
+    scaffold_execution_with_materials: 'executive_manager_scaffold_execution_with_materials',
+    daily_report: 'scaffold_executive_manager',
+    hr_management: 'general_manager',
+    personnel_accounting: 'scaffold_executive_manager',
+    site_registration: 'general_manager',
+    comprehensive_accounting: 'finance_manager',
+  };
+
   const handleAssignModule = async () => {
     if (!newPhoneNumber.trim()) {
       toast.error('لطفاً شماره موبایل را وارد کنید');
@@ -178,6 +188,24 @@ export function ModulesManagement() {
           throw error;
         }
         return;
+      }
+
+      // If user exists, also assign the corresponding role
+      if (profile?.user_id) {
+        const roleToAssign = MODULE_TO_ROLE[module.key];
+        if (roleToAssign) {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .upsert({
+              user_id: profile.user_id,
+              role: roleToAssign as any,
+            }, { onConflict: 'user_id,role' });
+
+          // Ignore duplicate role error (23505)
+          if (roleError && roleError.code !== '23505') {
+            console.error('Error assigning role:', roleError);
+          }
+        }
       }
 
       toast.success('ماژول با موفقیت اختصاص یافت');
