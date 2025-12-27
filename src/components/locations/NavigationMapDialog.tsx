@@ -77,19 +77,32 @@ export function NavigationMapDialog({
   // Initialize map
   useEffect(() => {
     if (!open || !mapContainer.current) return;
-    
-    // Clean up previous map
+
+    // Clean up previous map instance
     if (mapRef.current) {
       mapRef.current.remove();
       mapRef.current = null;
     }
 
+    // Reset Leaflet binding on the DOM node (prevents "Map container is already initialized" -> grey box)
+    const container = mapContainer.current;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((container as any)._leaflet_id) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (container as any)._leaflet_id;
+      }
+    } catch {
+      // ignore
+    }
+    container.innerHTML = '';
+
     // Reset state
     setHasArrived(false);
     setDistanceToDestination(null);
 
-    // Small delay to ensure dialog is fully rendered
-    const initTimer = setTimeout(() => {
+    // Delay to ensure Dialog is fully laid out
+    const initTimer = window.setTimeout(() => {
       if (!mapContainer.current) return;
 
       try {
@@ -97,34 +110,29 @@ export function NavigationMapDialog({
           center: [destinationLat, destinationLng],
           zoom: 14,
           zoomControl: true,
+          attributionControl: true,
           scrollWheelZoom: true,
           dragging: true,
           preferCanvas: true,
-          fadeAnimation: true,
-          zoomAnimation: true,
         });
 
         mapRef.current = map;
 
-        // Add tile layer with multiple fallbacks
-        const tileConfigs = [
-          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png'
-        ];
+        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          maxZoom: 19,
+          subdomains: ['a', 'b', 'c'],
+          crossOrigin: 'anonymous',
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
+        });
 
-        for (const tileUrl of tileConfigs) {
-          try {
-            L.tileLayer(tileUrl, {
-              attribution: '© OpenStreetMap contributors',
-              maxZoom: 19,
-              subdomains: ['a', 'b', 'c'],
-            }).addTo(map);
-            break;
-          } catch (e) {
-            console.warn('Tile failed:', tileUrl);
-          }
-        }
+        tileLayer.on('tileerror', (e) => {
+          console.warn('[NavigationMapDialog] tileerror', e);
+        });
+
+        tileLayer.addTo(map);
 
         // Custom destination marker
         const destIcon = L.divIcon({
@@ -133,57 +141,62 @@ export function NavigationMapDialog({
             <div style="
               width: 40px;
               height: 40px;
-              background: #dc2626;
-              border: 3px solid white;
+              background: hsl(var(--destructive));
+              border: 3px solid hsl(var(--background));
               border-radius: 50% 50% 50% 0;
               transform: rotate(-45deg);
-              box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+              box-shadow: 0 4px 12px hsl(var(--foreground) / 0.25);
               display: flex;
               align-items: center;
               justify-content: center;
             ">
               <div style="
                 transform: rotate(45deg);
-                color: white;
+                color: hsl(var(--destructive-foreground));
                 font-size: 20px;
                 font-weight: bold;
               ">🏠</div>
             </div>
           `,
           iconSize: [40, 40],
-          iconAnchor: [20, 40]
+          iconAnchor: [20, 40],
         });
 
         const destMarker = L.marker([destinationLat, destinationLng], { icon: destIcon }).addTo(map);
         if (destinationAddress) {
-          destMarker.bindPopup(`<div style="padding: 8px; max-width: 200px;"><strong>مقصد:</strong><br/>${destinationAddress}</div>`).openPopup();
+          destMarker.bindPopup(
+            `<div style="padding: 8px; max-width: 200px;"><strong>مقصد:</strong><br/>${destinationAddress}</div>`
+          );
         }
         destMarkerRef.current = destMarker;
 
-        // Multiple invalidateSize calls to ensure proper rendering
-        const invalidateTimes = [100, 200, 400, 800, 1200];
-        invalidateTimes.forEach(time => {
-          setTimeout(() => {
-            if (mapRef.current) {
-              mapRef.current.invalidateSize({ animate: false });
-            }
-          }, time);
+        const doInvalidate = () => mapRef.current?.invalidateSize({ animate: false });
+        map.whenReady(() => {
+          doInvalidate();
+          window.setTimeout(doInvalidate, 50);
+          window.setTimeout(doInvalidate, 200);
+          window.setTimeout(doInvalidate, 500);
+          window.setTimeout(doInvalidate, 1000);
         });
-
       } catch (error) {
         console.error('Error initializing navigation map:', error);
+        toast({
+          variant: 'destructive',
+          title: 'خطا در نمایش نقشه',
+          description: 'بارگذاری نقشه با مشکل مواجه شد. لطفاً صفحه را رفرش کنید.',
+        });
       }
-    }, 150);
+    }, 250);
 
     // Cleanup
     return () => {
-      clearTimeout(initTimer);
+      window.clearTimeout(initTimer);
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
-  }, [open, destinationLat, destinationLng, destinationAddress]);
+  }, [open, destinationLat, destinationLng, destinationAddress, toast]);
 
   // Update user marker position
   const updateUserMarker = useCallback((lat: number, lng: number) => {
