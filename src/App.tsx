@@ -103,6 +103,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
 const OrderTransferManagement = lazy(() => import("@/pages/admin/OrderTransferManagement"));
 const MapTest = lazy(() => import("@/pages/test/MapTest"));
+const GlobeMap = lazy(() => import("@/pages/GlobeMap"));
 
 // Redirect component for old orders pages
 import { Navigate } from 'react-router-dom';
@@ -167,6 +168,11 @@ const App = () => {
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
               <Route path="/" element={<Home />} />
+              <Route path="/globe" element={
+                <ProtectedRoute>
+                  <GlobeMap />
+                </ProtectedRoute>
+              } />
               <Route path="/scaffolding/form" element={
                 <ProtectedRoute>
                   <ScaffoldingForm />
