@@ -97,6 +97,7 @@ interface Order {
   payment_confirmed_at?: string;
   transaction_reference?: string;
   total_paid?: number;
+  total_price?: number;
   rental_start_date?: string;
   customer_completion_date?: string;
   executive_completion_date?: string;
@@ -2995,8 +2996,8 @@ export default function OrderDetail() {
             orderId={order.id}
             orderCode={order.code}
             customerId={(order as any).customer_id || ''}
-            rentalStartDate={parsedNotes?.rental_start_date || null}
-            originalPrice={order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0}
+            rentalStartDate={order.rental_start_date || null}
+            originalPrice={order.total_price || order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0}
             onRenewalComplete={fetchOrderDetails}
           />
 
