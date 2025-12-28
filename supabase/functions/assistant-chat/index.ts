@@ -448,6 +448,398 @@ async function getUserRoles(supabase: any, userId: string): Promise<string[]> {
   }
 }
 
+// تابع برای بررسی آیا کاربر مدیرعامل است
+async function isCEOUser(supabase: any, userId: string): Promise<boolean> {
+  try {
+    // بررسی نقش CEO
+    const { data: ceoRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "ceo")
+      .maybeSingle();
+    
+    if (ceoRole) return true;
+    
+    // بررسی شماره تلفن مدیرعامل
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("phone_number")
+      .eq("user_id", userId)
+      .maybeSingle();
+    
+    const CEO_PHONE = "09124411494";
+    if (profile?.phone_number === CEO_PHONE) return true;
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking CEO status:', error);
+    return false;
+  }
+}
+
+// تابع برای گرفتن گزارش جامع مدیرعامل از تمام داده‌ها
+async function getCEOComprehensiveContext(supabase: any): Promise<string> {
+  try {
+    let context = `
+═══════════════════════════════════════
+🏢 گزارش جامع مدیریت عامل
+═══════════════════════════════════════
+به داشبورد مدیریتی خوش آمدید. شما به تمام اطلاعات شرکت دسترسی دارید.
+`;
+
+    // ۱. آمار کلی سفارشات
+    const { data: allOrders } = await supabase
+      .from("projects_v3")
+      .select(`
+        id, code, status, execution_stage, address, customer_name, customer_phone,
+        total_price, total_paid, payment_amount, created_at, approved_at,
+        execution_start_date, execution_end_date, is_archived, is_deep_archived,
+        provinces:province_id (name),
+        districts:district_id (name),
+        subcategories:subcategory_id (name, service_types_v3:service_type_id (name))
+      `)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    const activeOrders = (allOrders || []).filter((o: any) => 
+      !o.is_archived && !o.is_deep_archived
+    );
+
+    // آمار وضعیت سفارشات
+    const statusCounts: Record<string, number> = {};
+    let totalRevenue = 0;
+    let totalPaid = 0;
+    let totalPending = 0;
+
+    activeOrders.forEach((o: any) => {
+      const status = o.status || 'pending';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+      totalRevenue += Number(o.total_price || o.payment_amount || 0);
+      totalPaid += Number(o.total_paid || 0);
+    });
+    totalPending = totalRevenue - totalPaid;
+
+    const statusMap: Record<string, string> = {
+      'pending': 'در انتظار تایید',
+      'approved': 'تایید شده',
+      'pending_execution': 'در انتظار اجرا',
+      'scheduled': 'زمان‌بندی شده',
+      'in_progress': 'در حال اجرا',
+      'completed': 'تکمیل شده',
+      'paid': 'پرداخت شده',
+      'awaiting_collection': 'در انتظار جمع‌آوری',
+      'collected': 'جمع‌آوری شده',
+      'closed': 'بسته شده',
+      'rejected': 'رد شده'
+    };
+
+    context += `
+═══════════════════════════════════════
+📊 آمار کلی سفارشات (${activeOrders.length} سفارش فعال)
+═══════════════════════════════════════
+`;
+
+    Object.entries(statusCounts).forEach(([status, count]) => {
+      context += `• ${statusMap[status] || status}: ${count} سفارش\n`;
+    });
+
+    context += `
+💰 وضعیت مالی:
+• مجموع درآمد (قابل دریافت): ${totalRevenue.toLocaleString('fa-IR')} تومان
+• مبلغ وصول شده: ${totalPaid.toLocaleString('fa-IR')} تومان
+• مطالبات باقیمانده: ${totalPending.toLocaleString('fa-IR')} تومان
+`;
+
+    // آمار بر اساس استان
+    const byProvince: Record<string, { count: number; revenue: number }> = {};
+    activeOrders.forEach((o: any) => {
+      const prov = o.provinces?.name || 'نامشخص';
+      if (!byProvince[prov]) byProvince[prov] = { count: 0, revenue: 0 };
+      byProvince[prov].count++;
+      byProvince[prov].revenue += Number(o.total_price || o.payment_amount || 0);
+    });
+
+    context += `
+📍 آمار بر اساس استان:
+`;
+    Object.entries(byProvince)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 10)
+      .forEach(([prov, stats]) => {
+        context += `• ${prov}: ${stats.count} سفارش | ${stats.revenue.toLocaleString('fa-IR')} تومان\n`;
+      });
+
+    // آمار بر اساس نوع خدمات
+    const byService: Record<string, { count: number; revenue: number }> = {};
+    activeOrders.forEach((o: any) => {
+      const svc = o.subcategories?.name || o.subcategories?.service_types_v3?.name || 'نامشخص';
+      if (!byService[svc]) byService[svc] = { count: 0, revenue: 0 };
+      byService[svc].count++;
+      byService[svc].revenue += Number(o.total_price || o.payment_amount || 0);
+    });
+
+    context += `
+🔧 آمار بر اساس نوع خدمات:
+`;
+    Object.entries(byService)
+      .sort((a, b) => b[1].count - a[1].count)
+      .forEach(([svc, stats]) => {
+        context += `• ${svc}: ${stats.count} سفارش | ${stats.revenue.toLocaleString('fa-IR')} تومان\n`;
+      });
+
+    // ۲. لیست سفارشات اخیر
+    context += `
+═══════════════════════════════════════
+📋 آخرین ۱۵ سفارش:
+═══════════════════════════════════════
+`;
+    activeOrders.slice(0, 15).forEach((o: any) => {
+      const statusFa = statusMap[o.status] || o.status;
+      const date = new Date(o.created_at).toLocaleDateString('fa-IR');
+      const price = Number(o.total_price || o.payment_amount || 0);
+      const paid = Number(o.total_paid || 0);
+      const remaining = price - paid;
+      context += `📦 ${o.code} | ${o.customer_name || 'بدون نام'} | ${o.customer_phone || ''} | ${statusFa} | ${price.toLocaleString('fa-IR')} ت | مانده: ${remaining.toLocaleString('fa-IR')} ت | ${date}\n`;
+    });
+
+    // ۳. اطلاعات مشتریان
+    const { data: customers } = await supabase
+      .from("customers")
+      .select("id, user_id, customer_code")
+      .limit(500);
+
+    const { data: customerProfiles } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, phone_number")
+      .in("user_id", (customers || []).map((c: any) => c.user_id));
+
+    const profileMap = new Map((customerProfiles || []).map((p: any) => [p.user_id, p]));
+
+    // محاسبه بدهی هر مشتری
+    const customerDebts: { name: string; phone: string; debt: number; ordersCount: number }[] = [];
+    
+    for (const customer of (customers || []).slice(0, 100)) {
+      const customerOrders = activeOrders.filter((o: any) => {
+        // پیدا کردن سفارشات این مشتری با شماره تلفن
+        const profile: any = profileMap.get(customer.user_id);
+        return o.customer_phone === profile?.phone_number;
+      });
+      
+      let customerTotal = 0;
+      let customerPaid = 0;
+      customerOrders.forEach((o: any) => {
+        customerTotal += Number(o.total_price || o.payment_amount || 0);
+        customerPaid += Number(o.total_paid || 0);
+      });
+      
+      const profile: any = profileMap.get(customer.user_id);
+      if (customerTotal > 0) {
+        customerDebts.push({
+          name: profile?.full_name || 'نامشخص',
+          phone: profile?.phone_number || '',
+          debt: customerTotal - customerPaid,
+          ordersCount: customerOrders.length
+        });
+      }
+    }
+
+    // مرتب‌سازی بر اساس بدهی
+    customerDebts.sort((a, b) => b.debt - a.debt);
+
+    context += `
+═══════════════════════════════════════
+👥 مشتریان با بیشترین بدهی:
+═══════════════════════════════════════
+`;
+    customerDebts.slice(0, 15).forEach((c, i) => {
+      context += `${i + 1}. ${c.name} | ${c.phone} | ${c.ordersCount} سفارش | بدهی: ${c.debt.toLocaleString('fa-IR')} تومان\n`;
+    });
+
+    // ۴. گزارشات روزانه
+    const { data: recentReports } = await supabase
+      .from("daily_reports")
+      .select(`
+        id, report_date, notes, is_archived,
+        daily_report_staff(staff_name, staff_user_id, work_status, overtime_hours, amount_received, amount_spent, is_cash_box),
+        daily_report_orders(order_id, team_name, activity_description)
+      `)
+      .eq("is_archived", false)
+      .order("report_date", { ascending: false })
+      .limit(30);
+
+    if (recentReports && recentReports.length > 0) {
+      context += `
+═══════════════════════════════════════
+📊 گزارشات روزانه (${recentReports.length} گزارش اخیر)
+═══════════════════════════════════════
+`;
+      
+      // آمار کلی نیروها
+      const staffStatsGlobal: Record<string, { present: number; absent: number; overtime: number; received: number; spent: number }> = {};
+      let totalCompanyReceived = 0;
+      let totalCompanySpent = 0;
+      let totalCompanyOvertime = 0;
+
+      recentReports.forEach((report: any) => {
+        (report.daily_report_staff || []).filter((s: any) => !s.is_cash_box).forEach((staff: any) => {
+          const name = staff.staff_name?.trim() || 'نامشخص';
+          if (!staffStatsGlobal[name]) {
+            staffStatsGlobal[name] = { present: 0, absent: 0, overtime: 0, received: 0, spent: 0 };
+          }
+          if (staff.work_status === 'حاضر' || staff.work_status === 'کارکرده') {
+            staffStatsGlobal[name].present++;
+          } else {
+            staffStatsGlobal[name].absent++;
+          }
+          staffStatsGlobal[name].overtime += Number(staff.overtime_hours) || 0;
+          staffStatsGlobal[name].received += Number(staff.amount_received) || 0;
+          staffStatsGlobal[name].spent += Number(staff.amount_spent) || 0;
+
+          totalCompanyReceived += Number(staff.amount_received) || 0;
+          totalCompanySpent += Number(staff.amount_spent) || 0;
+          totalCompanyOvertime += Number(staff.overtime_hours) || 0;
+        });
+      });
+
+      context += `
+💰 خلاصه مالی گزارشات:
+• مجموع دریافتی نیروها: ${totalCompanyReceived.toLocaleString('fa-IR')} تومان
+• مجموع هزینه‌های نیروها: ${totalCompanySpent.toLocaleString('fa-IR')} تومان
+• مجموع اضافه‌کاری: ${totalCompanyOvertime} ساعت
+
+👷 آمار کارکرد نیروها:
+`;
+      Object.entries(staffStatsGlobal)
+        .sort((a: any, b: any) => b[1].present - a[1].present)
+        .slice(0, 20)
+        .forEach(([name, stats]: [string, any]) => {
+          const netBalance = stats.received - stats.spent;
+          context += `• ${name}: ${stats.present} روز حضور | ${stats.absent} غیبت | ${stats.overtime}س اضافه‌کاری | دریافتی: ${stats.received.toLocaleString('fa-IR')} | هزینه: ${stats.spent.toLocaleString('fa-IR')} | مانده: ${netBalance >= 0 ? '+' : ''}${netBalance.toLocaleString('fa-IR')}\n`;
+        });
+
+      // جزئیات چند گزارش اخیر
+      context += `
+📅 جزئیات ۵ گزارش اخیر:
+`;
+      recentReports.slice(0, 5).forEach((report: any) => {
+        const reportDate = new Date(report.report_date).toLocaleDateString('fa-IR');
+        const staffCount = (report.daily_report_staff || []).filter((s: any) => !s.is_cash_box).length;
+        const ordersCount = (report.daily_report_orders || []).length;
+        let dayReceived = 0;
+        let daySpent = 0;
+        (report.daily_report_staff || []).forEach((s: any) => {
+          dayReceived += Number(s.amount_received) || 0;
+          daySpent += Number(s.amount_spent) || 0;
+        });
+        context += `📆 ${reportDate}: ${staffCount} نیرو | ${ordersCount} سفارش | دریافتی: ${dayReceived.toLocaleString('fa-IR')} | هزینه: ${daySpent.toLocaleString('fa-IR')}\n`;
+      });
+    }
+
+    // ۵. لیست نیروها
+    const { data: hrEmployees } = await supabase
+      .from("hr_employees")
+      .select("id, full_name, phone_number, department, position, status, hire_date, user_id")
+      .eq("status", "active")
+      .limit(100);
+
+    if (hrEmployees && hrEmployees.length > 0) {
+      context += `
+═══════════════════════════════════════
+👥 لیست نیروها (${hrEmployees.length} نفر فعال)
+═══════════════════════════════════════
+`;
+      // گروه‌بندی بر اساس دپارتمان/سمت
+      const byDept: Record<string, any[]> = {};
+      hrEmployees.forEach((emp: any) => {
+        const dept = emp.department || emp.position || 'سایر';
+        if (!byDept[dept]) byDept[dept] = [];
+        byDept[dept].push(emp);
+      });
+
+      Object.entries(byDept).forEach(([dept, employees]) => {
+        context += `\n🏷️ ${dept} (${employees.length} نفر):\n`;
+        employees.forEach((emp: any) => {
+          const hireDate = emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('fa-IR') : '';
+          context += `   • ${emp.full_name} | ${emp.phone_number || ''} ${hireDate ? `| استخدام: ${hireDate}` : ''}\n`;
+        });
+      });
+    }
+
+    // ۶. درخواست‌های تایید در انتظار
+    const { data: pendingApprovals } = await supabase
+      .from("order_approvals")
+      .select(`
+        id, order_id, approver_role, approved_at, created_at,
+        projects_v3:order_id (code, customer_name, address, status)
+      `)
+      .is("approved_at", null)
+      .limit(20);
+
+    if (pendingApprovals && pendingApprovals.length > 0) {
+      context += `
+═══════════════════════════════════════
+⏳ درخواست‌های در انتظار تایید (${pendingApprovals.length} مورد)
+═══════════════════════════════════════
+`;
+      pendingApprovals.forEach((approval: any) => {
+        const order = approval.projects_v3;
+        if (order) {
+          context += `• سفارش ${order.code} | ${order.customer_name || ''} | منتظر تایید ${approval.approver_role}\n`;
+        }
+      });
+    }
+
+    // ۷. پرداخت‌های اخیر
+    const { data: recentPayments } = await supabase
+      .from("order_payments")
+      .select(`
+        id, amount, payment_method, receipt_number, created_at, notes,
+        projects_v3:order_id (code, customer_name, customer_phone)
+      `)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (recentPayments && recentPayments.length > 0) {
+      let totalRecentPayments = 0;
+      context += `
+═══════════════════════════════════════
+💳 پرداخت‌های اخیر (${recentPayments.length} پرداخت)
+═══════════════════════════════════════
+`;
+      recentPayments.forEach((payment: any) => {
+        const order = payment.projects_v3;
+        const date = new Date(payment.created_at).toLocaleDateString('fa-IR');
+        const amount = Number(payment.amount);
+        totalRecentPayments += amount;
+        context += `• ${date} | ${order?.code || '?'} | ${order?.customer_name || ''} | ${amount.toLocaleString('fa-IR')} تومان | ${payment.payment_method || ''}\n`;
+      });
+      context += `مجموع: ${totalRecentPayments.toLocaleString('fa-IR')} تومان\n`;
+    }
+
+    context += `
+═══════════════════════════════════════
+💡 راهنمای مدیرعامل:
+═══════════════════════════════════════
+شما به عنوان مدیرعامل دسترسی کامل به تمام اطلاعات دارید.
+می‌توانید درباره هر موضوعی سوال بپرسید:
+• سفارشات و وضعیت آن‌ها
+• مشتریان و بدهی‌ها
+• نیروها و کارکرد آن‌ها
+• گزارشات روزانه
+• پرداخت‌ها و امور مالی
+• آمار و تحلیل‌ها
+
+پاسخ‌ها باید دقیق، واضح و مستقیم باشند.
+`;
+
+    return context;
+  } catch (error) {
+    console.error('Error getting CEO comprehensive context:', error);
+    return '\n⚠️ خطا در بارگذاری اطلاعات جامع مدیریتی.';
+  }
+}
+
 // تابع برای نرمال‌سازی نام کارکنان - حذف کدها و یکپارچه‌سازی
 function normalizeStaffName(rawName: string): { normalizedName: string; code: string } {
   if (!rawName) return { normalizedName: '', code: '' };
@@ -1584,30 +1976,64 @@ serve(async (req) => {
     if (userId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       
-      // گرفتن ماژول‌های کاربر
-      const { moduleKeys, moduleNames } = await getUserModules(supabase, userId);
-      const userRoles = await getUserRoles(supabase, userId);
+      // بررسی آیا کاربر مدیرعامل است
+      const userIsCEO = await isCEOUser(supabase, userId);
+      console.log('User is CEO:', userIsCEO);
       
-      console.log('User modules:', moduleKeys);
-      console.log('User roles:', userRoles);
-      
-      // اطلاعات سفارشات کاربر (همیشه)
-      const ordersContext = await getUserOrdersContext(supabase, userId);
-      contextualPrompt += ordersContext;
-      
-      // اطلاعات کارکرد و حسابکتاب شخصی کاربر (همیشه برای کاربرانی که HR هستند)
-      const workRecordsContext = await getUserWorkRecordsContext(supabase, userId);
-      if (workRecordsContext) {
-        contextualPrompt += workRecordsContext;
-      }
-      
-      // بررسی دسترسی به ماژول‌ها
-      if (moduleKeys.length > 0) {
-        const accessibleTopics = moduleKeys.flatMap(
-          moduleKey => MODULE_CAPABILITIES[moduleKey]?.dataAccess || []
-        );
+      if (userIsCEO) {
+        // مدیرعامل دسترسی کامل به همه اطلاعات دارد
+        const ceoContext = await getCEOComprehensiveContext(supabase);
+        contextualPrompt += ceoContext;
         
+        // اضافه کردن دستورالعمل ویژه برای پاسخگویی به مدیرعامل
         contextualPrompt += `
+
+═══════════════════════════════════════
+⚠️ دستورالعمل ویژه برای پاسخگویی به مدیرعامل:
+═══════════════════════════════════════
+این کاربر مدیرعامل شرکت است. تو باید:
+1. پاسخ‌های دقیق، واضح و شسته‌رفته بدهی
+2. از اعداد و آمار دقیق استفاده کنی
+3. گزارشات را به صورت خلاصه و قابل فهم ارائه دهی
+4. به همه سوالات درباره سفارشات، نیروها، گزارشات، مشتریان و امور مالی پاسخ دهی
+5. اگر نیاز به توضیح بیشتر است، آن را به صورت مختصر و مفید ارائه کن
+6. هیچ محدودیتی در دسترسی به اطلاعات نداری - همه چیز در اختیار مدیرعامل است
+7. پاسخ‌ها باید حرفه‌ای و مدیریتی باشند
+
+مثال سوالات متداول مدیرعامل:
+- "چند سفارش داریم؟" → تعداد کل و تفکیک وضعیت
+- "وضعیت مالی چطوره؟" → درآمد، دریافتی، مطالبات
+- "کارکرد نیروها چطوره؟" → آمار حضور/غیبت/اضافه‌کاری
+- "کدوم مشتری‌ها بدهکارن؟" → لیست بدهکاران
+- "سفارش X چی شد؟" → جستجو و گزارش
+`;
+      } else {
+        // کاربر عادی - رفتار معمولی
+        
+        // گرفتن ماژول‌های کاربر
+        const { moduleKeys, moduleNames } = await getUserModules(supabase, userId);
+        const userRoles = await getUserRoles(supabase, userId);
+        
+        console.log('User modules:', moduleKeys);
+        console.log('User roles:', userRoles);
+        
+        // اطلاعات سفارشات کاربر (همیشه)
+        const ordersContext = await getUserOrdersContext(supabase, userId);
+        contextualPrompt += ordersContext;
+        
+        // اطلاعات کارکرد و حسابکتاب شخصی کاربر (همیشه برای کاربرانی که HR هستند)
+        const workRecordsContext = await getUserWorkRecordsContext(supabase, userId);
+        if (workRecordsContext) {
+          contextualPrompt += workRecordsContext;
+        }
+        
+        // بررسی دسترسی به ماژول‌ها
+        if (moduleKeys.length > 0) {
+          const accessibleTopics = moduleKeys.flatMap(
+            moduleKey => MODULE_CAPABILITIES[moduleKey]?.dataAccess || []
+          );
+          
+          contextualPrompt += `
 
 ═══════════════════════════════════════
 🔐 ماژول‌های فعال برای این کاربر
@@ -1621,32 +2047,33 @@ ${accessibleTopics.map(topic => `• ${topic}`).join("\n")}
 "متأسفانه شما دسترسی به این بخش را ندارید. لطفاً از مدیر بخواهید ماژول مربوطه را برای شما فعال کند."
 `;
 
-        // اضافه کردن اطلاعات بر اساس ماژول‌ها
-        if (moduleKeys.includes('daily_report')) {
-          const reportsContext = await getDailyReportsContext(supabase);
-          contextualPrompt += reportsContext;
-        }
-        
-        if (moduleKeys.includes('staff_management') || moduleKeys.includes('daily_report')) {
-          const staffContext = await getStaffListContext(supabase);
-          contextualPrompt += staffContext;
-        }
-        
-        if (moduleKeys.includes('scaffold_execution_with_materials') || moduleKeys.includes('ceo_dashboard')) {
-          const ordersListContext = await getRecentOrdersContext(supabase);
-          contextualPrompt += ordersListContext;
-        }
-      } else {
-        contextualPrompt += `
+          // اضافه کردن اطلاعات بر اساس ماژول‌ها
+          if (moduleKeys.includes('daily_report')) {
+            const reportsContext = await getDailyReportsContext(supabase);
+            contextualPrompt += reportsContext;
+          }
+          
+          if (moduleKeys.includes('staff_management') || moduleKeys.includes('daily_report')) {
+            const staffContext = await getStaffListContext(supabase);
+            contextualPrompt += staffContext;
+          }
+          
+          if (moduleKeys.includes('scaffold_execution_with_materials') || moduleKeys.includes('ceo_dashboard')) {
+            const ordersListContext = await getRecentOrdersContext(supabase);
+            contextualPrompt += ordersListContext;
+          }
+        } else {
+          contextualPrompt += `
 
 ⚠️ این کاربر هیچ ماژول تخصصی فعالی ندارد.
 فقط به سوالات عمومی درباره سایت و سفارشات شخصی این کاربر پاسخ بده.
 اگر درباره گزارشات روزانه، نیروها، یا اطلاعات مدیریتی سوال کرد، بگو که باید از مدیر بخواهد ماژول مربوطه را برایش فعال کند.
 `;
-      }
-      
-      if (userRoles.length > 0) {
-        contextualPrompt += `\n\nنقش‌های کاربر: ${userRoles.join('، ')}`;
+        }
+        
+        if (userRoles.length > 0) {
+          contextualPrompt += `\n\nنقش‌های کاربر: ${userRoles.join('، ')}`;
+        }
       }
     }
 
