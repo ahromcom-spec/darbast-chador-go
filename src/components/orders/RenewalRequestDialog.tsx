@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, RefreshCw, Clock, CheckCircle } from 'lucide-react';
+import { CalendarDays, RefreshCw, Clock, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, addMonths } from 'date-fns-jalali';
@@ -42,6 +42,7 @@ export function RenewalRequestDialog({
   onRenewalComplete
 }: RenewalRequestDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [renewals, setRenewals] = useState<RenewalRecord[]>([]);
   const [loadingRenewals, setLoadingRenewals] = useState(true);
   const { toast } = useToast();
@@ -160,6 +161,36 @@ export function RenewalRequestDialog({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelRenewal = async (renewalId: string) => {
+    setCancelLoading(true);
+    try {
+      const { error } = await supabase
+        .from('order_renewals')
+        .delete()
+        .eq('id', renewalId)
+        .eq('status', 'pending'); // فقط درخواست‌های pending قابل لغو هستند
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ درخواست لغو شد',
+        description: 'درخواست تمدید با موفقیت لغو شد'
+      });
+
+      fetchRenewals();
+      onRenewalComplete?.();
+    } catch (error: any) {
+      console.error('Error canceling renewal:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در لغو درخواست تمدید'
+      });
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -346,11 +377,30 @@ export function RenewalRequestDialog({
           )}
 
           {pendingRenewal && (
-            <div className="bg-yellow-50 dark:bg-yellow-950 p-4 rounded-lg">
+            <div className="bg-yellow-50 dark:bg-yellow-950 p-4 rounded-lg space-y-3">
               <p className="text-sm text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 درخواست تمدید سری {pendingRenewal.renewal_number} در انتظار تایید مدیر است
               </p>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleCancelRenewal(pendingRenewal.id)}
+                disabled={cancelLoading}
+                className="w-full"
+              >
+                {cancelLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    در حال لغو...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    لغو درخواست تمدید
+                  </>
+                )}
+              </Button>
             </div>
           )}
         </div>
