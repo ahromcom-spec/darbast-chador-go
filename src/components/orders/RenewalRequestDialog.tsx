@@ -54,18 +54,23 @@ export function RenewalRequestDialog({
     return addMonths(startDate, 1);
   };
 
-  // محاسبه تاریخ شروع تمدید جدید (پایان دوره قبلی)
+  // محاسبه تاریخ شروع تمدید جدید
+  // سری اول: یک ماه بعد از rental_start_date
+  // سری های بعدی: یک ماه بعد از تاریخ پایان آخرین تمدید تایید شده
   const calculateNewStartDate = () => {
-    if (renewals.length > 0) {
-      // آخرین تمدید تایید شده را پیدا کن
-      const approvedRenewals = renewals.filter(r => r.status === 'approved');
-      if (approvedRenewals.length > 0) {
-        const lastApproved = approvedRenewals[approvedRenewals.length - 1];
-        return new Date(lastApproved.new_end_date);
-      }
+    // اگر تمدید تایید شده‌ای وجود دارد، از پایان آن استفاده کن
+    const approvedRenewals = renewals.filter(r => r.status === 'approved');
+    if (approvedRenewals.length > 0) {
+      const lastApproved = approvedRenewals[approvedRenewals.length - 1];
+      return new Date(lastApproved.new_end_date);
     }
-    // اگر تمدیدی وجود ندارد، از پایان دوره اصلی استفاده کن
-    return calculateCurrentEndDate();
+    
+    // برای سری اول، یک ماه بعد از rental_start_date
+    if (rentalStartDate) {
+      return addMonths(new Date(rentalStartDate), 1);
+    }
+    
+    return null;
   };
 
   const fetchRenewals = async () => {
@@ -116,8 +121,18 @@ export function RenewalRequestDialog({
         return;
       }
 
-      // اگر تاریخ شروع کرایه تعیین نشده، از تاریخ امروز استفاده شود
-      const newStartDate = calculateNewStartDate() || new Date();
+      // تاریخ شروع تمدید جدید
+      const newStartDate = calculateNewStartDate();
+      
+      if (!newStartDate) {
+        toast({
+          variant: 'destructive',
+          title: 'خطا',
+          description: 'تاریخ شروع کرایه داربست هنوز تعیین نشده است'
+        });
+        setLoading(false);
+        return;
+      }
 
       const newEndDate = addMonths(newStartDate, 1);
       const previousEndDate = newStartDate; // تاریخ پایان قبلی همان شروع جدید است
@@ -191,7 +206,7 @@ export function RenewalRequestDialog({
   const newStartDate = calculateNewStartDate();
   const approvedRenewalsCount = renewals.filter(r => r.status === 'approved').length;
   const pendingRenewal = renewals.find(r => r.status === 'pending');
-  const canRequestRenewal = renewals.length < 12 && !pendingRenewal;
+  const canRequestRenewal = renewals.length < 12 && !pendingRenewal && rentalStartDate;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -358,6 +373,17 @@ export function RenewalRequestDialog({
                 </div>
               </div>
             </>
+          )}
+
+          {/* پیام عدم تعیین تاریخ شروع کرایه */}
+          {!rentalStartDate && renewals.length < 12 && !pendingRenewal && (
+            <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-lg text-center border border-amber-200 dark:border-amber-700">
+              <p className="text-amber-700 dark:text-amber-300">
+                ⚠️ تاریخ شروع کرایه داربست هنوز توسط مدیر تعیین نشده است.
+                <br />
+                <span className="text-sm">پس از تعیین تاریخ شروع کرایه، امکان درخواست تمدید وجود خواهد داشت.</span>
+              </p>
+            </div>
           )}
 
           {/* پیام محدودیت */}
