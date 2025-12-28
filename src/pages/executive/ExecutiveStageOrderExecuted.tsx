@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckSquare, Eye, Search, MapPin, Phone, User, Calendar, RefreshCw, ArrowLeftRight, Users, Archive } from 'lucide-react';
+import { CheckSquare, Eye, Search, MapPin, Phone, User, Calendar, RefreshCw, ArrowLeftRight, Users, Archive, PackageOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -17,6 +17,7 @@ import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaff
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 
 interface Order {
   id: string;
@@ -27,12 +28,14 @@ interface Order {
   created_at: string;
   customer_name: string;
   customer_phone: string;
+  customer_id: string;
   execution_start_date: string | null;
   execution_end_date: string | null;
   execution_stage: string | null;
   rental_start_date: string | null;
   customer_completion_date: string | null;
   notes: any;
+  collection_request_date?: string | null;
 }
 
 const stageLabels: Record<string, string> = {
@@ -52,6 +55,7 @@ export default function ExecutiveStageOrderExecuted() {
   const [searchTerm, setSearchTerm] = useState('');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
+  const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const { toast } = useToast();
   
   // Archive functionality
@@ -122,6 +126,16 @@ export default function ExecutiveStageOrderExecuted() {
             customerPhone = profileData?.phone_number || '';
           }
 
+          // Fetch collection request date if exists
+          const { data: collectionData } = await supabase
+            .from('collection_requests')
+            .select('requested_date, status')
+            .eq('order_id', order.id)
+            .in('status', ['pending', 'approved'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
           return {
             id: order.id,
             code: order.code,
@@ -135,8 +149,10 @@ export default function ExecutiveStageOrderExecuted() {
             rental_start_date: order.rental_start_date,
             customer_completion_date: order.customer_completion_date,
             notes: order.notes,
+            customer_id: order.customer_id,
             customer_name: customerName,
-            customer_phone: customerPhone
+            customer_phone: customerPhone,
+            collection_request_date: collectionData?.requested_date || null
           };
         })
       );
@@ -341,11 +357,13 @@ export default function ExecutiveStageOrderExecuted() {
                   </div>
                 )}
 
-                {/* کادر تعیین تاریخ شروع کرایه */}
-                <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border-2 border-amber-200 dark:border-amber-800">
+                {/* مرحله ۱: کادر تعیین تاریخ شروع کرایه */}
+                <div className={`p-3 rounded-lg border-2 ${order.rental_start_date ? 'bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700' : 'bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800'}`}>
                   <div className="flex items-center gap-2 text-sm mb-2">
-                    <Calendar className="h-4 w-4 text-amber-600" />
-                    <span className="font-medium text-amber-800 dark:text-amber-200">تاریخ شروع کرایه داربست</span>
+                    <Calendar className={`h-4 w-4 ${order.rental_start_date ? 'text-green-600' : 'text-amber-600'}`} />
+                    <span className={`font-medium ${order.rental_start_date ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200'}`}>
+                      ۱. تاریخ شروع کرایه داربست {order.rental_start_date ? '✓' : '(الزامی)'}
+                    </span>
                   </div>
                   <PersianDatePicker
                     value={order.rental_start_date || undefined}
@@ -354,8 +372,99 @@ export default function ExecutiveStageOrderExecuted() {
                     timeMode="none"
                   />
                   {order.rental_start_date && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-2">
                       ✓ تاریخ ثبت شده: {new Date(order.rental_start_date).toLocaleDateString('fa-IR')}
+                    </p>
+                  )}
+                </div>
+
+                {/* مرحله ۲: تاریخ جمع‌آوری - فقط بعد از ثبت تاریخ کرایه فعال می‌شود */}
+                <div className={`p-3 rounded-lg border-2 ${
+                  !order.rental_start_date 
+                    ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 opacity-60'
+                    : order.collection_request_date
+                      ? 'bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700'
+                      : 'bg-teal-50 dark:bg-teal-950 border-teal-200 dark:border-teal-800'
+                }`}>
+                  <div className="flex items-center gap-2 text-sm mb-2">
+                    <PackageOpen className={`h-4 w-4 ${
+                      !order.rental_start_date ? 'text-gray-500' : order.collection_request_date ? 'text-green-600' : 'text-teal-600'
+                    }`} />
+                    <span className={`font-medium ${
+                      !order.rental_start_date 
+                        ? 'text-gray-500 dark:text-gray-400' 
+                        : order.collection_request_date
+                          ? 'text-green-800 dark:text-green-200'
+                          : 'text-teal-800 dark:text-teal-200'
+                    }`}>
+                      ۲. تاریخ جمع‌آوری {order.collection_request_date ? '✓' : !order.rental_start_date ? '(ابتدا تاریخ کرایه)' : '(الزامی)'}
+                    </span>
+                  </div>
+                  
+                  {order.rental_start_date ? (
+                    order.collection_request_date ? (
+                      <div className="space-y-2">
+                        <p className="text-sm text-green-700 dark:text-green-300">
+                          ✓ تاریخ جمع‌آوری: {new Date(order.collection_request_date).toLocaleDateString('fa-IR')}
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => { setSelectedOrder(order); setCollectionDialogOpen(true); }}
+                          className="gap-2 border-green-300 text-green-700 hover:bg-green-100"
+                        >
+                          <PackageOpen className="h-4 w-4" />
+                          ویرایش تاریخ
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => { setSelectedOrder(order); setCollectionDialogOpen(true); }}
+                        className="gap-2 border-teal-300 text-teal-700 hover:bg-teal-100"
+                      >
+                        <Calendar className="h-4 w-4" />
+                        ثبت تاریخ جمع‌آوری
+                      </Button>
+                    )
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      پس از ثبت تاریخ شروع کرایه فعال می‌شود
+                    </p>
+                  )}
+                </div>
+
+                {/* مرحله ۳: ارسال به جمع‌آوری - فقط بعد از ثبت هر دو تاریخ فعال می‌شود */}
+                <div className={`p-3 rounded-lg border-2 ${
+                  order.rental_start_date && order.collection_request_date
+                    ? 'bg-primary/10 border-primary'
+                    : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 opacity-60'
+                }`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <RefreshCw className={`h-4 w-4 ${
+                        order.rental_start_date && order.collection_request_date ? 'text-primary' : 'text-gray-500'
+                      }`} />
+                      <span className={`font-medium ${
+                        order.rental_start_date && order.collection_request_date ? 'text-primary' : 'text-gray-500'
+                      }`}>
+                        ۳. ارسال به مرحله جمع‌آوری
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleStageUpdate(order.id, 'awaiting_collection', order.code)}
+                      disabled={!order.rental_start_date || !order.collection_request_date || updatingStage}
+                      className="gap-2"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      ارسال به جمع‌آوری
+                    </Button>
+                  </div>
+                  {(!order.rental_start_date || !order.collection_request_date) && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      برای فعال‌سازی، ابتدا تاریخ شروع کرایه و سپس تاریخ جمع‌آوری را ثبت کنید
                     </p>
                   )}
                 </div>
@@ -416,6 +525,17 @@ export default function ExecutiveStageOrderExecuted() {
 
       {selectedOrder && (
         <ManagerAddStaffCollaborator orderId={selectedOrder.id} orderCode={selectedOrder.code} open={collaboratorDialogOpen} onOpenChange={setCollaboratorDialogOpen} onCollaboratorAdded={fetchOrders} />
+      )}
+
+      {selectedOrder && (
+        <CollectionRequestDialog
+          open={collectionDialogOpen}
+          onOpenChange={setCollectionDialogOpen}
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          customerId={selectedOrder.customer_id}
+          isManager={true}
+        />
       )}
     </div>
   );
