@@ -19,6 +19,7 @@ import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 
 interface Order {
   id: string;
@@ -33,6 +34,7 @@ interface Order {
   execution_end_date: string | null;
   execution_confirmed_at: string | null;
   execution_stage: string | null;
+  rental_start_date: string | null;
   notes: any;
 }
 
@@ -111,6 +113,7 @@ export default function ExecutiveInProgress() {
           execution_end_date,
           execution_confirmed_at,
           execution_stage,
+          rental_start_date,
           notes,
           customer_id
         `)
