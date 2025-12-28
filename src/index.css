@@ -207,7 +207,8 @@ body {
   html {
     /* Smooth scrolling optimization */
     scroll-behavior: smooth;
-    overscroll-behavior: contain;
+    /* اجازه Pull-to-Refresh در اندروید - فقط overscroll افقی را محدود می‌کنیم */
+    overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
     /* Prevent zoom gestures */
     touch-action: manipulation;
@@ -219,8 +220,8 @@ body {
     @apply bg-background text-foreground font-vazir;
     direction: rtl;
     position: relative;
-    /* Prevent scroll jitter */
-    overscroll-behavior-y: contain;
+    /* اجازه Pull-to-Refresh - فقط محدودیت افقی */
+    overscroll-behavior-x: contain;
     overflow-x: hidden;
     /* Prevent zooming on touch devices */
     touch-action: pan-x pan-y;
