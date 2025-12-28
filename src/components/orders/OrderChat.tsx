@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Send, MessageCircle, User, UserCheck, Mic, Square, Play, Pause, Loader2 } from 'lucide-react';
+import { Send, MessageCircle, User, UserCheck, Mic, Square, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
@@ -43,10 +43,9 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Audio playback state
-  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const [loadingAudioId, setLoadingAudioId] = useState<string | null>(null);
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  // Voice message playback (native player)
+  const [audioUrlByMessageId, setAudioUrlByMessageId] = useState<Record<string, string>>({});
+  const [audioUrlLoadingByMessageId, setAudioUrlLoadingByMessageId] = useState<Record<string, boolean>>({});
 
   // Check user role
   useEffect(() => {
@@ -403,144 +402,68 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   }, [user, orderId, isStaff, toast]);
 
-  // Play audio message - use signed URL for better compatibility
-  const playAudio = useCallback(async (messageId: string, audioPath: string) => {
-    console.log('Play audio requested:', messageId, audioPath);
-    
-    // If same audio is playing, stop it
-    if (playingAudioId === messageId) {
-      if (audioElementRef.current) {
-        audioElementRef.current.pause();
-        audioElementRef.current.currentTime = 0;
-        audioElementRef.current = null;
-      }
-      setPlayingAudioId(null);
-      return;
-    }
+  // Resolve voice message URLs (signed URL preferred)
+  const fetchVoiceMessageUrl = useCallback(async (audioPath: string): Promise<string | null> => {
+    const { data, error } = await supabase.storage
+      .from('voice-messages')
+      .createSignedUrl(audioPath, 86400); // 24h expiry
 
-    // Stop any currently playing audio
-    if (audioElementRef.current) {
-      audioElementRef.current.pause();
-      audioElementRef.current.currentTime = 0;
-      audioElementRef.current = null;
-    }
+    if (!error && data?.signedUrl) return data.signedUrl;
 
-    setLoadingAudioId(messageId);
-    setPlayingAudioId(null);
+    const { data: publicData } = supabase.storage
+      .from('voice-messages')
+      .getPublicUrl(audioPath);
 
-    try {
-      // Method 1: Try using signed URL (works better on mobile)
-      console.log('Getting signed URL for:', audioPath);
-      const { data: signedData, error: signedError } = await supabase.storage
-        .from('voice-messages')
-        .createSignedUrl(audioPath, 3600); // 1 hour expiry
+    return publicData?.publicUrl || null;
+  }, []);
 
-      if (signedError) {
-        console.error('Signed URL error:', signedError);
-        // Fallback to public URL
-        const { data: publicData } = supabase.storage
-          .from('voice-messages')
-          .getPublicUrl(audioPath);
-        
-        if (!publicData?.publicUrl) {
-          throw new Error('آدرس فایل صوتی یافت نشد');
-        }
-        
-        await playAudioFromUrl(publicData.publicUrl, messageId);
-      } else if (signedData?.signedUrl) {
-        await playAudioFromUrl(signedData.signedUrl, messageId);
-      } else {
-        throw new Error('آدرس فایل صوتی یافت نشد');
-      }
+  const resolveAudioUrlForMessage = useCallback(
+    async (messageId: string, audioPath: string, opts?: { silent?: boolean }) => {
+      if (!audioPath) return null;
 
-    } catch (error: any) {
-      console.error('Audio playback error:', error);
-      setLoadingAudioId(null);
-      setPlayingAudioId(null);
-      toast({
-        title: 'خطا در پخش صدا',
-        description: error.message || 'فایل صوتی قابل پخش نیست.',
-        variant: 'destructive'
-      });
-    }
-  }, [playingAudioId, toast]);
+      setAudioUrlLoadingByMessageId((prev) => ({ ...prev, [messageId]: true }));
 
-  // Helper function to play audio from URL
-  const playAudioFromUrl = useCallback(async (url: string, messageId: string) => {
-    console.log('Playing audio from URL:', url.substring(0, 100) + '...');
-    
-    const audio = new Audio();
-    audioElementRef.current = audio;
-    
-    // Configure for better mobile support
-    audio.preload = 'auto';
-    audio.crossOrigin = 'anonymous';
+      try {
+        const url = await fetchVoiceMessageUrl(audioPath);
+        if (!url) throw new Error('آدرس فایل صوتی یافت نشد');
 
-    return new Promise<void>((resolve, reject) => {
-      // Set up event handlers before setting src
-      audio.oncanplaythrough = () => {
-        console.log('Audio can play through');
-        audio.play()
-          .then(() => {
-            console.log('Playback started successfully');
-            setPlayingAudioId(messageId);
-            setLoadingAudioId(null);
-            resolve();
-          })
-          .catch((playError) => {
-            console.error('Play error:', playError);
-            setLoadingAudioId(null);
-            setPlayingAudioId(null);
-            reject(new Error('پخش صدا امکان‌پذیر نیست. لطفاً روی صفحه کلیک کنید و دوباره تلاش کنید.'));
+        setAudioUrlByMessageId((prev) => ({ ...prev, [messageId]: url }));
+        return url;
+      } catch (error: any) {
+        console.error('Error resolving voice message url:', error);
+
+        if (!opts?.silent) {
+          toast({
+            title: 'خطا در آماده‌سازی صدا',
+            description: error?.message || 'فایل صوتی قابل دسترسی نیست.',
+            variant: 'destructive',
           });
-      };
-
-      audio.onended = () => {
-        console.log('Audio ended');
-        setPlayingAudioId(null);
-        audioElementRef.current = null;
-      };
-
-      audio.onerror = (e) => {
-        const errorCode = audio.error?.code;
-        const errorMessage = audio.error?.message || 'Unknown error';
-        console.error('Audio error:', errorCode, errorMessage, e);
-        setLoadingAudioId(null);
-        setPlayingAudioId(null);
-        
-        let userMessage = 'فرمت صوتی پشتیبانی نمی‌شود';
-        if (errorCode === 4) {
-          userMessage = 'فرمت صوتی توسط مرورگر پشتیبانی نمی‌شود';
-        } else if (errorCode === 2) {
-          userMessage = 'خطا در دانلود فایل صوتی';
         }
-        
-        reject(new Error(userMessage));
-      };
 
-      // Set timeout for loading
-      const timeout = setTimeout(() => {
-        if (loadingAudioId === messageId) {
-          console.error('Audio loading timeout');
-          setLoadingAudioId(null);
-          reject(new Error('زمان بارگذاری به پایان رسید'));
-        }
-      }, 15000);
+        return null;
+      } finally {
+        setAudioUrlLoadingByMessageId((prev) => {
+          const next = { ...prev };
+          delete next[messageId];
+          return next;
+        });
+      }
+    },
+    [fetchVoiceMessageUrl, toast]
+  );
 
-      audio.onloadstart = () => {
-        console.log('Audio loading started');
-      };
+  // Preload signed URLs so the user can use the phone's native audio controls reliably
+  useEffect(() => {
+    const voiceMessages = messages.filter((m) => !!m.audio_path);
+    if (voiceMessages.length === 0) return;
 
-      audio.onloadedmetadata = () => {
-        console.log('Audio metadata loaded, duration:', audio.duration);
-        clearTimeout(timeout);
-      };
-
-      // Set the source
-      audio.src = url;
-      audio.load();
-    });
-  }, [loadingAudioId]);
+    for (const m of voiceMessages) {
+      if (!m.audio_path) continue;
+      if (audioUrlByMessageId[m.id]) continue;
+      if (audioUrlLoadingByMessageId[m.id]) continue;
+      resolveAudioUrlForMessage(m.id, m.audio_path, { silent: true });
+    }
+  }, [messages, audioUrlByMessageId, audioUrlLoadingByMessageId, resolveAudioUrlForMessage]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -556,9 +479,6 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (audioElementRef.current) {
-        audioElementRef.current.pause();
       }
     };
   }, []);
@@ -614,23 +534,52 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
                     
                     {/* Voice message */}
                     {msg.audio_path ? (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant={msg.user_id === user?.id ? "secondary" : "outline"}
-                          className="h-8 w-8 p-0"
-                          onClick={() => playAudio(msg.id, msg.audio_path!)}
-                          disabled={loadingAudioId === msg.id}
-                        >
-                          {loadingAudioId === msg.id ? (
+                      <div className="w-full">
+                        {audioUrlByMessageId[msg.id] ? (
+                          <div className="flex flex-col gap-2">
+                            <audio
+                              controls
+                              preload="metadata"
+                              playsInline
+                              src={audioUrlByMessageId[msg.id]}
+                              className="w-full max-w-[260px]"
+                            />
+
+                            <div className="flex items-center gap-3 text-xs">
+                              <a
+                                href={audioUrlByMessageId[msg.id]}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                              >
+                                باز کردن در پلیر گوشی
+                              </a>
+                              <a
+                                href={audioUrlByMessageId[msg.id]}
+                                download
+                                className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                              >
+                                دانلود
+                              </a>
+                            </div>
+                          </div>
+                        ) : audioUrlLoadingByMessageId[msg.id] ? (
+                          <div className="flex items-center gap-2">
                             <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : playingAudioId === msg.id ? (
-                            <Pause className="h-4 w-4" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <span className="text-sm">🎤 پیام صوتی</span>
+                            <span className="text-sm">درحال آمادهسازی پیام صوتی...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant={msg.user_id === user?.id ? "secondary" : "outline"}
+                              onClick={() => resolveAudioUrlForMessage(msg.id, msg.audio_path!, { silent: false })}
+                            >
+                              آمادهسازی پخش
+                            </Button>
+                            <span className="text-sm">🎤 پیام صوتی</span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
