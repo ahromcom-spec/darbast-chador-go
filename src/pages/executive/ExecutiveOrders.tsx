@@ -1357,17 +1357,17 @@ export default function ExecutiveOrders() {
                       ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
                       : 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800'
                   }`}>
-                    <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 text-sm">
                         <PackageOpen className={`h-4 w-4 ${
-                          order.collection_request.status === 'approved' 
+                          order.collection_request.status === 'approved' || order.collection_request.status === 'completed'
                             ? 'text-green-600' 
                             : order.collection_request.status === 'rejected'
                             ? 'text-red-600'
                             : 'text-orange-600'
                         }`} />
                         <span className={`font-medium ${
-                          order.collection_request.status === 'approved' 
+                          order.collection_request.status === 'approved' || order.collection_request.status === 'completed'
                             ? 'text-green-700 dark:text-green-300' 
                             : order.collection_request.status === 'rejected'
                             ? 'text-red-700 dark:text-red-300'
@@ -1375,13 +1375,15 @@ export default function ExecutiveOrders() {
                         }`}>
                           {order.collection_request.status === 'approved' 
                             ? 'درخواست جمع‌آوری تایید شده' 
+                            : order.collection_request.status === 'completed'
+                            ? 'جمع‌آوری تکمیل شده'
                             : order.collection_request.status === 'rejected'
                             ? 'درخواست جمع‌آوری رد شده'
                             : 'درخواست جمع‌آوری در انتظار تایید'}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
-                        {/* دکمه ویرایش تاریخ - برای همه وضعیت‌ها قابل ویرایش باشد */}
+                        {/* دکمه بررسی/ویرایش تاریخ */}
                         <Button
                           size="sm"
                           variant="outline"
@@ -1389,10 +1391,23 @@ export default function ExecutiveOrders() {
                             setSelectedOrder(order);
                             setCollectionDialogOpen(true);
                           }}
-                          className="gap-1 text-blue-700 border-blue-300 hover:bg-blue-100"
+                          className={`gap-1 ${
+                            order.collection_request.status === 'pending' 
+                              ? 'text-orange-700 border-orange-300 hover:bg-orange-100' 
+                              : 'text-blue-700 border-blue-300 hover:bg-blue-100'
+                          }`}
                         >
-                          <Edit className="h-3 w-3" />
-                          {order.collection_request.status === 'pending' ? 'بررسی' : 'ویرایش تاریخ'}
+                          {order.collection_request.status === 'pending' ? (
+                            <>
+                              <CheckCircle className="h-3 w-3" />
+                              تایید درخواست
+                            </>
+                          ) : (
+                            <>
+                              <Edit className="h-3 w-3" />
+                              ویرایش تاریخ
+                            </>
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -1548,20 +1563,29 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه در انتظار جمع‌آوری - برای awaiting_payment و فقط وقتی تاریخ جمع‌آوری تنظیم شده */}
+                  {/* دکمه در انتظار جمع‌آوری - برای awaiting_payment و فقط وقتی تاریخ جمع‌آوری تنظیم شده یا درخواست تایید شده */}
                   {order.execution_stage === 'awaiting_payment' && (
-                    <Button
-                      onClick={() => handleStageChange(order.id, 'awaiting_collection')}
-                      size="sm"
-                      disabled={!order.customer_completion_date}
-                      title={!order.customer_completion_date ? 'ابتدا باید تاریخ جمع‌آوری تعیین شود' : 'انتقال به مرحله در انتظار جمع‌آوری'}
-                      className={`gap-2 bg-orange-600 hover:bg-orange-700 ${
-                        !order.customer_completion_date ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                    >
-                      <Clock className="h-4 w-4" />
-                      در انتظار جمع‌آوری
-                    </Button>
+                    (() => {
+                      // تاریخ تثبیت شده یا درخواست جمع‌آوری تایید شده باشد
+                      const hasConfirmedDate = !!order.customer_completion_date;
+                      const hasApprovedRequest = order.collection_request?.status === 'approved' || order.collection_request?.status === 'completed';
+                      const canProceed = hasConfirmedDate || hasApprovedRequest;
+                      
+                      return (
+                        <Button
+                          onClick={() => handleStageChange(order.id, 'awaiting_collection')}
+                          size="sm"
+                          disabled={!canProceed}
+                          title={!canProceed ? 'ابتدا باید تاریخ جمع‌آوری تعیین شود' : 'انتقال به مرحله در انتظار جمع‌آوری'}
+                          className={`gap-2 bg-orange-600 hover:bg-orange-700 ${
+                            !canProceed ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                        >
+                          <Clock className="h-4 w-4" />
+                          در انتظار جمع‌آوری
+                        </Button>
+                      );
+                    })()
                   )}
 
                   {/* دکمه در حال جمع‌آوری - برای awaiting_collection */}

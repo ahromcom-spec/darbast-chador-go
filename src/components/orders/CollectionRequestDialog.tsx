@@ -303,7 +303,10 @@ export function CollectionRequestDialog({
   const handleApproveRequest = async () => {
     if (!existingRequest || !isManager) return;
 
-    if (!confirmedDate) {
+    // اگر تاریخ تایید شده خالی است، از تاریخ درخواستی استفاده کن
+    const dateToUse = confirmedDate || existingRequest.requested_date;
+    
+    if (!dateToUse) {
       toast({
         title: 'خطا',
         description: 'لطفاً تاریخ جمع‌آوری را تایید یا تنظیم کنید',
@@ -324,7 +327,7 @@ export function CollectionRequestDialog({
           status: 'approved',
           approved_at: new Date().toISOString(),
           approved_by: user.id,
-          requested_date: confirmedDate, // Update with manager's confirmed date
+          requested_date: dateToUse, // Update with manager's confirmed date
         })
         .eq('id', existingRequest.id);
 
@@ -336,30 +339,34 @@ export function CollectionRequestDialog({
         .update({
           execution_stage: 'awaiting_collection',
           execution_stage_updated_at: new Date().toISOString(),
-          customer_completion_date: confirmedDate, // Save collection date to order
+          customer_completion_date: dateToUse, // Save collection date to order
         })
         .eq('id', orderId);
 
       if (orderError) {
         console.error('Error updating order stage:', orderError);
+        throw new Error('خطا در بروزرسانی سفارش');
       }
 
       setExistingRequest({
         ...existingRequest,
         status: 'approved',
         approved_at: new Date().toISOString(),
-        requested_date: confirmedDate,
+        requested_date: dateToUse,
       });
 
       toast({
         title: '✓ موفق',
         description: 'درخواست جمع‌آوری تایید شد و سفارش به مرحله در انتظار جمع‌آوری منتقل شد',
       });
+      
+      // بستن دیالوگ بعد از تایید موفق
+      onOpenChange(false);
     } catch (error: any) {
       console.error('Error approving request:', error);
       toast({
         title: 'خطا',
-        description: 'خطا در تایید درخواست',
+        description: error.message || 'خطا در تایید درخواست',
         variant: 'destructive',
       });
     } finally {
