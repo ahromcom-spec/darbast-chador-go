@@ -32,6 +32,14 @@ interface Module {
 
 const AVAILABLE_MODULES: Module[] = [
   {
+    key: 'all_company_orders',
+    name: 'ماژول کل سفارشات شرکت اهرم',
+    description: 'مشاهده تمام سفارشات ثبت شده توسط همه کاربران',
+    href: '/all-company-orders',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+  },
+  {
     key: 'scaffold_execution_with_materials',
     name: 'ماژول مدیریت اجرای داربست به همراه اجناس',
     description: 'مدیریت سفارشات اجرای داربست به همراه اجناس',
@@ -134,6 +142,7 @@ export function ModulesManagement() {
 
   // Mapping module keys to required roles
   const MODULE_TO_ROLE: Record<string, string> = {
+    all_company_orders: 'ceo',
     scaffold_execution_with_materials: 'executive_manager_scaffold_execution_with_materials',
     daily_report: 'scaffold_executive_manager',
     hr_management: 'general_manager',
