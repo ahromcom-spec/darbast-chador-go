@@ -18,6 +18,7 @@ import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
 import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 import { RentalStartDatePicker } from '@/components/orders/RentalStartDatePicker';
+import { ManagerRenewalDialog } from '@/components/orders/ManagerRenewalDialog';
 
 interface Order {
   id: string;
@@ -56,6 +57,7 @@ export default function ExecutiveStageOrderExecuted() {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
+  const [renewalDialogOpen, setRenewalDialogOpen] = useState(false);
   const { toast } = useToast();
   
   // Archive functionality
@@ -483,6 +485,11 @@ export default function ExecutiveStageOrderExecuted() {
                     <Users className="h-4 w-4" />
                     افزودن پرسنل
                   </Button>
+
+                  <Button variant="default" size="sm" onClick={() => { setSelectedOrder(order); setRenewalDialogOpen(true); }} className="gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    تمدید
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -534,6 +541,24 @@ export default function ExecutiveStageOrderExecuted() {
           orderCode={selectedOrder.code}
           customerId={selectedOrder.customer_id}
           isManager={true}
+        />
+      )}
+
+      {selectedOrder && (
+        <ManagerRenewalDialog
+          open={renewalDialogOpen}
+          onOpenChange={setRenewalDialogOpen}
+          orderId={selectedOrder.id}
+          orderCode={selectedOrder.code}
+          customerId={selectedOrder.customer_id}
+          rentalStartDate={selectedOrder.rental_start_date}
+          originalPrice={(() => {
+            try {
+              const notes = typeof selectedOrder.notes === 'string' ? JSON.parse(selectedOrder.notes) : selectedOrder.notes;
+              return notes?.estimated_price || notes?.estimatedPrice || 0;
+            } catch { return 0; }
+          })()}
+          onRenewalComplete={fetchOrders}
         />
       )}
     </div>

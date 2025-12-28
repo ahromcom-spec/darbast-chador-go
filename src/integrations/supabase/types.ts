@@ -1472,6 +1472,78 @@ export type Database = {
           },
         ]
       }
+      order_renewals: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          manager_notes: string | null
+          new_end_date: string | null
+          new_start_date: string
+          order_id: string
+          original_price: number | null
+          previous_end_date: string | null
+          rejection_reason: string | null
+          renewal_number: number
+          renewal_price: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          manager_notes?: string | null
+          new_end_date?: string | null
+          new_start_date: string
+          order_id: string
+          original_price?: number | null
+          previous_end_date?: string | null
+          rejection_reason?: string | null
+          renewal_number?: number
+          renewal_price?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          manager_notes?: string | null
+          new_end_date?: string | null
+          new_start_date?: string
+          order_id?: string
+          original_price?: number | null
+          previous_end_date?: string | null
+          rejection_reason?: string | null
+          renewal_number?: number
+          renewal_price?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_renewals_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_renewals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_transfer_requests: {
         Row: {
           created_at: string
