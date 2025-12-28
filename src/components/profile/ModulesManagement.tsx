@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2, Pencil, Check, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2, FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { DraggableModuleItem, ModuleItem } from './DraggableModuleItem';
+import { useModuleHierarchy } from '@/hooks/useModuleHierarchy';
 
 interface ModuleAssignment {
   id: string;
@@ -89,6 +91,20 @@ const AVAILABLE_MODULES: Module[] = [
   },
 ];
 
+// Convert modules to ModuleItem format
+const convertModulesToItems = (modules: Module[]): ModuleItem[] => {
+  return modules.map(m => ({
+    id: m.key,
+    type: 'module' as const,
+    key: m.key,
+    name: m.name,
+    description: m.description,
+    href: m.href,
+    color: m.color,
+    bgColor: m.bgColor,
+  }));
+};
+
 export function ModulesManagement() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -98,80 +114,19 @@ export function ModulesManagement() {
   const [saving, setSaving] = useState(false);
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [selectedModule, setSelectedModule] = useState<string>(AVAILABLE_MODULES[0].key);
-  
-  // State for editing module names
-  const [editingModuleKey, setEditingModuleKey] = useState<string | null>(null);
-  const [editedModuleName, setEditedModuleName] = useState('');
-  const [editedModuleDescription, setEditedModuleDescription] = useState('');
-  const [customModuleNames, setCustomModuleNames] = useState<Record<string, { name: string; description: string }>>({});
+
+  // Memoize initial modules to prevent infinite loop
+  const initialAvailableModules = useMemo(() => convertModulesToItems(AVAILABLE_MODULES), []);
+
+  // Module hierarchy for available modules
+  const availableHierarchy = useModuleHierarchy({
+    type: 'available',
+    initialModules: initialAvailableModules,
+  });
 
   useEffect(() => {
     fetchAssignments();
-    loadCustomModuleNames();
   }, []);
-
-  // Load custom module names from localStorage
-  const loadCustomModuleNames = () => {
-    try {
-      const saved = localStorage.getItem('custom_module_names');
-      if (saved) {
-        setCustomModuleNames(JSON.parse(saved));
-      }
-    } catch (error) {
-      console.error('Error loading custom module names:', error);
-    }
-  };
-
-  // Save custom module names to localStorage
-  const saveCustomModuleNames = (names: Record<string, { name: string; description: string }>) => {
-    try {
-      localStorage.setItem('custom_module_names', JSON.stringify(names));
-      setCustomModuleNames(names);
-    } catch (error) {
-      console.error('Error saving custom module names:', error);
-    }
-  };
-
-  const startEditingModule = (moduleKey: string) => {
-    const customName = customModuleNames[moduleKey];
-    const module = AVAILABLE_MODULES.find(m => m.key === moduleKey);
-    if (module) {
-      setEditingModuleKey(moduleKey);
-      setEditedModuleName(customName?.name || module.name);
-      setEditedModuleDescription(customName?.description || module.description);
-    }
-  };
-
-  const saveModuleEdit = () => {
-    if (editingModuleKey && editedModuleName.trim()) {
-      const newCustomNames = {
-        ...customModuleNames,
-        [editingModuleKey]: {
-          name: editedModuleName.trim(),
-          description: editedModuleDescription.trim()
-        }
-      };
-      saveCustomModuleNames(newCustomNames);
-      toast.success('نام ماژول با موفقیت ویرایش شد');
-      setEditingModuleKey(null);
-      setEditedModuleName('');
-      setEditedModuleDescription('');
-    }
-  };
-
-  const cancelModuleEdit = () => {
-    setEditingModuleKey(null);
-    setEditedModuleName('');
-    setEditedModuleDescription('');
-  };
-
-  const getModuleDisplayName = (module: Module) => {
-    return customModuleNames[module.key]?.name || module.name;
-  };
-
-  const getModuleDisplayDescription = (module: Module) => {
-    return customModuleNames[module.key]?.description || module.description;
-  };
 
   const fetchAssignments = async () => {
     try {
@@ -319,6 +274,62 @@ export function ModulesManagement() {
     return AVAILABLE_MODULES.find(m => m.key === key);
   };
 
+  const handleCreateFolder = () => {
+    const newFolder: ModuleItem = {
+      id: `folder-${Date.now()}`,
+      type: 'folder',
+      key: `folder-${Date.now()}`,
+      name: 'پوشه جدید',
+      description: 'برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید',
+      children: [],
+      isOpen: true,
+    };
+    availableHierarchy.setItems(prev => [newFolder, ...prev]);
+  };
+
+  // Convert assignments to ModuleItem format for assigned modules section
+  const assignedModulesAsItems = useMemo((): ModuleItem[] => {
+    return assignments.map(a => {
+      const moduleInfo = getModuleInfo(a.module_key);
+      return {
+        id: a.id,
+        type: 'module' as const,
+        key: a.module_key,
+        name: a.module_name,
+        description: `${a.assigned_phone_number} - ${a.assigned_user_name || 'کاربر یافت نشد'}`,
+        href: moduleInfo?.href,
+        color: moduleInfo?.color || 'text-gray-600',
+        bgColor: moduleInfo?.bgColor || 'bg-gray-100',
+      };
+    });
+  }, [assignments]);
+
+  // Module hierarchy for assigned modules
+  const assignedHierarchy = useModuleHierarchy({
+    type: 'assigned',
+    initialModules: assignedModulesAsItems,
+  });
+
+  // Update assigned hierarchy when assignments change
+  useEffect(() => {
+    if (assignedHierarchy.isLoaded && assignedModulesAsItems.length > 0) {
+      // Only update if there are new assignments not in hierarchy
+      const currentIds = new Set<string>();
+      const collectIds = (items: ModuleItem[]) => {
+        items.forEach(item => {
+          currentIds.add(item.id);
+          if (item.children) collectIds(item.children);
+        });
+      };
+      collectIds(assignedHierarchy.items);
+      
+      const newAssignments = assignedModulesAsItems.filter(a => !currentIds.has(a.id));
+      if (newAssignments.length > 0) {
+        assignedHierarchy.setItems(prev => [...prev, ...newAssignments]);
+      }
+    }
+  }, [assignedModulesAsItems, assignedHierarchy.isLoaded]);
+
   return (
     <Card className="border-2 border-amber-500/30 shadow-md">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -353,91 +364,37 @@ export function ModulesManagement() {
 
         <CollapsibleContent>
           <CardContent className="pt-0 space-y-6">
-            {/* Available Modules */}
+            {/* Available Modules with Drag & Drop */}
             <div className="space-y-3">
-              <h4 className="font-medium text-sm text-muted-foreground">ماژول‌های موجود</h4>
-              <div className="grid gap-3">
-                {AVAILABLE_MODULES.map((module) => (
-                  <div
-                    key={module.key}
-                    className="p-4 rounded-lg border-2 border-border bg-background"
-                  >
-                    {editingModuleKey === module.key ? (
-                      // Edit mode
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <div className={`p-2 rounded-lg ${module.bgColor} flex-shrink-0`}>
-                            <Building2 className={`h-5 w-5 ${module.color}`} />
-                          </div>
-                          <span className="text-xs text-muted-foreground">ویرایش ماژول</span>
-                        </div>
-                        <Input
-                          value={editedModuleName}
-                          onChange={(e) => setEditedModuleName(e.target.value)}
-                          placeholder="نام ماژول"
-                          className="font-semibold"
-                        />
-                        <Input
-                          value={editedModuleDescription}
-                          onChange={(e) => setEditedModuleDescription(e.target.value)}
-                          placeholder="توضیحات ماژول"
-                          className="text-sm"
-                        />
-                        <div className="flex items-center gap-2 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={cancelModuleEdit}
-                            className="gap-1"
-                          >
-                            <X className="h-4 w-4" />
-                            انصراف
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={saveModuleEdit}
-                            className="gap-1"
-                          >
-                            <Check className="h-4 w-4" />
-                            ذخیره
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      // View mode
-                      <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                        <div className={`p-2 rounded-lg ${module.bgColor} flex-shrink-0`}>
-                          <Building2 className={`h-5 w-5 ${module.color}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm whitespace-normal leading-relaxed">
-                            {getModuleDisplayName(module)}
-                          </div>
-                          <div className="text-xs text-muted-foreground whitespace-normal leading-relaxed">
-                            {getModuleDisplayDescription(module)}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => startEditingModule(module.key)}
-                            className="h-8 w-8"
-                            title="ویرایش نام"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(module.href)}
-                          >
-                            ورود به ماژول
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-sm text-muted-foreground">ماژول‌های موجود</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCreateFolder}
+                  className="gap-2"
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  ایجاد پوشه
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                برای مرتب‌سازی، ماژول‌ها را بکشید و رها کنید. با انداختن ماژول روی ماژول دیگر، پوشه ایجاد می‌شود.
+              </p>
+              <div className="space-y-2">
+                {availableHierarchy.items.map((item) => (
+                  <DraggableModuleItem
+                    key={item.id}
+                    item={item}
+                    onDragStart={availableHierarchy.handleDragStart}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={availableHierarchy.handleDrop}
+                    onDragEnd={availableHierarchy.handleDragEnd}
+                    onToggleFolder={availableHierarchy.toggleFolder}
+                    onEditItem={availableHierarchy.editItem}
+                    onNavigate={(href) => navigate(href)}
+                    customNames={availableHierarchy.customNames}
+                  />
                 ))}
               </div>
             </div>
@@ -484,16 +441,18 @@ export function ModulesManagement() {
               </div>
             </div>
 
-            {/* Current Assignments */}
+            {/* Current Assignments with Drag & Drop */}
             <div className="space-y-3">
-              <h4 className="font-medium text-sm text-muted-foreground">
-                اختصاص‌های فعلی
-                {assignments.length > 0 && (
-                  <Badge variant="secondary" className="mr-2">
-                    {assignments.length}
-                  </Badge>
-                )}
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-sm text-muted-foreground">
+                  اختصاص‌های فعلی
+                  {assignments.length > 0 && (
+                    <Badge variant="secondary" className="mr-2">
+                      {assignments.length}
+                    </Badge>
+                  )}
+                </h4>
+              </div>
               
               {loading ? (
                 <div className="flex items-center justify-center py-8">
