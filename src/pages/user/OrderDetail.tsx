@@ -258,7 +258,7 @@ export default function OrderDetail() {
     }
   }, [id]);
 
-  // Realtime updates for order status and approvals
+  // Realtime updates for order status, approvals, and media
   useEffect(() => {
     if (!id) return;
 
@@ -288,6 +288,44 @@ export default function OrderDetail() {
         (payload) => {
           console.log('Approval updated:', payload);
           fetchOrderDetails();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'project_media',
+          filter: `project_id=eq.${id}`
+        },
+        async (payload) => {
+          console.log('New media uploaded:', payload);
+          // Fetch fresh media data
+          const { data: newMedia } = await supabase
+            .from('project_media')
+            .select('*')
+            .eq('project_id', id)
+            .order('created_at', { ascending: false });
+          
+          if (newMedia) {
+            setMediaFiles(newMedia as MediaFile[]);
+            // Also update uploader names
+            const userIds = [...new Set(newMedia.map(m => m.user_id).filter(Boolean))];
+            if (userIds.length > 0) {
+              const { data: profiles } = await supabase
+                .from('profiles')
+                .select('user_id, full_name, phone_number')
+                .in('user_id', userIds);
+              
+              if (profiles) {
+                const names: Record<string, string> = {};
+                profiles.forEach(p => {
+                  names[p.user_id] = p.full_name || p.phone_number || 'کاربر';
+                });
+                setMediaUploaderNames(names);
+              }
+            }
+          }
         }
       )
       .subscribe();
