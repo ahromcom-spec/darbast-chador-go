@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ImageIcon, ChevronLeft, ChevronRight, Ruler, FileText, Layers, User, Phone, MapPin, 
-  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench, Truck, Home
+  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench, Truck, Home, ExternalLink
 } from 'lucide-react';
 import { ManagerOrderInvoice } from './ManagerOrderInvoice';
 import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
@@ -78,6 +79,7 @@ interface EditableOrderDetailsProps {
 }
 
 export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsProps) => {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [repairDialogOpen, setRepairDialogOpen] = useState(false);
@@ -283,12 +285,34 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
       )}
 
       {/* Edit Toggle Button & Print */}
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 flex-wrap">
         <ManagerOrderInvoice order={order} />
+        
+        {/* دکمه ویرایش کامل در فرم قیمت‌گذاری */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => {
+            // هدایت به فرم قیمت‌گذاری با داده‌های موجود
+            navigate(`/scaffolding/form?edit=${order.id}&managerEdit=true`, {
+              state: {
+                locationAddress: order.address,
+                detailedAddress: order.detailed_address,
+                provinceId: null,
+                districtId: null,
+              }
+            });
+          }}
+        >
+          <ExternalLink className="h-4 w-4 ml-1" />
+          ویرایش در فرم قیمت‌گزاری
+        </Button>
+        
+        {/* دکمه ویرایش سریع در همین دیالوگ */}
         {!isEditing ? (
           <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
             <Edit className="h-4 w-4 ml-1" />
-            ویرایش سفارش
+            ویرایش سریع
           </Button>
         ) : (
           <div className="flex gap-2">
