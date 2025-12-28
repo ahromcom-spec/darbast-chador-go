@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ModuleItem } from '@/components/profile/DraggableModuleItem';
+import { supabase } from '@/integrations/supabase/client';
 
 const STORAGE_KEY_AVAILABLE = 'module_hierarchy_available';
 const STORAGE_KEY_ASSIGNED = 'module_hierarchy_assigned';
@@ -62,13 +63,29 @@ export function useModuleHierarchy({ type, initialModules }: UseModuleHierarchyP
     }
   }, [storageKey]);
 
-  // Save custom names
-  const saveCustomNames = useCallback((names: Record<string, { name: string; description: string }>) => {
+  // Save custom names and sync with database
+  const saveCustomNames = useCallback(async (names: Record<string, { name: string; description: string }>) => {
     try {
       localStorage.setItem(CUSTOM_NAMES_KEY, JSON.stringify(names));
       setCustomNames(names);
     } catch (error) {
       console.error('Error saving custom names:', error);
+    }
+  }, []);
+
+  // Update module assignment names in database when custom names change
+  const syncModuleNamesToDatabase = useCallback(async (moduleKey: string, newName: string) => {
+    try {
+      const { error } = await supabase
+        .from('module_assignments')
+        .update({ module_name: newName })
+        .eq('module_key', moduleKey);
+      
+      if (error) {
+        console.error('Error syncing module names to database:', error);
+      }
+    } catch (error) {
+      console.error('Error syncing module names:', error);
     }
   }, []);
 
@@ -228,6 +245,11 @@ export function useModuleHierarchy({ type, initialModules }: UseModuleHierarchyP
     };
     saveCustomNames(newCustomNames);
 
+    // Sync module names to database for assigned modules
+    if (item.type === 'module') {
+      syncModuleNamesToDatabase(item.key, newName);
+    }
+
     // Also update in items for folders
     if (item.type === 'folder') {
       setItems(prevItems => {
@@ -248,7 +270,7 @@ export function useModuleHierarchy({ type, initialModules }: UseModuleHierarchyP
         return newItems;
       });
     }
-  }, [customNames, saveCustomNames, saveHierarchy]);
+  }, [customNames, saveCustomNames, saveHierarchy, syncModuleNamesToDatabase]);
 
   // Reorder item within same level
   const reorderItems = useCallback((sourceId: string, targetId: string) => {
