@@ -188,26 +188,70 @@ export function CollectionRequestDialog({
 
     setSubmitting(true);
     try {
-      const { data: request, error } = await supabase
-        .from('collection_requests')
-        .insert({
-          order_id: orderId,
-          customer_id: customerId,
-          description: description.trim() || null,
-          requested_date: requestedDate,
-          status: 'pending',
-        })
-        .select()
-        .single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
 
-      if (error) throw error;
+      // اگر مدیر است، درخواست را مستقیماً تایید کن
+      if (isManager) {
+        const { data: request, error } = await supabase
+          .from('collection_requests')
+          .insert({
+            order_id: orderId,
+            customer_id: customerId,
+            description: description.trim() || null,
+            requested_date: requestedDate,
+            status: 'approved',
+            approved_at: new Date().toISOString(),
+            approved_by: user.id,
+          })
+          .select()
+          .single();
 
-      toast({
-        title: '✓ موفق',
-        description: 'درخواست جمع‌آوری با موفقیت ثبت شد',
-      });
+        if (error) throw error;
 
-      setExistingRequest(request);
+        // بروزرسانی سفارش به مرحله در انتظار جمع‌آوری
+        const { error: orderError } = await supabase
+          .from('projects_v3')
+          .update({
+            execution_stage: 'awaiting_collection',
+            execution_stage_updated_at: new Date().toISOString(),
+            customer_completion_date: requestedDate,
+          })
+          .eq('id', orderId);
+
+        if (orderError) {
+          console.error('Error updating order stage:', orderError);
+        }
+
+        toast({
+          title: '✓ موفق',
+          description: 'درخواست جمع‌آوری ثبت و سفارش به مرحله در انتظار جمع‌آوری منتقل شد',
+        });
+
+        setExistingRequest(request);
+      } else {
+        // مشتری: درخواست به حالت pending ثبت شود
+        const { data: request, error } = await supabase
+          .from('collection_requests')
+          .insert({
+            order_id: orderId,
+            customer_id: customerId,
+            description: description.trim() || null,
+            requested_date: requestedDate,
+            status: 'pending',
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        toast({
+          title: '✓ موفق',
+          description: 'درخواست جمع‌آوری با موفقیت ثبت شد و در انتظار تایید مدیر است',
+        });
+
+        setExistingRequest(request);
+      }
     } catch (error: any) {
       console.error('Error submitting collection request:', error);
       toast({
