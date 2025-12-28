@@ -132,11 +132,7 @@ const Header = memo(() => {
 
   // Calculate the height of the first header for smooth positioning
   const firstHeaderHeight = isVisible ? 0 : -80; // Approximate height in pixels
-
-  // Hide header when on globe page
-  if (location.pathname === '/globe') {
-    return null;
-  }
+  const isGlobeRoute = location.pathname === '/globe';
 
   const handleRefresh = useCallback(() => {
     // Clear react-query cache and reload all data
@@ -194,6 +190,11 @@ const Header = memo(() => {
       </Button>
     </div>
   ) : null;
+
+  // Hide header when on globe page (IMPORTANT: after all hooks)
+  if (isGlobeRoute) {
+    return null;
+  }
 
   return (
     <>
