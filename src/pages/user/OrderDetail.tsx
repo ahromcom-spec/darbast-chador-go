@@ -97,6 +97,7 @@ interface Order {
   payment_confirmed_at?: string;
   transaction_reference?: string;
   total_paid?: number;
+  rental_start_date?: string;
   customer_completion_date?: string;
   executive_completion_date?: string;
   location_lat?: number;
@@ -2045,7 +2046,7 @@ export default function OrderDetail() {
                 })()}
 
                 {/* بلوک تاریخ‌های مهم - کادر جداگانه */}
-                {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime || parsedNotes?.rental_start_date || parsedNotes?.rental_end_date) && (
+                {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime || parsedNotes?.rental_start_date || parsedNotes?.rental_end_date || order.rental_start_date) && (
                   <section className="rounded-2xl border-2 border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 p-4 space-y-3">
                     <h3 className="font-semibold flex items-center gap-2">
                       <Calendar className="h-5 w-5 text-blue-600" />
@@ -2053,7 +2054,7 @@ export default function OrderDetail() {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {/* تاریخ‌های داربست */}
-                      {parsedNotes.installDate && (
+                      {parsedNotes?.installDate && (
                         <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
                           <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ نصب پیشنهادی</span>
                           <span className="font-bold text-base text-foreground">
@@ -2063,7 +2064,7 @@ export default function OrderDetail() {
                           </span>
                         </div>
                       )}
-                      {parsedNotes.installationDateTime && (
+                      {parsedNotes?.installationDateTime && (
                         <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
                           <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">زمان نصب درخواستی</span>
                           <span className="font-bold text-base text-foreground">
@@ -2073,7 +2074,7 @@ export default function OrderDetail() {
                           </span>
                         </div>
                       )}
-                      {parsedNotes.dueDate && (
+                      {parsedNotes?.dueDate && (
                         <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
                           <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">سررسید قرارداد</span>
                           <span className="font-bold text-base text-foreground">
@@ -2083,8 +2084,17 @@ export default function OrderDetail() {
                           </span>
                         </div>
                       )}
-                      {/* تاریخ‌های کرایه */}
-                      {parsedNotes.rental_start_date && (
+                      {/* تاریخ شروع کرایه داربست - از دیتابیس (توسط مدیر ثبت شده) */}
+                      {order.rental_start_date && (
+                        <div className="p-4 bg-white dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-700 shadow-sm">
+                          <span className="text-xs text-green-600 dark:text-green-400 block mb-1">تاریخ شروع کرایه داربست</span>
+                          <span className="font-bold text-base text-foreground">
+                            {formatPersianDate(order.rental_start_date)}
+                          </span>
+                        </div>
+                      )}
+                      {/* تاریخ‌های کرایه از notes (فرم کرایه اجناس) */}
+                      {parsedNotes?.rental_start_date && !order.rental_start_date && (
                         <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
                           <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ شروع اجاره</span>
                           <span className="font-bold text-base text-foreground">
@@ -2092,7 +2102,7 @@ export default function OrderDetail() {
                           </span>
                         </div>
                       )}
-                      {parsedNotes.rental_end_date && (
+                      {parsedNotes?.rental_end_date && (
                         <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
                           <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ پایان اجاره</span>
                           <span className="font-bold text-base text-foreground">
