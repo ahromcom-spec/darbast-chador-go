@@ -60,6 +60,7 @@ import { OrderCollaboratorsList } from "@/components/orders/OrderCollaboratorsLi
 import { OrderOwnershipChain } from "@/components/orders/OrderOwnershipChain";
 import { RepairRequestDialog } from "@/components/orders/RepairRequestDialog";
 import { CollectionRequestDialog } from "@/components/orders/CollectionRequestDialog";
+import { RenewalRequestDialog } from "@/components/orders/RenewalRequestDialog";
 import { ManagerOrderInvoice } from "@/components/orders/ManagerOrderInvoice";
 import { OrderForOthersInfo } from "@/components/orders/OrderForOthersInfo";
 import { RatingForm } from "@/components/ratings/RatingForm";
@@ -220,6 +221,7 @@ export default function OrderDetail() {
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
   const [showEditExpertPricingDialog, setShowEditExpertPricingDialog] = useState(false);
+  const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
   const [isOrderDetailsExpanded, setIsOrderDetailsExpanded] = useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
@@ -1575,6 +1577,35 @@ export default function OrderDetail() {
                   </section>
                 )}
 
+                {/* دکمه تمدید سفارش - برای سفارش‌های اجرا شده (execution_stage = order_executed) */}
+                {order.execution_stage === 'order_executed' && 
+                 ['in_progress', 'completed', 'paid'].includes(order.status) && (
+                  <section className="rounded-2xl border-2 border-primary/50 dark:border-primary/30 bg-primary/5 dark:bg-primary/10 p-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <RefreshCw className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground mb-1">
+                            تمدید سفارش
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            برای تمدید کرایه داربست برای دوره بعدی، درخواست تمدید ثبت کنید.
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => setShowRenewalDialog(true)}
+                        className="gap-2 whitespace-nowrap"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        درخواست تمدید
+                      </Button>
+                    </div>
+                  </section>
+                )}
+
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
                 {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
                   const basePrice = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
@@ -2888,6 +2919,18 @@ export default function OrderDetail() {
             orderId={order.id}
             orderCode={order.code}
             customerId={(order as any).customer_id || ''}
+          />
+
+          {/* Renewal Request Dialog */}
+          <RenewalRequestDialog
+            open={showRenewalDialog}
+            onOpenChange={setShowRenewalDialog}
+            orderId={order.id}
+            orderCode={order.code}
+            customerId={(order as any).customer_id || ''}
+            rentalStartDate={parsedNotes?.rental_start_date || null}
+            originalPrice={order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0}
+            onRenewalComplete={fetchOrderDetails}
           />
 
           {/* Add Collaborator Dialog */}
