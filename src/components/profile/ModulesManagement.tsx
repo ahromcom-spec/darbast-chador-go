@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2, FolderPlus, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2, FolderPlus, Search, X, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -116,6 +116,14 @@ export function ModulesManagement() {
   const [selectedModule, setSelectedModule] = useState<string>(AVAILABLE_MODULES[0].key);
   const [availableSearch, setAvailableSearch] = useState('');
   const [assignedSearch, setAssignedSearch] = useState('');
+  const [availableTypeFilter, setAvailableTypeFilter] = useState<string>('all');
+  const [assignedTypeFilter, setAssignedTypeFilter] = useState<string>('all');
+  const [assignedUserFilter, setAssignedUserFilter] = useState<string>('all');
+
+  // Get unique module types for filter
+  const moduleTypes = useMemo(() => {
+    return AVAILABLE_MODULES.map(m => ({ key: m.key, name: m.name }));
+  }, []);
 
   // Memoize initial modules to prevent infinite loop
   const initialAvailableModules = useMemo(() => convertModulesToItems(AVAILABLE_MODULES), []);
@@ -398,35 +406,64 @@ export function ModulesManagement() {
               <p className="text-xs text-muted-foreground">
                 برای مرتب‌سازی، ماژول‌ها را بکشید و رها کنید. با انداختن ماژول روی ماژول دیگر، پوشه ایجاد می‌شود.
               </p>
-              {/* Search for available modules */}
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="جستجو در ماژول‌های موجود..."
-                  value={availableSearch}
-                  onChange={(e) => setAvailableSearch(e.target.value)}
-                  className="pr-10"
-                />
-                {availableSearch && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                    onClick={() => setAvailableSearch('')}
+              {/* Search and Filter for available modules */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="جستجو در ماژول‌های موجود..."
+                    value={availableSearch}
+                    onChange={(e) => setAvailableSearch(e.target.value)}
+                    className="pr-10"
+                  />
+                  {availableSearch && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                      onClick={() => setAvailableSearch('')}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <select
+                    value={availableTypeFilter}
+                    onChange={(e) => setAvailableTypeFilter(e.target.value)}
+                    className="h-10 px-3 rounded-md border border-input bg-background text-sm min-w-[150px]"
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+                    <option value="all">همه ماژول‌ها</option>
+                    <option value="folder">فقط پوشه‌ها</option>
+                    <option value="module">فقط ماژول‌ها</option>
+                    {moduleTypes.map(type => (
+                      <option key={type.key} value={type.key}>{type.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="space-y-2">
                 {availableHierarchy.items
                   .filter((item) => {
+                    // Type filter
+                    if (availableTypeFilter !== 'all') {
+                      if (availableTypeFilter === 'folder' && item.type !== 'folder') return false;
+                      if (availableTypeFilter === 'module' && item.type !== 'module') return false;
+                      if (availableTypeFilter !== 'folder' && availableTypeFilter !== 'module') {
+                        if (item.type === 'folder') {
+                          if (!item.children?.some(child => child.key === availableTypeFilter)) return false;
+                        } else if (item.key !== availableTypeFilter) {
+                          return false;
+                        }
+                      }
+                    }
+                    // Search filter
                     if (!availableSearch) return true;
                     const searchLower = availableSearch.toLowerCase();
                     const itemName = (availableHierarchy.customNames[item.key]?.name || item.name).toLowerCase();
                     const itemDesc = (availableHierarchy.customNames[item.key]?.description || item.description || '').toLowerCase();
                     if (itemName.includes(searchLower) || itemDesc.includes(searchLower)) return true;
-                    // Also check children for folders
                     if (item.children) {
                       return item.children.some(child => {
                         const childName = (availableHierarchy.customNames[child.key]?.name || child.name).toLowerCase();
@@ -450,7 +487,19 @@ export function ModulesManagement() {
                     customNames={availableHierarchy.customNames}
                   />
                 ))}
-                {availableSearch && availableHierarchy.items.filter((item) => {
+                {(availableSearch || availableTypeFilter !== 'all') && availableHierarchy.items.filter((item) => {
+                  if (availableTypeFilter !== 'all') {
+                    if (availableTypeFilter === 'folder' && item.type !== 'folder') return false;
+                    if (availableTypeFilter === 'module' && item.type !== 'module') return false;
+                    if (availableTypeFilter !== 'folder' && availableTypeFilter !== 'module') {
+                      if (item.type === 'folder') {
+                        if (!item.children?.some(child => child.key === availableTypeFilter)) return false;
+                      } else if (item.key !== availableTypeFilter) {
+                        return false;
+                      }
+                    }
+                  }
+                  if (!availableSearch) return true;
                   const searchLower = availableSearch.toLowerCase();
                   const itemName = (availableHierarchy.customNames[item.key]?.name || item.name).toLowerCase();
                   const itemDesc = (availableHierarchy.customNames[item.key]?.description || item.description || '').toLowerCase();
@@ -543,26 +592,50 @@ export function ModulesManagement() {
                 </p>
               )}
               
-              {/* Search for assigned modules */}
+              {/* Search and Filter for assigned modules */}
               {assignments.length > 0 && (
-                <div className="relative">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="جستجو در اختصاص‌ها (نام ماژول، شماره تلفن، نام کاربر)..."
-                    value={assignedSearch}
-                    onChange={(e) => setAssignedSearch(e.target.value)}
-                    className="pr-10"
-                  />
-                  {assignedSearch && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                      onClick={() => setAssignedSearch('')}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="جستجو در اختصاص‌ها (نام ماژول، شماره تلفن، نام کاربر)..."
+                      value={assignedSearch}
+                      onChange={(e) => setAssignedSearch(e.target.value)}
+                      className="pr-10"
+                    />
+                    {assignedSearch && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                        onClick={() => setAssignedSearch('')}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <select
+                      value={assignedTypeFilter}
+                      onChange={(e) => setAssignedTypeFilter(e.target.value)}
+                      className="h-10 px-3 rounded-md border border-input bg-background text-sm min-w-[120px]"
                     >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
+                      <option value="all">همه ماژول‌ها</option>
+                      {moduleTypes.map(type => (
+                        <option key={type.key} value={type.key}>{type.name}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={assignedUserFilter}
+                      onChange={(e) => setAssignedUserFilter(e.target.value)}
+                      className="h-10 px-3 rounded-md border border-input bg-background text-sm min-w-[120px]"
+                    >
+                      <option value="all">همه کاربران</option>
+                      <option value="with_user">با کاربر</option>
+                      <option value="without_user">بدون کاربر</option>
+                    </select>
+                  </div>
                 </div>
               )}
               
@@ -578,12 +651,28 @@ export function ModulesManagement() {
                 <div className="space-y-2">
                   {assignedHierarchy.items
                     .filter((item) => {
+                      // Type filter
+                      if (assignedTypeFilter !== 'all') {
+                        if (item.type === 'folder') {
+                          if (!item.children?.some(child => child.key === assignedTypeFilter)) return false;
+                        } else if (item.key !== assignedTypeFilter) {
+                          return false;
+                        }
+                      }
+                      // User filter
+                      if (assignedUserFilter !== 'all') {
+                        const assignment = assignments.find(a => a.id === item.id);
+                        if (assignment) {
+                          if (assignedUserFilter === 'with_user' && !assignment.assigned_user_id) return false;
+                          if (assignedUserFilter === 'without_user' && assignment.assigned_user_id) return false;
+                        }
+                      }
+                      // Search filter
                       if (!assignedSearch) return true;
                       const searchLower = assignedSearch.toLowerCase();
                       const itemName = (assignedHierarchy.customNames[item.key]?.name || item.name).toLowerCase();
                       const itemDesc = (assignedHierarchy.customNames[item.key]?.description || item.description || '').toLowerCase();
                       if (itemName.includes(searchLower) || itemDesc.includes(searchLower)) return true;
-                      // Also check children for folders
                       if (item.children) {
                         return item.children.some(child => {
                           const childName = (assignedHierarchy.customNames[child.key]?.name || child.name).toLowerCase();
@@ -609,7 +698,22 @@ export function ModulesManagement() {
                         showDeleteButton={true}
                       />
                     ))}
-                  {assignedSearch && assignedHierarchy.items.filter((item) => {
+                  {(assignedSearch || assignedTypeFilter !== 'all' || assignedUserFilter !== 'all') && assignedHierarchy.items.filter((item) => {
+                    if (assignedTypeFilter !== 'all') {
+                      if (item.type === 'folder') {
+                        if (!item.children?.some(child => child.key === assignedTypeFilter)) return false;
+                      } else if (item.key !== assignedTypeFilter) {
+                        return false;
+                      }
+                    }
+                    if (assignedUserFilter !== 'all') {
+                      const assignment = assignments.find(a => a.id === item.id);
+                      if (assignment) {
+                        if (assignedUserFilter === 'with_user' && !assignment.assigned_user_id) return false;
+                        if (assignedUserFilter === 'without_user' && assignment.assigned_user_id) return false;
+                      }
+                    }
+                    if (!assignedSearch) return true;
                     const searchLower = assignedSearch.toLowerCase();
                     const itemName = (assignedHierarchy.customNames[item.key]?.name || item.name).toLowerCase();
                     const itemDesc = (assignedHierarchy.customNames[item.key]?.description || item.description || '').toLowerCase();
