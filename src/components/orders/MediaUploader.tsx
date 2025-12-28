@@ -1,8 +1,9 @@
 import { useState, useId, useRef, useCallback } from 'react';
-import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon, XCircle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon, XCircle, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +50,7 @@ export function MediaUploader({
 }: MediaUploaderProps) {
   const { toast } = useToast();
   const [files, setFiles] = useState<MediaFile[]>([]);
+  const [previewMedia, setPreviewMedia] = useState<MediaFile | null>(null);
   
   // Unique IDs for file inputs to prevent conflicts when multiple uploaders exist
   const uniqueId = useId();
@@ -413,13 +415,24 @@ export function MediaUploader({
           {files.filter(f => f.type === 'image').length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {files.filter(f => f.type === 'image').map((file) => (
-                <div key={file.id} className="relative group aspect-square rounded-lg overflow-hidden border">
+                <div 
+                  key={file.id} 
+                  className="relative group aspect-square rounded-lg overflow-hidden border cursor-pointer"
+                  onClick={() => file.status === 'done' && setPreviewMedia(file)}
+                >
                   <img
                     src={file.remoteUrl || file.preview}
                     alt="پیش‌نمایش تصویر آپلودی"
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
+                  
+                  {/* Zoom icon on hover */}
+                  {file.status === 'done' && (
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+                      <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  )}
 
                   {/* Upload Progress Overlay */}
                   {file.status === 'uploading' && (
@@ -500,7 +513,20 @@ export function MediaUploader({
           {files.filter(f => f.type === 'video').length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {files.filter(f => f.type === 'video').map((file) => (
-                <div key={file.id} className="relative group aspect-video rounded-lg overflow-hidden border bg-muted">
+                <div 
+                  key={file.id} 
+                  className="relative group aspect-video rounded-lg overflow-hidden border bg-muted cursor-pointer"
+                >
+                  {/* Expand button */}
+                  {file.status === 'done' && (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMedia(file)}
+                      className="absolute top-2 left-2 z-20 p-2 bg-black/60 hover:bg-black/80 text-white rounded-full transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <ZoomIn className="w-4 h-4" />
+                    </button>
+                  )}
                   {/* Video preview / player */}
                   {!file.previewError ? (
                     <CentralizedVideoPlayer
@@ -596,6 +622,36 @@ export function MediaUploader({
           </div>
         )}
       </CardContent>
+
+      {/* Preview Modal */}
+      <Dialog open={!!previewMedia} onOpenChange={(open) => !open && setPreviewMedia(null)}>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-0">
+            <DialogTitle className="text-right">
+              {previewMedia?.type === 'image' ? 'پیش‌نمایش تصویر' : 'پیش‌نمایش ویدیو'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4 pt-2 flex items-center justify-center max-h-[80vh] overflow-auto">
+            {previewMedia?.type === 'image' ? (
+              <img
+                src={previewMedia.remoteUrl || previewMedia.preview}
+                alt="پیش‌نمایش بزرگ"
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            ) : previewMedia?.type === 'video' ? (
+              <div className="w-full max-h-[70vh]">
+                <CentralizedVideoPlayer
+                  src={previewMedia.remoteUrl || previewMedia.preview}
+                  thumbnail={previewMedia.thumbnail}
+                  className="w-full h-auto max-h-[70vh]"
+                  showControls
+                  autoPlay
+                />
+              </div>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
