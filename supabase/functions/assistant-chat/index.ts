@@ -1140,21 +1140,23 @@ async function getStaffListContext(supabase: any): Promise<string> {
   }
 }
 
-// تابع برای گرفتن سفارشات اخیر (برای ماژول اجرا)
+// تابع برای گرفتن سفارشات اخیر (برای ماژول اجرا) - با آدرس کامل
 async function getRecentOrdersContext(supabase: any): Promise<string> {
   try {
     const { data: rawOrders, error } = await supabase
       .from("projects_v3")
       .select(`
-        id, code, status, execution_stage, address,
+        id, code, status, execution_stage, address, detailed_address,
         customer_name, customer_phone, total_price, total_paid,
         created_at, execution_start_date, execution_end_date,
         is_archived, is_deep_archived, archived_at, deep_archived_at,
+        location_lat, location_lng,
         provinces:province_id (name),
-        subcategories:subcategory_id (name)
+        districts:district_id (name),
+        subcategories:subcategory_id (name, service_types_v3:service_type_id (name))
       `)
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(100);
 
     const orders = (rawOrders || [])
       .filter((o: any) => {
@@ -1165,7 +1167,7 @@ async function getRecentOrdersContext(supabase: any): Promise<string> {
           o?.deep_archived_at != null;
         return !archived;
       })
-      .slice(0, 15);
+      .slice(0, 50);
 
     
     if (error || !orders || orders.length === 0) {
@@ -1180,12 +1182,15 @@ async function getRecentOrdersContext(supabase: any): Promise<string> {
       'awaiting_collection': 'در انتظار جمع‌آوری',
       'collected': 'جمع‌آوری شده',
       'closed': 'بسته شده',
-      'rejected': 'رد شده'
+      'rejected': 'رد شده',
+      'paid': 'پرداخت شده',
+      'pending_execution': 'در انتظار اجرا',
+      'scheduled': 'زمان‌بندی شده'
     };
 
     let context = `
 ═══════════════════════════════════════
-📦 سفارشات اخیر (${orders.length} سفارش)
+📦 اطلاعات کامل سفارشات (${orders.length} سفارش)
 ═══════════════════════════════════════
 `;
 
@@ -1209,11 +1214,40 @@ async function getRecentOrdersContext(supabase: any): Promise<string> {
     context += `   ✅ مجموع پرداختی: ${totalPaid.toLocaleString('fa-IR')} تومان\n`;
     context += `   ⏳ مانده: ${(totalPrice - totalPaid).toLocaleString('fa-IR')} تومان\n`;
 
-    context += `\n📋 لیست سفارشات:\n`;
-    orders.slice(0, 10).forEach((order: any) => {
+    context += `\n📋 جزئیات کامل سفارشات (شامل آدرس):\n`;
+    orders.forEach((order: any) => {
       const statusFa = statusMap[order.status] || order.status;
       const date = new Date(order.created_at).toLocaleDateString('fa-IR');
-      context += `   📦 ${order.code} | ${order.customer_name || 'بدون نام'} | ${statusFa} | ${order.provinces?.name || ''} | ${date}\n`;
+      const provinceName = order.provinces?.name || '';
+      const districtName = order.districts?.name || '';
+      const serviceName = order.subcategories?.service_types_v3?.name || order.subcategories?.name || '';
+      const remainingDebt = (Number(order.total_price) || 0) - (Number(order.total_paid) || 0);
+      
+      // ساخت آدرس کامل
+      let fullAddress = order.address || '';
+      if (order.detailed_address) {
+        fullAddress += (fullAddress ? ' - ' : '') + order.detailed_address;
+      }
+      if (!fullAddress && provinceName) {
+        fullAddress = `استان ${provinceName}`;
+        if (districtName) {
+          fullAddress += ` - ${districtName}`;
+        }
+      }
+      
+      context += `
+📦 سفارش ${order.code}:
+   👤 کارفرما: ${order.customer_name || 'ثبت نشده'}
+   📱 تلفن: ${order.customer_phone || 'ثبت نشده'}
+   📍 آدرس کامل: ${fullAddress || 'ثبت نشده'}
+   🏙️ استان: ${provinceName || 'نامشخص'}${districtName ? ` | شهر/منطقه: ${districtName}` : ''}
+   🔧 نوع خدمات: ${serviceName || 'نامشخص'}
+   📊 وضعیت: ${statusFa}
+   💰 مبلغ کل: ${(Number(order.total_price) || 0).toLocaleString('fa-IR')} تومان
+   ✅ پرداخت شده: ${(Number(order.total_paid) || 0).toLocaleString('fa-IR')} تومان
+   ⏳ مانده بدهی: ${remainingDebt.toLocaleString('fa-IR')} تومان
+   📅 تاریخ ثبت: ${date}
+`;
     });
 
     return context;
