@@ -651,14 +651,21 @@ export function CollectionRequestDialog({
 
                 {!showRejectForm ? (
                   <div className="flex gap-2">
+                  {approvingRequest ? (
+                    <div className="flex-1 flex items-center justify-center gap-2 p-3 bg-green-100 dark:bg-green-900 rounded-lg border border-green-300 dark:border-green-700">
+                      <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full" />
+                      <span className="text-sm text-green-700 dark:text-green-300 font-medium">در حال ثبت تاریخ...</span>
+                    </div>
+                  ) : (
                     <Button
                       onClick={handleApproveRequest}
-                      disabled={approvingRequest || !confirmedDate}
+                      disabled={!confirmedDate}
                       className="flex-1 bg-green-600 hover:bg-green-700"
                     >
-                      {approvingRequest ? <LoadingSpinner className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                      <CheckCircle className="h-4 w-4 mr-2" />
                       تایید درخواست
                     </Button>
+                  )}
                     <Button
                       variant="destructive"
                       onClick={() => setShowRejectForm(true)}
@@ -717,15 +724,22 @@ export function CollectionRequestDialog({
                       timeMode="ampm"
                     />
                   </div>
-                  <Button
-                    onClick={handleUpdateDate}
-                    disabled={updatingDate || !confirmedDate || confirmedDate === existingRequest.requested_date}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {updatingDate ? <LoadingSpinner className="h-4 w-4" /> : <Calendar className="h-4 w-4 mr-2" />}
-                    به‌روزرسانی تاریخ
-                  </Button>
+                  {updatingDate ? (
+                    <div className="flex items-center justify-center gap-2 p-3 bg-blue-100 dark:bg-blue-900 rounded-lg border border-blue-300 dark:border-blue-700">
+                      <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                      <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">در حال ثبت تاریخ...</span>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleUpdateDate}
+                      disabled={!confirmedDate || confirmedDate === existingRequest.requested_date}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      به‌روزرسانی تاریخ
+                    </Button>
+                  )}
                 </div>
                 <Button
                   onClick={handleCompleteCollection}
@@ -754,15 +768,22 @@ export function CollectionRequestDialog({
                       timeMode="ampm"
                     />
                   </div>
-                  <Button
-                    onClick={handleUpdateDate}
-                    disabled={updatingDate || !confirmedDate || confirmedDate === existingRequest.requested_date}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {updatingDate ? <LoadingSpinner className="h-4 w-4" /> : <Calendar className="h-4 w-4 mr-2" />}
-                    به‌روزرسانی تاریخ
-                  </Button>
+                  {updatingDate ? (
+                    <div className="flex items-center justify-center gap-2 p-3 bg-blue-100 dark:bg-blue-900 rounded-lg border border-blue-300 dark:border-blue-700">
+                      <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                      <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">در حال ثبت تاریخ...</span>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleUpdateDate}
+                      disabled={!confirmedDate || confirmedDate === existingRequest.requested_date}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      به‌روزرسانی تاریخ
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
