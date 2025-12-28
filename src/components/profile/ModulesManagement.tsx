@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2, FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -118,17 +118,8 @@ export function ModulesManagement() {
   // Memoize initial modules to prevent infinite loop
   const initialAvailableModules = useMemo(() => convertModulesToItems(AVAILABLE_MODULES), []);
 
-  // Module hierarchy for available modules
-  const availableHierarchy = useModuleHierarchy({
-    type: 'available',
-    initialModules: initialAvailableModules,
-  });
-
-  useEffect(() => {
-    fetchAssignments();
-  }, []);
-
-  const fetchAssignments = async () => {
+  // Fetch assignments function - defined with useCallback before useModuleHierarchy
+  const fetchAssignments = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -163,7 +154,18 @@ export function ModulesManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Module hierarchy for available modules
+  const availableHierarchy = useModuleHierarchy({
+    type: 'available',
+    initialModules: initialAvailableModules,
+    onModuleNameChange: fetchAssignments,
+  });
+
+  useEffect(() => {
+    fetchAssignments();
+  }, [fetchAssignments]);
 
   // Mapping module keys to required roles
   const MODULE_TO_ROLE: Record<string, string> = {

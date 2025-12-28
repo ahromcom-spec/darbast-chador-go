@@ -9,9 +9,10 @@ const CUSTOM_NAMES_KEY = 'custom_module_names_v2';
 interface UseModuleHierarchyProps {
   type: 'available' | 'assigned';
   initialModules: ModuleItem[];
+  onModuleNameChange?: () => void;
 }
 
-export function useModuleHierarchy({ type, initialModules }: UseModuleHierarchyProps) {
+export function useModuleHierarchy({ type, initialModules, onModuleNameChange }: UseModuleHierarchyProps) {
   const storageKey = type === 'available' ? STORAGE_KEY_AVAILABLE : STORAGE_KEY_ASSIGNED;
   
   const [items, setItems] = useState<ModuleItem[]>([]);
@@ -83,11 +84,14 @@ export function useModuleHierarchy({ type, initialModules }: UseModuleHierarchyP
       
       if (error) {
         console.error('Error syncing module names to database:', error);
+      } else {
+        // Notify parent to refresh assignments list
+        onModuleNameChange?.();
       }
     } catch (error) {
       console.error('Error syncing module names:', error);
     }
-  }, []);
+  }, [onModuleNameChange]);
 
   // Handle drag start
   const handleDragStart = useCallback((item: ModuleItem, e: React.DragEvent) => {
