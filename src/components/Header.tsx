@@ -365,8 +365,7 @@ const Header = memo(() => {
             <div className="flex items-center justify-end gap-2 py-0.5 pr-2">
             {user ? (
               <>
-                {RefreshButton}
-                {ZoomControls}
+              {ZoomControls}
                 <div data-tour="notifications">
                   <NotificationBell />
                 </div>
@@ -484,8 +483,7 @@ const Header = memo(() => {
           <div className="flex items-center justify-end gap-4 py-1 pr-4">
             {user ? (
               <>
-                {RefreshButton}
-                {ZoomControls}
+              {ZoomControls}
                 <div data-tour="notifications">
                   <NotificationBell />
                 </div>
