@@ -1199,6 +1199,50 @@ export default function ExecutiveOrders() {
               </CardHeader>
               <CardContent className="space-y-4 transition-all duration-300 ease-in-out">
                 <Separator />
+
+                {/* دکمه‌های مدیریتی - جزئیات، انتقال، افزودن پرسنل */}
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setShowDetailsDialog(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    جزئیات کامل
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setTransferDialogOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <ArrowLeftRight className="h-4 w-4" />
+                    انتقال
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setCollaboratorDialogOpen(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    افزودن پرسنل
+                  </Button>
+                </div>
+
+                <Separator className="my-2" />
                 
                 {/* انتخاب مرحله سفارش */}
                 <div className="flex items-center gap-3 p-3 bg-gradient-to-l from-primary/5 to-transparent rounded-lg border border-primary/20">
@@ -1401,45 +1445,6 @@ export default function ExecutiveOrders() {
                 )}
 
                 <div className="flex gap-2 flex-wrap pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      setShowDetailsDialog(true);
-                    }}
-                    className="gap-2"
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                    جزئیات کامل
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      setTransferDialogOpen(true);
-                    }}
-                    className="gap-2"
-                  >
-                    <ArrowLeftRight className="h-4 w-4" />
-                    انتقال
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      setCollaboratorDialogOpen(true);
-                    }}
-                    className="gap-2"
-                  >
-                    <Users className="h-4 w-4" />
-                    افزودن پرسنل
-                  </Button>
-
                   {/* دکمه بایگانی - برای سفارشات رد شده */}
                   {order.status === 'rejected' && (
                     <Button
