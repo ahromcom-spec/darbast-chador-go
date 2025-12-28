@@ -43,7 +43,36 @@ import 'leaflet/dist/leaflet.css';
   }
 })();
 
+// به‌روزرسانی چیدمان و تلاش برای آزاد کردن قفل چرخش (Android PWA/WebAPK)
+(() => {
+  try {
+    const unlock = () => {
+      const o = (screen as any)?.orientation;
+      if (o && typeof o.unlock === 'function') {
+        try { o.unlock(); } catch {}
+      }
+    };
+
+    unlock();
+
+    const onOrientationChange = () => {
+      unlock();
+      // بعضی WebView ها در چرخش، resize را درست ارسال نمی‌کنند
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 500);
+    };
+
+    window.addEventListener('orientationchange', onOrientationChange);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) onOrientationChange();
+    });
+  } catch {
+    // no-op
+  }
+})();
+
 // ثبت Service Worker برای PWA و Push Notifications (بدون انتظار برای window.load)
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker
     .register('/sw.js')
