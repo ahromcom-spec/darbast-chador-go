@@ -60,7 +60,12 @@ export const useLocations = () => {
       .single();
 
     if (error) throw error;
-    await fetchLocations(); // رفرش لیست آدرس‌ها
+    
+    // به‌روزرسانی لوکال لیست بدون درخواست مجدد به سرور
+    if (data) {
+      setLocations(prev => [data, ...prev]);
+    }
+    
     return data;
   };
 
@@ -73,7 +78,12 @@ export const useLocations = () => {
       .single();
 
     if (error) throw error;
-    await fetchLocations(); // رفرش لیست آدرس‌ها
+    
+    // به‌روزرسانی لوکال لیست بدون درخواست مجدد به سرور
+    if (data) {
+      setLocations(prev => prev.map(loc => loc.id === id ? { ...loc, ...data } : loc));
+    }
+    
     return data;
   };
 
