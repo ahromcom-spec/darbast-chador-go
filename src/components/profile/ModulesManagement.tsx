@@ -291,6 +291,19 @@ export function ModulesManagement() {
     availableHierarchy.setItems(prev => [newFolder, ...prev]);
   };
 
+  const handleCreateAssignedFolder = () => {
+    const newFolder: ModuleItem = {
+      id: `assigned-folder-${Date.now()}`,
+      type: 'folder',
+      key: `assigned-folder-${Date.now()}`,
+      name: 'پوشه جدید',
+      description: 'برای اضافه کردن اختصاص‌ها، آن‌ها را روی این پوشه بکشید',
+      children: [],
+      isOpen: true,
+    };
+    assignedHierarchy.setItems(prev => [newFolder, ...prev]);
+  };
+
   // Convert assignments to ModuleItem format for assigned modules section
   const assignedModulesAsItems = useMemo((): ModuleItem[] => {
     return assignments.map(a => {
@@ -500,7 +513,7 @@ export function ModulesManagement() {
               </div>
             </div>
 
-            {/* Current Assignments */}
+            {/* Current Assignments with Drag & Drop */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-sm text-muted-foreground">
@@ -511,7 +524,24 @@ export function ModulesManagement() {
                     </Badge>
                   )}
                 </h4>
+                {assignments.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCreateAssignedFolder}
+                    className="gap-2"
+                  >
+                    <FolderPlus className="h-4 w-4" />
+                    ایجاد پوشه
+                  </Button>
+                )}
               </div>
+              
+              {assignments.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  برای مرتب‌سازی، آیتم‌ها را بکشید و رها کنید. با انداختن آیتم روی آیتم دیگر، پوشه ایجاد می‌شود.
+                </p>
+              )}
               
               {/* Search for assigned modules */}
               {assignments.length > 0 && (
@@ -546,61 +576,52 @@ export function ModulesManagement() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {assignments
-                    .filter((assignment) => {
+                  {assignedHierarchy.items
+                    .filter((item) => {
                       if (!assignedSearch) return true;
                       const searchLower = assignedSearch.toLowerCase();
-                      return (
-                        assignment.module_name.toLowerCase().includes(searchLower) ||
-                        assignment.assigned_phone_number.includes(assignedSearch) ||
-                        (assignment.assigned_user_name && assignment.assigned_user_name.toLowerCase().includes(searchLower))
-                      );
+                      const itemName = (assignedHierarchy.customNames[item.key]?.name || item.name).toLowerCase();
+                      const itemDesc = (assignedHierarchy.customNames[item.key]?.description || item.description || '').toLowerCase();
+                      if (itemName.includes(searchLower) || itemDesc.includes(searchLower)) return true;
+                      // Also check children for folders
+                      if (item.children) {
+                        return item.children.some(child => {
+                          const childName = (assignedHierarchy.customNames[child.key]?.name || child.name).toLowerCase();
+                          const childDesc = (assignedHierarchy.customNames[child.key]?.description || child.description || '').toLowerCase();
+                          return childName.includes(searchLower) || childDesc.includes(searchLower);
+                        });
+                      }
+                      return false;
                     })
-                    .map((assignment) => {
-                    const moduleInfo = getModuleInfo(assignment.module_key);
-                    return (
-                      <div
-                        key={assignment.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`p-1.5 rounded-lg ${moduleInfo?.bgColor || 'bg-gray-100'}`}>
-                            <Building2 className={`h-4 w-4 ${moduleInfo?.color || 'text-gray-600'}`} />
-                          </div>
-                          <div>
-                            <div className="font-medium text-sm">
-                              {assignment.module_name}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Phone className="h-3 w-3" />
-                              <span dir="ltr">{assignment.assigned_phone_number}</span>
-                              {assignment.assigned_user_name && (
-                                <>
-                                  <User className="h-3 w-3 mr-2" />
-                                  <span>{assignment.assigned_user_name}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveAssignment(assignment.id)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    );
-                  })}
-                  {assignedSearch && assignments.filter((assignment) => {
+                    .map((item) => (
+                      <DraggableModuleItem
+                        key={item.id}
+                        item={item}
+                        onDragStart={assignedHierarchy.handleDragStart}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={assignedHierarchy.handleDrop}
+                        onDragEnd={assignedHierarchy.handleDragEnd}
+                        onToggleFolder={assignedHierarchy.toggleFolder}
+                        onEditItem={assignedHierarchy.editItem}
+                        onNavigate={(href) => navigate(href)}
+                        onDelete={handleRemoveAssignment}
+                        customNames={assignedHierarchy.customNames}
+                        showDeleteButton={true}
+                      />
+                    ))}
+                  {assignedSearch && assignedHierarchy.items.filter((item) => {
                     const searchLower = assignedSearch.toLowerCase();
-                    return (
-                      assignment.module_name.toLowerCase().includes(searchLower) ||
-                      assignment.assigned_phone_number.includes(assignedSearch) ||
-                      (assignment.assigned_user_name && assignment.assigned_user_name.toLowerCase().includes(searchLower))
-                    );
+                    const itemName = (assignedHierarchy.customNames[item.key]?.name || item.name).toLowerCase();
+                    const itemDesc = (assignedHierarchy.customNames[item.key]?.description || item.description || '').toLowerCase();
+                    if (itemName.includes(searchLower) || itemDesc.includes(searchLower)) return true;
+                    if (item.children) {
+                      return item.children.some(child => {
+                        const childName = (assignedHierarchy.customNames[child.key]?.name || child.name).toLowerCase();
+                        const childDesc = (assignedHierarchy.customNames[child.key]?.description || child.description || '').toLowerCase();
+                        return childName.includes(searchLower) || childDesc.includes(searchLower);
+                      });
+                    }
+                    return false;
                   }).length === 0 && (
                     <div className="text-center py-4 text-muted-foreground text-sm">
                       نتیجه‌ای یافت نشد
