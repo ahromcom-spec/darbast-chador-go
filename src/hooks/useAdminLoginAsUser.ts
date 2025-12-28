@@ -52,8 +52,9 @@ export const useAdminLoginAsUser = () => {
         toast.success('با موفقیت وارد حساب کاربر شدید');
 
         // Reload the page to apply new session and show persistent banner
+        // هدایت به صفحه تونل برای امنیت بیشتر و جداسازی مسیر
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = '/tunnel';
         }, 500);
       }
     } catch (error) {

@@ -103,6 +103,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
 const OrderTransferManagement = lazy(() => import("@/pages/admin/OrderTransferManagement"));
 const MapTest = lazy(() => import("@/pages/test/MapTest"));
+const TunnelPage = lazy(() => import("@/pages/tunnel/TunnelPage"));
 // GlobeMap is imported eagerly (see above) to avoid first-load chunk errors on some mobile browsers.
 
 // Redirect component for old orders pages
@@ -266,6 +267,12 @@ const App = () => {
               <Route path="/form-not-available" element={
                 <ProtectedRoute>
                   <FormNotAvailable />
+                </ProtectedRoute>
+              } />
+              {/* مسیر تونل برای ورود نمایندگی مدیرعامل */}
+              <Route path="/tunnel" element={
+                <ProtectedRoute>
+                  <TunnelPage />
                 </ProtectedRoute>
               } />
               <Route path="/contractor/register" element={<ContractorRegister />} />
