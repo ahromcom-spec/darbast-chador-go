@@ -173,10 +173,10 @@ export function UserModulesTab() {
       </div>
 
       <div className="grid gap-4">
-        {assignments.map((assignment) => {
+      {assignments.map((assignment) => {
           const moduleInfo = getModuleInfo(assignment.module_key);
-          // Use assignment.module_name as fallback if MODULE_DETAILS doesn't have the name
-          const displayName = MODULE_DETAILS[assignment.module_key]?.name || assignment.module_name || assignment.module_key;
+          // Use module_name from database (synced by CEO) as primary source
+          const displayName = assignment.module_name || MODULE_DETAILS[assignment.module_key]?.name || assignment.module_key;
           return (
                 <Card
                   key={assignment.id}

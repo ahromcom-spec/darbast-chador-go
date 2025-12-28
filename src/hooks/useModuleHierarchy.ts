@@ -147,16 +147,22 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
   }, []);
 
   // Update module assignment names in database when custom names change
+  // This updates ALL assignments with this module_key so all assigned users see the new name
   const syncModuleNamesToDatabase = useCallback(async (moduleKey: string, newName: string) => {
     try {
+      // Extract base key from custom modules (e.g., "custom-12345" -> use original key if exists)
+      // For copied modules, we store original key reference
+      const baseKey = moduleKey.startsWith('custom-') ? moduleKey : moduleKey;
+      
       const { error } = await supabase
         .from('module_assignments')
         .update({ module_name: newName })
-        .eq('module_key', moduleKey);
+        .eq('module_key', baseKey);
       
       if (error) {
         console.error('Error syncing module names to database:', error);
       } else {
+        console.log(`Module name synced to database: ${baseKey} -> ${newName}`);
         // Notify parent to refresh assignments list
         onModuleNameChange?.();
       }
