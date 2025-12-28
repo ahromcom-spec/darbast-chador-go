@@ -97,7 +97,8 @@ export function MobileProjectPanel({
 
   const getPublicUrl = (filePath: string) => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    return `${supabaseUrl}/storage/v1/object/public/order-media/${filePath}`;
+    // استفاده از bucket صحیح project-media (همان bucket که در HybridGlobe استفاده می‌شود)
+    return `${supabaseUrl}/storage/v1/object/public/project-media/${filePath}`;
   };
 
   const handleViewOrderDetail = (orderId: string) => {
