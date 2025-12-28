@@ -30,21 +30,73 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
         setCustomNames(JSON.parse(savedNames));
       }
       
-      if (saved) {
+      if (saved && type === 'available') {
+        // Only use localStorage for available modules
         const parsed = JSON.parse(saved);
         // Merge with initial modules to add any new ones
-        const savedIds = new Set<string>();
-        const collectIds = (items: ModuleItem[]) => {
+        const savedKeys = new Set<string>();
+        const collectKeys = (items: ModuleItem[]) => {
           items.forEach(item => {
-            savedIds.add(item.key);
-            if (item.children) collectIds(item.children);
+            savedKeys.add(item.key);
+            if (item.children) collectKeys(item.children);
           });
         };
-        collectIds(parsed);
+        collectKeys(parsed);
         
         // Add any new modules that aren't in saved hierarchy
-        const newModules = initialModules.filter(m => !savedIds.has(m.key));
+        const newModules = initialModules.filter(m => !savedKeys.has(m.key));
         setItems([...parsed, ...newModules]);
+      } else if (type === 'assigned') {
+        // For assigned modules, always use initialModules from database
+        // But try to preserve folder structure from localStorage
+        const savedAssigned = localStorage.getItem(storageKey);
+        if (savedAssigned) {
+          const parsed = JSON.parse(savedAssigned);
+          
+          // Get all valid IDs from initialModules
+          const validIds = new Set(initialModules.map(m => m.id));
+          
+          // Create a map of initial modules by id for quick lookup
+          const initialModulesMap = new Map(initialModules.map(m => [m.id, m]));
+          
+          // Filter saved hierarchy to only include valid items and update module data
+          const filterAndUpdate = (items: ModuleItem[]): ModuleItem[] => {
+            return items.map(item => {
+              if (item.type === 'folder') {
+                const updatedChildren = item.children ? filterAndUpdate(item.children) : [];
+                // Only keep folder if it has valid children
+                if (updatedChildren.length > 0) {
+                  return { ...item, children: updatedChildren };
+                }
+                return null;
+              } else {
+                // For modules, check if still exists in database
+                if (validIds.has(item.id)) {
+                  // Update with latest data from database
+                  return initialModulesMap.get(item.id) || item;
+                }
+                return null;
+              }
+            }).filter((item): item is ModuleItem => item !== null);
+          };
+          
+          const updatedHierarchy = filterAndUpdate(parsed);
+          
+          // Find modules that are in initialModules but not in hierarchy
+          const hierarchyIds = new Set<string>();
+          const collectIds = (items: ModuleItem[]) => {
+            items.forEach(item => {
+              hierarchyIds.add(item.id);
+              if (item.children) collectIds(item.children);
+            });
+          };
+          collectIds(updatedHierarchy);
+          
+          const newModules = initialModules.filter(m => !hierarchyIds.has(m.id));
+          setItems([...updatedHierarchy, ...newModules]);
+        } else {
+          setItems(initialModules);
+        }
       } else {
         setItems(initialModules);
       }
@@ -53,7 +105,7 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
       setItems(initialModules);
     }
     setIsLoaded(true);
-  }, [storageKey, initialModules]);
+  }, [storageKey, initialModules, type]);
 
   // Save hierarchy to localStorage
   const saveHierarchy = useCallback((newItems: ModuleItem[]) => {
