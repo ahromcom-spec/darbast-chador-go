@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, GripVertical, Pencil, Check, X } from 'lucide-react';
+import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, GripVertical, Pencil, Check, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -26,8 +26,10 @@ interface DraggableModuleItemProps {
   onToggleFolder: (folderId: string) => void;
   onEditItem: (item: ModuleItem, newName: string, newDescription: string) => void;
   onNavigate?: (href: string) => void;
+  onDelete?: (itemId: string) => void;
   level?: number;
   customNames?: Record<string, { name: string; description: string }>;
+  showDeleteButton?: boolean;
 }
 
 export function DraggableModuleItem({
@@ -39,8 +41,10 @@ export function DraggableModuleItem({
   onToggleFolder,
   onEditItem,
   onNavigate,
+  onDelete,
   level = 0,
-  customNames = {}
+  customNames = {},
+  showDeleteButton = false
 }: DraggableModuleItemProps) {
   const navigate = useNavigate();
   const [isDragOver, setIsDragOver] = useState(false);
@@ -259,6 +263,20 @@ export function DraggableModuleItem({
             >
               <Pencil className="h-4 w-4" />
             </Button>
+            {showDeleteButton && onDelete && item.type === 'module' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(item.id);
+                }}
+                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                title="حذف"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             {item.type === 'module' && item.href && (
               <Button
                 variant="outline"
@@ -289,8 +307,10 @@ export function DraggableModuleItem({
               onToggleFolder={onToggleFolder}
               onEditItem={onEditItem}
               onNavigate={onNavigate}
+              onDelete={onDelete}
               level={level + 1}
               customNames={customNames}
+              showDeleteButton={showDeleteButton}
             />
           ))}
         </div>
