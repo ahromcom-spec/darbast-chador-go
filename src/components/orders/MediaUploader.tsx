@@ -1,5 +1,5 @@
-import { useState, useId, useRef } from 'react';
-import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon } from 'lucide-react';
+import { useState, useId, useRef, useCallback } from 'react';
+import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -17,12 +17,13 @@ interface MediaFile {
   type: 'image' | 'video';
   id: string;
   // Upload state
-  status?: 'pending' | 'uploading' | 'done' | 'error';
+  status?: 'pending' | 'uploading' | 'done' | 'error' | 'cancelled';
   storagePath?: string; // <userId>/<filename>
   remoteUrl?: string; // public URL after upload
   previewError?: boolean; // when browser can't play the format
   uploadProgress?: number; // 0-100
   thumbnail?: string; // For videos: extracted frame from middle
+  xhr?: XMLHttpRequest; // For cancellation
 }
 
 interface MediaUploaderProps {
@@ -95,129 +96,148 @@ export function MediaUploader({
     return true;
   };
 
-  // Upload to storage with progress tracking
-  const uploadToStorage = async (media: MediaFile) => {
-    try {
-      const { data: auth, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !auth?.user) {
-        console.error('خطای احراز هویت:', authError);
-        toast({ 
-          title: 'خطا در احراز هویت', 
-          description: 'لطفاً دوباره وارد سیستم شوید.', 
-          variant: 'destructive' 
-        });
-        setFilePartial(media.id, { status: 'error' });
-        return;
-      }
-
-      const user = auth.user;
-      setFilePartial(media.id, { status: 'uploading', uploadProgress: 0 });
-
-      const extFromName = media.file.name.split('.').pop() || '';
-      const ext = extFromName ? `.${extFromName}` : '';
-      const safeName = media.file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
-      const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}${ext ? '' : ''}`;
-      const storagePath = `${user.id}/${fileName}`;
-
-      console.log('در حال آپلود فایل:', { fileName, storagePath, fileSize: media.file.size, fileType: media.file.type });
-
-      // Simulate progress with fast start, slow finish for better UX
-      // Supabase client doesn't expose upload progress, so we simulate
-      let progressStep = 0;
-      const progressInterval = setInterval(() => {
-        setFilePartial(media.id, (prev) => {
-          const current = prev.uploadProgress || 0;
-          progressStep++;
-          
-          // Fast start (0-60%): larger increments, shorter intervals
-          // Slow finish (60-90%): smaller increments
-          let increment: number;
-          if (current < 30) {
-            increment = 8; // Very fast start
-          } else if (current < 60) {
-            increment = 5; // Moderate speed
-          } else if (current < 80) {
-            increment = 2; // Slow down
-          } else {
-            increment = 0.5; // Very slow near end
-          }
-          
-          return { uploadProgress: Math.min(current + increment, 90) };
-        });
-      }, 100); // Faster interval for smoother animation
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(MEDIA_BUCKET)
-        .upload(storagePath, media.file, {
-          contentType: media.file.type, 
-          upsert: false 
-        });
-
-      clearInterval(progressInterval);
-
-      if (uploadError) {
-        console.error('خطای آپلود:', uploadError);
-        setFilePartial(media.id, { status: 'error', uploadProgress: 0 });
-        
-        let errorMessage = uploadError.message;
-        
-        // پیام‌های خطا را بهبود می‌دهیم
-        if (uploadError.message?.includes('duplicate') || uploadError.message?.includes('already exists')) {
-          errorMessage = 'این فایل قبلاً آپلود شده است. لطفاً نام فایل را تغییر دهید.';
-        } else if (uploadError.message?.includes('size') || uploadError.message?.includes('large')) {
-          errorMessage = 'حجم فایل بیش از حد مجاز است. حداکثر 50 مگابایت.';
-        } else if (uploadError.message?.includes('type') || uploadError.message?.includes('format')) {
-          errorMessage = 'فرمت فایل پشتیبانی نمی‌شود.';
-        } else if (uploadError.message?.includes('permission') || uploadError.message?.includes('policy')) {
-          errorMessage = 'شما اجازه آپلود فایل را ندارید. لطفاً دوباره وارد شوید.';
-        }
-        
-        toast({ 
-          title: 'خطا در آپلود', 
-          description: errorMessage, 
-          variant: 'destructive' 
-        });
-        return;
-      }
-
-      console.log('آپلود موفق:', uploadData);
-
-      const { data: publicData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(storagePath);
-      
-      // If projectId is provided, save record to project_media table
-      if (projectId) {
-        const { error: dbError } = await supabase
-          .from('project_media')
-          .insert({
-            project_id: projectId,
-            user_id: user.id,
-            file_path: storagePath,
-            file_type: media.type,
-            file_size: media.file.size,
-            mime_type: media.file.type,
-          });
-        
-        if (dbError) {
-          console.error('خطا در ذخیره اطلاعات مدیا:', dbError);
-          // Don't fail the upload, just log the error
-        } else {
-          console.log('رکورد مدیا در دیتابیس ذخیره شد');
-        }
-      }
-      
-      setFilePartial(media.id, { status: 'done', storagePath, remoteUrl: publicData.publicUrl, uploadProgress: 100 });
-      
-      toast({ title: 'موفق', description: 'فایل با موفقیت آپلود شد', variant: 'default' });
-    } catch (e: any) {
-      console.error('خطای غیرمنتظره در آپلود:', e);
-      setFilePartial(media.id, { status: 'error', uploadProgress: 0 });
-      toast({ 
-        title: 'خطای غیرمنتظره', 
-        description: e?.message || 'مشکلی در آپلود فایل پیش آمد. لطفاً دوباره تلاش کنید.', 
-        variant: 'destructive' 
-      });
+  // Cancel upload function
+  const cancelUpload = useCallback((id: string) => {
+    const target = files.find(f => f.id === id);
+    if (target?.xhr) {
+      target.xhr.abort();
     }
+    setFilePartial(id, { status: 'cancelled', uploadProgress: 0, xhr: undefined });
+    toast({ title: 'لغو شد', description: 'آپلود فایل لغو شد' });
+  }, [files, toast]);
+
+  // Upload to storage with REAL progress tracking using XMLHttpRequest
+  const uploadToStorage = async (media: MediaFile): Promise<void> => {
+    return new Promise(async (resolve) => {
+      try {
+        const { data: auth, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !auth?.user) {
+          console.error('خطای احراز هویت:', authError);
+          toast({ 
+            title: 'خطا در احراز هویت', 
+            description: 'لطفاً دوباره وارد سیستم شوید.', 
+            variant: 'destructive' 
+          });
+          setFilePartial(media.id, { status: 'error' });
+          resolve();
+          return;
+        }
+
+        const user = auth.user;
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          toast({ 
+            title: 'خطا در احراز هویت', 
+            description: 'لطفاً دوباره وارد سیستم شوید.', 
+            variant: 'destructive' 
+          });
+          setFilePartial(media.id, { status: 'error' });
+          resolve();
+          return;
+        }
+
+        const extFromName = media.file.name.split('.').pop() || '';
+        const safeName = media.file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`;
+        const storagePath = `${user.id}/${fileName}`;
+
+        console.log('در حال آپلود فایل با XHR:', { fileName, storagePath, fileSize: media.file.size, fileType: media.file.type });
+
+        const xhr = new XMLHttpRequest();
+        
+        // Save XHR reference for cancellation
+        setFilePartial(media.id, { status: 'uploading', uploadProgress: 0, xhr });
+
+        // Real progress tracking
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentage = Math.round((event.loaded / event.total) * 100);
+            setFilePartial(media.id, { uploadProgress: percentage });
+          }
+        });
+
+        xhr.addEventListener('load', async () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            console.log('آپلود موفق');
+            
+            const { data: publicData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(storagePath);
+            
+            // If projectId is provided, save record to project_media table
+            if (projectId) {
+              const { error: dbError } = await supabase
+                .from('project_media')
+                .insert({
+                  project_id: projectId,
+                  user_id: user.id,
+                  file_path: storagePath,
+                  file_type: media.type,
+                  file_size: media.file.size,
+                  mime_type: media.file.type,
+                });
+              
+              if (dbError) {
+                console.error('خطا در ذخیره اطلاعات مدیا:', dbError);
+              }
+            }
+            
+            setFilePartial(media.id, { 
+              status: 'done', 
+              storagePath, 
+              remoteUrl: publicData.publicUrl, 
+              uploadProgress: 100,
+              xhr: undefined 
+            });
+            
+            toast({ title: 'موفق', description: 'فایل با موفقیت آپلود شد' });
+          } else {
+            console.error('خطای آپلود:', xhr.status, xhr.statusText);
+            setFilePartial(media.id, { status: 'error', uploadProgress: 0, xhr: undefined });
+            
+            let errorMessage = 'خطا در آپلود فایل';
+            if (xhr.status === 413) {
+              errorMessage = 'حجم فایل بیش از حد مجاز است';
+            } else if (xhr.status === 401 || xhr.status === 403) {
+              errorMessage = 'شما اجازه آپلود فایل را ندارید';
+            }
+            
+            toast({ title: 'خطا در آپلود', description: errorMessage, variant: 'destructive' });
+          }
+          resolve();
+        });
+
+        xhr.addEventListener('error', () => {
+          console.error('خطای شبکه در آپلود');
+          setFilePartial(media.id, { status: 'error', uploadProgress: 0, xhr: undefined });
+          toast({ title: 'خطای شبکه', description: 'مشکلی در اتصال به سرور پیش آمد', variant: 'destructive' });
+          resolve();
+        });
+
+        xhr.addEventListener('abort', () => {
+          console.log('آپلود لغو شد');
+          setFilePartial(media.id, { status: 'cancelled', uploadProgress: 0, xhr: undefined });
+          resolve();
+        });
+
+        // Use Supabase storage upload endpoint directly
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        xhr.open('POST', `${supabaseUrl}/storage/v1/object/${MEDIA_BUCKET}/${storagePath}`);
+        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+        xhr.setRequestHeader('x-upsert', 'true');
+        xhr.send(media.file);
+
+      } catch (e: any) {
+        console.error('خطای غیرمنتظره در آپلود:', e);
+        setFilePartial(media.id, { status: 'error', uploadProgress: 0, xhr: undefined });
+        toast({ 
+          title: 'خطای غیرمنتظره', 
+          description: e?.message || 'مشکلی در آپلود فایل پیش آمد', 
+          variant: 'destructive' 
+        });
+        resolve();
+      }
+    });
   };
 
   // Extract thumbnail from video beginning
@@ -419,6 +439,16 @@ export function MediaUploader({
                       <span className="text-white text-sm font-semibold">
                         در حال آپلود: {Math.round(file.uploadProgress || 0)}%
                       </span>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => cancelUpload(file.id)}
+                        className="mt-2"
+                      >
+                        <XCircle className="w-4 h-4 ml-1" />
+                        لغو آپلود
+                      </Button>
                     </div>
                   )}
 
@@ -517,6 +547,16 @@ export function MediaUploader({
                       <span className="text-white text-base font-semibold">
                         در حال آپلود: {Math.round(file.uploadProgress || 0)}%
                       </span>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => cancelUpload(file.id)}
+                        className="mt-2"
+                      >
+                        <XCircle className="w-4 h-4 ml-1" />
+                        لغو آپلود
+                      </Button>
                     </div>
                   )}
 
