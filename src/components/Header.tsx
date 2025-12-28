@@ -19,19 +19,20 @@ const Header = memo(() => {
   const { toast } = useToast();
   const { isWindows, zoomIn, zoomOut, resetZoom, zoomPercentage } = useZoom();
   
-  // نمایش نام کاربر فقط وقتی لاگین شده
-  const displayName = user?.user_metadata?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
-  
   const [contactDropdownOpenMobile, setContactDropdownOpenMobile] = useState(false);
   const [contactDropdownOpenDesktop, setContactDropdownOpenDesktop] = useState(false);
   const [profileDropdownOpenMobile, setProfileDropdownOpenMobile] = useState(false);
   const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
   
   // Scroll hide functionality
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
+  
+  // نمایش نام کاربر از پروفایل یا متادیتا
+  const displayName = profileName || user?.user_metadata?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
 
 
   const handleScroll = useCallback(() => {
@@ -62,27 +63,29 @@ const Header = memo(() => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
-  // Fetch user avatar and subscribe to changes
+  // Fetch user profile (avatar and name) and subscribe to changes
   useEffect(() => {
     if (!user?.id) {
       setAvatarUrl(null);
+      setProfileName(null);
       return;
     }
 
-    const fetchAvatar = async () => {
+    const fetchProfile = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('avatar_url')
+        .select('avatar_url, full_name')
         .eq('user_id', user.id)
         .maybeSingle();
       setAvatarUrl(data?.avatar_url || null);
+      setProfileName(data?.full_name || null);
     };
     
-    fetchAvatar();
+    fetchProfile();
 
     // Subscribe to realtime changes on the profiles table
     const channel = supabase
-      .channel(`profile-avatar-${user.id}`)
+      .channel(`profile-header-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -92,8 +95,13 @@ const Header = memo(() => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          if (payload.new && 'avatar_url' in payload.new) {
-            setAvatarUrl(payload.new.avatar_url as string | null);
+          if (payload.new) {
+            if ('avatar_url' in payload.new) {
+              setAvatarUrl(payload.new.avatar_url as string | null);
+            }
+            if ('full_name' in payload.new) {
+              setProfileName(payload.new.full_name as string | null);
+            }
           }
         }
       )
