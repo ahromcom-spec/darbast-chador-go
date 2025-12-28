@@ -199,16 +199,41 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       // Request microphone access
       console.log('Requesting microphone access...');
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       });
       
       console.log('Microphone access granted');
       streamRef.current = stream;
       
-      // Use default format - don't specify mimeType for maximum compatibility
-      console.log('Creating MediaRecorder...');
-      const mediaRecorder = new MediaRecorder(stream);
-      console.log('MediaRecorder created with mimeType:', mediaRecorder.mimeType);
+      // Choose the best supported format for maximum compatibility
+      let mimeType = '';
+      const mimeTypes = [
+        'audio/mp4',       // Best for iOS/Safari
+        'audio/webm;codecs=opus',  // Best for Chrome/Firefox
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+        ''  // Let browser decide
+      ];
+      
+      for (const type of mimeTypes) {
+        if (!type || MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          console.log('Selected mimeType:', mimeType || 'default');
+          break;
+        }
+      }
+      
+      console.log('Creating MediaRecorder with mimeType:', mimeType || 'browser default');
+      const mediaRecorder = mimeType 
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+      
+      console.log('MediaRecorder created, actual mimeType:', mediaRecorder.mimeType);
       
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -378,7 +403,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   }, [user, orderId, isStaff, toast]);
 
-  // Play audio message - always use blob download for better compatibility
+  // Play audio message - use signed URL for better compatibility
   const playAudio = useCallback(async (messageId: string, audioPath: string) => {
     console.log('Play audio requested:', messageId, audioPath);
     
@@ -386,6 +411,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     if (playingAudioId === messageId) {
       if (audioElementRef.current) {
         audioElementRef.current.pause();
+        audioElementRef.current.currentTime = 0;
         audioElementRef.current = null;
       }
       setPlayingAudioId(null);
@@ -395,6 +421,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     // Stop any currently playing audio
     if (audioElementRef.current) {
       audioElementRef.current.pause();
+      audioElementRef.current.currentTime = 0;
       audioElementRef.current = null;
     }
 
@@ -402,72 +429,28 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     setPlayingAudioId(null);
 
     try {
-      // Download file as blob for better browser compatibility
-      console.log('Downloading audio blob:', audioPath);
-      const { data: blobData, error: downloadError } = await supabase.storage
+      // Method 1: Try using signed URL (works better on mobile)
+      console.log('Getting signed URL for:', audioPath);
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('voice-messages')
-        .download(audioPath);
+        .createSignedUrl(audioPath, 3600); // 1 hour expiry
 
-      if (downloadError || !blobData) {
-        console.error('Download error:', downloadError);
-        throw new Error('فایل صوتی دانلود نشد');
-      }
-
-      console.log('Blob downloaded, size:', blobData.size, 'type:', blobData.type);
-
-      // Determine correct mime type from file extension if blob type is empty
-      let mimeType = blobData.type;
-      if (!mimeType || mimeType === 'application/octet-stream') {
-        const ext = audioPath.split('.').pop()?.toLowerCase();
-        switch (ext) {
-          case 'ogg': mimeType = 'audio/ogg'; break;
-          case 'webm': mimeType = 'audio/webm'; break;
-          case 'mp4': mimeType = 'audio/mp4'; break;
-          case 'mp3': mimeType = 'audio/mpeg'; break;
-          case 'aac': mimeType = 'audio/aac'; break;
-          default: mimeType = 'audio/webm';
+      if (signedError) {
+        console.error('Signed URL error:', signedError);
+        // Fallback to public URL
+        const { data: publicData } = supabase.storage
+          .from('voice-messages')
+          .getPublicUrl(audioPath);
+        
+        if (!publicData?.publicUrl) {
+          throw new Error('آدرس فایل صوتی یافت نشد');
         }
-      }
-
-      // Create blob with proper mime type
-      const typedBlob = new Blob([blobData], { type: mimeType });
-      const objectUrl = URL.createObjectURL(typedBlob);
-      console.log('Created object URL with type:', mimeType);
-
-      const audio = new Audio();
-      audioElementRef.current = audio;
-
-      // Set up event handlers
-      audio.onended = () => {
-        console.log('Audio ended');
-        setPlayingAudioId(null);
-        URL.revokeObjectURL(objectUrl);
-        audioElementRef.current = null;
-      };
-
-      audio.onerror = (e) => {
-        console.error('Audio error:', audio.error?.code, audio.error?.message);
-        setLoadingAudioId(null);
-        setPlayingAudioId(null);
-        URL.revokeObjectURL(objectUrl);
-        toast({
-          title: 'خطا در پخش صدا',
-          description: 'فرمت صوتی توسط مرورگر پشتیبانی نمی‌شود',
-          variant: 'destructive'
-        });
-      };
-
-      audio.src = objectUrl;
-      
-      try {
-        await audio.play();
-        console.log('Playback started successfully');
-        setPlayingAudioId(messageId);
-        setLoadingAudioId(null);
-      } catch (playError: any) {
-        console.error('Play error:', playError);
-        URL.revokeObjectURL(objectUrl);
-        throw new Error('پخش صدا امکان‌پذیر نیست');
+        
+        await playAudioFromUrl(publicData.publicUrl, messageId);
+      } else if (signedData?.signedUrl) {
+        await playAudioFromUrl(signedData.signedUrl, messageId);
+      } else {
+        throw new Error('آدرس فایل صوتی یافت نشد');
       }
 
     } catch (error: any) {
@@ -481,6 +464,83 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       });
     }
   }, [playingAudioId, toast]);
+
+  // Helper function to play audio from URL
+  const playAudioFromUrl = useCallback(async (url: string, messageId: string) => {
+    console.log('Playing audio from URL:', url.substring(0, 100) + '...');
+    
+    const audio = new Audio();
+    audioElementRef.current = audio;
+    
+    // Configure for better mobile support
+    audio.preload = 'auto';
+    audio.crossOrigin = 'anonymous';
+
+    return new Promise<void>((resolve, reject) => {
+      // Set up event handlers before setting src
+      audio.oncanplaythrough = () => {
+        console.log('Audio can play through');
+        audio.play()
+          .then(() => {
+            console.log('Playback started successfully');
+            setPlayingAudioId(messageId);
+            setLoadingAudioId(null);
+            resolve();
+          })
+          .catch((playError) => {
+            console.error('Play error:', playError);
+            setLoadingAudioId(null);
+            setPlayingAudioId(null);
+            reject(new Error('پخش صدا امکان‌پذیر نیست. لطفاً روی صفحه کلیک کنید و دوباره تلاش کنید.'));
+          });
+      };
+
+      audio.onended = () => {
+        console.log('Audio ended');
+        setPlayingAudioId(null);
+        audioElementRef.current = null;
+      };
+
+      audio.onerror = (e) => {
+        const errorCode = audio.error?.code;
+        const errorMessage = audio.error?.message || 'Unknown error';
+        console.error('Audio error:', errorCode, errorMessage, e);
+        setLoadingAudioId(null);
+        setPlayingAudioId(null);
+        
+        let userMessage = 'فرمت صوتی پشتیبانی نمی‌شود';
+        if (errorCode === 4) {
+          userMessage = 'فرمت صوتی توسط مرورگر پشتیبانی نمی‌شود';
+        } else if (errorCode === 2) {
+          userMessage = 'خطا در دانلود فایل صوتی';
+        }
+        
+        reject(new Error(userMessage));
+      };
+
+      // Set timeout for loading
+      const timeout = setTimeout(() => {
+        if (loadingAudioId === messageId) {
+          console.error('Audio loading timeout');
+          setLoadingAudioId(null);
+          reject(new Error('زمان بارگذاری به پایان رسید'));
+        }
+      }, 15000);
+
+      audio.onloadstart = () => {
+        console.log('Audio loading started');
+      };
+
+      audio.onloadedmetadata = () => {
+        console.log('Audio metadata loaded, duration:', audio.duration);
+        clearTimeout(timeout);
+      };
+
+      // Set the source
+      audio.src = url;
+      audio.load();
+    });
+  }, [loadingAudioId]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
