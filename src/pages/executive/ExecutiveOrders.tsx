@@ -26,6 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
 import { OrderLocationEditor } from '@/components/locations/OrderLocationEditor';
+import { RentalStartDatePicker } from '@/components/orders/RentalStartDatePicker';
 
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 // IMPORTANT: pending_execution باید به status = 'pending_execution' در دیتابیس مپ شود
@@ -124,6 +125,7 @@ interface Order {
   executed_by?: string | null;
   approved_by?: string | null;
   subcategory_id?: string | null;
+  rental_start_date?: string | null;
   collection_request?: {
     requested_date: string | null;
     status: string;
@@ -240,7 +242,8 @@ export default function ExecutiveOrders() {
           location_lat,
           location_lng,
           location_confirmed_by_customer,
-          location_confirmed_at
+          location_confirmed_at,
+          rental_start_date
         `)
         .in('status', ['pending', 'approved', 'pending_execution', 'in_progress', 'completed', 'closed', 'rejected'])
         // فقط سفارشات غیر بایگانی را نمایش بده
@@ -334,6 +337,7 @@ export default function ExecutiveOrders() {
             executed_by: order.executed_by,
             approved_by: order.approved_by,
             subcategory_id: order.subcategory_id,
+            rental_start_date: order.rental_start_date,
             collection_request: collectionRequestData || null,
           } as Order;
         })
@@ -427,6 +431,33 @@ export default function ExecutiveOrders() {
         variant: 'destructive',
         title: 'خطا',
         description: 'شروع اجرا با خطا مواجه شد'
+      });
+    }
+  };
+
+  const handleRentalStartDateUpdate = async (orderId: string, date: string, orderCode: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({ 
+          rental_start_date: date
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ تاریخ شروع کرایه ثبت شد',
+        description: `تاریخ شروع کرایه سفارش ${orderCode} ثبت شد.`
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error updating rental start date:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در ثبت تاریخ شروع کرایه'
       });
     }
   };
@@ -1240,6 +1271,34 @@ export default function ExecutiveOrders() {
                     {order.execution_end_date && (
                       <p className="text-xs text-muted-foreground mt-1">
                         تا: {formatPersianDateTimeFull(order.execution_end_date)}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* نمایش تاریخ شروع کرایه داربست - فقط برای مراحل بعد از اجرا */}
+                {(order.execution_stage === 'order_executed' || 
+                  order.execution_stage === 'awaiting_payment' || 
+                  order.execution_stage === 'awaiting_collection' || 
+                  order.execution_stage === 'in_collection' || 
+                  order.execution_stage === 'collected' ||
+                  order.status === 'completed' || 
+                  order.status === 'closed') && (
+                  <div className={`p-3 rounded-lg border-2 ${order.rental_start_date ? 'bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-700' : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-700'}`}>
+                    <div className="flex items-center gap-2 text-sm mb-2">
+                      <Calendar className={`h-4 w-4 ${order.rental_start_date ? 'text-green-600' : 'text-amber-600'}`} />
+                      <span className={`font-medium ${order.rental_start_date ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200'}`}>
+                        تاریخ شروع کرایه داربست {order.rental_start_date ? '✓' : '(الزامی)'}
+                      </span>
+                    </div>
+                    <RentalStartDatePicker
+                      value={order.rental_start_date || undefined}
+                      onChange={(date) => handleRentalStartDateUpdate(order.id, date, order.code)}
+                      placeholder="انتخاب تاریخ شروع کرایه"
+                    />
+                    {order.rental_start_date && (
+                      <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                        ✓ تاریخ ثبت شده: {new Date(order.rental_start_date).toLocaleDateString('fa-IR')}
                       </p>
                     )}
                   </div>
