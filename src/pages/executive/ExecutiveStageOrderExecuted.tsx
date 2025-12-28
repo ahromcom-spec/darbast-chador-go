@@ -203,7 +203,7 @@ export default function ExecutiveStageOrderExecuted() {
     }
   };
 
-  const handleRentalStartDateUpdate = async (orderId: string, date: string, orderCode: string) => {
+  const handleRentalStartDateUpdate = async (orderId: string, date: string | null, orderCode: string) => {
     try {
       const { error } = await supabase
         .from('projects_v3')
@@ -215,8 +215,10 @@ export default function ExecutiveStageOrderExecuted() {
       if (error) throw error;
 
       toast({
-        title: '✓ تاریخ شروع کرایه ثبت شد',
-        description: `تاریخ شروع کرایه سفارش ${orderCode} ثبت شد.`
+        title: date ? '✓ تاریخ شروع کرایه ثبت شد' : '✓ تاریخ شروع کرایه پاک شد',
+        description: date 
+          ? `تاریخ شروع کرایه سفارش ${orderCode} ثبت شد.`
+          : `تاریخ شروع کرایه سفارش ${orderCode} پاک شد.`
       });
 
       fetchOrders();
@@ -371,6 +373,7 @@ export default function ExecutiveStageOrderExecuted() {
                     value={order.rental_start_date || undefined}
                     onChange={(date) => handleRentalStartDateUpdate(order.id, date, order.code)}
                     placeholder="انتخاب تاریخ شروع کرایه"
+                    allowClear={true}
                   />
                   {order.rental_start_date && (
                     <p className="text-xs text-green-600 dark:text-green-400 mt-2">
