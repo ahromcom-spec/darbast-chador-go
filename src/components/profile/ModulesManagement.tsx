@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2, FolderPlus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2, FolderPlus, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -114,6 +114,8 @@ export function ModulesManagement() {
   const [saving, setSaving] = useState(false);
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [selectedModule, setSelectedModule] = useState<string>(AVAILABLE_MODULES[0].key);
+  const [availableSearch, setAvailableSearch] = useState('');
+  const [assignedSearch, setAssignedSearch] = useState('');
 
   // Memoize initial modules to prevent infinite loop
   const initialAvailableModules = useMemo(() => convertModulesToItems(AVAILABLE_MODULES), []);
@@ -383,8 +385,45 @@ export function ModulesManagement() {
               <p className="text-xs text-muted-foreground">
                 برای مرتب‌سازی، ماژول‌ها را بکشید و رها کنید. با انداختن ماژول روی ماژول دیگر، پوشه ایجاد می‌شود.
               </p>
+              {/* Search for available modules */}
+              <div className="relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="جستجو در ماژول‌های موجود..."
+                  value={availableSearch}
+                  onChange={(e) => setAvailableSearch(e.target.value)}
+                  className="pr-10"
+                />
+                {availableSearch && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={() => setAvailableSearch('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <div className="space-y-2">
-                {availableHierarchy.items.map((item) => (
+                {availableHierarchy.items
+                  .filter((item) => {
+                    if (!availableSearch) return true;
+                    const searchLower = availableSearch.toLowerCase();
+                    const itemName = (availableHierarchy.customNames[item.key]?.name || item.name).toLowerCase();
+                    const itemDesc = (availableHierarchy.customNames[item.key]?.description || item.description || '').toLowerCase();
+                    if (itemName.includes(searchLower) || itemDesc.includes(searchLower)) return true;
+                    // Also check children for folders
+                    if (item.children) {
+                      return item.children.some(child => {
+                        const childName = (availableHierarchy.customNames[child.key]?.name || child.name).toLowerCase();
+                        const childDesc = (availableHierarchy.customNames[child.key]?.description || child.description || '').toLowerCase();
+                        return childName.includes(searchLower) || childDesc.includes(searchLower);
+                      });
+                    }
+                    return false;
+                  })
+                  .map((item) => (
                   <DraggableModuleItem
                     key={item.id}
                     item={item}
@@ -398,6 +437,24 @@ export function ModulesManagement() {
                     customNames={availableHierarchy.customNames}
                   />
                 ))}
+                {availableSearch && availableHierarchy.items.filter((item) => {
+                  const searchLower = availableSearch.toLowerCase();
+                  const itemName = (availableHierarchy.customNames[item.key]?.name || item.name).toLowerCase();
+                  const itemDesc = (availableHierarchy.customNames[item.key]?.description || item.description || '').toLowerCase();
+                  if (itemName.includes(searchLower) || itemDesc.includes(searchLower)) return true;
+                  if (item.children) {
+                    return item.children.some(child => {
+                      const childName = (availableHierarchy.customNames[child.key]?.name || child.name).toLowerCase();
+                      const childDesc = (availableHierarchy.customNames[child.key]?.description || child.description || '').toLowerCase();
+                      return childName.includes(searchLower) || childDesc.includes(searchLower);
+                    });
+                  }
+                  return false;
+                }).length === 0 && (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    نتیجه‌ای یافت نشد
+                  </div>
+                )}
               </div>
             </div>
 
@@ -443,7 +500,7 @@ export function ModulesManagement() {
               </div>
             </div>
 
-            {/* Current Assignments with Drag & Drop */}
+            {/* Current Assignments */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-sm text-muted-foreground">
@@ -456,6 +513,29 @@ export function ModulesManagement() {
                 </h4>
               </div>
               
+              {/* Search for assigned modules */}
+              {assignments.length > 0 && (
+                <div className="relative">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="جستجو در اختصاص‌ها (نام ماژول، شماره تلفن، نام کاربر)..."
+                    value={assignedSearch}
+                    onChange={(e) => setAssignedSearch(e.target.value)}
+                    className="pr-10"
+                  />
+                  {assignedSearch && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                      onClick={() => setAssignedSearch('')}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              )}
+              
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -466,7 +546,17 @@ export function ModulesManagement() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {assignments.map((assignment) => {
+                  {assignments
+                    .filter((assignment) => {
+                      if (!assignedSearch) return true;
+                      const searchLower = assignedSearch.toLowerCase();
+                      return (
+                        assignment.module_name.toLowerCase().includes(searchLower) ||
+                        assignment.assigned_phone_number.includes(assignedSearch) ||
+                        (assignment.assigned_user_name && assignment.assigned_user_name.toLowerCase().includes(searchLower))
+                      );
+                    })
+                    .map((assignment) => {
                     const moduleInfo = getModuleInfo(assignment.module_key);
                     return (
                       <div
@@ -504,6 +594,18 @@ export function ModulesManagement() {
                       </div>
                     );
                   })}
+                  {assignedSearch && assignments.filter((assignment) => {
+                    const searchLower = assignedSearch.toLowerCase();
+                    return (
+                      assignment.module_name.toLowerCase().includes(searchLower) ||
+                      assignment.assigned_phone_number.includes(assignedSearch) ||
+                      (assignment.assigned_user_name && assignment.assigned_user_name.toLowerCase().includes(searchLower))
+                    );
+                  }).length === 0 && (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      نتیجه‌ای یافت نشد
+                    </div>
+                  )}
                 </div>
               )}
             </div>
