@@ -2046,7 +2046,7 @@ export default function OrderDetail() {
                 })()}
 
                 {/* بلوک تاریخ‌های مهم - کادر جداگانه */}
-                {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime || parsedNotes?.rental_start_date || parsedNotes?.rental_end_date || order.rental_start_date) && (
+                {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime || parsedNotes?.rental_start_date || parsedNotes?.rental_end_date || order.rental_start_date || order.customer_completion_date) && (
                   <section className="rounded-2xl border-2 border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 p-4 space-y-3">
                     <h3 className="font-semibold flex items-center gap-2">
                       <Calendar className="h-5 w-5 text-blue-600" />
@@ -2090,6 +2090,15 @@ export default function OrderDetail() {
                           <span className="text-xs text-green-600 dark:text-green-400 block mb-1">تاریخ شروع کرایه داربست</span>
                           <span className="font-bold text-base text-foreground">
                             {formatPersianDate(order.rental_start_date)}
+                          </span>
+                        </div>
+                      )}
+                      {/* تاریخ جمع‌آوری - از دیتابیس */}
+                      {order.customer_completion_date && (
+                        <div className="p-4 bg-white dark:bg-amber-900/30 rounded-xl border border-amber-200 dark:border-amber-700 shadow-sm">
+                          <span className="text-xs text-amber-600 dark:text-amber-400 block mb-1">تاریخ جمع‌آوری داربست</span>
+                          <span className="font-bold text-base text-foreground">
+                            {formatPersianDate(order.customer_completion_date)}
                           </span>
                         </div>
                       )}

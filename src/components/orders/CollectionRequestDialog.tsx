@@ -273,6 +273,7 @@ export function CollectionRequestDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Update collection request
       const { error } = await supabase
         .from('collection_requests')
         .update({
@@ -285,6 +286,20 @@ export function CollectionRequestDialog({
 
       if (error) throw error;
 
+      // Update order execution_stage to awaiting_collection and save collection date
+      const { error: orderError } = await supabase
+        .from('projects_v3')
+        .update({
+          execution_stage: 'awaiting_collection',
+          execution_stage_updated_at: new Date().toISOString(),
+          customer_completion_date: confirmedDate, // Save collection date to order
+        })
+        .eq('id', orderId);
+
+      if (orderError) {
+        console.error('Error updating order stage:', orderError);
+      }
+
       setExistingRequest({
         ...existingRequest,
         status: 'approved',
@@ -294,7 +309,7 @@ export function CollectionRequestDialog({
 
       toast({
         title: '✓ موفق',
-        description: 'درخواست جمع‌آوری تایید شد',
+        description: 'درخواست جمع‌آوری تایید شد و سفارش به مرحله در انتظار جمع‌آوری منتقل شد',
       });
     } catch (error: any) {
       console.error('Error approving request:', error);
@@ -430,6 +445,18 @@ export function CollectionRequestDialog({
         .eq('id', existingRequest.id);
 
       if (error) throw error;
+
+      // Also update the collection date in the order
+      const { error: orderError } = await supabase
+        .from('projects_v3')
+        .update({
+          customer_completion_date: confirmedDate,
+        })
+        .eq('id', orderId);
+
+      if (orderError) {
+        console.error('Error updating order collection date:', orderError);
+      }
 
       setExistingRequest({
         ...existingRequest,
