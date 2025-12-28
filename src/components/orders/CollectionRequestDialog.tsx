@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Calendar,
   XCircle,
+  Trash2,
 } from "lucide-react";
 import { formatPersianDateTime } from "@/lib/dateUtils";
 
@@ -530,6 +531,55 @@ export function CollectionRequestDialog({
     }
   };
 
+  // Manager clears the collection date
+  const handleClearCollectionDate = async () => {
+    if (!existingRequest || !isManager) return;
+
+    setUpdatingDate(true);
+    try {
+      const { error } = await supabase
+        .from('collection_requests')
+        .update({
+          requested_date: null,
+        })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      // Also clear the collection date in the order
+      const { error: orderError } = await supabase
+        .from('projects_v3')
+        .update({
+          customer_completion_date: null,
+        })
+        .eq('id', orderId);
+
+      if (orderError) {
+        console.error('Error clearing order collection date:', orderError);
+      }
+
+      setExistingRequest({
+        ...existingRequest,
+        requested_date: null,
+      });
+      setConfirmedDate('');
+
+      toast({
+        title: '✓ موفق',
+        description: 'تاریخ جمع‌آوری پاک شد',
+      });
+    } catch (error: any) {
+      console.error('Error clearing date:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در پاک کردن تاریخ',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingDate(false);
+    }
+  };
+
   // Customer cancels their pending request
   const handleCancelRequest = async () => {
     if (!existingRequest || isManager || existingRequest.status !== 'pending') return;
@@ -730,15 +780,27 @@ export function CollectionRequestDialog({
                       <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">در حال ثبت تاریخ...</span>
                     </div>
                   ) : (
-                    <Button
-                      onClick={handleUpdateDate}
-                      disabled={!confirmedDate || confirmedDate === existingRequest.requested_date}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <Calendar className="h-4 w-4 mr-2" />
-                      به‌روزرسانی تاریخ
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleUpdateDate}
+                        disabled={!confirmedDate || confirmedDate === existingRequest.requested_date}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <Calendar className="h-4 w-4 mr-2" />
+                        به‌روزرسانی تاریخ
+                      </Button>
+                      {existingRequest.requested_date && (
+                        <Button
+                          onClick={handleClearCollectionDate}
+                          variant="outline"
+                          className="text-destructive hover:bg-destructive/10"
+                          title="پاک کردن تاریخ"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
                 <Button
@@ -774,15 +836,27 @@ export function CollectionRequestDialog({
                       <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">در حال ثبت تاریخ...</span>
                     </div>
                   ) : (
-                    <Button
-                      onClick={handleUpdateDate}
-                      disabled={!confirmedDate || confirmedDate === existingRequest.requested_date}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <Calendar className="h-4 w-4 mr-2" />
-                      به‌روزرسانی تاریخ
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleUpdateDate}
+                        disabled={!confirmedDate || confirmedDate === existingRequest.requested_date}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <Calendar className="h-4 w-4 mr-2" />
+                        به‌روزرسانی تاریخ
+                      </Button>
+                      {existingRequest.requested_date && (
+                        <Button
+                          onClick={handleClearCollectionDate}
+                          variant="outline"
+                          className="text-destructive hover:bg-destructive/10"
+                          title="پاک کردن تاریخ"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
