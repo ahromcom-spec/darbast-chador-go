@@ -47,6 +47,7 @@ const HRManagementModule = lazy(() => import("@/pages/ceo/HRManagementModule"));
 const PersonnelAccountingModule = lazy(() => import("@/pages/ceo/PersonnelAccountingModule"));
 const SiteRegistrationModule = lazy(() => import("@/pages/ceo/SiteRegistrationModule"));
 const AccountingModule = lazy(() => import("@/pages/ceo/AccountingModule"));
+const AllCompanyOrdersModule = lazy(() => import("@/pages/ceo/AllCompanyOrdersModule"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -346,6 +347,12 @@ const App = () => {
               <Route path="/comprehensive-accounting" element={
                 <ProtectedRoute>
                   <AccountingModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر جداگانه برای ماژول کل سفارشات شرکت اهرم */}
+              <Route path="/all-company-orders" element={
+                <ProtectedRoute>
+                  <AllCompanyOrdersModule />
                 </ProtectedRoute>
               } />
               <Route path="/executive" element={
