@@ -16,8 +16,8 @@ import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
-import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
+import { RentalStartDatePicker } from '@/components/orders/RentalStartDatePicker';
 
 interface Order {
   id: string;
@@ -365,11 +365,10 @@ export default function ExecutiveStageOrderExecuted() {
                       ۱. تاریخ شروع کرایه داربست {order.rental_start_date ? '✓' : '(الزامی)'}
                     </span>
                   </div>
-                  <PersianDatePicker
+                  <RentalStartDatePicker
                     value={order.rental_start_date || undefined}
                     onChange={(date) => handleRentalStartDateUpdate(order.id, date, order.code)}
                     placeholder="انتخاب تاریخ شروع کرایه"
-                    timeMode="none"
                   />
                   {order.rental_start_date && (
                     <p className="text-xs text-green-600 dark:text-green-400 mt-2">
