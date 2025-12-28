@@ -64,6 +64,7 @@ interface ComprehensiveScaffoldingFormProps {
   prefilledAddress?: string;
   prefilledProvince?: string;
   prefilledDistrict?: string;
+  isManagerEdit?: boolean; // وقتی مدیر در حال ویرایش سفارش است
 }
 
 export default function ComprehensiveScaffoldingForm({
@@ -80,6 +81,7 @@ export default function ComprehensiveScaffoldingForm({
   prefilledAddress = '',
   prefilledProvince = '',
   prefilledDistrict = '',
+  isManagerEdit = false,
 }: ComprehensiveScaffoldingFormProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -207,6 +209,13 @@ export default function ComprehensiveScaffoldingForm({
   
   // State برای ثبت سفارش برای دیگری
   const [recipientData, setRecipientData] = useState<RecipientData | null>(null);
+  
+  // State برای override قیمت توسط مدیر
+  const [manualPriceOverride, setManualPriceOverride] = useState<string>('');
+  const [useManualPrice, setUseManualPrice] = useState(false);
+  
+  // دریافت isManagerEdit از query param نیز
+  const isManagerEditMode = isManagerEdit || searchParams.get('managerEdit') === 'true';
 
   // Fetch order data if editing from query parameter
   useEffect(() => {
@@ -317,6 +326,11 @@ export default function ComprehensiveScaffoldingForm({
         }
         if (data.detailed_address) {
           setDetailedAddress(data.detailed_address);
+        }
+        
+        // Set existing price for manager override
+        if (data.payment_amount) {
+          setManualPriceOverride(data.payment_amount.toString());
         }
       }
     } catch (error) {
@@ -1122,6 +1136,11 @@ export default function ComprehensiveScaffoldingForm({
         }
       }
 
+      // محاسبه قیمت نهایی - اگر مدیر override کرده باشد، از آن استفاده کن
+      const finalPrice = (isManagerEditMode && useManualPrice && manualPriceOverride) 
+        ? parseFloat(manualPriceOverride) 
+        : priceData.total;
+
       // Check if editing or creating new order
       if (editOrderId) {
         // Update existing order
@@ -1130,6 +1149,7 @@ export default function ComprehensiveScaffoldingForm({
           .update({
             address: sanitizedAddress,
             detailed_address: sanitizedAddress,
+            payment_amount: finalPrice, // استفاده از قیمت نهایی (override یا محاسبه شده)
             notes: {
               service_type: activeService,
               dimensions: dimensions.map(d => ({
@@ -1167,10 +1187,11 @@ export default function ComprehensiveScaffoldingForm({
               locationPurpose,
               totalArea: calculateTotalArea(),
               estimated_price: priceData.total,
+              manual_price_override: (isManagerEditMode && useManualPrice) ? parseFloat(manualPriceOverride) : undefined,
               price_breakdown: priceData.breakdown,
               installationDateTime,
-              customerName: user?.user_metadata?.full_name || '',
-              phoneNumber: user?.phone || '',
+              customerName: orderData?.customer_name || user?.user_metadata?.full_name || '',
+              phoneNumber: orderData?.customer_phone || user?.phone || '',
             } as any
           })
           .eq('id', editOrderId);
@@ -1179,7 +1200,7 @@ export default function ComprehensiveScaffoldingForm({
 
         toast({ 
           title: 'بروزرسانی شد', 
-          description: 'سفارش شما با موفقیت ویرایش شد' 
+          description: 'سفارش با موفقیت ویرایش شد' 
         });
 
         // آپلود فایل‌ها در پس‌زمینه (بدون انتظار)
@@ -2035,7 +2056,7 @@ export default function ComprehensiveScaffoldingForm({
             ))}
             <div className="pt-3 border-t">
               <div className="text-xl font-bold">
-                قیمت نهایی: <span className="text-primary">{priceData.total.toLocaleString('fa-IR')}</span> تومان
+                قیمت محاسبه شده: <span className="text-primary">{priceData.total.toLocaleString('fa-IR')}</span> تومان
               </div>
               {priceData.pricePerMeter && (
                 <div className="text-sm text-slate-700 dark:text-slate-300 mt-1">
@@ -2043,6 +2064,49 @@ export default function ComprehensiveScaffoldingForm({
                 </div>
               )}
             </div>
+            
+            {/* بخش تعیین قیمت دستی برای مدیر */}
+            {isManagerEditMode && (
+              <div className="pt-4 border-t border-amber-300 mt-4">
+                <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="use-manual-price"
+                      checked={useManualPrice}
+                      onCheckedChange={(checked) => setUseManualPrice(checked as boolean)}
+                    />
+                    <Label htmlFor="use-manual-price" className="text-amber-800 dark:text-amber-200 font-semibold cursor-pointer">
+                      تعیین قیمت دستی (متفاوت از قیمت محاسبه شده)
+                    </Label>
+                  </div>
+                  
+                  {useManualPrice && (
+                    <div className="space-y-2">
+                      <Label className="text-sm text-amber-700 dark:text-amber-300">قیمت دستی (تومان)</Label>
+                      <Input
+                        type="number"
+                        value={manualPriceOverride}
+                        onChange={(e) => setManualPriceOverride(e.target.value)}
+                        placeholder="قیمت را وارد کنید"
+                        className="text-lg font-bold"
+                        dir="ltr"
+                      />
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        این قیمت جایگزین قیمت محاسبه شده خواهد شد
+                      </p>
+                    </div>
+                  )}
+                  
+                  {useManualPrice && manualPriceOverride && (
+                    <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3 mt-2">
+                      <div className="text-lg font-bold text-green-700 dark:text-green-400">
+                        قیمت نهایی: {parseFloat(manualPriceOverride).toLocaleString('fa-IR')} تومان
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
