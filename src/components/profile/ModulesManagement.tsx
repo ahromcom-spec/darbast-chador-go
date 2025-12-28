@@ -299,6 +299,20 @@ export function ModulesManagement() {
     availableHierarchy.setItems(prev => [newFolder, ...prev]);
   };
 
+  // Duplicate a module (copy with new id/key)
+  const handleDuplicateModule = (item: ModuleItem) => {
+    const timestamp = Date.now();
+    const newModule: ModuleItem = {
+      ...item,
+      id: `custom-${timestamp}`,
+      key: `custom-${timestamp}`,
+      name: `${item.name} (کپی)`,
+      description: item.description,
+    };
+    availableHierarchy.setItems(prev => [newModule, ...prev]);
+    toast.success('ماژول کپی شد. می‌توانید آن را ویرایش کنید.');
+  };
+
   const handleCreateAssignedFolder = () => {
     const newFolder: ModuleItem = {
       id: `assigned-folder-${Date.now()}`,
@@ -467,7 +481,9 @@ export function ModulesManagement() {
                     onToggleFolder={availableHierarchy.toggleFolder}
                     onEditItem={availableHierarchy.editItem}
                     onNavigate={(href) => navigate(href)}
+                    onDuplicate={handleDuplicateModule}
                     customNames={availableHierarchy.customNames}
+                    showDuplicateButton={true}
                   />
                 ))}
                 {(availableSearch || availableTypeFilter !== 'all') && availableHierarchy.items.filter((item) => {
