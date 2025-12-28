@@ -36,6 +36,7 @@ interface Order {
   rental_start_date: string | null;
   customer_completion_date: string | null;
   notes: any;
+  total_price: number | null;
   collection_request_date?: string | null;
 }
 
@@ -100,6 +101,7 @@ export default function ExecutiveStageOrderExecuted() {
           rental_start_date,
           customer_completion_date,
           notes,
+          total_price,
           customer_id
         `)
         .eq('execution_stage', 'order_executed')
@@ -152,6 +154,7 @@ export default function ExecutiveStageOrderExecuted() {
             rental_start_date: order.rental_start_date,
             customer_completion_date: order.customer_completion_date,
             notes: order.notes,
+            total_price: order.total_price,
             customer_id: order.customer_id,
             customer_name: customerName,
             customer_phone: customerPhone,
@@ -580,6 +583,8 @@ export default function ExecutiveStageOrderExecuted() {
           customerId={selectedOrder.customer_id}
           rentalStartDate={selectedOrder.rental_start_date}
           originalPrice={(() => {
+            // اولویت: total_price از دیتابیس، سپس قیمت از notes
+            if (selectedOrder.total_price) return selectedOrder.total_price;
             try {
               const notes = typeof selectedOrder.notes === 'string' ? JSON.parse(selectedOrder.notes) : selectedOrder.notes;
               return notes?.estimated_price || notes?.estimatedPrice || 0;
