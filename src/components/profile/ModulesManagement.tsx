@@ -335,25 +335,6 @@ export function ModulesManagement() {
     initialModules: assignedModulesAsItems,
   });
 
-  // Update assigned hierarchy when assignments change
-  useEffect(() => {
-    if (assignedHierarchy.isLoaded && assignedModulesAsItems.length > 0) {
-      // Only update if there are new assignments not in hierarchy
-      const currentIds = new Set<string>();
-      const collectIds = (items: ModuleItem[]) => {
-        items.forEach(item => {
-          currentIds.add(item.id);
-          if (item.children) collectIds(item.children);
-        });
-      };
-      collectIds(assignedHierarchy.items);
-      
-      const newAssignments = assignedModulesAsItems.filter(a => !currentIds.has(a.id));
-      if (newAssignments.length > 0) {
-        assignedHierarchy.setItems(prev => [...prev, ...newAssignments]);
-      }
-    }
-  }, [assignedModulesAsItems, assignedHierarchy.isLoaded]);
 
   return (
     <Card className="border-2 border-amber-500/30 shadow-md">
