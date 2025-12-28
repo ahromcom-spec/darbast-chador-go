@@ -755,6 +755,8 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
             variant="outline" 
             className="gap-2"
             onClick={() => setCollectionDialogOpen(true)}
+            disabled={!order.rental_start_date || !order.customer_completion_date}
+            title={!order.rental_start_date ? 'ابتدا تاریخ شروع کرایه را ثبت کنید' : !order.customer_completion_date ? 'ابتدا تاریخ جمع‌آوری را ثبت کنید' : ''}
           >
             <Calendar className="h-4 w-4" />
             درخواست جمع‌آوری

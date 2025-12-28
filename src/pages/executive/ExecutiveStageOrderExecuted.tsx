@@ -31,6 +31,7 @@ interface Order {
   execution_end_date: string | null;
   execution_stage: string | null;
   rental_start_date: string | null;
+  customer_completion_date: string | null;
   notes: any;
 }
 
@@ -90,6 +91,7 @@ export default function ExecutiveStageOrderExecuted() {
           execution_end_date,
           execution_stage,
           rental_start_date,
+          customer_completion_date,
           notes,
           customer_id
         `)
@@ -131,6 +133,7 @@ export default function ExecutiveStageOrderExecuted() {
             execution_end_date: order.execution_end_date,
             execution_stage: order.execution_stage,
             rental_start_date: order.rental_start_date,
+            customer_completion_date: order.customer_completion_date,
             notes: order.notes,
             customer_name: customerName,
             customer_phone: customerPhone
@@ -398,7 +401,8 @@ export default function ExecutiveStageOrderExecuted() {
                 execution_start_date: selectedOrder.execution_start_date,
                 execution_end_date: selectedOrder.execution_end_date,
                 execution_stage: selectedOrder.execution_stage,
-                rental_start_date: selectedOrder.rental_start_date
+                rental_start_date: selectedOrder.rental_start_date,
+                customer_completion_date: selectedOrder.customer_completion_date
               }}
               onUpdate={fetchOrders}
             />
