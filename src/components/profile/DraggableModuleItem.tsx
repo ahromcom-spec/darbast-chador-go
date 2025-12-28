@@ -10,6 +10,10 @@ export interface ModuleItem {
   key: string;
   name: string;
   description: string;
+  /** For assigned modules: always show under title and MUST NOT be overridden by customNames */
+  assignedPhone?: string;
+  /** For assigned modules: always show under title and MUST NOT be overridden by customNames */
+  assignedUserName?: string;
   href?: string;
   color?: string;
   bgColor?: string;
@@ -243,6 +247,15 @@ export function DraggableModuleItem({
                 <div className="font-semibold text-sm whitespace-normal leading-relaxed">
                   {displayName}
                 </div>
+                {(item.assignedPhone || item.assignedUserName) && (
+                  <div className="text-xs text-muted-foreground whitespace-normal leading-relaxed mt-0.5">
+                    <span dir="ltr" className="inline-block">
+                      {item.assignedPhone || ''}
+                    </span>
+                    {(item.assignedPhone && item.assignedUserName) ? ' - ' : ''}
+                    <span>{item.assignedUserName || ''}</span>
+                  </div>
+                )}
                 <div className="text-xs text-muted-foreground whitespace-normal leading-relaxed">
                   {displayDescription}
                 </div>

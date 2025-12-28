@@ -61,26 +61,46 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
           
           // Filter saved hierarchy to only include valid items and update module data
           const filterAndUpdate = (items: ModuleItem[]): ModuleItem[] => {
-            return items.map(item => {
-              if (item.type === 'folder') {
-                const updatedChildren = item.children ? filterAndUpdate(item.children) : [];
-                // Only keep folder if it has valid children
-                if (updatedChildren.length > 0) {
-                  return { ...item, children: updatedChildren };
+            return items
+              .map(item => {
+                if (item.type === 'folder') {
+                  const updatedChildren = item.children ? filterAndUpdate(item.children) : [];
+                  // Only keep folder if it has valid children
+                  if (updatedChildren.length > 0) {
+                    return { ...item, children: updatedChildren };
+                  }
+                  return null;
                 }
-                return null;
-              } else {
+
                 // For modules, check if still exists in database
                 if (validIds.has(item.id)) {
                   // Update with latest data from database
                   return initialModulesMap.get(item.id) || item;
                 }
+
                 return null;
-              }
-            }).filter((item): item is ModuleItem => item !== null);
+              })
+              .filter((item): item is ModuleItem => item !== null);
           };
-          
-          const updatedHierarchy = filterAndUpdate(parsed);
+
+          // Deduplicate modules by id across the whole hierarchy (prevents repeated UI rows)
+          const dedupeById = (items: ModuleItem[], seen: Set<string>): ModuleItem[] => {
+            return items
+              .map(item => {
+                if (item.type === 'folder') {
+                  const children = item.children ? dedupeById(item.children, seen) : [];
+                  if (children.length === 0) return null;
+                  return { ...item, children };
+                }
+
+                if (seen.has(item.id)) return null;
+                seen.add(item.id);
+                return item;
+              })
+              .filter((i): i is ModuleItem => i !== null);
+          };
+
+          const updatedHierarchy = dedupeById(filterAndUpdate(parsed), new Set());
           
           // Find modules that are in initialModules but not in hierarchy
           const hierarchyIds = new Set<string>();
