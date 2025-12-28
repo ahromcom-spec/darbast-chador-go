@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, GripVertical, Pencil, Check, X, Trash2 } from 'lucide-react';
+import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, GripVertical, Pencil, Check, X, Trash2, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -31,9 +31,11 @@ interface DraggableModuleItemProps {
   onEditItem: (item: ModuleItem, newName: string, newDescription: string) => void;
   onNavigate?: (href: string) => void;
   onDelete?: (itemId: string) => void;
+  onDuplicate?: (item: ModuleItem) => void;
   level?: number;
   customNames?: Record<string, { name: string; description: string }>;
   showDeleteButton?: boolean;
+  showDuplicateButton?: boolean;
 }
 
 export function DraggableModuleItem({
@@ -46,9 +48,11 @@ export function DraggableModuleItem({
   onEditItem,
   onNavigate,
   onDelete,
+  onDuplicate,
   level = 0,
   customNames = {},
-  showDeleteButton = false
+  showDeleteButton = false,
+  showDuplicateButton = false
 }: DraggableModuleItemProps) {
   const navigate = useNavigate();
   const [isDragOver, setIsDragOver] = useState(false);
@@ -263,7 +267,7 @@ export function DraggableModuleItem({
             </>
           )}
           
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <Button
               variant="ghost"
               size="icon"
@@ -276,6 +280,20 @@ export function DraggableModuleItem({
             >
               <Pencil className="h-4 w-4" />
             </Button>
+            {showDuplicateButton && onDuplicate && item.type === 'module' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate(item);
+                }}
+                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                title="کپی ماژول"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            )}
             {showDeleteButton && onDelete && item.type === 'module' && (
               <Button
                 variant="ghost"
@@ -321,9 +339,11 @@ export function DraggableModuleItem({
               onEditItem={onEditItem}
               onNavigate={onNavigate}
               onDelete={onDelete}
+              onDuplicate={onDuplicate}
               level={level + 1}
               customNames={customNames}
               showDeleteButton={showDeleteButton}
+              showDuplicateButton={showDuplicateButton}
             />
           ))}
         </div>
