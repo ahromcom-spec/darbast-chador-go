@@ -116,15 +116,8 @@ export function RenewalRequestDialog({
         return;
       }
 
-      const newStartDate = calculateNewStartDate();
-      if (!newStartDate) {
-        toast({
-          variant: 'destructive',
-          title: 'خطا',
-          description: 'تاریخ شروع کرایه تعیین نشده است'
-        });
-        return;
-      }
+      // اگر تاریخ شروع کرایه تعیین نشده، از تاریخ امروز استفاده شود
+      const newStartDate = calculateNewStartDate() || new Date();
 
       const newEndDate = addMonths(newStartDate, 1);
       const previousEndDate = newStartDate; // تاریخ پایان قبلی همان شروع جدید است
@@ -301,7 +294,7 @@ export function RenewalRequestDialog({
                 </div>
                 <Button 
                   onClick={handleRequestRenewal} 
-                  disabled={loading || !rentalStartDate}
+                  disabled={loading}
                   className="w-full"
                 >
                   {loading ? (
