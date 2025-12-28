@@ -58,6 +58,7 @@ export default function ExecutiveStageOrderExecuted() {
   const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const [renewalDialogOpen, setRenewalDialogOpen] = useState(false);
+  const [savingRentalDate, setSavingRentalDate] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Archive functionality
@@ -204,6 +205,7 @@ export default function ExecutiveStageOrderExecuted() {
   };
 
   const handleRentalStartDateUpdate = async (orderId: string, date: string | null, orderCode: string) => {
+    setSavingRentalDate(orderId);
     try {
       const { error } = await supabase
         .from('projects_v3')
@@ -229,6 +231,8 @@ export default function ExecutiveStageOrderExecuted() {
         title: 'خطا',
         description: 'خطا در ثبت تاریخ شروع کرایه'
       });
+    } finally {
+      setSavingRentalDate(null);
     }
   };
 
@@ -369,13 +373,22 @@ export default function ExecutiveStageOrderExecuted() {
                       ۱. تاریخ شروع کرایه داربست {order.rental_start_date ? '✓' : '(الزامی)'}
                     </span>
                   </div>
-                  <RentalStartDatePicker
-                    value={order.rental_start_date || undefined}
-                    onChange={(date) => handleRentalStartDateUpdate(order.id, date, order.code)}
-                    placeholder="انتخاب تاریخ شروع کرایه"
-                    allowClear={true}
-                  />
-                  {order.rental_start_date && (
+                  
+                  {savingRentalDate === order.id ? (
+                    <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                      <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">در حال ثبت تاریخ...</span>
+                    </div>
+                  ) : (
+                    <RentalStartDatePicker
+                      value={order.rental_start_date || undefined}
+                      onChange={(date) => handleRentalStartDateUpdate(order.id, date, order.code)}
+                      placeholder="انتخاب تاریخ شروع کرایه"
+                      allowClear={true}
+                    />
+                  )}
+                  
+                  {order.rental_start_date && savingRentalDate !== order.id && (
                     <p className="text-xs text-green-600 dark:text-green-400 mt-2">
                       ✓ تاریخ ثبت شده: {new Date(order.rental_start_date).toLocaleDateString('fa-IR')}
                     </p>
