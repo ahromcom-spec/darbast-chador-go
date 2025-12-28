@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon } from 'lucide-react';
+import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { MediaUploader } from './MediaUploader';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { useNavigate } from 'react-router-dom';
@@ -49,6 +50,10 @@ export const ExpertPricingRequestDialog = ({
   const [requestedDate, setRequestedDate] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   
+  // Progress tracking state
+  const [progress, setProgress] = useState(0);
+  const [progressStep, setProgressStep] = useState('');
+  
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -73,10 +78,18 @@ export const ExpertPricingRequestDialog = ({
     setUploadedFiles(files);
   };
 
-  const uploadMedia = async (orderId: string, files: File[]) => {
-    const uploadResults: { success: boolean; fileName: string; error?: string }[] = [];
+  // Optimized parallel file upload with progress tracking
+  const uploadMedia = useCallback(async (orderId: string, files: File[], onProgress: (uploaded: number, total: number) => void) => {
+    if (files.length === 0) return;
     
-    for (const file of files) {
+    let uploadedCount = 0;
+    const total = files.length;
+    
+    // Process files in parallel (max 3 concurrent uploads)
+    const CONCURRENT_LIMIT = 3;
+    const results: { success: boolean; fileName: string; error?: string }[] = [];
+    
+    const uploadSingleFile = async (file: File): Promise<{ success: boolean; fileName: string; error?: string }> => {
       const isVideo = file.type.startsWith('video/') || 
                      file.name.toLowerCase().endsWith('.mp4') ||
                      file.name.toLowerCase().endsWith('.mov') ||
@@ -90,7 +103,6 @@ export const ExpertPricingRequestDialog = ({
       // Determine correct content type
       let contentType = file.type;
       if (!contentType || contentType === 'application/octet-stream') {
-        // Fallback content type based on extension
         const extMap: Record<string, string> = {
           'mp4': 'video/mp4',
           'mov': 'video/quicktime',
@@ -104,17 +116,8 @@ export const ExpertPricingRequestDialog = ({
         contentType = extMap[fileExt] || (isVideo ? 'video/mp4' : 'image/jpeg');
       }
 
-      console.log('Uploading file:', { 
-        originalName: file.name,
-        storagePath, 
-        fileType, 
-        fileSize: file.size, 
-        mimeType: contentType,
-        isVideo
-      });
-
       try {
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('project-media')
           .upload(storagePath, file, {
             contentType: contentType,
@@ -123,11 +126,8 @@ export const ExpertPricingRequestDialog = ({
 
         if (uploadError) {
           console.error('Upload error for', file.name, ':', uploadError);
-          uploadResults.push({ success: false, fileName: file.name, error: uploadError.message });
-          continue;
+          return { success: false, fileName: file.name, error: uploadError.message };
         }
-
-        console.log('Upload successful:', uploadData);
 
         const { error: dbError } = await supabase.from('project_media').insert({
           project_id: orderId,
@@ -140,20 +140,28 @@ export const ExpertPricingRequestDialog = ({
 
         if (dbError) {
           console.error('DB error saving media:', dbError);
-          uploadResults.push({ success: false, fileName: file.name, error: dbError.message });
-        } else {
-          console.log('Media record saved to database:', { fileType, storagePath });
-          uploadResults.push({ success: true, fileName: file.name });
+          return { success: false, fileName: file.name, error: dbError.message };
         }
+        
+        uploadedCount++;
+        onProgress(uploadedCount, total);
+        return { success: true, fileName: file.name };
       } catch (error: any) {
         console.error('Unexpected error uploading', file.name, ':', error);
-        uploadResults.push({ success: false, fileName: file.name, error: error?.message });
+        return { success: false, fileName: file.name, error: error?.message };
       }
+    };
+
+    // Process in batches for parallel upload
+    for (let i = 0; i < files.length; i += CONCURRENT_LIMIT) {
+      const batch = files.slice(i, i + CONCURRENT_LIMIT);
+      const batchResults = await Promise.all(batch.map(uploadSingleFile));
+      results.push(...batchResults);
     }
 
-    // نمایش نتیجه آپلود
-    const successCount = uploadResults.filter(r => r.success).length;
-    const failCount = uploadResults.filter(r => !r.success).length;
+    // Show result
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
     
     if (successCount > 0 && failCount === 0) {
       toast({
@@ -169,11 +177,11 @@ export const ExpertPricingRequestDialog = ({
     } else if (failCount > 0 && successCount === 0) {
       toast({
         title: '❌ خطا در آپلود',
-        description: `هیچ فایلی آپلود نشد. ${uploadResults[0]?.error || 'خطای نامشخص'}`,
+        description: `هیچ فایلی آپلود نشد. ${results[0]?.error || 'خطای نامشخص'}`,
         variant: 'destructive'
       });
     }
-  };
+  }, [user, toast]);
 
   const handleSubmit = async () => {
     if (!user) {
@@ -182,8 +190,14 @@ export const ExpertPricingRequestDialog = ({
     }
 
     setLoading(true);
+    setProgress(0);
+    setProgressStep('در حال آماده‌سازی...');
+    
     try {
-      // Get customer ID
+      // Step 1: Get customer ID (5%)
+      setProgressStep('دریافت اطلاعات کاربر...');
+      setProgress(5);
+      
       const { data: customer, error: customerError } = await supabase
         .from('customers')
         .select('id')
@@ -194,16 +208,22 @@ export const ExpertPricingRequestDialog = ({
         throw new Error('مشتری یافت نشد');
       }
 
-      // Build notes object for the order
+      // Step 2: Build notes (10%)
+      setProgressStep('آماده‌سازی اطلاعات سفارش...');
+      setProgress(10);
+      
       const notes = JSON.stringify({
-        is_expert_pricing_request: true, // Flag to identify this as expert pricing request
+        is_expert_pricing_request: true,
         description: description,
         dimensions: dimensions.filter(d => d.length || d.width || d.height),
         requested_date: requestedDate || null,
         service_type: serviceTypeName || 'داربست فلزی'
       });
 
-      // Create order using create_project_v3 RPC function
+      // Step 3: Create order (30%)
+      setProgressStep('ثبت سفارش در سیستم...');
+      setProgress(20);
+      
       const { data: createdOrder, error: createError } = await supabase.rpc('create_project_v3', {
         _customer_id: customer.id,
         _province_id: provinceId,
@@ -219,6 +239,8 @@ export const ExpertPricingRequestDialog = ({
         throw createError;
       }
 
+      setProgress(30);
+
       const orderData = createdOrder as any;
       const orderId = Array.isArray(orderData) ? orderData[0]?.id : orderData?.id;
       const orderCode = Array.isArray(orderData) ? orderData[0]?.code : orderData?.code;
@@ -227,12 +249,23 @@ export const ExpertPricingRequestDialog = ({
         throw new Error('خطا در ایجاد سفارش');
       }
 
-      // Upload media files if any
+      // Step 4: Upload media files (30% - 90%)
       if (uploadedFiles.length > 0) {
-        await uploadMedia(orderId, uploadedFiles);
+        setProgressStep(`آپلود ${uploadedFiles.length} فایل...`);
+        
+        await uploadMedia(orderId, uploadedFiles, (uploaded, total) => {
+          const mediaProgress = 30 + Math.round((uploaded / total) * 60);
+          setProgress(mediaProgress);
+          setProgressStep(`آپلود فایل ${uploaded} از ${total}...`);
+        });
+      } else {
+        setProgress(90);
       }
 
-      // Send SMS notification to customer
+      // Step 5: Send SMS (95%)
+      setProgressStep('ارسال پیامک...');
+      setProgress(95);
+      
       const customerPhone = user?.user_metadata?.phone_number || user?.phone;
       if (customerPhone && orderCode) {
         sendOrderSms(customerPhone, orderCode, 'submitted', {
@@ -244,10 +277,17 @@ export const ExpertPricingRequestDialog = ({
         });
       }
 
+      // Complete (100%)
+      setProgress(100);
+      setProgressStep('سفارش با موفقیت ثبت شد!');
+
       toast({
         title: '✅ درخواست ثبت شد',
         description: `سفارش با کد ${orderCode} ثبت شد. کارشناسان قیمت‌گذاری را انجام خواهند داد.`
       });
+
+      // Small delay to show 100%
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       setOpen(false);
       // Reset form
@@ -255,6 +295,8 @@ export const ExpertPricingRequestDialog = ({
       setDimensions([{ length: '', width: '', height: '' }]);
       setRequestedDate('');
       setUploadedFiles([]);
+      setProgress(0);
+      setProgressStep('');
 
       // Navigate to order detail
       navigate(`/user/orders/${orderId}`);
@@ -268,6 +310,8 @@ export const ExpertPricingRequestDialog = ({
       });
     } finally {
       setLoading(false);
+      setProgress(0);
+      setProgressStep('');
     }
   };
 
@@ -392,13 +436,38 @@ export const ExpertPricingRequestDialog = ({
             </p>
           </div>
 
+          {/* Progress Bar - Show during submission */}
+          {loading && (
+            <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {progressStep}
+                </span>
+                <span className="font-medium text-primary">{progress}%</span>
+              </div>
+              <Progress value={progress} className="h-3" />
+              <p className="text-xs text-center text-muted-foreground">
+                لطفاً صبر کنید...
+              </p>
+            </div>
+          )}
+
           {/* Submit Button */}
           <Button 
             onClick={handleSubmit} 
             disabled={loading} 
             className="w-full"
+            size="lg"
           >
-            {loading ? 'در حال ثبت...' : 'ثبت درخواست قیمت‌گذاری'}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                در حال ثبت... ({progress}%)
+              </span>
+            ) : (
+              'ثبت درخواست قیمت‌گذاری'
+            )}
           </Button>
         </div>
       </DialogContent>
