@@ -424,15 +424,26 @@ export default function ExecutiveStageOrderExecuted() {
                         <p className="text-sm text-green-700 dark:text-green-300">
                           ✓ تاریخ جمع‌آوری: {new Date(order.collection_request_date).toLocaleDateString('fa-IR')}
                         </p>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => { setSelectedOrder(order); setCollectionDialogOpen(true); }}
-                          className="gap-2 border-green-300 text-green-700 hover:bg-green-100"
-                        >
-                          <PackageOpen className="h-4 w-4" />
-                          ویرایش تاریخ
-                        </Button>
+                        <div className="flex gap-2 flex-wrap">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => { setSelectedOrder(order); setCollectionDialogOpen(true); }}
+                            className="gap-2 border-green-300 text-green-700 hover:bg-green-100"
+                          >
+                            <PackageOpen className="h-4 w-4" />
+                            ویرایش تاریخ
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleStageUpdate(order.id, 'awaiting_collection', order.code)}
+                            disabled={updatingStage}
+                            className="gap-2 bg-primary hover:bg-primary/90"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            ارسال به جمع‌آوری
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <Button 
