@@ -1627,9 +1627,9 @@ export default function OrderDetail() {
                   </section>
                 )}
 
-                {/* دکمه تمدید سفارش - برای سفارش‌های اجرا شده (execution_stage = order_executed) */}
-                {order.execution_stage === 'order_executed' && 
-                 ['in_progress', 'completed', 'paid'].includes(order.status) && (
+                {/* دکمه تمدید سفارش - برای سفارش‌های اجرا شده یا کارشناسی قیمت تایید شده */}
+                {(order.execution_stage === 'order_executed' || 
+                 (isExpertPricingRequest && customerHasConfirmedPrice && ['in_progress', 'completed', 'paid'].includes(order.status))) && (
                   <section className="rounded-2xl border-2 border-primary/50 dark:border-primary/30 bg-primary/5 dark:bg-primary/10 p-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-start gap-3">
