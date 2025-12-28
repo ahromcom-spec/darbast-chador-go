@@ -72,6 +72,7 @@ interface EditableOrderDetailsProps {
     subcategory?: { code?: string; name?: string } | null;
     transferred_from_user_id?: string | null;
     transferred_from_phone?: string | null;
+    rental_start_date?: string | null;
   };
   onUpdate?: () => void;
 }
@@ -591,6 +592,12 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
               <div className="p-3 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
                 <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ پایان اجرا</span>
                 <span className="font-bold text-sm">{formatPersianDate(order.execution_end_date)}</span>
+              </div>
+            )}
+            {order.rental_start_date && (
+              <div className="p-3 bg-white dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-700">
+                <span className="text-xs text-green-600 dark:text-green-400 block mb-1">تاریخ شروع کرایه داربست</span>
+                <span className="font-bold text-sm">{formatPersianDate(order.rental_start_date)}</span>
               </div>
             )}
           </div>

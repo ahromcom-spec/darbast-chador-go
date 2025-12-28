@@ -16,6 +16,7 @@ import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 
 interface Order {
   id: string;
@@ -29,6 +30,7 @@ interface Order {
   execution_start_date: string | null;
   execution_end_date: string | null;
   execution_stage: string | null;
+  rental_start_date: string | null;
   notes: any;
 }
 
@@ -87,6 +89,7 @@ export default function ExecutiveStageOrderExecuted() {
           execution_start_date,
           execution_end_date,
           execution_stage,
+          rental_start_date,
           notes,
           customer_id
         `)
@@ -127,6 +130,7 @@ export default function ExecutiveStageOrderExecuted() {
             execution_start_date: order.execution_start_date,
             execution_end_date: order.execution_end_date,
             execution_stage: order.execution_stage,
+            rental_start_date: order.rental_start_date,
             notes: order.notes,
             customer_name: customerName,
             customer_phone: customerPhone
@@ -175,6 +179,33 @@ export default function ExecutiveStageOrderExecuted() {
       });
     } finally {
       setUpdatingStage(false);
+    }
+  };
+
+  const handleRentalStartDateUpdate = async (orderId: string, date: string, orderCode: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({ 
+          rental_start_date: date
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ تاریخ شروع کرایه ثبت شد',
+        description: `تاریخ شروع کرایه سفارش ${orderCode} ثبت شد.`
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error updating rental start date:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'خطا در ثبت تاریخ شروع کرایه'
+      });
     }
   };
 
@@ -307,6 +338,25 @@ export default function ExecutiveStageOrderExecuted() {
                   </div>
                 )}
 
+                {/* کادر تعیین تاریخ شروع کرایه */}
+                <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border-2 border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center gap-2 text-sm mb-2">
+                    <Calendar className="h-4 w-4 text-amber-600" />
+                    <span className="font-medium text-amber-800 dark:text-amber-200">تاریخ شروع کرایه داربست</span>
+                  </div>
+                  <PersianDatePicker
+                    value={order.rental_start_date || undefined}
+                    onChange={(date) => handleRentalStartDateUpdate(order.id, date, order.code)}
+                    placeholder="انتخاب تاریخ شروع کرایه"
+                    timeMode="none"
+                  />
+                  {order.rental_start_date && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                      ✓ تاریخ ثبت شده: {new Date(order.rental_start_date).toLocaleDateString('fa-IR')}
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={() => { setSelectedOrder(order); setDetailsOpen(true); }} className="gap-2">
                     <Eye className="h-4 w-4" />
@@ -347,7 +397,8 @@ export default function ExecutiveStageOrderExecuted() {
                 notes: selectedOrder.notes,
                 execution_start_date: selectedOrder.execution_start_date,
                 execution_end_date: selectedOrder.execution_end_date,
-                execution_stage: selectedOrder.execution_stage
+                execution_stage: selectedOrder.execution_stage,
+                rental_start_date: selectedOrder.rental_start_date
               }}
               onUpdate={fetchOrders}
             />

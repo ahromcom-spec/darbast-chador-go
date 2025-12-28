@@ -2250,6 +2250,7 @@ export type Database = {
           payment_method: string | null
           province_id: string
           rejection_reason: string | null
+          rental_start_date: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           total_paid: number | null
@@ -2305,6 +2306,7 @@ export type Database = {
           payment_method?: string | null
           province_id: string
           rejection_reason?: string | null
+          rental_start_date?: string | null
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           total_paid?: number | null
@@ -2360,6 +2362,7 @@ export type Database = {
           payment_method?: string | null
           province_id?: string
           rejection_reason?: string | null
+          rental_start_date?: string | null
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id?: string
           total_paid?: number | null
@@ -4029,6 +4032,7 @@ export type Database = {
           payment_method: string | null
           province_id: string
           rejection_reason: string | null
+          rental_start_date: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           total_paid: number | null
@@ -4151,6 +4155,7 @@ export type Database = {
           payment_method: string | null
           province_id: string
           rejection_reason: string | null
+          rental_start_date: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           total_paid: number | null
