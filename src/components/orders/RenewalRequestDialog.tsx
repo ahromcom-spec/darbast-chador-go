@@ -58,16 +58,21 @@ export function RenewalRequestDialog({
   // سری اول: یک ماه بعد از rental_start_date
   // سری های بعدی: یک ماه بعد از تاریخ پایان آخرین تمدید تایید شده
   const calculateNewStartDate = () => {
-    // اگر تمدید تایید شده‌ای وجود دارد، از پایان آن استفاده کن
+    // اگر تمدید تایید شده‌ای وجود دارد، شروع بعدی = پایان آخرین تمدید تایید شده
     const approvedRenewals = renewals.filter(r => r.status === 'approved');
     if (approvedRenewals.length > 0) {
-      const lastApproved = approvedRenewals[approvedRenewals.length - 1];
+      // پیدا کردن آخرین تمدید تایید شده بر اساس شماره سری
+      const lastApproved = approvedRenewals.reduce((prev, current) => 
+        prev.renewal_number > current.renewal_number ? prev : current
+      );
+      // تاریخ شروع تمدید جدید = تاریخ پایان آخرین تمدید تایید شده
       return new Date(lastApproved.new_end_date);
     }
     
-    // برای سری اول، یک ماه بعد از rental_start_date
+    // برای سری اول: یک ماه بعد از rental_start_date
     if (rentalStartDate) {
-      return addMonths(new Date(rentalStartDate), 1);
+      const startDate = new Date(rentalStartDate);
+      return addMonths(startDate, 1);
     }
     
     return null;

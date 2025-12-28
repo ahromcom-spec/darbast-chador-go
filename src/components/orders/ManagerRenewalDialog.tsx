@@ -72,14 +72,22 @@ export function ManagerRenewalDialog({
     return addMonths(startDate, 1);
   };
 
+  // محاسبه تاریخ شروع تمدید بعدی
   const calculateNewStartDate = () => {
-    if (renewals.length > 0) {
-      const approvedRenewals = renewals.filter(r => r.status === 'approved');
-      if (approvedRenewals.length > 0) {
-        const lastApproved = approvedRenewals[approvedRenewals.length - 1];
-        return new Date(lastApproved.new_end_date);
-      }
+    // اگر تمدید تایید شده‌ای وجود دارد، شروع بعدی = پایان آخرین تمدید
+    const approvedRenewals = renewals.filter(r => r.status === 'approved');
+    if (approvedRenewals.length > 0) {
+      const lastApproved = approvedRenewals.reduce((prev, current) => 
+        prev.renewal_number > current.renewal_number ? prev : current
+      );
+      return new Date(lastApproved.new_end_date);
     }
+    
+    // برای سری اول: یک ماه بعد از rental_start_date
+    if (rentalStartDate) {
+      return addMonths(new Date(rentalStartDate), 1);
+    }
+    
     return calculateCurrentEndDate();
   };
 
@@ -139,12 +147,17 @@ export function ManagerRenewalDialog({
         approved_at: new Date().toISOString()
       };
 
+      // پیدا کردن تمدیدی که تایید می‌شود
+      const renewalToApprove = renewals.find(r => r.id === renewalId);
+      let renewalPriceToAdd = renewalToApprove?.renewal_price || 0;
+
       // اگر در حال ویرایش هستیم، قیمت و تاریخ‌ها را هم به‌روز کن
       if (editingRenewal && editingRenewal.id === renewalId) {
         updateData.renewal_price = editPrice;
         updateData.new_start_date = editStartDate;
         updateData.new_end_date = editEndDate;
         updateData.manager_notes = managerNotes;
+        renewalPriceToAdd = editPrice;
       }
 
       const { error } = await supabase
@@ -154,9 +167,31 @@ export function ManagerRenewalDialog({
 
       if (error) throw error;
 
+      // به‌روزرسانی total_price سفارش با اضافه کردن مبلغ تمدید
+      if (renewalPriceToAdd > 0) {
+        // دریافت مبلغ فعلی سفارش
+        const { data: orderData, error: orderFetchError } = await supabase
+          .from('projects_v3')
+          .select('total_price')
+          .eq('id', orderId)
+          .single();
+        
+        if (orderFetchError) throw orderFetchError;
+        
+        const currentTotalPrice = orderData?.total_price || originalPrice || 0;
+        const newTotalPrice = Number(currentTotalPrice) + Number(renewalPriceToAdd);
+        
+        const { error: orderUpdateError } = await supabase
+          .from('projects_v3')
+          .update({ total_price: newTotalPrice })
+          .eq('id', orderId);
+        
+        if (orderUpdateError) throw orderUpdateError;
+      }
+
       toast({
         title: '✓ تمدید تایید شد',
-        description: 'درخواست تمدید با موفقیت تایید شد'
+        description: 'درخواست تمدید با موفقیت تایید شد و مبلغ به سفارش اضافه گردید'
       });
 
       setEditingRenewal(null);
@@ -260,9 +295,31 @@ export function ManagerRenewalDialog({
 
       if (error) throw error;
 
+      // به‌روزرسانی total_price سفارش با اضافه کردن مبلغ تمدید
+      if (newRenewalPrice > 0) {
+        // دریافت مبلغ فعلی سفارش
+        const { data: orderData, error: orderFetchError } = await supabase
+          .from('projects_v3')
+          .select('total_price')
+          .eq('id', orderId)
+          .single();
+        
+        if (orderFetchError) throw orderFetchError;
+        
+        const currentTotalPrice = orderData?.total_price || originalPrice || 0;
+        const newTotalPrice = Number(currentTotalPrice) + Number(newRenewalPrice);
+        
+        const { error: orderUpdateError } = await supabase
+          .from('projects_v3')
+          .update({ total_price: newTotalPrice })
+          .eq('id', orderId);
+        
+        if (orderUpdateError) throw orderUpdateError;
+      }
+
       toast({
         title: '✓ تمدید ایجاد شد',
-        description: 'تمدید جدید با موفقیت ایجاد و تایید شد'
+        description: 'تمدید جدید با موفقیت ایجاد و تایید شد و مبلغ به سفارش اضافه گردید'
       });
 
       setShowCreateForm(false);
