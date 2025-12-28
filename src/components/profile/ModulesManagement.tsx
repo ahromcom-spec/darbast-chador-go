@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2, Pencil, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -98,10 +98,80 @@ export function ModulesManagement() {
   const [saving, setSaving] = useState(false);
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [selectedModule, setSelectedModule] = useState<string>(AVAILABLE_MODULES[0].key);
+  
+  // State for editing module names
+  const [editingModuleKey, setEditingModuleKey] = useState<string | null>(null);
+  const [editedModuleName, setEditedModuleName] = useState('');
+  const [editedModuleDescription, setEditedModuleDescription] = useState('');
+  const [customModuleNames, setCustomModuleNames] = useState<Record<string, { name: string; description: string }>>({});
 
   useEffect(() => {
     fetchAssignments();
+    loadCustomModuleNames();
   }, []);
+
+  // Load custom module names from localStorage
+  const loadCustomModuleNames = () => {
+    try {
+      const saved = localStorage.getItem('custom_module_names');
+      if (saved) {
+        setCustomModuleNames(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Error loading custom module names:', error);
+    }
+  };
+
+  // Save custom module names to localStorage
+  const saveCustomModuleNames = (names: Record<string, { name: string; description: string }>) => {
+    try {
+      localStorage.setItem('custom_module_names', JSON.stringify(names));
+      setCustomModuleNames(names);
+    } catch (error) {
+      console.error('Error saving custom module names:', error);
+    }
+  };
+
+  const startEditingModule = (moduleKey: string) => {
+    const customName = customModuleNames[moduleKey];
+    const module = AVAILABLE_MODULES.find(m => m.key === moduleKey);
+    if (module) {
+      setEditingModuleKey(moduleKey);
+      setEditedModuleName(customName?.name || module.name);
+      setEditedModuleDescription(customName?.description || module.description);
+    }
+  };
+
+  const saveModuleEdit = () => {
+    if (editingModuleKey && editedModuleName.trim()) {
+      const newCustomNames = {
+        ...customModuleNames,
+        [editingModuleKey]: {
+          name: editedModuleName.trim(),
+          description: editedModuleDescription.trim()
+        }
+      };
+      saveCustomModuleNames(newCustomNames);
+      toast.success('نام ماژول با موفقیت ویرایش شد');
+      setEditingModuleKey(null);
+      setEditedModuleName('');
+      setEditedModuleDescription('');
+    }
+  };
+
+  const cancelModuleEdit = () => {
+    setEditingModuleKey(null);
+    setEditedModuleName('');
+    setEditedModuleDescription('');
+  };
+
+  const getModuleDisplayName = (module: Module) => {
+    return customModuleNames[module.key]?.name || module.name;
+  };
+
+  const getModuleDisplayDescription = (module: Module) => {
+    return customModuleNames[module.key]?.description || module.description;
+  };
 
   const fetchAssignments = async () => {
     try {
@@ -292,23 +362,81 @@ export function ModulesManagement() {
                     key={module.key}
                     className="p-4 rounded-lg border-2 border-border bg-background"
                   >
-                    <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                      <div className={`p-2 rounded-lg ${module.bgColor} flex-shrink-0`}>
-                        <Building2 className={`h-5 w-5 ${module.color}`} />
+                    {editingModuleKey === module.key ? (
+                      // Edit mode
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`p-2 rounded-lg ${module.bgColor} flex-shrink-0`}>
+                            <Building2 className={`h-5 w-5 ${module.color}`} />
+                          </div>
+                          <span className="text-xs text-muted-foreground">ویرایش ماژول</span>
+                        </div>
+                        <Input
+                          value={editedModuleName}
+                          onChange={(e) => setEditedModuleName(e.target.value)}
+                          placeholder="نام ماژول"
+                          className="font-semibold"
+                        />
+                        <Input
+                          value={editedModuleDescription}
+                          onChange={(e) => setEditedModuleDescription(e.target.value)}
+                          placeholder="توضیحات ماژول"
+                          className="text-sm"
+                        />
+                        <div className="flex items-center gap-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={cancelModuleEdit}
+                            className="gap-1"
+                          >
+                            <X className="h-4 w-4" />
+                            انصراف
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={saveModuleEdit}
+                            className="gap-1"
+                          >
+                            <Check className="h-4 w-4" />
+                            ذخیره
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm whitespace-normal leading-relaxed">{module.name}</div>
-                        <div className="text-xs text-muted-foreground whitespace-normal leading-relaxed">{module.description}</div>
+                    ) : (
+                      // View mode
+                      <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                        <div className={`p-2 rounded-lg ${module.bgColor} flex-shrink-0`}>
+                          <Building2 className={`h-5 w-5 ${module.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm whitespace-normal leading-relaxed">
+                            {getModuleDisplayName(module)}
+                          </div>
+                          <div className="text-xs text-muted-foreground whitespace-normal leading-relaxed">
+                            {getModuleDisplayDescription(module)}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => startEditingModule(module.key)}
+                            className="h-8 w-8"
+                            title="ویرایش نام"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(module.href)}
+                          >
+                            ورود به ماژول
+                          </Button>
+                        </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(module.href)}
-                        className="flex-shrink-0"
-                      >
-                        ورود به ماژول
-                      </Button>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
