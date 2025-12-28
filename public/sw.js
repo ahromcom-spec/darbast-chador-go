@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ahrom-v19-call-push';
+const CACHE_VERSION = 'ahrom-v20-call-push-orientation';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -6,8 +6,8 @@ const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const SHELL_FILES = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
-  '/manifest.json',
+  '/manifest.webmanifest?v=9',
+  '/manifest.json?v=9',
   '/ahrom-pwa-icon.png',
   '/ahrom-pwa-icon-new.png',
   '/ahrom-app-icon.png',
