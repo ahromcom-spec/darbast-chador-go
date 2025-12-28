@@ -253,9 +253,17 @@ export default function OrderDetail() {
 
   const { data: projectRatings, refetch: refetchRatings } = useProjectRatings(id || '');
 
+  // رفرش خودکار بعد از بارگذاری اولیه برای نمایش فایل‌های تازه آپلود شده
   useEffect(() => {
     if (id) {
       fetchOrderDetails();
+      
+      // رفرش خودکار بعد از 2 ثانیه برای اطمینان از بارگذاری کامل مدیا
+      const refreshTimer = setTimeout(() => {
+        fetchOrderDetails();
+      }, 2000);
+      
+      return () => clearTimeout(refreshTimer);
     }
   }, [id]);
 
