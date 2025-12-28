@@ -1380,7 +1380,8 @@ export default function ExecutiveOrders() {
                             : 'درخواست جمع‌آوری در انتظار تایید'}
                         </span>
                       </div>
-                      {order.collection_request.status === 'pending' && (
+                      <div className="flex items-center gap-1">
+                        {/* دکمه ویرایش تاریخ - برای همه وضعیت‌ها قابل ویرایش باشد */}
                         <Button
                           size="sm"
                           variant="outline"
@@ -1388,12 +1389,12 @@ export default function ExecutiveOrders() {
                             setSelectedOrder(order);
                             setCollectionDialogOpen(true);
                           }}
-                          className="gap-1 text-orange-700 border-orange-300 hover:bg-orange-100"
+                          className="gap-1 text-blue-700 border-blue-300 hover:bg-blue-100"
                         >
-                          <Calendar className="h-3 w-3" />
-                          بررسی
+                          <Edit className="h-3 w-3" />
+                          {order.collection_request.status === 'pending' ? 'بررسی' : 'ویرایش تاریخ'}
                         </Button>
-                      )}
+                      </div>
                     </div>
                     {order.collection_request.requested_date && (
                       <div className="mt-2 text-sm">
@@ -1405,6 +1406,19 @@ export default function ExecutiveOrders() {
                             day: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                    {/* نمایش تاریخ جمع‌آوری تثبیت شده */}
+                    {order.customer_completion_date && (
+                      <div className="mt-2 text-sm bg-green-100 dark:bg-green-900/30 p-2 rounded">
+                        <span className="text-green-700 dark:text-green-300 font-medium">✓ تاریخ جمع‌آوری تثبیت شده: </span>
+                        <span className="font-bold text-green-800 dark:text-green-200">
+                          {new Date(order.customer_completion_date).toLocaleDateString('fa-IR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
                           })}
                         </span>
                       </div>
@@ -1534,12 +1548,16 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه در انتظار جمع‌آوری - برای awaiting_payment */}
+                  {/* دکمه در انتظار جمع‌آوری - برای awaiting_payment و فقط وقتی تاریخ جمع‌آوری تنظیم شده */}
                   {order.execution_stage === 'awaiting_payment' && (
                     <Button
                       onClick={() => handleStageChange(order.id, 'awaiting_collection')}
                       size="sm"
-                      className="gap-2 bg-orange-600 hover:bg-orange-700"
+                      disabled={!order.customer_completion_date}
+                      title={!order.customer_completion_date ? 'ابتدا باید تاریخ جمع‌آوری تعیین شود' : 'انتقال به مرحله در انتظار جمع‌آوری'}
+                      className={`gap-2 bg-orange-600 hover:bg-orange-700 ${
+                        !order.customer_completion_date ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
                     >
                       <Clock className="h-4 w-4" />
                       در انتظار جمع‌آوری
