@@ -486,13 +486,15 @@ export function ModulesManagement() {
                     }
                     return false;
                   })
-                  .map((item) => (
+                  .map((item, idx) => (
                   <DraggableModuleItem
                     key={item.id}
                     item={item}
+                    index={idx}
                     onDragStart={availableHierarchy.handleDragStart}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={availableHierarchy.handleDrop}
+                    onDropBetween={availableHierarchy.handleDropBetween}
                     onDragEnd={availableHierarchy.handleDragEnd}
                     onToggleFolder={availableHierarchy.toggleFolder}
                     onEditItem={availableHierarchy.editItem}
@@ -500,6 +502,8 @@ export function ModulesManagement() {
                     onDuplicate={handleDuplicateModule}
                     customNames={availableHierarchy.customNames}
                     showDuplicateButton={true}
+                    isFirst={idx === 0}
+                    draggedItemId={availableHierarchy.draggedItem?.id || null}
                   />
                 ))}
                 {(availableSearch || availableTypeFilter !== 'all') && availableHierarchy.items.filter((item) => {
@@ -697,13 +701,15 @@ export function ModulesManagement() {
                       }
                       return false;
                     })
-                    .map((item) => (
+                    .map((item, idx) => (
                       <DraggableModuleItem
                         key={item.id}
                         item={item}
+                        index={idx}
                         onDragStart={assignedHierarchy.handleDragStart}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={assignedHierarchy.handleDrop}
+                        onDropBetween={assignedHierarchy.handleDropBetween}
                         onDragEnd={assignedHierarchy.handleDragEnd}
                         onToggleFolder={assignedHierarchy.toggleFolder}
                         onEditItem={assignedHierarchy.editItem}
@@ -711,6 +717,8 @@ export function ModulesManagement() {
                         onDelete={handleRemoveAssignment}
                         customNames={assignedHierarchy.customNames}
                         showDeleteButton={true}
+                        isFirst={idx === 0}
+                        draggedItemId={assignedHierarchy.draggedItem?.id || null}
                       />
                     ))}
                   {(assignedSearch || assignedTypeFilter !== 'all' || assignedUserFilter !== 'all') && assignedHierarchy.items.filter((item) => {

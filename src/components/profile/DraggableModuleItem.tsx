@@ -23,9 +23,11 @@ export interface ModuleItem {
 
 interface DraggableModuleItemProps {
   item: ModuleItem;
+  index: number;
   onDragStart: (item: ModuleItem, e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (targetItem: ModuleItem, e: React.DragEvent) => void;
+  onDropBetween: (targetIndex: number, e: React.DragEvent) => void;
   onDragEnd: () => void;
   onToggleFolder: (folderId: string) => void;
   onEditItem: (item: ModuleItem, newName: string, newDescription: string) => void;
@@ -36,13 +38,17 @@ interface DraggableModuleItemProps {
   customNames?: Record<string, { name: string; description: string }>;
   showDeleteButton?: boolean;
   showDuplicateButton?: boolean;
+  isFirst?: boolean;
+  draggedItemId?: string | null;
 }
 
 export function DraggableModuleItem({
   item,
+  index = 0,
   onDragStart,
   onDragOver,
   onDrop,
+  onDropBetween,
   onDragEnd,
   onToggleFolder,
   onEditItem,
@@ -52,10 +58,14 @@ export function DraggableModuleItem({
   level = 0,
   customNames = {},
   showDeleteButton = false,
-  showDuplicateButton = false
+  showDuplicateButton = false,
+  isFirst = false,
+  draggedItemId = null
 }: DraggableModuleItemProps) {
   const navigate = useNavigate();
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isDragOverBefore, setIsDragOverBefore] = useState(false);
+  const [isDragOverAfter, setIsDragOverAfter] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
@@ -63,6 +73,22 @@ export function DraggableModuleItem({
 
   const displayName = customNames[item.key]?.name || item.name;
   const displayDescription = customNames[item.key]?.description || item.description;
+
+  // Handle drop zone before this item
+  const handleDropBefore = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOverBefore(false);
+    onDropBetween(index, e);
+  };
+
+  // Handle drop zone after this item
+  const handleDropAfter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOverAfter(false);
+    onDropBetween(index + 1, e);
+  };
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -186,8 +212,25 @@ export function DraggableModuleItem({
     );
   }
 
+  const isDragging = draggedItemId && draggedItemId !== item.id;
+
   return (
-    <div style={{ marginRight: `${paddingLeft}px` }}>
+    <div style={{ marginRight: `${paddingLeft}px` }} className="relative">
+      {/* Drop zone before this item - only show for first item or when dragging */}
+      {isFirst && isDragging && (
+        <div
+          className={`h-3 -mt-1 mb-1 rounded-full transition-all ${
+            isDragOverBefore ? 'bg-primary/40 h-4' : 'bg-transparent hover:bg-primary/20'
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOverBefore(true);
+          }}
+          onDragLeave={() => setIsDragOverBefore(false)}
+          onDrop={handleDropBefore}
+        />
+      )}
+      
       <div
         draggable
         onDragStart={(e) => onDragStart(item, e)}
@@ -324,16 +367,33 @@ export function DraggableModuleItem({
         </div>
       </div>
       
+      {/* Drop zone after this item - always visible when dragging */}
+      {isDragging && (
+        <div
+          className={`h-3 mt-1 rounded-full transition-all ${
+            isDragOverAfter ? 'bg-primary/40 h-4' : 'bg-transparent hover:bg-primary/20'
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOverAfter(true);
+          }}
+          onDragLeave={() => setIsDragOverAfter(false)}
+          onDrop={handleDropAfter}
+        />
+      )}
+      
       {/* Render children if folder is open */}
       {item.type === 'folder' && item.isOpen && item.children && (
         <div className="mt-2 space-y-2">
-          {item.children.map((child) => (
+          {item.children.map((child, childIndex) => (
             <DraggableModuleItem
               key={child.id}
               item={child}
+              index={childIndex}
               onDragStart={onDragStart}
               onDragOver={onDragOver}
               onDrop={onDrop}
+              onDropBetween={onDropBetween}
               onDragEnd={onDragEnd}
               onToggleFolder={onToggleFolder}
               onEditItem={onEditItem}
@@ -344,6 +404,8 @@ export function DraggableModuleItem({
               customNames={customNames}
               showDeleteButton={showDeleteButton}
               showDuplicateButton={showDuplicateButton}
+              isFirst={childIndex === 0}
+              draggedItemId={draggedItemId}
             />
           ))}
         </div>
