@@ -15,7 +15,8 @@ interface UseModuleHierarchyProps {
 export function useModuleHierarchy({ type, initialModules, onModuleNameChange }: UseModuleHierarchyProps) {
   const storageKey = type === 'available' ? STORAGE_KEY_AVAILABLE : STORAGE_KEY_ASSIGNED;
   
-  const [items, setItems] = useState<ModuleItem[]>([]);
+  // Initialize with initialModules to prevent empty state on first render
+  const [items, setItems] = useState<ModuleItem[]>(() => initialModules);
   const [customNames, setCustomNames] = useState<Record<string, { name: string; description: string }>>({});
   const [draggedItem, setDraggedItem] = useState<ModuleItem | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
