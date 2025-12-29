@@ -382,6 +382,33 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
     });
   }, [saveHierarchy]);
 
+  // Move item to a specific index in root level (for drop between)
+  const handleDropBetween = useCallback((targetIndex: number, e: React.DragEvent) => {
+    e.preventDefault();
+    
+    if (!draggedItem) {
+      return;
+    }
+
+    setItems(prevItems => {
+      // Remove dragged item from its current position
+      const { items: itemsWithoutDragged, removed } = removeItemFromHierarchy(prevItems, draggedItem.id);
+      
+      if (!removed) return prevItems;
+
+      // Insert at target index
+      const newItems = [...itemsWithoutDragged];
+      // Adjust target index if the item was before the target position
+      const adjustedIndex = Math.min(targetIndex, newItems.length);
+      newItems.splice(adjustedIndex, 0, removed);
+
+      saveHierarchy(newItems);
+      return newItems;
+    });
+
+    setDraggedItem(null);
+  }, [draggedItem, saveHierarchy]);
+
   return {
     items,
     customNames,
@@ -390,6 +417,7 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
     handleDragStart,
     handleDragEnd,
     handleDrop,
+    handleDropBetween,
     toggleFolder,
     editItem,
     reorderItems,
