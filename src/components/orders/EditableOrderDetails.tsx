@@ -685,27 +685,6 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
 
       <Separator />
 
-      {/* Map Location */}
-      {order.location_lat && order.location_lng && (
-        <div className="space-y-2">
-          <Label className="text-sm font-medium flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-primary" />
-            موقعیت پروژه بر روی نقشه
-          </Label>
-          <div className="h-[350px] rounded-lg overflow-hidden border-2 border-border relative">
-            <StaticLocationMap
-              lat={order.location_lat}
-              lng={order.location_lng}
-              address={order.address}
-              detailedAddress={order.detailed_address}
-              showNavigationButton={true}
-            />
-          </div>
-        </div>
-      )}
-
-      <Separator />
-
       {/* مراحل پیشرفت سفارش */}
       <OrderTimeline
         orderStatus={order.status || 'pending'}
