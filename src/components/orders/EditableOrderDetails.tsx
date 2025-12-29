@@ -692,12 +692,13 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
             <MapPin className="h-4 w-4 text-primary" />
             موقعیت پروژه بر روی نقشه
           </Label>
-          <div className="h-[300px] rounded-lg overflow-hidden border-2 border-border">
+          <div className="h-[350px] rounded-lg overflow-hidden border-2 border-border relative">
             <StaticLocationMap
               lat={order.location_lat}
               lng={order.location_lng}
               address={order.address}
               detailedAddress={order.detailed_address}
+              showNavigationButton={true}
             />
           </div>
         </div>
