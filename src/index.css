@@ -46,8 +46,8 @@ body {
   /* Force consistent rendering */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* Prevent scroll locking */
-  overflow-x: hidden;
+  /* Allow both horizontal and vertical scrolling */
+  overflow-x: auto;
   overflow-y: auto;
 }
 
@@ -222,7 +222,9 @@ body {
     position: relative;
     /* اجازه Pull-to-Refresh - فقط محدودیت افقی */
     overscroll-behavior-x: contain;
-    overflow-x: hidden;
+    /* اجازه اسکرول افقی و عمودی */
+    overflow-x: auto;
+    overflow-y: auto;
     /* Prevent zooming on touch devices */
     touch-action: pan-x pan-y;
     -webkit-text-size-adjust: 100%;
