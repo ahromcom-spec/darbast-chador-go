@@ -309,7 +309,16 @@ export function ModulesManagement() {
       name: `${item.name} (کپی)`,
       description: item.description,
     };
-    availableHierarchy.setItems(prev => [newModule, ...prev]);
+    availableHierarchy.setItems(prev => {
+      const newItems = [newModule, ...prev];
+      // Save to localStorage immediately
+      try {
+        localStorage.setItem('module_hierarchy_available', JSON.stringify(newItems));
+      } catch (error) {
+        console.error('Error saving duplicated module:', error);
+      }
+      return newItems;
+    });
     toast.success('ماژول کپی شد. می‌توانید آن را ویرایش کنید.');
   };
 
