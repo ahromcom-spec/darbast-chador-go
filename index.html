@@ -6,15 +6,15 @@
     <!-- Cross-browser text sizing - Edge/Firefox compatibility -->
     <meta name="MobileOptimized" content="width" />
     <meta name="HandheldFriendly" content="true" />
-    <link rel="icon" href="/icons/icon-192-v3.png?v=3" type="image/png" />
-    
+    <link rel="icon" href="/icons/icon-192-v3.png?v=4" type="image/png" />
+
     <!-- Security Headers -->
     <meta http-equiv="X-Frame-Options" content="DENY" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="Referrer-Policy" content="no-referrer" />
     <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(self), camera=()" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://api.mapbox.com https://cdn.onesignal.com https://van.najva.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; media-src 'self' blob: https:; connect-src 'self' https://gclbltatkbwbqxqqrcea.supabase.co wss://gclbltatkbwbqxqqrcea.supabase.co https://gclbltatkbwbqxqqrcea.functions.supabase.co wss://gclbltatkbwbqxqqrcea.functions.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://onesignal.com https://*.onesignal.com https://van.najva.com https://*.najva.com; worker-src 'self' blob: https://cdn.onesignal.com https://van.najva.com;" />
-    
+
     <!-- Najva Push Notification - disable default popup, we use custom UI -->
     <script>
       // Disable Najva default popup - we use our own custom dialog
@@ -22,8 +22,15 @@
       window.najvaUserConfig.showWebPushPrompt = false;
       window.najvaUserConfig.disableAutoPrompt = true;
     </script>
-    <script>var s=document.createElement("script");s.src="https://van.najva.com/static/js/main-script.js";s.defer=!0;s.id="najva-mini-script";s.setAttribute("data-najva-id","028d3cc4-7bf7-402f-a836-4c1be6fdea95");document.head.appendChild(s);</script>
-    
+    <script>
+      var s = document.createElement("script");
+      s.src = "https://van.najva.com/static/js/main-script.js";
+      s.defer = !0;
+      s.id = "najva-mini-script";
+      s.setAttribute("data-najva-id", "028d3cc4-7bf7-402f-a836-4c1be6fdea95");
+      document.head.appendChild(s);
+    </script>
+
     <!-- DNS Prefetch برای بهبود سرعت -->
     <link rel="dns-prefetch" href="https://gclbltatkbwbqxqqrcea.supabase.co" />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
@@ -32,12 +39,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
-    
+
     <!-- Primary Meta Tags -->
     <title>خدمات ساختمانی و منزل اهرم | داربست فلزی در قم و سراسر ایران</title>
     <meta name="title" content="خدمات ساختمانی و منزل اهرم | داربست فلزی در قم و سراسر ایران" />
-    <meta name="description" content="خدمات ساختمانی و منزل اهرم - ارائه خدمات تخصصی داربست فلزی، داربست ساختمانی، نصب و اجرای داربست در قم و سراسر ایران. سیستم هوشمند سفارش داربست با کیفیت بالا و قیمت مناسب" />
-    <meta name="keywords" content="داربست فلزی, خدمات داربست, داربست, خدمات داربست فلزی, داربست فلزی در قم, داربست فلزی در ایران, خدمات ساختمانی, خدمات ساختمانی اهرم, اهرم, ساختمان, داربست ساختمانی, نصب داربست, اجرای داربست, قیمت داربست فلزی, شرکت داربست, پیمانکار داربست, چادر برزنتی" />
+    <meta
+      name="description"
+      content="خدمات ساختمانی و منزل اهرم - ارائه خدمات تخصصی داربست فلزی، داربست ساختمانی، نصب و اجرای داربست در قم و سراسر ایران. سیستم هوشمند سفارش داربست با کیفیت بالا و قیمت مناسب"
+    />
+    <meta
+      name="keywords"
+      content="داربست فلزی, خدمات داربست, داربست, خدمات داربست فلزی, داربست فلزی در قم, داربست فلزی در ایران, خدمات ساختمانی, خدمات ساختمانی اهرم, اهرم, ساختمان, داربست ساختمانی, نصب داربست, اجرای داربست, قیمت داربست فلزی, شرکت داربست, پیمانکار داربست, چادر برزنتی"
+    />
     <meta name="author" content="خدمات ساختمانی اهرم" />
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta name="language" content="Persian" />
@@ -46,11 +59,14 @@
     <meta name="geo.position" content="34.6416;50.8746" />
     <meta name="ICBM" content="34.6416, 50.8746" />
     <!-- Public tokens (safe for frontend) -->
-    <meta name="mapbox-token" content="pk.eyJ1Ijoia2hhZGFtYXRlLWFocm9tIiwiYSI6ImNtaTEzNm0yaDBzdTIyam16enU3eGVtc3IifQ.0YazUHOkiwSYLwsjOcgUFA" />
-    
+    <meta
+      name="mapbox-token"
+      content="pk.eyJ1Ijoia2hhZGFtYXRlLWFocm9tIiwiYSI6ImNtaTEzNm0yaDBzdTIyam16enU3eGVtc3IifQ.0YazUHOkiwSYLwsjOcgUFA"
+    />
+
     <!-- Canonical URL -->
     <link rel="canonical" href="https://ahrom.org/" />
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ahrom.org/" />
@@ -62,7 +78,7 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="لوگو خدمات ساختمانی اهرم - داربست فلزی" />
     <meta property="og:locale" content="fa_IR" />
-    
+
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://ahrom.org/" />
@@ -70,174 +86,181 @@
     <meta name="twitter:description" content="خدمات ساختمانی اهرم - ارائه خدمات تخصصی داربست فلزی، داربست ساختمانی، نصب و اجرای داربست در قم و سراسر ایران" />
     <meta name="twitter:image" content="https://ahrom.org/assets/ahrom-logo.png" />
     <meta name="twitter:image:alt" content="لوگو خدمات ساختمانی اهرم" />
-    
+
     <!-- Additional Meta Tags for Better SEO -->
     <meta name="format-detection" content="telephone=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="خدمات ساختمانی و منزل اهرم" />
-    
+
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "LocalBusiness",
-      "name": "خدمات ساختمانی اهرم",
-      "image": "https://ahrom.org/assets/ahrom-logo.png",
-      "logo": "https://ahrom.org/assets/ahrom-logo.png",
-      "description": "خدمات ساختمانی اهرم - ارائه خدمات تخصصی داربست فلزی، داربست ساختمانی، نصب و اجرای داربست در قم و سراسر ایران",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "قم",
-        "addressRegion": "قم",
-        "addressCountry": "IR"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": "34.6416",
-        "longitude": "50.8746"
-      },
-      "url": "https://ahrom.org/",
-      "priceRange": "$$",
-      "openingHours": "Mo-Sa 08:00-20:00",
-      "telephone": "+98-XXX-XXX-XXXX",
-      "areaServed": [
-        {
-          "@type": "City",
-          "name": "قم"
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "خدمات ساختمانی اهرم",
+        "image": "https://ahrom.org/assets/ahrom-logo.png",
+        "logo": "https://ahrom.org/assets/ahrom-logo.png",
+        "description": "خدمات ساختمانی اهرم - ارائه خدمات تخصصی داربست فلزی، داربست ساختمانی، نصب و اجرای داربست در قم و سراسر ایران",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "قم",
+          "addressRegion": "قم",
+          "addressCountry": "IR"
         },
-        {
-          "@type": "Country",
-          "name": "ایران"
-        }
-      ],
-      "serviceType": ["داربست فلزی", "خدمات ساختمانی", "نصب داربست", "چادر برزنتی"],
-      "hasOfferCatalog": {
-        "@type": "OfferCatalog",
-        "name": "خدمات داربست فلزی و ساختمانی",
-        "itemListElement": [
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": "34.6416",
+          "longitude": "50.8746"
+        },
+        "url": "https://ahrom.org/",
+        "priceRange": "$$",
+        "openingHours": "Mo-Sa 08:00-20:00",
+        "telephone": "+98-XXX-XXX-XXXX",
+        "areaServed": [
           {
-            "@type": "Offer",
-            "itemOffered": {
-              "@type": "Service",
-              "name": "داربست فلزی",
-              "description": "خدمات نصب و اجرای داربست فلزی برای پروژه‌های ساختمانی، بازسازی و نماسازی",
-              "provider": {
-                "@type": "Organization",
-                "name": "خدمات ساختمانی اهرم"
-              }
-            }
+            "@type": "City",
+            "name": "قم"
           },
           {
-            "@type": "Offer",
-            "itemOffered": {
-              "@type": "Service",
-              "name": "چادر برزنتی",
-              "description": "خدمات چادر برزنتی برای محافظت از ساختمان در حین اجرای پروژه",
-              "provider": {
-                "@type": "Organization",
-                "name": "خدمات ساختمانی اهرم"
+            "@type": "Country",
+            "name": "ایران"
+          }
+        ],
+        "serviceType": ["داربست فلزی", "خدمات ساختمانی", "نصب داربست", "چادر برزنتی"],
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "خدمات داربست فلزی و ساختمانی",
+          "itemListElement": [
+            {
+              "@type": "Offer",
+              "itemOffered": {
+                "@type": "Service",
+                "name": "داربست فلزی",
+                "description": "خدمات نصب و اجرای داربست فلزی برای پروژه‌های ساختمانی، بازسازی و نماسازی",
+                "provider": {
+                  "@type": "Organization",
+                  "name": "خدمات ساختمانی اهرم"
+                }
+              }
+            },
+            {
+              "@type": "Offer",
+              "itemOffered": {
+                "@type": "Service",
+                "name": "چادر برزنتی",
+                "description": "خدمات چادر برزنتی برای محافظت از ساختمان در حین اجرای پروژه",
+                "provider": {
+                  "@type": "Organization",
+                  "name": "خدمات ساختمانی اهرم"
+                }
               }
             }
+          ]
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "reviewCount": "127"
+        }
+      }
+    </script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "خدمات ساختمانی اهرم",
+        "alternateName": "اهرم - خدمات ساختمانی",
+        "url": "https://ahrom.org/",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://ahrom.org/?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "خدمات ساختمانی اهرم",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://ahrom.org/assets/ahrom-logo.png"
+          }
+        }
+      }
+    </script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "خانه",
+            "item": "https://ahrom.org/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "خدمات داربست فلزی",
+            "item": "https://ahrom.org/scaffolding/form"
           }
         ]
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.8",
-        "reviewCount": "127"
       }
-    }
     </script>
-    
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "خدمات ساختمانی اهرم",
-      "alternateName": "اهرم - خدمات ساختمانی",
-      "url": "https://ahrom.org/",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://ahrom.org/?q={search_term_string}",
-        "query-input": "required name=search_term_string"
-      },
-      "publisher": {
-        "@type": "Organization",
-        "name": "خدمات ساختمانی اهرم",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://ahrom.org/assets/ahrom-logo.png"
-        }
-      }
-    }
-    </script>
-    
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "خانه",
-          "item": "https://ahrom.org/"
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "خدمات داربست فلزی",
-          "item": "https://ahrom.org/scaffolding/form"
-        }
-      ]
-    }
-    </script>
-    
+
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.webmanifest?v=9" />
+    <link rel="manifest" href="/manifest.webmanifest?v=10" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="application-name" content="اهرم" />
     <meta name="msapplication-TileColor" content="#ffffff" />
-    <meta name="msapplication-TileImage" content="/icons/icon-512-v3.png?v=3" />
+    <meta name="msapplication-TileImage" content="/icons/icon-512-v3.png?v=4" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192-v3.png?v=3" />
-    
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192-v3.png?v=4" />
+
     <!-- iOS - Standalone Mode -->
-    <link rel="apple-touch-icon" href="/icons/apple-touch-180-v3.png?v=3" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-180-v3.png?v=3" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192-v3.png?v=3" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512-v3.png?v=3" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-180-v3.png?v=4" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-180-v3.png?v=4" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192-v3.png?v=4" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512-v3.png?v=4" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="اهرم" />
-    
+
     <!-- Android Chrome - Standalone Mode -->
     <meta name="mobile-web-app-capable" content="yes" />
 
     <!-- Persian/RTL Font - بارگذاری غیرمسدودکننده -->
     <link rel="preload" href="/hero-background.webp" as="image" fetchpriority="high" />
     <link rel="preload" href="/assets/ahrom-logo.png" as="image" />
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet" /></noscript>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet" />
+    </noscript>
   </head>
 
   <body dir="rtl">
     <div id="root"></div>
-    
+
     <!-- Service Worker برای PWA در src/main.tsx ثبت می‌شود -->
     <script>
       // Early capture of PWA install events before React mounts
       (function () {
         try {
           window.__deferredPrompt = window.__deferredPrompt || null;
-          window.addEventListener('beforeinstallprompt', function (e) {
+          window.addEventListener("beforeinstallprompt", function (e) {
             e.preventDefault();
             window.__deferredPrompt = e;
           });
-          window.addEventListener('appinstalled', function () {
+          window.addEventListener("appinstalled", function () {
             window.__deferredPrompt = null;
           });
         } catch (err) {
@@ -246,12 +269,12 @@
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
-    
+
     <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
+      OneSignalDeferred.push(async function (OneSignal) {
         await OneSignal.init({
           appId: "bbc288e4-bad9-4da0-9270-d499e0aa1eb3",
         });
@@ -259,3 +282,4 @@
     </script>
   </body>
 </html>
+
