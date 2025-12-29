@@ -245,13 +245,13 @@ export default function StaticLocationMap({
   }, [lat, lng, address, detailedAddress]);
 
   return (
-    <div className="relative">
-      <div 
-        ref={mapContainer} 
+    <div className="relative w-full h-full">
+      <div
+        ref={mapContainer}
         className="w-full h-full relative"
-        style={{ 
-          minHeight: '400px',
-          background: '#e8e8e8',
+        style={{
+          height: '100%',
+          background: 'hsl(var(--muted))',
           /* Prevent CSS zoom from affecting map */
           zoom: '1',
           transform: 'translateZ(0)',
@@ -259,15 +259,11 @@ export default function StaticLocationMap({
           isolation: 'isolate',
         }}
       />
-      
+
       {/* Navigation Button */}
       {showNavigationButton && (
-        <div className="absolute bottom-4 right-4 z-10">
-          <Button
-            onClick={handleNavigate}
-            className="gap-2 shadow-lg"
-            variant="default"
-          >
+        <div className="absolute bottom-4 right-4 z-[1001]">
+          <Button onClick={handleNavigate} className="gap-2 shadow-lg" variant="default">
             <Navigation className="h-4 w-4" />
             مسیریابی
           </Button>
