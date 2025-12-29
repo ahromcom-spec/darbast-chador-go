@@ -296,7 +296,15 @@ export function ModulesManagement() {
       children: [],
       isOpen: true,
     };
-    availableHierarchy.setItems(prev => [newFolder, ...prev]);
+    availableHierarchy.setItems(prev => {
+      const newItems = [newFolder, ...prev];
+      try {
+        localStorage.setItem('module_hierarchy_available', JSON.stringify(newItems));
+      } catch (error) {
+        console.error('Error saving folder:', error);
+      }
+      return newItems;
+    });
   };
 
   // Duplicate a module (copy with new id/key)
@@ -332,7 +340,15 @@ export function ModulesManagement() {
       children: [],
       isOpen: true,
     };
-    assignedHierarchy.setItems(prev => [newFolder, ...prev]);
+    assignedHierarchy.setItems(prev => {
+      const newItems = [newFolder, ...prev];
+      try {
+        localStorage.setItem('module_hierarchy_assigned', JSON.stringify(newItems));
+      } catch (error) {
+        console.error('Error saving assigned folder:', error);
+      }
+      return newItems;
+    });
   };
 
   // Convert assignments to ModuleItem format for assigned modules section
