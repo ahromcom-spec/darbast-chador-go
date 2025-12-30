@@ -11,7 +11,8 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { DraggableModuleItem, ModuleItem } from './DraggableModuleItem';
+import { ModuleItem as ModuleItemComponent, ModuleItemData } from './ModuleItem';
+import { ModuleItem } from './DraggableModuleItem';
 import { useModuleHierarchy } from '@/hooks/useModuleHierarchy';
 
 interface ModuleAssignment {
@@ -696,7 +697,7 @@ export function ModulesManagement() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                برای مرتب‌سازی، ماژول‌ها را بکشید و رها کنید. با انداختن ماژول روی ماژول دیگر، پوشه ایجاد می‌شود.
+                با کلیدهای بالا و پایین ماژول‌ها را مرتب کنید. برای افزودن ماژول به پوشه، پوشه را باز کنید و «افزودن ماژول» را بزنید.
               </p>
               {/* Search and Filter for available modules */}
               <div className="flex flex-col sm:flex-row gap-2">
@@ -736,8 +737,8 @@ export function ModulesManagement() {
                 </div>
               </div>
               <div className="space-y-2">
-                {availableHierarchy.items
-                  .filter((item) => {
+                {(() => {
+                  const filteredItems = availableHierarchy.items.filter((item) => {
                     // Type filter
                     if (availableTypeFilter !== 'all') {
                       if (availableTypeFilter === 'folder' && item.type !== 'folder') return false;
@@ -764,30 +765,31 @@ export function ModulesManagement() {
                       });
                     }
                     return false;
-                  })
-                  .map((item, idx) => (
-                  <DraggableModuleItem
-                    key={item.id}
-                    item={item}
-                    index={idx}
-                    onDragStart={availableHierarchy.handleDragStart}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={availableHierarchy.handleDrop}
-                    onDropBetween={availableHierarchy.handleDropBetween}
-                    onDragEnd={availableHierarchy.handleDragEnd}
-                    onToggleFolder={availableHierarchy.toggleFolder}
-                    onEditItem={availableHierarchy.editItem}
-                    onNavigate={(href) => navigate(href)}
-                    onDuplicate={handleDuplicateModule}
-                    onDelete={handleDeleteAvailableModule}
-                    customNames={availableHierarchy.customNames}
-                    showDuplicateButton={true}
-                    showDeleteButton={true}
-                    isFirst={idx === 0}
-                    draggedItemId={availableHierarchy.draggedItem?.id || null}
-                    canDeleteItem={canDeleteModule}
-                  />
-                ))}
+                  });
+                  
+                  return filteredItems.map((item, idx) => (
+                    <ModuleItemComponent
+                      key={item.id}
+                      item={item as ModuleItemData}
+                      index={idx}
+                      totalItems={filteredItems.length}
+                      onMoveUp={availableHierarchy.moveItemUp}
+                      onMoveDown={availableHierarchy.moveItemDown}
+                      onToggleFolder={availableHierarchy.toggleFolder}
+                      onEditItem={availableHierarchy.editItem}
+                      onNavigate={(href) => navigate(href)}
+                      onDuplicate={handleDuplicateModule}
+                      onDelete={handleDeleteAvailableModule}
+                      onAddToFolder={availableHierarchy.addModuleToFolder}
+                      onRemoveFromFolder={availableHierarchy.removeModuleFromFolder}
+                      customNames={availableHierarchy.customNames}
+                      showDuplicateButton={true}
+                      showDeleteButton={true}
+                      canDeleteItem={canDeleteModule}
+                      availableModulesForFolder={availableHierarchy.getAvailableModulesForFolder() as ModuleItemData[]}
+                    />
+                  ));
+                })()}
                 {(availableSearch || availableTypeFilter !== 'all') && availableHierarchy.items.filter((item) => {
                   if (availableTypeFilter !== 'all') {
                     if (availableTypeFilter === 'folder' && item.type !== 'folder') return false;
@@ -892,7 +894,7 @@ export function ModulesManagement() {
               
               {assignments.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  برای مرتب‌سازی، آیتم‌ها را بکشید و رها کنید. با انداختن آیتم روی آیتم دیگر، پوشه ایجاد می‌شود.
+                  با کلیدهای بالا و پایین آیتم‌ها را مرتب کنید. برای افزودن آیتم به پوشه، پوشه را باز کنید و «افزودن ماژول» را بزنید.
                 </p>
               )}
               
@@ -953,8 +955,8 @@ export function ModulesManagement() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {assignedHierarchy.items
-                    .filter((item) => {
+                  {(() => {
+                    const filteredItems = assignedHierarchy.items.filter((item) => {
                       // Type filter
                       if (assignedTypeFilter !== 'all') {
                         if (item.type === 'folder') {
@@ -985,27 +987,28 @@ export function ModulesManagement() {
                         });
                       }
                       return false;
-                    })
-                    .map((item, idx) => (
-                      <DraggableModuleItem
+                    });
+                    
+                    return filteredItems.map((item, idx) => (
+                      <ModuleItemComponent
                         key={item.id}
-                        item={item}
+                        item={item as ModuleItemData}
                         index={idx}
-                        onDragStart={assignedHierarchy.handleDragStart}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={assignedHierarchy.handleDrop}
-                        onDropBetween={assignedHierarchy.handleDropBetween}
-                        onDragEnd={assignedHierarchy.handleDragEnd}
+                        totalItems={filteredItems.length}
+                        onMoveUp={assignedHierarchy.moveItemUp}
+                        onMoveDown={assignedHierarchy.moveItemDown}
                         onToggleFolder={assignedHierarchy.toggleFolder}
                         onEditItem={assignedHierarchy.editItem}
                         onNavigate={(href) => navigate(href)}
                         onDelete={handleRemoveAssignment}
+                        onAddToFolder={assignedHierarchy.addModuleToFolder}
+                        onRemoveFromFolder={assignedHierarchy.removeModuleFromFolder}
                         customNames={assignedHierarchy.customNames}
                         showDeleteButton={true}
-                        isFirst={idx === 0}
-                        draggedItemId={assignedHierarchy.draggedItem?.id || null}
+                        availableModulesForFolder={assignedHierarchy.getAvailableModulesForFolder() as ModuleItemData[]}
                       />
-                    ))}
+                    ));
+                  })()}
                   {(assignedSearch || assignedTypeFilter !== 'all' || assignedUserFilter !== 'all') && assignedHierarchy.items.filter((item) => {
                     if (assignedTypeFilter !== 'all') {
                       if (item.type === 'folder') {

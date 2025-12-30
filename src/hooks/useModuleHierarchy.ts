@@ -514,6 +514,86 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
     setDraggedItem(null);
   }, [draggedItem, saveHierarchy]);
 
+  // Move item up within its level
+  const moveItemUp = useCallback((itemId: string) => {
+    setItems(prevItems => {
+      const moveUp = (items: ModuleItem[]): ModuleItem[] => {
+        const index = items.findIndex(i => i.id === itemId);
+        if (index > 0) {
+          const newItems = [...items];
+          [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
+          return newItems;
+        }
+        return items.map(item => {
+          if (item.children) {
+            return { ...item, children: moveUp(item.children) };
+          }
+          return item;
+        });
+      };
+      
+      const newItems = moveUp(prevItems);
+      saveHierarchy(newItems);
+      return newItems;
+    });
+  }, [saveHierarchy]);
+
+  // Move item down within its level
+  const moveItemDown = useCallback((itemId: string) => {
+    setItems(prevItems => {
+      const moveDown = (items: ModuleItem[]): ModuleItem[] => {
+        const index = items.findIndex(i => i.id === itemId);
+        if (index !== -1 && index < items.length - 1) {
+          const newItems = [...items];
+          [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
+          return newItems;
+        }
+        return items.map(item => {
+          if (item.children) {
+            return { ...item, children: moveDown(item.children) };
+          }
+          return item;
+        });
+      };
+      
+      const newItems = moveDown(prevItems);
+      saveHierarchy(newItems);
+      return newItems;
+    });
+  }, [saveHierarchy]);
+
+  // Add module to folder
+  const addModuleToFolder = useCallback((folderId: string, moduleId: string) => {
+    setItems(prevItems => {
+      // First remove module from current position
+      const { items: itemsWithoutModule, removed } = removeItemFromHierarchy(prevItems, moduleId);
+      if (!removed) return prevItems;
+
+      // Then add to folder
+      const newItems = addItemToFolder(itemsWithoutModule, folderId, removed);
+      saveHierarchy(newItems);
+      return newItems;
+    });
+  }, [saveHierarchy]);
+
+  // Remove module from folder (move to root)
+  const removeModuleFromFolder = useCallback((moduleId: string) => {
+    setItems(prevItems => {
+      const { items: itemsWithoutModule, removed } = removeItemFromHierarchy(prevItems, moduleId);
+      if (!removed) return prevItems;
+
+      // Add to root level
+      const newItems = [...itemsWithoutModule, removed];
+      saveHierarchy(newItems);
+      return newItems;
+    });
+  }, [saveHierarchy]);
+
+  // Get modules available to add to folders (modules at root level, not in any folder)
+  const getAvailableModulesForFolder = useCallback((): ModuleItem[] => {
+    return items.filter(item => item.type === 'module');
+  }, [items]);
+
   return {
     items,
     customNames,
@@ -526,6 +606,11 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
     toggleFolder,
     editItem,
     reorderItems,
-    setItems
+    setItems,
+    moveItemUp,
+    moveItemDown,
+    addModuleToFolder,
+    removeModuleFromFolder,
+    getAvailableModulesForFolder
   };
 }
