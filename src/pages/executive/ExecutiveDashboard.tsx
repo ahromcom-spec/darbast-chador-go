@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/common/PageHeader';
+import { ModuleHeader } from '@/components/common/ModuleHeader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Users, ShoppingCart, Clock, CheckCircle, AlertCircle, Package, Calendar, TrendingUp, PlayCircle, Globe, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -184,22 +184,11 @@ export default function ExecutiveDashboard() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* هدر با دکمه بازگشت */}
-      <div className="flex items-center gap-4 mb-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate('/profile')}
-          className="gap-2"
-        >
-          <ArrowRight className="h-4 w-4" />
-          بازگشت به پروفایل
-        </Button>
-      </div>
-      
-      <PageHeader
+      <ModuleHeader
         title="ماژول مدیریت اجرای داربست به همراه اجناس"
         description="مدیریت و پیگیری سفارشات خدمات اجرای داربست به همراه اجناس"
+        icon={<Package className="h-5 w-5" />}
+        backTo="/profile?tab=modules"
       />
 
       {/* بخش کره زمین */}
