@@ -74,12 +74,15 @@ interface EditableOrderDetailsProps {
     transferred_from_user_id?: string | null;
     transferred_from_phone?: string | null;
     rental_start_date?: string | null;
+    total_price?: number | null;
+    total_paid?: number | null;
   };
   onUpdate?: () => void;
   hidePrice?: boolean; // Hide price information (for executive managers in specific modules)
+  hideDetails?: boolean; // Hide order details, only show financial info (for accounting module)
 }
 
-export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false }: EditableOrderDetailsProps) => {
+export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideDetails = false }: EditableOrderDetailsProps) => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -217,6 +220,93 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false }: Edi
   const totalArea = parsedNotes?.totalArea || parsedNotes?.total_area;
   const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
   const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
+
+  // For accounting module, show only financial info
+  if (hideDetails) {
+    const paymentAmountValue = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0;
+    const totalPaidValue = (order as any).total_paid || 0;
+    const remainingValue = Math.max(0, paymentAmountValue - totalPaidValue);
+
+    return (
+      <div className="space-y-4">
+        {/* Basic Order Info */}
+        <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+          <div>
+            <Label className="text-xs text-muted-foreground">کد سفارش</Label>
+            <p className="font-bold text-lg">{order.code}</p>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">نام مشتری</Label>
+            <p className="font-medium">{order.customer_name || 'نامشخص'}</p>
+          </div>
+        </div>
+
+        {/* Financial Summary */}
+        <div className="p-4 rounded-lg border bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Banknote className="h-5 w-5 text-green-600" />
+            <span className="text-lg font-bold">اطلاعات مالی سفارش</span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-background p-4 rounded-lg border">
+              <Label className="text-xs text-muted-foreground block mb-1">مبلغ کل سفارش</Label>
+              <p className="font-bold text-xl text-green-700 dark:text-green-300">
+                {Number(paymentAmountValue + approvedRepairCost).toLocaleString('fa-IR')} تومان
+              </p>
+            </div>
+            
+            <div className="bg-background p-4 rounded-lg border">
+              <Label className="text-xs text-muted-foreground block mb-1">مبلغ پرداخت شده</Label>
+              <p className="font-bold text-xl text-blue-700 dark:text-blue-300">
+                {Number(totalPaidValue).toLocaleString('fa-IR')} تومان
+              </p>
+            </div>
+            
+            <div className="bg-background p-4 rounded-lg border">
+              <Label className="text-xs text-muted-foreground block mb-1">مانده بدهکاری</Label>
+              <p className={`font-bold text-xl ${remainingValue > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                {Number(remainingValue).toLocaleString('fa-IR')} تومان
+              </p>
+            </div>
+          </div>
+
+          {approvedRepairCost > 0 && (
+            <div className="flex justify-between text-sm p-2 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
+              <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                <Wrench className="h-3 w-3" />
+                هزینه تعمیرات:
+              </span>
+              <span className="font-bold text-orange-700 dark:text-orange-300">{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+            </div>
+          )}
+
+          {/* Editable Price Input for Accounting */}
+          <div className="border-t pt-4 mt-4">
+            <Label className="text-sm font-medium mb-2 block">ویرایش مبلغ سفارش</Label>
+            <div className="flex gap-2">
+              <Input 
+                type="number"
+                value={paymentAmount} 
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="مبلغ به تومان"
+                className="flex-1"
+                dir="ltr"
+              />
+              <Button 
+                onClick={handleSave} 
+                disabled={saving || !isPriceChanged}
+                className="gap-2"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {!isPriceChanged ? 'ذخیره شده' : 'ذخیره'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
