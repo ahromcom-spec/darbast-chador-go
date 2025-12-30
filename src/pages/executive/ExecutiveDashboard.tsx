@@ -86,8 +86,13 @@ export default function ExecutiveDashboard() {
                              activeModuleKey.includes('سفارشات کل') ||
                              moduleName.includes('سفارشات کل');
 
+  // Check if this is the "scaffold execution with materials" module (code 10)
+  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
+                                         activeModuleKey.includes('101010') ||
+                                         moduleName.includes('داربست به همراه اجناس');
+
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['executive-stats', activeModuleKey, isAllOrdersModule],
+    queryKey: ['executive-stats', activeModuleKey, isAllOrdersModule, isScaffoldWithMaterialsModule],
     queryFn: async () => {
       // For "all orders" module, get ALL orders including pending
       // For specific modules, only get approved+ orders
@@ -95,10 +100,18 @@ export default function ExecutiveDashboard() {
         ? ['pending', 'approved', 'pending_execution', 'in_progress', 'completed', 'paid', 'rejected']
         : ['approved', 'in_progress', 'completed', 'paid'];
       
-      const { data: orders, error } = await supabase
+      // Build the query based on module type
+      let ordersQuery = supabase
         .from('projects_v3')
-        .select('*')
+        .select('*, subcategories!inner(code, service_type_id, service_types_v3!inner(code))')
         .in('status', statusFilter);
+
+      // For scaffold with materials module, filter by subcategory code '10'
+      if (isScaffoldWithMaterialsModule && !isAllOrdersModule) {
+        ordersQuery = ordersQuery.eq('subcategories.code', '10');
+      }
+
+      const { data: orders, error } = await ordersQuery;
 
       if (error) throw error;
 
@@ -106,7 +119,7 @@ export default function ExecutiveDashboard() {
       // For specific modules, filter by role
       let approvalsQuery = supabase
         .from('order_approvals')
-        .select('order_id')
+        .select('order_id, projects_v3!inner(subcategory_id, subcategories!inner(code))')
         .is('approved_at', null);
       
       // Only filter by role if NOT the "all orders" module
@@ -119,6 +132,11 @@ export default function ExecutiveDashboard() {
           'sales_manager',
           'general_manager'
         ]);
+        
+        // For scaffold with materials module, filter approvals by subcategory code '10'
+        if (isScaffoldWithMaterialsModule) {
+          approvalsQuery = approvalsQuery.eq('projects_v3.subcategories.code', '10');
+        }
       }
       
       const { data: pendingApprovals, error: approvalsError } = await approvalsQuery;
