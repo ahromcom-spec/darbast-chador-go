@@ -208,6 +208,38 @@ export function ModulesManagement() {
     comprehensive_accounting: 'finance_manager',
   };
 
+  // Get all assignable modules (both base and custom/copied modules)
+  const getAllAssignableModules = useMemo(() => {
+    // Collect all modules from availableHierarchy, including from folders
+    const collectModules = (items: ModuleItem[]): ModuleItem[] => {
+      const result: ModuleItem[] = [];
+      for (const item of items) {
+        if (item.type === 'module') {
+          result.push(item);
+        } else if (item.type === 'folder' && item.children) {
+          result.push(...collectModules(item.children));
+        }
+      }
+      return result;
+    };
+    return collectModules(availableHierarchy.items);
+  }, [availableHierarchy.items]);
+
+  // Get module info for assignment dropdown with custom names
+  const getModuleDisplayInfo = (item: ModuleItem) => {
+    const customName = availableHierarchy.customNames[item.key]?.name || item.name;
+    const customDesc = availableHierarchy.customNames[item.key]?.description || item.description;
+    const baseModule = AVAILABLE_MODULES.find(m => m.key === item.key);
+    return {
+      key: item.key,
+      name: customName,
+      description: customDesc,
+      href: item.href || baseModule?.href || '/executive',
+      color: item.color || baseModule?.color || 'text-gray-600',
+      bgColor: item.bgColor || baseModule?.bgColor || 'bg-gray-100',
+    };
+  };
+
   const handleAssignModule = async () => {
     if (!newPhoneNumber.trim()) {
       toast.error('لطفاً شماره موبایل را وارد کنید');
@@ -220,11 +252,14 @@ export function ModulesManagement() {
       return;
     }
 
-    const module = AVAILABLE_MODULES.find(m => m.key === selectedModule);
-    if (!module) {
+    // Find the selected module from all assignable modules
+    const selectedItem = getAllAssignableModules.find(m => m.key === selectedModule);
+    if (!selectedItem) {
       toast.error('ماژول نامعتبر');
       return;
     }
+
+    const moduleInfo = getModuleDisplayInfo(selectedItem);
 
     try {
       setSaving(true);
@@ -240,8 +275,8 @@ export function ModulesManagement() {
       const { error } = await supabase
         .from('module_assignments')
         .insert({
-          module_key: module.key,
-          module_name: module.name,
+          module_key: selectedItem.key,
+          module_name: moduleInfo.name,
           assigned_phone_number: newPhoneNumber,
           assigned_user_id: profile?.user_id || null,
           assigned_by: user?.id,
@@ -256,9 +291,9 @@ export function ModulesManagement() {
         return;
       }
 
-      // If user exists, also assign the corresponding role
+      // If user exists, also assign the corresponding role (only for base modules)
       if (profile?.user_id) {
-        const roleToAssign = MODULE_TO_ROLE[module.key];
+        const roleToAssign = MODULE_TO_ROLE[selectedItem.key];
         if (roleToAssign) {
           const { error: roleError } = await supabase
             .from('user_roles')
@@ -769,11 +804,14 @@ export function ModulesManagement() {
                     onChange={(e) => setSelectedModule(e.target.value)}
                     className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                   >
-                    {AVAILABLE_MODULES.map((module) => (
-                      <option key={module.key} value={module.key}>
-                        {module.name}
-                      </option>
-                    ))}
+                    {getAllAssignableModules.map((item) => {
+                      const info = getModuleDisplayInfo(item);
+                      return (
+                        <option key={item.key} value={item.key}>
+                          {info.name}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div className="flex-1">
