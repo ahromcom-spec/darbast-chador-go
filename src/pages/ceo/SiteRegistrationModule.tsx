@@ -11,6 +11,10 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/useDebounce';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+
+const DEFAULT_TITLE = 'ثبت‌نام در سایت اهرم';
+const DEFAULT_DESCRIPTION = 'ثبت‌نام کاربر جدید بدون نیاز به ارسال کد تایید';
 
 export default function SiteRegistrationModule() {
   const { user } = useAuth();
@@ -22,6 +26,13 @@ export default function SiteRegistrationModule() {
   const [registeredInfo, setRegisteredInfo] = useState<{ phone: string; name: string } | null>(null);
   const [existingUser, setExistingUser] = useState<{ name: string } | null>(null);
   const [checkingPhone, setCheckingPhone] = useState(false);
+
+  // Get dynamic module name from assignment
+  const { moduleName, moduleDescription } = useModuleAssignmentInfo(
+    'site_registration',
+    DEFAULT_TITLE,
+    DEFAULT_DESCRIPTION
+  );
 
   // بررسی دسترسی به ماژول
   useEffect(() => {
@@ -52,15 +63,21 @@ export default function SiteRegistrationModule() {
           .single();
 
         if (profile?.phone_number) {
-          const { data: assignment } = await supabase
+          // Check for base module or any copied module that links to site_registration
+          const { data: assignments } = await supabase
             .from('module_assignments')
-            .select('id')
-            .eq('module_key', 'site_registration')
+            .select('id, module_key, module_name')
             .eq('assigned_phone_number', profile.phone_number)
-            .eq('is_active', true)
-            .single();
+            .eq('is_active', true);
 
-          setHasAccess(!!assignment);
+          // Check if user has access via base module or a copied version
+          const hasModuleAccess = assignments?.some(a => 
+            a.module_key === 'site_registration' || 
+            (a.module_key.startsWith('custom-') && 
+              (a.module_name.includes('ثبت‌نام') || a.module_name.includes('site_registration')))
+          );
+
+          setHasAccess(!!hasModuleAccess);
         } else {
           setHasAccess(false);
         }
@@ -191,8 +208,8 @@ export default function SiteRegistrationModule() {
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-6">
       <ModuleHeader
-        title="ثبت‌نام در سایت اهرم"
-        description="ثبت‌نام کاربر جدید بدون نیاز به ارسال کد تایید"
+        title={moduleName}
+        description={moduleDescription}
         icon={<UserPlus className="h-5 w-5" />}
         backTo="/profile?tab=modules"
       />
