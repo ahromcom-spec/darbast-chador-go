@@ -29,30 +29,52 @@ function mergeAvailableHierarchy(saved: ModuleItem[], initialModules: ModuleItem
 }
 
 /**
+ * Normalize legacy assigned hierarchy where module `id` may not equal stable `moduleKey`.
+ * For assigned modules we always treat `key` as the stable identity and force `id === key`.
+ */
+function normalizeAssignedHierarchyIds(items: ModuleItem[]): ModuleItem[] {
+  const normalize = (arr: ModuleItem[]): ModuleItem[] =>
+    arr.map((it) => {
+      if (it.type === 'folder') {
+        return { ...it, children: normalize(it.children || []) };
+      }
+      const stableKey = it.key || it.id;
+      return { ...it, key: stableKey, id: stableKey };
+    });
+
+  return normalize(items);
+}
+
+/**
  * Helper to merge saved hierarchy with initialModules for assigned modules
  */
-function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[]): ModuleItem[] {
-  const validIds = new Set(initialModules.map(m => m.id));
-  const initialModulesMap = new Map(initialModules.map(m => [m.id, m]));
+function mergeAssignedHierarchy(savedRaw: ModuleItem[], initialModules: ModuleItem[]): ModuleItem[] {
+  const saved = normalizeAssignedHierarchyIds(savedRaw);
+
+  const getStableKey = (m: ModuleItem) => m.key || m.id;
+  const validKeys = new Set(initialModules.map(getStableKey));
+  const initialModulesMap = new Map(initialModules.map((m) => [getStableKey(m), m]));
 
   // Update modules in hierarchy with fresh data from initialModules, keeping their position
   const updateModulesInPlace = (items: ModuleItem[]): ModuleItem[] => {
     return items
-      .map(item => {
+      .map((item) => {
         if (item.type === 'folder') {
           // Keep folders even if they are empty (must persist across refresh)
           const updatedChildren = item.children ? updateModulesInPlace(item.children) : [];
           return { ...item, children: updatedChildren };
         }
 
+        const stableKey = getStableKey(item);
+
         // For modules: if still valid (has assignments), update with fresh data
-        if (validIds.has(item.id)) {
-          const freshData = initialModulesMap.get(item.id);
+        if (validKeys.has(stableKey)) {
+          const freshData = initialModulesMap.get(stableKey);
           if (freshData) {
-            // Merge fresh data but keep the item in its current position
-            return { ...item, ...freshData };
+            // Merge fresh data but keep folder placement; enforce stable id/key
+            return { ...item, ...freshData, key: stableKey, id: stableKey };
           }
-          return item;
+          return { ...item, key: stableKey, id: stableKey };
         }
 
         // Module no longer has assignments - remove it
@@ -61,65 +83,73 @@ function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[
       .filter((item): item is ModuleItem => item !== null);
   };
 
-  // Collect module ids that are inside any folder.
+  // Collect module keys that are inside any folder.
   // If duplicates exist both at root and in a folder, folder placement must win.
-  const inFolderIds = new Set<string>();
-  const collectInFolderIds = (items: ModuleItem[], insideFolder: boolean) => {
-    items.forEach(item => {
+  const inFolderKeys = new Set<string>();
+  const collectInFolderKeys = (items: ModuleItem[], insideFolder: boolean) => {
+    items.forEach((item) => {
       if (item.type === 'folder') {
-        collectInFolderIds(item.children || [], true);
+        collectInFolderKeys(item.children || [], true);
         return;
       }
-      if (insideFolder) inFolderIds.add(item.id);
+      if (insideFolder) inFolderKeys.add(getStableKey(item));
     });
   };
 
   const removeRootDuplicates = (items: ModuleItem[], isRoot: boolean): ModuleItem[] => {
     return items
-      .map(item => {
+      .map((item) => {
         if (item.type === 'folder') {
           const children = removeRootDuplicates(item.children || [], false);
           return { ...item, children };
         }
-        if (isRoot && inFolderIds.has(item.id)) return null;
-        return item;
+        const stableKey = getStableKey(item);
+        if (isRoot && inFolderKeys.has(stableKey)) return null;
+        return { ...item, key: stableKey, id: stableKey };
       })
       .filter((i): i is ModuleItem => i !== null);
   };
 
   // Remove duplicates across the tree (e.g., accidental duplicates across folders)
-  const dedupeById = (items: ModuleItem[], seen: Set<string>): ModuleItem[] => {
+  const dedupeByKey = (items: ModuleItem[], seen: Set<string>): ModuleItem[] => {
     return items
-      .map(item => {
+      .map((item) => {
         if (item.type === 'folder') {
           // Keep empty folders too
-          const children = item.children ? dedupeById(item.children, seen) : [];
+          const children = item.children ? dedupeByKey(item.children, seen) : [];
           return { ...item, children };
         }
-        if (seen.has(item.id)) return null;
-        seen.add(item.id);
-        return item;
+        const stableKey = getStableKey(item);
+        if (seen.has(stableKey)) return null;
+        seen.add(stableKey);
+        return { ...item, key: stableKey, id: stableKey };
       })
       .filter((i): i is ModuleItem => i !== null);
   };
 
   const updated = updateModulesInPlace(saved);
-  collectInFolderIds(updated, false);
+  collectInFolderKeys(updated, false);
 
-  const updatedHierarchy = dedupeById(removeRootDuplicates(updated, true), new Set());
+  const updatedHierarchy = dedupeByKey(removeRootDuplicates(updated, true), new Set());
 
-  // Collect all IDs in the updated hierarchy (including folders and their children)
-  const hierarchyIds = new Set<string>();
-  const collectIds = (items: ModuleItem[]) => {
-    items.forEach(item => {
-      hierarchyIds.add(item.id);
-      if (item.children) collectIds(item.children);
+  // Collect all module keys in the updated hierarchy
+  const hierarchyModuleKeys = new Set<string>();
+  const collectModuleKeys = (items: ModuleItem[]) => {
+    items.forEach((item) => {
+      if (item.type === 'module') hierarchyModuleKeys.add(getStableKey(item));
+      if (item.children) collectModuleKeys(item.children);
     });
   };
-  collectIds(updatedHierarchy);
+  collectModuleKeys(updatedHierarchy);
 
   // Add new modules that don't exist in hierarchy yet (at root level)
-  const newModules = initialModules.filter(m => !hierarchyIds.has(m.id));
+  const newModules = initialModules
+    .filter((m) => !hierarchyModuleKeys.has(getStableKey(m)))
+    .map((m) => {
+      const stableKey = getStableKey(m);
+      return { ...m, key: stableKey, id: stableKey };
+    });
+
   return [...updatedHierarchy, ...newModules];
 }
 
