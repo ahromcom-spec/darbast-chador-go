@@ -516,6 +516,7 @@ export function ModulesManagement() {
   };
 
   // Delete a custom module (only if no assignments exist) - now requires OTP
+  // For empty folders - delete immediately without OTP
   const handleDeleteAvailableModule = async (itemId: string) => {
     // Find the item in hierarchy
     const findItem = (items: ModuleItem[], id: string): ModuleItem | null => {
@@ -531,10 +532,43 @@ export function ModulesManagement() {
 
     const item = findItem(availableHierarchy.items, itemId);
     if (!item) {
-      toast.error('ماژول یافت نشد');
+      toast.error('آیتم یافت نشد');
       return;
     }
 
+    // Check if this is an empty folder - delete directly without OTP
+    if (item.type === 'folder') {
+      if (item.children && item.children.length > 0) {
+        toast.error('پوشه خالی نیست. ابتدا ماژول‌های داخل پوشه را خارج کنید.');
+        return;
+      }
+      
+      // Delete empty folder immediately
+      const removeItem = (items: ModuleItem[], id: string): ModuleItem[] => {
+        return items.filter(it => {
+          if (it.id === id) return false;
+          if (it.children) {
+            it.children = removeItem(it.children, id);
+          }
+          return true;
+        });
+      };
+
+      availableHierarchy.setItems(prev => {
+        const newItems = removeItem([...prev], itemId);
+        try {
+          localStorage.setItem('module_hierarchy_available', JSON.stringify(newItems));
+        } catch (err) {
+          console.error('Error saving after delete:', err);
+        }
+        return newItems;
+      });
+      
+      toast.success('پوشه حذف شد');
+      return;
+    }
+
+    // For modules - check assignments and require OTP
     // Get the display name (might be customized)
     const displayName = availableHierarchy.customNames[item.key]?.name || item.name;
     

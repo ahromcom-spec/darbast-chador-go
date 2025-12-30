@@ -297,6 +297,7 @@ export function ModuleItem({
                 <LogOut className="h-4 w-4" />
               </Button>
             )}
+            {/* Delete button for modules */}
             {showDeleteButton && onDelete && item.type === 'module' && (!canDeleteItem || canDeleteItem(item)) && (
               <Button
                 variant="ghost"
@@ -307,6 +308,21 @@ export function ModuleItem({
                 }}
                 className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                 title="حذف"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+            {/* Delete button for empty folders only */}
+            {showDeleteButton && onDelete && item.type === 'folder' && (!item.children || item.children.length === 0) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(item.id);
+                }}
+                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                title="حذف پوشه خالی"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
