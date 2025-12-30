@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import { 
   Calculator, 
   Loader2,
@@ -117,10 +118,16 @@ interface WalletSummary {
 
 type ArchiveFilter = 'all' | 'active' | 'archived' | 'deep_archived';
 
+const DEFAULT_TITLE = 'ماژول حسابداری جامع';
+const DEFAULT_DESCRIPTION = 'مدیریت حساب‌های مشتریان، نیروها و پرسنل';
+
 export default function AccountingModule() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { isCEO, loading: ceoLoading } = useCEORole();
+  const activeModuleKey = searchParams.get('moduleKey') || 'comprehensive_accounting';
+  const { moduleName, moduleDescription } = useModuleAssignmentInfo(activeModuleKey, DEFAULT_TITLE, DEFAULT_DESCRIPTION);
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('customers');
@@ -604,8 +611,8 @@ export default function AccountingModule() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6 space-y-6">
         <ModuleHeader
-          title="ماژول حسابداری جامع"
-          description="مدیریت حساب‌های مشتریان، نیروها و پرسنل"
+          title={moduleName}
+          description={moduleDescription}
           icon={<Calculator className="h-5 w-5" />}
           backTo="/profile?tab=modules"
         />

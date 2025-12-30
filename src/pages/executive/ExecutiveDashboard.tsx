@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
@@ -48,9 +49,15 @@ const COLORS = {
   paid: 'hsl(var(--chart-4))',
 };
 
+const DEFAULT_TITLE = 'ماژول مدیریت اجرای داربست به همراه اجناس';
+const DEFAULT_DESCRIPTION = 'مدیریت و پیگیری سفارشات خدمات اجرای داربست به همراه اجناس';
+
 export default function ExecutiveDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const activeModuleKey = searchParams.get('moduleKey') || 'scaffold_execution_with_materials';
+  const { moduleName, moduleDescription } = useModuleAssignmentInfo(activeModuleKey, DEFAULT_TITLE, DEFAULT_DESCRIPTION);
   // بررسی وضعیت نقشه از sessionStorage
   const [showGlobe, setShowGlobe] = useState(() => {
     return sessionStorage.getItem('executive_map_open') === 'true';
@@ -185,8 +192,8 @@ export default function ExecutiveDashboard() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <ModuleHeader
-        title="ماژول مدیریت اجرای داربست به همراه اجناس"
-        description="مدیریت و پیگیری سفارشات خدمات اجرای داربست به همراه اجناس"
+        title={moduleName}
+        description={moduleDescription}
         icon={<Package className="h-5 w-5" />}
         backTo="/profile?tab=modules"
       />

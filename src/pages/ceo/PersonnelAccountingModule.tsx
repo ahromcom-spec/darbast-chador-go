@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Calculator, 
   Calendar, 
@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns-jalali';
 import { faIR } from 'date-fns-jalali/locale';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 
 interface StaffWorkRecord {
   id: string;
@@ -51,9 +52,15 @@ interface SalarySetting {
   overtime_rate_fraction: number;
 }
 
+const DEFAULT_TITLE = 'حسابکتاب و کارکرد';
+const DEFAULT_DESCRIPTION = 'مشاهده کارکرد و حسابکتاب شخصی';
+
 export default function PersonnelAccountingModule() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const activeModuleKey = searchParams.get('moduleKey') || 'personnel_accounting';
   const { user } = useAuth();
+  const { moduleName, moduleDescription: moduleDesc } = useModuleAssignmentInfo(activeModuleKey, DEFAULT_TITLE, DEFAULT_DESCRIPTION);
   const [loading, setLoading] = useState(true);
   const [userPhone, setUserPhone] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
@@ -501,8 +508,8 @@ export default function PersonnelAccountingModule() {
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
         <ModuleHeader
-          title="حسابکتاب و کارکرد"
-          description={userName || 'کاربر'}
+          title={moduleName}
+          description={userName || moduleDesc}
           icon={<Calculator className="h-5 w-5" />}
           backTo="/profile"
         />
