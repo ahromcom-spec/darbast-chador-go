@@ -81,22 +81,47 @@ export default function ExecutiveDashboard() {
     }
   }, []);
   
+  // Check if this is the "all orders" module
+  const isAllOrdersModule = activeModuleKey === 'all_orders_management' || 
+                             activeModuleKey.includes('سفارشات کل') ||
+                             moduleName.includes('سفارشات کل');
+
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['executive-stats'],
+    queryKey: ['executive-stats', activeModuleKey, isAllOrdersModule],
     queryFn: async () => {
+      // For "all orders" module, get ALL orders including pending
+      // For specific modules, only get approved+ orders
+      const statusFilter: ('pending' | 'approved' | 'pending_execution' | 'in_progress' | 'completed' | 'paid' | 'rejected')[] = isAllOrdersModule 
+        ? ['pending', 'approved', 'pending_execution', 'in_progress', 'completed', 'paid', 'rejected']
+        : ['approved', 'in_progress', 'completed', 'paid'];
+      
       const { data: orders, error } = await supabase
         .from('projects_v3')
         .select('*')
-        .in('status', ['approved', 'in_progress', 'completed', 'paid']);
+        .in('status', statusFilter);
 
       if (error) throw error;
 
-      // Count pending approvals for executive manager
-      const { data: pendingApprovals, error: approvalsError } = await supabase
+      // Count pending approvals - for "all orders" module, get all pending approvals
+      // For specific modules, filter by role
+      let approvalsQuery = supabase
         .from('order_approvals')
         .select('order_id')
-        .in('approver_role', ['scaffold_executive_manager', 'executive_manager_scaffold_execution_with_materials', 'rental_executive_manager'])
         .is('approved_at', null);
+      
+      // Only filter by role if NOT the "all orders" module
+      if (!isAllOrdersModule) {
+        approvalsQuery = approvalsQuery.in('approver_role', [
+          'scaffold_executive_manager', 
+          'executive_manager_scaffold_execution_with_materials', 
+          'rental_executive_manager',
+          'ceo',
+          'sales_manager',
+          'general_manager'
+        ]);
+      }
+      
+      const { data: pendingApprovals, error: approvalsError } = await approvalsQuery;
 
       if (approvalsError) throw approvalsError;
 
