@@ -29,17 +29,36 @@ function mergeAvailableHierarchy(saved: ModuleItem[], initialModules: ModuleItem
 }
 
 /**
- * Normalize legacy assigned hierarchy where module `id` may not equal stable `moduleKey`.
- * For assigned modules we always treat `key` as the stable identity and force `id === key`.
+ * Normalize legacy assigned hierarchy where module identity may have been saved with unstable ids.
+ *
+ * For assigned modules we want a *stable* identifier that matches the current `initialModules`.
+ * In some legacy saves, `key` could be a random id while `id` was the real moduleKey (or vice‑versa).
+ * This normalizer maps any known legacy id/key to the current canonical module key.
  */
-function normalizeAssignedHierarchyIds(items: ModuleItem[]): ModuleItem[] {
+function normalizeAssignedHierarchyIds(items: ModuleItem[], initialModules: ModuleItem[]): ModuleItem[] {
+  // Build canonical key map from current modules.
+  // Any of (m.key, m.id) should map to the canonical stable key we use everywhere.
+  const canonicalByAnyKey = new Map<string, string>();
+
+  for (const m of initialModules) {
+    const canonical = m.key || m.id;
+    if (!canonical) continue;
+
+    if (m.key) canonicalByAnyKey.set(m.key, canonical);
+    if (m.id) canonicalByAnyKey.set(m.id, canonical);
+  }
+
   const normalize = (arr: ModuleItem[]): ModuleItem[] =>
     arr.map((it) => {
       if (it.type === 'folder') {
         return { ...it, children: normalize(it.children || []) };
       }
-      const stableKey = it.key || it.id;
-      return { ...it, key: stableKey, id: stableKey };
+
+      const candidates = [it.key, it.id].filter(Boolean) as string[];
+      const match = candidates.find((k) => canonicalByAnyKey.has(k));
+      const canonical = match ? canonicalByAnyKey.get(match)! : (it.key || it.id);
+
+      return { ...it, key: canonical, id: canonical };
     });
 
   return normalize(items);
@@ -49,7 +68,7 @@ function normalizeAssignedHierarchyIds(items: ModuleItem[]): ModuleItem[] {
  * Helper to merge saved hierarchy with initialModules for assigned modules
  */
 function mergeAssignedHierarchy(savedRaw: ModuleItem[], initialModules: ModuleItem[]): ModuleItem[] {
-  const saved = normalizeAssignedHierarchyIds(savedRaw);
+  const saved = normalizeAssignedHierarchyIds(savedRaw, initialModules);
 
   const getStableKey = (m: ModuleItem) => m.key || m.id;
   const validKeys = new Set(initialModules.map(getStableKey));
