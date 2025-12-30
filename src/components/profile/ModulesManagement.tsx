@@ -594,24 +594,51 @@ export function ModulesManagement() {
     });
   };
 
+  // Helper to find a module in availableHierarchy (including copied modules)
+  const findModuleInHierarchy = (key: string, items: ModuleItem[]): ModuleItem | null => {
+    for (const item of items) {
+      if (item.key === key) return item;
+      if (item.type === 'folder' && item.children) {
+        const found = findModuleInHierarchy(key, item.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   // Convert assignments to ModuleItem format for assigned modules section
   const assignedModulesAsItems = useMemo((): ModuleItem[] => {
     return assignments.map(a => {
-      const moduleInfo = getModuleInfo(a.module_key);
+      // First check base modules
+      const baseModuleInfo = getModuleInfo(a.module_key);
+      // Then check availableHierarchy for copied/custom modules
+      const customModule = !baseModuleInfo ? findModuleInHierarchy(a.module_key, availableHierarchy.items) : null;
+      
+      // For copied modules, derive href from original module name pattern
+      let href = baseModuleInfo?.href || customModule?.href;
+      if (!href && a.module_key.startsWith('custom-')) {
+        // Try to find the base module by matching module_name pattern
+        const cleanName = a.module_name.replace(' (کپی)', '').trim();
+        const matchedBase = AVAILABLE_MODULES.find(m => 
+          m.name === cleanName || cleanName.includes(m.name) || m.name.includes(cleanName)
+        );
+        href = matchedBase?.href;
+      }
+      
       return {
         id: a.id,
         type: 'module' as const,
         key: a.module_key,
         name: a.module_name,
-        description: moduleInfo?.description || '',
+        description: baseModuleInfo?.description || customModule?.description || '',
         assignedPhone: a.assigned_phone_number,
         assignedUserName: a.assigned_user_name || 'کاربر یافت نشد',
-        href: moduleInfo?.href,
-        color: moduleInfo?.color || 'text-gray-600',
-        bgColor: moduleInfo?.bgColor || 'bg-gray-100',
+        href: href,
+        color: baseModuleInfo?.color || customModule?.color || 'text-gray-600',
+        bgColor: baseModuleInfo?.bgColor || customModule?.bgColor || 'bg-gray-100',
       };
     });
-  }, [assignments]);
+  }, [assignments, availableHierarchy.items]);
 
   // Module hierarchy for assigned modules
   const assignedHierarchy = useModuleHierarchy({
