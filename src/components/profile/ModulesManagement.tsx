@@ -321,9 +321,32 @@ export function ModulesManagement() {
     toast.success('ماژول کپی شد. می‌توانید آن را ویرایش کنید.');
   };
 
-  // Check if a module has active assignments
-  const getModuleAssignments = (moduleKey: string): ModuleAssignment[] => {
-    return assignments.filter(a => a.module_key === moduleKey && a.is_active);
+  // Check if a module has active assignments - check by module_key OR module_name
+  const getModuleAssignments = (moduleKey: string, moduleName?: string): ModuleAssignment[] => {
+    return assignments.filter(a => {
+      if (!a.is_active) return false;
+      // Check by key (for base modules)
+      if (a.module_key === moduleKey) return true;
+      // Also check by name (for duplicated modules with same name)
+      if (moduleName && a.module_name === moduleName) return true;
+      return false;
+    });
+  };
+
+  // Get the base module key from a possibly-duplicated module
+  const getBaseModuleKey = (item: ModuleItem): string | null => {
+    // If it's already a base module
+    const baseModule = AVAILABLE_MODULES.find(m => m.key === item.key);
+    if (baseModule) return baseModule.key;
+    
+    // Check if the name matches a base module (for duplicated modules)
+    const displayName = availableHierarchy.customNames[item.key]?.name || item.name;
+    const matchByName = AVAILABLE_MODULES.find(m => 
+      displayName.includes(m.name) || m.name.includes(displayName.replace(' (کپی)', ''))
+    );
+    if (matchByName) return matchByName.key;
+    
+    return null;
   };
 
   // Delete a custom module (only if no assignments exist)
@@ -346,26 +369,50 @@ export function ModulesManagement() {
       return;
     }
 
+    // Get the display name (might be customized)
+    const displayName = availableHierarchy.customNames[item.key]?.name || item.name;
+    
+    // Get the base module key (if this is related to a base module)
+    const baseKey = getBaseModuleKey(item);
+    
     // Check if this is a base module (from AVAILABLE_MODULES)
     const isBaseModule = AVAILABLE_MODULES.some(m => m.key === item.key);
     
-    // Get assignments for this module
-    const moduleAssignments = getModuleAssignments(item.key);
+    // Get assignments for this module - check both key and name
+    const moduleAssignments = getModuleAssignments(
+      baseKey || item.key, 
+      displayName
+    );
     
     if (moduleAssignments.length > 0) {
+      const assignedNames = moduleAssignments
+        .map(a => a.assigned_user_name || a.assigned_phone_number)
+        .slice(0, 3)
+        .join('، ');
+      
+      const moreCount = moduleAssignments.length > 3 ? ` و ${moduleAssignments.length - 3} نفر دیگر` : '';
+      
       toast.error(
-        `این ماژول به ${moduleAssignments.length} نفر اختصاص داده شده است. ابتدا اختصاص‌ها را حذف کنید.`,
+        `این ماژول به ${moduleAssignments.length} نفر اختصاص داده شده است`,
         {
-          description: 'برای حذف ماژول، ابتدا از بخش "اختصاص‌های فعلی" افراد را یکی یکی حذف کنید.',
-          duration: 5000,
+          description: `افراد: ${assignedNames}${moreCount}. ابتدا از بخش "اختصاص‌های فعلی" افراد را یکی یکی حذف کنید.`,
+          duration: 7000,
         }
       );
       return;
     }
 
+    // Show confirmation for base modules
     if (isBaseModule) {
-      // Base modules cannot be completely deleted, just removed from display
-      toast.info('ماژول‌های پایه قابل حذف کامل نیستند، اما از نمایش حذف می‌شوند.');
+      const confirmed = window.confirm(
+        `آیا مطمئن هستید که می‌خواهید ماژول "${displayName}" را از لیست حذف کنید؟\n\nتوجه: این ماژول از لیست نمایشی حذف می‌شود ولی می‌توانید با رفرش صفحه آن را بازگردانید.`
+      );
+      if (!confirmed) return;
+    } else {
+      const confirmed = window.confirm(
+        `آیا مطمئن هستید که می‌خواهید ماژول "${displayName}" را حذف کنید؟`
+      );
+      if (!confirmed) return;
     }
 
     // Remove from hierarchy
