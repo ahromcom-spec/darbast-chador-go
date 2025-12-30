@@ -693,6 +693,7 @@ export function ModulesManagement() {
   const assignedHierarchy = useModuleHierarchy({
     type: 'assigned',
     initialModules: assignedModulesAsItems,
+    isInitialModulesReady: !loading,
   });
 
   // Create folder for assigned modules
