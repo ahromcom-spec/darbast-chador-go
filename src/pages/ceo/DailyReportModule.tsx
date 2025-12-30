@@ -34,6 +34,7 @@ import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
 import { StaffSalarySettingsTab } from '@/components/ceo/StaffSalarySettingsTab';
 import { ExcelImportDialog } from '@/components/ceo/ExcelImportDialog';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
 import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
 
@@ -153,10 +154,16 @@ const toLocalDateString = (date: Date): string => {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
+
+const DEFAULT_TITLE = 'گزارش روزانه شرکت اهرم';
+const DEFAULT_DESCRIPTION = 'ثبت گزارش فعالیت‌های روزانه';
+
 export default function DailyReportModule() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const activeModuleKey = searchParams.get('moduleKey') || 'daily_report';
   const { user } = useAuth();
+  const { moduleName, moduleDescription } = useModuleAssignmentInfo(activeModuleKey, DEFAULT_TITLE, DEFAULT_DESCRIPTION);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -1844,8 +1851,8 @@ export default function DailyReportModule() {
       <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full">
         {/* Header */}
         <ModuleHeader
-          title="گزارش روزانه شرکت اهرم"
-          description="ثبت گزارش فعالیت‌های روزانه"
+          title={moduleName}
+          description={moduleDescription}
           icon={<FileText className="h-5 w-5" />}
           backTo="/profile?tab=modules"
           action={
