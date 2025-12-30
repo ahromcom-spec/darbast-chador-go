@@ -321,6 +321,77 @@ export function ModulesManagement() {
     toast.success('ماژول کپی شد. می‌توانید آن را ویرایش کنید.');
   };
 
+  // Check if a module has active assignments
+  const getModuleAssignments = (moduleKey: string): ModuleAssignment[] => {
+    return assignments.filter(a => a.module_key === moduleKey && a.is_active);
+  };
+
+  // Delete a custom module (only if no assignments exist)
+  const handleDeleteAvailableModule = (itemId: string) => {
+    // Find the item in hierarchy
+    const findItem = (items: ModuleItem[], id: string): ModuleItem | null => {
+      for (const item of items) {
+        if (item.id === id) return item;
+        if (item.children) {
+          const found = findItem(item.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const item = findItem(availableHierarchy.items, itemId);
+    if (!item) {
+      toast.error('ماژول یافت نشد');
+      return;
+    }
+
+    // Check if this is a base module (from AVAILABLE_MODULES)
+    const isBaseModule = AVAILABLE_MODULES.some(m => m.key === item.key);
+    
+    // Get assignments for this module
+    const moduleAssignments = getModuleAssignments(item.key);
+    
+    if (moduleAssignments.length > 0) {
+      toast.error(
+        `این ماژول به ${moduleAssignments.length} نفر اختصاص داده شده است. ابتدا اختصاص‌ها را حذف کنید.`,
+        {
+          description: 'برای حذف ماژول، ابتدا از بخش "اختصاص‌های فعلی" افراد را یکی یکی حذف کنید.',
+          duration: 5000,
+        }
+      );
+      return;
+    }
+
+    if (isBaseModule) {
+      // Base modules cannot be completely deleted, just removed from display
+      toast.info('ماژول‌های پایه قابل حذف کامل نیستند، اما از نمایش حذف می‌شوند.');
+    }
+
+    // Remove from hierarchy
+    const removeItem = (items: ModuleItem[], id: string): ModuleItem[] => {
+      return items.filter(item => {
+        if (item.id === id) return false;
+        if (item.children) {
+          item.children = removeItem(item.children, id);
+        }
+        return true;
+      });
+    };
+
+    availableHierarchy.setItems(prev => {
+      const newItems = removeItem([...prev], itemId);
+      try {
+        localStorage.setItem('module_hierarchy_available', JSON.stringify(newItems));
+      } catch (error) {
+        console.error('Error saving after delete:', error);
+      }
+      return newItems;
+    });
+
+    toast.success('ماژول با موفقیت حذف شد');
+  };
+
   const handleCreateAssignedFolder = () => {
     const newFolder: ModuleItem = {
       id: `assigned-folder-${Date.now()}`,
@@ -500,8 +571,10 @@ export function ModulesManagement() {
                     onEditItem={availableHierarchy.editItem}
                     onNavigate={(href) => navigate(href)}
                     onDuplicate={handleDuplicateModule}
+                    onDelete={handleDeleteAvailableModule}
                     customNames={availableHierarchy.customNames}
                     showDuplicateButton={true}
+                    showDeleteButton={true}
                     isFirst={idx === 0}
                     draggedItemId={availableHierarchy.draggedItem?.id || null}
                   />
