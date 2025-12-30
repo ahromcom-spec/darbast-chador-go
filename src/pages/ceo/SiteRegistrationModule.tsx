@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserPlus, Loader2, CheckCircle, Phone, User, AlertCircle, UserCheck } from 'lucide-react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/useDebounce';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
@@ -18,6 +18,13 @@ const DEFAULT_DESCRIPTION = 'ثبت‌نام کاربر جدید بدون نیا
 
 export default function SiteRegistrationModule() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  const activeModuleKey = useMemo(() => {
+    const fromUrl = searchParams.get('moduleKey')?.trim();
+    return fromUrl || 'site_registration';
+  }, [searchParams]);
+
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [fullName, setFullName] = useState('');
@@ -27,9 +34,9 @@ export default function SiteRegistrationModule() {
   const [existingUser, setExistingUser] = useState<{ name: string } | null>(null);
   const [checkingPhone, setCheckingPhone] = useState(false);
 
-  // Get dynamic module name from assignment
+  // Get dynamic module name from assignment (supports base + copied modules via ?moduleKey=...)
   const { moduleName, moduleDescription } = useModuleAssignmentInfo(
-    'site_registration',
+    activeModuleKey,
     DEFAULT_TITLE,
     DEFAULT_DESCRIPTION
   );

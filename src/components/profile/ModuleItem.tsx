@@ -91,6 +91,17 @@ export function ModuleItem({
     setEditedDescription('');
   };
 
+  const buildModuleHref = (href: string) => {
+    try {
+      const url = new URL(href, window.location.origin);
+      url.searchParams.set('moduleKey', item.key);
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      const sep = href.includes('?') ? '&' : '?';
+      return `${href}${sep}moduleKey=${encodeURIComponent(item.key)}`;
+    }
+  };
+
   const handleNavigate = (href: string) => {
     if (onNavigate) {
       onNavigate(href);
@@ -306,7 +317,7 @@ export function ModuleItem({
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleNavigate(item.href!);
+                  handleNavigate(buildModuleHref(item.href!));
                 }}
               >
                 ورود به ماژول
