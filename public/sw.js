@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ahrom-v22-icon-size-27pct';
+const CACHE_VERSION = 'ahrom-v23-windows-icon-bust';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -6,8 +6,8 @@ const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const SHELL_FILES = [
   '/',
   '/index.html',
-  '/manifest.webmanifest?v=11',
-  '/manifest.json?v=11',
+  '/manifest.webmanifest?v=12',
+  '/manifest.json?v=12',
   '/ahrom-pwa-icon.png',
   '/ahrom-pwa-icon-new.png',
   '/ahrom-app-icon.png',
