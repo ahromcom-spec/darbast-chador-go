@@ -149,17 +149,12 @@ export function DraggableModuleItem({
 
   const isInteractiveElement = (target: EventTarget | null) => {
     const el = target as HTMLElement | null;
-    // Treat common interactive elements as "no drag" unless it's the drag handle
-    return !!el?.closest?.('button, a, input, textarea, select, [role="button"], [data-no-drag="true"]');
-  };
-
-  const handleDragStartFromHandle = (e: React.DragEvent) => {
-    e.stopPropagation();
-    onDragStart(item, e);
+    // Only block drag from explicit "no drag" zones + form controls/links
+    return !!el?.closest?.('a, input, textarea, select, [data-no-drag="true"]');
   };
 
   const handleDragStartFromCard = (e: React.DragEvent) => {
-    // Allow drag from anywhere on the card except interactive controls (edit/delete/navigate/toggle)
+    // Allow drag from anywhere on the card except explicit no-drag controls
     if (!isDragHandle(e.target) && isInteractiveElement(e.target)) {
       e.preventDefault();
       return;
@@ -168,7 +163,7 @@ export function DraggableModuleItem({
     onDragStart(item, e);
   };
 
-  const handleDragEndFromHandle = (e: React.DragEvent) => {
+  const handleDragEndFromCard = (e: React.DragEvent) => {
     e.stopPropagation();
 
     dragCounterRef.current = 0;
@@ -182,11 +177,6 @@ export function DraggableModuleItem({
     }
 
     onDragEnd();
-  };
-
-  const handleDragEndFromCard = (e: React.DragEvent) => {
-    e.stopPropagation();
-    handleDragEndFromHandle(e);
   };
 
   const startEditing = () => {
