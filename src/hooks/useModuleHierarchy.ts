@@ -39,11 +39,9 @@ function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[
     return items
       .map(item => {
         if (item.type === 'folder') {
+          // Keep folders even if they are empty (must persist across refresh)
           const updatedChildren = item.children ? filterAndUpdate(item.children) : [];
-          if (updatedChildren.length > 0) {
-            return { ...item, children: updatedChildren };
-          }
-          return null;
+          return { ...item, children: updatedChildren };
         }
         if (validIds.has(item.id)) {
           return initialModulesMap.get(item.id) || item;
@@ -57,8 +55,8 @@ function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[
     return items
       .map(item => {
         if (item.type === 'folder') {
+          // Keep empty folders too
           const children = item.children ? dedupeById(item.children, seen) : [];
-          if (children.length === 0) return null;
           return { ...item, children };
         }
         if (seen.has(item.id)) return null;
@@ -150,7 +148,13 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
           if (type === 'available') {
             setItems(mergeAvailableHierarchy(hierarchy, initialModules));
           } else {
-            setItems(mergeAssignedHierarchy(hierarchy, initialModules));
+            // For assigned modules: during first render, initialModules can be empty until assignments load.
+            // In that case, keep DB hierarchy as-is (folders + module placement) and reconcile later.
+            if (initialModules.length === 0) {
+              setItems(hierarchy);
+            } else {
+              setItems(mergeAssignedHierarchy(hierarchy, initialModules));
+            }
           }
         } else {
           setItems(initialModules);
