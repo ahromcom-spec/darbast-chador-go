@@ -504,6 +504,11 @@ export default function ExecutivePendingOrders() {
   const activeModuleKey = searchParams.get('moduleKey') || '';
   const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
                                          activeModuleKey.includes('101010');
+  
+  // Check if this is an accounting module - hide order details, only show financial info
+  const isAccountingModule = activeModuleKey.includes('حسابداری') ||
+                              activeModuleKey === 'comprehensive_accounting' ||
+                              activeModuleKey.includes('accounting');
 
   useEffect(() => {
     fetchOrders();
@@ -1446,7 +1451,7 @@ export default function ExecutivePendingOrders() {
           {selectedOrder && (
             <EditableOrderDetails order={selectedOrder} onUpdate={() => {
               fetchOrders();
-            }} hidePrice={isScaffoldWithMaterialsModule} />
+            }} hidePrice={isScaffoldWithMaterialsModule} hideDetails={isAccountingModule} />
           )}
         </DialogContent>
       </Dialog>

@@ -52,11 +52,11 @@ const executionStageToUiKey: Record<string, string> = {
 };
 
 // Component to display order technical details with edit capability
-const OrderDetailsContent = ({ order, getStatusBadge, onUpdate, hidePrice = false }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void; hidePrice?: boolean }) => {
+const OrderDetailsContent = ({ order, getStatusBadge, onUpdate, hidePrice = false, hideDetails = false }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void; hidePrice?: boolean; hideDetails?: boolean }) => {
   return (
     <div className="space-y-4">
       {/* Use editable component for details */}
-      <EditableOrderDetails order={order} onUpdate={onUpdate} hidePrice={hidePrice} />
+      <EditableOrderDetails order={order} onUpdate={onUpdate} hidePrice={hidePrice} hideDetails={hideDetails} />
       
       {/* Additional execution-specific info */}
       {order.execution_start_date && (
@@ -173,6 +173,11 @@ export default function ExecutiveOrders() {
   const activeModuleKey = searchParams.get('moduleKey') || '';
   const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
                                          activeModuleKey.includes('101010');
+  
+  // Check if this is an accounting module - hide order details, only show financial info
+  const isAccountingModule = activeModuleKey.includes('حسابداری') ||
+                              activeModuleKey === 'comprehensive_accounting' ||
+                              activeModuleKey.includes('accounting');
 
   useEffect(() => {
     fetchOrders();
@@ -1793,9 +1798,9 @@ export default function ExecutiveOrders() {
           </DialogHeader>
           {selectedOrder && (
             <>
-              <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={fetchOrders} hidePrice={isScaffoldWithMaterialsModule} />
-              {/* نقشه موقعیت پروژه با امکان ویرایش */}
-              {selectedOrder.location_lat && selectedOrder.location_lng && (
+              <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={fetchOrders} hidePrice={isScaffoldWithMaterialsModule} hideDetails={isAccountingModule} />
+              {/* نقشه موقعیت پروژه با امکان ویرایش - hidden for accounting module */}
+              {!isAccountingModule && selectedOrder.location_lat && selectedOrder.location_lng && (
                 <div className="mt-4">
                   <OrderLocationEditor
                     orderId={selectedOrder.id}

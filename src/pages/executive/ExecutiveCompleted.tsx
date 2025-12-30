@@ -75,6 +75,11 @@ export default function ExecutiveCompleted() {
   const activeModuleKey = searchParams.get('moduleKey') || '';
   const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
                                          activeModuleKey.includes('101010');
+  
+  // Check if this is an accounting module - hide order details, only show financial info
+  const isAccountingModule = activeModuleKey.includes('حسابداری') ||
+                              activeModuleKey === 'comprehensive_accounting' ||
+                              activeModuleKey.includes('accounting');
 
   useEffect(() => {
     fetchOrders();
@@ -333,15 +338,19 @@ export default function ExecutiveCompleted() {
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4 py-4">
-              <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} hidePrice={isScaffoldWithMaterialsModule} />
+              <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} hidePrice={isScaffoldWithMaterialsModule} hideDetails={isAccountingModule} />
               
-              {/* Progress Media Uploader */}
-              <Separator />
-              <ProgressMediaUploader
-                projectId={selectedOrder.id}
-                stage="completed"
-                stageName="تکمیل شده"
-              />
+              {/* Progress Media Uploader - hidden for accounting module */}
+              {!isAccountingModule && (
+                <>
+                  <Separator />
+                  <ProgressMediaUploader
+                    projectId={selectedOrder.id}
+                    stage="completed"
+                    stageName="تکمیل شده"
+                  />
+                </>
+              )}
             </div>
           )}
         </DialogContent>
