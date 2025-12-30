@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2, FolderPlus, Search, X, Filter } from 'lucide-react';
+import { ChevronDown, ChevronUp, Boxes, Plus, Trash2, User, Phone, Building2, Loader2, FolderPlus, Search, X, Filter, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -111,6 +113,15 @@ export function ModulesManagement() {
   const [availableTypeFilter, setAvailableTypeFilter] = useState<string>('all');
   const [assignedTypeFilter, setAssignedTypeFilter] = useState<string>('all');
   const [assignedUserFilter, setAssignedUserFilter] = useState<string>('all');
+
+  // OTP verification state for module deletion
+  const [otpDialogOpen, setOtpDialogOpen] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
+  const [pendingDeleteItemName, setPendingDeleteItemName] = useState<string>('');
+  const [otpSent, setOtpSent] = useState(false);
 
   // Get unique module types for filter
   const moduleTypes = useMemo(() => {
@@ -357,8 +368,100 @@ export function ModulesManagement() {
     return null;
   };
 
-  // Delete a custom module (only if no assignments exist)
-  const handleDeleteAvailableModule = (itemId: string) => {
+  // Send OTP to CEO for module deletion
+  const sendCeoOtp = async (moduleName: string) => {
+    setOtpSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-ceo-otp', {
+        body: { 
+          action: 'module_delete',
+          purpose: `حذف ماژول "${moduleName}"`
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data?.error) {
+        toast.error(data.error);
+        return false;
+      }
+
+      setOtpSent(true);
+      toast.success('کد تایید به شماره مدیرعامل ارسال شد');
+      return true;
+    } catch (error) {
+      console.error('Error sending CEO OTP:', error);
+      toast.error('خطا در ارسال کد تایید');
+      return false;
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  // Verify CEO OTP and delete module
+  const verifyCeoOtpAndDelete = async () => {
+    if (!otpCode || otpCode.length < 5) {
+      toast.error('لطفاً کد ۵ رقمی را کامل وارد کنید');
+      return;
+    }
+
+    if (!pendingDeleteItemId) return;
+
+    setOtpVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-ceo-otp', {
+        body: { 
+          code: otpCode,
+          action: 'module_delete'
+        }
+      });
+
+      if (error) throw error;
+      
+      if (!data?.success) {
+        toast.error(data?.error || 'کد تایید نادرست است');
+        return;
+      }
+
+      // OTP verified - proceed with deletion
+      const removeItem = (items: ModuleItem[], id: string): ModuleItem[] => {
+        return items.filter(item => {
+          if (item.id === id) return false;
+          if (item.children) {
+            item.children = removeItem(item.children, id);
+          }
+          return true;
+        });
+      };
+
+      availableHierarchy.setItems(prev => {
+        const newItems = removeItem([...prev], pendingDeleteItemId);
+        try {
+          localStorage.setItem('module_hierarchy_available', JSON.stringify(newItems));
+        } catch (err) {
+          console.error('Error saving after delete:', err);
+        }
+        return newItems;
+      });
+
+      toast.success('ماژول با موفقیت حذف شد');
+      
+      // Reset OTP state
+      setOtpDialogOpen(false);
+      setOtpCode('');
+      setPendingDeleteItemId(null);
+      setPendingDeleteItemName('');
+      setOtpSent(false);
+    } catch (error) {
+      console.error('Error verifying CEO OTP:', error);
+      toast.error('خطا در تایید کد');
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
+
+  // Delete a custom module (only if no assignments exist) - now requires OTP
+  const handleDeleteAvailableModule = async (itemId: string) => {
     // Find the item in hierarchy
     const findItem = (items: ModuleItem[], id: string): ModuleItem | null => {
       for (const item of items) {
@@ -382,9 +485,6 @@ export function ModulesManagement() {
     
     // Get the base module key (if this is related to a base module)
     const baseKey = getBaseModuleKey(item);
-    
-    // Check if this is a base module (from AVAILABLE_MODULES)
-    const isBaseModule = AVAILABLE_MODULES.some(m => m.key === item.key);
     
     // Get assignments for this module - check both key and name
     const moduleAssignments = getModuleAssignments(
@@ -410,41 +510,12 @@ export function ModulesManagement() {
       return;
     }
 
-    // Show confirmation for base modules
-    if (isBaseModule) {
-      const confirmed = window.confirm(
-        `آیا مطمئن هستید که می‌خواهید ماژول "${displayName}" را از لیست حذف کنید؟\n\nتوجه: این ماژول از لیست نمایشی حذف می‌شود ولی می‌توانید با رفرش صفحه آن را بازگردانید.`
-      );
-      if (!confirmed) return;
-    } else {
-      const confirmed = window.confirm(
-        `آیا مطمئن هستید که می‌خواهید ماژول "${displayName}" را حذف کنید؟`
-      );
-      if (!confirmed) return;
-    }
-
-    // Remove from hierarchy
-    const removeItem = (items: ModuleItem[], id: string): ModuleItem[] => {
-      return items.filter(item => {
-        if (item.id === id) return false;
-        if (item.children) {
-          item.children = removeItem(item.children, id);
-        }
-        return true;
-      });
-    };
-
-    availableHierarchy.setItems(prev => {
-      const newItems = removeItem([...prev], itemId);
-      try {
-        localStorage.setItem('module_hierarchy_available', JSON.stringify(newItems));
-      } catch (error) {
-        console.error('Error saving after delete:', error);
-      }
-      return newItems;
-    });
-
-    toast.success('ماژول با موفقیت حذف شد');
+    // Store pending delete info and open OTP dialog
+    setPendingDeleteItemId(itemId);
+    setPendingDeleteItemName(displayName);
+    setOtpCode('');
+    setOtpSent(false);
+    setOtpDialogOpen(true);
   };
 
   const handleCreateAssignedFolder = () => {
@@ -889,6 +960,126 @@ export function ModulesManagement() {
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* OTP Verification Dialog for Module Deletion */}
+      <Dialog open={otpDialogOpen} onOpenChange={(open) => {
+        if (!open && !otpVerifying) {
+          setOtpDialogOpen(false);
+          setOtpCode('');
+          setPendingDeleteItemId(null);
+          setPendingDeleteItemName('');
+          setOtpSent(false);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-right">
+              <ShieldCheck className="h-5 w-5 text-amber-600" />
+              تایید حذف ماژول
+            </DialogTitle>
+            <DialogDescription className="text-right">
+              {otpSent ? (
+                <>
+                  کد تایید به شماره مدیرعامل (<span dir="ltr" className="inline-block">۰۹۱۲۵۵۱۱۴۹۴</span>) ارسال شد.
+                  <br />
+                  برای حذف ماژول «{pendingDeleteItemName}» کد را وارد کنید.
+                </>
+              ) : (
+                <>
+                  برای حذف ماژول «{pendingDeleteItemName}» ابتدا کد تایید به شماره مدیرعامل ارسال می‌شود.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-4 py-4">
+            {!otpSent ? (
+              <Button 
+                onClick={() => sendCeoOtp(pendingDeleteItemName)}
+                disabled={otpSending}
+                className="w-full"
+              >
+                {otpSending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                    در حال ارسال کد...
+                  </>
+                ) : (
+                  'ارسال کد تایید به مدیرعامل'
+                )}
+              </Button>
+            ) : (
+              <>
+                <div className="w-full" dir="ltr">
+                  <InputOTP
+                    maxLength={5}
+                    value={otpCode}
+                    onChange={setOtpCode}
+                    className="justify-center"
+                    disabled={otpVerifying}
+                  >
+                    <InputOTPGroup className="gap-2">
+                      <InputOTPSlot index={0} className="w-12 h-12 text-xl" />
+                      <InputOTPSlot index={1} className="w-12 h-12 text-xl" />
+                      <InputOTPSlot index={2} className="w-12 h-12 text-xl" />
+                      <InputOTPSlot index={3} className="w-12 h-12 text-xl" />
+                      <InputOTPSlot index={4} className="w-12 h-12 text-xl" />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  کد ۵ رقمی ارسال شده را وارد کنید
+                </p>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:justify-start">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOtpDialogOpen(false);
+                setOtpCode('');
+                setPendingDeleteItemId(null);
+                setPendingDeleteItemName('');
+                setOtpSent(false);
+              }}
+              disabled={otpVerifying}
+            >
+              انصراف
+            </Button>
+            {otpSent && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => sendCeoOtp(pendingDeleteItemName)}
+                  disabled={otpSending || otpVerifying}
+                >
+                  {otpSending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'ارسال مجدد کد'
+                  )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={verifyCeoOtpAndDelete}
+                  disabled={otpVerifying || otpCode.length < 5}
+                >
+                  {otpVerifying ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                      در حال تایید...
+                    </>
+                  ) : (
+                    'تایید و حذف'
+                  )}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
