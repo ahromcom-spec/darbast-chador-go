@@ -76,9 +76,10 @@ interface EditableOrderDetailsProps {
     rental_start_date?: string | null;
   };
   onUpdate?: () => void;
+  hidePrice?: boolean; // Hide price information (for executive managers in specific modules)
 }
 
-export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsProps) => {
+export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false }: EditableOrderDetailsProps) => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -219,8 +220,8 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
 
   return (
     <div className="space-y-4">
-      {/* Expert Pricing Request Badge with Price Input */}
-      {isExpertPricingRequest && (
+      {/* Expert Pricing Request Badge with Price Input - hidden if hidePrice is true */}
+      {isExpertPricingRequest && !hidePrice && (
         <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-3">
             <div className="bg-amber-100 dark:bg-amber-900/50 p-2 rounded-full">
@@ -629,7 +630,8 @@ export const EditableOrderDetails = ({ order, onUpdate }: EditableOrderDetailsPr
       )}
 
       {/* Price - Only show for non-expert pricing requests, as expert pricing has input at top */}
-      {!isExpertPricingRequest && (
+      {/* Also hide if hidePrice is true (for executive managers in scaffold with materials module) */}
+      {!isExpertPricingRequest && !hidePrice && (
         <div className="p-4 rounded-lg border bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
           <div className="flex items-center gap-2 mb-2">
             <Banknote className="h-4 w-4 text-green-600" />
