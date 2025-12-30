@@ -37,8 +37,12 @@ function mergeAvailableHierarchy(saved: ModuleItem[], initialModules: ModuleItem
  */
 function normalizeAssignedHierarchyIds(items: ModuleItem[], initialModules: ModuleItem[]): ModuleItem[] {
   // Build canonical key map from current modules.
-  // Any of (m.key, m.id) should map to the canonical stable key we use everywhere.
+  // Any of (m.key, m.id, m.name, m.href) should map to the canonical stable key we use everywhere.
   const canonicalByAnyKey = new Map<string, string>();
+  const canonicalByName = new Map<string, string>();
+  const canonicalByHref = new Map<string, string>();
+
+  const norm = (v: string) => v.trim().replace(/\s+/g, ' ').toLowerCase();
 
   for (const m of initialModules) {
     const canonical = m.key || m.id;
@@ -46,6 +50,9 @@ function normalizeAssignedHierarchyIds(items: ModuleItem[], initialModules: Modu
 
     if (m.key) canonicalByAnyKey.set(m.key, canonical);
     if (m.id) canonicalByAnyKey.set(m.id, canonical);
+
+    if (m.name) canonicalByName.set(norm(m.name), canonical);
+    if (m.href) canonicalByHref.set(m.href, canonical);
   }
 
   const normalize = (arr: ModuleItem[]): ModuleItem[] =>
@@ -54,11 +61,31 @@ function normalizeAssignedHierarchyIds(items: ModuleItem[], initialModules: Modu
         return { ...it, children: normalize(it.children || []) };
       }
 
+      // 1) Prefer explicit key/id match
       const candidates = [it.key, it.id].filter(Boolean) as string[];
       const match = candidates.find((k) => canonicalByAnyKey.has(k));
-      const canonical = match ? canonicalByAnyKey.get(match)! : (it.key || it.id);
+      if (match) {
+        const canonical = canonicalByAnyKey.get(match)!;
+        return { ...it, key: canonical, id: canonical };
+      }
 
-      return { ...it, key: canonical, id: canonical };
+      // 2) Fallback: match by href (more stable than name if present)
+      if (it.href && canonicalByHref.has(it.href)) {
+        const canonical = canonicalByHref.get(it.href)!;
+        return { ...it, key: canonical, id: canonical };
+      }
+
+      // 3) Fallback: match by name (best-effort for legacy saves)
+      const nameKey = it.name ? norm(it.name) : '';
+      if (nameKey && canonicalByName.has(nameKey)) {
+        const canonical = canonicalByName.get(nameKey)!;
+        return { ...it, key: canonical, id: canonical };
+      }
+
+      // 4) Unknown module: keep its own identity (prevents it from "jumping" folders)
+      //    It will be filtered out later if it truly no longer exists in `initialModules`.
+      const fallback = it.key || it.id;
+      return { ...it, key: fallback, id: fallback };
     });
 
   return normalize(items);
@@ -278,7 +305,13 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
   }, [initialModules, isLoaded, type]);
 
   // Save hierarchy to localStorage AND database (debounced)
-  const saveHierarchy = useCallback((newItems: ModuleItem[]) => {
+  const saveHierarchy = useCallback((newItemsRaw: ModuleItem[]) => {
+    // For assigned hierarchy: normalize before persisting so folder placement never breaks on refresh.
+    const newItems =
+      type === 'assigned' && initialModules.length > 0
+        ? normalizeAssignedHierarchyIds(newItemsRaw, initialModules)
+        : newItemsRaw;
+
     // Save to localStorage immediately
     try {
       localStorage.setItem(storageKey, JSON.stringify(newItems));
@@ -318,7 +351,7 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
         console.error('Error saving module hierarchy to DB:', error);
       }
     }, 500);
-  }, [storageKey, type, customNames]);
+  }, [storageKey, type, customNames, initialModules]);
 
   // Save custom names to localStorage AND database
   const saveCustomNames = useCallback(async (names: Record<string, { name: string; description: string }>) => {
