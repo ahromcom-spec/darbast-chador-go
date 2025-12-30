@@ -12,6 +12,7 @@ import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 import { AdminImpersonationBanner } from "@/components/common/AdminImpersonationBanner";
 // import { PageLoadProgress } from "@/components/common/PageLoadProgress";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { GlobalKeyboardShortcuts } from "@/components/common/GlobalKeyboardShortcuts";
 import { IncomingCallProvider } from "@/contexts/IncomingCallContext";
 import GlobalIncomingCallPopup from "@/components/calls/GlobalIncomingCallPopup";
 import { ZoomProvider } from "@/contexts/ZoomContext";
@@ -161,6 +162,7 @@ const App = () => {
               <IncomingCallProvider>
                 {/* <PageLoadProgress /> */}
                 <AdminImpersonationBanner />
+                <GlobalKeyboardShortcuts />
               <GlobalIncomingCallPopup />
               
               <Suspense fallback={<PageLoader />}>
