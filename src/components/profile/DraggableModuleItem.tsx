@@ -40,6 +40,7 @@ interface DraggableModuleItemProps {
   showDuplicateButton?: boolean;
   isFirst?: boolean;
   draggedItemId?: string | null;
+  canDeleteItem?: (item: ModuleItem) => boolean;
 }
 
 export function DraggableModuleItem({
@@ -60,7 +61,8 @@ export function DraggableModuleItem({
   showDeleteButton = false,
   showDuplicateButton = false,
   isFirst = false,
-  draggedItemId = null
+  draggedItemId = null,
+  canDeleteItem
 }: DraggableModuleItemProps) {
   const navigate = useNavigate();
   const [isDragOver, setIsDragOver] = useState(false);
@@ -383,7 +385,7 @@ export function DraggableModuleItem({
                 <Copy className="h-4 w-4" />
               </Button>
             )}
-            {showDeleteButton && onDelete && item.type === 'module' && (
+            {showDeleteButton && onDelete && item.type === 'module' && (!canDeleteItem || canDeleteItem(item)) && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -452,6 +454,7 @@ export function DraggableModuleItem({
               showDuplicateButton={showDuplicateButton}
               isFirst={childIndex === 0}
               draggedItemId={draggedItemId}
+              canDeleteItem={canDeleteItem}
             />
           ))}
         </div>

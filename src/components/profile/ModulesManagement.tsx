@@ -333,6 +333,14 @@ export function ModulesManagement() {
     });
   };
 
+  // Check if an available module can be deleted (no assignments)
+  const canDeleteModule = (item: ModuleItem): boolean => {
+    const displayName = availableHierarchy.customNames[item.key]?.name || item.name;
+    const baseKey = getBaseModuleKey(item);
+    const moduleAssignments = getModuleAssignments(baseKey || item.key, displayName);
+    return moduleAssignments.length === 0;
+  };
+
   // Get the base module key from a possibly-duplicated module
   const getBaseModuleKey = (item: ModuleItem): string | null => {
     // If it's already a base module
@@ -624,6 +632,7 @@ export function ModulesManagement() {
                     showDeleteButton={true}
                     isFirst={idx === 0}
                     draggedItemId={availableHierarchy.draggedItem?.id || null}
+                    canDeleteItem={canDeleteModule}
                   />
                 ))}
                 {(availableSearch || availableTypeFilter !== 'all') && availableHierarchy.items.filter((item) => {
