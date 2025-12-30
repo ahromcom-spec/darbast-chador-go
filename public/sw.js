@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ahrom-v23-windows-icon-bust';
+const CACHE_VERSION = 'ahrom-v24-android-maskable-icon';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -6,8 +6,11 @@ const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const SHELL_FILES = [
   '/',
   '/index.html',
-  '/manifest.webmanifest?v=12',
-  '/manifest.json?v=12',
+  '/manifest.webmanifest?v=13',
+  '/manifest.json?v=13',
+  '/icons/icon-192-v3.png?v=10',
+  '/icons/icon-512-v3.png?v=10',
+  '/icons/maskable-512-v3.png?v=10',
   '/ahrom-pwa-icon.png',
   '/ahrom-pwa-icon-new.png',
   '/ahrom-app-icon.png',
