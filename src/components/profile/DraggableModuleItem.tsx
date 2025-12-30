@@ -307,18 +307,14 @@ export function DraggableModuleItem({
         }`}
       >
         <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          <button
-            type="button"
-            draggable
+          <div
             data-drag-handle="true"
-            onDragStart={handleDragStartFromHandle}
-            onDragEnd={handleDragEndFromHandle}
-            className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-grab active:cursor-grabbing touch-none"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 cursor-grab active:cursor-grabbing"
             aria-label="گرفتن و جابه‌جایی"
             title="برای جابه‌جایی بکشید"
           >
             <GripVertical className="h-5 w-5" />
-          </button>
+          </div>
           
           {item.type === 'folder' ? (
             <>
