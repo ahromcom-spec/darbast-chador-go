@@ -89,8 +89,7 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
   const [draggedItem, setDraggedItem] = useState<ModuleItem | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Track save timeout for debouncing
-  const saveTimeoutRef = useRef<number | null>(null);
+  // Track last saved hierarchy to avoid redundant writes
   const lastSavedRef = useRef<string | null>(null);
 
   // Load hierarchy from DB first, fallback to localStorage
