@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -2854,9 +2854,7 @@ export default function DailyReportModule() {
                   return colors[status] || 'bg-gray-100 text-gray-800';
                 };
 
-                const paymentAmount = selectedOrderDetails.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0;
-                const totalPaid = selectedOrderDetails.total_paid || 0;
-                const remaining = Math.max(0, paymentAmount - totalPaid);
+                // Note: Price info removed from Daily Report module per requirements
 
                 return (
                   <div className="space-y-4 text-right">
@@ -3239,33 +3237,7 @@ export default function DailyReportModule() {
                       </div>
                     )}
 
-                    {/* Payment History */}
-                    {selectedOrderDetails.payments && selectedOrderDetails.payments.length > 0 && (
-                      <div className="p-4 border rounded-xl space-y-3 bg-violet-50/50 dark:bg-violet-900/10">
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-violet-600" />
-                          <h4 className="font-semibold">تاریخچه پرداخت‌ها</h4>
-                        </div>
-                        <div className="space-y-2">
-                          {selectedOrderDetails.payments.map((payment: any, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-background/50 rounded-lg text-sm">
-                              <div>
-                                <p className="font-bold text-violet-700 dark:text-violet-300">
-                                  {payment.amount?.toLocaleString('fa-IR')} تومان
-                                </p>
-                                {payment.payment_method && (
-                                  <span className="text-xs text-muted-foreground">روش: {payment.payment_method}</span>
-                                )}
-                                {payment.notes && (
-                                  <p className="text-xs text-muted-foreground mt-1">{payment.notes}</p>
-                                )}
-                              </div>
-                              <span className="text-xs text-muted-foreground">{formatPersianDate(payment.created_at)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* Payment History - Hidden in Daily Report Module */}
 
                     {/* Media Section */}
                     <div className="p-4 border rounded-xl space-y-4 bg-purple-50/50 dark:bg-purple-900/10">
