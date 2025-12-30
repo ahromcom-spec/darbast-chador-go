@@ -9,6 +9,12 @@ const CUSTOM_NAMES_KEY = 'custom_module_names_v2';
 interface UseModuleHierarchyProps {
   type: 'available' | 'assigned';
   initialModules: ModuleItem[];
+  /**
+   * For assigned modules, `initialModules` is often empty while assignments are still loading.
+   * Set this to false during loading to prevent merge logic from temporarily stripping modules
+   * from folders (which makes them re-appear at root after refresh).
+   */
+  isInitialModulesReady?: boolean;
   onModuleNameChange?: () => void;
 }
 
@@ -199,7 +205,7 @@ function mergeAssignedHierarchy(savedRaw: ModuleItem[], initialModules: ModuleIt
   return [...updatedHierarchy, ...newModules];
 }
 
-export function useModuleHierarchy({ type, initialModules, onModuleNameChange }: UseModuleHierarchyProps) {
+export function useModuleHierarchy({ type, initialModules, isInitialModulesReady = true, onModuleNameChange }: UseModuleHierarchyProps) {
   const storageKey = type === 'available' ? STORAGE_KEY_AVAILABLE : STORAGE_KEY_ASSIGNED;
 
   const [items, setItems] = useState<ModuleItem[]>(() => initialModules);
@@ -299,10 +305,29 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
   // When initialModules change (e.g., new assignments), update items
   useEffect(() => {
     if (!isLoaded) return;
-    if (type === 'assigned') {
-      setItems(prev => mergeAssignedHierarchy(prev, initialModules));
-    }
-  }, [initialModules, isLoaded, type]);
+    if (type !== 'assigned') return;
+
+    // IMPORTANT: while assignments are still loading, `initialModules` is often an empty array.
+    // Merging with an empty array would temporarily remove all modules from folders, and then
+    // when assignments arrive, modules get re-added at root level (appears as "module jumped out").
+    if (!isInitialModulesReady || initialModules.length === 0) return;
+
+    setItems((prev) => {
+      const merged = mergeAssignedHierarchy(prev, initialModules);
+
+      // One-time repair: if normalization/merge changed anything, persist the repaired hierarchy
+      // so future refreshes start from a clean, stable structure.
+      try {
+        const prevStr = JSON.stringify(prev);
+        const mergedStr = JSON.stringify(merged);
+        if (prevStr !== mergedStr) saveHierarchy(merged);
+      } catch {
+        // If stringify fails for any reason, still keep the merged state.
+      }
+
+      return merged;
+    });
+  }, [initialModules, isLoaded, isInitialModulesReady, saveHierarchy, type]);
 
   // Save hierarchy to localStorage AND database (debounced)
   const saveHierarchy = useCallback((newItemsRaw: ModuleItem[]) => {
