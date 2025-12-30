@@ -6,6 +6,12 @@ verify_jwt = false
 [functions.verify-otp]
 verify_jwt = false
 
+[functions.send-ceo-otp]
+verify_jwt = true
+
+[functions.verify-ceo-otp]
+verify_jwt = true
+
 [functions.get-mapbox-token]
 verify_jwt = false
 
