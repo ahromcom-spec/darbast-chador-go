@@ -142,7 +142,28 @@ export function DraggableModuleItem({
     onDrop(item, e);
   };
 
+  const isDragHandle = (target: EventTarget | null) => {
+    const el = target as HTMLElement | null;
+    return !!el?.closest?.('[data-drag-handle="true"]');
+  };
+
+  const isInteractiveElement = (target: EventTarget | null) => {
+    const el = target as HTMLElement | null;
+    // Treat common interactive elements as "no drag" unless it's the drag handle
+    return !!el?.closest?.('button, a, input, textarea, select, [role="button"], [data-no-drag="true"]');
+  };
+
   const handleDragStartFromHandle = (e: React.DragEvent) => {
+    e.stopPropagation();
+    onDragStart(item, e);
+  };
+
+  const handleDragStartFromCard = (e: React.DragEvent) => {
+    // Allow drag from anywhere on the card except interactive controls (edit/delete/navigate/toggle)
+    if (!isDragHandle(e.target) && isInteractiveElement(e.target)) {
+      e.preventDefault();
+      return;
+    }
     e.stopPropagation();
     onDragStart(item, e);
   };
@@ -161,6 +182,11 @@ export function DraggableModuleItem({
     }
 
     onDragEnd();
+  };
+
+  const handleDragEndFromCard = (e: React.DragEvent) => {
+    e.stopPropagation();
+    handleDragEndFromHandle(e);
   };
 
   const startEditing = () => {
@@ -271,6 +297,9 @@ export function DraggableModuleItem({
       )}
       
       <div
+        draggable
+        onDragStart={handleDragStartFromCard}
+        onDragEnd={handleDragEndFromCard}
         onDragOver={(e) => {
           e.preventDefault();
           e.dataTransfer.dropEffect = 'move';
@@ -291,6 +320,7 @@ export function DraggableModuleItem({
           <button
             type="button"
             draggable
+            data-drag-handle="true"
             onDragStart={handleDragStartFromHandle}
             onDragEnd={handleDragEndFromHandle}
             className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-grab active:cursor-grabbing touch-none"
