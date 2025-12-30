@@ -303,31 +303,7 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
   }, [type, storageKey]);
 
   // When initialModules change (e.g., new assignments), update items
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (type !== 'assigned') return;
-
-    // IMPORTANT: while assignments are still loading, `initialModules` is often an empty array.
-    // Merging with an empty array would temporarily remove all modules from folders, and then
-    // when assignments arrive, modules get re-added at root level (appears as "module jumped out").
-    if (!isInitialModulesReady || initialModules.length === 0) return;
-
-    setItems((prev) => {
-      const merged = mergeAssignedHierarchy(prev, initialModules);
-
-      // One-time repair: if normalization/merge changed anything, persist the repaired hierarchy
-      // so future refreshes start from a clean, stable structure.
-      try {
-        const prevStr = JSON.stringify(prev);
-        const mergedStr = JSON.stringify(merged);
-        if (prevStr !== mergedStr) saveHierarchy(merged);
-      } catch {
-        // If stringify fails for any reason, still keep the merged state.
-      }
-
-      return merged;
-    });
-  }, [initialModules, isLoaded, isInitialModulesReady, saveHierarchy, type]);
+  // (Effect moved below `saveHierarchy` to avoid TS "used before declaration".)
 
   // Save hierarchy to localStorage AND database (debounced)
   const saveHierarchy = useCallback((newItemsRaw: ModuleItem[]) => {
@@ -377,6 +353,33 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
       }
     }, 500);
   }, [storageKey, type, customNames, initialModules]);
+
+  // When initialModules change (e.g., new assignments), update items
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (type !== 'assigned') return;
+
+    // IMPORTANT: while assignments are still loading, `initialModules` is often an empty array.
+    // Merging with an empty array would temporarily remove all modules from folders, and then
+    // when assignments arrive, modules get re-added at root level (appears as "module jumped out").
+    if (!isInitialModulesReady || initialModules.length === 0) return;
+
+    setItems((prev) => {
+      const merged = mergeAssignedHierarchy(prev, initialModules);
+
+      // One-time repair: if normalization/merge changed anything, persist the repaired hierarchy
+      // so future refreshes start from a clean, stable structure.
+      try {
+        const prevStr = JSON.stringify(prev);
+        const mergedStr = JSON.stringify(merged);
+        if (prevStr !== mergedStr) saveHierarchy(merged);
+      } catch {
+        // If stringify fails for any reason, still keep the merged state.
+      }
+
+      return merged;
+    });
+  }, [initialModules, isLoaded, isInitialModulesReady, saveHierarchy, type]);
 
   // Save custom names to localStorage AND database
   const saveCustomNames = useCallback(async (names: Record<string, { name: string; description: string }>) => {
