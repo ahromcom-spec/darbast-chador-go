@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ModuleItem } from '@/components/profile/DraggableModuleItem';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -12,140 +12,244 @@ interface UseModuleHierarchyProps {
   onModuleNameChange?: () => void;
 }
 
+/**
+ * Helper to merge saved hierarchy with initialModules for available modules
+ */
+function mergeAvailableHierarchy(saved: ModuleItem[], initialModules: ModuleItem[]): ModuleItem[] {
+  const savedKeys = new Set<string>();
+  const collectKeys = (items: ModuleItem[]) => {
+    items.forEach(item => {
+      savedKeys.add(item.key);
+      if (item.children) collectKeys(item.children);
+    });
+  };
+  collectKeys(saved);
+  const newModules = initialModules.filter(m => !savedKeys.has(m.key));
+  return [...saved, ...newModules];
+}
+
+/**
+ * Helper to merge saved hierarchy with initialModules for assigned modules
+ */
+function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[]): ModuleItem[] {
+  const validIds = new Set(initialModules.map(m => m.id));
+  const initialModulesMap = new Map(initialModules.map(m => [m.id, m]));
+
+  const filterAndUpdate = (items: ModuleItem[]): ModuleItem[] => {
+    return items
+      .map(item => {
+        if (item.type === 'folder') {
+          const updatedChildren = item.children ? filterAndUpdate(item.children) : [];
+          if (updatedChildren.length > 0) {
+            return { ...item, children: updatedChildren };
+          }
+          return null;
+        }
+        if (validIds.has(item.id)) {
+          return initialModulesMap.get(item.id) || item;
+        }
+        return null;
+      })
+      .filter((item): item is ModuleItem => item !== null);
+  };
+
+  const dedupeById = (items: ModuleItem[], seen: Set<string>): ModuleItem[] => {
+    return items
+      .map(item => {
+        if (item.type === 'folder') {
+          const children = item.children ? dedupeById(item.children, seen) : [];
+          if (children.length === 0) return null;
+          return { ...item, children };
+        }
+        if (seen.has(item.id)) return null;
+        seen.add(item.id);
+        return item;
+      })
+      .filter((i): i is ModuleItem => i !== null);
+  };
+
+  const updatedHierarchy = dedupeById(filterAndUpdate(saved), new Set());
+
+  const hierarchyIds = new Set<string>();
+  const collectIds = (items: ModuleItem[]) => {
+    items.forEach(item => {
+      hierarchyIds.add(item.id);
+      if (item.children) collectIds(item.children);
+    });
+  };
+  collectIds(updatedHierarchy);
+
+  const newModules = initialModules.filter(m => !hierarchyIds.has(m.id));
+  return [...updatedHierarchy, ...newModules];
+}
+
 export function useModuleHierarchy({ type, initialModules, onModuleNameChange }: UseModuleHierarchyProps) {
   const storageKey = type === 'available' ? STORAGE_KEY_AVAILABLE : STORAGE_KEY_ASSIGNED;
-  
-  // Initialize with initialModules to prevent empty state on first render
+
   const [items, setItems] = useState<ModuleItem[]>(() => initialModules);
   const [customNames, setCustomNames] = useState<Record<string, { name: string; description: string }>>({});
   const [draggedItem, setDraggedItem] = useState<ModuleItem | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load saved hierarchy from localStorage
+  // Track save timeout for debouncing
+  const saveTimeoutRef = useRef<number | null>(null);
+  const lastSavedRef = useRef<string | null>(null);
+
+  // Load hierarchy from DB first, fallback to localStorage
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      const savedNames = localStorage.getItem(CUSTOM_NAMES_KEY);
-      
-      if (savedNames) {
-        setCustomNames(JSON.parse(savedNames));
-      }
-      
-      if (saved && type === 'available') {
-        // Only use localStorage for available modules
-        const parsed = JSON.parse(saved);
-        // Merge with initial modules to add any new ones
-        const savedKeys = new Set<string>();
-        const collectKeys = (items: ModuleItem[]) => {
-          items.forEach(item => {
-            savedKeys.add(item.key);
-            if (item.children) collectKeys(item.children);
-          });
-        };
-        collectKeys(parsed);
-        
-        // Add any new modules that aren't in saved hierarchy
-        const newModules = initialModules.filter(m => !savedKeys.has(m.key));
-        setItems([...parsed, ...newModules]);
-      } else if (type === 'assigned') {
-        // For assigned modules, always use initialModules from database
-        // But try to preserve folder structure from localStorage
-        const savedAssigned = localStorage.getItem(storageKey);
-        if (savedAssigned) {
-          const parsed = JSON.parse(savedAssigned);
-          
-          // Get all valid IDs from initialModules
-          const validIds = new Set(initialModules.map(m => m.id));
-          
-          // Create a map of initial modules by id for quick lookup
-          const initialModulesMap = new Map(initialModules.map(m => [m.id, m]));
-          
-          // Filter saved hierarchy to only include valid items and update module data
-          const filterAndUpdate = (items: ModuleItem[]): ModuleItem[] => {
-            return items
-              .map(item => {
-                if (item.type === 'folder') {
-                  const updatedChildren = item.children ? filterAndUpdate(item.children) : [];
-                  // Only keep folder if it has valid children
-                  if (updatedChildren.length > 0) {
-                    return { ...item, children: updatedChildren };
-                  }
-                  return null;
-                }
+    let cancelled = false;
 
-                // For modules, check if still exists in database
-                if (validIds.has(item.id)) {
-                  // Update with latest data from database
-                  return initialModulesMap.get(item.id) || item;
-                }
+    const loadFromDB = async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        const userId = session?.session?.user?.id;
 
-                return null;
-              })
-              .filter((item): item is ModuleItem => item !== null);
-          };
+        let hierarchy: ModuleItem[] | null = null;
+        let names: Record<string, { name: string; description: string }> = {};
 
-          // Deduplicate modules by id across the whole hierarchy (prevents repeated UI rows)
-          const dedupeById = (items: ModuleItem[], seen: Set<string>): ModuleItem[] => {
-            return items
-              .map(item => {
-                if (item.type === 'folder') {
-                  const children = item.children ? dedupeById(item.children, seen) : [];
-                  if (children.length === 0) return null;
-                  return { ...item, children };
-                }
+        // Try fetching from database if user is logged in
+        if (userId) {
+          const { data } = await (supabase as any)
+            .from('module_hierarchy_states')
+            .select('hierarchy, custom_names')
+            .eq('owner_user_id', userId)
+            .eq('type', type)
+            .maybeSingle();
 
-                if (seen.has(item.id)) return null;
-                seen.add(item.id);
-                return item;
-              })
-              .filter((i): i is ModuleItem => i !== null);
-          };
+          if (data && data.hierarchy) {
+            hierarchy = data.hierarchy as unknown as ModuleItem[];
+            names = (data.custom_names as unknown as Record<string, { name: string; description: string }>) || {};
+          }
+        }
 
-          const updatedHierarchy = dedupeById(filterAndUpdate(parsed), new Set());
-          
-          // Find modules that are in initialModules but not in hierarchy
-          const hierarchyIds = new Set<string>();
-          const collectIds = (items: ModuleItem[]) => {
-            items.forEach(item => {
-              hierarchyIds.add(item.id);
-              if (item.children) collectIds(item.children);
-            });
-          };
-          collectIds(updatedHierarchy);
-          
-          const newModules = initialModules.filter(m => !hierarchyIds.has(m.id));
-          setItems([...updatedHierarchy, ...newModules]);
+        // Fallback to localStorage if no DB data
+        if (!hierarchy) {
+          const saved = localStorage.getItem(storageKey);
+          if (saved) {
+            try {
+              hierarchy = JSON.parse(saved);
+            } catch {
+              hierarchy = null;
+            }
+          }
+          const savedNames = localStorage.getItem(CUSTOM_NAMES_KEY);
+          if (savedNames) {
+            try {
+              names = JSON.parse(savedNames);
+            } catch {
+              names = {};
+            }
+          }
+        }
+
+        if (cancelled) return;
+
+        setCustomNames(names);
+
+        if (hierarchy && hierarchy.length > 0) {
+          if (type === 'available') {
+            setItems(mergeAvailableHierarchy(hierarchy, initialModules));
+          } else {
+            setItems(mergeAssignedHierarchy(hierarchy, initialModules));
+          }
         } else {
           setItems(initialModules);
         }
-      } else {
-        setItems(initialModules);
+      } catch (error) {
+        console.error('Error loading module hierarchy:', error);
+        if (!cancelled) {
+          setItems(initialModules);
+        }
       }
-    } catch (error) {
-      console.error('Error loading module hierarchy:', error);
-      setItems(initialModules);
-    }
-    setIsLoaded(true);
-  }, [storageKey, initialModules, type]);
+      if (!cancelled) {
+        setIsLoaded(true);
+      }
+    };
 
-  // Save hierarchy to localStorage
+    loadFromDB();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, storageKey]);
+
+  // When initialModules change (e.g., new assignments), update items
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (type === 'assigned') {
+      setItems(prev => mergeAssignedHierarchy(prev, initialModules));
+    }
+  }, [initialModules, isLoaded, type]);
+
+  // Save hierarchy to localStorage AND database (debounced)
   const saveHierarchy = useCallback((newItems: ModuleItem[]) => {
+    // Save to localStorage immediately
     try {
       localStorage.setItem(storageKey, JSON.stringify(newItems));
     } catch (error) {
-      console.error('Error saving module hierarchy:', error);
+      console.error('Error saving module hierarchy to localStorage:', error);
     }
-  }, [storageKey]);
 
-  // Save custom names and sync with database
+    // Debounce database save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        const userId = session?.session?.user?.id;
+        if (!userId) return;
+
+        const hierarchyStr = JSON.stringify(newItems);
+        // Skip if nothing changed
+        if (lastSavedRef.current === hierarchyStr) return;
+
+        await (supabase as any)
+          .from('module_hierarchy_states')
+          .upsert(
+            {
+              owner_user_id: userId,
+              type,
+              hierarchy: newItems,
+              custom_names: customNames,
+            },
+            { onConflict: 'owner_user_id,type' }
+          );
+
+        lastSavedRef.current = hierarchyStr;
+      } catch (error) {
+        console.error('Error saving module hierarchy to DB:', error);
+      }
+    }, 500);
+  }, [storageKey, type, customNames]);
+
+  // Save custom names to localStorage AND database
   const saveCustomNames = useCallback(async (names: Record<string, { name: string; description: string }>) => {
     try {
       localStorage.setItem(CUSTOM_NAMES_KEY, JSON.stringify(names));
       setCustomNames(names);
+
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+      if (!userId) return;
+
+      await (supabase as any)
+        .from('module_hierarchy_states')
+        .upsert(
+          {
+            owner_user_id: userId,
+            type,
+            hierarchy: items,
+            custom_names: names,
+          },
+          { onConflict: 'owner_user_id,type' }
+        );
     } catch (error) {
       console.error('Error saving custom names:', error);
     }
-  }, []);
+  }, [type, items]);
 
   // Update module assignment names in database when custom names change
   // This updates ALL assignments with this module_key so all assigned users see the new name

@@ -1221,6 +1221,36 @@ export type Database = {
         }
         Relationships: []
       }
+      module_hierarchy_states: {
+        Row: {
+          created_at: string
+          custom_names: Json
+          hierarchy: Json
+          id: string
+          owner_user_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_names?: Json
+          hierarchy?: Json
+          id?: string
+          owner_user_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_names?: Json
+          hierarchy?: Json
+          id?: string
+          owner_user_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string
