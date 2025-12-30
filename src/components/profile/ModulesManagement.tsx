@@ -122,6 +122,24 @@ export function ModulesManagement() {
   const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
   const [pendingDeleteItemName, setPendingDeleteItemName] = useState<string>('');
   const [otpSent, setOtpSent] = useState(false);
+  const [otpTimeLeft, setOtpTimeLeft] = useState(0);
+
+  // OTP countdown timer effect
+  useEffect(() => {
+    if (!otpSent || otpTimeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setOtpTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [otpSent, otpTimeLeft]);
 
   // Get unique module types for filter
   const moduleTypes = useMemo(() => {
@@ -387,6 +405,7 @@ export function ModulesManagement() {
       }
 
       setOtpSent(true);
+      setOtpTimeLeft(90); // Start 90 second countdown
       toast.success('کد تایید به شماره مدیرعامل ارسال شد');
       return true;
     } catch (error) {
@@ -452,6 +471,7 @@ export function ModulesManagement() {
       setPendingDeleteItemId(null);
       setPendingDeleteItemName('');
       setOtpSent(false);
+      setOtpTimeLeft(0);
     } catch (error) {
       console.error('Error verifying CEO OTP:', error);
       toast.error('خطا در تایید کد');
@@ -1030,6 +1050,15 @@ export function ModulesManagement() {
                 <p className="text-sm text-muted-foreground">
                   کد ۵ رقمی ارسال شده را وارد کنید
                 </p>
+                {otpTimeLeft > 0 ? (
+                  <p className="text-sm font-medium text-primary">
+                    زمان باقی‌مانده: {Math.floor(otpTimeLeft / 60)}:{(otpTimeLeft % 60).toString().padStart(2, '0')}
+                  </p>
+                ) : (
+                  <p className="text-sm font-medium text-destructive">
+                    زمان وارد کردن کد به پایان رسید. لطفاً کد جدید دریافت کنید.
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -1043,6 +1072,7 @@ export function ModulesManagement() {
                 setPendingDeleteItemId(null);
                 setPendingDeleteItemName('');
                 setOtpSent(false);
+                setOtpTimeLeft(0);
               }}
               disabled={otpVerifying}
             >
@@ -1064,7 +1094,7 @@ export function ModulesManagement() {
                 <Button
                   variant="destructive"
                   onClick={verifyCeoOtpAndDelete}
-                  disabled={otpVerifying || otpCode.length < 5}
+                  disabled={otpVerifying || otpCode.length < 5 || otpTimeLeft <= 0}
                 >
                   {otpVerifying ? (
                     <>
