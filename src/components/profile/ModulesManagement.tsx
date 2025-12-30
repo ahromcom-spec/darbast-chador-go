@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ModuleItem as ModuleItemComponent, ModuleItemData } from './ModuleItem';
-import { AssignedModuleItem, AssignedModuleData, AssignedUser } from './AssignedModuleItem';
+import { AssignedModuleItemWithFolder, AssignedHierarchyItem, AssignedModuleData, AssignedUser } from './AssignedModuleItemWithFolder';
 import { ModuleItem } from './DraggableModuleItem';
 import { useModuleHierarchy } from '@/hooks/useModuleHierarchy';
 
@@ -666,6 +666,15 @@ export function ModulesManagement() {
     return Object.values(grouped);
   }, [assignments, availableHierarchy.items]);
 
+  // Create a Map of module data for quick lookup
+  const assignedModulesDataMap = useMemo((): Map<string, AssignedModuleData> => {
+    const map = new Map<string, AssignedModuleData>();
+    groupedAssignedModules.forEach(mod => {
+      map.set(mod.moduleKey, mod);
+    });
+    return map;
+  }, [groupedAssignedModules]);
+
   // Convert assignments to ModuleItem format for assigned modules section (kept for ordering logic)
   const assignedModulesAsItems = useMemo((): ModuleItem[] => {
     return groupedAssignedModules.map(g => ({
@@ -680,68 +689,120 @@ export function ModulesManagement() {
     }));
   }, [groupedAssignedModules]);
 
-  // Module hierarchy for assigned modules (for ordering)
+  // Module hierarchy for assigned modules (for ordering and folders)
   const assignedHierarchy = useModuleHierarchy({
     type: 'assigned',
     initialModules: assignedModulesAsItems,
   });
 
+  // Create folder for assigned modules
+  const handleCreateAssignedFolder = useCallback(() => {
+    const newFolder: ModuleItem = {
+      id: `assigned-folder-${Date.now()}`,
+      type: 'folder',
+      key: `assigned-folder-${Date.now()}`,
+      name: 'پوشه جدید',
+      description: 'برای دسته‌بندی ماژول‌های اختصاص یافته',
+      children: [],
+      isOpen: true,
+    };
+    assignedHierarchy.setItems(prev => [newFolder, ...prev]);
+  }, [assignedHierarchy]);
+
   // Edit module name in assigned list
   const handleEditAssignedModule = useCallback(
-    (moduleKey: string, newName: string, newDescription: string) => {
+    (item: AssignedHierarchyItem, newName: string, newDescription: string) => {
       // Use the existing editItem which handles customNames + DB sync
-      const item = groupedAssignedModules.find((m) => m.moduleKey === moduleKey);
-      if (item) {
-        assignedHierarchy.editItem(
-          { id: moduleKey, type: 'module', key: moduleKey, name: item.moduleName, description: item.moduleDescription },
-          newName,
-          newDescription
-        );
-      }
+      assignedHierarchy.editItem(
+        { id: item.id, type: item.type, key: item.key, name: item.name, description: item.description } as ModuleItem,
+        newName,
+        newDescription
+      );
 
       // Also update module_assignments in DB so all assigned users see the new name
-      supabase
-        .from('module_assignments')
-        .update({ module_name: newName })
-        .eq('module_key', moduleKey)
-        .then(({ error }) => {
-          if (error) console.error('Error updating module name:', error);
-          else fetchAssignments();
-        });
+      if (item.type === 'module') {
+        supabase
+          .from('module_assignments')
+          .update({ module_name: newName })
+          .eq('module_key', item.key)
+          .then(({ error }) => {
+            if (error) console.error('Error updating module name:', error);
+            else fetchAssignments();
+          });
+      }
     },
-    [assignedHierarchy, groupedAssignedModules, fetchAssignments]
+    [assignedHierarchy, fetchAssignments]
   );
 
   // Handle module order change
   const handleMoveAssignedModuleUp = useCallback(
-    (moduleKey: string) => {
-      assignedHierarchy.moveItemUp(moduleKey);
+    (itemId: string) => {
+      assignedHierarchy.moveItemUp(itemId);
     },
     [assignedHierarchy]
   );
 
   const handleMoveAssignedModuleDown = useCallback(
-    (moduleKey: string) => {
-      assignedHierarchy.moveItemDown(moduleKey);
+    (itemId: string) => {
+      assignedHierarchy.moveItemDown(itemId);
     },
     [assignedHierarchy]
   );
 
-  // Delete an entire assigned module (only when no assignments left - but this is guarded in UI)
-  const handleDeleteAssignedModule = useCallback(
-    async (moduleKey: string) => {
-      // Safety: confirm no assignments for this module
-      const moduleData = groupedAssignedModules.find((m) => m.moduleKey === moduleKey);
-      if (moduleData && moduleData.assignments.length > 0) {
-        toast.error('ابتدا همه کاربران اختصاص داده شده را لغو کنید');
-        return;
+  // Delete an assigned item (folder or module without assignments)
+  const handleDeleteAssignedItem = useCallback(
+    async (itemId: string) => {
+      // Find item in hierarchy
+      const findItem = (items: ModuleItem[], id: string): ModuleItem | null => {
+        for (const item of items) {
+          if (item.id === id) return item;
+          if (item.children) {
+            const found = findItem(item.children, id);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const item = findItem(assignedHierarchy.items, itemId);
+      if (!item) return;
+
+      // For folders - check if empty
+      if (item.type === 'folder') {
+        if (item.children && item.children.length > 0) {
+          toast.error('پوشه خالی نیست. ابتدا ماژول‌های داخل پوشه را خارج کنید.');
+          return;
+        }
+      } else {
+        // For modules - check if has assignments
+        const moduleData = groupedAssignedModules.find((m) => m.moduleKey === item.key);
+        if (moduleData && moduleData.assignments.length > 0) {
+          toast.error('ابتدا همه کاربران اختصاص داده شده را لغو کنید');
+          return;
+        }
       }
-      // Nothing to delete from DB since no assignments remain.
-      // Just refresh UI.
-      fetchAssignments();
+
+      // Remove item from hierarchy
+      const removeItem = (items: ModuleItem[], id: string): ModuleItem[] => {
+        return items.filter(it => {
+          if (it.id === id) return false;
+          if (it.children) {
+            it.children = removeItem(it.children, id);
+          }
+          return true;
+        });
+      };
+
+      assignedHierarchy.setItems(prev => removeItem([...prev], itemId));
+      toast.success(item.type === 'folder' ? 'پوشه حذف شد' : 'ماژول از لیست حذف شد');
     },
-    [groupedAssignedModules, fetchAssignments]
+    [assignedHierarchy, groupedAssignedModules]
   );
+
+  // Get available modules for adding to folders (modules at root level)
+  const getAssignedModulesForFolder = useCallback((): AssignedHierarchyItem[] => {
+    return assignedHierarchy.items.filter(item => item.type === 'module') as AssignedHierarchyItem[];
+  }, [assignedHierarchy.items]);
 
 
   return (
@@ -964,7 +1025,7 @@ export function ModulesManagement() {
               </div>
             </div>
 
-            {/* Current Assignments - Grouped by Module */}
+            {/* Current Assignments - Grouped by Module with Folders */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-sm text-muted-foreground">
@@ -975,16 +1036,25 @@ export function ModulesManagement() {
                     </Badge>
                   )}
                 </h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCreateAssignedFolder}
+                  className="gap-2"
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  ایجاد پوشه
+                </Button>
               </div>
               
               {groupedAssignedModules.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  روی هر ماژول کلیک کنید تا لیست افراد اختصاص داده شده نمایش داده شود. فقط زمانی که هیچ کاربری به ماژول اختصاص نشده باشد، دکمه حذف نمایان می‌شود.
+                  روی هر ماژول کلیک کنید تا لیست افراد اختصاص داده شده نمایش داده شود. با کلیدهای بالا و پایین ماژول‌ها را مرتب کنید.
                 </p>
               )}
               
-              {/* Search and Filter for assigned modules */}
-              {groupedAssignedModules.length > 0 && (
+              {/* Search for assigned modules */}
+              {(groupedAssignedModules.length > 0 || assignedHierarchy.items.some(i => i.type === 'folder')) && (
                 <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1012,28 +1082,50 @@ export function ModulesManagement() {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : groupedAssignedModules.length === 0 ? (
+              ) : assignedHierarchy.items.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   هنوز ماژولی اختصاص داده نشده است
                 </div>
               ) : (
                 <div className="space-y-2">
                   {(() => {
-                    // Filter grouped modules
-                    const filtered = groupedAssignedModules.filter((mod) => {
-                      if (!assignedSearch) return true;
+                    // Filter hierarchy items
+                    const filterItems = (items: typeof assignedHierarchy.items): typeof assignedHierarchy.items => {
+                      if (!assignedSearch) return items;
                       const searchLower = assignedSearch.toLowerCase();
-                      const modName = (assignedHierarchy.customNames[mod.moduleKey]?.name || mod.moduleName).toLowerCase();
-                      const modDesc = (assignedHierarchy.customNames[mod.moduleKey]?.description || mod.moduleDescription || '').toLowerCase();
-                      if (modName.includes(searchLower) || modDesc.includes(searchLower)) return true;
-                      // Also search in assigned users
-                      return mod.assignments.some((u) => 
-                        u.phone.includes(searchLower) || 
-                        u.name?.toLowerCase().includes(searchLower)
-                      );
-                    });
-
-                    if (filtered.length === 0) {
+                      
+                      return items.filter(item => {
+                        if (item.type === 'folder') {
+                          const folderName = (assignedHierarchy.customNames[item.key]?.name || item.name).toLowerCase();
+                          const folderDesc = (assignedHierarchy.customNames[item.key]?.description || item.description || '').toLowerCase();
+                          if (folderName.includes(searchLower) || folderDesc.includes(searchLower)) return true;
+                          // Check children
+                          if (item.children) {
+                            const filteredChildren = filterItems(item.children);
+                            if (filteredChildren.length > 0) return true;
+                          }
+                          return false;
+                        }
+                        
+                        // Module
+                        const modName = (assignedHierarchy.customNames[item.key]?.name || item.name).toLowerCase();
+                        const modDesc = (assignedHierarchy.customNames[item.key]?.description || item.description || '').toLowerCase();
+                        if (modName.includes(searchLower) || modDesc.includes(searchLower)) return true;
+                        
+                        // Check assignments
+                        const moduleData = assignedModulesDataMap.get(item.key);
+                        if (moduleData?.assignments.some(u => 
+                          u.phone.includes(searchLower) || 
+                          u.name?.toLowerCase().includes(searchLower)
+                        )) return true;
+                        
+                        return false;
+                      });
+                    };
+                    
+                    const filteredItems = filterItems(assignedHierarchy.items);
+                    
+                    if (filteredItems.length === 0) {
                       return (
                         <div className="text-center py-4 text-muted-foreground text-sm">
                           نتیجه‌ای یافت نشد
@@ -1041,18 +1133,23 @@ export function ModulesManagement() {
                       );
                     }
 
-                    return filtered.map((mod, idx) => (
-                      <AssignedModuleItem
-                        key={mod.moduleKey}
-                        module={mod}
+                    return filteredItems.map((item, idx) => (
+                      <AssignedModuleItemWithFolder
+                        key={item.id}
+                        item={item as AssignedHierarchyItem}
                         index={idx}
-                        totalItems={filtered.length}
+                        totalItems={filteredItems.length}
                         onMoveUp={handleMoveAssignedModuleUp}
                         onMoveDown={handleMoveAssignedModuleDown}
-                        onEditModule={handleEditAssignedModule}
+                        onToggleFolder={assignedHierarchy.toggleFolder}
+                        onEditItem={handleEditAssignedModule}
                         onRemoveAssignment={handleRemoveAssignment}
-                        onDeleteModule={handleDeleteAssignedModule}
+                        onDeleteItem={handleDeleteAssignedItem}
+                        onAddToFolder={assignedHierarchy.addModuleToFolder}
+                        onRemoveFromFolder={assignedHierarchy.removeModuleFromFolder}
                         customNames={assignedHierarchy.customNames}
+                        availableModulesForFolder={getAssignedModulesForFolder()}
+                        allModulesData={assignedModulesDataMap}
                       />
                     ));
                   })()}
