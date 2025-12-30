@@ -28,15 +28,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check if CEO phone is in whitelist (skip SMS, use fixed code)
-    const { data: whitelistData } = await supabase
-      .from('phone_whitelist')
-      .select('phone_number')
-      .eq('phone_number', CEO_PHONE_NUMBER)
-      .maybeSingle();
-
-    const isWhitelisted = !!whitelistData;
-
     // Check rate limit
     const { data: rateLimitOk, error: rateLimitError } = await supabase
       .rpc('check_otp_rate_limit', { _phone_number: CEO_PHONE_NUMBER });
@@ -52,32 +43,7 @@ serve(async (req) => {
       );
     }
 
-    // If whitelisted, use fixed code (no SMS)
-    if (isWhitelisted) {
-      const fixed = '12345';
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-      await supabase
-        .from('otp_codes')
-        .insert({
-          phone_number: CEO_PHONE_NUMBER,
-          code: fixed,
-          expires_at: expiresAt,
-          verified: false,
-        });
-      
-      console.log(`CEO OTP for ${action}: using fixed code (whitelisted)`);
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'کد تایید آماده است',
-          whitelisted: true
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Generate 5-digit OTP code
+    // Always generate real 5-digit OTP code (never use fixed codes)
     const code = Math.floor(10000 + Math.random() * 90000).toString();
 
     // Send SMS via Parsgreen
