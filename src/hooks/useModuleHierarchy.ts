@@ -35,22 +35,43 @@ function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[
   const validIds = new Set(initialModules.map(m => m.id));
   const initialModulesMap = new Map(initialModules.map(m => [m.id, m]));
 
-  const filterAndUpdate = (items: ModuleItem[]): ModuleItem[] => {
+  // Collect all module IDs that exist in the saved hierarchy (including inside folders)
+  const existingIdsInHierarchy = new Set<string>();
+  const collectExistingIds = (items: ModuleItem[]) => {
+    items.forEach(item => {
+      if (item.type === 'module') {
+        existingIdsInHierarchy.add(item.id);
+      }
+      if (item.children) collectExistingIds(item.children);
+    });
+  };
+  collectExistingIds(saved);
+
+  // Update modules in hierarchy with fresh data from initialModules, keeping their position
+  const updateModulesInPlace = (items: ModuleItem[]): ModuleItem[] => {
     return items
       .map(item => {
         if (item.type === 'folder') {
           // Keep folders even if they are empty (must persist across refresh)
-          const updatedChildren = item.children ? filterAndUpdate(item.children) : [];
+          const updatedChildren = item.children ? updateModulesInPlace(item.children) : [];
           return { ...item, children: updatedChildren };
         }
+        // For modules: if still valid (has assignments), update with fresh data
         if (validIds.has(item.id)) {
-          return initialModulesMap.get(item.id) || item;
+          const freshData = initialModulesMap.get(item.id);
+          if (freshData) {
+            // Merge fresh data but keep the item in its current position
+            return { ...item, ...freshData };
+          }
+          return item;
         }
+        // Module no longer has assignments - remove it
         return null;
       })
       .filter((item): item is ModuleItem => item !== null);
   };
 
+  // Remove duplicates (in case a module appears both in a folder and at root)
   const dedupeById = (items: ModuleItem[], seen: Set<string>): ModuleItem[] => {
     return items
       .map(item => {
@@ -66,8 +87,9 @@ function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[
       .filter((i): i is ModuleItem => i !== null);
   };
 
-  const updatedHierarchy = dedupeById(filterAndUpdate(saved), new Set());
+  const updatedHierarchy = dedupeById(updateModulesInPlace(saved), new Set());
 
+  // Collect all IDs in the updated hierarchy (including folders and their children)
   const hierarchyIds = new Set<string>();
   const collectIds = (items: ModuleItem[]) => {
     items.forEach(item => {
@@ -77,6 +99,7 @@ function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[
   };
   collectIds(updatedHierarchy);
 
+  // Add new modules that don't exist in hierarchy yet (at root level)
   const newModules = initialModules.filter(m => !hierarchyIds.has(m.id));
   return [...updatedHierarchy, ...newModules];
 }
@@ -89,7 +112,8 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
   const [draggedItem, setDraggedItem] = useState<ModuleItem | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Track last saved hierarchy to avoid redundant writes
+  // Track save timeout for debouncing
+  const saveTimeoutRef = useRef<number | null>(null);
   const lastSavedRef = useRef<string | null>(null);
 
   // Load hierarchy from DB first, fallback to localStorage
