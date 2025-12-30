@@ -459,9 +459,10 @@ interface OrderDetailsViewProps {
   };
   showMedia?: boolean;
   allowMediaEdit?: boolean; // Allow customer to add/delete media
+  hidePrice?: boolean; // Hide price information (for executive managers in specific modules)
 }
 
-export const OrderDetailsView = ({ order, showMedia = true, allowMediaEdit = true }: OrderDetailsViewProps) => {
+export const OrderDetailsView = ({ order, showMedia = true, allowMediaEdit = true, hidePrice = false }: OrderDetailsViewProps) => {
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
   
   const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
@@ -624,8 +625,8 @@ export const OrderDetailsView = ({ order, showMedia = true, allowMediaEdit = tru
         </div>
       )}
 
-      {/* Price */}
-      {estimatedPrice && (
+      {/* Price - hidden for executive managers in scaffold with materials module */}
+      {estimatedPrice && !hidePrice && (
         <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg">
           <div className="flex items-center gap-2 mb-1">
             <Banknote className="h-4 w-4 text-green-600" />

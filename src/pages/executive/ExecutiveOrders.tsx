@@ -52,11 +52,11 @@ const executionStageToUiKey: Record<string, string> = {
 };
 
 // Component to display order technical details with edit capability
-const OrderDetailsContent = ({ order, getStatusBadge, onUpdate }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void }) => {
+const OrderDetailsContent = ({ order, getStatusBadge, onUpdate, hidePrice = false }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void; hidePrice?: boolean }) => {
   return (
     <div className="space-y-4">
       {/* Use editable component for details */}
-      <EditableOrderDetails order={order} onUpdate={onUpdate} />
+      <EditableOrderDetails order={order} onUpdate={onUpdate} hidePrice={hidePrice} />
       
       {/* Additional execution-specific info */}
       {order.execution_start_date && (
@@ -168,6 +168,11 @@ export default function ExecutiveOrders() {
 
   // Auto-open order from URL param
   const urlOrderId = searchParams.get('orderId');
+  
+  // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
+  const activeModuleKey = searchParams.get('moduleKey') || '';
+  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
+                                         activeModuleKey.includes('101010');
 
   useEffect(() => {
     fetchOrders();
@@ -1788,7 +1793,7 @@ export default function ExecutiveOrders() {
           </DialogHeader>
           {selectedOrder && (
             <>
-              <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={fetchOrders} />
+              <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={fetchOrders} hidePrice={isScaffoldWithMaterialsModule} />
               {/* نقشه موقعیت پروژه با امکان ویرایش */}
               {selectedOrder.location_lat && selectedOrder.location_lng && (
                 <div className="mt-4">

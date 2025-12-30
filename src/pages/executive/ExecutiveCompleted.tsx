@@ -70,6 +70,11 @@ export default function ExecutiveCompleted() {
 
   // Auto-open order from URL param
   const urlOrderId = searchParams.get('orderId');
+  
+  // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
+  const activeModuleKey = searchParams.get('moduleKey') || '';
+  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
+                                         activeModuleKey.includes('101010');
 
   useEffect(() => {
     fetchOrders();
@@ -328,7 +333,7 @@ export default function ExecutiveCompleted() {
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4 py-4">
-              <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} />
+              <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} hidePrice={isScaffoldWithMaterialsModule} />
               
               {/* Progress Media Uploader */}
               <Separator />
