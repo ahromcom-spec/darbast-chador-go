@@ -70,6 +70,7 @@ export function DraggableModuleItem({
   const [editedName, setEditedName] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
   const dragTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dragCounterRef = useRef(0);
 
   const displayName = customNames[item.key]?.name || item.name;
   const displayDescription = customNames[item.key]?.description || item.description;
@@ -93,10 +94,17 @@ export function DraggableModuleItem({
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragOver(true);
-    
+
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) {
+      setIsDragOver(true);
+    }
+
     // Auto-open folder after hovering for 500ms
     if (item.type === 'folder' && !item.isOpen) {
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current);
+      }
       dragTimeoutRef.current = setTimeout(() => {
         onToggleFolder(item.id);
       }, 500);
@@ -106,23 +114,51 @@ export function DraggableModuleItem({
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragOver(false);
-    
-    if (dragTimeoutRef.current) {
-      clearTimeout(dragTimeoutRef.current);
+
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) {
+      setIsDragOver(false);
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current);
+        dragTimeoutRef.current = null;
+      }
     }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    dragCounterRef.current = 0;
     setIsDragOver(false);
-    
+
     if (dragTimeoutRef.current) {
       clearTimeout(dragTimeoutRef.current);
+      dragTimeoutRef.current = null;
     }
-    
+
     onDrop(item, e);
+  };
+
+  const handleDragStartFromHandle = (e: React.DragEvent) => {
+    e.stopPropagation();
+    onDragStart(item, e);
+  };
+
+  const handleDragEndFromHandle = (e: React.DragEvent) => {
+    e.stopPropagation();
+
+    dragCounterRef.current = 0;
+    setIsDragOver(false);
+    setIsDragOverBefore(false);
+    setIsDragOverAfter(false);
+
+    if (dragTimeoutRef.current) {
+      clearTimeout(dragTimeoutRef.current);
+      dragTimeoutRef.current = null;
+    }
+
+    onDragEnd();
   };
 
   const startEditing = () => {
@@ -212,15 +248,16 @@ export function DraggableModuleItem({
     );
   }
 
-  const isDragging = draggedItemId && draggedItemId !== item.id;
+  const isOtherItemBeingDragged = !!draggedItemId && draggedItemId !== item.id;
+  const isDragged = draggedItemId === item.id;
 
   return (
     <div style={{ marginRight: `${paddingLeft}px` }} className="relative">
       {/* Drop zone before this item - only show for first item or when dragging */}
-      {isFirst && isDragging && (
+      {isFirst && isOtherItemBeingDragged && (
         <div
-          className={`h-3 -mt-1 mb-1 rounded-full transition-all ${
-            isDragOverBefore ? 'bg-primary/40 h-4' : 'bg-transparent hover:bg-primary/20'
+          className={`h-5 -mt-1 mb-2 rounded-md transition-all ${
+            isDragOverBefore ? 'bg-primary/40 h-6' : 'bg-transparent hover:bg-primary/20'
           }`}
           onDragOver={(e) => {
             e.preventDefault();
@@ -232,26 +269,35 @@ export function DraggableModuleItem({
       )}
       
       <div
-        draggable
-        onDragStart={(e) => onDragStart(item, e)}
         onDragOver={(e) => {
           e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
           onDragOver(e);
         }}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onDragEnd={onDragEnd}
-        className={`p-4 rounded-lg border-2 bg-background transition-all cursor-move ${
+        className={`p-4 rounded-lg border-2 bg-background transition-all select-none ${
+          isDragged ? 'opacity-60' : ''
+        } ${
           isDragOver
             ? 'border-primary bg-primary/5 scale-[1.02]'
             : 'border-border hover:border-muted-foreground/30'
         }`}
       >
         <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          <div className="text-muted-foreground cursor-grab active:cursor-grabbing">
+          <button
+            type="button"
+            draggable
+            onDragStart={handleDragStartFromHandle}
+            onDragEnd={handleDragEndFromHandle}
+            onMouseDown={(e) => e.preventDefault()}
+            className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-grab active:cursor-grabbing touch-none"
+            aria-label="گرفتن و جابه‌جایی"
+            title="برای جابه‌جایی بکشید"
+          >
             <GripVertical className="h-5 w-5" />
-          </div>
+          </button>
           
           {item.type === 'folder' ? (
             <>
@@ -368,10 +414,10 @@ export function DraggableModuleItem({
       </div>
       
       {/* Drop zone after this item - always visible when dragging */}
-      {isDragging && (
+      {isOtherItemBeingDragged && (
         <div
-          className={`h-3 mt-1 rounded-full transition-all ${
-            isDragOverAfter ? 'bg-primary/40 h-4' : 'bg-transparent hover:bg-primary/20'
+          className={`h-5 mt-2 rounded-md transition-all ${
+            isDragOverAfter ? 'bg-primary/40 h-6' : 'bg-transparent hover:bg-primary/20'
           }`}
           onDragOver={(e) => {
             e.preventDefault();
