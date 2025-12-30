@@ -319,21 +319,6 @@ export function ModuleItem({
       {/* Folder children and add module button */}
       {item.type === 'folder' && item.isOpen && (
         <div className="mt-2 space-y-2">
-          {/* Add module button inside folder */}
-          {onAddToFolder && (
-            <div className="mr-6 mb-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddModuleDialog(true)}
-                className="gap-2 w-full border-dashed border-2 text-muted-foreground hover:text-foreground"
-              >
-                <Plus className="h-4 w-4" />
-                افزودن ماژول به پوشه
-              </Button>
-            </div>
-          )}
-          
           {item.children && item.children.map((child, childIndex) => (
             <ModuleItem
               key={child.id}
@@ -357,6 +342,21 @@ export function ModuleItem({
               isInsideFolder={true}
             />
           ))}
+          
+          {/* Add module button at the end of folder children */}
+          {onAddToFolder && (
+            <div className="mr-6 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddModuleDialog(true)}
+                className="gap-2 w-full border-dashed border-2 text-muted-foreground hover:text-foreground"
+              >
+                <Plus className="h-4 w-4" />
+                افزودن ماژول به پوشه
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
