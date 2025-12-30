@@ -54,15 +54,13 @@ export function useModuleAssignmentInfo(
           // Check custom_names first
           if (customNames && customNames[moduleKey]) {
             setModuleName(customNames[moduleKey].name);
-            if (customNames[moduleKey].description) {
-              setModuleDescription(customNames[moduleKey].description);
-            }
+            setModuleDescription(customNames[moduleKey].description ?? defaultDescription);
             setIsLoading(false);
             return;
           }
 
-          // For copied modules, search in hierarchy to find the item by moduleKey
-          if (hierarchy && moduleKey.startsWith('custom-')) {
+          // Search in hierarchy to find the item by moduleKey (covers normal + copied modules)
+          if (hierarchy) {
             const findInHierarchy = (items: HierarchyItem[]): HierarchyItem | null => {
               for (const item of items) {
                 if (item.id === moduleKey) return item;
@@ -77,9 +75,7 @@ export function useModuleAssignmentInfo(
             const foundItem = findInHierarchy(hierarchy);
             if (foundItem) {
               setModuleName(foundItem.name);
-              if (foundItem.description) {
-                setModuleDescription(foundItem.description);
-              }
+              setModuleDescription(foundItem.description ?? defaultDescription);
               setIsLoading(false);
               return;
             }
@@ -130,7 +126,7 @@ export function useModuleAssignmentInfo(
     };
 
     fetchModuleInfo();
-  }, [user, moduleKey, defaultName]);
+  }, [user, moduleKey, defaultName, defaultDescription]);
 
   return { moduleName, moduleDescription, isLoading };
 }
