@@ -35,18 +35,6 @@ function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[
   const validIds = new Set(initialModules.map(m => m.id));
   const initialModulesMap = new Map(initialModules.map(m => [m.id, m]));
 
-  // Collect all module IDs that exist in the saved hierarchy (including inside folders)
-  const existingIdsInHierarchy = new Set<string>();
-  const collectExistingIds = (items: ModuleItem[]) => {
-    items.forEach(item => {
-      if (item.type === 'module') {
-        existingIdsInHierarchy.add(item.id);
-      }
-      if (item.children) collectExistingIds(item.children);
-    });
-  };
-  collectExistingIds(saved);
-
   // Update modules in hierarchy with fresh data from initialModules, keeping their position
   const updateModulesInPlace = (items: ModuleItem[]): ModuleItem[] => {
     return items
@@ -56,6 +44,7 @@ function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[
           const updatedChildren = item.children ? updateModulesInPlace(item.children) : [];
           return { ...item, children: updatedChildren };
         }
+
         // For modules: if still valid (has assignments), update with fresh data
         if (validIds.has(item.id)) {
           const freshData = initialModulesMap.get(item.id);
@@ -65,13 +54,40 @@ function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[
           }
           return item;
         }
+
         // Module no longer has assignments - remove it
         return null;
       })
       .filter((item): item is ModuleItem => item !== null);
   };
 
-  // Remove duplicates (in case a module appears both in a folder and at root)
+  // Collect module ids that are inside any folder.
+  // If duplicates exist both at root and in a folder, folder placement must win.
+  const inFolderIds = new Set<string>();
+  const collectInFolderIds = (items: ModuleItem[], insideFolder: boolean) => {
+    items.forEach(item => {
+      if (item.type === 'folder') {
+        collectInFolderIds(item.children || [], true);
+        return;
+      }
+      if (insideFolder) inFolderIds.add(item.id);
+    });
+  };
+
+  const removeRootDuplicates = (items: ModuleItem[], isRoot: boolean): ModuleItem[] => {
+    return items
+      .map(item => {
+        if (item.type === 'folder') {
+          const children = removeRootDuplicates(item.children || [], false);
+          return { ...item, children };
+        }
+        if (isRoot && inFolderIds.has(item.id)) return null;
+        return item;
+      })
+      .filter((i): i is ModuleItem => i !== null);
+  };
+
+  // Remove duplicates across the tree (e.g., accidental duplicates across folders)
   const dedupeById = (items: ModuleItem[], seen: Set<string>): ModuleItem[] => {
     return items
       .map(item => {
@@ -87,7 +103,10 @@ function mergeAssignedHierarchy(saved: ModuleItem[], initialModules: ModuleItem[
       .filter((i): i is ModuleItem => i !== null);
   };
 
-  const updatedHierarchy = dedupeById(updateModulesInPlace(saved), new Set());
+  const updated = updateModulesInPlace(saved);
+  collectInFolderIds(updated, false);
+
+  const updatedHierarchy = dedupeById(removeRootDuplicates(updated, true), new Set());
 
   // Collect all IDs in the updated hierarchy (including folders and their children)
   const hierarchyIds = new Set<string>();
