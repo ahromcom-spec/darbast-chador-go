@@ -594,6 +594,15 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
     return items.filter(item => item.type === 'module');
   }, [items]);
 
+  // Wrapper to update items and save to DB
+  const updateItems = useCallback((updater: (prev: ModuleItem[]) => ModuleItem[]) => {
+    setItems(prev => {
+      const newItems = updater(prev);
+      saveHierarchy(newItems);
+      return newItems;
+    });
+  }, [saveHierarchy]);
+
   return {
     items,
     customNames,
@@ -606,7 +615,7 @@ export function useModuleHierarchy({ type, initialModules, onModuleNameChange }:
     toggleFolder,
     editItem,
     reorderItems,
-    setItems,
+    setItems: updateItems, // Use updateItems instead of raw setItems to ensure DB persistence
     moveItemUp,
     moveItemDown,
     addModuleToFolder,
