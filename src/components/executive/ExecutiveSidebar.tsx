@@ -11,7 +11,8 @@ import {
   CheckSquare,
   PackageOpen,
   ArrowLeftRight,
-  Archive
+  Archive,
+  DollarSign
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
@@ -149,6 +150,11 @@ export function ExecutiveSidebar() {
       title: 'داشبورد',
       href: '/executive',
       icon: LayoutDashboard
+    },
+    {
+      title: 'تعیین قیمت سفارشات',
+      href: '/executive/expert-pricing',
+      icon: DollarSign
     },
     {
       title: 'در انتظار تایید مدیران',
