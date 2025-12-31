@@ -3134,6 +3134,91 @@ export default function DailyReportModule() {
                       </div>
                     )}
 
+                    {/* شرایط اجرا و محل پروژه - onGround, vehicleReachesSite, conditions */}
+                    {(parsedNotes?.conditions || parsedNotes?.onGround !== undefined || parsedNotes?.vehicleReachesSite !== undefined || parsedNotes?.isFacadeWidth2m !== undefined) && (
+                      <div className="p-4 border rounded-xl space-y-3 bg-green-50/50 dark:bg-green-900/10">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-green-600" />
+                          <h4 className="font-semibold text-green-800 dark:text-green-200">شرایط اجرا و محل پروژه</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {/* پلان اجاره */}
+                          {parsedNotes?.conditions?.rentalMonthsPlan && (
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">پلان اجاره</span>
+                              <span className="font-medium text-sm">
+                                {parsedNotes.conditions.rentalMonthsPlan === '1' && 'به شرط یک ماه'}
+                                {parsedNotes.conditions.rentalMonthsPlan === '2' && 'به شرط دو ماه'}
+                                {parsedNotes.conditions.rentalMonthsPlan === '3+' && 'به شرط سه ماه و بیشتر'}
+                              </span>
+                            </div>
+                          )}
+                          {/* مدت قرارداد */}
+                          {parsedNotes?.conditions?.totalMonths && (
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">مدت قرارداد</span>
+                              <span className="font-medium text-sm">{parsedNotes.conditions.totalMonths} ماه</span>
+                            </div>
+                          )}
+                          {/* فاصله از قم */}
+                          {parsedNotes?.conditions?.distanceRange && (
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">فاصله از قم</span>
+                              <span className="font-medium text-sm">{parsedNotes.conditions.distanceRange} کیلومتر</span>
+                            </div>
+                          )}
+                          {/* محل نصب داربست - onGround */}
+                          {parsedNotes?.onGround !== undefined && (
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">محل نصب داربست</span>
+                              <Badge variant={parsedNotes.onGround ? 'default' : 'secondary'} className="text-xs">
+                                {parsedNotes.onGround ? 'روی زمین' : 'روی سکو / پشت‌بام / بالکن'}
+                              </Badge>
+                            </div>
+                          )}
+                          {/* ارتفاع پای کار */}
+                          {!parsedNotes?.onGround && parsedNotes?.conditions?.platformHeight && (
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">ارتفاع پای کار</span>
+                              <span className="font-medium text-sm">{parsedNotes.conditions.platformHeight} متر</span>
+                            </div>
+                          )}
+                          {/* ارتفاع داربست از پای کار */}
+                          {!parsedNotes?.onGround && parsedNotes?.conditions?.scaffoldHeightFromPlatform && (
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">ارتفاع داربست از پای کار</span>
+                              <span className="font-medium text-sm">{parsedNotes.conditions.scaffoldHeightFromPlatform} متر</span>
+                            </div>
+                          )}
+                          {/* دسترسی خودرو - vehicleReachesSite */}
+                          {parsedNotes?.vehicleReachesSite !== undefined && (
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">دسترسی خودرو</span>
+                              <Badge variant={parsedNotes.vehicleReachesSite ? 'default' : 'secondary'} className="text-xs">
+                                {parsedNotes.vehicleReachesSite ? 'خودرو به محل می‌رسد' : 'خودرو به محل نمی‌رسد'}
+                              </Badge>
+                            </div>
+                          )}
+                          {/* فاصله خودرو تا محل */}
+                          {!parsedNotes?.vehicleReachesSite && parsedNotes?.conditions?.vehicleDistance && (
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">فاصله خودرو تا محل</span>
+                              <span className="font-medium text-sm">{parsedNotes.conditions.vehicleDistance} متر</span>
+                            </div>
+                          )}
+                          {/* عرض داربست نما - isFacadeWidth2m */}
+                          {parsedNotes?.isFacadeWidth2m !== undefined && (
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">عرض داربست نما</span>
+                              <Badge variant="outline" className="text-xs">
+                                {parsedNotes.isFacadeWidth2m ? '2 متر' : '1 متر'}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Activity Description / Notes & Description - Always show section */}
                     <div className="p-4 border rounded-xl space-y-3 bg-orange-50/50 dark:bg-orange-900/10">
                       <div className="flex items-center gap-2">
