@@ -383,9 +383,16 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                 قیمت فی (تومان به ازای هر متر مربع)
               </Label>
               <Input 
-                type="number"
-                value={unitPrice} 
-                onChange={(e) => setUnitPrice(e.target.value)}
+                type="text"
+                inputMode="numeric"
+                value={unitPrice ? Number(unitPrice).toLocaleString('fa-IR') : ''} 
+                onChange={(e) => {
+                  // Remove all non-digit characters and convert Persian digits to English
+                  const rawValue = e.target.value
+                    .replace(/[^\d۰-۹]/g, '')
+                    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                  setUnitPrice(rawValue);
+                }}
                 placeholder="قیمت فی را وارد کنید"
                 className="text-lg font-bold"
                 dir="ltr"
@@ -403,14 +410,19 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
               </Label>
               <div className="flex gap-2">
                 <Input 
-                  type="number"
-                  value={paymentAmount} 
+                  type="text"
+                  inputMode="numeric"
+                  value={paymentAmount ? Number(paymentAmount).toLocaleString('fa-IR') : ''} 
                   onChange={(e) => {
-                    setPaymentAmount(e.target.value);
+                    // Remove all non-digit characters and convert Persian digits to English
+                    const rawValue = e.target.value
+                      .replace(/[^\d۰-۹]/g, '')
+                      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                    setPaymentAmount(rawValue);
                     // If manually changed, clear unit price
                     if (unitPrice && parseFloat(unitPrice) > 0 && expertPricingTotalArea > 0) {
                       const calculated = parseFloat(unitPrice) * expertPricingTotalArea;
-                      if (Math.abs(parseFloat(e.target.value) - calculated) > 1) {
+                      if (Math.abs(parseFloat(rawValue) - calculated) > 1) {
                         // User is overriding the calculated value
                       }
                     }
