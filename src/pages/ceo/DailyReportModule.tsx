@@ -203,6 +203,7 @@ export default function DailyReportModule() {
   // Order details dialog state
   const [orderDetailsDialogOpen, setOrderDetailsDialogOpen] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
+  const [selectedDailyOrderRow, setSelectedDailyOrderRow] = useState<OrderReportRow | null>(null);
   const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
 
   // Bulk delete hook
@@ -3219,50 +3220,64 @@ export default function DailyReportModule() {
                       </div>
                     )}
 
-                    {/* Activity Description / Notes & Description - Always show section */}
-                    <div className="p-4 border rounded-xl space-y-3 bg-orange-50/50 dark:bg-orange-900/10">
+                    {/* Daily report row details (what you entered in this module) */}
+                    <div className="p-4 border rounded-xl space-y-3 bg-muted/10">
                       <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-orange-600" />
-                        <h4 className="font-semibold text-orange-800 dark:text-orange-200">شرح محل و فعالیت</h4>
+                        <FileText className="h-4 w-4 text-primary" />
+                        <h4 className="font-semibold">گزارش امروز (از گزارش روزانه)</h4>
                       </div>
-                      
-                      {/* شرح فعالیت - from daily report */}
-                      <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                        <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1 font-medium">شرح فعالیت</span>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="p-3 bg-muted/30 rounded-lg">
+                          <span className="text-xs text-muted-foreground block mb-1">اکیپ</span>
+                          <p className="text-sm font-medium whitespace-pre-wrap">
+                            {selectedDailyOrderRow?.team_name?.trim() || 'ثبت نشده'}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-muted/30 rounded-lg">
+                          <span className="text-xs text-muted-foreground block mb-1">توضیحات</span>
+                          <p className="text-sm font-medium whitespace-pre-wrap">
+                            {selectedDailyOrderRow?.notes?.trim() || 'ثبت نشده'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <span className="text-xs text-muted-foreground block mb-1">شرح فعالیت امروز</span>
                         <p className="text-sm whitespace-pre-wrap">
-                          {parsedNotes?.activity_description || selectedOrderDetails.activity_description || 'ثبت نشده'}
+                          {selectedDailyOrderRow?.activity_description?.trim() || 'ثبت نشده'}
                         </p>
                       </div>
-                      
-                      {/* شرح محل نصب - locationPurpose */}
-                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <span className="text-xs text-blue-700 dark:text-blue-300 block mb-1 font-medium">شرح محل نصب</span>
-                        <p className="text-sm whitespace-pre-wrap">
-                          {parsedNotes?.locationPurpose || parsedNotes?.location_purpose || 'ثبت نشده'}
-                        </p>
-                      </div>
-                      
-                      {/* توضیحات سفارش - فقط نمایش متن واقعی، نه JSON خام */}
-                      {parsedNotes?.description && typeof parsedNotes.description === 'string' && !parsedNotes.description.includes('{') && (
-                        <div className="p-3 bg-muted/50 rounded-lg border">
-                          <span className="text-xs text-muted-foreground block mb-1 font-medium">توضیحات سفارش</span>
-                          <p className="text-sm whitespace-pre-wrap">{parsedNotes.description}</p>
+
+                      {selectedDailyOrderRow?.service_details?.trim() && (
+                        <div className="p-3 bg-muted/30 rounded-lg">
+                          <span className="text-xs text-muted-foreground block mb-1">ابعاد / جزئیات خدمات</span>
+                          <p className="text-sm whitespace-pre-wrap">{selectedDailyOrderRow.service_details}</p>
                         </div>
                       )}
-                      
-                      {/* یادداشت‌های اضافی */}
+
+                      {(parsedNotes?.locationPurpose || parsedNotes?.location_purpose) && (
+                        <div className="p-3 bg-muted/30 rounded-lg">
+                          <span className="text-xs text-muted-foreground block mb-1">شرح محل نصب</span>
+                          <p className="text-sm whitespace-pre-wrap">
+                            {parsedNotes?.locationPurpose || parsedNotes?.location_purpose}
+                          </p>
+                        </div>
+                      )}
+
+                      {parsedNotes?.description &&
+                        typeof parsedNotes.description === 'string' &&
+                        !parsedNotes.description.includes('{') && (
+                          <div className="p-3 bg-muted/30 rounded-lg">
+                            <span className="text-xs text-muted-foreground block mb-1">توضیحات سفارش</span>
+                            <p className="text-sm whitespace-pre-wrap">{parsedNotes.description}</p>
+                          </div>
+                        )}
+
                       {parsedNotes?.notes && (
-                        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                          <span className="text-xs text-purple-700 dark:text-purple-300 block mb-1 font-medium">یادداشت‌های اضافی</span>
+                        <div className="p-3 bg-muted/30 rounded-lg">
+                          <span className="text-xs text-muted-foreground block mb-1">یادداشت‌های اضافی</span>
                           <p className="text-sm whitespace-pre-wrap">{parsedNotes.notes}</p>
-                        </div>
-                      )}
-                      
-                      {/* جزئیات سرویس - from daily report orders */}
-                      {selectedOrderDetails.service_details && (
-                        <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
-                          <span className="text-xs text-teal-700 dark:text-teal-300 block mb-1 font-medium">جزئیات سرویس</span>
-                          <p className="text-sm whitespace-pre-wrap">{selectedOrderDetails.service_details}</p>
                         </div>
                       )}
                     </div>
