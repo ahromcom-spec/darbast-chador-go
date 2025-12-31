@@ -1241,8 +1241,8 @@ export default function ExecutivePendingOrders() {
               افزودن پرسنل
             </Button>
             
-            {/* دکمه تایید سفارش فقط برای ماژول مدیریت کل - در ماژول 101010 مخفی است چون مدیر اجرایی به قیمت دسترسی ندارد */}
-            {!isScaffoldWithMaterialsModule && (
+            {/* دکمه تایید سفارش فقط برای ماژول مدیریت کل اجرای داربست به همراه اجناس 101010 */}
+            {isScaffoldWithMaterialsModule && (
               <Button
                 size="sm"
                 onClick={() => {
