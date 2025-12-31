@@ -402,11 +402,19 @@ const App = () => {
                 <Route path="customers" element={<SalesCustomers />} />
                 <Route path="order-transfers" element={<OrderTransferManagement />} />
               </Route>
-              <Route path="/finance/orders" element={
+              {/* Finance/Accounting Dashboard Routes */}
+              <Route path="/finance" element={
                 <ProtectedRoute>
-                  <FinanceOrders />
+                  <FinanceLayout />
                 </ProtectedRoute>
-              } />
+              }>
+                <Route index element={<FinanceDashboard />} />
+                <Route path="awaiting-payment" element={<FinanceAwaitingPayment />} />
+                <Route path="paid" element={<FinancePaidOrders />} />
+                <Route path="closed" element={<FinanceClosedOrders />} />
+                <Route path="all-orders" element={<FinanceAllOrders />} />
+                <Route path="orders" element={<FinanceOrders />} />
+              </Route>
               
               {/* Settings Routes */}
               <Route path="/settings/notifications" element={
