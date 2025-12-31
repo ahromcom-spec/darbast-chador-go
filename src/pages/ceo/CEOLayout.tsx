@@ -217,7 +217,7 @@ export const CEOLayout = () => {
             {mainNavItems.map((item) => (
               <NavLink
                 key={item.href}
-                to={item.href}
+                to={`${item.href}?moduleKey=${activeModuleKey}`}
                 end={item.href === '/ceo'}
                 className={({ isActive }) =>
                   cn(
@@ -256,7 +256,7 @@ export const CEOLayout = () => {
                 {orderStagesItems.map((item) => (
                   <DropdownMenuItem key={item.href} asChild>
                     <NavLink
-                      to={item.href}
+                      to={`${item.href}?moduleKey=${activeModuleKey}`}
                       className={({ isActive }) =>
                         cn(
                           'flex items-center gap-2 w-full cursor-pointer text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700',
