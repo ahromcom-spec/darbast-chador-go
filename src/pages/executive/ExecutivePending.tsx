@@ -26,6 +26,7 @@ import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { Separator } from '@/components/ui/separator';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 
 // Helper to parse order notes safely - handles double-stringified JSON
 const parseOrderNotes = (notes: any): any => {
@@ -73,6 +74,13 @@ export default function ExecutivePending() {
 
   // Auto-open order from URL param
   const urlOrderId = searchParams.get('orderId');
+  
+  // Check if this is the "scaffold execution with materials" module (code 101010) - hide approval for this module
+  const activeModuleKey = searchParams.get('moduleKey') || '';
+  const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
+  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
+                                         activeModuleKey.includes('101010') ||
+                                         moduleName.includes('داربست به همراه اجناس');
 
   useEffect(() => {
     fetchOrders();
@@ -376,23 +384,26 @@ export default function ExecutivePending() {
                 <Eye className="h-4 w-4 ml-2" />
                 مشاهده جزئیات
               </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setSelectedOrder(order);
-                  setActionType('approve');
-                  // Pre-fill execution dates from customer's requested dates
-                  const notes = parseOrderNotes(order.notes);
-                  const customerRequestedDate = notes?.installationDateTime || notes?.installation_date || notes?.requested_date || '';
-                  const customerDueDate = notes?.dueDateTime || notes?.due_date || '';
-                  setExecutionStartDate(customerRequestedDate);
-                  setExecutionEndDate(customerDueDate);
-                }}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle className="h-4 w-4 ml-2" />
-                تایید سفارش
-              </Button>
+              {/* دکمه تایید سفارش - مخفی در ماژول 101010 چون مدیر اجرایی به قیمت دسترسی ندارد */}
+              {!isScaffoldWithMaterialsModule && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setSelectedOrder(order);
+                    setActionType('approve');
+                    // Pre-fill execution dates from customer's requested dates
+                    const notes = parseOrderNotes(order.notes);
+                    const customerRequestedDate = notes?.installationDateTime || notes?.installation_date || notes?.requested_date || '';
+                    const customerDueDate = notes?.dueDateTime || notes?.due_date || '';
+                    setExecutionStartDate(customerRequestedDate);
+                    setExecutionEndDate(customerDueDate);
+                  }}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 ml-2" />
+                  تایید سفارش
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
