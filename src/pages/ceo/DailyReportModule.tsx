@@ -1627,9 +1627,11 @@ export default function DailyReportModule() {
   const [orderMedia, setOrderMedia] = useState<Array<{id: string; file_path: string; file_type: string; url: string; mime_type?: string}>>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   
-  const fetchOrderDetails = async (orderId: string) => {
+  const fetchOrderDetails = async (orderId: string, dailyRow?: OrderReportRow | null) => {
     setLoadingOrderDetails(true);
     setOrderDetailsDialogOpen(true);
+    setSelectedOrderDetails(null);
+    setSelectedDailyOrderRow(dailyRow ?? null);
     setOrderMedia([]);
     try {
       // First get the order with all related data
@@ -2017,7 +2019,7 @@ export default function DailyReportModule() {
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        onClick={() => fetchOrderDetails(row.order_id)}
+                                        onClick={() => fetchOrderDetails(row.order_id, row)}
                                         title="مشاهده جزئیات سفارش"
                                         className="shrink-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
                                       >
