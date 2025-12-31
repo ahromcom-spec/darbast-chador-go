@@ -2950,7 +2950,7 @@ export default function DailyReportModule() {
                           const lng = selectedOrderDetails.location_lng || selectedOrderDetails.locations?.lng;
                           if (lat && lng) {
                             return (
-                              <div className="mt-3 rounded-lg overflow-hidden border border-primary/20">
+                              <div className="mt-3 h-56 sm:h-64 rounded-lg overflow-hidden border border-primary/20">
                                 <StaticLocationMap
                                   lat={lat}
                                   lng={lng}
