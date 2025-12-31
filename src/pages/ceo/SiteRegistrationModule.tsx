@@ -10,8 +10,7 @@ import { UserPlus, Loader2, CheckCircle, Phone, User, AlertCircle, UserCheck } f
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/useDebounce';
-import { ModuleHeader } from '@/components/common/ModuleHeader';
-import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 
 const DEFAULT_TITLE = 'ثبت‌نام در سایت اهرم';
 const DEFAULT_DESCRIPTION = 'ثبت‌نام کاربر جدید بدون نیاز به ارسال کد تایید';
@@ -33,13 +32,6 @@ export default function SiteRegistrationModule() {
   const [registeredInfo, setRegisteredInfo] = useState<{ phone: string; name: string } | null>(null);
   const [existingUser, setExistingUser] = useState<{ name: string } | null>(null);
   const [checkingPhone, setCheckingPhone] = useState(false);
-
-  // Get dynamic module name from assignment (supports base + copied modules via ?moduleKey=...)
-  const { moduleName, moduleDescription } = useModuleAssignmentInfo(
-    activeModuleKey,
-    DEFAULT_TITLE,
-    DEFAULT_DESCRIPTION
-  );
 
   // بررسی دسترسی به ماژول
   useEffect(() => {
@@ -213,101 +205,101 @@ export default function SiteRegistrationModule() {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-6">
-      <ModuleHeader
-        title={moduleName}
-        description={moduleDescription}
-        icon={<UserPlus className="h-5 w-5" />}
-        backTo="/profile?tab=modules"
-      />
-      
-      <Card className="border-2 border-teal-500/30 shadow-lg">
-        <CardContent className="space-y-6 pt-4">
-          <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
-            <AlertCircle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
-              توجه: با استفاده از این ماژول، کاربر مستقیماً در سایت ثبت‌نام می‌شود و کد تایید به شماره موبایل ارسال نمی‌شود.
-            </AlertDescription>
-          </Alert>
-
-          {success && registeredInfo && (
-            <Alert className="bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                کاربر <strong>{registeredInfo.name}</strong> با شماره{' '}
-                <span dir="ltr" className="font-mono">{registeredInfo.phone}</span>{' '}
-                با موفقیت ثبت‌نام شد.
+    <ModuleLayout
+      defaultModuleKey={activeModuleKey}
+      defaultTitle={DEFAULT_TITLE}
+      defaultDescription={DEFAULT_DESCRIPTION}
+      icon={<UserPlus className="h-5 w-5 text-primary" />}
+    >
+      <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-6">
+        <Card className="border-2 border-teal-500/30 shadow-lg">
+          <CardContent className="space-y-6 pt-4">
+            <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
+                توجه: با استفاده از این ماژول، کاربر مستقیماً در سایت ثبت‌نام می‌شود و کد تایید به شماره موبایل ارسال نمی‌شود.
               </AlertDescription>
             </Alert>
-          )}
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                نام و نام خانوادگی
-              </Label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="مثال: علی رضایی"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="text-right"
-              />
+            {success && registeredInfo && (
+              <Alert className="bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800 dark:text-green-200">
+                  کاربر <strong>{registeredInfo.name}</strong> با شماره{' '}
+                  <span dir="ltr" className="font-mono">{registeredInfo.phone}</span>{' '}
+                  با موفقیت ثبت‌نام شد.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="fullName" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  نام و نام خانوادگی
+                </Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="مثال: علی رضایی"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="text-right"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber" className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  شماره موبایل
+                </Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="مثال: 09123456789"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  dir="ltr"
+                  className="text-left"
+                />
+                {checkingPhone && (
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    در حال بررسی...
+                  </div>
+                )}
+                {existingUser && !checkingPhone && (
+                  <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 py-2">
+                    <UserCheck className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
+                      این شماره قبلاً با نام <strong>{existingUser.name}</strong> در سایت ثبت‌نام شده است.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
+              <Button
+                onClick={handleRegister}
+                disabled={loading || !phoneNumber.trim() || !fullName.trim() || !!existingUser}
+                className="w-full gap-2"
+                size="lg"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    در حال ثبت‌نام...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-5 w-5" />
+                    ثبت‌نام کاربر
+                  </>
+                )}
+              </Button>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber" className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                شماره موبایل
-              </Label>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                placeholder="مثال: 09123456789"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                dir="ltr"
-                className="text-left"
-              />
-              {checkingPhone && (
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  در حال بررسی...
-                </div>
-              )}
-              {existingUser && !checkingPhone && (
-                <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 py-2">
-                  <UserCheck className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-                    این شماره قبلاً با نام <strong>{existingUser.name}</strong> در سایت ثبت‌نام شده است.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            <Button
-              onClick={handleRegister}
-              disabled={loading || !phoneNumber.trim() || !fullName.trim() || !!existingUser}
-              className="w-full gap-2"
-              size="lg"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  در حال ثبت‌نام...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="h-5 w-5" />
-                  ثبت‌نام کاربر
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </ModuleLayout>
   );
 }

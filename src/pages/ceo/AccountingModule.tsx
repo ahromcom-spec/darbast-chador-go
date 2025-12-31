@@ -33,7 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns-jalali';
 import { faIR } from 'date-fns-jalali/locale';
-import { ModuleHeader } from '@/components/common/ModuleHeader';
+import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import {
   Collapsible,
   CollapsibleContent,
@@ -608,15 +608,13 @@ export default function AccountingModule() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <ModuleLayout
+      defaultModuleKey={activeModuleKey}
+      defaultTitle={DEFAULT_TITLE}
+      defaultDescription={DEFAULT_DESCRIPTION}
+      icon={<Calculator className="h-5 w-5 text-primary" />}
+    >
       <div className="container mx-auto px-4 py-6 space-y-6">
-        <ModuleHeader
-          title={moduleName}
-          description={moduleDescription}
-          icon={<Calculator className="h-5 w-5" />}
-          backTo="/profile?tab=modules"
-        />
-        
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/20 dark:to-background">
@@ -1152,6 +1150,6 @@ export default function AccountingModule() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </ModuleLayout>
   );
 }

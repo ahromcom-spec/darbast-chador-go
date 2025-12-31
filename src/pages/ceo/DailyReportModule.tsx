@@ -33,8 +33,7 @@ import { format } from 'date-fns-jalali';
 import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
 import { StaffSalarySettingsTab } from '@/components/ceo/StaffSalarySettingsTab';
 import { ExcelImportDialog } from '@/components/ceo/ExcelImportDialog';
-import { ModuleHeader } from '@/components/common/ModuleHeader';
-import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
 import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
 
@@ -163,7 +162,7 @@ export default function DailyReportModule() {
   const [searchParams] = useSearchParams();
   const activeModuleKey = searchParams.get('moduleKey') || 'daily_report';
   const { user } = useAuth();
-  const { moduleName, moduleDescription } = useModuleAssignmentInfo(activeModuleKey, DEFAULT_TITLE, DEFAULT_DESCRIPTION);
+  
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -1847,40 +1846,37 @@ export default function DailyReportModule() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-amber-500/5">
-      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full">
-        {/* Header */}
-        <ModuleHeader
-          title={moduleName}
-          description={moduleDescription}
-          icon={<FileText className="h-5 w-5" />}
-          backTo="/profile?tab=modules"
-          action={
-            <div className="flex items-center gap-3">
-              <ExcelImportDialog
-                onImportComplete={handleExcelImport}
-                knownStaffMembers={staffMembers}
-              />
-              {autoSaveStatus !== 'idle' && (
-                <div className="flex items-center gap-2 text-sm">
-                  {autoSaveStatus === 'saving' && (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
-                      <span className="text-muted-foreground">در حال ذخیره...</span>
-                    </>
-                  )}
-                  {autoSaveStatus === 'saved' && (
-                    <>
-                      <Check className="h-4 w-4 text-green-600" />
-                      <span className="text-green-600">ذخیره شد</span>
-                    </>
-                  )}
-                </div>
+    <ModuleLayout
+      defaultModuleKey={activeModuleKey}
+      defaultTitle={DEFAULT_TITLE}
+      defaultDescription={DEFAULT_DESCRIPTION}
+      icon={<FileText className="h-5 w-5 text-primary" />}
+      action={
+        <div className="flex items-center gap-3">
+          <ExcelImportDialog
+            onImportComplete={handleExcelImport}
+            knownStaffMembers={staffMembers}
+          />
+          {autoSaveStatus !== 'idle' && (
+            <div className="flex items-center gap-2 text-sm">
+              {autoSaveStatus === 'saving' && (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                  <span className="text-muted-foreground">در حال ذخیره...</span>
+                </>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <>
+                  <Check className="h-4 w-4 text-green-600" />
+                  <span className="text-green-600">ذخیره شد</span>
+                </>
               )}
             </div>
-          }
-        />
-
+          )}
+        </div>
+      }
+    >
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full">
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
@@ -3317,6 +3313,6 @@ export default function DailyReportModule() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </div>
+    </ModuleLayout>
   );
 }
