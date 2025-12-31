@@ -149,6 +149,7 @@ export const ExpertPricingRequestDialog = ({
         is_expert_pricing_request: true,
         description: description,
         dimensions: dimensions.filter(d => d.length || d.width || d.height),
+        total_area: totalArea, // Store calculated total area (length × height for each row)
         requested_date: requestedDate || null,
         service_type: serviceTypeName || 'داربست فلزی'
       });
