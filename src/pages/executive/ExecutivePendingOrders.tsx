@@ -500,13 +500,16 @@ export default function ExecutivePendingOrders() {
   // Auto-open order from URL param
   const urlOrderId = searchParams.get('orderId');
   
-  // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
+  // Check if this is the "scaffold execution with materials" module (code 101010)
   const activeModuleKey = searchParams.get('moduleKey') || '';
   // Also check moduleName for custom copies of the module  
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
-  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
-                                         activeModuleKey.includes('101010') ||
-                                         moduleName.includes('داربست به همراه اجناس');
+  
+  // ماژول مدیریت اجرایی - بدون دسترسی به قیمت و تایید
+  const isExecutiveModule = moduleName.includes('مدیریت اجرایی');
+  
+  // ماژول مدیریت کلی - با دسترسی کامل به قیمت و تایید
+  const isGeneralManagerModule = moduleName.includes('مدیریت کلی') || moduleName.includes('مدیریت کل');
   
   // Check if this is an accounting module - hide order details, only show financial info
   const isAccountingModule = activeModuleKey.includes('حسابداری') ||
@@ -1241,8 +1244,8 @@ export default function ExecutivePendingOrders() {
               افزودن پرسنل
             </Button>
             
-            {/* دکمه تایید سفارش فقط برای ماژول مدیریت کل اجرای داربست به همراه اجناس 101010 */}
-            {isScaffoldWithMaterialsModule && (
+            {/* دکمه تایید سفارش فقط برای ماژول مدیریت کلی - مدیریت اجرایی دسترسی ندارد */}
+            {isGeneralManagerModule && !isExecutiveModule && (
               <Button
                 size="sm"
                 onClick={() => {
@@ -1457,7 +1460,7 @@ export default function ExecutivePendingOrders() {
           {selectedOrder && (
             <EditableOrderDetails order={selectedOrder} onUpdate={() => {
               fetchOrders();
-            }} hidePrice={isScaffoldWithMaterialsModule} hideDetails={isAccountingModule} />
+            }} hidePrice={isExecutiveModule} hideDetails={isAccountingModule} />
           )}
         </DialogContent>
       </Dialog>

@@ -75,12 +75,15 @@ export default function ExecutivePending() {
   // Auto-open order from URL param
   const urlOrderId = searchParams.get('orderId');
   
-  // Check if this is the "scaffold execution with materials" module (code 101010) - hide approval for this module
+  // Check if this is the "scaffold execution with materials" module
   const activeModuleKey = searchParams.get('moduleKey') || '';
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
-  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
-                                         activeModuleKey.includes('101010') ||
-                                         moduleName.includes('داربست به همراه اجناس');
+  
+  // ماژول مدیریت اجرایی - بدون دسترسی به قیمت و تایید
+  const isExecutiveModule = moduleName.includes('مدیریت اجرایی');
+  
+  // ماژول مدیریت کلی - با دسترسی کامل به قیمت و تایید
+  const isGeneralManagerModule = moduleName.includes('مدیریت کلی') || moduleName.includes('مدیریت کل');
 
   useEffect(() => {
     fetchOrders();
@@ -384,8 +387,8 @@ export default function ExecutivePending() {
                 <Eye className="h-4 w-4 ml-2" />
                 مشاهده جزئیات
               </Button>
-              {/* دکمه تایید سفارش - مخفی در ماژول 101010 چون مدیر اجرایی به قیمت دسترسی ندارد */}
-              {!isScaffoldWithMaterialsModule && (
+              {/* دکمه تایید سفارش - فقط برای ماژول مدیریت کلی */}
+              {isGeneralManagerModule && !isExecutiveModule && (
                 <Button
                   size="sm"
                   onClick={() => {
