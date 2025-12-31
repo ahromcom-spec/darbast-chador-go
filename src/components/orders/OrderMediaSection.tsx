@@ -90,6 +90,37 @@ export function OrderMediaSection({
     setMediaUrls(urls);
   };
 
+  // آپلود موازی با XMLHttpRequest برای progress واقعی
+  const uploadFileWithProgress = async (
+    file: File,
+    filePath: string,
+    accessToken: string,
+    onProgress: (loaded: number, total: number) => void
+  ): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          onProgress(event.loaded, event.total);
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        resolve(xhr.status >= 200 && xhr.status < 300);
+      });
+
+      xhr.addEventListener('error', () => resolve(false));
+      xhr.addEventListener('abort', () => resolve(false));
+
+      xhr.open('POST', `${supabaseUrl}/storage/v1/object/project-media/${filePath}`);
+      xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+      xhr.setRequestHeader('x-upsert', 'true');
+      xhr.send(file);
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -98,28 +129,38 @@ export function OrderMediaSection({
     setImageUploadProgress(0);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || !session.access_token) {
         toast({ title: "خطا", description: "لطفاً وارد سیستم شوید", variant: "destructive" });
         return;
       }
 
+      const user = session.user;
+      const fileArray = Array.from(files);
+      const totalSize = fileArray.reduce((sum, f) => sum + f.size, 0);
+      const progressMap: Record<number, number> = {};
+      
+      // آپلود موازی حداکثر 3 فایل همزمان
+      const CONCURRENT_UPLOADS = 3;
       let successCount = 0;
-      const totalFiles = files.length;
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      const uploadFile = async (file: File, index: number): Promise<boolean> => {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${index}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
 
-        try {
-          const { error: uploadError } = await supabase.storage
-            .from('project-media')
-            .upload(filePath, file);
+        const success = await uploadFileWithProgress(
+          file,
+          filePath,
+          session.access_token,
+          (loaded) => {
+            progressMap[index] = loaded;
+            const totalLoaded = Object.values(progressMap).reduce((a, b) => a + b, 0);
+            setImageUploadProgress(Math.min((totalLoaded / totalSize) * 100, 99));
+          }
+        );
 
-          if (uploadError) throw uploadError;
-
+        if (success) {
           const { error: dbError } = await supabase
             .from('project_media')
             .insert({
@@ -130,16 +171,19 @@ export function OrderMediaSection({
               mime_type: file.type,
               user_id: user.id
             });
-
-          if (dbError) throw dbError;
-          successCount++;
-        } catch (err) {
-          console.error('Error uploading file:', file.name, err);
+          
+          if (!dbError) return true;
         }
+        return false;
+      };
 
-        const linearProgress = ((i + 1) / totalFiles) * 100;
-        const easedProgress = 100 * (1 - Math.pow(1 - linearProgress / 100, 0.5));
-        setImageUploadProgress(Math.min(easedProgress, 95));
+      // آپلود موازی با محدودیت
+      for (let i = 0; i < fileArray.length; i += CONCURRENT_UPLOADS) {
+        const batch = fileArray.slice(i, i + CONCURRENT_UPLOADS);
+        const results = await Promise.all(
+          batch.map((file, idx) => uploadFile(file, i + idx))
+        );
+        successCount += results.filter(Boolean).length;
       }
 
       setImageUploadProgress(100);
@@ -168,28 +212,38 @@ export function OrderMediaSection({
     setVideoUploadProgress(0);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || !session.access_token) {
         toast({ title: "خطا", description: "لطفاً وارد سیستم شوید", variant: "destructive" });
         return;
       }
 
+      const user = session.user;
+      const fileArray = Array.from(files);
+      const totalSize = fileArray.reduce((sum, f) => sum + f.size, 0);
+      const progressMap: Record<number, number> = {};
+      
+      // ویدیوها را 2 تا 2 آپلود کن (حجم بالاتر)
+      const CONCURRENT_UPLOADS = 2;
       let successCount = 0;
-      const totalFiles = files.length;
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      const uploadVideo = async (file: File, index: number): Promise<boolean> => {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${index}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
 
-        try {
-          const { error: uploadError } = await supabase.storage
-            .from('project-media')
-            .upload(filePath, file);
+        const success = await uploadFileWithProgress(
+          file,
+          filePath,
+          session.access_token,
+          (loaded) => {
+            progressMap[index] = loaded;
+            const totalLoaded = Object.values(progressMap).reduce((a, b) => a + b, 0);
+            setVideoUploadProgress(Math.min((totalLoaded / totalSize) * 100, 99));
+          }
+        );
 
-          if (uploadError) throw uploadError;
-
+        if (success) {
           const { error: dbError } = await supabase
             .from('project_media')
             .insert({
@@ -200,16 +254,19 @@ export function OrderMediaSection({
               mime_type: file.type,
               user_id: user.id
             });
-
-          if (dbError) throw dbError;
-          successCount++;
-        } catch (err) {
-          console.error('Error uploading file:', file.name, err);
+          
+          if (!dbError) return true;
         }
+        return false;
+      };
 
-        const linearProgress = ((i + 1) / totalFiles) * 100;
-        const easedProgress = 100 * (1 - Math.pow(1 - linearProgress / 100, 0.5));
-        setVideoUploadProgress(Math.min(easedProgress, 95));
+      // آپلود موازی با محدودیت
+      for (let i = 0; i < fileArray.length; i += CONCURRENT_UPLOADS) {
+        const batch = fileArray.slice(i, i + CONCURRENT_UPLOADS);
+        const results = await Promise.all(
+          batch.map((file, idx) => uploadVideo(file, i + idx))
+        );
+        successCount += results.filter(Boolean).length;
       }
 
       setVideoUploadProgress(100);
