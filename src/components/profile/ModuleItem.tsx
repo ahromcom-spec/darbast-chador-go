@@ -403,11 +403,16 @@ export function ModuleItem({
               onDuplicate={onDuplicate}
               onAddToFolder={onAddToFolder}
               onRemoveFromFolder={onRemoveFromFolder}
+              onMoveToFolder={onMoveToFolder}
+              onMoveToRoot={onMoveToRoot}
+              getAvailableFoldersForMove={getAvailableFoldersForMove}
               level={level + 1}
               customNames={customNames}
               showDeleteButton={showDeleteButton}
               showDuplicateButton={showDuplicateButton}
+              showMoveButton={showMoveButton}
               canDeleteItem={canDeleteItem}
+              availableModulesForFolder={availableModulesForFolder}
               isInsideFolder={true}
             />
           ))}
