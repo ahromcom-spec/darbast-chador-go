@@ -29,6 +29,7 @@ import { ManagerOwnershipChain } from './ManagerOwnershipChain';
 import { CustomerOwnershipChain } from './CustomerOwnershipChain';
 import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 import { OrderMediaSection } from './OrderMediaSection';
+import { ExpertPricingEditDialog } from './ExpertPricingEditDialog';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -88,6 +89,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const [saving, setSaving] = useState(false);
   const [repairDialogOpen, setRepairDialogOpen] = useState(false);
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
+  const [expertPricingEditOpen, setExpertPricingEditOpen] = useState(false);
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [orderApprovals, setOrderApprovals] = useState<Array<{ approver_role: string; approved_at: string | null; approver_user_id: string | null }>>([]);
   const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
@@ -476,17 +478,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={() => {
-            // هدایت به فرم قیمت‌گذاری با داده‌های موجود
-            navigate(`/scaffolding/form?edit=${order.id}&managerEdit=true`, {
-              state: {
-                locationAddress: order.address,
-                detailedAddress: order.detailed_address,
-                provinceId: null,
-                districtId: null,
-              }
-            });
-          }}
+          onClick={() => setExpertPricingEditOpen(true)}
+          className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500"
         >
           <ExternalLink className="h-4 w-4 ml-1" />
           ویرایش در فرم قیمت‌گزاری
@@ -971,6 +964,21 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         orderId={order.id}
         orderCode={order.code}
         customerId={order.customer_id || ''}
+      />
+
+      {/* Expert Pricing Edit Dialog */}
+      <ExpertPricingEditDialog
+        open={expertPricingEditOpen}
+        onOpenChange={setExpertPricingEditOpen}
+        order={{
+          id: order.id,
+          code: order.code,
+          address: order.address,
+          detailed_address: order.detailed_address,
+          notes: order.notes,
+          subcategory: order.subcategory
+        }}
+        onSuccess={onUpdate}
       />
     </div>
   );
