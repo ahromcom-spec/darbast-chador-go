@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, ChevronUp, Pencil, Check, X, Trash2, Users, UserMinus, Plus, LogOut } from 'lucide-react';
+import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, ChevronUp, Pencil, Check, X, Trash2, Users, UserMinus, Plus, LogOut, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +50,10 @@ interface AssignedModuleItemWithFolderProps {
   onDeleteItem: (itemId: string) => void;
   onAddToFolder?: (folderId: string, moduleId: string) => void;
   onRemoveFromFolder?: (moduleId: string) => void;
+  onMoveToFolder?: (itemId: string, targetFolderId: string) => void;
+  onMoveToRoot?: (itemId: string) => void;
+  getAvailableFoldersForMove?: (itemId: string) => AssignedHierarchyItem[];
+  showMoveButton?: boolean;
   customNames?: Record<string, { name: string; description: string }>;
   level?: number;
   isInsideFolder?: boolean;
@@ -69,6 +73,10 @@ export function AssignedModuleItemWithFolder({
   onDeleteItem,
   onAddToFolder,
   onRemoveFromFolder,
+  onMoveToFolder,
+  onMoveToRoot,
+  getAvailableFoldersForMove,
+  showMoveButton = false,
   customNames = {},
   level = 0,
   isInsideFolder = false,
@@ -81,6 +89,7 @@ export function AssignedModuleItemWithFolder({
   const [editedName, setEditedName] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
   const [showAddModuleDialog, setShowAddModuleDialog] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
 
   const displayName = customNames[item.key]?.name || item.name;
   const displayDescription = customNames[item.key]?.description || item.description;
@@ -240,6 +249,21 @@ export function AssignedModuleItemWithFolder({
 
             {/* Actions */}
             <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Move button */}
+              {showMoveButton && getAvailableFoldersForMove && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMoveDialog(true);
+                  }}
+                  className="h-8 w-8 text-blue-600 hover:text-blue-600 hover:bg-blue-100"
+                  title="انتقال به پوشه دیگر"
+                >
+                  <Move className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -287,6 +311,10 @@ export function AssignedModuleItemWithFolder({
                 onDeleteItem={onDeleteItem}
                 onAddToFolder={onAddToFolder}
                 onRemoveFromFolder={onRemoveFromFolder}
+                onMoveToFolder={onMoveToFolder}
+                onMoveToRoot={onMoveToRoot}
+                getAvailableFoldersForMove={getAvailableFoldersForMove}
+                showMoveButton={showMoveButton}
                 customNames={customNames}
                 level={level + 1}
                 isInsideFolder={true}
@@ -413,6 +441,22 @@ export function AssignedModuleItemWithFolder({
 
           {/* Actions */}
           <div className="flex items-center gap-1 flex-shrink-0 flex-wrap">
+            {/* Move button */}
+            {showMoveButton && getAvailableFoldersForMove && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMoveDialog(true);
+                }}
+                className="h-8 w-8 text-blue-600 hover:text-blue-600 hover:bg-blue-100"
+                title="انتقال به پوشه دیگر"
+              >
+                <Move className="h-4 w-4" />
+              </Button>
+            )}
+
             <Button
               variant="ghost"
               size="icon"
@@ -511,6 +555,68 @@ export function AssignedModuleItemWithFolder({
           )}
         </div>
       )}
+
+      {/* Move Dialog */}
+      <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>انتقال «{displayName}»</DialogTitle>
+            <DialogDescription>
+              پوشه مقصد را انتخاب کنید یا به ریشه منتقل کنید
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {/* Move to root option */}
+            {isInsideFolder && onMoveToRoot && (
+              <button
+                className="w-full p-3 rounded-lg border hover:bg-accent text-right flex items-center gap-3 transition-colors"
+                onClick={() => {
+                  onMoveToRoot(item.id);
+                  setShowMoveDialog(false);
+                }}
+              >
+                <div className="p-2 rounded-lg bg-gray-100 flex-shrink-0">
+                  <LogOut className="h-4 w-4 text-gray-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm">انتقال به ریشه</div>
+                  <div className="text-xs text-muted-foreground">خارج از همه پوشه‌ها</div>
+                </div>
+              </button>
+            )}
+            
+            {/* Available folders */}
+            {getAvailableFoldersForMove && (() => {
+              const folders = getAvailableFoldersForMove(item.id);
+              if (folders.length === 0 && !isInsideFolder) {
+                return (
+                  <p className="text-center text-muted-foreground py-4">
+                    پوشه‌ای برای انتقال وجود ندارد
+                  </p>
+                );
+              }
+              return folders.map((folder) => (
+                <button
+                  key={folder.id}
+                  className="w-full p-3 rounded-lg border hover:bg-accent text-right flex items-center gap-3 transition-colors"
+                  onClick={() => {
+                    onMoveToFolder?.(item.id, folder.id);
+                    setShowMoveDialog(false);
+                  }}
+                >
+                  <div className="p-2 rounded-lg bg-amber-100 flex-shrink-0">
+                    <Folder className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">{customNames[folder.key]?.name || folder.name}</div>
+                    <div className="text-xs text-muted-foreground">{customNames[folder.key]?.description || folder.description}</div>
+                  </div>
+                </button>
+              ));
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
