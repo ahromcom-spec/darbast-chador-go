@@ -22,8 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns-jalali';
 import { faIR } from 'date-fns-jalali/locale';
-import { ModuleHeader } from '@/components/common/ModuleHeader';
-import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 
 interface StaffWorkRecord {
   id: string;
@@ -60,7 +59,6 @@ export default function PersonnelAccountingModule() {
   const [searchParams] = useSearchParams();
   const activeModuleKey = searchParams.get('moduleKey') || 'personnel_accounting';
   const { user } = useAuth();
-  const { moduleName, moduleDescription: moduleDesc } = useModuleAssignmentInfo(activeModuleKey, DEFAULT_TITLE, DEFAULT_DESCRIPTION);
   const [loading, setLoading] = useState(true);
   const [userPhone, setUserPhone] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
@@ -505,14 +503,14 @@ export default function PersonnelAccountingModule() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <ModuleLayout
+      defaultModuleKey={activeModuleKey}
+      defaultTitle={DEFAULT_TITLE}
+      defaultDescription={userName || DEFAULT_DESCRIPTION}
+      icon={<Calculator className="h-5 w-5 text-primary" />}
+      backTo="/profile"
+    >
       <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
-        <ModuleHeader
-          title={moduleName}
-          description={userName || moduleDesc}
-          icon={<Calculator className="h-5 w-5" />}
-          backTo="/profile"
-        />
         {/* User Info Card */}
         <Card className="border-2 border-primary/20">
           <CardContent className="p-6">
@@ -804,6 +802,6 @@ export default function PersonnelAccountingModule() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </ModuleLayout>
   );
 }
