@@ -3030,6 +3030,13 @@ export default function DailyReportModule() {
                             </span>
                           </div>
                         )}
+                        {/* Column specific info */}
+                        {parsedNotes.columnHeight && (
+                          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                            <span className="text-sm text-muted-foreground">ارتفاع ستون: </span>
+                            <strong className="text-primary">{parsedNotes.columnHeight}</strong> متر
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -3047,6 +3054,30 @@ export default function DailyReportModule() {
                         </div>
                       </div>
                     )}
+
+                    {/* شرح محل و فعالیت - از فرم سفارش */}
+                    <div className="p-4 border rounded-xl space-y-3 bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-amber-600" />
+                        <h4 className="font-semibold text-amber-800 dark:text-amber-200">شرح محل و فعالیت</h4>
+                      </div>
+                      <div className="space-y-3">
+                        {/* شرح فعالیت / توضیحات سفارش */}
+                        <div className="p-3 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
+                          <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1 font-medium">شرح فعالیت</span>
+                          <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">
+                            {parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || 'ثبت نشده'}
+                          </p>
+                        </div>
+                        {/* شرح محل نصب */}
+                        <div className="p-3 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
+                          <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1 font-medium">شرح محل نصب</span>
+                          <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">
+                            {parsedNotes?.locationPurpose || parsedNotes?.location_purpose || 'ثبت نشده'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
                     {/* Scaffold Conditions */}
                     {parsedNotes?.scaffold_conditions && Object.keys(parsedNotes.scaffold_conditions).length > 0 && (() => {
@@ -3255,31 +3286,6 @@ export default function DailyReportModule() {
                         <div className="p-3 bg-muted/30 rounded-lg">
                           <span className="text-xs text-muted-foreground block mb-1">ابعاد / جزئیات خدمات</span>
                           <p className="text-sm whitespace-pre-wrap">{selectedDailyOrderRow.service_details}</p>
-                        </div>
-                      )}
-
-                      {(parsedNotes?.locationPurpose || parsedNotes?.location_purpose) && (
-                        <div className="p-3 bg-muted/30 rounded-lg">
-                          <span className="text-xs text-muted-foreground block mb-1">شرح محل نصب</span>
-                          <p className="text-sm whitespace-pre-wrap">
-                            {parsedNotes?.locationPurpose || parsedNotes?.location_purpose}
-                          </p>
-                        </div>
-                      )}
-
-                      {parsedNotes?.description &&
-                        typeof parsedNotes.description === 'string' &&
-                        !parsedNotes.description.includes('{') && (
-                          <div className="p-3 bg-muted/30 rounded-lg">
-                            <span className="text-xs text-muted-foreground block mb-1">توضیحات سفارش</span>
-                            <p className="text-sm whitespace-pre-wrap">{parsedNotes.description}</p>
-                          </div>
-                        )}
-
-                      {parsedNotes?.notes && (
-                        <div className="p-3 bg-muted/30 rounded-lg">
-                          <span className="text-xs text-muted-foreground block mb-1">یادداشت‌های اضافی</span>
-                          <p className="text-sm whitespace-pre-wrap">{parsedNotes.notes}</p>
                         </div>
                       )}
                     </div>
