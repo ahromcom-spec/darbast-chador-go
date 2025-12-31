@@ -47,10 +47,11 @@ export default function ExpertPricingQueue() {
   const activeModuleKey = searchParams.get('moduleKey') || '';
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
   
-  // فقط برای ماژول 101010 فیلتر کنیم
+  // برای ماژول 101010 یا بدون moduleKey، همه درخواست‌های کارشناسی قیمت را نشان بده
   const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
                                          activeModuleKey.includes('101010') ||
-                                         moduleName.includes('داربست به همراه اجناس');
+                                         moduleName.includes('داربست به همراه اجناس') ||
+                                         !activeModuleKey; // اگر moduleKey نداریم، همه را نشان بده
 
   useEffect(() => {
     fetchExpertPricingOrders();
@@ -99,10 +100,8 @@ export default function ExpertPricingQueue() {
         `)
         .order('code', { ascending: false });
 
-      // اگر ماژول 101010 است، فیلتر کد زیردسته اعمال کنیم
-      if (isScaffoldWithMaterialsModule) {
-        query = query.eq('subcategory_id', '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d');
-      }
+      // فیلتر زیردسته داربست به همراه اجناس (کد 10)
+      query = query.eq('subcategory_id', '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d');
 
       const { data, error } = await query;
 
