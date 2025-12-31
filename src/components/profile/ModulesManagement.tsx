@@ -710,6 +710,37 @@ export function ModulesManagement() {
     assignedHierarchy.setItems(prev => [newFolder, ...prev]);
   }, [assignedHierarchy]);
 
+  // Create subfolder (depth limit: folder > subfolder)
+  const handleCreateAssignedSubfolder = useCallback((parentFolderId: string) => {
+    const ts = Date.now();
+    const newFolder: ModuleItem = {
+      id: `assigned-subfolder-${ts}`,
+      type: 'folder',
+      key: `assigned-subfolder-${ts}`,
+      name: 'پوشه جدید',
+      description: 'زیرپوشه برای دسته‌بندی ماژول‌های اختصاص یافته',
+      children: [],
+      isOpen: true,
+    };
+
+    assignedHierarchy.setItems((prev) => {
+      const addToParent = (items: ModuleItem[]): ModuleItem[] =>
+        items.map((it) => {
+          if (it.id === parentFolderId && it.type === 'folder') {
+            return {
+              ...it,
+              isOpen: true,
+              children: [...(it.children || []), newFolder],
+            };
+          }
+          if (it.children) return { ...it, children: addToParent(it.children) };
+          return it;
+        });
+
+      return addToParent(prev);
+    });
+  }, [assignedHierarchy]);
+
   // Edit module name in assigned list
   const handleEditAssignedModule = useCallback(
     (item: AssignedHierarchyItem, newName: string, newDescription: string) => {
@@ -1156,6 +1187,7 @@ export function ModulesManagement() {
                         onMoveToRoot={assignedHierarchy.moveItemToRoot}
                         getAvailableFoldersForMove={(id) => assignedHierarchy.getAvailableFoldersForMove(id) as AssignedHierarchyItem[]}
                         showMoveButton={true}
+                        onCreateSubfolder={handleCreateAssignedSubfolder}
                         customNames={assignedHierarchy.customNames}
                         availableModulesForFolder={getAssignedModulesForFolder()}
                         allModulesData={assignedModulesDataMap}

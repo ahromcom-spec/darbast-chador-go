@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, ChevronUp, Pencil, Check, X, Trash2, Users, UserMinus, Plus, LogOut, Move } from 'lucide-react';
+import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, ChevronUp, Pencil, Check, X, Trash2, Users, UserMinus, Plus, LogOut, Move, FolderPlus, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +54,7 @@ interface AssignedModuleItemWithFolderProps {
   onMoveToRoot?: (itemId: string) => void;
   getAvailableFoldersForMove?: (itemId: string) => AssignedHierarchyItem[];
   showMoveButton?: boolean;
+  onCreateSubfolder?: (parentFolderId: string) => void;
   customNames?: Record<string, { name: string; description: string }>;
   level?: number;
   isInsideFolder?: boolean;
@@ -77,6 +78,7 @@ export function AssignedModuleItemWithFolder({
   onMoveToRoot,
   getAvailableFoldersForMove,
   showMoveButton = false,
+  onCreateSubfolder,
   customNames = {},
   level = 0,
   isInsideFolder = false,
@@ -264,6 +266,23 @@ export function AssignedModuleItemWithFolder({
                   <Move className="h-4 w-4" />
                 </Button>
               )}
+
+              {/* Move to root (quick) */}
+              {isInsideFolder && onMoveToRoot && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMoveToRoot(item.id);
+                  }}
+                  className="h-8 w-8 text-orange-600 hover:text-orange-600 hover:bg-orange-100"
+                  title="انتقال به ریشه"
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
+              )}
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -315,12 +334,29 @@ export function AssignedModuleItemWithFolder({
                 onMoveToRoot={onMoveToRoot}
                 getAvailableFoldersForMove={getAvailableFoldersForMove}
                 showMoveButton={showMoveButton}
+                onCreateSubfolder={onCreateSubfolder}
                 customNames={customNames}
                 level={level + 1}
                 isInsideFolder={true}
+                availableModulesForFolder={availableModulesForFolder}
                 allModulesData={allModulesData}
               />
             ))}
+
+            {/* Create subfolder (only one level deep: folder > folder) */}
+            {onCreateSubfolder && level === 0 && (
+              <div className="mr-6 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onCreateSubfolder(item.id)}
+                  className="gap-2 w-full border-dashed border-2 text-muted-foreground hover:text-foreground"
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  ایجاد زیرپوشه
+                </Button>
+              </div>
+            )}
 
             {/* Add module button */}
             {onAddToFolder && (
