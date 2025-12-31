@@ -110,69 +110,6 @@ export const useInternalZoom = () => {
     };
   }, [isWindows, zoomIn, zoomOut, resetZoom]);
 
-  // Listen for dropdown/popover/select open events and reset zoom to 100%
-  useEffect(() => {
-    if (!isWindows) return;
-
-    // MutationObserver to detect when Radix UI popovers/dropdowns are added to DOM
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList') {
-          for (const node of mutation.addedNodes) {
-            if (node instanceof HTMLElement) {
-              // Check for Radix UI components (Select, Dropdown, Popover, Command, etc.)
-              const isRadixPortal = 
-                node.hasAttribute('data-radix-popper-content-wrapper') ||
-                node.hasAttribute('data-radix-select-viewport') ||
-                node.querySelector('[data-radix-popper-content-wrapper]') ||
-                node.querySelector('[role="listbox"]') ||
-                node.querySelector('[role="menu"]') ||
-                node.querySelector('[data-radix-menu-content]') ||
-                node.querySelector('[data-radix-select-content]') ||
-                node.querySelector('[data-radix-popover-content]') ||
-                node.querySelector('[data-radix-dropdown-menu-content]') ||
-                node.classList.contains('SelectContent') ||
-                node.getAttribute('data-state') === 'open';
-              
-              if (isRadixPortal) {
-                // Reset zoom to 100% when dropdown opens
-                setZoomIndex(1);
-                return;
-              }
-            }
-          }
-        }
-      }
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['data-state']
-    });
-
-    // Also listen for focus on select elements
-    const handleFocusIn = (e: FocusEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.getAttribute('role') === 'combobox' ||
-        target.getAttribute('role') === 'listbox' ||
-        target.closest('[role="combobox"]') ||
-        target.closest('[data-radix-select-trigger]') ||
-        target.closest('[data-radix-dropdown-menu-trigger]')
-      ) {
-        setZoomIndex(1);
-      }
-    };
-
-    document.addEventListener('focusin', handleFocusIn);
-
-    return () => {
-      observer.disconnect();
-      document.removeEventListener('focusin', handleFocusIn);
-    };
-  }, [isWindows]);
 
   return {
     zoomLevel: ZOOM_LEVELS[zoomIndex],
