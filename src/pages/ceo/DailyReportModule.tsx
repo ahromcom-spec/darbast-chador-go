@@ -37,6 +37,7 @@ import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
 import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
+import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 
 interface SavedReport {
   id: string;
@@ -2805,17 +2806,8 @@ export default function DailyReportModule() {
               </div>
             ) : selectedOrderDetails ? (
               (() => {
-                // Parse notes JSON
-                let parsedNotes: any = null;
-                try {
-                  if (selectedOrderDetails.notes) {
-                    parsedNotes = typeof selectedOrderDetails.notes === 'string' 
-                      ? JSON.parse(selectedOrderDetails.notes) 
-                      : selectedOrderDetails.notes;
-                  }
-                } catch (e) {
-                  parsedNotes = null;
-                }
+                // Parse notes JSON using shared parseOrderNotes function (handles double-stringified JSON)
+                const parsedNotes = parseOrderNotes(selectedOrderDetails.notes);
 
                 const getStatusLabel = (status: string, executionStage?: string) => {
                   if (status === 'in_progress' && executionStage) {
@@ -3055,27 +3047,61 @@ export default function DailyReportModule() {
                       </div>
                     )}
 
-                    {/* شرح محل و فعالیت - از فرم سفارش */}
+                    {/* شرح محل و فعالیت - از فرم ثبت شده مشتری */}
                     <div className="p-4 border rounded-xl space-y-3 bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-amber-600" />
-                        <h4 className="font-semibold text-amber-800 dark:text-amber-200">شرح محل و فعالیت</h4>
+                        <h4 className="font-semibold text-amber-800 dark:text-amber-200">شرح محل نصب و نوع فعالیت (از فرم مشتری)</h4>
                       </div>
                       <div className="space-y-3">
-                        {/* شرح فعالیت / توضیحات سفارش */}
+                        {/* شرح محل نصب و نوع فعالیت - این فیلد اصلی است که مشتری پر می‌کند */}
                         <div className="p-3 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
-                          <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1 font-medium">شرح فعالیت</span>
+                          <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1 font-medium">شرح محل نصب و نوع فعالیت</span>
                           <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">
-                            {parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || 'ثبت نشده'}
+                            {parsedNotes?.locationPurpose || parsedNotes?.location_purpose || parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || 'ثبت نشده'}
                           </p>
                         </div>
-                        {/* شرح محل نصب */}
-                        <div className="p-3 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
-                          <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1 font-medium">شرح محل نصب</span>
-                          <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">
-                            {parsedNotes?.locationPurpose || parsedNotes?.location_purpose || 'ثبت نشده'}
-                          </p>
-                        </div>
+                        {/* تاریخ و زمان نصب درخواستی */}
+                        {(parsedNotes?.installationDateTime || parsedNotes?.installation_date) && (
+                          <div className="p-3 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
+                            <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1 font-medium">تاریخ و زمان نصب درخواستی</span>
+                            <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">
+                              {(() => {
+                                const dateStr = parsedNotes?.installationDateTime || parsedNotes?.installation_date;
+                                if (!dateStr) return 'ثبت نشده';
+                                try {
+                                  return new Date(dateStr).toLocaleDateString('fa-IR', { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  });
+                                } catch {
+                                  return dateStr;
+                                }
+                              })()}
+                            </p>
+                          </div>
+                        )}
+                        {/* نام و تلفن مشتری از فرم */}
+                        {(parsedNotes?.customerName || parsedNotes?.phoneNumber) && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {parsedNotes?.customerName && (
+                              <div className="p-2 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
+                                <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1">نام مشتری (فرم)</span>
+                                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">{parsedNotes.customerName}</p>
+                              </div>
+                            )}
+                            {parsedNotes?.phoneNumber && (
+                              <div className="p-2 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700" dir="ltr">
+                                <span className="text-xs text-amber-700 dark:text-amber-300 block mb-1 text-right" dir="rtl">تلفن (فرم)</span>
+                                <p className="text-sm font-medium text-amber-900 dark:text-amber-100 text-left">{parsedNotes.phoneNumber}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
