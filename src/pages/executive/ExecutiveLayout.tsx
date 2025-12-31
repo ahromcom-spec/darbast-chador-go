@@ -1,5 +1,5 @@
-import { Outlet, NavLink, useLocation, Navigate, useSearchParams } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive, PackageCheck, Package } from 'lucide-react';
+import { Outlet, NavLink, useLocation, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive, PackageCheck, Package, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -108,6 +108,7 @@ export function ExecutiveLayout() {
   const [hasAccess, setHasAccess] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeModuleKey = searchParams.get('moduleKey') || 'scaffold_execution_with_materials';
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, 'ماژول مدیریت اجرای داربست', '');
@@ -177,8 +178,17 @@ export function ExecutiveLayout() {
     <div className="min-h-screen bg-background">
       {/* Module Name Header */}
       <div className="bg-primary/5 border-b border-primary/10">
-        <div className="container mx-auto px-4 py-2">
-          <p className="text-sm font-medium text-primary text-center md:text-right">
+        <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/profile?tab=modules')}
+            className="gap-2"
+          >
+            بازگشت
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+          <p className="text-sm font-medium text-primary">
             {moduleName}
           </p>
         </div>

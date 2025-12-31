@@ -1,7 +1,8 @@
-import { Outlet, Navigate, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, Navigate, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import { 
   LayoutDashboard, 
   Users, 
@@ -19,7 +20,8 @@ import {
   UserCheck,
   Archive,
   ArchiveX,
-  CreditCard
+  CreditCard,
+  ArrowRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -126,6 +128,10 @@ export const CEOLayout = () => {
   const [hasAccess, setHasAccess] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const activeModuleKey = searchParams.get('moduleKey') || 'ceo_module';
+  const { moduleName } = useModuleAssignmentInfo(activeModuleKey, 'ماژول مدیریت CEO', '');
 
   useEffect(() => {
     const checkRoles = async () => {
@@ -186,6 +192,24 @@ export const CEOLayout = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Module Name Header */}
+      <div className="bg-primary/5 border-b border-primary/10">
+        <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/profile?tab=modules')}
+            className="gap-2"
+          >
+            بازگشت
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+          <p className="text-sm font-medium text-primary">
+            {moduleName}
+          </p>
+        </div>
+      </div>
+
       <div className="border-b bg-card">
         <div className="container mx-auto">
           <nav className="flex gap-1 overflow-x-auto py-1">
