@@ -376,6 +376,68 @@ export function AssignedModuleItemWithFolder({
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Move Folder Dialog */}
+        <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
+          <DialogContent className="max-w-md" dir="rtl">
+            <DialogHeader>
+              <DialogTitle>انتقال پوشه «{displayName}»</DialogTitle>
+              <DialogDescription>
+                پوشه مقصد را انتخاب کنید یا به ریشه منتقل کنید
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {/* Move to root option */}
+              {isInsideFolder && onMoveToRoot && (
+                <button
+                  className="w-full p-3 rounded-lg border hover:bg-accent text-right flex items-center gap-3 transition-colors"
+                  onClick={() => {
+                    onMoveToRoot(item.id);
+                    setShowMoveDialog(false);
+                  }}
+                >
+                  <div className="p-2 rounded-lg bg-gray-100 flex-shrink-0">
+                    <LogOut className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">انتقال به ریشه</div>
+                    <div className="text-xs text-muted-foreground">خارج از همه پوشه‌ها</div>
+                  </div>
+                </button>
+              )}
+              
+              {/* Available folders */}
+              {getAvailableFoldersForMove && (() => {
+                const folders = getAvailableFoldersForMove(item.id);
+                if (folders.length === 0 && !isInsideFolder) {
+                  return (
+                    <p className="text-center text-muted-foreground py-4">
+                      پوشه‌ای برای انتقال وجود ندارد
+                    </p>
+                  );
+                }
+                return folders.map((folder) => (
+                  <button
+                    key={folder.id}
+                    className="w-full p-3 rounded-lg border hover:bg-accent text-right flex items-center gap-3 transition-colors"
+                    onClick={() => {
+                      onMoveToFolder?.(item.id, folder.id);
+                      setShowMoveDialog(false);
+                    }}
+                  >
+                    <div className="p-2 rounded-lg bg-amber-100 flex-shrink-0">
+                      <Folder className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{customNames[folder.key]?.name || folder.name}</div>
+                      <div className="text-xs text-muted-foreground">{customNames[folder.key]?.description || folder.description}</div>
+                    </div>
+                  </button>
+                ));
+              })()}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
