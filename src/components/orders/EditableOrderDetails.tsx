@@ -156,8 +156,38 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const [savedPaymentAmount, setSavedPaymentAmount] = useState(order.payment_amount?.toString() || '');
   const isPriceChanged = paymentAmount !== savedPaymentAmount;
 
+  // Unit price for expert pricing requests (price per square meter)
+  const [unitPrice, setUnitPrice] = useState(parsedNotes?.unit_price?.toString() || '');
+  const [savedUnitPrice, setSavedUnitPrice] = useState(parsedNotes?.unit_price?.toString() || '');
+  const isUnitPriceChanged = unitPrice !== savedUnitPrice;
+
   // Check if this is an expert pricing request
   const isExpertPricingRequest = parsedNotes?.is_expert_pricing_request === true;
+
+  // Calculate total area from dimensions for expert pricing
+  const calculateTotalArea = () => {
+    const dims = parsedNotes?.dimensions;
+    if (!dims || !Array.isArray(dims)) return parsedNotes?.total_area || 0;
+    
+    return dims.reduce((sum: number, dim: any) => {
+      const length = parseFloat(dim.length) || 0;
+      const height = parseFloat(dim.height) || 0;
+      if (length > 0 && height > 0) {
+        return sum + (length * height);
+      }
+      return sum;
+    }, 0);
+  };
+
+  const expertPricingTotalArea = calculateTotalArea();
+
+  // Auto-calculate total price when unit price changes
+  useEffect(() => {
+    if (isExpertPricingRequest && unitPrice && expertPricingTotalArea > 0) {
+      const calculatedTotal = parseFloat(unitPrice) * expertPricingTotalArea;
+      setPaymentAmount(Math.round(calculatedTotal).toString());
+    }
+  }, [unitPrice, expertPricingTotalArea, isExpertPricingRequest]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -173,6 +203,11 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       if (isExpertPricingRequest && paymentAmount && parseFloat(paymentAmount) > 0) {
         updatedNotes.price_set_by_manager = true;
         updatedNotes.manager_set_price = parseFloat(paymentAmount);
+        // Store unit price if provided
+        if (unitPrice && parseFloat(unitPrice) > 0) {
+          updatedNotes.unit_price = parseFloat(unitPrice);
+          updatedNotes.total_area = expertPricingTotalArea;
+        }
       }
 
       const { error } = await supabase
@@ -191,6 +226,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
       // بعد از ذخیره موفق، مقدار ذخیره شده قیمت را آپدیت کن تا دکمه غیرفعال شود
       setSavedPaymentAmount(paymentAmount);
+      setSavedUnitPrice(unitPrice);
 
       toast({ title: 'موفق', description: 'اطلاعات سفارش به‌روزرسانی شد' });
       setIsEditing(false);
@@ -330,31 +366,71 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             </div>
           </div>
           
-          {/* Prominent Price Input for Expert Pricing */}
-          <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600">
-            <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
-              تعیین قیمت (تومان)
-            </Label>
-            <div className="flex gap-2">
+          {/* Display Total Area from Customer Form */}
+          {expertPricingTotalArea > 0 && (
+            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+              <p className="text-sm font-medium text-blue-700 dark:text-blue-300 text-center">
+                <Ruler className="h-4 w-4 inline ml-1" />
+                متراژ کل: <span className="font-bold text-lg">{expertPricingTotalArea.toLocaleString('fa-IR')}</span> متر مربع
+              </p>
+            </div>
+          )}
+          
+          {/* Unit Price Input for Expert Pricing */}
+          <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600 space-y-4">
+            <div>
+              <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
+                قیمت فی (تومان به ازای هر متر مربع)
+              </Label>
               <Input 
                 type="number"
-                value={paymentAmount} 
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder="مبلغ را به تومان وارد کنید"
-                className="flex-1 text-lg font-bold"
+                value={unitPrice} 
+                onChange={(e) => setUnitPrice(e.target.value)}
+                placeholder="قیمت فی را وارد کنید"
+                className="text-lg font-bold"
                 dir="ltr"
               />
-              <Button 
-                onClick={handleSave} 
-                disabled={saving || !paymentAmount || !isPriceChanged}
-                title={!isPriceChanged ? 'قیمت ذخیره شده است' : 'ذخیره قیمت'}
-                className={`bg-amber-600 hover:bg-amber-700 text-white px-6 ${
-                  !isPriceChanged ? 'opacity-50 cursor-not-allowed hover:bg-amber-600' : ''
-                }`}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
-                {!isPriceChanged ? 'ذخیره شده ✓' : 'ذخیره قیمت'}
-              </Button>
+              {unitPrice && parseFloat(unitPrice) > 0 && expertPricingTotalArea > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  محاسبه: {parseFloat(unitPrice).toLocaleString('fa-IR')} × {expertPricingTotalArea.toLocaleString('fa-IR')} = {(parseFloat(unitPrice) * expertPricingTotalArea).toLocaleString('fa-IR')} تومان
+                </p>
+              )}
+            </div>
+            
+            <div className="border-t pt-4">
+              <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
+                قیمت کل (تومان)
+              </Label>
+              <div className="flex gap-2">
+                <Input 
+                  type="number"
+                  value={paymentAmount} 
+                  onChange={(e) => {
+                    setPaymentAmount(e.target.value);
+                    // If manually changed, clear unit price
+                    if (unitPrice && parseFloat(unitPrice) > 0 && expertPricingTotalArea > 0) {
+                      const calculated = parseFloat(unitPrice) * expertPricingTotalArea;
+                      if (Math.abs(parseFloat(e.target.value) - calculated) > 1) {
+                        // User is overriding the calculated value
+                      }
+                    }
+                  }}
+                  placeholder="مبلغ کل را به تومان وارد کنید"
+                  className="flex-1 text-lg font-bold"
+                  dir="ltr"
+                />
+                <Button 
+                  onClick={handleSave} 
+                  disabled={saving || !paymentAmount || (!isPriceChanged && !isUnitPriceChanged)}
+                  title={(!isPriceChanged && !isUnitPriceChanged) ? 'قیمت ذخیره شده است' : 'ذخیره قیمت'}
+                  className={`bg-amber-600 hover:bg-amber-700 text-white px-6 ${
+                    (!isPriceChanged && !isUnitPriceChanged) ? 'opacity-50 cursor-not-allowed hover:bg-amber-600' : ''
+                  }`}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
+                  {(!isPriceChanged && !isUnitPriceChanged) ? 'ذخیره شده ✓' : 'ذخیره قیمت'}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -363,6 +439,11 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             <div className="bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-700 rounded-lg p-3">
               <p className="text-sm font-bold text-green-700 dark:text-green-400 text-center">
                 قیمت تعیین شده: {Number(paymentAmount).toLocaleString('fa-IR')} تومان
+                {unitPrice && parseFloat(unitPrice) > 0 && (
+                  <span className="block text-xs font-normal mt-1">
+                    (قیمت فی: {parseFloat(unitPrice).toLocaleString('fa-IR')} تومان × {expertPricingTotalArea.toLocaleString('fa-IR')} متر مربع)
+                  </span>
+                )}
               </p>
             </div>
           ) : (

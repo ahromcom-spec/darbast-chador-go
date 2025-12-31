@@ -1149,6 +1149,17 @@ export default function OrderDetail() {
                         <p className="text-3xl font-extrabold text-green-700 dark:text-green-300">
                           {(order.payment_amount || parsedNotes?.manager_set_price)?.toLocaleString('fa-IR')} تومان
                         </p>
+                        
+                        {/* Show unit price and area breakdown if available */}
+                        {parsedNotes?.unit_price && parsedNotes?.total_area && (
+                          <div className="pt-2 border-t border-green-200 dark:border-green-700 mt-3">
+                            <p className="text-sm text-green-600 dark:text-green-400">
+                              قیمت فی: {parsedNotes.unit_price.toLocaleString('fa-IR')} تومان
+                              <span className="mx-2">×</span>
+                              متراژ: {parsedNotes.total_area.toLocaleString('fa-IR')} متر مربع
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -1187,6 +1198,12 @@ export default function OrderDetail() {
                       <p className="text-sm text-green-700 dark:text-green-300">
                         سفارش شما با قیمت {(order.payment_amount || parsedNotes?.manager_set_price)?.toLocaleString('fa-IR')} تومان تایید شده و در روال عادی قرار گرفته است.
                       </p>
+                      {/* Show unit price and area breakdown if available */}
+                      {parsedNotes?.unit_price && parsedNotes?.total_area && (
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                          (قیمت فی: {parsedNotes.unit_price.toLocaleString('fa-IR')} تومان × متراژ: {parsedNotes.total_area.toLocaleString('fa-IR')} متر مربع)
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
