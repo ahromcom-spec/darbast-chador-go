@@ -1152,6 +1152,10 @@ export function ModulesManagement() {
                         onDeleteItem={handleDeleteAssignedItem}
                         onAddToFolder={assignedHierarchy.addModuleToFolder}
                         onRemoveFromFolder={assignedHierarchy.removeModuleFromFolder}
+                        onMoveToFolder={assignedHierarchy.moveItemToFolder}
+                        onMoveToRoot={assignedHierarchy.moveItemToRoot}
+                        getAvailableFoldersForMove={(id) => assignedHierarchy.getAvailableFoldersForMove(id) as AssignedHierarchyItem[]}
+                        showMoveButton={true}
                         customNames={assignedHierarchy.customNames}
                         availableModulesForFolder={getAssignedModulesForFolder()}
                         allModulesData={assignedModulesDataMap}
