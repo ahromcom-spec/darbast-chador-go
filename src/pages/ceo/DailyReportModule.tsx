@@ -36,6 +36,7 @@ import { ExcelImportDialog } from '@/components/ceo/ExcelImportDialog';
 import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
 import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
+import StaticLocationMap from '@/components/locations/StaticLocationMap';
 
 interface SavedReport {
   id: string;
@@ -2917,7 +2918,7 @@ export default function DailyReportModule() {
                       )}
                     </div>
 
-                    {/* Location Info with Province & District */}
+                    {/* Location Info with Province & District + Map */}
                     <div className="p-4 border rounded-xl space-y-3">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-primary" />
@@ -2942,12 +2943,26 @@ export default function DailyReportModule() {
                         {selectedOrderDetails.detailed_address && (
                           <p className="text-sm text-muted-foreground">{selectedOrderDetails.detailed_address}</p>
                         )}
-                        {/* Show coordinates if available */}
-                        {(selectedOrderDetails.location_lat && selectedOrderDetails.location_lng) && (
-                          <div className="p-2 bg-muted/30 rounded-lg text-xs text-muted-foreground">
-                            <span>موقعیت: {selectedOrderDetails.location_lat.toFixed(6)}, {selectedOrderDetails.location_lng.toFixed(6)}</span>
-                          </div>
-                        )}
+                        
+                        {/* Location Map with Navigation */}
+                        {(() => {
+                          const lat = selectedOrderDetails.location_lat || selectedOrderDetails.locations?.lat;
+                          const lng = selectedOrderDetails.location_lng || selectedOrderDetails.locations?.lng;
+                          if (lat && lng) {
+                            return (
+                              <div className="mt-3 rounded-lg overflow-hidden border border-primary/20">
+                                <StaticLocationMap
+                                  lat={lat}
+                                  lng={lng}
+                                  address={selectedOrderDetails.address || selectedOrderDetails.locations?.address_line}
+                                  detailedAddress={selectedOrderDetails.detailed_address}
+                                  showNavigationButton={true}
+                                />
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </div>
 
