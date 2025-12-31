@@ -176,7 +176,8 @@ export const useInternalZoom = () => {
 
   return {
     zoomLevel: ZOOM_LEVELS[zoomIndex],
-    zoomPercentage: Math.round(ZOOM_LEVELS[zoomIndex] * 100),
+    // Display as 85%, 100%, 115% while actual zoom is 0.75, 0.9, 1.05
+    zoomPercentage: Math.round(ZOOM_LEVELS[zoomIndex] * 100) + 10,
     isWindows,
     zoomIn,
     zoomOut,
