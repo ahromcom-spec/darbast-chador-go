@@ -78,6 +78,21 @@ export const ExpertPricingRequestDialog = ({
     setDimensions(updated);
   };
 
+  // Calculate total area for each dimension row (length × width) and total height-based area
+  const calculateDimensionArea = (dim: Dimension) => {
+    const l = parseFloat(dim.length) || 0;
+    const w = parseFloat(dim.width) || 0;
+    const h = parseFloat(dim.height) || 0;
+    // For scaffolding: perimeter * height = (2*(l+w)) * h OR (l*h) for single wall
+    // Simple calculation: length × height for wall surface area
+    if (l > 0 && h > 0) {
+      return l * h;
+    }
+    return 0;
+  };
+
+  const totalArea = dimensions.reduce((sum, dim) => sum + calculateDimensionArea(dim), 0);
+
   // Called when MediaUploader finishes uploading files
   const handleMediaUploaded = useCallback((mediaList: UploadedMediaInfo[]) => {
     setUploadedMedia(mediaList);
@@ -297,45 +312,65 @@ export const ExpertPricingRequestDialog = ({
               </Button>
             </div>
             
-            {dimensions.map((dim, index) => (
-              <div key={index} className="flex gap-2 items-center">
-                <div className="flex-1">
-                  <Input
-                    type="number"
-                    placeholder="طول"
-                    value={dim.length}
-                    onChange={(e) => updateDimension(index, 'length', e.target.value)}
-                  />
+            {dimensions.map((dim, index) => {
+              const rowArea = calculateDimensionArea(dim);
+              return (
+                <div key={index} className="space-y-1">
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1">
+                      <Input
+                        type="number"
+                        placeholder="طول"
+                        value={dim.length}
+                        onChange={(e) => updateDimension(index, 'length', e.target.value)}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        type="number"
+                        placeholder="عرض"
+                        value={dim.width}
+                        onChange={(e) => updateDimension(index, 'width', e.target.value)}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        type="number"
+                        placeholder="ارتفاع"
+                        value={dim.height}
+                        onChange={(e) => updateDimension(index, 'height', e.target.value)}
+                      />
+                    </div>
+                    {dimensions.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeDimension(index)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {rowArea > 0 && (
+                    <p className="text-xs text-muted-foreground text-left">
+                      متراژ: <span className="font-semibold text-primary">{rowArea.toLocaleString('fa-IR')} متر مربع</span>
+                    </p>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <Input
-                    type="number"
-                    placeholder="عرض"
-                    value={dim.width}
-                    onChange={(e) => updateDimension(index, 'width', e.target.value)}
-                  />
-                </div>
-                <div className="flex-1">
-                  <Input
-                    type="number"
-                    placeholder="ارتفاع"
-                    value={dim.height}
-                    onChange={(e) => updateDimension(index, 'height', e.target.value)}
-                  />
-                </div>
-                {dimensions.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeDimension(index)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
+              );
+            })}
+            
+            {/* Total area display */}
+            {totalArea > 0 && (
+              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <p className="text-sm font-semibold text-primary flex items-center justify-between">
+                  <span>مجموع متراژ:</span>
+                  <span className="text-lg">{totalArea.toLocaleString('fa-IR')} متر مربع</span>
+                </p>
               </div>
-            ))}
+            )}
           </div>
 
           {/* Requested Date */}
