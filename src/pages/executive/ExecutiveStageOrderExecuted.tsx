@@ -67,13 +67,13 @@ export default function ExecutiveStageOrderExecuted() {
   // Archive functionality
   const archive = useOrderArchive(() => fetchOrders());
 
-  // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
+  // Check if this is the "scaffold execution with materials" module
   const activeModuleKey = searchParams.get('moduleKey') || '';
   // Also check moduleName for custom copies of the module
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
-  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
-                                         activeModuleKey.includes('101010') ||
-                                         moduleName.includes('داربست به همراه اجناس');
+  
+  // ماژول مدیریت اجرایی - بدون دسترسی به قیمت
+  const isExecutiveModule = moduleName.includes('مدیریت اجرایی');
 
   useEffect(() => {
     fetchOrders();
@@ -560,7 +560,7 @@ export default function ExecutiveStageOrderExecuted() {
                 customer_completion_date: selectedOrder.customer_completion_date
               }}
               onUpdate={fetchOrders}
-              hidePrice={isScaffoldWithMaterialsModule}
+              hidePrice={isExecutiveModule}
             />
           )}
         </DialogContent>

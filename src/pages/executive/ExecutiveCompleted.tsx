@@ -18,6 +18,7 @@ import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 
 // Helper function to parse order notes (handles double-stringified JSON)
 const parseOrderNotes = (notes: string | null | undefined): any => {
@@ -71,10 +72,12 @@ export default function ExecutiveCompleted() {
   // Auto-open order from URL param
   const urlOrderId = searchParams.get('orderId');
   
-  // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
+  // Check if this is the "scaffold execution with materials" module
   const activeModuleKey = searchParams.get('moduleKey') || '';
-  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
-                                         activeModuleKey.includes('101010');
+  const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
+  
+  // ماژول مدیریت اجرایی - بدون دسترسی به قیمت
+  const isExecutiveModule = moduleName.includes('مدیریت اجرایی');
   
   // Check if this is an accounting module - hide order details, only show financial info
   const isAccountingModule = activeModuleKey.includes('حسابداری') ||
@@ -338,7 +341,7 @@ export default function ExecutiveCompleted() {
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4 py-4">
-              <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} hidePrice={isScaffoldWithMaterialsModule} hideDetails={isAccountingModule} />
+              <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} hidePrice={isExecutiveModule} hideDetails={isAccountingModule} />
               
               {/* Progress Media Uploader - hidden for accounting module */}
               {!isAccountingModule && (
