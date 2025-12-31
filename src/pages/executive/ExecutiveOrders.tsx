@@ -27,6 +27,7 @@ import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDi
 import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
 import { OrderLocationEditor } from '@/components/locations/OrderLocationEditor';
 import { RentalStartDatePicker } from '@/components/orders/RentalStartDatePicker';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 // IMPORTANT: pending_execution باید به status = 'pending_execution' در دیتابیس مپ شود
@@ -171,8 +172,11 @@ export default function ExecutiveOrders() {
   
   // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
   const activeModuleKey = searchParams.get('moduleKey') || '';
+  // Also check moduleName for custom copies of the module
+  const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
   const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
-                                         activeModuleKey.includes('101010');
+                                         activeModuleKey.includes('101010') ||
+                                         moduleName.includes('داربست به همراه اجناس');
   
   // Check if this is an accounting module - hide order details, only show financial info
   const isAccountingModule = activeModuleKey.includes('حسابداری') ||
