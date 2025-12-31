@@ -91,6 +91,12 @@ const SalesCompletedOrders = lazy(() => import("./pages/sales/SalesCompletedOrde
 const SalesDashboard = lazy(() => import("./pages/sales/SalesDashboard"));
 const SalesCustomers = lazy(() => import("./pages/sales/SalesCustomers"));
 const FinanceOrders = lazy(() => import("./pages/finance/FinanceOrders"));
+const FinanceLayout = lazy(() => import("./pages/finance/FinanceLayout"));
+const FinanceDashboard = lazy(() => import("./pages/finance/FinanceDashboard"));
+const FinanceAwaitingPayment = lazy(() => import("./pages/finance/FinanceAwaitingPayment"));
+const FinancePaidOrders = lazy(() => import("./pages/finance/FinancePaidOrders"));
+const FinanceClosedOrders = lazy(() => import("./pages/finance/FinanceClosedOrders"));
+const FinanceAllOrders = lazy(() => import("./pages/finance/FinanceAllOrders"));
 const ReputationDashboard = lazy(() => import("./pages/ratings/ReputationDashboard"));
 const RatingTestPage = lazy(() => import("./pages/ratings/RatingTestPage"));
 const TopRatedUsers = lazy(() => import("./pages/ratings/TopRatedUsers"));
