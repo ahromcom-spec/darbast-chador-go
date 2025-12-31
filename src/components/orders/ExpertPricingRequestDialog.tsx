@@ -362,8 +362,8 @@ export const ExpertPricingRequestDialog = ({
               onMediaUploaded={handleMediaUploaded}
               onUploadStatusChange={handleUploadStatusChange}
               disableAutoUpload={false}
-              maxImages={6} 
-              maxVideos={5}
+              maxImages={10} 
+              maxVideos={10}
               maxVideoSize={100}
             />
             <p className="text-xs text-muted-foreground">
