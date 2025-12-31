@@ -631,3 +631,26 @@ body {
     will-change: opacity, transform;
   }
 }
+
+/* Force dropdown menus to appear below their triggers at 100% zoom */
+[data-radix-popper-content-wrapper] {
+  --radix-popper-available-height: auto !important;
+}
+
+/* Radix dropdown/select content - force side bottom */
+[data-side="top"] {
+  --radix-dropdown-menu-content-transform-origin: bottom center;
+  --radix-select-content-transform-origin: bottom center;
+}
+
+/* Ensure all dropdowns have high z-index and proper background */
+[data-radix-popper-content-wrapper] > div {
+  z-index: 9999 !important;
+}
+
+/* Force select content to bottom */
+[role="listbox"],
+[data-radix-menu-content],
+[data-radix-select-content] {
+  z-index: 9999 !important;
+}
