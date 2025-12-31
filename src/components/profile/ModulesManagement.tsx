@@ -940,9 +940,13 @@ export function ModulesManagement() {
                       onDelete={handleDeleteAvailableModule}
                       onAddToFolder={availableHierarchy.addModuleToFolder}
                       onRemoveFromFolder={availableHierarchy.removeModuleFromFolder}
+                      onMoveToFolder={availableHierarchy.moveItemToFolder}
+                      onMoveToRoot={availableHierarchy.moveItemToRoot}
+                      getAvailableFoldersForMove={(id) => availableHierarchy.getAvailableFoldersForMove(id) as ModuleItemData[]}
                       customNames={availableHierarchy.customNames}
                       showDuplicateButton={true}
                       showDeleteButton={true}
+                      showMoveButton={true}
                       canDeleteItem={canDeleteModule}
                       availableModulesForFolder={availableHierarchy.getAvailableModulesForFolder() as ModuleItemData[]}
                     />

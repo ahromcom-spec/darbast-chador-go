@@ -750,6 +750,116 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
     return items.filter(item => item.type === 'module');
   }, [items]);
 
+  // Calculate depth of an item in hierarchy
+  const getItemDepth = useCallback((itemId: string, currentItems: ModuleItem[] = items, currentDepth: number = 0): number => {
+    for (const item of currentItems) {
+      if (item.id === itemId) {
+        return currentDepth;
+      }
+      if (item.children) {
+        const childDepth = getItemDepth(itemId, item.children, currentDepth + 1);
+        if (childDepth !== -1) return childDepth;
+      }
+    }
+    return -1;
+  }, [items]);
+
+  // Get maximum depth of children in a folder
+  const getMaxChildDepth = useCallback((item: ModuleItem): number => {
+    if (!item.children || item.children.length === 0) return 0;
+    let maxDepth = 0;
+    for (const child of item.children) {
+      if (child.type === 'folder') {
+        const childDepth = 1 + getMaxChildDepth(child);
+        maxDepth = Math.max(maxDepth, childDepth);
+      }
+    }
+    return maxDepth;
+  }, []);
+
+  // Get all folders that a folder/module can be moved into (respecting 2-level depth limit)
+  const getAvailableFoldersForMove = useCallback((itemId: string): ModuleItem[] => {
+    const MAX_DEPTH = 2; // پوشه > پوشه > ماژول
+    const folders: ModuleItem[] = [];
+    
+    // Get item being moved to check if it's a folder
+    let itemBeingMoved: ModuleItem | null = null;
+    const findItem = (items: ModuleItem[]): ModuleItem | null => {
+      for (const item of items) {
+        if (item.id === itemId) return item;
+        if (item.children) {
+          const found = findItem(item.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    itemBeingMoved = findItem(items);
+    
+    // Calculate how much depth the item being moved would add
+    const itemDepthContribution = itemBeingMoved?.type === 'folder' ? 1 + getMaxChildDepth(itemBeingMoved) : 0;
+
+    const collectFolders = (items: ModuleItem[], currentDepth: number = 0) => {
+      for (const item of items) {
+        if (item.type === 'folder' && item.id !== itemId) {
+          // Check if moving item here would exceed depth limit
+          const newDepth = currentDepth + 1 + itemDepthContribution;
+          if (newDepth <= MAX_DEPTH) {
+            // Don't include if item is ancestor of this folder (prevent circular)
+            let isAncestor = false;
+            if (itemBeingMoved?.type === 'folder') {
+              const checkDescendant = (folder: ModuleItem): boolean => {
+                if (folder.id === item.id) return true;
+                if (folder.children) {
+                  return folder.children.some(child => child.type === 'folder' && checkDescendant(child));
+                }
+                return false;
+              };
+              isAncestor = checkDescendant(itemBeingMoved);
+            }
+            if (!isAncestor) {
+              folders.push(item);
+            }
+          }
+          // Continue to check children folders (they might be valid targets for modules)
+          if (item.children && currentDepth + 1 < MAX_DEPTH) {
+            collectFolders(item.children, currentDepth + 1);
+          }
+        }
+      }
+    };
+
+    collectFolders(items);
+    return folders;
+  }, [items, getMaxChildDepth]);
+
+  // Move folder/module to another folder
+  const moveItemToFolder = useCallback((itemId: string, targetFolderId: string) => {
+    setItems(prevItems => {
+      // First remove item from current position
+      const { items: itemsWithoutItem, removed } = removeItemFromHierarchy(prevItems, itemId);
+      if (!removed) return prevItems;
+
+      // Then add to target folder
+      const newItems = addItemToFolder(itemsWithoutItem, targetFolderId, removed);
+      saveHierarchy(newItems);
+      return newItems;
+    });
+  }, [saveHierarchy]);
+
+  // Move item out of folder to root level
+  const moveItemToRoot = useCallback((itemId: string) => {
+    setItems(prevItems => {
+      const { items: itemsWithoutItem, removed } = removeItemFromHierarchy(prevItems, itemId);
+      if (!removed) return prevItems;
+
+      // Add to root level
+      const newItems = [...itemsWithoutItem, removed];
+      saveHierarchy(newItems);
+      return newItems;
+    });
+  }, [saveHierarchy]);
+
   // Wrapper to update items and save to DB
   const updateItems = useCallback((updater: (prev: ModuleItem[]) => ModuleItem[]) => {
     setItems(prev => {
@@ -776,6 +886,10 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
     moveItemDown,
     addModuleToFolder,
     removeModuleFromFolder,
-    getAvailableModulesForFolder
+    getAvailableModulesForFolder,
+    getAvailableFoldersForMove,
+    moveItemToFolder,
+    moveItemToRoot,
+    getItemDepth
   };
 }
