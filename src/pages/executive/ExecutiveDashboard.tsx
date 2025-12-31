@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ModuleHeader } from '@/components/common/ModuleHeader';
+
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Users, ShoppingCart, Clock, CheckCircle, AlertCircle, Package, Calendar, TrendingUp, PlayCircle, Globe, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -234,13 +234,6 @@ export default function ExecutiveDashboard() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <ModuleHeader
-        title={moduleName}
-        description={moduleDescription}
-        icon={<Package className="h-5 w-5" />}
-        backTo="/profile?tab=modules"
-      />
-
       {/* بخش کره زمین */}
       <Card className="overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-background to-muted/30">
         <CardContent className="p-6">
