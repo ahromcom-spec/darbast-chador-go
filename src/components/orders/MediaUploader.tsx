@@ -54,8 +54,8 @@ export function MediaUploader({
   onFilesChange,
   onMediaUploaded,
   onUploadStatusChange,
-  maxImages = 4,
-  maxVideos = 2,
+  maxImages = 10,
+  maxVideos = 10,
   maxImageSize = 10,
   maxVideoSize = 50,
   maxVideoDuration = 600, // 10 minutes
