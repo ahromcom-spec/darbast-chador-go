@@ -1241,26 +1241,29 @@ export default function ExecutivePendingOrders() {
               افزودن پرسنل
             </Button>
             
-            <Button
-              size="sm"
-              onClick={() => {
-                setSelectedOrder(order);
-                setActionType('approve');
-                // Pre-fill execution dates from customer's requested dates
-                const notes = parseOrderNotes(order.notes);
-                // بررسی همه فیلدهای ممکن برای تاریخ درخواستی
-                const customerRequestedDate = notes?.installationDateTime || notes?.installation_date || notes?.requested_date || '';
-                const customerDueDate = notes?.dueDateTime || notes?.due_date || '';
-                setExecutionStartDate(customerRequestedDate);
-                setExecutionEndDate(customerDueDate);
-              }}
-              className={`gap-2 ${canApprove ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}
-              disabled={!canApprove}
-              title={!canApprove ? 'ابتدا باید قیمت سفارش را تعیین کنید' : 'تایید سفارش'}
-            >
-              <CheckCircle className="h-4 w-4" />
-              تایید سفارش
-            </Button>
+            {/* دکمه تایید سفارش فقط برای ماژول مدیریت کل - در ماژول 101010 مخفی است چون مدیر اجرایی به قیمت دسترسی ندارد */}
+            {!isScaffoldWithMaterialsModule && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setActionType('approve');
+                  // Pre-fill execution dates from customer's requested dates
+                  const notes = parseOrderNotes(order.notes);
+                  // بررسی همه فیلدهای ممکن برای تاریخ درخواستی
+                  const customerRequestedDate = notes?.installationDateTime || notes?.installation_date || notes?.requested_date || '';
+                  const customerDueDate = notes?.dueDateTime || notes?.due_date || '';
+                  setExecutionStartDate(customerRequestedDate);
+                  setExecutionEndDate(customerDueDate);
+                }}
+                className={`gap-2 ${canApprove ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}
+                disabled={!canApprove}
+                title={!canApprove ? 'ابتدا باید قیمت سفارش را تعیین کنید' : 'تایید سفارش'}
+              >
+                <CheckCircle className="h-4 w-4" />
+                تایید سفارش
+              </Button>
+            )}
             
           </div>
         </CardContent>

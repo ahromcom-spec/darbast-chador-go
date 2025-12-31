@@ -1504,8 +1504,8 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه تایید سفارش - برای pending */}
-                  {order.status === 'pending' && (
+                  {/* دکمه تایید سفارش - برای pending - مخفی در ماژول 101010 */}
+                  {order.status === 'pending' && !isScaffoldWithMaterialsModule && (
                     <Button
                       onClick={() => handleStageChange(order.id, 'pending_execution')}
                       size="sm"
