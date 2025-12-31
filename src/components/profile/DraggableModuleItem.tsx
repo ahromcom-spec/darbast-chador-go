@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, GripVertical, Pencil, Check, X, Trash2, Copy } from 'lucide-react';
+import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, GripVertical, Pencil, Check, X, Trash2, Copy, MoveRight, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 export interface ModuleItem {
   id: string;
@@ -34,10 +35,14 @@ interface DraggableModuleItemProps {
   onNavigate?: (href: string) => void;
   onDelete?: (itemId: string) => void;
   onDuplicate?: (item: ModuleItem) => void;
+  onMoveToFolder?: (itemId: string, targetFolderId: string) => void;
+  onMoveToRoot?: (itemId: string) => void;
+  getAvailableFolders?: (itemId: string) => ModuleItem[];
   level?: number;
   customNames?: Record<string, { name: string; description: string }>;
   showDeleteButton?: boolean;
   showDuplicateButton?: boolean;
+  showMoveButton?: boolean;
   isFirst?: boolean;
   draggedItemId?: string | null;
   canDeleteItem?: (item: ModuleItem) => boolean;
@@ -56,10 +61,14 @@ export function DraggableModuleItem({
   onNavigate,
   onDelete,
   onDuplicate,
+  onMoveToFolder,
+  onMoveToRoot,
+  getAvailableFolders,
   level = 0,
   customNames = {},
   showDeleteButton = false,
   showDuplicateButton = false,
+  showMoveButton = false,
   isFirst = false,
   draggedItemId = null,
   canDeleteItem
@@ -71,11 +80,15 @@ export function DraggableModuleItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
   const dragTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dragCounterRef = useRef(0);
 
   const displayName = customNames[item.key]?.name || item.name;
   const displayDescription = customNames[item.key]?.description || item.description;
+  
+  // Get available folders for move
+  const availableFolders = showMoveDialog && getAvailableFolders ? getAvailableFolders(item.id) : [];
 
   // Handle drop zone before this item
   const handleDropBefore = (e: React.DragEvent) => {
@@ -374,6 +387,21 @@ export function DraggableModuleItem({
           )}
           
           <div className="flex items-center gap-1 flex-shrink-0">
+            {/* دکمه انتقال به پوشه */}
+            {showMoveButton && onMoveToFolder && getAvailableFolders && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMoveDialog(true);
+                }}
+                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                title="انتقال به پوشه دیگر"
+              >
+                <MoveRight className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -463,10 +491,14 @@ export function DraggableModuleItem({
               onNavigate={onNavigate}
               onDelete={onDelete}
               onDuplicate={onDuplicate}
+              onMoveToFolder={onMoveToFolder}
+              onMoveToRoot={onMoveToRoot}
+              getAvailableFolders={getAvailableFolders}
               level={level + 1}
               customNames={customNames}
               showDeleteButton={showDeleteButton}
               showDuplicateButton={showDuplicateButton}
+              showMoveButton={showMoveButton}
               isFirst={childIndex === 0}
               draggedItemId={draggedItemId}
               canDeleteItem={canDeleteItem}
@@ -474,6 +506,78 @@ export function DraggableModuleItem({
           ))}
         </div>
       )}
+
+      {/* Move to folder dialog */}
+      <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MoveRight className="h-5 w-5" />
+              انتقال به پوشه
+            </DialogTitle>
+            <DialogDescription>
+              {item.type === 'folder' ? 'پوشه' : 'ماژول'} «{displayName}» را به کجا منتقل کنیم؟
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-2 py-4 max-h-64 overflow-y-auto">
+            {/* Option to move to root */}
+            {level > 0 && onMoveToRoot && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={() => {
+                  onMoveToRoot(item.id);
+                  setShowMoveDialog(false);
+                }}
+              >
+                <Home className="h-4 w-4" />
+                انتقال به ریشه (سطح اول)
+              </Button>
+            )}
+            
+            {/* Available folders */}
+            {availableFolders.length > 0 ? (
+              availableFolders.map((folder) => {
+                const folderDisplayName = customNames[folder.key]?.name || folder.name;
+                return (
+                  <Button
+                    key={folder.id}
+                    variant="outline"
+                    className="w-full justify-start gap-2"
+                    onClick={() => {
+                      if (onMoveToFolder) {
+                        onMoveToFolder(item.id, folder.id);
+                        setShowMoveDialog(false);
+                      }
+                    }}
+                  >
+                    <Folder className="h-4 w-4 text-amber-600" />
+                    {folderDisplayName}
+                    {folder.children && folder.children.length > 0 && (
+                      <span className="text-xs text-muted-foreground mr-auto">
+                        ({folder.children.length} آیتم)
+                      </span>
+                    )}
+                  </Button>
+                );
+              })
+            ) : (
+              level === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  پوشه‌ای برای انتقال موجود نیست. ابتدا یک پوشه ایجاد کنید.
+                </p>
+              )
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMoveDialog(false)}>
+              انصراف
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

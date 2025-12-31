@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, Pencil, Check, X, Trash2, Copy, ChevronUp, Plus, LogOut } from 'lucide-react';
+import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, Pencil, Check, X, Trash2, Copy, ChevronUp, Plus, LogOut, MoveRight, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 export interface ModuleItemData {
   id: string;
@@ -33,10 +33,14 @@ interface ModuleItemProps {
   onDuplicate?: (item: ModuleItemData) => void;
   onAddToFolder?: (folderId: string, moduleId: string) => void;
   onRemoveFromFolder?: (moduleId: string) => void;
+  onMoveToFolder?: (itemId: string, targetFolderId: string) => void;
+  onMoveToRoot?: (itemId: string) => void;
+  getAvailableFoldersForMove?: (itemId: string) => ModuleItemData[];
   level?: number;
   customNames?: Record<string, { name: string; description: string }>;
   showDeleteButton?: boolean;
   showDuplicateButton?: boolean;
+  showMoveButton?: boolean;
   canDeleteItem?: (item: ModuleItemData) => boolean;
   availableModulesForFolder?: ModuleItemData[];
   isInsideFolder?: boolean;
@@ -55,10 +59,14 @@ export function ModuleItem({
   onDuplicate,
   onAddToFolder,
   onRemoveFromFolder,
+  onMoveToFolder,
+  onMoveToRoot,
+  getAvailableFoldersForMove,
   level = 0,
   customNames = {},
   showDeleteButton = false,
   showDuplicateButton = false,
+  showMoveButton = false,
   canDeleteItem,
   availableModulesForFolder = [],
   isInsideFolder = false
@@ -68,9 +76,13 @@ export function ModuleItem({
   const [editedName, setEditedName] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
   const [showAddModuleDialog, setShowAddModuleDialog] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
 
   const displayName = customNames[item.key]?.name || item.name;
   const displayDescription = customNames[item.key]?.description || item.description;
+  
+  // Get available folders for move
+  const availableFoldersForMove = showMoveDialog && getAvailableFoldersForMove ? getAvailableFoldersForMove(item.id) : [];
 
   const startEditing = () => {
     setEditedName(displayName);
@@ -256,6 +268,21 @@ export function ModuleItem({
           )}
           
           <div className="flex items-center gap-1 flex-shrink-0 flex-wrap">
+            {/* Move to folder button for folders */}
+            {showMoveButton && onMoveToFolder && getAvailableFoldersForMove && item.type === 'folder' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMoveDialog(true);
+                }}
+                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                title="انتقال به پوشه دیگر"
+              >
+                <MoveRight className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -295,6 +322,21 @@ export function ModuleItem({
                 title="خروج از پوشه"
               >
                 <LogOut className="h-4 w-4" />
+              </Button>
+            )}
+            {/* Move to root button for folders inside folders */}
+            {isInsideFolder && onMoveToRoot && item.type === 'folder' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveToRoot(item.id);
+                }}
+                className="h-8 w-8 text-orange-600 hover:text-orange-600 hover:bg-orange-100"
+                title="انتقال به ریشه"
+              >
+                <Home className="h-4 w-4" />
               </Button>
             )}
             {/* Delete button for modules */}
@@ -422,6 +464,78 @@ export function ModuleItem({
               ))
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move to Folder Dialog */}
+      <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MoveRight className="h-5 w-5" />
+              انتقال پوشه
+            </DialogTitle>
+            <DialogDescription>
+              پوشه «{displayName}» را به کجا منتقل کنیم؟
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-2 py-4 max-h-64 overflow-y-auto">
+            {/* Option to move to root */}
+            {isInsideFolder && onMoveToRoot && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={() => {
+                  onMoveToRoot(item.id);
+                  setShowMoveDialog(false);
+                }}
+              >
+                <Home className="h-4 w-4" />
+                انتقال به ریشه (سطح اول)
+              </Button>
+            )}
+            
+            {/* Available folders */}
+            {availableFoldersForMove.length > 0 ? (
+              availableFoldersForMove.map((folder) => {
+                const folderDisplayName = customNames[folder.key]?.name || folder.name;
+                return (
+                  <Button
+                    key={folder.id}
+                    variant="outline"
+                    className="w-full justify-start gap-2"
+                    onClick={() => {
+                      if (onMoveToFolder) {
+                        onMoveToFolder(item.id, folder.id);
+                        setShowMoveDialog(false);
+                      }
+                    }}
+                  >
+                    <Folder className="h-4 w-4 text-amber-600" />
+                    {folderDisplayName}
+                    {folder.children && folder.children.length > 0 && (
+                      <span className="text-xs text-muted-foreground mr-auto">
+                        ({folder.children.length} آیتم)
+                      </span>
+                    )}
+                  </Button>
+                );
+              })
+            ) : (
+              !isInsideFolder && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  به دلیل محدودیت عمق (۲ سطح)، این پوشه قابل انتقال به پوشه دیگر نیست.
+                </p>
+              )
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMoveDialog(false)}>
+              انصراف
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
