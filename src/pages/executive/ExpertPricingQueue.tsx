@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, Search, DollarSign, Ruler, CheckCircle, AlertCircle } from 'lucide-react';
+import { Eye, Search, DollarSign, Ruler, CheckCircle, AlertCircle, Calculator } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
+import { ExpertPricingDialog } from '@/components/orders/ExpertPricingDialog';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
@@ -40,6 +41,7 @@ export default function ExpertPricingQueue() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [pricingDialogOpen, setPricingDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const activeModuleKey = searchParams.get('moduleKey') || '';
@@ -344,11 +346,22 @@ export default function ExpertPricingQueue() {
                         size="sm"
                         onClick={() => {
                           setSelectedOrder(order);
+                          setPricingDialogOpen(true);
+                        }}
+                      >
+                        <Calculator className="h-4 w-4 ml-1" />
+                        تعیین قیمت
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedOrder(order);
                           setDetailsOpen(true);
                         }}
                       >
                         <Eye className="h-4 w-4 ml-1" />
-                        جزئیات کامل و تعیین قیمت
+                        جزئیات کامل
                       </Button>
                     </div>
                   </CardContent>
@@ -430,6 +443,16 @@ export default function ExpertPricingQueue() {
             })}
           </div>
         </div>
+      )}
+
+      {/* دیالوگ تعیین قیمت */}
+      {selectedOrder && (
+        <ExpertPricingDialog
+          open={pricingDialogOpen}
+          onOpenChange={setPricingDialogOpen}
+          order={selectedOrder}
+          onSuccess={fetchExpertPricingOrders}
+        />
       )}
 
       {/* دیالوگ جزئیات */}
