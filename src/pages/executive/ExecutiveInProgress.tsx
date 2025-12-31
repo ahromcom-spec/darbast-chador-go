@@ -20,7 +20,7 @@ import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaff
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
-
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 interface Order {
   id: string;
   code: string;
@@ -69,8 +69,11 @@ export default function ExecutiveInProgress() {
   
   // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
   const activeModuleKey = searchParams.get('moduleKey') || '';
+  // Also check moduleName for custom copies of the module
+  const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
   const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
-                                         activeModuleKey.includes('101010');
+                                         activeModuleKey.includes('101010') ||
+                                         moduleName.includes('داربست به همراه اجناس');
 
   useEffect(() => {
     fetchOrders();

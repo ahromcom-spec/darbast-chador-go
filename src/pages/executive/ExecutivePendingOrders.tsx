@@ -30,7 +30,7 @@ import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
-
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 // Helper to parse order notes safely - handles double-stringified JSON
 const parseOrderNotes = (notes: any): any => {
   if (!notes) return null;
@@ -502,8 +502,11 @@ export default function ExecutivePendingOrders() {
   
   // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
   const activeModuleKey = searchParams.get('moduleKey') || '';
+  // Also check moduleName for custom copies of the module  
+  const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
   const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
-                                         activeModuleKey.includes('101010');
+                                         activeModuleKey.includes('101010') ||
+                                         moduleName.includes('داربست به همراه اجناس');
   
   // Check if this is an accounting module - hide order details, only show financial info
   const isAccountingModule = activeModuleKey.includes('حسابداری') ||

@@ -20,7 +20,7 @@ import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
-
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 interface Order {
   id: string;
   code: string;
@@ -65,8 +65,11 @@ export default function ExecutiveReady() {
 
   // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
   const activeModuleKey = searchParams.get('moduleKey') || '';
+  // Also check moduleName for custom copies of the module
+  const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
   const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
-                                         activeModuleKey.includes('101010');
+                                         activeModuleKey.includes('101010') ||
+                                         moduleName.includes('داربست به همراه اجناس');
 
   useEffect(() => {
     fetchOrders();
