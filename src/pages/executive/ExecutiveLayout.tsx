@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation, Navigate } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, Navigate, useSearchParams } from 'react-router-dom';
 import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive, PackageCheck, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 
 // نقش‌های مجاز برای دسترسی به پنل مدیریت اجرایی
 const ALLOWED_ROLES = [
@@ -107,6 +108,9 @@ export function ExecutiveLayout() {
   const [hasAccess, setHasAccess] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const activeModuleKey = searchParams.get('moduleKey') || 'scaffold_execution_with_materials';
+  const { moduleName } = useModuleAssignmentInfo(activeModuleKey, 'ماژول مدیریت اجرای داربست', '');
 
   useEffect(() => {
     const checkExecutiveRole = async () => {
@@ -171,6 +175,15 @@ export function ExecutiveLayout() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Module Name Header */}
+      <div className="bg-primary/5 border-b border-primary/10">
+        <div className="container mx-auto px-4 py-2">
+          <p className="text-sm font-medium text-primary text-center md:text-right">
+            {moduleName}
+          </p>
+        </div>
+      </div>
+      
       <div className="border-b bg-card">
         <div className="container mx-auto">
           <nav className="flex gap-1 overflow-x-auto py-1">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ const stageLabels: Record<string, string> = {
 };
 
 export default function ExecutiveStageAwaitingCollection() {
+  const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +65,11 @@ export default function ExecutiveStageAwaitingCollection() {
   
   // Archive functionality
   const archive = useOrderArchive(() => fetchOrders());
+
+  // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
+  const activeModuleKey = searchParams.get('moduleKey') || '';
+  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
+                                         activeModuleKey.includes('101010');
 
   useEffect(() => {
     fetchOrders();
@@ -639,6 +646,7 @@ export default function ExecutiveStageAwaitingCollection() {
                 execution_stage: selectedOrder.execution_stage
               }}
               onUpdate={fetchOrders}
+              hidePrice={isScaffoldWithMaterialsModule}
             />
           )}
         </DialogContent>
