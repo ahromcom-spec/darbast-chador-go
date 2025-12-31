@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 
-const ZOOM_LEVELS = [0.85, 1, 1.15] as const;
+const ZOOM_LEVELS = [0.75, 0.9, 1.05] as const;
 const STORAGE_KEY = 'site-zoom-level';
 
 export const useInternalZoom = () => {
