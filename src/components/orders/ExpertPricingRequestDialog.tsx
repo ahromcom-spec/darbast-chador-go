@@ -8,8 +8,8 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { MediaUploader } from './MediaUploader';
+import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { MediaUploader, UploadedMediaInfo } from './MediaUploader';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { useNavigate } from 'react-router-dom';
 import { sendOrderSms, buildOrderSmsAddress } from '@/lib/orderSms';
@@ -48,9 +48,13 @@ export const ExpertPricingRequestDialog = ({
   const [description, setDescription] = useState('');
   const [dimensions, setDimensions] = useState<Dimension[]>([{ length: '', width: '', height: '' }]);
   const [requestedDate, setRequestedDate] = useState('');
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   
-  // Progress tracking state
+  // Track uploaded media files (already uploaded to storage by MediaUploader)
+  const [uploadedMedia, setUploadedMedia] = useState<UploadedMediaInfo[]>([]);
+  const [isMediaUploading, setIsMediaUploading] = useState(false);
+  const [pendingFilesCount, setPendingFilesCount] = useState(0);
+  
+  // Progress tracking state for order submission
   const [progress, setProgress] = useState(0);
   const [progressStep, setProgressStep] = useState('');
   
@@ -74,118 +78,32 @@ export const ExpertPricingRequestDialog = ({
     setDimensions(updated);
   };
 
-  const handleFilesChange = (files: File[]) => {
-    setUploadedFiles(files);
-  };
+  // Called when MediaUploader finishes uploading files
+  const handleMediaUploaded = useCallback((mediaList: UploadedMediaInfo[]) => {
+    setUploadedMedia(mediaList);
+  }, []);
 
-  // Optimized parallel file upload with progress tracking
-  const uploadMedia = useCallback(async (orderId: string, files: File[], onProgress: (uploaded: number, total: number) => void) => {
-    if (files.length === 0) return;
-    
-    let uploadedCount = 0;
-    const total = files.length;
-    
-    // Process files in parallel (max 3 concurrent uploads)
-    const CONCURRENT_LIMIT = 3;
-    const results: { success: boolean; fileName: string; error?: string }[] = [];
-    
-    const uploadSingleFile = async (file: File): Promise<{ success: boolean; fileName: string; error?: string }> => {
-      const isVideo = file.type.startsWith('video/') || 
-                     file.name.toLowerCase().endsWith('.mp4') ||
-                     file.name.toLowerCase().endsWith('.mov') ||
-                     file.name.toLowerCase().endsWith('.webm') ||
-                     file.name.toLowerCase().endsWith('.avi');
-      const fileType = isVideo ? 'video' : 'image';
-      const fileExt = file.name.split('.').pop()?.toLowerCase() || (isVideo ? 'mp4' : 'jpg');
-      const safeFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-      const storagePath = `${user!.id}/${orderId}/${safeFileName}`;
+  // Called when upload status changes in MediaUploader
+  const handleUploadStatusChange = useCallback((isUploading: boolean, pendingCount: number) => {
+    setIsMediaUploading(isUploading);
+    setPendingFilesCount(pendingCount);
+  }, []);
 
-      // Determine correct content type
-      let contentType = file.type;
-      if (!contentType || contentType === 'application/octet-stream') {
-        const extMap: Record<string, string> = {
-          'mp4': 'video/mp4',
-          'mov': 'video/quicktime',
-          'webm': 'video/webm',
-          'avi': 'video/x-msvideo',
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'png': 'image/png',
-          'webp': 'image/webp'
-        };
-        contentType = extMap[fileExt] || (isVideo ? 'video/mp4' : 'image/jpeg');
-      }
-
-      try {
-        const { error: uploadError } = await supabase.storage
-          .from('project-media')
-          .upload(storagePath, file, {
-            contentType: contentType,
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Upload error for', file.name, ':', uploadError);
-          return { success: false, fileName: file.name, error: uploadError.message };
-        }
-
-        const { error: dbError } = await supabase.from('project_media').insert({
-          project_id: orderId,
-          user_id: user!.id,
-          file_path: storagePath,
-          file_type: fileType,
-          file_size: file.size,
-          mime_type: contentType
-        });
-
-        if (dbError) {
-          console.error('DB error saving media:', dbError);
-          return { success: false, fileName: file.name, error: dbError.message };
-        }
-        
-        uploadedCount++;
-        onProgress(uploadedCount, total);
-        return { success: true, fileName: file.name };
-      } catch (error: any) {
-        console.error('Unexpected error uploading', file.name, ':', error);
-        return { success: false, fileName: file.name, error: error?.message };
-      }
-    };
-
-    // Process in batches for parallel upload
-    for (let i = 0; i < files.length; i += CONCURRENT_LIMIT) {
-      const batch = files.slice(i, i + CONCURRENT_LIMIT);
-      const batchResults = await Promise.all(batch.map(uploadSingleFile));
-      results.push(...batchResults);
-    }
-
-    // Show result
-    const successCount = results.filter(r => r.success).length;
-    const failCount = results.filter(r => !r.success).length;
-    
-    if (successCount > 0 && failCount === 0) {
-      toast({
-        title: '✅ آپلود موفق',
-        description: `${successCount} فایل با موفقیت آپلود شد`
-      });
-    } else if (failCount > 0 && successCount > 0) {
-      toast({
-        title: '⚠️ آپلود ناقص',
-        description: `${successCount} فایل آپلود شد، ${failCount} فایل با خطا مواجه شد`,
-        variant: 'destructive'
-      });
-    } else if (failCount > 0 && successCount === 0) {
-      toast({
-        title: '❌ خطا در آپلود',
-        description: `هیچ فایلی آپلود نشد. ${results[0]?.error || 'خطای نامشخص'}`,
-        variant: 'destructive'
-      });
-    }
-  }, [user, toast]);
+  // Can submit only when no files are being uploaded
+  const canSubmit = !isMediaUploading && pendingFilesCount === 0;
 
   const handleSubmit = async () => {
     if (!user) {
       toast({ title: 'خطا', description: 'لطفاً وارد حساب کاربری شوید', variant: 'destructive' });
+      return;
+    }
+
+    if (!canSubmit) {
+      toast({ 
+        title: 'در حال آپلود', 
+        description: 'لطفاً صبر کنید تا آپلود فایل‌ها کامل شود', 
+        variant: 'destructive' 
+      });
       return;
     }
 
@@ -194,9 +112,9 @@ export const ExpertPricingRequestDialog = ({
     setProgressStep('در حال آماده‌سازی...');
     
     try {
-      // Step 1: Get customer ID (5%)
+      // Step 1: Get customer ID (10%)
       setProgressStep('دریافت اطلاعات کاربر...');
-      setProgress(5);
+      setProgress(10);
       
       const { data: customer, error: customerError } = await supabase
         .from('customers')
@@ -208,9 +126,9 @@ export const ExpertPricingRequestDialog = ({
         throw new Error('مشتری یافت نشد');
       }
 
-      // Step 2: Build notes (10%)
+      // Step 2: Build notes (20%)
       setProgressStep('آماده‌سازی اطلاعات سفارش...');
-      setProgress(10);
+      setProgress(20);
       
       const notes = JSON.stringify({
         is_expert_pricing_request: true,
@@ -220,9 +138,9 @@ export const ExpertPricingRequestDialog = ({
         service_type: serviceTypeName || 'داربست فلزی'
       });
 
-      // Step 3: Create order (30%)
+      // Step 3: Create order (50%)
       setProgressStep('ثبت سفارش در سیستم...');
-      setProgress(20);
+      setProgress(40);
       
       const { data: createdOrder, error: createError } = await supabase.rpc('create_project_v3', {
         _customer_id: customer.id,
@@ -239,7 +157,7 @@ export const ExpertPricingRequestDialog = ({
         throw createError;
       }
 
-      setProgress(30);
+      setProgress(50);
 
       const orderData = createdOrder as any;
       const orderId = Array.isArray(orderData) ? orderData[0]?.id : orderData?.id;
@@ -249,22 +167,38 @@ export const ExpertPricingRequestDialog = ({
         throw new Error('خطا در ایجاد سفارش');
       }
 
-      // Step 4: Upload media files (30% - 90%)
-      if (uploadedFiles.length > 0) {
-        setProgressStep(`آپلود ${uploadedFiles.length} فایل...`);
+      // Step 4: Link already-uploaded media to this order (60%-80%)
+      if (uploadedMedia.length > 0) {
+        setProgressStep(`پیوند ${uploadedMedia.length} فایل به سفارش...`);
+        setProgress(60);
         
-        await uploadMedia(orderId, uploadedFiles, (uploaded, total) => {
-          const mediaProgress = 30 + Math.round((uploaded / total) * 60);
-          setProgress(mediaProgress);
-          setProgressStep(`آپلود فایل ${uploaded} از ${total}...`);
-        });
+        // Insert project_media records for already-uploaded files
+        const mediaRecords = uploadedMedia.map(media => ({
+          project_id: orderId,
+          user_id: user.id,
+          file_path: media.storagePath,
+          file_type: media.fileType,
+          file_size: media.fileSize,
+          mime_type: media.mimeType
+        }));
+
+        const { error: mediaError } = await supabase
+          .from('project_media')
+          .insert(mediaRecords);
+
+        if (mediaError) {
+          console.error('Error linking media to order:', mediaError);
+          // Don't fail the whole order, just log the error
+        }
+        
+        setProgress(80);
       } else {
-        setProgress(90);
+        setProgress(80);
       }
 
-      // Step 5: Send SMS (95%)
+      // Step 5: Send SMS (90%)
       setProgressStep('ارسال پیامک...');
-      setProgress(95);
+      setProgress(90);
       
       const customerPhone = user?.user_metadata?.phone_number || user?.phone;
       if (customerPhone && orderCode) {
@@ -294,7 +228,7 @@ export const ExpertPricingRequestDialog = ({
       setDescription('');
       setDimensions([{ length: '', width: '', height: '' }]);
       setRequestedDate('');
-      setUploadedFiles([]);
+      setUploadedMedia([]);
       setProgress(0);
       setProgressStep('');
 
@@ -418,15 +352,16 @@ export const ExpertPricingRequestDialog = ({
             />
           </div>
 
-          {/* Media Upload */}
+          {/* Media Upload - Files are uploaded immediately when selected */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <ImageIcon className="h-4 w-4" />
               عکس و فیلم از محل کار
             </Label>
             <MediaUploader 
-              onFilesChange={handleFilesChange} 
-              disableAutoUpload={true} 
+              onMediaUploaded={handleMediaUploaded}
+              onUploadStatusChange={handleUploadStatusChange}
+              disableAutoUpload={false}
               maxImages={6} 
               maxVideos={5}
               maxVideoSize={100}
@@ -434,9 +369,28 @@ export const ExpertPricingRequestDialog = ({
             <p className="text-xs text-muted-foreground">
               ویدیو: حداکثر 100 مگابایت - تصویر: حداکثر 10 مگابایت
             </p>
+            
+            {/* Upload status indicator */}
+            {isMediaUploading && (
+              <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                <span className="text-sm text-blue-700 dark:text-blue-300">
+                  در حال آپلود {pendingFilesCount} فایل... لطفاً صبر کنید
+                </span>
+              </div>
+            )}
+            
+            {!isMediaUploading && uploadedMedia.length > 0 && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <span className="text-sm text-green-700 dark:text-green-300">
+                  {uploadedMedia.length} فایل با موفقیت آپلود شد
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Progress Bar - Show during submission */}
+          {/* Progress Bar - Show during order submission */}
           {loading && (
             <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
               <div className="flex items-center justify-between text-sm">
@@ -456,7 +410,7 @@ export const ExpertPricingRequestDialog = ({
           {/* Submit Button */}
           <Button 
             onClick={handleSubmit} 
-            disabled={loading} 
+            disabled={loading || !canSubmit} 
             className="w-full"
             size="lg"
           >
@@ -464,6 +418,11 @@ export const ExpertPricingRequestDialog = ({
               <span className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 در حال ثبت... ({progress}%)
+              </span>
+            ) : !canSubmit ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                در انتظار اتمام آپلود...
               </span>
             ) : (
               'ثبت درخواست قیمت‌گذاری'

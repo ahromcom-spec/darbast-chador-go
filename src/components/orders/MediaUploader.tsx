@@ -1,4 +1,4 @@
-import { useState, useId, useRef, useCallback } from 'react';
+import { useState, useId, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon, XCircle, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,9 +27,20 @@ interface MediaFile {
   xhr?: XMLHttpRequest; // For cancellation
 }
 
+// Interface for uploaded media info to pass to parent
+export interface UploadedMediaInfo {
+  storagePath: string;
+  fileType: 'image' | 'video';
+  fileSize: number;
+  mimeType: string;
+}
+
 interface MediaUploaderProps {
   projectId?: string; // Order/project ID to link media to
   onFilesChange?: (files: File[]) => void;
+  // New callbacks for immediate upload mode
+  onMediaUploaded?: (mediaFiles: UploadedMediaInfo[]) => void; // Called when upload completes with file info
+  onUploadStatusChange?: (isUploading: boolean, pendingCount: number) => void; // Called when upload status changes
   maxImages?: number;
   maxVideos?: number;
   maxImageSize?: number; // in MB
@@ -41,6 +52,8 @@ interface MediaUploaderProps {
 export function MediaUploader({
   projectId,
   onFilesChange,
+  onMediaUploaded,
+  onUploadStatusChange,
   maxImages = 4,
   maxVideos = 2,
   maxImageSize = 10,
@@ -58,6 +71,29 @@ export function MediaUploader({
   const videoInputId = `video-upload-${uniqueId}`;
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+
+  // Notify parent about upload status changes
+  useEffect(() => {
+    if (onUploadStatusChange) {
+      const uploadingFiles = files.filter(f => f.status === 'uploading' || f.status === 'pending');
+      const isUploading = uploadingFiles.length > 0;
+      onUploadStatusChange(isUploading, uploadingFiles.length);
+    }
+  }, [files, onUploadStatusChange]);
+
+  // Notify parent about completed uploads
+  useEffect(() => {
+    if (onMediaUploaded) {
+      const completedFiles = files.filter(f => f.status === 'done' && f.storagePath);
+      const mediaInfo: UploadedMediaInfo[] = completedFiles.map(f => ({
+        storagePath: f.storagePath!,
+        fileType: f.type,
+        fileSize: f.file.size,
+        mimeType: f.file.type || (f.type === 'video' ? 'video/mp4' : 'image/jpeg')
+      }));
+      onMediaUploaded(mediaInfo);
+    }
+  }, [files, onMediaUploaded]);
 
   // Utilities
   const setFilePartial = (id: string, patch: Partial<MediaFile> | ((prev: MediaFile) => Partial<MediaFile>)) => {
