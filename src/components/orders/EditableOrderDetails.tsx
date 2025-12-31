@@ -348,8 +348,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
   return (
     <div className="space-y-4">
-      {/* Expert Pricing Request Badge with Price Input - always shown for expert pricing requests (managers need to set prices) */}
-      {isExpertPricingRequest && (
+      {/* Expert Pricing Request Badge with Price Input - shown only if hidePrice is false */}
+      {isExpertPricingRequest && !hidePrice && (
         <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-3">
             <div className="bg-amber-100 dark:bg-amber-900/50 p-2 rounded-full">
