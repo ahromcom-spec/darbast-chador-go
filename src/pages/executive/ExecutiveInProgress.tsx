@@ -66,6 +66,11 @@ export default function ExecutiveInProgress() {
 
   // Auto-open order from URL param
   const urlOrderId = searchParams.get('orderId');
+  
+  // Check if this is the "scaffold execution with materials" module (code 101010) - hide price for this module
+  const activeModuleKey = searchParams.get('moduleKey') || '';
+  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
+                                         activeModuleKey.includes('101010');
 
   useEffect(() => {
     fetchOrders();
@@ -551,6 +556,7 @@ export default function ExecutiveInProgress() {
                 execution_stage: selectedOrder.execution_stage
               }}
               onUpdate={fetchOrders}
+              hidePrice={isScaffoldWithMaterialsModule}
             />
           )}
         </DialogContent>
