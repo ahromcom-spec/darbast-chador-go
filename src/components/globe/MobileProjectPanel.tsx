@@ -199,16 +199,34 @@ export function MobileProjectPanel({
           {hasOrders ? (
             serviceTypeGroups.map((group, groupIndex) => (
               <div key={group.code} className="space-y-3">
-                {/* هدر نوع خدمات */}
+                {/* هدر نوع خدمات با دکمه سفارش جدید */}
                 <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-3 border-2 border-primary/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 rounded-full bg-primary" />
-                    <h3 className="text-sm font-bold text-primary">
-                      {group.name}
-                    </h3>
-                    <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
-                      {group.orders.length} سفارش
-                    </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                      <h3 className="text-sm font-bold text-primary">
+                        {group.name}
+                      </h3>
+                      <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
+                        {group.orders.length} سفارش
+                      </span>
+                    </div>
+                    {/* دکمه سفارش جدید */}
+                    <Button
+                      size="sm"
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white h-8 px-3 text-xs font-bold"
+                      onClick={() => {
+                        // هدایت به صفحه ثبت سفارش با پیش‌فرض location و نوع خدمات
+                        const locationId = project.location_id;
+                        const subcategoryCode = group.code;
+                        if (locationId) {
+                          navigate(`/service-selection?locationId=${locationId}&subcategory=${subcategoryCode}`);
+                        }
+                      }}
+                    >
+                      <Plus className="w-4 h-4 ml-1" />
+                      سفارش جدید
+                    </Button>
                   </div>
                 </div>
 
