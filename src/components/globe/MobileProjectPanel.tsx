@@ -220,7 +220,14 @@ export function MobileProjectPanel({
                         const locationId = project.location_id;
                         const subcategoryCode = group.code;
                         if (locationId) {
-                          navigate(`/service-selection?locationId=${locationId}&subcategory=${subcategoryCode}`);
+                          // مسیر صحیح: /user/select-service با state
+                          navigate('/user/select-service', {
+                            state: {
+                              locationId: locationId,
+                              subcategoryCode: subcategoryCode,
+                              fromMap: true
+                            }
+                          });
                         }
                       }}
                     >

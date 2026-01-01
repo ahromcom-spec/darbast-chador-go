@@ -41,6 +41,10 @@ export default function ServiceSelection() {
   const locationId = location.state?.locationId;
   const locationData = location.state?.locationData;
   const distanceFromCenter = location.state?.distanceFromCenter;
+  const fromMap = location.state?.fromMap;
+  const preselectedSubcategoryCode = location.state?.subcategoryCode;
+  const preselectedServiceTypeId = location.state?.serviceTypeId;
+  const preselectedSubcategoryId = location.state?.subcategoryId;
 
   useEffect(() => {
     if (!locationId) {
@@ -53,16 +57,60 @@ export default function ServiceSelection() {
     }
   }, [locationId, navigate, toast]);
 
-  // انتخاب خودکار اولین نوع خدمات برای نمایش زیرمجموعه‌ها
-  useEffect(() => {
-    if (serviceTypes.length > 0 && !selectedServiceType) {
-      setSelectedServiceType(serviceTypes[0].id);
-    }
-  }, [serviceTypes, selectedServiceType]);
-
-  // Get subcategories from selected service type
+  // Get subcategories from selected service type - باید قبل از useEffect ها تعریف شود
   const selectedServiceTypeData = serviceTypes.find(st => st.id === selectedServiceType);
   const filteredSubcategories = selectedServiceTypeData?.subcategories || [];
+
+  // انتخاب خودکار نوع خدمات وقتی از نقشه می‌آید
+  useEffect(() => {
+    if (serviceTypes.length > 0 && !selectedServiceType) {
+      // اگر serviceTypeId از نقشه ارسال شده، از آن استفاده کن
+      if (preselectedServiceTypeId) {
+        const matchingType = serviceTypes.find(st => st.id === preselectedServiceTypeId);
+        if (matchingType) {
+          setSelectedServiceType(matchingType.id);
+          return;
+        }
+      }
+      
+      // اگر subcategoryCode از نقشه ارسال شده، نوع خدمات مناسب را پیدا کن
+      if (preselectedSubcategoryCode) {
+        const matchingType = serviceTypes.find(st => 
+          st.subcategories?.some(sub => sub.code === preselectedSubcategoryCode)
+        );
+        if (matchingType) {
+          setSelectedServiceType(matchingType.id);
+          return;
+        }
+      }
+      
+      // در غیر اینصورت اولین نوع خدمات را انتخاب کن
+      setSelectedServiceType(serviceTypes[0].id);
+    }
+  }, [serviceTypes, selectedServiceType, preselectedServiceTypeId, preselectedSubcategoryCode]);
+
+  // انتخاب خودکار زیرمجموعه وقتی نوع خدمات انتخاب شده و از نقشه آمده
+  useEffect(() => {
+    if (selectedServiceType && filteredSubcategories.length > 0 && !selectedSubcategory) {
+      // اگر subcategoryId از نقشه ارسال شده
+      if (preselectedSubcategoryId) {
+        const matching = filteredSubcategories.find(sub => sub.id === preselectedSubcategoryId);
+        if (matching) {
+          setSelectedSubcategory(matching.id);
+          return;
+        }
+      }
+      
+      // اگر subcategoryCode از نقشه ارسال شده
+      if (preselectedSubcategoryCode) {
+        const matching = filteredSubcategories.find(sub => sub.code === preselectedSubcategoryCode);
+        if (matching) {
+          setSelectedSubcategory(matching.id);
+          return;
+        }
+      }
+    }
+  }, [selectedServiceType, filteredSubcategories, selectedSubcategory, preselectedSubcategoryId, preselectedSubcategoryCode]);
 
   const getFormPath = (subcategoryCode: string) => {
     // Map subcategory codes to form routes
