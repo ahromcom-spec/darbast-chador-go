@@ -92,7 +92,7 @@ export function ServiceTypeSelectionDialog({
         }
       });
     } else if (subcategoryCode === '20') {
-      navigate('/scaffolding/rental', {
+      navigate('/scaffolding/rental-form', {
         state: {
           fromMap: true,
           locationId: locationId,
