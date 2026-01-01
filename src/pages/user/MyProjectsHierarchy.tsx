@@ -449,10 +449,9 @@ export default function MyProjectsHierarchy() {
     }
   };
 
-  // تابع بررسی وضعیت سفارش - قابل حذف یا خیر
+  // تابع بررسی وضعیت سفارش - قابل حذف یا خیر (فقط سفارش‌های در انتظار تایید)
   const isOrderDeletable = (orderStatus: string): boolean => {
-    return orderStatus === 'pending' || orderStatus === 'rejected' || 
-           orderStatus === 'completed' || orderStatus === 'paid' || orderStatus === 'closed';
+    return orderStatus === 'pending';
   };
 
   // تابع بررسی پروژه - آیا همه سفارشات قابل حذف هستند؟
@@ -853,18 +852,21 @@ export default function MyProjectsHierarchy() {
                                                   <span className="text-xs">لغو</span>
                                                 </Button>
                                               )}
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setDeleteOrderId(order.id);
-                                                }}
-                                              >
-                                                <XCircle className="h-3.5 w-3.5" />
-                                                <span className="text-xs">حذف</span>
-                                              </Button>
+                                              {/* دکمه حذف فقط برای سفارش‌های در انتظار تایید */}
+                                              {order.status === 'pending' && (
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDeleteOrderId(order.id);
+                                                  }}
+                                                >
+                                                  <XCircle className="h-3.5 w-3.5" />
+                                                  <span className="text-xs">حذف</span>
+                                                </Button>
+                                              )}
                                             </div>
                                           </div>
                                           <div 
