@@ -658,16 +658,20 @@ body {
   --radix-select-content-transform-origin: bottom center;
 }
 
-/* Ensure all dropdowns have high z-index and proper background */
+/* ✅ Ensure all dropdowns have VERY HIGH z-index to appear above dialogs on map */
+[data-radix-popper-content-wrapper] {
+  z-index: 300000 !important;
+}
+
 [data-radix-popper-content-wrapper] > div {
-  z-index: 9999 !important;
+  z-index: 300000 !important;
   background-color: hsl(var(--popover)) !important;
 }
 
-/* Force select content to bottom */
+/* Force select content to bottom with proper z-index */
 [role="listbox"],
 [data-radix-menu-content],
 [data-radix-select-content] {
-  z-index: 9999 !important;
+  z-index: 300000 !important;
   background-color: hsl(var(--popover)) !important;
 }
