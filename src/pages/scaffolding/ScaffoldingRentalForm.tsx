@@ -58,6 +58,7 @@ export default function ScaffoldingRentalForm() {
   const [loading, setLoading] = useState(false);
   const [selectedItemType, setSelectedItemType] = useState<string>('');
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [resolvedLocation, setResolvedLocation] = useState<any>(null);
   
   // Extract service selection data
   const stateData = location.state || {};
@@ -101,6 +102,45 @@ export default function ScaffoldingRentalForm() {
       fetchOrderData();
     }
   }, [editOrderId]);
+
+  // ✅ اگر کاربر مستقیم از نقشه وارد شده و آدرس در state نیامده، از جدول locations بخوان
+  useEffect(() => {
+    if (editOrderId) return;
+    if (!stateLocationId) return;
+    if (stateLocationAddress) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('locations')
+          .select(`
+            id,
+            title,
+            address_line,
+            province_id,
+            district_id,
+            provinces (name),
+            districts (name)
+          `)
+          .eq('id', stateLocationId)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (cancelled) return;
+        setResolvedLocation(data || null);
+      } catch (e) {
+        // اگر به هر دلیلی نتوانستیم بخوانیم، فقط از fallback های موجود استفاده می‌کنیم
+        if (cancelled) return;
+        setResolvedLocation(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editOrderId, stateLocationId, stateLocationAddress]);
 
   const fetchOrderData = async () => {
     if (!editOrderId) return;
@@ -182,15 +222,15 @@ export default function ScaffoldingRentalForm() {
 
   // Merge order data with state data
   const hierarchyProjectId = orderData?.hierarchy_project_id || stateHierarchyProjectId;
-  const provinceId = orderData?.province_id || stateProvinceId;
-  const districtId = orderData?.district_id || stateDistrictId;
+  const provinceId = orderData?.province_id || stateProvinceId || resolvedLocation?.province_id;
+  const districtId = orderData?.district_id || stateDistrictId || resolvedLocation?.district_id;
   const subcategoryId = orderData?.subcategory_id || stateSubcategoryId;
   const serviceName = orderData?.subcategory?.service_type?.name || stateServiceName || 'داربست فلزی';
   const subcategoryName = orderData?.subcategory?.name || stateSubcategoryName;
-  const locationAddress = orderData?.address || stateLocationAddress;
-  const locationTitle = orderData?.detailed_address || stateLocationTitle;
-  const provinceName = orderData?.province?.name || stateProvinceName;
-  const districtName = orderData?.district?.name || stateDistrictName;
+  const locationAddress = orderData?.address || stateLocationAddress || resolvedLocation?.address_line;
+  const locationTitle = orderData?.detailed_address || stateLocationTitle || resolvedLocation?.title;
+  const provinceName = orderData?.province?.name || stateProvinceName || resolvedLocation?.provinces?.name;
+  const districtName = orderData?.district?.name || stateDistrictName || resolvedLocation?.districts?.name;
   const customerName = orderData?.customer_name;
   const customerPhone = orderData?.customer_phone;
 
