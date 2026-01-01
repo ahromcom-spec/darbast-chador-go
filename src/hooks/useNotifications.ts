@@ -12,6 +12,21 @@ interface Notification {
   created_at: string;
 }
 
+// تنظیم بج روی آیکون برنامه (PWA App Badge)
+const updateAppBadge = (count: number) => {
+  if ('setAppBadge' in navigator) {
+    try {
+      if (count > 0) {
+        (navigator as any).setAppBadge(count);
+      } else {
+        (navigator as any).clearAppBadge();
+      }
+    } catch (error) {
+      console.log('App Badge API error:', error);
+    }
+  }
+};
+
 // نمایش اعلان سیستمی با صدا
 const showSystemNotification = (title: string, body: string, link?: string) => {
   // بررسی پشتیبانی و مجوز
@@ -84,7 +99,10 @@ export const useNotifications = () => {
       }
       
       setNotifications(notifs);
-      setUnreadCount(data?.filter(n => !n.read_at).length || 0);
+      const unread = data?.filter(n => !n.read_at).length || 0;
+      setUnreadCount(unread);
+      // به‌روزرسانی بج برنامه
+      updateAppBadge(unread);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -112,7 +130,12 @@ export const useNotifications = () => {
           showSystemNotification(newNotif.title, newNotif.body, newNotif.link);
           
           setNotifications(prev => [newNotif, ...prev.slice(0, 19)]);
-          setUnreadCount(prev => prev + 1);
+          setUnreadCount(prev => {
+            const newCount = prev + 1;
+            // به‌روزرسانی بج برنامه
+            updateAppBadge(newCount);
+            return newCount;
+          });
           lastNotificationIdRef.current = newNotif.id;
         }
       )
@@ -149,7 +172,12 @@ export const useNotifications = () => {
           n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
         )
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount(prev => {
+        const newCount = Math.max(0, prev - 1);
+        // به‌روزرسانی بج برنامه
+        updateAppBadge(newCount);
+        return newCount;
+      });
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
