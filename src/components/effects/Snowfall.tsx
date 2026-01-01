@@ -31,14 +31,14 @@ const Snowfall = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden" style={{ height: '150vh' }}>
       {snowflakes.map((flake) => (
         <div
           key={flake.id}
           className="absolute rounded-full bg-white animate-snowfall"
           style={{
             left: `${flake.x}%`,
-            top: '-10px',
+            top: '-20px',
             width: `${flake.size}px`,
             height: `${flake.size}px`,
             opacity: flake.opacity,
