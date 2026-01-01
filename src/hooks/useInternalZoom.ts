@@ -67,6 +67,18 @@ export const useInternalZoom = () => {
     setZoomIndex(1);
   }, []);
 
+  // Allow dropdowns/popovers to permanently force 100% zoom (Windows only)
+  useEffect(() => {
+    if (!isWindows) return;
+
+    const handleForceZoom100 = () => {
+      setZoomIndex((prev) => (prev === 1 ? prev : 1));
+    };
+
+    window.addEventListener('app:force-zoom-100', handleForceZoom100);
+    return () => window.removeEventListener('app:force-zoom-100', handleForceZoom100);
+  }, [isWindows]);
+
   // Handle keyboard and mouse wheel events
   useEffect(() => {
     if (!isWindows) return;

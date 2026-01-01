@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { requestZoom100 } from '@/lib/zoom';
 
 // لیست ثابت پرسنل اهرم با کد
 const AHROM_STAFF_LIST = [
