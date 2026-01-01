@@ -100,7 +100,6 @@ export function MobileProjectPanel({
 
   const getPublicUrl = (filePath: string) => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    // استفاده از bucket صحیح project-media (همان bucket که در HybridGlobe استفاده می‌شود)
     return `${supabaseUrl}/storage/v1/object/public/project-media/${filePath}`;
   };
 
@@ -110,6 +109,22 @@ export function MobileProjectPanel({
 
   const orders = project.orders || [];
   const hasOrders = orders.length > 0;
+
+  // گروه‌بندی سفارشات بر اساس نوع زیردسته (subcategory)
+  const ordersByServiceType = orders.reduce((acc, order) => {
+    const key = order.subcategory?.code || 'unknown';
+    if (!acc[key]) {
+      acc[key] = {
+        name: order.subcategory?.name || 'نامشخص',
+        code: key,
+        orders: []
+      };
+    }
+    acc[key].orders.push(order);
+    return acc;
+  }, {} as Record<string, { name: string; code: string; orders: ProjectOrder[] }>);
+
+  const serviceTypeGroups = Object.values(ordersByServiceType);
 
   return (
     <div className="fixed inset-0 z-[100000] bg-background flex flex-col">
@@ -126,15 +141,10 @@ export function MobileProjectPanel({
           </Button>
           <div className="flex-1 text-center px-2 min-w-0">
             <h2 className="text-base font-bold leading-tight break-words">
-              {project.title || 'پروژه'}
+              {project.locations?.title || project.title || 'موقعیت'}
             </h2>
-            {project.locations?.title && (
-              <p className="text-sm opacity-90 mt-1">
-                {project.locations.title}
-              </p>
-            )}
           </div>
-          <div className="w-12" /> {/* Spacer for centering */}
+          <div className="w-12" />
         </div>
         {project.locations?.address_line && (
           <p className="text-xs opacity-80 mt-2 text-center">
@@ -143,189 +153,195 @@ export function MobileProjectPanel({
         )}
       </div>
 
-      {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات قبل از ScrollArea با خط اتصال به نقطه قرمز */}
-      {hasOrders && project.location_id && (
+      {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات */}
+      {project.location_id && (
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-gradient-to-r from-muted/30 to-muted/10">
-          {/* نقطه قرمز */}
           <div className="flex items-center gap-0">
             <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-red-200 shadow-[0_0_8px_rgba(239,68,68,0.5)] flex-shrink-0" />
-            {/* خط اتصال */}
             <div className="w-6 h-0.5 bg-gradient-to-r from-red-500 to-purple-600" />
           </div>
-          {/* دکمه */}
           <Button
             variant="outline"
             className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white border-none hover:from-purple-600 hover:to-violet-700 shadow-lg py-3 text-sm font-semibold"
-            onClick={() => {
-              if (project.location_id) {
-                setServiceDialogOpen(true);
-              }
-            }}
+            onClick={() => setServiceDialogOpen(true)}
           >
             🆕 افزودن خدمات جدید (نوع دیگر)
           </Button>
         </div>
       )}
 
-      {/* Content */}
+      {/* Content - هر نوع خدمات در کادر جداگانه */}
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4 pb-8">
+        <div className="p-4 space-y-6 pb-8">
           {hasOrders ? (
-            orders.map((order) => {
-              const allMedia = (order.media || []).sort((a, b) => {
-                if (a.file_type === 'image' && b.file_type === 'video') return -1;
-                if (a.file_type === 'video' && b.file_type === 'image') return 1;
-                return 0;
-              });
-              const currentIndex = getMediaIndex(order.id);
-              const totalMedia = allMedia.length;
-
-              return (
-                <div
-                  key={order.id}
-                  className="bg-card border border-border rounded-xl overflow-hidden shadow-sm"
-                >
-                  {/* Order Header */}
-                  <div className="p-3 bg-muted/50 border-b border-border">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-muted-foreground">
-                          #{order.code}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(order.status)}`}>
-                          {getStatusLabel(order.status)}
-                        </span>
-                      </div>
-                      {order.subcategory?.name && (
-                        <span className="text-xs text-primary font-medium">
-                          {order.subcategory.name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Media Gallery */}
-                  <div className="relative aspect-video bg-muted">
-                    {totalMedia > 0 ? (
-                      <>
-                        {allMedia.map((media, idx) => {
-                          const url = getPublicUrl(media.file_path);
-                          const isVisible = idx === currentIndex;
-                          const isVideo = media.file_type === 'video';
-
-                          if (!isVisible) return null;
-
-                          return isVideo ? (
-                            <div
-                              key={media.id}
-                              className="absolute inset-0 flex items-center justify-center bg-black cursor-pointer"
-                              onClick={() => onViewVideo(url)}
-                            >
-                              <video
-                                src={url}
-                                className="w-full h-full object-cover"
-                                preload="metadata"
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
-                                  <svg className="w-8 h-8 text-primary ml-1" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z"/>
-                                  </svg>
-                                </div>
-                              </div>
-                              <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                                ویدیو
-                              </span>
-                            </div>
-                          ) : (
-                            <img
-                              key={media.id}
-                              src={url}
-                              alt="تصویر سفارش"
-                              className="absolute inset-0 w-full h-full object-cover cursor-pointer"
-                              onClick={() => {
-                                const imageUrls = allMedia
-                                  .filter(m => m.file_type === 'image')
-                                  .map(m => getPublicUrl(m.file_path));
-                                const imageIndex = allMedia
-                                  .filter(m => m.file_type === 'image')
-                                  .findIndex(m => m.id === media.id);
-                                onViewImage(imageUrls, imageIndex >= 0 ? imageIndex : 0);
-                              }}
-                            />
-                          );
-                        })}
-
-                        {/* Navigation Arrows */}
-                        {totalMedia > 1 && (
-                          <>
-                            <button
-                              onClick={() => setMediaIndex(order.id, (currentIndex - 1 + totalMedia) % totalMedia)}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-                            >
-                              <ChevronRight className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => setMediaIndex(order.id, (currentIndex + 1) % totalMedia)}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-                            >
-                              <ChevronLeft className="w-5 h-5" />
-                            </button>
-                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
-                              {currentIndex + 1} از {totalMedia}
-                            </div>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <div
-                        className="absolute inset-0 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-muted/80 transition-colors"
-                        onClick={() => onAddMedia(order.id)}
-                      >
-                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Camera className="w-8 h-8 text-primary" />
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-medium text-foreground">افزودن عکس یا فیلم</p>
-                          <p className="text-xs text-muted-foreground">برای این سفارش رسانه اضافه کنید</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Add Media Button (when has media) */}
-                  {totalMedia > 0 && (
-                    <button
-                      onClick={() => onAddMedia(order.id)}
-                      className="w-full py-2 border-b border-border flex items-center justify-center gap-2 text-primary hover:bg-primary/5 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span className="text-sm font-medium">افزودن رسانه جدید</span>
-                    </button>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="p-3 flex gap-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleViewOrderDetail(order.id)}
-                    >
-                      <Eye className="w-4 h-4 ml-2" />
-                      مشاهده جزئیات
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => onDeleteOrder(order.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+            serviceTypeGroups.map((group, groupIndex) => (
+              <div key={group.code} className="space-y-3">
+                {/* هدر نوع خدمات */}
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-3 border-2 border-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                    <h3 className="text-sm font-bold text-primary">
+                      {group.name}
+                    </h3>
+                    <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
+                      {group.orders.length} سفارش
+                    </span>
                   </div>
                 </div>
-              );
-            })
+
+                {/* سفارشات این نوع خدمات */}
+                {group.orders.map((order) => {
+                  const allMedia = (order.media || []).sort((a, b) => {
+                    if (a.file_type === 'image' && b.file_type === 'video') return -1;
+                    if (a.file_type === 'video' && b.file_type === 'image') return 1;
+                    return 0;
+                  });
+                  const currentIndex = getMediaIndex(order.id);
+                  const totalMedia = allMedia.length;
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="bg-card border border-border rounded-xl overflow-hidden shadow-sm mr-4"
+                    >
+                      {/* Order Header */}
+                      <div className="p-3 bg-muted/50 border-b border-border">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-muted-foreground">
+                              #{order.code}
+                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(order.status)}`}>
+                              {getStatusLabel(order.status)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Media Gallery */}
+                      <div className="relative aspect-video bg-muted">
+                        {totalMedia > 0 ? (
+                          <>
+                            {allMedia.map((media, idx) => {
+                              const url = getPublicUrl(media.file_path);
+                              const isVisible = idx === currentIndex;
+                              const isVideo = media.file_type === 'video';
+
+                              if (!isVisible) return null;
+
+                              return isVideo ? (
+                                <div
+                                  key={media.id}
+                                  className="absolute inset-0 flex items-center justify-center bg-black cursor-pointer"
+                                  onClick={() => onViewVideo(url)}
+                                >
+                                  <video
+                                    src={url}
+                                    className="w-full h-full object-cover"
+                                    preload="metadata"
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                    <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
+                                      <svg className="w-8 h-8 text-primary ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M8 5v14l11-7z"/>
+                                      </svg>
+                                    </div>
+                                  </div>
+                                  <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                    ویدیو
+                                  </span>
+                                </div>
+                              ) : (
+                                <img
+                                  key={media.id}
+                                  src={url}
+                                  alt="تصویر سفارش"
+                                  className="absolute inset-0 w-full h-full object-cover cursor-pointer"
+                                  onClick={() => {
+                                    const imageUrls = allMedia
+                                      .filter(m => m.file_type === 'image')
+                                      .map(m => getPublicUrl(m.file_path));
+                                    const imageIndex = allMedia
+                                      .filter(m => m.file_type === 'image')
+                                      .findIndex(m => m.id === media.id);
+                                    onViewImage(imageUrls, imageIndex >= 0 ? imageIndex : 0);
+                                  }}
+                                />
+                              );
+                            })}
+
+                            {/* Navigation Arrows */}
+                            {totalMedia > 1 && (
+                              <>
+                                <button
+                                  onClick={() => setMediaIndex(order.id, (currentIndex - 1 + totalMedia) % totalMedia)}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                                >
+                                  <ChevronRight className="w-5 h-5" />
+                                </button>
+                                <button
+                                  onClick={() => setMediaIndex(order.id, (currentIndex + 1) % totalMedia)}
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                                >
+                                  <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
+                                  {currentIndex + 1} از {totalMedia}
+                                </div>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          <div
+                            className="absolute inset-0 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-muted/80 transition-colors"
+                            onClick={() => onAddMedia(order.id)}
+                          >
+                            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Camera className="w-8 h-8 text-primary" />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-sm font-medium text-foreground">افزودن عکس یا فیلم</p>
+                              <p className="text-xs text-muted-foreground">برای این سفارش رسانه اضافه کنید</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Add Media Button (when has media) */}
+                      {totalMedia > 0 && (
+                        <button
+                          onClick={() => onAddMedia(order.id)}
+                          className="w-full py-2 border-b border-border flex items-center justify-center gap-2 text-primary hover:bg-primary/5 transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span className="text-sm font-medium">افزودن رسانه جدید</span>
+                        </button>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="p-3 flex gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleViewOrderDetail(order.id)}
+                        >
+                          <Eye className="w-4 h-4 ml-2" />
+                          مشاهده جزئیات
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onDeleteOrder(order.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))
           ) : (
             <div className="text-center py-12">
               <div className="w-20 h-20 rounded-full bg-muted mx-auto flex items-center justify-center mb-4">

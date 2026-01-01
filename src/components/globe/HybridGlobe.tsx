@@ -1691,190 +1691,215 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           </div>
         ` : '';
 
-        // لیست سفارشات پروژه
+        // گروه‌بندی سفارشات بر اساس نوع زیردسته (subcategory)
+        const ordersByServiceType: Record<string, { name: string; code: string; orders: ProjectOrder[] }> = {};
+        if (project.orders) {
+          project.orders.forEach(order => {
+            const key = order.subcategory?.code || 'unknown';
+            if (!ordersByServiceType[key]) {
+              ordersByServiceType[key] = {
+                name: order.subcategory?.name || 'نامشخص',
+                code: key,
+                orders: []
+              };
+            }
+            ordersByServiceType[key].orders.push(order);
+          });
+        }
+        const serviceTypeGroups = Object.values(ordersByServiceType);
+
+        // لیست سفارشات پروژه - گروه‌بندی شده بر اساس نوع خدمات
         const ordersHTML = project.orders && project.orders.length > 0
           ? `
-            <div style="margin-top:10px;padding:8px;background:#f9fafb;border-radius:8px;max-height:60vh;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <div style="font-size:11px;font-weight:700;color:#1e293b;">سفارشات این پروژه (${project.orders.length})</div>
-                <button 
-                  class="add-new-order-btn"
-                  data-project-id="${project.id}"
-                  data-location-id="${project.location_id}"
-                  data-service-type-id="${project.service_type_id}"
-                  data-subcategory-id="${project.subcategory_id}"
-                  data-subcategory-code="${project.subcategories?.code || ''}"
-                  style="padding:4px 12px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:Vazirmatn,sans-serif;transition:all 0.2s;box-shadow:0 2px 4px rgba(16,185,129,0.3);"
-                  onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 8px rgba(16,185,129,0.4)'"
-                  onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 4px rgba(16,185,129,0.3)'"
-                >
-                  ➕ افزودن سفارش جدید
-                </button>
-              </div>
-              ${project.orders.map((order, orderIdx) => {
-                const allMedia = (order.media || []).sort((a, b) => {
-                  if (a.file_type === 'image' && b.file_type === 'video') return -1;
-                  if (a.file_type === 'video' && b.file_type === 'image') return 1;
-                  return 0;
-                });
-                
-                return `
-                  <div 
-                    class="order-card-${order.id}" 
-                    style="padding:8px;margin-bottom:6px;background:white;border:2px solid #e5e7eb;border-radius:6px;cursor:pointer;transition:all 0.2s;"
-                    onmouseover="this.style.borderColor='#3b82f6';this.style.boxShadow='0 4px 12px rgba(59,130,246,0.2)'"
-                    onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'"
-                  >
-                    <div style="font-size:11px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
-                    <div style="font-size:10px;color:#6b7280;margin-top:2px;">${order.subcategory?.name || 'نامشخص'}</div>
-                    <div id="order-gallery-${order.id}" class="swipeable-gallery" style="position:relative;margin-top:6px;touch-action:pan-y;">
-                      <div style="overflow:hidden;border-radius:6px;background:#f9fafb;position:relative;height:160px;">
-                        ${allMedia.map((m, idx) => {
-                          const { data: baseData } = supabase.storage
-                            .from('project-media')
-                            .getPublicUrl(m.file_path);
-                          const baseUrl = baseData.publicUrl;
-                          const isVideo = m.file_type === 'video';
-                          // استفاده از thumbnail بهینه‌شده برای عکس‌ها (عرض ۴۰۰ و کیفیت ۷۰)
-                          const thumbUrl = isVideo
-                            ? baseUrl
-                            : supabase.storage
-                                .from('project-media')
-                                .getPublicUrl(m.file_path, {
-                                  transform: { width: 400, quality: 70 },
-                                }).data.publicUrl;
-                          const showDeleteBtn = !order.approved_at;
-                          
-                          if (isVideo) {
-                            return `
-                              <div 
-                                id="order-media-${order.id}-${idx}" 
-                                class="order-video-item-${order.id}" 
-                                data-url="${baseUrl}"
-                                style="position:relative;width:100%;height:100%;background:#f0f0f0;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
-                              >
-                                <video src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;user-select:none;background:#000;" preload="metadata" draggable="false" loading="lazy"></video>
-                                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
-                                  <svg style="width:28px;height:28px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z"/>
-                                  </svg>
-                                </div>
-                                <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 5px;border-radius:3px;">ویدیو</span>
-                                ${showDeleteBtn ? `
-                                  <button 
-                                    class="delete-media-btn"
-                                    data-media-id="${m.id}"
-                                    data-media-path="${m.file_path}"
-                                    data-order-id="${order.id}"
-                                    style="position:absolute;top:4px;left:4px;background:#ef4444;color:white;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;transition:background 0.2s;pointer-events:auto;"
-                                    onmouseover="this.style.background='#dc2626'"
-                                    onmouseout="this.style.background='#ef4444'"
-                                    onclick="event.stopPropagation();"
-                                  >
-                                    <svg style="width:14px;height:14px;" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                    </svg>
-                                  </button>
-                                ` : ''}
-                              </div>
-                            `;
-                          } else {
-                            return `
-                              <div 
-                                id="order-media-${order.id}-${idx}" 
-                                style="position:relative;width:100%;height:100%;display:${idx === 0 ? 'block' : 'none'};"
-                              >
-                                <img 
-                                  class="order-image-clickable"
-                                  data-image-url="${baseUrl}"
-                                  data-order-id="${order.id}"
-                                  src="${thumbUrl}" 
-                                  alt="تصویر سفارش" 
-                                  style="width:100%;height:100%;object-fit:cover;cursor:pointer;user-select:none;background:#f0f0f0;"
-                                  draggable="false"
-                                  loading="eager"
-                                  decoding="async"
-                                  onerror="this.style.backgroundColor='#e0e0e0';this.alt='خطا در بارگذاری';"
-                                />
-                                ${showDeleteBtn ? `
-                                  <button 
-                                    class="delete-media-btn"
-                                    data-media-id="${m.id}"
-                                    data-media-path="${m.file_path}"
-                                    data-order-id="${order.id}"
-                                    style="position:absolute;top:4px;left:4px;background:#ef4444;color:white;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;transition:background 0.2s;"
-                                    onmouseover="this.style.background='#dc2626'"
-                                    onmouseout="this.style.background='#ef4444'"
-                                    onclick="event.stopPropagation();"
-                                  >
-                                    <svg style="width:14px;height:14px;" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                    </svg>
-                                  </button>
-                                ` : ''}
-                              </div>
-                            `;
-                          }
-                        }).join('')}
-                        
-                        <!-- کادر افزودن عکس/فیلم -->
-                        <div 
-                          id="order-media-${order.id}-add" 
-                          class="order-add-media-${order.id}"
-                          data-is-add="true"
-                          style="display:${allMedia.length === 0 ? 'flex' : 'none'};flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 15px;background:linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));border:2px dashed #667eea;border-radius:6px;cursor:pointer;height:100%;"
-                        >
-                          <div style="font-size:28px;">📷</div>
-                          <div style="text-align:center;">
-                            <div style="font-weight:600;font-size:11px;color:#1f2937;margin-bottom:2px;">افزودن عکس یا فیلم</div>
-                            <div style="font-size:9px;color:#6b7280;">برای این سفارش رسانه جدید اضافه کنید</div>
-                            ${allMedia.length > 0 ? `<div style="font-size:9px;color:#667eea;margin-top:4px;font-weight:600;">در حال حاضر ${allMedia.length} رسانه موجود است</div>` : ''}
-                          </div>
-                        </div>
-                        
-                        ${allMedia.length > 0 ? `
-                          <button class="order-gallery-prev-${order.id}" style="position:absolute;top:50%;right:4px;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
-                            <svg style="width:14px;height:14px;transform:rotate(180deg);" fill="currentColor" viewBox="0 0 20 20">
-                              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
-                            </svg>
-                          </button>
-                          <button class="order-gallery-next-${order.id}" style="position:absolute;top:50%;left:4px;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
-                            <svg style="width:14px;height:14px;" fill="currentColor" viewBox="0 0 20 20">
-                              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
-                            </svg>
-                          </button>
-                          <div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:2px 8px;border-radius:10px;font-family:Vazirmatn;font-size:9px;pointer-events:none;">
-                            <span id="order-counter-${order.id}">1 از ${allMedia.length + 1}</span>
-                          </div>
-                        ` : ''}
-                      </div>
-                      <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb;">
-                        <div style="display:flex;gap:6px;">
-                          <button 
-                            class="view-order-detail-${order.id}"
-                            data-order-id="${order.id}"
-                            data-subcategory-code="${order.subcategory?.code || ''}"
-                            style="flex:1;padding:6px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;"
-                          >
-                            مشاهده جزئیات
-                          </button>
-                          <button 
-                            class="delete-order-btn-${order.id}"
-                            data-order-id="${order.id}"
-                            data-order-status="${order.status}"
-                            data-order-code="${order.code}"
-                            style="padding:6px 12px;background:#ef4444;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;transition:background 0.2s;"
-                            onmouseover="this.style.background='#dc2626'"
-                            onmouseout="this.style.background='#ef4444'"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+            <div style="margin-top:10px;max-height:60vh;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;">
+              ${serviceTypeGroups.map(group => `
+                <!-- کادر نوع خدمات: ${group.name} -->
+                <div style="margin-bottom:12px;padding:10px;background:linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.05));border:2px solid rgba(102, 126, 234, 0.3);border-radius:10px;">
+                  <!-- هدر نوع خدمات -->
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(102, 126, 234, 0.2);">
+                    <div style="width:10px;height:10px;background:#667eea;border-radius:50%;"></div>
+                    <span style="font-size:12px;font-weight:700;color:#667eea;">${group.name}</span>
+                    <span style="font-size:9px;background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:10px;">${group.orders.length} سفارش</span>
+                    <button 
+                      class="add-new-order-btn"
+                      data-project-id="${project.id}"
+                      data-location-id="${project.location_id}"
+                      data-service-type-id="${project.service_type_id}"
+                      data-subcategory-id="${project.subcategory_id}"
+                      data-subcategory-code="${group.code}"
+                      style="margin-right:auto;padding:4px 10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:9px;font-family:Vazirmatn,sans-serif;transition:all 0.2s;box-shadow:0 2px 4px rgba(16,185,129,0.3);"
+                      onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 8px rgba(16,185,129,0.4)'"
+                      onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 4px rgba(16,185,129,0.3)'"
+                    >
+                      ➕ سفارش جدید
+                    </button>
                   </div>
-                `;
-              }).join('')}
+                  
+                  <!-- سفارشات این نوع خدمات -->
+                  ${group.orders.map((order, orderIdx) => {
+                    const allMedia = (order.media || []).sort((a, b) => {
+                      if (a.file_type === 'image' && b.file_type === 'video') return -1;
+                      if (a.file_type === 'video' && b.file_type === 'image') return 1;
+                      return 0;
+                    });
+                    
+                    return `
+                      <div 
+                        class="order-card-${order.id}" 
+                        style="padding:8px;margin-bottom:6px;background:white;border:2px solid #e5e7eb;border-radius:6px;cursor:pointer;transition:all 0.2s;"
+                        onmouseover="this.style.borderColor='#3b82f6';this.style.boxShadow='0 4px 12px rgba(59,130,246,0.2)'"
+                        onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'"
+                      >
+                        <div style="font-size:11px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
+                        <div id="order-gallery-${order.id}" class="swipeable-gallery" style="position:relative;margin-top:6px;touch-action:pan-y;">
+                          <div style="overflow:hidden;border-radius:6px;background:#f9fafb;position:relative;height:160px;">
+                            ${allMedia.map((m, idx) => {
+                              const { data: baseData } = supabase.storage
+                                .from('project-media')
+                                .getPublicUrl(m.file_path);
+                              const baseUrl = baseData.publicUrl;
+                              const isVideo = m.file_type === 'video';
+                              const thumbUrl = isVideo
+                                ? baseUrl
+                                : supabase.storage
+                                    .from('project-media')
+                                    .getPublicUrl(m.file_path, {
+                                      transform: { width: 400, quality: 70 },
+                                    }).data.publicUrl;
+                              const showDeleteBtn = !order.approved_at;
+                              
+                              if (isVideo) {
+                                return `
+                                  <div 
+                                    id="order-media-${order.id}-${idx}" 
+                                    class="order-video-item-${order.id}" 
+                                    data-url="${baseUrl}"
+                                    style="position:relative;width:100%;height:100%;background:#f0f0f0;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
+                                  >
+                                    <video src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;user-select:none;background:#000;" preload="metadata" draggable="false" loading="lazy"></video>
+                                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
+                                      <svg style="width:28px;height:28px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M8 5v14l11-7z"/>
+                                      </svg>
+                                    </div>
+                                    <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;font-size:9px;padding:2px 5px;border-radius:3px;">ویدیو</span>
+                                    ${showDeleteBtn ? `
+                                      <button 
+                                        class="delete-media-btn"
+                                        data-media-id="${m.id}"
+                                        data-media-path="${m.file_path}"
+                                        data-order-id="${order.id}"
+                                        style="position:absolute;top:4px;left:4px;background:#ef4444;color:white;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;transition:background 0.2s;pointer-events:auto;"
+                                        onmouseover="this.style.background='#dc2626'"
+                                        onmouseout="this.style.background='#ef4444'"
+                                        onclick="event.stopPropagation();"
+                                      >
+                                        <svg style="width:14px;height:14px;" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                      </button>
+                                    ` : ''}
+                                  </div>
+                                `;
+                              } else {
+                                return `
+                                  <div 
+                                    id="order-media-${order.id}-${idx}" 
+                                    style="position:relative;width:100%;height:100%;display:${idx === 0 ? 'block' : 'none'};"
+                                  >
+                                    <img 
+                                      class="order-image-clickable"
+                                      data-image-url="${baseUrl}"
+                                      data-order-id="${order.id}"
+                                      src="${thumbUrl}" 
+                                      alt="تصویر سفارش" 
+                                      style="width:100%;height:100%;object-fit:cover;cursor:pointer;user-select:none;background:#f0f0f0;"
+                                      draggable="false"
+                                      loading="eager"
+                                      decoding="async"
+                                      onerror="this.style.backgroundColor='#e0e0e0';this.alt='خطا در بارگذاری';"
+                                    />
+                                    ${showDeleteBtn ? `
+                                      <button 
+                                        class="delete-media-btn"
+                                        data-media-id="${m.id}"
+                                        data-media-path="${m.file_path}"
+                                        data-order-id="${order.id}"
+                                        style="position:absolute;top:4px;left:4px;background:#ef4444;color:white;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;transition:background 0.2s;"
+                                        onmouseover="this.style.background='#dc2626'"
+                                        onmouseout="this.style.background='#ef4444'"
+                                        onclick="event.stopPropagation();"
+                                      >
+                                        <svg style="width:14px;height:14px;" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                      </button>
+                                    ` : ''}
+                                  </div>
+                                `;
+                              }
+                            }).join('')}
+                            
+                            <!-- کادر افزودن عکس/فیلم -->
+                            <div 
+                              id="order-media-${order.id}-add" 
+                              class="order-add-media-${order.id}"
+                              data-is-add="true"
+                              style="display:${allMedia.length === 0 ? 'flex' : 'none'};flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 15px;background:linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));border:2px dashed #667eea;border-radius:6px;cursor:pointer;height:100%;"
+                            >
+                              <div style="font-size:28px;">📷</div>
+                              <div style="text-align:center;">
+                                <div style="font-weight:600;font-size:11px;color:#1f2937;margin-bottom:2px;">افزودن عکس یا فیلم</div>
+                                <div style="font-size:9px;color:#6b7280;">برای این سفارش رسانه جدید اضافه کنید</div>
+                                ${allMedia.length > 0 ? `<div style="font-size:9px;color:#667eea;margin-top:4px;font-weight:600;">در حال حاضر ${allMedia.length} رسانه موجود است</div>` : ''}
+                              </div>
+                            </div>
+                            
+                            ${allMedia.length > 0 ? `
+                              <button class="order-gallery-prev-${order.id}" style="position:absolute;top:50%;right:4px;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
+                                <svg style="width:14px;height:14px;transform:rotate(180deg);" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                              </button>
+                              <button class="order-gallery-next-${order.id}" style="position:absolute;top:50%;left:4px;transform:translateY(-50%);background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
+                                <svg style="width:14px;height:14px;" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                              </button>
+                              <div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:2px 8px;border-radius:10px;font-family:Vazirmatn;font-size:9px;pointer-events:none;">
+                                <span id="order-counter-${order.id}">1 از ${allMedia.length + 1}</span>
+                              </div>
+                            ` : ''}
+                          </div>
+                          <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb;">
+                            <div style="display:flex;gap:6px;">
+                              <button 
+                                class="view-order-detail-${order.id}"
+                                data-order-id="${order.id}"
+                                data-subcategory-code="${order.subcategory?.code || ''}"
+                                style="flex:1;padding:6px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;"
+                              >
+                                مشاهده جزئیات
+                              </button>
+                              <button 
+                                class="delete-order-btn-${order.id}"
+                                data-order-id="${order.id}"
+                                data-order-status="${order.status}"
+                                data-order-code="${order.code}"
+                                style="padding:6px 12px;background:#ef4444;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;transition:background 0.2s;"
+                                onmouseover="this.style.background='#dc2626'"
+                                onmouseout="this.style.background='#ef4444'"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              `).join('')}
             </div>
           `
           : `
