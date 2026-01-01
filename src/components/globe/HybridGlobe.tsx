@@ -79,6 +79,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [mobileSelectedProject, setMobileSelectedProject] = useState<ProjectWithMedia | null>(null);
+  const [mobileSelectedLocationProjects, setMobileSelectedLocationProjects] = useState<ProjectWithMedia[]>([]);
   const [serviceTypeDialogOpen, setServiceTypeDialogOpen] = useState(false);
   const [serviceTypeDialogLocationId, setServiceTypeDialogLocationId] = useState<string>('');
 
@@ -1691,25 +1692,41 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           </div>
         ` : '';
 
+        // جمع‌آوری سفارشات از همه پروژه‌های این location
+        const locationProjects = projectsWithMedia.filter(p => 
+          p.location_id === project.location_id
+        );
+        const allOrdersAtLocation: ProjectOrder[] = [];
+        locationProjects.forEach(p => {
+          if (p.orders) {
+            allOrdersAtLocation.push(...p.orders);
+          }
+        });
+
         // گروه‌بندی سفارشات بر اساس نوع زیردسته (subcategory)
-        const ordersByServiceType: Record<string, { name: string; code: string; orders: ProjectOrder[] }> = {};
-        if (project.orders) {
-          project.orders.forEach(order => {
-            const key = order.subcategory?.code || 'unknown';
-            if (!ordersByServiceType[key]) {
-              ordersByServiceType[key] = {
-                name: order.subcategory?.name || 'نامشخص',
-                code: key,
-                orders: []
-              };
-            }
-            ordersByServiceType[key].orders.push(order);
-          });
-        }
+        const ordersByServiceType: Record<string, { name: string; code: string; orders: ProjectOrder[]; projectId?: string; serviceTypeId?: string; subcategoryId?: string }> = {};
+        allOrdersAtLocation.forEach(order => {
+          const key = order.subcategory?.code || 'unknown';
+          if (!ordersByServiceType[key]) {
+            // پیدا کردن پروژه مرتبط با این سفارش برای گرفتن service_type_id و subcategory_id
+            const relatedProject = locationProjects.find(p => 
+              p.orders?.some(o => o.id === order.id)
+            );
+            ordersByServiceType[key] = {
+              name: order.subcategory?.name || 'نامشخص',
+              code: key,
+              orders: [],
+              projectId: relatedProject?.id,
+              serviceTypeId: relatedProject?.service_type_id,
+              subcategoryId: relatedProject?.subcategory_id
+            };
+          }
+          ordersByServiceType[key].orders.push(order);
+        });
         const serviceTypeGroups = Object.values(ordersByServiceType);
 
         // لیست سفارشات پروژه - گروه‌بندی شده بر اساس نوع خدمات
-        const ordersHTML = project.orders && project.orders.length > 0
+        const ordersHTML = allOrdersAtLocation.length > 0
           ? `
             <div style="margin-top:10px;max-height:60vh;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;">
               ${serviceTypeGroups.map(group => `
@@ -1722,10 +1739,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                     <span style="font-size:9px;background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:10px;">${group.orders.length} سفارش</span>
                     <button 
                       class="add-new-order-btn"
-                      data-project-id="${project.id}"
+                      data-project-id="${group.projectId || project.id}"
                       data-location-id="${project.location_id}"
-                      data-service-type-id="${project.service_type_id}"
-                      data-subcategory-id="${project.subcategory_id}"
+                      data-service-type-id="${group.serviceTypeId || project.service_type_id}"
+                      data-subcategory-id="${group.subcategoryId || project.subcategory_id}"
                       data-subcategory-code="${group.code}"
                       style="margin-right:auto;padding:4px 10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:9px;font-family:Vazirmatn,sans-serif;transition:all 0.2s;box-shadow:0 2px 4px rgba(16,185,129,0.3);"
                       onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 8px rgba(16,185,129,0.4)'"
@@ -2511,9 +2528,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               setSelectedProject(project);
               setSelectedOrderForUpload(null);
               setSelectedMapLocation(null);
+              // پیدا کردن همه پروژه‌های این location
+              const locationProjects = projectsWithMedia.filter(p => 
+                p.location_id === project.location_id
+              );
               // در موبایل از پنل تمام‌صفحه استفاده می‌کنیم
               if (window.innerWidth < 768) {
                 setMobileSelectedProject(project);
+                setMobileSelectedLocationProjects(locationProjects);
               } else {
                 marker.openPopup();
               }
@@ -2523,9 +2545,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             setSelectedProject(project);
             setSelectedOrderForUpload(null);
             setSelectedMapLocation(null);
+            // پیدا کردن همه پروژه‌های این location
+            const locationProjects = projectsWithMedia.filter(p => 
+              p.location_id === project.location_id
+            );
             // در موبایل از پنل تمام‌صفحه استفاده می‌کنیم
             if (window.innerWidth < 768) {
               setMobileSelectedProject(project);
+              setMobileSelectedLocationProjects(locationProjects);
             } else {
               marker.openPopup();
             }
@@ -2790,8 +2817,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       {mobileSelectedProject && (
         <MobileProjectPanel
           project={mobileSelectedProject}
+          allProjectsAtLocation={mobileSelectedLocationProjects}
           onClose={() => {
             setMobileSelectedProject(null);
+            setMobileSelectedLocationProjects([]);
             setSelectedProject(null);
           }}
           onDeleteOrder={(orderId) => {
@@ -2803,6 +2832,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           onAddMedia={(orderId) => {
             setSelectedOrderForUpload(orderId);
             setMobileSelectedProject(null);
+            setMobileSelectedLocationProjects([]);
           }}
           onViewImage={(images, index) => {
             setZoomedImages(images);
