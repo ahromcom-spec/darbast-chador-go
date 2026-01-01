@@ -3,7 +3,49 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 import { cn } from "@/lib/utils";
 
-const Popover = PopoverPrimitive.Root;
+// Helper to temporarily reset zoom when popover opens
+const useZoomReset = (open: boolean) => {
+  const originalZoom = React.useRef<string>("");
+  
+  React.useEffect(() => {
+    if (open) {
+      originalZoom.current = document.documentElement.style.zoom || "";
+      document.documentElement.style.zoom = "1";
+      document.body.style.zoom = "1";
+    } else if (originalZoom.current !== "") {
+      document.documentElement.style.zoom = originalZoom.current;
+      document.body.style.zoom = originalZoom.current;
+    }
+  }, [open]);
+};
+
+// Wrapper component that handles zoom reset
+const Popover = React.forwardRef<
+  React.ElementRef<typeof PopoverPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Root>
+>(({ open, onOpenChange, ...props }, ref) => {
+  const [internalOpen, setInternalOpen] = React.useState(open ?? false);
+  const isControlled = open !== undefined;
+  const actualOpen = isControlled ? open : internalOpen;
+  
+  useZoomReset(actualOpen);
+  
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!isControlled) {
+      setInternalOpen(newOpen);
+    }
+    onOpenChange?.(newOpen);
+  };
+  
+  return (
+    <PopoverPrimitive.Root 
+      open={actualOpen} 
+      onOpenChange={handleOpenChange} 
+      {...props} 
+    />
+  );
+});
+Popover.displayName = "Popover";
 
 const PopoverTrigger = PopoverPrimitive.Trigger;
 

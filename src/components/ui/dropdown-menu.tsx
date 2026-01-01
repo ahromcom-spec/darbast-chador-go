@@ -4,7 +4,49 @@ import { Check, ChevronRight, Circle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const DropdownMenu = DropdownMenuPrimitive.Root;
+// Helper to temporarily reset zoom when dropdown opens
+const useZoomReset = (open: boolean) => {
+  const originalZoom = React.useRef<string>("");
+  
+  React.useEffect(() => {
+    if (open) {
+      originalZoom.current = document.documentElement.style.zoom || "";
+      document.documentElement.style.zoom = "1";
+      document.body.style.zoom = "1";
+    } else if (originalZoom.current !== "") {
+      document.documentElement.style.zoom = originalZoom.current;
+      document.body.style.zoom = originalZoom.current;
+    }
+  }, [open]);
+};
+
+// Wrapper component that handles zoom reset
+const DropdownMenu = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Root>
+>(({ open, onOpenChange, ...props }, ref) => {
+  const [internalOpen, setInternalOpen] = React.useState(open ?? false);
+  const isControlled = open !== undefined;
+  const actualOpen = isControlled ? open : internalOpen;
+  
+  useZoomReset(actualOpen);
+  
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!isControlled) {
+      setInternalOpen(newOpen);
+    }
+    onOpenChange?.(newOpen);
+  };
+  
+  return (
+    <DropdownMenuPrimitive.Root 
+      open={actualOpen} 
+      onOpenChange={handleOpenChange} 
+      {...props} 
+    />
+  );
+});
+DropdownMenu.displayName = "DropdownMenu";
 
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
