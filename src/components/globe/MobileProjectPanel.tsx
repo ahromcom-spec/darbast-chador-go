@@ -141,35 +141,35 @@ export function MobileProjectPanel({
         )}
       </div>
 
+      {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات قبل از ScrollArea با خط اتصال به نقطه قرمز */}
+      {hasOrders && project.location_id && (
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-gradient-to-r from-muted/30 to-muted/10">
+          {/* نقطه قرمز */}
+          <div className="flex items-center gap-0">
+            <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-red-200 shadow-[0_0_8px_rgba(239,68,68,0.5)] flex-shrink-0" />
+            {/* خط اتصال */}
+            <div className="w-6 h-0.5 bg-gradient-to-r from-red-500 to-purple-600" />
+          </div>
+          {/* دکمه */}
+          <Button
+            variant="outline"
+            className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white border-none hover:from-purple-600 hover:to-violet-700 shadow-lg py-3 text-sm font-semibold"
+            onClick={() => navigate('/user/service-selection', {
+              state: {
+                fromMap: true,
+                locationId: project.location_id,
+                returnToMap: true
+              }
+            })}
+          >
+            🆕 افزودن خدمات جدید (نوع دیگر)
+          </Button>
+        </div>
+      )}
+
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4 pb-8">
-          {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات با خط اتصال به نقطه قرمز */}
-          {hasOrders && project.location_id && (
-            <div className="flex items-center gap-3 my-4">
-              {/* نقطه قرمز */}
-              <div className="flex items-center gap-0">
-                <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-red-200 shadow-[0_0_8px_rgba(239,68,68,0.5)] flex-shrink-0" />
-                {/* خط اتصال */}
-                <div className="w-6 h-0.5 bg-gradient-to-r from-red-500 to-purple-600" />
-              </div>
-              {/* دکمه */}
-              <Button
-                variant="outline"
-                className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white border-none hover:from-purple-600 hover:to-violet-700 shadow-lg py-3 text-sm font-semibold"
-                onClick={() => navigate('/user/service-selection', {
-                  state: {
-                    fromMap: true,
-                    locationId: project.location_id,
-                    returnToMap: true
-                  }
-                })}
-              >
-                🆕 افزودن خدمات جدید (نوع دیگر)
-              </Button>
-            </div>
-          )}
-          
           {hasOrders ? (
             orders.map((order) => {
               const allMedia = (order.media || []).sort((a, b) => {
