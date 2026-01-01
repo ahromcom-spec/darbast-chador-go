@@ -45,60 +45,80 @@ serve(async (req) => {
       console.log('[Push] ✓ In-app notification created');
     }
 
-    // Send Najva push notification
+    // Send Najva push notification to specific user
     let pushSent = false;
     if (najvaApiToken && najvaApiKey) {
       try {
-        console.log('[Push] Sending Najva notification...');
-        console.log('[Push] Using API Key:', najvaApiKey.substring(0, 8) + '...');
-        
-        // Prepare notification data for Najva API
-        // Based on Najva PHP library: https://github.com/MrApr/Najva-api2
-        const notificationData: Record<string, unknown> = {
-          api_key: najvaApiKey,
-          title,
-          body,
-          onclick_action: 0, // open-link
-          url: link ? `https://ahrom.ir${link}` : 'https://ahrom.ir/',
-          icon: 'https://ahrom.ir/icon-512.png',
-        };
+        // دریافت توکن نجوا برای این کاربر
+        const { data: subscriptions, error: subError } = await supabase
+          .from('najva_subscriptions')
+          .select('subscriber_token')
+          .eq('user_id', user_id);
 
-        // Add special handling for incoming calls
-        if (type === 'incoming-call' && callData) {
-          notificationData.json = JSON.stringify({
-            type: 'incoming-call',
-            orderId: callData.orderId,
-            callerName: callData.callerName,
-            callerId: callData.callerId,
-          });
+        if (subError) {
+          console.error('[Push] Error fetching Najva subscriptions:', subError);
         }
 
-        console.log('[Push] Najva request data:', JSON.stringify(notificationData));
+        if (subscriptions && subscriptions.length > 0) {
+          const subscriberTokens = subscriptions.map(s => s.subscriber_token);
+          console.log('[Push] Sending to', subscriberTokens.length, 'device(s)');
+          
+          // ساخت URL نوتیفیکیشن
+          const notificationUrl = link ? `https://ahrom.ir${link}` : 'https://ahrom.ir/';
+          
+          // زمان ارسال (الان)
+          const sentTime = new Date().toISOString().replace('Z', '').split('.')[0];
 
-        const response = await fetch('https://app.najva.com/api/v1/notifications/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Token ${najvaApiToken}`,
-          },
-          body: JSON.stringify(notificationData),
-        });
+          const notificationData: Record<string, unknown> = {
+            api_key: najvaApiKey,
+            subscriber_tokens: subscriberTokens,
+            title,
+            body,
+            onclick_action: 0, // open-link
+            url: notificationUrl,
+            icon: 'https://ahrom.ir/icons/icon-512-v3.png',
+            sent_time: sentTime,
+          };
 
-        const responseText = await response.text();
-        console.log('[Push] Najva response status:', response.status);
-        console.log('[Push] Najva response:', responseText);
-        
-        if (response.ok) {
-          try {
-            const result = JSON.parse(responseText);
-            console.log('[Push] ✓ Najva notification sent:', result);
-            pushSent = true;
-          } catch {
-            console.log('[Push] ✓ Najva notification sent (non-JSON response)');
-            pushSent = true;
+          // Add special handling for incoming calls
+          if (type === 'incoming-call' && callData) {
+            notificationData.content = JSON.stringify({
+              type: 'incoming-call',
+              orderId: callData.orderId,
+              callerName: callData.callerName,
+              callerId: callData.callerId,
+            });
+          }
+
+          console.log('[Push] Najva request - subscribers:', subscriberTokens.length);
+
+          const response = await fetch('https://app.najva.com/notification/api/v1/notifications/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Token ${najvaApiToken}`,
+            },
+            body: JSON.stringify(notificationData),
+          });
+
+          const responseText = await response.text();
+          console.log('[Push] Najva response status:', response.status);
+          console.log('[Push] Najva response:', responseText);
+          
+          if (response.ok || response.status === 201) {
+            try {
+              const result = JSON.parse(responseText);
+              console.log('[Push] ✓ Najva notification sent:', result);
+              pushSent = true;
+            } catch {
+              console.log('[Push] ✓ Najva notification sent (non-JSON response)');
+              pushSent = true;
+            }
+          } else {
+            console.error('[Push] Najva error - Status:', response.status, 'Response:', responseText);
           }
         } else {
-          console.error('[Push] Najva error - Status:', response.status, 'Response:', responseText);
+          console.log('[Push] No Najva subscription found for user:', user_id);
         }
       } catch (najvaError) {
         console.error('[Push] Najva request failed:', najvaError);
