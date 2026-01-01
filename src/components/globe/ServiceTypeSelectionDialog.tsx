@@ -172,10 +172,10 @@ export function ServiceTypeSelectionDialog({
               <SelectContent 
                 className="bg-popover border shadow-lg max-h-60 overflow-y-auto"
                 position="popper"
-                side="top"
+                side="bottom"
                 align="end"
                 sideOffset={4}
-                style={{ zIndex: 300000 }}
+                style={{ zIndex: 200002 }}
               >
                 {serviceTypes.map((type) => (
                   <SelectItem 
@@ -213,10 +213,10 @@ export function ServiceTypeSelectionDialog({
               <SelectContent 
                 className="bg-popover border shadow-lg max-h-60 overflow-y-auto"
                 position="popper"
-                side="top"
+                side="bottom"
                 align="end"
                 sideOffset={4}
-                style={{ zIndex: 300000 }}
+                style={{ zIndex: 200002 }}
               >
                 {subcategories.map((sub) => (
                   <SelectItem 
