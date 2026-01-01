@@ -48,12 +48,6 @@ export function ServiceTypeSelectionDialog({
     setSelectedSubcategory(''); // ریست زیرمجموعه
   }, []);
 
-  // تغییر زیرمجموعه
-  const handleSubcategoryChange = useCallback((value: string) => {
-    console.log('[ServiceTypeDialog] Subcategory changed to:', value);
-    setSelectedSubcategory(value);
-  }, []);
-
   const selectedServiceTypeData = serviceTypes.find(st => st.id === selectedServiceType);
   const subcategories = selectedServiceTypeData?.subcategories || [];
 
@@ -66,31 +60,33 @@ export function ServiceTypeSelectionDialog({
     subcategoriesCount: subcategories.length
   });
 
-  const handleContinue = useCallback(() => {
-    if (!selectedServiceType || !selectedSubcategory || isNavigating) return;
+  // هدایت به فرم مناسب
+  const navigateToForm = useCallback((subcategoryId: string) => {
+    if (!selectedServiceType || isNavigating) return;
+
+    const subcategoryData = subcategories.find(sub => sub.id === subcategoryId);
+    if (!subcategoryData) return;
 
     setIsNavigating(true);
-    const subcategoryData = subcategories.find(sub => sub.id === selectedSubcategory);
     
-    console.log('[ServiceTypeDialog] Continue clicked:', {
+    console.log('[ServiceTypeDialog] Navigating to form:', {
       serviceType: selectedServiceType,
-      subcategory: selectedSubcategory,
-      subcategoryCode: subcategoryData?.code
+      subcategory: subcategoryId,
+      subcategoryCode: subcategoryData.code
     });
     
     onOpenChange(false);
     
-    // هدایت به فرم مناسب بر اساس کد زیرمجموعه
-    const subcategoryCode = subcategoryData?.code || '';
-    
     // مسیریابی بر اساس کد زیرمجموعه
+    const subcategoryCode = subcategoryData.code || '';
+    
     if (subcategoryCode === '10') {
       navigate('/scaffolding/form', {
         state: {
           fromMap: true,
           locationId: locationId,
           serviceTypeId: selectedServiceType,
-          subcategoryId: selectedSubcategory,
+          subcategoryId: subcategoryId,
           subcategoryCode: subcategoryCode,
           returnToMap: true
         }
@@ -101,7 +97,7 @@ export function ServiceTypeSelectionDialog({
           fromMap: true,
           locationId: locationId,
           serviceTypeId: selectedServiceType,
-          subcategoryId: selectedSubcategory,
+          subcategoryId: subcategoryId,
           subcategoryCode: subcategoryCode,
           returnToMap: true
         }
@@ -112,7 +108,7 @@ export function ServiceTypeSelectionDialog({
           fromMap: true,
           locationId: locationId,
           serviceTypeId: selectedServiceType,
-          subcategoryId: selectedSubcategory,
+          subcategoryId: subcategoryId,
           subcategoryCode: subcategoryCode,
           returnToMap: true
         }
@@ -123,19 +119,30 @@ export function ServiceTypeSelectionDialog({
           fromMap: true,
           locationId: locationId,
           serviceTypeId: selectedServiceType,
-          subcategoryId: selectedSubcategory,
+          subcategoryId: subcategoryId,
           subcategoryCode: subcategoryCode,
           returnToMap: true
         }
       });
     }
-  }, [selectedServiceType, selectedSubcategory, subcategories, isNavigating, onOpenChange, navigate, locationId]);
+  }, [selectedServiceType, subcategories, isNavigating, onOpenChange, navigate, locationId]);
+
+  // وقتی زیرشاخه انتخاب شد، مستقیماً به فرم برو
+  const handleSubcategoryChange = useCallback((value: string) => {
+    console.log('[ServiceTypeDialog] Subcategory selected:', value);
+    setSelectedSubcategory(value);
+    // با کمی تاخیر به فرم برو تا UI آپدیت شود
+    setTimeout(() => {
+      navigateToForm(value);
+    }, 150);
+  }, [navigateToForm]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-md z-[100001]" 
+        className="sm:max-w-md" 
         dir="rtl"
+        style={{ zIndex: 200001 }}
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogHeader className="text-right">
@@ -163,10 +170,11 @@ export function ServiceTypeSelectionDialog({
                 <SelectValue placeholder={loading ? 'در حال بارگذاری...' : 'انتخاب نوع خدمات'} />
               </SelectTrigger>
               <SelectContent 
-                className="z-[100002] bg-popover"
+                className="bg-popover border shadow-lg"
                 position="popper"
                 side="bottom"
                 sideOffset={4}
+                style={{ zIndex: 200002 }}
               >
                 {serviceTypes.map((type) => (
                   <SelectItem 
@@ -202,10 +210,11 @@ export function ServiceTypeSelectionDialog({
                 } />
               </SelectTrigger>
               <SelectContent 
-                className="z-[100002] bg-popover"
+                className="bg-popover border shadow-lg"
                 position="popper"
                 side="bottom"
                 sideOffset={4}
+                style={{ zIndex: 200002 }}
               >
                 {subcategories.map((sub) => (
                   <SelectItem 
@@ -221,20 +230,12 @@ export function ServiceTypeSelectionDialog({
           </div>
         </div>
 
-        <Button
-          onClick={handleContinue}
-          disabled={!selectedServiceType || !selectedSubcategory || isNavigating}
-          className="w-full"
-        >
-          {isNavigating ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin ml-2" />
-              در حال انتقال...
-            </>
-          ) : (
-            'ادامه و ثبت سفارش'
-          )}
-        </Button>
+        {isNavigating && (
+          <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>در حال انتقال به فرم ثبت سفارش...</span>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
