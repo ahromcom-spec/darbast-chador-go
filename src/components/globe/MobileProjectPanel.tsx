@@ -168,7 +168,7 @@ export function MobileProjectPanel({
         )}
       </div>
 
-      {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات */}
+      {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات با ناحیه لمسی بزرگ */}
       {project.location_id && (
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-gradient-to-r from-muted/30 to-muted/10">
           <div className="flex items-center gap-0">
@@ -177,8 +177,16 @@ export function MobileProjectPanel({
           </div>
           <Button
             variant="outline"
-            className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white border-none hover:from-purple-600 hover:to-violet-700 shadow-lg py-3 text-sm font-semibold"
-            onClick={() => setServiceDialogOpen(true)}
+            className="flex-1 min-h-[48px] bg-gradient-to-r from-purple-500 to-violet-600 text-white border-none hover:from-purple-600 hover:to-violet-700 active:from-purple-700 active:to-violet-800 shadow-lg py-3 text-sm font-bold touch-manipulation"
+            onClick={() => {
+              console.log('[MobilePanel] Opening service type dialog for location:', project.location_id);
+              setServiceDialogOpen(true);
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              console.log('[MobilePanel] Touch end - Opening service type dialog');
+              setServiceDialogOpen(true);
+            }}
           >
             🆕 افزودن خدمات جدید (نوع دیگر)
           </Button>
