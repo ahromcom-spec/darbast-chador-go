@@ -36,6 +36,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ phone?: string; otp?: string; password?: string }>({});
   const [countdown, setCountdown] = useState(90);
+  const [passwordCountdown, setPasswordCountdown] = useState(90);
   const [userExists, setUserExists] = useState<boolean | null>(null);
   
   const { user, sendOTP, verifyOTP } = useAuth();
@@ -65,6 +66,23 @@ export default function Login() {
       if (timer) clearInterval(timer);
     };
   }, [step, countdown]);
+
+  // تایمر ۹۰ ثانیه‌ای برای مرحله رمز عبور (لیست سفید)
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (step === 'password' && passwordCountdown > 0) {
+      timer = setInterval(() => {
+        setPasswordCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    // اگر زمان تمام شد، برگشت به مرحله شماره
+    if (step === 'password' && passwordCountdown === 0) {
+      handleBackToPhone();
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [step, passwordCountdown]);
 
   // Web OTP API: auto-read SMS and autofill/submit the code on supported browsers
   useEffect(() => {
@@ -137,6 +155,7 @@ export default function Login() {
       // شماره در لیست سفید است - نمایش فرم رمز عبور
       setLoading(false);
       flushSync(() => {
+        setPasswordCountdown(90); // ریست تایمر رمز عبور
         setStep('password');
       });
       return;
@@ -320,6 +339,7 @@ const handleResendOTP = async () => {
     setPassword('');
     setErrors({});
     setCountdown(90);
+    setPasswordCountdown(90);
     setUserExists(null);
   };
 
@@ -486,6 +506,17 @@ const handleResendOTP = async () => {
                       <p className="text-sm text-muted-foreground">
                         ورود با شماره <span className="font-bold text-foreground" dir="ltr">{phoneNumber}</span>
                       </p>
+                      {passwordCountdown > 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          زمان باقی‌مانده: <span className="font-bold text-primary">{passwordCountdown}</span> ثانیه
+                        </p>
+                      ) : (
+                        <Alert variant="destructive">
+                          <AlertDescription className="text-center text-sm">
+                            زمان ورود به پایان رسید. لطفاً مجدداً تلاش کنید.
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </div>
                     
                     {errors.password && (
@@ -500,7 +531,7 @@ const handleResendOTP = async () => {
                     type="submit" 
                     className="w-full" 
                     size="lg"
-                    disabled={loading || !password}
+                    disabled={loading || !password || passwordCountdown === 0}
                   >
                     {loading ? 'در حال بررسی...' : 'ورود'}
                   </Button>
