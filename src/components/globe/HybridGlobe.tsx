@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowRight, MapPin, X, Plus } from 'lucide-react';
+import { ArrowRight, MapPin, X, Plus, Camera, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
@@ -2683,40 +2683,93 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       {/* کادر آپلود برای سفارش خاص */}
       {selectedOrderForUpload && (
-        <Card className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-card shadow-2xl p-4 z-[2000] border-2 border-primary/20 pointer-events-auto">
-          <div className="space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                <h3 className="text-base font-semibold">افزودن عکس/فیلم به سفارش</h3>
-                <p className="text-xs text-muted-foreground mt-1">فایل‌های انتخابی به سفارش اضافه می‌شود</p>
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-[200000] pointer-events-auto" onClick={() => setSelectedOrderForUpload(null)}>
+          <Card 
+            className="w-full max-w-md bg-card shadow-2xl p-4 rounded-t-2xl border-t-2 border-x-2 border-primary/20 mb-0 animate-in slide-in-from-bottom duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold">افزودن عکس و فیلم به سفارش</h3>
+                  <p className="text-sm text-muted-foreground mt-1">فایل‌های انتخابی به سفارش اضافه می‌شود</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setSelectedOrderForUpload(null);
+                    setSelectedProject(null);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.accept = 'image/*';
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  disabled={uploading}
+                  variant="outline"
+                  className="h-24 flex flex-col gap-2"
+                >
+                  <Camera className="h-8 w-8 text-primary" />
+                  <span>افزودن عکس</span>
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.accept = 'video/*';
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  disabled={uploading}
+                  variant="outline"
+                  className="h-24 flex flex-col gap-2"
+                >
+                  <Video className="h-8 w-8 text-primary" />
+                  <span>افزودن فیلم</span>
+                </Button>
+              </div>
+              {uploading && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>در حال آپلود...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
               <Button
-                size="sm"
-                variant="ghost"
                 onClick={() => {
-                  setSelectedOrderForUpload(null);
-                  setSelectedProject(null);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.accept = 'image/*,video/*';
+                    fileInputRef.current.click();
+                  }
                 }}
+                disabled={uploading}
+                className="w-full"
               >
-                <X className="h-4 w-4" />
+                {uploading ? 'در حال آپلود...' : 'انتخاب همزمان عکس و فیلم'}
               </Button>
             </div>
-            <Button
-              onClick={handleAddImage}
-              disabled={uploading}
-              className="w-full"
-            >
-              {uploading ? `در حال آپلود... ${uploadProgress}%` : '+ انتخاب فایل'}
-            </Button>
-          </div>
-        </Card>
+          </Card>
+        </div>
       )}
 
       {/* Input مخفی برای انتخاب فایل */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*,video/*"
         multiple
         className="hidden"
         onChange={handleFileChange}
@@ -2840,8 +2893,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           }}
           onAddMedia={(orderId) => {
             setSelectedOrderForUpload(orderId);
-            setMobileSelectedProject(null);
-            setMobileSelectedLocationProjects([]);
+            // بستن پنل موبایل با تاخیر تا کادر آپلود نمایش داده شود
+            setTimeout(() => {
+              setMobileSelectedProject(null);
+              setMobileSelectedLocationProjects([]);
+            }, 100);
           }}
           onViewImage={(images, index) => {
             setZoomedImages(images);
