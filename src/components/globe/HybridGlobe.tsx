@@ -1687,6 +1687,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   ➕ افزودن سفارش جدید
                 </button>
               </div>
+              <!-- دکمه افزودن نوع خدمات جدید -->
+              <div style="margin-bottom:8px;">
+                <button 
+                  class="add-new-service-type-btn"
+                  data-location-id="${project.location_id}"
+                  style="width:100%;padding:8px 12px;background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:11px;font-family:Vazirmatn,sans-serif;transition:all 0.2s;box-shadow:0 2px 6px rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;gap:6px;"
+                  onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(139,92,246,0.4)'"
+                  onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 6px rgba(139,92,246,0.3)'"
+                >
+                  🆕 افزودن خدمات جدید (نوع دیگر)
+                </button>
+              </div>
               ${project.orders.map((order, orderIdx) => {
                 const allMedia = (order.media || []).sort((a, b) => {
                   if (a.file_type === 'image' && b.file_type === 'video') return -1;
@@ -2293,6 +2305,29 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   districtName: districtName,
                   serviceName: serviceName,
                   subcategoryName: subcategoryName
+                }
+              });
+            });
+          }
+          
+          // هندلر افزودن نوع خدمات جدید (خدمات متفاوت)
+          const addNewServiceTypeBtn = popupElement.querySelector('.add-new-service-type-btn');
+          if (addNewServiceTypeBtn) {
+            addNewServiceTypeBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const locationId = (addNewServiceTypeBtn as HTMLElement).dataset.locationId;
+              
+              console.log('[Map] Adding new service type at location:', locationId);
+              
+              // بستن popup
+              marker.closePopup();
+              
+              // هدایت به صفحه انتخاب خدمات با location_id
+              navigate('/user/service-selection', {
+                state: {
+                  fromMap: true,
+                  locationId: locationId,
+                  returnToMap: true
                 }
               });
             });
