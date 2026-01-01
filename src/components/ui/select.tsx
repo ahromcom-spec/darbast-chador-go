@@ -3,26 +3,17 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { requestZoom100 } from "@/lib/zoom";
 
-// Helper to temporarily reset zoom when dropdown opens
+// Helper to force zoom to 100% when dropdown opens (and keep it there)
 const useZoomReset = (open: boolean) => {
-  const originalZoom = React.useRef<string>("");
-  const hasReset = React.useRef(false);
-  
+  const wasOpen = React.useRef(false);
+
   React.useEffect(() => {
-    if (open && !hasReset.current) {
-      // ذخیره مقدار فعلی زوم
-      originalZoom.current = document.documentElement.style.zoom || "1";
-      // تنظیم زوم به 100%
-      document.documentElement.style.zoom = "1";
-      document.body.style.zoom = "1";
-      hasReset.current = true;
-    } else if (!open && hasReset.current) {
-      // بازگرداندن زوم به مقدار قبلی
-      document.documentElement.style.zoom = originalZoom.current;
-      document.body.style.zoom = originalZoom.current;
-      hasReset.current = false;
+    if (open && !wasOpen.current) {
+      requestZoom100({ preserveScroll: true });
     }
+    wasOpen.current = open;
   }, [open]);
 };
 

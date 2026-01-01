@@ -2,23 +2,17 @@ import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 import { cn } from "@/lib/utils";
+import { requestZoom100 } from "@/lib/zoom";
 
-// Helper to temporarily reset zoom when popover opens
+// Helper to force zoom to 100% when popover opens (and keep it there)
 const useZoomReset = (open: boolean) => {
-  const originalZoom = React.useRef<string>("");
-  const hasReset = React.useRef(false);
-  
+  const wasOpen = React.useRef(false);
+
   React.useEffect(() => {
-    if (open && !hasReset.current) {
-      originalZoom.current = document.documentElement.style.zoom || "1";
-      document.documentElement.style.zoom = "1";
-      document.body.style.zoom = "1";
-      hasReset.current = true;
-    } else if (!open && hasReset.current) {
-      document.documentElement.style.zoom = originalZoom.current;
-      document.body.style.zoom = originalZoom.current;
-      hasReset.current = false;
+    if (open && !wasOpen.current) {
+      requestZoom100({ preserveScroll: true });
     }
+    wasOpen.current = open;
   }, [open]);
 };
 

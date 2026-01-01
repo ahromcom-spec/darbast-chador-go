@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { requestZoom100 } from '@/lib/zoom';
 
 interface Order {
   id: string;
@@ -173,54 +174,20 @@ export function OrderSearchSelect({
     }
   };
 
-  // Temporary zoom reset to 100% while dropdown is open (for correct positioning)
-  const originalZoomRef = useRef<{ rootZoom: string; bodyZoom: string } | null>(null);
-
-  const applyZoomReset = () => {
-    if (originalZoomRef.current) return;
-    originalZoomRef.current = {
-      rootZoom: document.documentElement.style.zoom,
-      bodyZoom: document.body.style.zoom,
-    };
-    document.documentElement.style.zoom = "1";
-    document.body.style.zoom = "1";
-  };
-
-  const restoreZoom = () => {
-    const z = originalZoomRef.current;
-    if (!z) return;
-
-    if (z.rootZoom) document.documentElement.style.zoom = z.rootZoom;
-    else document.documentElement.style.removeProperty("zoom");
-
-    if (z.bodyZoom) document.body.style.zoom = z.bodyZoom;
-    else document.body.style.removeProperty("zoom");
-
-    originalZoomRef.current = null;
-  };
-
   const handleToggle = () => {
     if (open) {
       setOpen(false);
       return;
     }
 
-    applyZoomReset();
+    // Force 100% zoom (and keep it) so portal positioning stays correct
+    requestZoom100({ preserveScroll: true });
+
     requestAnimationFrame(() => {
       updatePosition();
       setOpen(true);
     });
   };
-
-  useEffect(() => {
-    if (!open) restoreZoom();
-  }, [open]);
-
-  useEffect(() => {
-    return () => restoreZoom();
-  }, []);
-
-
   // On mobile we don't auto-focus the search input (prevents keyboard covering the screen)
   useEffect(() => {
     if (!open || isMobile) return;
