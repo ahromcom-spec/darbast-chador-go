@@ -3,6 +3,7 @@ import { X, ChevronLeft, ChevronRight, Eye, Trash2, Plus, Camera } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
+import { ServiceTypeSelectionDialog } from './ServiceTypeSelectionDialog';
 
 interface HierarchyMedia {
   id: string;
@@ -89,6 +90,7 @@ export function MobileProjectPanel({
 }: MobileProjectPanelProps) {
   const navigate = useNavigate();
   const [mediaIndexes, setMediaIndexes] = useState<Record<string, number>>({});
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
 
   const getMediaIndex = (orderId: string) => mediaIndexes[orderId] || 0;
 
@@ -154,13 +156,11 @@ export function MobileProjectPanel({
           <Button
             variant="outline"
             className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white border-none hover:from-purple-600 hover:to-violet-700 shadow-lg py-3 text-sm font-semibold"
-            onClick={() => navigate('/user/service-selection', {
-              state: {
-                fromMap: true,
-                locationId: project.location_id,
-                returnToMap: true
+            onClick={() => {
+              if (project.location_id) {
+                setServiceDialogOpen(true);
               }
-            })}
+            }}
           >
             🆕 افزودن خدمات جدید (نوع دیگر)
           </Button>
@@ -348,6 +348,13 @@ export function MobileProjectPanel({
           )}
         </div>
       </ScrollArea>
+
+      {/* دیالوگ انتخاب نوع خدمات */}
+      <ServiceTypeSelectionDialog
+        open={serviceDialogOpen}
+        onOpenChange={setServiceDialogOpen}
+        locationId={project.location_id || ''}
+      />
     </div>
   );
 }
