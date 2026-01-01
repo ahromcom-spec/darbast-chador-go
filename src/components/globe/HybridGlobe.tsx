@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { OptimizedImage } from './OptimizedImage';
 import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 import { MobileProjectPanel } from './MobileProjectPanel';
+import { ServiceTypeSelectionDialog } from './ServiceTypeSelectionDialog';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
@@ -78,6 +79,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [mobileSelectedProject, setMobileSelectedProject] = useState<ProjectWithMedia | null>(null);
+  const [serviceTypeDialogOpen, setServiceTypeDialogOpen] = useState(false);
+  const [serviceTypeDialogLocationId, setServiceTypeDialogLocationId] = useState<string>('');
 
   const isMobile = useIsMobile();
   const { projects: allProjects, loading, refetch } = useProjectsHierarchy();
@@ -2333,14 +2336,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               // بستن popup
               marker.closePopup();
               
-              // هدایت به صفحه انتخاب خدمات با location_id
-              navigate('/user/service-selection', {
-                state: {
-                  fromMap: true,
-                  locationId: locationId,
-                  returnToMap: true
-                }
-              });
+              // باز کردن دیالوگ انتخاب نوع خدمات
+              if (locationId) {
+                setServiceTypeDialogLocationId(locationId);
+                setServiceTypeDialogOpen(true);
+              }
             });
           }
           
@@ -2789,6 +2789,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           }}
         />
       )}
+
+      {/* دیالوگ انتخاب نوع خدمات */}
+      <ServiceTypeSelectionDialog
+        open={serviceTypeDialogOpen}
+        onOpenChange={setServiceTypeDialogOpen}
+        locationId={serviceTypeDialogLocationId}
+      />
     </div>
   );
 }
