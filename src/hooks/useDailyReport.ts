@@ -257,7 +257,7 @@ export function useDailyReport() {
           notes,
           subcategories!projects_v3_subcategory_id_fkey(name)
         `)
-        .in('status', ['pending', 'pending_execution', 'in_progress', 'scheduled', 'approved'] as any[])
+        .in('status', ['pending', 'pending_execution', 'in_progress', 'scheduled', 'approved', 'awaiting_payment', 'awaiting_collection'] as any[])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
