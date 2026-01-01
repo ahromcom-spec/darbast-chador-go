@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Upload, Film, Clock, X, Play, Download, AlertCircle, RefreshCw } from 'lucide-react';
+import { Upload, Film, Clock, X, Play, Download, AlertCircle, RefreshCw, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { formatPersianDate } from '@/lib/dateUtils';
 
 interface MediaFile {
   id: string;
@@ -14,6 +15,34 @@ interface MediaFile {
   thumbnail_path?: string;
   created_at: string;
 }
+
+// گروه‌بندی مدیا بر اساس تاریخ
+interface MediaGroup {
+  date: string;
+  persianDate: string;
+  items: MediaFile[];
+}
+
+const groupMediaByDate = (mediaFiles: MediaFile[]): MediaGroup[] => {
+  const groups: Record<string, MediaFile[]> = {};
+  
+  mediaFiles.forEach(media => {
+    const date = media.created_at.split('T')[0]; // فقط تاریخ بدون زمان
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(media);
+  });
+  
+  // مرتب‌سازی بر اساس تاریخ (جدیدترین اول)
+  return Object.entries(groups)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, items]) => ({
+      date,
+      persianDate: formatPersianDate(new Date(date), { dateFormat: 'd MMMM yyyy' }),
+      items
+    }));
+};
 
 // کامپوننت ویدیو با نمایش مدت زمان
 function VideoWithDuration({ 
@@ -393,6 +422,10 @@ export function OrderMediaSection({
 
   const images = mediaFiles.filter(m => m.file_type === 'image');
   const videos = mediaFiles.filter(m => m.file_type === 'video');
+  
+  // گروه‌بندی بر اساس تاریخ
+  const imageGroups = useMemo(() => groupMediaByDate(images), [images]);
+  const videoGroups = useMemo(() => groupMediaByDate(videos), [videos]);
 
   if (loading) {
     return (
@@ -471,37 +504,60 @@ export function OrderMediaSection({
               <p className="text-sm">هنوز عکسی اضافه نشده است</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {images.map((media) => (
-                <div
-                  key={media.id}
-                  className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer hover:ring-2 hover:ring-primary transition-all group"
-                  onClick={() => setSelectedImage(getMediaUrl(media.id))}
-                >
-                  <img
-                    src={getMediaUrl(media.id)}
-                    alt="تصویر سفارش"
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+            <div className="space-y-4">
+              {imageGroups.map((group, groupIndex) => (
+                <div key={group.date}>
+                  {/* عنوان تاریخ */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {group.persianDate}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({group.items.length} عکس)
+                    </span>
+                  </div>
+                  
+                  {/* گرید عکس‌ها */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {group.items.map((media) => (
+                      <div
+                        key={media.id}
+                        className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer hover:ring-2 hover:ring-primary transition-all group"
+                        onClick={() => setSelectedImage(getMediaUrl(media.id))}
+                      >
+                        <img
+                          src={getMediaUrl(media.id)}
+                          alt="تصویر سفارش"
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
 
-                  {canDelete && (
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteMedia(media.id, media.file_path);
-                      }}
-                      disabled={deletingMediaId === media.id}
-                    >
-                      {deletingMediaId === media.id ? (
-                        <Clock className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <X className="h-4 w-4" />
-                      )}
-                    </Button>
+                        {canDelete && (
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteMedia(media.id, media.file_path);
+                            }}
+                            disabled={deletingMediaId === media.id}
+                          >
+                            {deletingMediaId === media.id ? (
+                              <Clock className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <X className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* خط جداکننده بین تاریخ‌ها */}
+                  {groupIndex < imageGroups.length - 1 && (
+                    <div className="mt-4 border-t border-dashed border-muted-foreground/30" />
                   )}
                 </div>
               ))}
@@ -577,88 +633,111 @@ export function OrderMediaSection({
               <p className="text-sm">هنوز ویدیویی اضافه نشده است</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {videos.map((media) => {
-                const url = getMediaUrl(media.id);
-                const hasError = videoErrors[media.id];
-                const fileName = media.file_path.split('/').pop() || 'video.mp4';
-                
-                return (
-                  <div key={media.id} className="relative group">
-                    <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
-                      {hasError ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-muted p-4">
-                          <AlertCircle className="h-10 w-10 text-destructive mb-2" />
-                          <p className="text-sm text-muted-foreground mb-3">خطا در بارگذاری ویدیو</p>
-                          <div className="flex gap-2">
+            <div className="space-y-4">
+              {videoGroups.map((group, groupIndex) => (
+                <div key={group.date}>
+                  {/* عنوان تاریخ */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {group.persianDate}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({group.items.length} ویدیو)
+                    </span>
+                  </div>
+                  
+                  {/* گرید ویدیوها */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {group.items.map((media) => {
+                      const url = getMediaUrl(media.id);
+                      const hasError = videoErrors[media.id];
+                      const fileName = media.file_path.split('/').pop() || 'video.mp4';
+                      
+                      return (
+                        <div key={media.id} className="relative group">
+                          <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
+                            {hasError ? (
+                              <div className="w-full h-full flex flex-col items-center justify-center bg-muted p-4">
+                                <AlertCircle className="h-10 w-10 text-destructive mb-2" />
+                                <p className="text-sm text-muted-foreground mb-3">خطا در بارگذاری ویدیو</p>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleRetryVideo(media.id)}
+                                  >
+                                    <RefreshCw className="h-4 w-4 ml-1" />
+                                    تلاش مجدد
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => handleDownloadVideo(url, fileName)}
+                                  >
+                                    <Download className="h-4 w-4 ml-1" />
+                                    دانلود فایل
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : url ? (
+                              <VideoWithDuration
+                                url={url}
+                                mimeType={media.mime_type}
+                                onError={() => handleVideoError(media.id)}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                              </div>
+                            )}
+                          </div>
+
+                          {canDelete && !hasError && (
                             <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleRetryVideo(media.id)}
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteMedia(media.id, media.file_path);
+                              }}
+                              disabled={deletingMediaId === media.id}
                             >
-                              <RefreshCw className="h-4 w-4 ml-1" />
-                              تلاش مجدد
+                              {deletingMediaId === media.id ? (
+                                <Clock className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
                             </Button>
+                          )}
+
+                          {/* دکمه دانلود */}
+                          {!hasError && url && (
                             <Button
                               size="sm"
                               variant="secondary"
-                              onClick={() => handleDownloadVideo(url, fileName)}
+                              className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownloadVideo(url, fileName);
+                              }}
                             >
                               <Download className="h-4 w-4 ml-1" />
-                              دانلود فایل
+                              دانلود
                             </Button>
-                          </div>
+                          )}
                         </div>
-                      ) : url ? (
-                        <VideoWithDuration
-                          url={url}
-                          mimeType={media.mime_type}
-                          onError={() => handleVideoError(media.id)}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                        </div>
-                      )}
-                    </div>
-
-                    {canDelete && !hasError && (
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteMedia(media.id, media.file_path);
-                        }}
-                        disabled={deletingMediaId === media.id}
-                      >
-                        {deletingMediaId === media.id ? (
-                          <Clock className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <X className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-
-                    {/* دکمه دانلود */}
-                    {!hasError && url && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownloadVideo(url, fileName);
-                        }}
-                      >
-                        <Download className="h-4 w-4 ml-1" />
-                        دانلود
-                      </Button>
-                    )}
+                      );
+                    })}
                   </div>
-                );
-              })}
+                  
+                  {/* خط جداکننده بین تاریخ‌ها */}
+                  {groupIndex < videoGroups.length - 1 && (
+                    <div className="mt-4 border-t border-dashed border-muted-foreground/30" />
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
