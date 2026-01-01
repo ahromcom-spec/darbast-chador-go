@@ -266,9 +266,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
 
   // Helper functions for deletion validation
+  // ✅ فقط سفارش‌های در انتظار تایید قابل حذف هستند
   const isOrderDeletable = (orderStatus: string): boolean => {
-    return orderStatus === 'pending' || orderStatus === 'rejected' || 
-           orderStatus === 'completed' || orderStatus === 'paid' || orderStatus === 'closed';
+    return orderStatus === 'pending';
   };
 
   const canDeleteProject = (project: ProjectWithMedia): { canDelete: boolean; reason?: string } => {
