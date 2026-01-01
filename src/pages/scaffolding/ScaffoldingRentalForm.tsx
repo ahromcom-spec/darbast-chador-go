@@ -64,6 +64,10 @@ export default function ScaffoldingRentalForm() {
   const serviceSelection = stateData?.serviceSelection || stateData;
   const {
     hierarchyProjectId: stateHierarchyProjectId,
+    // ✅ داده‌های لازم برای ساخت/یافتن پروژه سلسله‌مراتبی وقتی مستقیم از نقشه می‌آید
+    locationId: stateLocationId = serviceSelection?.locationId,
+    serviceTypeId: stateServiceTypeId = serviceSelection?.serviceTypeId,
+
     provinceId: stateProvinceId,
     districtId: stateDistrictId,
     subcategoryId: stateSubcategoryId = serviceSelection?.subcategoryId,
@@ -245,8 +249,22 @@ export default function ScaffoldingRentalForm() {
         additional_notes: values.additionalNotes,
       };
 
-      // اطمینان از وجود hierarchyProjectId
-      if (!hierarchyProjectId) {
+      // ✅ اطمینان از وجود hierarchyProjectId (در حالت جدید ممکن است فقط locationId داشته باشیم)
+      let finalHierarchyProjectId = hierarchyProjectId;
+
+      if (!finalHierarchyProjectId && user && stateLocationId && stateServiceTypeId && subcategoryId) {
+        const { data: projectId, error: projectError } = await supabase.rpc('get_or_create_project', {
+          _user_id: user.id,
+          _location_id: stateLocationId,
+          _service_type_id: stateServiceTypeId,
+          _subcategory_id: subcategoryId,
+        });
+
+        if (projectError) throw projectError;
+        finalHierarchyProjectId = projectId;
+      }
+
+      if (!finalHierarchyProjectId) {
         throw new Error('شناسه پروژه یافت نشد. لطفاً مجدداً تلاش کنید.');
       }
 
@@ -256,7 +274,7 @@ export default function ScaffoldingRentalForm() {
           _province_id: provinceId || null,
           _district_id: districtId || null,
           _subcategory_id: subcategoryId,
-          _hierarchy_project_id: hierarchyProjectId, // ✅ حتماً باید مقدار داشته باشد
+          _hierarchy_project_id: finalHierarchyProjectId, // ✅ حتماً باید مقدار داشته باشد
           _address: locationAddress || 'آدرس ثبت نشده - کرایه اجناس',
           _detailed_address: locationTitle || null,
           _notes: orderNotes,
