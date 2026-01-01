@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export const AdminImpersonationBanner = () => {
   const [isImpersonating, setIsImpersonating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Check if we're in impersonation mode
@@ -26,35 +27,75 @@ export const AdminImpersonationBanner = () => {
   }, []);
 
   const handleExitImpersonation = async () => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    
     try {
       const stored = localStorage.getItem('original_admin_session');
-      if (!stored) return;
+      if (!stored) {
+        setIsLoading(false);
+        return;
+      }
 
       const originalSession = JSON.parse(stored);
       
-      // Restore original admin session
-      const { error } = await supabase.auth.setSession({
+      // First, sign out from current (impersonated) session
+      await supabase.auth.signOut();
+      
+      // Small delay to ensure signout completes
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Try to restore original admin session
+      const { data, error } = await supabase.auth.setSession({
         access_token: originalSession.access_token,
         refresh_token: originalSession.refresh_token,
       });
 
       if (error) {
         console.error('Error restoring admin session:', error);
-        toast.error('خطا در بازگشت به حساب مدیر');
-        return;
+        
+        // If session restoration fails, try to refresh using refresh token
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
+          refresh_token: originalSession.refresh_token,
+        });
+        
+        if (refreshError) {
+          console.error('Error refreshing admin session:', refreshError);
+          // Clear invalid session data
+          localStorage.removeItem('original_admin_session');
+          setIsImpersonating(false);
+          toast.error('نشست مدیر منقضی شده است. لطفاً دوباره وارد شوید.');
+          window.location.href = '/auth/login';
+          return;
+        }
+        
+        if (refreshData?.session) {
+          // Successfully refreshed, now set the session
+          await supabase.auth.setSession({
+            access_token: refreshData.session.access_token,
+            refresh_token: refreshData.session.refresh_token,
+          });
+        }
       }
 
       // Clear the stored session
       localStorage.removeItem('original_admin_session');
       setIsImpersonating(false);
       
-      toast.success('بازگشت به حساب مدیر');
+      toast.success('بازگشت به حساب مدیر با موفقیت انجام شد');
       
-      // Navigate to admin users page
+      // Navigate to admin users page with full reload
       window.location.href = '/admin/users';
     } catch (error) {
       console.error('Error in handleExitImpersonation:', error);
-      toast.error('خطا در بازگشت به حساب مدیر');
+      // Clear invalid session data on any error
+      localStorage.removeItem('original_admin_session');
+      setIsImpersonating(false);
+      toast.error('خطا در بازگشت به حساب مدیر. لطفاً دوباره وارد شوید.');
+      window.location.href = '/auth/login';
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -74,9 +115,17 @@ export const AdminImpersonationBanner = () => {
           <Button
             onClick={handleExitImpersonation}
             size="sm"
-            className="bg-white text-red-600 hover:bg-red-50 font-bold transition-all duration-200 hover:scale-105"
+            disabled={isLoading}
+            className="bg-white text-red-600 hover:bg-red-50 font-bold transition-all duration-200 hover:scale-105 disabled:opacity-70"
           >
-            بازگشت به حساب مدیر
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                در حال بازگشت...
+              </>
+            ) : (
+              'بازگشت به حساب مدیر'
+            )}
           </Button>
         </div>
       </div>
