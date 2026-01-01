@@ -4,7 +4,49 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const Select = SelectPrimitive.Root;
+// Helper to temporarily reset zoom when dropdown opens
+const useZoomReset = (open: boolean) => {
+  const originalZoom = React.useRef<string>("");
+  
+  React.useEffect(() => {
+    if (open) {
+      originalZoom.current = document.documentElement.style.zoom || "";
+      document.documentElement.style.zoom = "1";
+      document.body.style.zoom = "1";
+    } else if (originalZoom.current !== "") {
+      document.documentElement.style.zoom = originalZoom.current;
+      document.body.style.zoom = originalZoom.current;
+    }
+  }, [open]);
+};
+
+// Wrapper component that handles zoom reset for Select
+const Select = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>
+>(({ open, onOpenChange, ...props }, ref) => {
+  const [internalOpen, setInternalOpen] = React.useState(open ?? false);
+  const isControlled = open !== undefined;
+  const actualOpen = isControlled ? open : internalOpen;
+  
+  useZoomReset(actualOpen);
+  
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!isControlled) {
+      setInternalOpen(newOpen);
+    }
+    onOpenChange?.(newOpen);
+  };
+  
+  return (
+    <SelectPrimitive.Root 
+      open={actualOpen} 
+      onOpenChange={handleOpenChange} 
+      {...props} 
+    />
+  );
+});
+Select.displayName = "Select";
 
 const SelectGroup = SelectPrimitive.Group;
 
