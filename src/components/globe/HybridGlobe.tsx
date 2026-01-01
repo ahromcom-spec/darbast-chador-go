@@ -1679,13 +1679,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               <div style="width:16px;height:16px;background:#ef4444;border-radius:50%;border:3px solid #fecaca;box-shadow:0 0 8px rgba(239,68,68,0.5);flex-shrink:0;"></div>
               <div style="width:24px;height:2px;background:linear-gradient(90deg, #ef4444, #8b5cf6);"></div>
             </div>
-            <!-- دکمه افزودن نوع خدمات جدید -->
+            <!-- دکمه افزودن نوع خدمات جدید - با ناحیه لمسی بزرگ‌تر -->
             <button 
               class="add-new-service-type-btn"
               data-location-id="${project.location_id}"
-              style="flex:1;padding:10px 14px;background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:12px;font-family:Vazirmatn,sans-serif;transition:all 0.2s;box-shadow:0 3px 10px rgba(139,92,246,0.35);display:flex;align-items:center;justify-content:center;gap:6px;"
-              onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(139,92,246,0.45)'"
-              onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 3px 10px rgba(139,92,246,0.35)'"
+              style="flex:1;padding:14px 16px;min-height:48px;background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);color:white;border:none;border-radius:12px;cursor:pointer;font-weight:700;font-size:13px;font-family:Vazirmatn,sans-serif;transition:all 0.15s ease;box-shadow:0 4px 12px rgba(139,92,246,0.4);display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;"
+              onmousedown="this.style.transform='scale(0.97)';this.style.boxShadow='0 2px 8px rgba(139,92,246,0.3)'"
+              onmouseup="this.style.transform='scale(1)';this.style.boxShadow='0 4px 12px rgba(139,92,246,0.4)'"
+              ontouchstart="this.style.transform='scale(0.97)';this.style.background='linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)'"
+              ontouchend="this.style.transform='scale(1)';this.style.background='linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)'"
             >
               🆕 افزودن خدمات جدید (نوع دیگر)
             </button>
@@ -2366,10 +2368,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             });
           }
           
-          // هندلر افزودن نوع خدمات جدید (خدمات متفاوت)
+          // هندلر افزودن نوع خدمات جدید (خدمات متفاوت) - با پشتیبانی بهتر از touch
           const addNewServiceTypeBtn = popupElement.querySelector('.add-new-service-type-btn');
           if (addNewServiceTypeBtn) {
-            addNewServiceTypeBtn.addEventListener('click', async (e) => {
+            const handleAddNewServiceType = (e: Event) => {
+              e.preventDefault();
               e.stopPropagation();
               const locationId = (addNewServiceTypeBtn as HTMLElement).dataset.locationId;
               
@@ -2378,12 +2381,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               // بستن popup
               marker.closePopup();
               
-              // باز کردن دیالوگ انتخاب نوع خدمات
+              // باز کردن دیالوگ انتخاب نوع خدمات با تاخیر کوتاه
               if (locationId) {
-                setServiceTypeDialogLocationId(locationId);
-                setServiceTypeDialogOpen(true);
+                setTimeout(() => {
+                  setServiceTypeDialogLocationId(locationId);
+                  setServiceTypeDialogOpen(true);
+                }, 100);
               }
-            });
+            };
+            
+            // استفاده از هر دو event برای پوشش بهتر موبایل و دسکتاپ
+            addNewServiceTypeBtn.addEventListener('click', handleAddNewServiceType);
+            addNewServiceTypeBtn.addEventListener('touchend', handleAddNewServiceType, { passive: false });
           }
           
           // هندلر برای گالری اصلی پروژه
