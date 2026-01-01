@@ -44,10 +44,23 @@ export function WorkStatusSelect({
     const triggerEl = triggerRef.current;
     if (!triggerEl) return;
 
+    // Get the current CSS zoom level from document
+    const zoomLevel = parseFloat(document.documentElement.style.zoom || '1');
+    
     const rect = triggerEl.getBoundingClientRect();
+    
+    // Adjust rect values for zoom - getBoundingClientRect returns zoomed values
+    const adjustedRect = {
+      left: rect.left / zoomLevel,
+      right: rect.right / zoomLevel,
+      top: rect.top / zoomLevel,
+      bottom: rect.bottom / zoomLevel,
+      width: rect.width / zoomLevel,
+      height: rect.height / zoomLevel,
+    };
 
     const VIEWPORT_MARGIN = 8;
-    const OFFSET = 0;
+    const OFFSET = 4;
 
     const boundaryEl = triggerEl.closest('[data-dropdown-boundary]') as
       | HTMLElement
@@ -58,28 +71,34 @@ export function WorkStatusSelect({
       document.documentElement.dir === "rtl" || !!triggerEl.closest('[dir="rtl"]');
 
     // IMPORTANT: In our app we apply internal zoom (CSS `zoom`) on Windows.
-    // Positioning `fixed` portals against the viewport can drift at 115%.
-    // If we have an explicit boundary (Daily Report cards), render & position INSIDE it.
     if (boundaryEl) {
       const b = boundaryEl.getBoundingClientRect();
+      const adjustedBoundary = {
+        left: b.left / zoomLevel,
+        right: b.right / zoomLevel,
+        top: b.top / zoomLevel,
+        bottom: b.bottom / zoomLevel,
+        width: b.width / zoomLevel,
+        height: b.height / zoomLevel,
+      };
 
-      const width = Math.min(rect.width, Math.max(120, b.width - VIEWPORT_MARGIN * 2));
+      const width = Math.min(adjustedRect.width, Math.max(120, adjustedBoundary.width - VIEWPORT_MARGIN * 2));
 
-      let left = isRTL ? rect.right - b.left - width : rect.left - b.left;
+      let left = isRTL ? adjustedRect.right - adjustedBoundary.left - width : adjustedRect.left - adjustedBoundary.left;
       left = Math.max(
         VIEWPORT_MARGIN,
-        Math.min(left, b.width - VIEWPORT_MARGIN - width),
+        Math.min(left, adjustedBoundary.width - VIEWPORT_MARGIN - width),
       );
 
-      const spaceAbove = rect.top - b.top - VIEWPORT_MARGIN;
-      const spaceBelow = b.bottom - rect.bottom - VIEWPORT_MARGIN;
+      const spaceAbove = adjustedRect.top - adjustedBoundary.top - VIEWPORT_MARGIN;
+      const spaceBelow = adjustedBoundary.bottom - adjustedRect.bottom - VIEWPORT_MARGIN;
       const openBelow = spaceBelow >= 160 || spaceBelow >= spaceAbove;
 
       if (openBelow) {
         setPosition({
           left,
           width,
-          top: rect.bottom - b.top + OFFSET,
+          top: adjustedRect.bottom - adjustedBoundary.top + OFFSET,
           bottom: undefined,
         });
       } else {
@@ -87,7 +106,7 @@ export function WorkStatusSelect({
           left,
           width,
           top: undefined,
-          bottom: b.bottom - rect.top + OFFSET,
+          bottom: adjustedBoundary.bottom - adjustedRect.top + OFFSET,
         });
       }
 
@@ -96,15 +115,15 @@ export function WorkStatusSelect({
 
     // Fallback (no boundary): use VisualViewport offsets for mobile pinch-zoom.
     const vv = window.visualViewport;
-    const viewportOffsetLeft = vv?.offsetLeft ?? 0;
-    const viewportOffsetTop = vv?.offsetTop ?? 0;
-    const viewportWidth = vv?.width ?? window.innerWidth;
-    const viewportHeight = vv?.height ?? window.innerHeight;
+    const viewportOffsetLeft = (vv?.offsetLeft ?? 0) / zoomLevel;
+    const viewportOffsetTop = (vv?.offsetTop ?? 0) / zoomLevel;
+    const viewportWidth = (vv?.width ?? window.innerWidth) / zoomLevel;
+    const viewportHeight = (vv?.height ?? window.innerHeight) / zoomLevel;
 
-    const triggerLeft = rect.left + viewportOffsetLeft;
-    const triggerRight = rect.right + viewportOffsetLeft;
-    const triggerTop = rect.top + viewportOffsetTop;
-    const triggerBottom = rect.bottom + viewportOffsetTop;
+    const triggerLeft = adjustedRect.left + viewportOffsetLeft;
+    const triggerRight = adjustedRect.right + viewportOffsetLeft;
+    const triggerTop = adjustedRect.top + viewportOffsetTop;
+    const triggerBottom = adjustedRect.bottom + viewportOffsetTop;
 
     const viewportBoundLeft = viewportOffsetLeft + VIEWPORT_MARGIN;
     const viewportBoundRight = viewportOffsetLeft + viewportWidth - VIEWPORT_MARGIN;
@@ -112,7 +131,7 @@ export function WorkStatusSelect({
     const viewportBoundBottom =
       viewportOffsetTop + viewportHeight - VIEWPORT_MARGIN;
 
-    const width = Math.min(rect.width, Math.max(120, viewportBoundRight - viewportBoundLeft));
+    const width = Math.min(adjustedRect.width, Math.max(120, viewportBoundRight - viewportBoundLeft));
 
     let left = isRTL ? triggerRight - width : triggerLeft;
     left = Math.max(viewportBoundLeft, Math.min(left, viewportBoundRight - width));
@@ -129,12 +148,11 @@ export function WorkStatusSelect({
         bottom: undefined,
       });
     } else {
-      // bottom is relative to layout viewport
       setPosition({
         left,
         width,
         top: undefined,
-        bottom: window.innerHeight - rect.top + OFFSET,
+        bottom: (window.innerHeight / zoomLevel) - adjustedRect.top + OFFSET,
       });
     }
   };
