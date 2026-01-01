@@ -53,6 +53,13 @@ export default function ServiceSelection() {
     }
   }, [locationId, navigate, toast]);
 
+  // انتخاب خودکار اولین نوع خدمات برای نمایش زیرمجموعه‌ها
+  useEffect(() => {
+    if (serviceTypes.length > 0 && !selectedServiceType) {
+      setSelectedServiceType(serviceTypes[0].id);
+    }
+  }, [serviceTypes, selectedServiceType]);
+
   // Get subcategories from selected service type
   const selectedServiceTypeData = serviceTypes.find(st => st.id === selectedServiceType);
   const filteredSubcategories = selectedServiceTypeData?.subcategories || [];
