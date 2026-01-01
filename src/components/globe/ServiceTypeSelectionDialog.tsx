@@ -91,7 +91,8 @@ export function ServiceTypeSelectionDialog({
           returnToMap: true
         }
       });
-    } else if (subcategoryCode === '20') {
+    } else if (subcategoryCode === '30') {
+      // ✅ خدمات کرایه اجناس داربست فلزی
       navigate('/scaffolding/rental-form', {
         state: {
           fromMap: true,
@@ -102,7 +103,8 @@ export function ServiceTypeSelectionDialog({
           returnToMap: true
         }
       });
-    } else if (subcategoryCode === '30') {
+    } else if (subcategoryCode === '20') {
+      // خدمات اجراء داربست بدون اجناس داربست
       navigate('/scaffolding/facade', {
         state: {
           fromMap: true,

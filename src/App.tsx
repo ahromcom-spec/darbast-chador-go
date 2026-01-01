@@ -195,6 +195,12 @@ const App = () => {
                   <ScaffoldingRentalForm />
                 </ProtectedRoute>
               } />
+              {/* سازگاری با مسیرهای قدیمی/کوتاه */}
+              <Route path="/rental-form" element={
+                <ProtectedRoute>
+                  <ScaffoldingRentalForm />
+                </ProtectedRoute>
+              } />
               <Route path="/scaffolding/facade" element={
                 <ProtectedRoute>
                   <ScaffoldingFacadeForm />
