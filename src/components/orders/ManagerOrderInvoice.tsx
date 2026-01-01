@@ -47,6 +47,7 @@ interface ManagerOrderInvoiceProps {
     province_id?: string;
     subcategory_id?: string;
   };
+  hidePrice?: boolean; // Hide price/financial information in invoice
 }
 
 interface RepairRequest {
@@ -58,7 +59,7 @@ interface RepairRequest {
   created_at: string;
 }
 
-export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
+export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderInvoiceProps) => {
   const [open, setOpen] = useState(false);
   const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string }>>([]);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
@@ -567,6 +568,7 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
         </table>
         ` : ''}
 
+        ${!hidePrice ? `
         <!-- Pricing Table -->
         <table class="order-details-table">
           <thead>
@@ -621,6 +623,35 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
             <td class="value-cell" style="color:#dc2626; font-weight:bold;">${Math.max(0, grandTotal - (parsedNotes?.total_paid || 0)).toLocaleString('fa-IR')} تومان</td>
           </tr>
         </table>
+        ` : `
+        <!-- Pricing Table without prices -->
+        <table class="order-details-table">
+          <thead>
+            <tr>
+              <th>ردیف</th>
+              <th>شرح خدمات</th>
+              <th>متراژ/تعداد</th>
+              <th>مدت (ماه)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>۱</td>
+              <td>${scaffoldTypeName} - ${subtypeName}</td>
+              <td>${totalArea || '-'} متر</td>
+              <td>${conditions?.totalMonths || '۱'}</td>
+            </tr>
+            ${repairRequests.map((repair, idx) => `
+              <tr class="repair-row">
+                <td>${(idx + 2).toLocaleString('fa-IR')}</td>
+                <td>تعمیر داربست${repair.description ? ` - ${repair.description}` : ''}</td>
+                <td>-</td>
+                <td>-</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        `}
 
         ${media.length > 0 ? `
           <div class="images-section">
@@ -634,6 +665,7 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
           </div>
         ` : ''}
 
+        ${!hidePrice ? `
         <!-- Bank Info -->
         <div class="bank-section">
           <div class="bank-title">💳 اطلاعات حساب بانکی</div>
@@ -650,6 +682,7 @@ export const ManagerOrderInvoice = ({ order }: ManagerOrderInvoiceProps) => {
             </tr>
           </table>
         </div>
+        ` : ''}
 
         <!-- Signatures -->
         <div class="signatures-section">

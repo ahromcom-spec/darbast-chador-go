@@ -472,7 +472,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
       {/* Edit Toggle Button & Print */}
       <div className="flex justify-end gap-2 flex-wrap">
-        <ManagerOrderInvoice order={order} />
+        <ManagerOrderInvoice order={order} hidePrice={hidePrice} />
         
         {/* دکمه ویرایش کامل در فرم قیمت‌گذاری */}
         <Button 
