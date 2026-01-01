@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ahrom-v24-android-maskable-icon';
+const CACHE_VERSION = 'ahrom-v25-app-badge-support';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -83,6 +83,46 @@ self.addEventListener('activate', (event) => {
 
 // ==================== PUSH NOTIFICATIONS ====================
 
+// به‌روزرسانی App Badge روی آیکون برنامه
+async function updateAppBadge() {
+  try {
+    // دریافت تعداد اعلان‌های خوانده‌نشده از سرور
+    const response = await fetch('/api/unread-count');
+    if (response.ok) {
+      const { count } = await response.json();
+      if ('setAppBadge' in navigator) {
+        if (count > 0) {
+          await navigator.setAppBadge(count);
+        } else {
+          await navigator.clearAppBadge();
+        }
+      }
+    }
+  } catch (error) {
+    console.log('[SW] Badge update error:', error);
+  }
+}
+
+// افزایش Badge به صورت محلی
+async function incrementBadge() {
+  try {
+    if ('setAppBadge' in navigator) {
+      // ارسال پیام به کلاینت برای به‌روزرسانی badge
+      const clients = await self.clients.matchAll({ type: 'window' });
+      if (clients.length > 0) {
+        clients.forEach(client => {
+          client.postMessage({ type: 'INCREMENT_BADGE' });
+        });
+      } else {
+        // اگر کلاینتی باز نیست، فقط یک badge نشان بده
+        await navigator.setAppBadge(1);
+      }
+    }
+  } catch (error) {
+    console.log('[SW] Badge increment error:', error);
+  }
+}
+
 // دریافت Push Notification
 self.addEventListener('push', (event) => {
   console.log('[SW] Push notification received');
@@ -162,7 +202,13 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    (async () => {
+      // نمایش نوتیفیکیشن
+      await self.registration.showNotification(data.title, options);
+      
+      // به‌روزرسانی App Badge
+      await incrementBadge();
+    })()
   );
 });
 

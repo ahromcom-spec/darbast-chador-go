@@ -70,6 +70,29 @@ export const useNotifications = () => {
   const [loading, setLoading] = useState(true);
   const lastNotificationIdRef = useRef<string | null>(null);
 
+  // گوش دادن به پیام‌های Service Worker برای به‌روزرسانی badge
+  useEffect(() => {
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'INCREMENT_BADGE') {
+        setUnreadCount(prev => {
+          const newCount = prev + 1;
+          updateAppBadge(newCount);
+          return newCount;
+        });
+      }
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleSWMessage);
+    }
+
+    return () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (user) {
       fetchNotifications();
