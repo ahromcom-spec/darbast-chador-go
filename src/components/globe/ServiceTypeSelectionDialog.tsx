@@ -170,11 +170,12 @@ export function ServiceTypeSelectionDialog({
                 <SelectValue placeholder={loading ? 'در حال بارگذاری...' : 'انتخاب نوع خدمات'} />
               </SelectTrigger>
               <SelectContent 
-                className="bg-popover border shadow-lg"
+                className="bg-popover border shadow-lg max-h-60 overflow-y-auto"
                 position="popper"
-                side="bottom"
+                side="top"
+                align="end"
                 sideOffset={4}
-                style={{ zIndex: 200002 }}
+                style={{ zIndex: 300000 }}
               >
                 {serviceTypes.map((type) => (
                   <SelectItem 
@@ -210,11 +211,12 @@ export function ServiceTypeSelectionDialog({
                 } />
               </SelectTrigger>
               <SelectContent 
-                className="bg-popover border shadow-lg"
+                className="bg-popover border shadow-lg max-h-60 overflow-y-auto"
                 position="popper"
-                side="bottom"
+                side="top"
+                align="end"
                 sideOffset={4}
-                style={{ zIndex: 200002 }}
+                style={{ zIndex: 300000 }}
               >
                 {subcategories.map((sub) => (
                   <SelectItem 
