@@ -114,7 +114,7 @@ export function ServiceTypeSelectionDialog({
         }
       });
     } else {
-      navigate('/user/service-selection', {
+      navigate('/user/select-service', {
         state: {
           fromMap: true,
           locationId: locationId,
