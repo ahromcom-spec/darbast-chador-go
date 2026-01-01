@@ -173,6 +173,20 @@ export function OrderSearchSelect({
     }
   };
 
+  // Zoom reset logic for proper dropdown positioning
+  const originalZoomRef = useRef<string>("");
+  
+  useEffect(() => {
+    if (open) {
+      originalZoomRef.current = document.documentElement.style.zoom || "1";
+      document.documentElement.style.zoom = "1";
+      document.body.style.zoom = "1";
+    } else if (originalZoomRef.current) {
+      document.documentElement.style.zoom = originalZoomRef.current;
+      document.body.style.zoom = originalZoomRef.current;
+    }
+  }, [open]);
+
   const handleToggle = () => {
     if (open) {
       setOpen(false);
