@@ -143,6 +143,32 @@ export function WorkStatusSelect({
     }
   };
 
+  // Temporary zoom reset to 100% while dropdown is open (for correct positioning)
+  const originalZoomRef = useRef<{ rootZoom: string; bodyZoom: string } | null>(null);
+
+  const applyZoomReset = () => {
+    if (originalZoomRef.current) return;
+    originalZoomRef.current = {
+      rootZoom: document.documentElement.style.zoom,
+      bodyZoom: document.body.style.zoom,
+    };
+    document.documentElement.style.zoom = "1";
+    document.body.style.zoom = "1";
+  };
+
+  const restoreZoom = () => {
+    const z = originalZoomRef.current;
+    if (!z) return;
+
+    if (z.rootZoom) document.documentElement.style.zoom = z.rootZoom;
+    else document.documentElement.style.removeProperty("zoom");
+
+    if (z.bodyZoom) document.body.style.zoom = z.bodyZoom;
+    else document.body.style.removeProperty("zoom");
+
+    originalZoomRef.current = null;
+  };
+
   const handleToggle = () => {
     if (disabled) return;
 
@@ -151,14 +177,26 @@ export function WorkStatusSelect({
       return;
     }
 
-    updatePosition();
-    setOpen(true);
+    applyZoomReset();
+    requestAnimationFrame(() => {
+      updatePosition();
+      setOpen(true);
+    });
   };
+
+  useEffect(() => {
+    if (!open) restoreZoom();
+  }, [open]);
+
+  useEffect(() => {
+    return () => restoreZoom();
+  }, []);
 
   const handleSelect = (next: WorkStatus) => {
     onValueChange(next);
     setOpen(false);
   };
+
 
   useEffect(() => {
     if (!open) return;
