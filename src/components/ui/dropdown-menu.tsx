@@ -3,20 +3,8 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { Check, ChevronRight, Circle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { useZoom } from "@/contexts/ZoomContext";
 
-const DropdownMenu = ({ onOpenChange, ...props }: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Root>) => {
-  const { resetZoom, isWindows } = useZoom();
-  
-  const handleOpenChange = (open: boolean) => {
-    if (open && isWindows) {
-      resetZoom();
-    }
-    onOpenChange?.(open);
-  };
-  
-  return <DropdownMenuPrimitive.Root onOpenChange={handleOpenChange} {...props} />;
-};
+const DropdownMenu = DropdownMenuPrimitive.Root;
 
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 

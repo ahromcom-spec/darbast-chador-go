@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 
-const ZOOM_LEVELS = [0.75, 0.9, 1.05] as const;
+const ZOOM_LEVELS = [0.85, 1, 1.15] as const;
 const STORAGE_KEY = 'site-zoom-level';
 
 export const useInternalZoom = () => {
@@ -25,24 +25,33 @@ export const useInternalZoom = () => {
     }
   }, []);
 
-  // Apply zoom to document
+  // Apply zoom to document using CSS transform instead of CSS zoom for better dropdown positioning
   useEffect(() => {
     if (!isWindows) return;
 
     const zoomValue = ZOOM_LEVELS[zoomIndex];
     const root = document.documentElement;
-    const body = document.body;
-
-    // Use CSS zoom for Windows browsers (well supported in Chrome, Edge)
-    root.style.zoom = String(zoomValue);
-    if (body) body.style.zoom = String(zoomValue);
+    
+    // Store zoom value as a CSS variable for JavaScript access
+    root.style.setProperty('--app-zoom', String(zoomValue));
+    
+    // Only apply CSS zoom when NOT 1 (100%)
+    // When zoom is 1, remove it completely to avoid any positioning issues
+    if (zoomValue === 1) {
+      root.style.removeProperty('zoom');
+      document.body.style.removeProperty('zoom');
+    } else {
+      root.style.zoom = String(zoomValue);
+      document.body.style.zoom = String(zoomValue);
+    }
 
     // Save to localStorage
     localStorage.setItem(STORAGE_KEY, String(zoomIndex));
 
     return () => {
-      root.style.zoom = '';
-      if (body) body.style.zoom = '';
+      root.style.removeProperty('zoom');
+      root.style.removeProperty('--app-zoom');
+      document.body.style.removeProperty('zoom');
     };
   }, [zoomIndex, isWindows]);
 
@@ -113,8 +122,7 @@ export const useInternalZoom = () => {
 
   return {
     zoomLevel: ZOOM_LEVELS[zoomIndex],
-    // Display as 85%, 100%, 115% while actual zoom is 0.75, 0.9, 1.05
-    zoomPercentage: Math.round(ZOOM_LEVELS[zoomIndex] * 100) + 10,
+    zoomPercentage: Math.round(ZOOM_LEVELS[zoomIndex] * 100),
     isWindows,
     zoomIn,
     zoomOut,

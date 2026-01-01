@@ -3,20 +3,8 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { useZoom } from "@/contexts/ZoomContext";
 
-const Select = ({ onOpenChange, ...props }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => {
-  const { resetZoom, isWindows } = useZoom();
-  
-  const handleOpenChange = (open: boolean) => {
-    if (open && isWindows) {
-      resetZoom();
-    }
-    onOpenChange?.(open);
-  };
-  
-  return <SelectPrimitive.Root onOpenChange={handleOpenChange} {...props} />;
-};
+const Select = SelectPrimitive.Root;
 
 const SelectGroup = SelectPrimitive.Group;
 

@@ -641,37 +641,46 @@ body {
    This fix neutralizes the zoom effect on portal wrappers.
    ============================================ */
 
-/* Neutralize zoom on Radix portal wrappers */
+/* ============================================
+   FIX: Radix UI Portal positioning with CSS zoom
+   ============================================ */
+
+/* 
+ * When CSS zoom is applied to the document, Radix UI's Popper (used by Select, 
+ * DropdownMenu, Popover, etc.) calculates positions incorrectly because 
+ * getBoundingClientRect() returns zoomed values but the portal is rendered
+ * at document level without zoom adjustment.
+ * 
+ * Solution: Neutralize zoom on the popper wrapper itself.
+ */
+
 [data-radix-popper-content-wrapper] {
+  /* Counter the page zoom so dropdowns position correctly */
   zoom: 1 !important;
-  transform-origin: top center !important;
-}
-
-/* Force dropdown menus to appear below their triggers */
-[data-radix-popper-content-wrapper] {
-  --radix-popper-available-height: auto !important;
-}
-
-/* Radix dropdown/select content - force side bottom */
-[data-side="top"] {
-  --radix-dropdown-menu-content-transform-origin: bottom center;
-  --radix-select-content-transform-origin: bottom center;
-}
-
-/* ✅ Ensure all dropdowns have VERY HIGH z-index to appear above dialogs on map */
-[data-radix-popper-content-wrapper] {
+  /* RTL support */
+  transform-origin: top right !important;
+  /* High z-index for visibility */
   z-index: 300000 !important;
 }
 
+/* Additional specificity for nested content */
 [data-radix-popper-content-wrapper] > div {
   z-index: 300000 !important;
   background-color: hsl(var(--popover)) !important;
 }
 
-/* Force select content to bottom with proper z-index */
+/* Force listboxes and menus to have proper z-index and background */
 [role="listbox"],
 [data-radix-menu-content],
 [data-radix-select-content] {
   z-index: 300000 !important;
   background-color: hsl(var(--popover)) !important;
+}
+
+/* Fix custom portal dropdowns when CSS zoom is applied */
+body[style*="zoom"] .fixed[role="listbox"],
+html[style*="zoom"] .fixed[role="listbox"],
+body[style*="zoom"] .absolute[role="listbox"],
+html[style*="zoom"] .absolute[role="listbox"] {
+  zoom: 1 !important;
 }
