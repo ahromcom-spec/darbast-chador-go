@@ -7,46 +7,49 @@ import { cn } from "@/lib/utils";
 // Helper to temporarily reset zoom when dropdown opens
 const useZoomReset = (open: boolean) => {
   const originalZoom = React.useRef<string>("");
+  const hasReset = React.useRef(false);
   
   React.useEffect(() => {
-    if (open) {
-      originalZoom.current = document.documentElement.style.zoom || "";
+    if (open && !hasReset.current) {
+      // ذخیره مقدار فعلی زوم
+      originalZoom.current = document.documentElement.style.zoom || "1";
+      // تنظیم زوم به 100%
       document.documentElement.style.zoom = "1";
       document.body.style.zoom = "1";
-    } else if (originalZoom.current !== "") {
+      hasReset.current = true;
+    } else if (!open && hasReset.current) {
+      // بازگرداندن زوم به مقدار قبلی
       document.documentElement.style.zoom = originalZoom.current;
       document.body.style.zoom = originalZoom.current;
+      hasReset.current = false;
     }
   }, [open]);
 };
 
 // Wrapper component that handles zoom reset for Select
-const Select = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>
->(({ open, onOpenChange, ...props }, ref) => {
-  const [internalOpen, setInternalOpen] = React.useState(open ?? false);
-  const isControlled = open !== undefined;
-  const actualOpen = isControlled ? open : internalOpen;
+const Select = ({ open: controlledOpen, onOpenChange, defaultOpen, ...props }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => {
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen ?? false);
+  const isControlled = controlledOpen !== undefined;
+  const actualOpen = isControlled ? controlledOpen : internalOpen;
   
   useZoomReset(actualOpen);
   
-  const handleOpenChange = (newOpen: boolean) => {
+  const handleOpenChange = React.useCallback((newOpen: boolean) => {
     if (!isControlled) {
       setInternalOpen(newOpen);
     }
     onOpenChange?.(newOpen);
-  };
+  }, [isControlled, onOpenChange]);
   
   return (
     <SelectPrimitive.Root 
       open={actualOpen} 
-      onOpenChange={handleOpenChange} 
+      onOpenChange={handleOpenChange}
+      defaultOpen={undefined}
       {...props} 
     />
   );
-});
-Select.displayName = "Select";
+};
 
 const SelectGroup = SelectPrimitive.Group;
 
