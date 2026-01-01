@@ -247,6 +247,13 @@ export const CentralizedVideoPlayer = ({
             ویدیو
           </div>
 
+          {/* Duration Badge - Always visible when loaded */}
+          {isLoaded && duration > 0 && (
+            <div className="absolute bottom-2 left-2 bg-black/80 text-white text-xs px-2 py-1 rounded font-medium z-[5]">
+              {formatTime(duration)}
+            </div>
+          )}
+
           {/* Bottom Controls */}
           {isLoaded && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
