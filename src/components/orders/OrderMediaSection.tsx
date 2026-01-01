@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,57 @@ interface MediaFile {
   mime_type?: string;
   thumbnail_path?: string;
   created_at: string;
+}
+
+// کامپوننت ویدیو با نمایش مدت زمان
+function VideoWithDuration({ 
+  url, 
+  mimeType, 
+  onError 
+}: { 
+  url: string; 
+  mimeType?: string;
+  onError: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [duration, setDuration] = useState<number>(0);
+
+  const formatTime = (seconds: number) => {
+    if (!isFinite(seconds) || isNaN(seconds)) return '';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full">
+      <video
+        ref={videoRef}
+        controls
+        playsInline
+        preload="metadata"
+        className="w-full h-full object-contain"
+        onLoadedMetadata={handleLoadedMetadata}
+        onError={onError}
+      >
+        <source src={url} type={mimeType || 'video/mp4'} />
+        مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
+      </video>
+      
+      {/* نمایش مدت زمان ویدیو */}
+      {duration > 0 && (
+        <div className="absolute bottom-12 left-2 bg-black/80 text-white text-xs px-2 py-1 rounded font-medium pointer-events-none z-10">
+          {formatTime(duration)}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface OrderMediaSectionProps {
@@ -559,16 +610,11 @@ export function OrderMediaSection({
                           </div>
                         </div>
                       ) : url ? (
-                        <video
-                          controls
-                          playsInline
-                          preload="metadata"
-                          className="w-full h-full object-contain"
+                        <VideoWithDuration
+                          url={url}
+                          mimeType={media.mime_type}
                           onError={() => handleVideoError(media.id)}
-                        >
-                          <source src={url} type={media.mime_type || 'video/mp4'} />
-                          مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
-                        </video>
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
