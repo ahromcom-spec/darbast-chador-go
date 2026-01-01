@@ -304,13 +304,18 @@ const handleResendOTP = async () => {
     setLoading(false);
 
     if (error || data?.error) {
-      const errorMessage = data?.error || error?.message || 'رمز عبور اشتباه است';
+      const rawMessage = data?.error || error?.message || '';
+      // تبدیل خطاهای عمومی به پیام فارسی مناسب
+      const isGenericError = /non-2xx|Edge Function returned|401|invalid/i.test(rawMessage);
+      const errorMessage = isGenericError ? 'رمز عبور اشتباه است' : (rawMessage || 'رمز عبور اشتباه است');
+      
       toast({
         variant: 'destructive',
-        title: 'خطا',
-        description: errorMessage,
+        title: 'رمز عبور اشتباه',
+        description: 'رمز عبور وارد شده صحیح نمی‌باشد. لطفاً مجدداً تلاش کنید.',
       });
-      setErrors({ password: errorMessage });
+      setErrors({ password: 'رمز عبور اشتباه است' });
+      setPassword(''); // پاک کردن فیلد رمز عبور
       return;
     }
 
