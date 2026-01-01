@@ -1,22 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bell, BellOff, CheckCircle, XCircle, Smartphone, AlertCircle, Loader2 } from 'lucide-react';
-import { useOneSignal } from '@/hooks/useOneSignal';
+import { useNajvaSubscription } from '@/hooks/useNajvaSubscription';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/common/PageHeader';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function NotificationSettings() {
+  const { user } = useAuth();
   const {
-    isSupported,
-    isInitialized,
     isSubscribed,
-    permission,
+    isLoading,
+    subscriberId,
     subscribe,
     unsubscribe
-  } = useOneSignal();
+  } = useNajvaSubscription();
 
   const [loading, setLoading] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [isSupported, setIsSupported] = useState(true);
+
+  useEffect(() => {
+    // بررسی پشتیبانی
+    if (!('Notification' in window)) {
+      setIsSupported(false);
+      return;
+    }
+    setPermission(Notification.permission);
+  }, []);
 
   const handleEnableNotifications = async () => {
     setLoading(true);
@@ -25,6 +37,7 @@ export default function NotificationSettings() {
       
       if (result) {
         toast.success('اعلان‌ها با موفقیت فعال شد!');
+        setPermission(Notification.permission);
       } else {
         toast.error('لطفاً دسترسی به اعلان‌ها را مجاز کنید');
       }
@@ -53,14 +66,31 @@ export default function NotificationSettings() {
     if (permission === 'granted') {
       new Notification('پیام آزمایشی', {
         body: 'این یک اعلان آزمایشی از سیستم اهرم است',
-        icon: '/ahrom-app-icon.png',
-        badge: '/ahrom-app-icon.png',
+        icon: '/icons/icon-512-v3.png',
+        badge: '/icons/icon-192-v3.png',
         tag: 'test-notification',
         requireInteraction: false
       });
       toast.success('اعلان آزمایشی ارسال شد!');
     }
   };
+
+  if (!user) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-6">
+        <PageHeader
+          title="تنظیمات اعلان‌ها"
+          description="برای استفاده از اعلان‌ها ابتدا وارد شوید"
+          showBackButton
+        />
+        <Card className="mt-6">
+          <CardContent className="py-8 text-center text-muted-foreground">
+            لطفاً ابتدا وارد حساب کاربری خود شوید
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
@@ -95,10 +125,10 @@ export default function NotificationSettings() {
               ? 'می‌توانید اعلان‌ها را فعال کنید تا از به‌روزرسانی‌های مهم مطلع شوید'
               : 'لطفاً از مرورگر Chrome، Firefox، Edge یا Safari استفاده کنید'}
           </p>
-          {!isInitialized && isSupported && (
+          {isLoading && isSupported && (
             <div className="flex items-center gap-2 mt-3 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">در حال بارگذاری سیستم اعلان...</span>
+              <span className="text-sm">در حال بررسی وضعیت اشتراک...</span>
             </div>
           )}
         </CardContent>
@@ -127,6 +157,11 @@ export default function NotificationSettings() {
                     {!isSubscribed && permission === 'denied' && 'برای دریافت اعلان، باید از تنظیمات مرورگر دسترسی را مجاز کنید'}
                     {!isSubscribed && permission !== 'denied' && 'روی دکمه فعال‌سازی کلیک کنید'}
                   </p>
+                  {isSubscribed && subscriberId && (
+                    <p className="text-xs text-muted-foreground mt-2 font-mono">
+                      شناسه: {subscriberId.substring(0, 12)}...
+                    </p>
+                  )}
                 </div>
                 {isSubscribed ? (
                   <CheckCircle className="h-8 w-8 text-green-600" />
@@ -140,7 +175,7 @@ export default function NotificationSettings() {
               {!isSubscribed && (
                 <Button
                   onClick={handleEnableNotifications}
-                  disabled={loading || permission === 'denied' || !isInitialized}
+                  disabled={loading || permission === 'denied' || isLoading}
                   className="w-full"
                   size="lg"
                 >
