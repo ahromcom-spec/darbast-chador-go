@@ -26,6 +26,7 @@ interface ProjectOrder {
 interface ProjectData {
   id: string;
   title?: string | null;
+  location_id?: string;
   locations?: {
     title?: string | null;
     address_line?: string;
@@ -143,6 +144,23 @@ export function MobileProjectPanel({
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4 pb-8">
+          {/* دکمه افزودن خدمات جدید */}
+          {hasOrders && project.location_id && (
+            <Button
+              variant="outline"
+              className="w-full bg-gradient-to-r from-purple-500 to-violet-600 text-white border-none hover:from-purple-600 hover:to-violet-700 shadow-md"
+              onClick={() => navigate('/user/service-selection', {
+                state: {
+                  fromMap: true,
+                  locationId: project.location_id,
+                  returnToMap: true
+                }
+              })}
+            >
+              🆕 افزودن خدمات جدید (نوع دیگر)
+            </Button>
+          )}
+          
           {hasOrders ? (
             orders.map((order) => {
               const allMedia = (order.media || []).sort((a, b) => {
