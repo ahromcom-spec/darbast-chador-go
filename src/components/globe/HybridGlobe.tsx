@@ -1900,17 +1900,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                               >
                                 مشاهده جزئیات
                               </button>
-                              <button 
-                                class="delete-order-btn-${order.id}"
-                                data-order-id="${order.id}"
-                                data-order-status="${order.status}"
-                                data-order-code="${order.code}"
-                                style="padding:6px 12px;background:#ef4444;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;transition:background 0.2s;"
-                                onmouseover="this.style.background='#dc2626'"
-                                onmouseout="this.style.background='#ef4444'"
-                              >
-                                🗑️
-                              </button>
+                              ${order.status === 'pending' ? `
+                                <button 
+                                  class="delete-order-btn-${order.id}"
+                                  data-order-id="${order.id}"
+                                  data-order-status="${order.status}"
+                                  data-order-code="${order.code}"
+                                  style="padding:6px 12px;background:#ef4444;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:10px;font-family:inherit;transition:background 0.2s;"
+                                  onmouseover="this.style.background='#dc2626'"
+                                  onmouseout="this.style.background='#ef4444'"
+                                >
+                                  🗑️
+                                </button>
+                              ` : ''}
                             </div>
                           </div>
                         </div>

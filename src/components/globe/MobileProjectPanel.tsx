@@ -377,13 +377,16 @@ export function MobileProjectPanel({
                           <Eye className="w-4 h-4 ml-2" />
                           مشاهده جزئیات
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => onDeleteOrder(order.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {/* دکمه حذف فقط برای سفارش‌های در انتظار تایید */}
+                        {order.status === 'pending' && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => onDeleteOrder(order.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
