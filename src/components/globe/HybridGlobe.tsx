@@ -1667,6 +1667,27 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             </div>`
           : '';
 
+        // دکمه افزودن خدمات جدید بیرون از کادر با خط اتصال به نقطه قرمز
+        const addNewServiceHTML = project.location_id ? `
+          <div style="position:relative;margin-top:16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+            <!-- نقطه قرمز با خط اتصال -->
+            <div style="position:relative;display:flex;align-items:center;">
+              <div style="width:16px;height:16px;background:#ef4444;border-radius:50%;border:3px solid #fecaca;box-shadow:0 0 8px rgba(239,68,68,0.5);flex-shrink:0;"></div>
+              <div style="width:24px;height:2px;background:linear-gradient(90deg, #ef4444, #8b5cf6);"></div>
+            </div>
+            <!-- دکمه افزودن نوع خدمات جدید -->
+            <button 
+              class="add-new-service-type-btn"
+              data-location-id="${project.location_id}"
+              style="flex:1;padding:10px 14px;background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:12px;font-family:Vazirmatn,sans-serif;transition:all 0.2s;box-shadow:0 3px 10px rgba(139,92,246,0.35);display:flex;align-items:center;justify-content:center;gap:6px;"
+              onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(139,92,246,0.45)'"
+              onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 3px 10px rgba(139,92,246,0.35)'"
+            >
+              🆕 افزودن خدمات جدید (نوع دیگر)
+            </button>
+          </div>
+        ` : '';
+
         // لیست سفارشات پروژه
         const ordersHTML = project.orders && project.orders.length > 0
           ? `
@@ -1685,18 +1706,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                   onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 4px rgba(16,185,129,0.3)'"
                 >
                   ➕ افزودن سفارش جدید
-                </button>
-              </div>
-              <!-- دکمه افزودن نوع خدمات جدید -->
-              <div style="margin-bottom:8px;">
-                <button 
-                  class="add-new-service-type-btn"
-                  data-location-id="${project.location_id}"
-                  style="width:100%;padding:8px 12px;background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:11px;font-family:Vazirmatn,sans-serif;transition:all 0.2s;box-shadow:0 2px 6px rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;gap:6px;"
-                  onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(139,92,246,0.4)'"
-                  onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 6px rgba(139,92,246,0.3)'"
-                >
-                  🆕 افزودن خدمات جدید (نوع دیگر)
                 </button>
               </div>
               ${project.orders.map((order, orderIdx) => {
@@ -1904,6 +1913,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             ${project.locations?.title ? `<div style="font-size: 14px; color: #667eea; font-weight: 600; margin-top: 8px; display: block;">${project.locations.title}</div>` : ''}
             <span style="font-size: 13px; color: #6b7280; margin-top: 6px; display: block;">${project.locations?.address_line || ''}</span>
             ${count > 1 ? `<div style="margin-top:10px;padding:6px 10px;background:#f3f4f6;border-radius:8px;text-align:center;font-size:12px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
+            ${addNewServiceHTML}
             ${ordersHTML}
           </div>
         `;

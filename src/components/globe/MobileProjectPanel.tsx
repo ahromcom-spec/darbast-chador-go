@@ -144,21 +144,30 @@ export function MobileProjectPanel({
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4 pb-8">
-          {/* دکمه افزودن خدمات جدید */}
+          {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات با خط اتصال به نقطه قرمز */}
           {hasOrders && project.location_id && (
-            <Button
-              variant="outline"
-              className="w-full bg-gradient-to-r from-purple-500 to-violet-600 text-white border-none hover:from-purple-600 hover:to-violet-700 shadow-md"
-              onClick={() => navigate('/user/service-selection', {
-                state: {
-                  fromMap: true,
-                  locationId: project.location_id,
-                  returnToMap: true
-                }
-              })}
-            >
-              🆕 افزودن خدمات جدید (نوع دیگر)
-            </Button>
+            <div className="flex items-center gap-3 my-4">
+              {/* نقطه قرمز */}
+              <div className="flex items-center gap-0">
+                <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-red-200 shadow-[0_0_8px_rgba(239,68,68,0.5)] flex-shrink-0" />
+                {/* خط اتصال */}
+                <div className="w-6 h-0.5 bg-gradient-to-r from-red-500 to-purple-600" />
+              </div>
+              {/* دکمه */}
+              <Button
+                variant="outline"
+                className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white border-none hover:from-purple-600 hover:to-violet-700 shadow-lg py-3 text-sm font-semibold"
+                onClick={() => navigate('/user/service-selection', {
+                  state: {
+                    fromMap: true,
+                    locationId: project.location_id,
+                    returnToMap: true
+                  }
+                })}
+              >
+                🆕 افزودن خدمات جدید (نوع دیگر)
+              </Button>
+            </div>
           )}
           
           {hasOrders ? (
