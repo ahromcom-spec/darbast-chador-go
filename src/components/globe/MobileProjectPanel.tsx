@@ -35,10 +35,13 @@ interface ProjectData {
     lng?: number;
   } | null;
   orders?: ProjectOrder[];
+  subcategory_id?: string;
+  service_type_id?: string;
 }
 
 interface MobileProjectPanelProps {
   project: ProjectData;
+  allProjectsAtLocation?: ProjectData[]; // همه پروژه‌های این location
   onClose: () => void;
   onDeleteOrder: (orderId: string) => void;
   onDeleteProject: (projectId: string) => void;
@@ -81,6 +84,7 @@ const getStatusColor = (status: string): string => {
 
 export function MobileProjectPanel({
   project,
+  allProjectsAtLocation,
   onClose,
   onDeleteOrder,
   onDeleteProject,
@@ -107,11 +111,22 @@ export function MobileProjectPanel({
     navigate(`/orders/${orderId}`);
   };
 
-  const orders = project.orders || [];
-  const hasOrders = orders.length > 0;
+  // جمع‌آوری همه سفارشات از تمام پروژه‌های این location
+  const projectsToUse = allProjectsAtLocation && allProjectsAtLocation.length > 0 
+    ? allProjectsAtLocation 
+    : [project];
+  
+  const allOrders: ProjectOrder[] = [];
+  projectsToUse.forEach(p => {
+    if (p.orders) {
+      allOrders.push(...p.orders);
+    }
+  });
+  
+  const hasOrders = allOrders.length > 0;
 
   // گروه‌بندی سفارشات بر اساس نوع زیردسته (subcategory)
-  const ordersByServiceType = orders.reduce((acc, order) => {
+  const ordersByServiceType = allOrders.reduce((acc, order) => {
     const key = order.subcategory?.code || 'unknown';
     if (!acc[key]) {
       acc[key] = {
