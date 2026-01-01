@@ -2,8 +2,20 @@ import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 import { cn } from "@/lib/utils";
+import { useZoom } from "@/contexts/ZoomContext";
 
-const Popover = PopoverPrimitive.Root;
+const Popover = ({ onOpenChange, ...props }: React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Root>) => {
+  const { resetZoom, isWindows } = useZoom();
+  
+  const handleOpenChange = (open: boolean) => {
+    if (open && isWindows) {
+      resetZoom();
+    }
+    onOpenChange?.(open);
+  };
+  
+  return <PopoverPrimitive.Root onOpenChange={handleOpenChange} {...props} />;
+};
 
 const PopoverTrigger = PopoverPrimitive.Trigger;
 

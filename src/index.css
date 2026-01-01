@@ -632,7 +632,20 @@ body {
   }
 }
 
-/* Force dropdown menus to appear below their triggers at 100% zoom */
+/* ============================================
+   CRITICAL: Fix for CSS Zoom & Radix UI Portals
+   When CSS zoom is applied to html/body, Radix popper 
+   portals calculate positions incorrectly.
+   This fix neutralizes the zoom effect on portal wrappers.
+   ============================================ */
+
+/* Neutralize zoom on Radix portal wrappers */
+[data-radix-popper-content-wrapper] {
+  zoom: 1 !important;
+  transform-origin: top center !important;
+}
+
+/* Force dropdown menus to appear below their triggers */
 [data-radix-popper-content-wrapper] {
   --radix-popper-available-height: auto !important;
 }
@@ -646,6 +659,7 @@ body {
 /* Ensure all dropdowns have high z-index and proper background */
 [data-radix-popper-content-wrapper] > div {
   z-index: 9999 !important;
+  background-color: hsl(var(--popover)) !important;
 }
 
 /* Force select content to bottom */
@@ -653,4 +667,5 @@ body {
 [data-radix-menu-content],
 [data-radix-select-content] {
   z-index: 9999 !important;
+  background-color: hsl(var(--popover)) !important;
 }
