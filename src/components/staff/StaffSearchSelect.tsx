@@ -308,14 +308,52 @@ export function StaffSearchSelect({
     }
   };
 
+  // Temporary zoom reset to 100% while dropdown is open (for correct positioning)
+  const originalZoomRef = useRef<{ rootZoom: string; bodyZoom: string } | null>(null);
+
+  const applyZoomReset = () => {
+    if (originalZoomRef.current) return;
+    originalZoomRef.current = {
+      rootZoom: document.documentElement.style.zoom,
+      bodyZoom: document.body.style.zoom,
+    };
+    document.documentElement.style.zoom = "1";
+    document.body.style.zoom = "1";
+  };
+
+  const restoreZoom = () => {
+    const z = originalZoomRef.current;
+    if (!z) return;
+
+    if (z.rootZoom) document.documentElement.style.zoom = z.rootZoom;
+    else document.documentElement.style.removeProperty("zoom");
+
+    if (z.bodyZoom) document.body.style.zoom = z.bodyZoom;
+    else document.body.style.removeProperty("zoom");
+
+    originalZoomRef.current = null;
+  };
+
   const handleToggle = () => {
     if (open) {
       setOpen(false);
       return;
     }
-    updatePosition();
-    setOpen(true);
+
+    applyZoomReset();
+    requestAnimationFrame(() => {
+      updatePosition();
+      setOpen(true);
+    });
   };
+
+  useEffect(() => {
+    if (!open) restoreZoom();
+  }, [open]);
+
+  useEffect(() => {
+    return () => restoreZoom();
+  }, []);
 
   // On mobile we don't auto-focus the search input (prevents keyboard covering the screen)
   useEffect(() => {
@@ -323,6 +361,7 @@ export function StaffSearchSelect({
     const t = window.setTimeout(() => searchInputRef.current?.focus(), 0);
     return () => window.clearTimeout(t);
   }, [open, isMobile]);
+
 
   // Keep dropdown anchored when outer scroll happens (table/page) and on resize.
   // We ignore scroll events that originate from inside the dropdown itself so the list can scroll smoothly.
