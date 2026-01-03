@@ -1367,12 +1367,17 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         zIndexOffset: 1000 // مارکر مرکزی بالاتر از بقیه باشد
       }).addTo(mapRef.current!);
       
+      // محاسبه تعداد نوع خدمات متفاوت (بر اساس subcategory_id یکتا)
+      const uniqueServiceTypes = new Set(
+        group.map(p => p.subcategory_id || 'unknown')
+      ).size;
+      
       if (count > 1) {
-        // اضافه کردن popup به نقطه مرکزی برای نمایش تعداد پروژه‌ها
+        // اضافه کردن popup به نقطه مرکزی برای نمایش تعداد نوع خدمات
         const centerPopupContent = `
           <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: center; padding: 8px;">
             <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:12px;border-radius:8px;margin-bottom:8px;">
-              <span style="font-size:14px;font-weight:bold;">📍 ${count} پروژه</span>
+              <span style="font-size:14px;font-weight:bold;">📍 ${uniqueServiceTypes} نوع خدمات</span>
             </div>
             <span style="font-size:11px;color:#6b7280;">کلیک کنید تا پروژه‌ها باز یا جمع شوند</span>
           </div>
