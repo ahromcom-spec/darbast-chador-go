@@ -1711,16 +1711,24 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         });
 
         // گروه‌بندی سفارشات بر اساس نوع زیردسته (subcategory)
-        const ordersByServiceType: Record<string, { name: string; code: string; orders: ProjectOrder[]; projectId?: string; serviceTypeId?: string; subcategoryId?: string }> = {};
+        const ordersByServiceType: Record<string, { serviceTypeName: string; subcategoryName: string; name: string; code: string; orders: ProjectOrder[]; projectId?: string; serviceTypeId?: string; subcategoryId?: string }> = {};
         allOrdersAtLocation.forEach(order => {
-          const key = order.subcategory?.code || 'unknown';
+          // پیدا کردن پروژه مرتبط با این سفارش برای گرفتن نام نوع خدمات و زیردسته
+          const relatedProject = locationProjects.find(p => 
+            p.orders?.some(o => o.id === order.id)
+          );
+          
+          // استفاده از اطلاعات پروژه برای نام خدمات و زیردسته (نه سفارش)
+          const subcategoryCode = relatedProject?.subcategories?.code || order.subcategory?.code || 'unknown';
+          const subcategoryName = relatedProject?.subcategories?.name || order.subcategory?.name || 'نامشخص';
+          const serviceTypeName = relatedProject?.service_types_v3?.name || '';
+          
+          const key = subcategoryCode;
           if (!ordersByServiceType[key]) {
-            // پیدا کردن پروژه مرتبط با این سفارش برای گرفتن service_type_id و subcategory_id
-            const relatedProject = locationProjects.find(p => 
-              p.orders?.some(o => o.id === order.id)
-            );
             ordersByServiceType[key] = {
-              name: order.subcategory?.name || 'نامشخص',
+              serviceTypeName: serviceTypeName,
+              subcategoryName: subcategoryName,
+              name: subcategoryName,
               code: key,
               orders: [],
               projectId: relatedProject?.id,
@@ -1737,26 +1745,33 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           ? `
             <div style="margin-top:10px;max-height:60vh;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;">
               ${serviceTypeGroups.map(group => `
-                <!-- کادر نوع خدمات: ${group.name} -->
+                <!-- کادر نوع خدمات: ${group.serviceTypeName} - ${group.subcategoryName} -->
                 <div style="margin-bottom:12px;padding:10px;background:linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.05));border:2px solid rgba(102, 126, 234, 0.3);border-radius:10px;">
-                  <!-- هدر نوع خدمات -->
-                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(102, 126, 234, 0.2);">
-                    <div style="width:10px;height:10px;background:#667eea;border-radius:50%;"></div>
-                    <span style="font-size:12px;font-weight:700;color:#667eea;">${group.name}</span>
-                    <span style="font-size:9px;background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:10px;">${group.orders.length} سفارش</span>
-                    <button 
-                      class="add-new-order-btn"
-                      data-project-id="${group.projectId || project.id}"
-                      data-location-id="${project.location_id}"
-                      data-service-type-id="${group.serviceTypeId || project.service_type_id}"
-                      data-subcategory-id="${group.subcategoryId || project.subcategory_id}"
-                      data-subcategory-code="${group.code}"
-                      style="margin-right:auto;padding:4px 10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:9px;font-family:Vazirmatn,sans-serif;transition:all 0.2s;box-shadow:0 2px 4px rgba(16,185,129,0.3);"
-                      onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 8px rgba(16,185,129,0.4)'"
-                      onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 4px rgba(16,185,129,0.3)'"
-                    >
-                      ➕ سفارش جدید
-                    </button>
+                  <!-- هدر نوع خدمات با نمایش نوع خدمات اصلی و زیردسته -->
+                  <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(102, 126, 234, 0.2);">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div style="width:10px;height:10px;background:#667eea;border-radius:50%;"></div>
+                      <span style="font-size:13px;font-weight:700;color:#667eea;">${group.serviceTypeName || group.subcategoryName}</span>
+                      ${group.serviceTypeName && group.subcategoryName && group.serviceTypeName !== group.subcategoryName ? `
+                        <span style="font-size:10px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:2px 8px;border-radius:10px;font-weight:600;">${group.subcategoryName}</span>
+                      ` : ''}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-right:18px;">
+                      <span style="font-size:9px;background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:10px;">${group.orders.length} سفارش</span>
+                      <button 
+                        class="add-new-order-btn"
+                        data-project-id="${group.projectId || project.id}"
+                        data-location-id="${project.location_id}"
+                        data-service-type-id="${group.serviceTypeId || project.service_type_id}"
+                        data-subcategory-id="${group.subcategoryId || project.subcategory_id}"
+                        data-subcategory-code="${group.code}"
+                        style="margin-right:auto;padding:4px 10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:9px;font-family:Vazirmatn,sans-serif;transition:all 0.2s;box-shadow:0 2px 4px rgba(16,185,129,0.3);"
+                        onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 8px rgba(16,185,129,0.4)'"
+                        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 4px rgba(16,185,129,0.3)'"
+                      >
+                        ➕ سفارش جدید
+                      </button>
+                    </div>
                   </div>
                   
                   <!-- سفارشات این نوع خدمات -->
