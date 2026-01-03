@@ -1699,46 +1699,26 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           </div>
         ` : '';
 
-        // جمع‌آوری سفارشات از همه پروژه‌های این location
-        const locationProjects = projectsWithMedia.filter(p => 
-          p.location_id === project.location_id
-        );
-        const allOrdersAtLocation: ProjectOrder[] = [];
-        locationProjects.forEach(p => {
-          if (p.orders) {
-            allOrdersAtLocation.push(...p.orders);
-          }
-        });
+        // ✅ هر «نوع خدمات» (هر پروژه) باید کادر جدا داشته باشد
+        // بنابراین در هر کادر فقط سفارش‌های همان پروژه را نمایش می‌دهیم (نه همه پروژه‌های یک لوکیشن)
+        const allOrdersAtLocation: ProjectOrder[] = project.orders || [];
 
-        // گروه‌بندی سفارشات بر اساس نوع زیردسته (subcategory)
-        const ordersByServiceType: Record<string, { serviceTypeName: string; subcategoryName: string; name: string; code: string; orders: ProjectOrder[]; projectId?: string; serviceTypeId?: string; subcategoryId?: string }> = {};
-        allOrdersAtLocation.forEach(order => {
-          // پیدا کردن پروژه مرتبط با این سفارش برای گرفتن نام نوع خدمات و زیردسته
-          const relatedProject = locationProjects.find(p => 
-            p.orders?.some(o => o.id === order.id)
-          );
-          
-          // استفاده از اطلاعات پروژه برای نام خدمات و زیردسته (نه سفارش)
-          const subcategoryCode = relatedProject?.subcategories?.code || order.subcategory?.code || 'unknown';
-          const subcategoryName = relatedProject?.subcategories?.name || order.subcategory?.name || 'نامشخص';
-          const serviceTypeName = relatedProject?.service_types_v3?.name || '';
-          
-          const key = subcategoryCode;
-          if (!ordersByServiceType[key]) {
-            ordersByServiceType[key] = {
-              serviceTypeName: serviceTypeName,
-              subcategoryName: subcategoryName,
-              name: subcategoryName,
-              code: key,
-              orders: [],
-              projectId: relatedProject?.id,
-              serviceTypeId: relatedProject?.service_type_id,
-              subcategoryId: relatedProject?.subcategory_id
-            };
-          }
-          ordersByServiceType[key].orders.push(order);
-        });
-        const serviceTypeGroups = Object.values(ordersByServiceType);
+        const projectServiceTypeName = project.service_types_v3?.name || '';
+        const projectSubcategoryCode = project.subcategories?.code || allOrdersAtLocation[0]?.subcategory?.code || 'unknown';
+        const projectSubcategoryName = project.subcategories?.name || allOrdersAtLocation[0]?.subcategory?.name || 'نامشخص';
+
+        const serviceTypeGroups = [
+          {
+            serviceTypeName: projectServiceTypeName,
+            subcategoryName: projectSubcategoryName,
+            name: projectSubcategoryName,
+            code: projectSubcategoryCode,
+            orders: allOrdersAtLocation,
+            projectId: project.id,
+            serviceTypeId: project.service_type_id,
+            subcategoryId: project.subcategory_id,
+          },
+        ];
 
         // لیست سفارشات پروژه - گروه‌بندی شده بر اساس نوع خدمات
         const ordersHTML = allOrdersAtLocation.length > 0
