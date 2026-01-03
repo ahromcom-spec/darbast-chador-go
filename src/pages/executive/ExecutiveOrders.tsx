@@ -1341,8 +1341,21 @@ export default function ExecutiveOrders() {
             const serviceLabel = getOrderServiceLabel(notesObj);
             const isExecutionWithMaterialsOrder = order.subcategory_id === SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS;
 
+            // امکان تایید سفارش - فقط برای pending
             const canManageInitialApproval =
               order.status === 'pending' &&
+              ((isGeneralManagerModule && !isExecutiveModule) ||
+                (isExecutiveModule && isExecutionWithMaterialsModule && isExecutionWithMaterialsOrder));
+
+            // امکان رد/لغو سفارش - تا قبل از اجرا شدن (order_executed)
+            // شامل: pending, pending_execution, in_progress (بدون execution_stage)
+            const orderNotYetExecuted = 
+              order.status === 'pending' ||
+              order.status === 'pending_execution' ||
+              (order.status === 'in_progress' && !order.execution_stage);
+
+            const canRejectOrder =
+              orderNotYetExecuted &&
               ((isGeneralManagerModule && !isExecutiveModule) ||
                 (isExecutiveModule && isExecutionWithMaterialsModule && isExecutionWithMaterialsOrder));
 
@@ -1719,8 +1732,8 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه رد سفارش */}
-                  {canManageInitialApproval && (
+                  {/* دکمه رد سفارش - تا قبل از اجرا شدن */}
+                  {canRejectOrder && (
                     <Button
                       onClick={() => {
                         setSelectedOrder(order);
@@ -1731,7 +1744,7 @@ export default function ExecutiveOrders() {
                       className="gap-2 text-red-600 border-red-300 hover:bg-red-50"
                     >
                       <XCircle className="h-4 w-4" />
-                      رد سفارش
+                      لغو سفارش
                     </Button>
                   )}
 
