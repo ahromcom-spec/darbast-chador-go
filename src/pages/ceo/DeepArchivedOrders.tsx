@@ -55,7 +55,8 @@ export default function DeepArchivedOrders() {
     }
   });
 
-  const restoreMutation = useMutation({
+  // بازگردانی به بایگانی عادی (فقط حذف deep archive)
+  const restoreToArchiveMutation = useMutation({
     mutationFn: async (orderId: string) => {
       const { error } = await supabase
         .from('projects_v3')
@@ -70,6 +71,34 @@ export default function DeepArchivedOrders() {
     },
     onSuccess: () => {
       toast({ title: 'سفارش به بایگانی عادی بازگردانده شد' });
+      queryClient.invalidateQueries({ queryKey: ['deep-archived-orders'] });
+      setShowRestoreDialog(false);
+      setSelectedOrder(null);
+    },
+    onError: () => {
+      toast({ title: 'خطا در بازگردانی سفارش', variant: 'destructive' });
+    }
+  });
+
+  // بازگردانی کامل به جریان سفارشات (حذف هر دو بایگانی)
+  const restoreMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const { error } = await supabase
+        .from('projects_v3')
+        .update({
+          is_archived: false,
+          archived_at: null,
+          archived_by: null,
+          is_deep_archived: false,
+          deep_archived_at: null,
+          deep_archived_by: null
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'سفارش به جریان سفارشات بازگردانده شد' });
       queryClient.invalidateQueries({ queryKey: ['deep-archived-orders'] });
       setShowRestoreDialog(false);
       setSelectedOrder(null);
@@ -270,7 +299,7 @@ export default function DeepArchivedOrders() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mr-8 md:mr-0">
+                  <div className="flex flex-wrap gap-2 mr-8 md:mr-0">
                     <Button
                       variant="outline"
                       size="sm"
@@ -280,7 +309,17 @@ export default function DeepArchivedOrders() {
                       }}
                     >
                       <RotateCcw className="h-4 w-4 ml-2" />
-                      بازگردانی به بایگانی
+                      بازگردانی کامل
+                    </Button>
+                    
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => restoreToArchiveMutation.mutate(order.id)}
+                      disabled={restoreToArchiveMutation.isPending}
+                    >
+                      <RotateCcw className="h-4 w-4 ml-2" />
+                      به بایگانی عادی
                     </Button>
                     
                     <Button
@@ -302,17 +341,17 @@ export default function DeepArchivedOrders() {
         </div>
       )}
 
-      {/* Restore Dialog */}
+      {/* Restore Dialog - بازگردانی کامل به جریان سفارشات */}
       <Dialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
         <DialogContent dir="rtl">
           <DialogHeader>
-            <DialogTitle>بازگردانی سفارش به بایگانی عادی</DialogTitle>
+            <DialogTitle>بازگردانی سفارش به جریان سفارشات</DialogTitle>
             <DialogDescription>
-              آیا مطمئن هستید که می‌خواهید سفارش {selectedOrder?.code} را به بایگانی عادی بازگردانید؟
+              آیا مطمئن هستید که می‌خواهید سفارش {selectedOrder?.code} را به جریان عادی سفارشات بازگردانید؟
             </DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            این سفارش به بایگانی عادی بازگردانده می‌شود و سایر مدیران می‌توانند آن را مشاهده کنند.
+            این سفارش از بایگانی خارج شده و کاربر و مدیران می‌توانند آن را در پنل خود مشاهده کنند.
           </p>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowRestoreDialog(false)}>
@@ -322,7 +361,7 @@ export default function DeepArchivedOrders() {
               onClick={() => selectedOrder && restoreMutation.mutate(selectedOrder.id)}
               disabled={restoreMutation.isPending}
             >
-              {restoreMutation.isPending ? 'در حال بازگردانی...' : 'بازگردانی'}
+              {restoreMutation.isPending ? 'در حال بازگردانی...' : 'بازگردانی کامل'}
             </Button>
           </DialogFooter>
         </DialogContent>
