@@ -493,7 +493,14 @@ export default function ExecutiveOrders() {
     }
   };
 
-  const handleRentalStartDateUpdate = async (orderId: string, date: string, orderCode: string) => {
+  const handleRentalStartDateUpdate = async (orderId: string, date: string | null, orderCode: string) => {
+    // Optimistic update - بروزرسانی فوری محلی
+    setOrders(prev => prev.map(order => 
+      order.id === orderId 
+        ? { ...order, rental_start_date: date } 
+        : order
+    ));
+
     try {
       const { error } = await supabase
         .from('projects_v3')
@@ -505,13 +512,15 @@ export default function ExecutiveOrders() {
       if (error) throw error;
 
       toast({
-        title: '✓ تاریخ شروع کرایه ثبت شد',
-        description: `تاریخ شروع کرایه سفارش ${orderCode} ثبت شد.`
+        title: date ? '✓ تاریخ شروع کرایه ثبت شد' : '✓ تاریخ شروع کرایه پاک شد',
+        description: date 
+          ? `تاریخ شروع کرایه سفارش ${orderCode} ثبت شد.`
+          : `تاریخ شروع کرایه سفارش ${orderCode} پاک شد.`
       });
-
-      fetchOrders();
     } catch (error) {
       console.error('Error updating rental start date:', error);
+      // Revert on error
+      fetchOrders();
       toast({
         variant: 'destructive',
         title: 'خطا',

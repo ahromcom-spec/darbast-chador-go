@@ -218,7 +218,14 @@ export default function ExecutiveStageOrderExecuted() {
   };
 
   const handleRentalStartDateUpdate = async (orderId: string, date: string | null, orderCode: string) => {
+    // Optimistic update - بروزرسانی فوری محلی
+    setOrders(prev => prev.map(order => 
+      order.id === orderId 
+        ? { ...order, rental_start_date: date } 
+        : order
+    ));
     setSavingRentalDate(orderId);
+
     try {
       const { error } = await supabase
         .from('projects_v3')
@@ -235,10 +242,10 @@ export default function ExecutiveStageOrderExecuted() {
           ? `تاریخ شروع کرایه سفارش ${orderCode} ثبت شد.`
           : `تاریخ شروع کرایه سفارش ${orderCode} پاک شد.`
       });
-
-      fetchOrders();
     } catch (error) {
       console.error('Error updating rental start date:', error);
+      // Revert on error
+      fetchOrders();
       toast({
         variant: 'destructive',
         title: 'خطا',
