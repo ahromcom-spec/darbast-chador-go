@@ -487,7 +487,14 @@ export function CollectionRequestDialog({
       return;
     }
 
+    // Optimistic update - بروزرسانی فوری state
+    const previousDate = existingRequest.requested_date;
+    setExistingRequest({
+      ...existingRequest,
+      requested_date: confirmedDate,
+    });
     setUpdatingDate(true);
+
     try {
       const { error } = await supabase
         .from('collection_requests')
@@ -510,17 +517,17 @@ export function CollectionRequestDialog({
         console.error('Error updating order collection date:', orderError);
       }
 
-      setExistingRequest({
-        ...existingRequest,
-        requested_date: confirmedDate,
-      });
-
       toast({
         title: '✓ موفق',
         description: 'تاریخ جمع‌آوری به‌روزرسانی شد',
       });
     } catch (error: any) {
       console.error('Error updating date:', error);
+      // Revert on error
+      setExistingRequest({
+        ...existingRequest,
+        requested_date: previousDate,
+      });
       toast({
         title: 'خطا',
         description: 'خطا در به‌روزرسانی تاریخ',
