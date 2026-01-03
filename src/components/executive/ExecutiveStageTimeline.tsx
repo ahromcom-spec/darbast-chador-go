@@ -106,14 +106,26 @@ export const ExecutiveStageTimeline = ({
           const message = stageMessages[stage.key];
           if (message) {
             try {
+              // ارسال نوتیفیکیشن درون‌سایتی
               const validated = sendNotificationSchema.parse({
                 _user_id: customerData.user_id,
                 _title: message.title,
                 _body: message.body,
-                _link: '/profile?tab=orders',
+                _link: `/user/orders/${projectId}`,
                 _type: 'info'
               });
               await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+              
+              // ارسال Push Notification به گوشی کاربر
+              await supabase.functions.invoke('send-push-notification', {
+                body: {
+                  user_id: customerData.user_id,
+                  title: message.title,
+                  body: message.body,
+                  link: `/user/orders/${projectId}`,
+                  type: 'order-stage'
+                }
+              });
             } catch (notifError) {
               console.error('Error sending notification:', notifError);
             }

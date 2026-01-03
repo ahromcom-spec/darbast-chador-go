@@ -215,8 +215,19 @@ export default function ExecutiveStageAwaitingPayment() {
                 _user_id: customerData.user_id,
                 _title: message.title,
                 _body: message.body,
-                _link: '/profile?tab=orders',
+                _link: `/user/orders/${orderId}`,
                 _type: 'info'
+              });
+              
+              // ارسال Push Notification به گوشی کاربر
+              await supabase.functions.invoke('send-push-notification', {
+                body: {
+                  user_id: customerData.user_id,
+                  title: message.title,
+                  body: message.body,
+                  link: `/user/orders/${orderId}`,
+                  type: 'order-stage'
+                }
               });
             } catch (e) { console.error('Notification error:', e); }
           }
