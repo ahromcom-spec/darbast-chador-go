@@ -1959,14 +1959,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           </button>
         `;
 
+        // استخراج عنوان موقعیت - نمایش فقط عنوان آدرس و نه نوع خدمات
+        const locationTitle = project.locations?.title || project.locations?.address_line || 'موقعیت';
+        const customerName = allOrdersAtLocation.length > 0 && allOrdersAtLocation[0]
+          ? '' // نام مشتری در سفارشات موجود است
+          : '';
+
         const popupContent = `
           ${mobileCloseBtn}
           <!-- دکمه افزودن خدمات جدید بیرون از کادر اصلی با خط اتصال به نقطه قرمز -->
           ${addNewServiceHTML}
           <div class="mobile-popup-inner" style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
             ${locationHeader}
-            <strong style="font-size: 15px; color: #1f2937;">${project.title || 'پروژه'}</strong><br/>
-            ${project.locations?.title ? `<div style="font-size: 14px; color: #667eea; font-weight: 600; margin-top: 8px; display: block;">${project.locations.title}</div>` : ''}
+            <strong style="font-size: 15px; color: #1f2937;">${locationTitle}</strong>
             <span style="font-size: 13px; color: #6b7280; margin-top: 6px; display: block;">${project.locations?.address_line || ''}</span>
             ${count > 1 ? `<div style="margin-top:10px;padding:6px 10px;background:#f3f4f6;border-radius:8px;text-align:center;font-size:12px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
             ${ordersHTML}
