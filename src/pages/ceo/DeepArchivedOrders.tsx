@@ -48,7 +48,7 @@ export default function DeepArchivedOrders() {
           subcategory:subcategories(name)
         `)
         .eq('is_deep_archived', true)
-        .order('deep_archived_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
       return data as DeepArchivedOrder[];

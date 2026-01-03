@@ -56,7 +56,7 @@ export default function ArchivedOrders() {
         `)
         .eq('is_archived', true)
         .or('is_deep_archived.is.null,is_deep_archived.eq.false')
-        .order('archived_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
       return data as ArchivedOrder[];

@@ -137,7 +137,7 @@ export default function AllCompanyOrdersModule() {
             name
           )
         `)
-        .order('created_at', { ascending: false })
+        .order('code', { ascending: false })
         .limit(500);
 
       if (error) throw error;

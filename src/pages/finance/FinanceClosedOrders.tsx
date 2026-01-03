@@ -77,7 +77,7 @@ export default function FinanceClosedOrders() {
         `)
         .eq('status', 'closed')
         .or('is_archived.is.null,is_archived.eq.false')
-        .order('closed_at', { ascending: false });
+        .order('code', { ascending: false });
 
       if (error) throw error;
 
