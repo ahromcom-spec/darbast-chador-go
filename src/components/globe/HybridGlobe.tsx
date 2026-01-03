@@ -171,16 +171,21 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [projectsWithOrders, setProjectsWithOrders] = useState<Set<string>>(new Set());
 
   const fetchProjectsWithOrders = useCallback(async () => {
+    // فقط سفارشاتی که is_archived=false و is_deep_archived=false هستند (یا null)
     const { data: ordersData } = await supabase
       .from('projects_v3')
-      .select('hierarchy_project_id')
-      .not('hierarchy_project_id', 'is', null)
-      .or('is_archived.is.null,is_archived.eq.false')
-      .or('is_deep_archived.is.null,is_deep_archived.eq.false');
+      .select('hierarchy_project_id, is_archived, is_deep_archived')
+      .not('hierarchy_project_id', 'is', null);
     
     if (ordersData) {
+      // فیلتر سفارشاتی که بایگانی نشده‌اند
+      const nonArchivedOrders = (ordersData as any[]).filter(o => 
+        (o.is_archived === null || o.is_archived === false) &&
+        (o.is_deep_archived === null || o.is_deep_archived === false)
+      );
+      
       const uniqueProjectIds = new Set(
-        (ordersData as any[])
+        nonArchivedOrders
           .map(o => o.hierarchy_project_id)
           .filter(Boolean) as string[]
       );
