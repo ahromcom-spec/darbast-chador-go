@@ -33,11 +33,19 @@ html {
 }
 
 /* Ensure body fills viewport consistently */
-html, body, #root {
+html, body {
   min-height: 100vh;
   min-height: 100dvh; /* Dynamic viewport height for mobile */
   /* Prevent white space when zoomed out */
   background-color: #ffffff;
+}
+
+/* #root should grow with content, not be limited */
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 body {

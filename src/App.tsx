@@ -174,7 +174,7 @@ const App = () => {
               <GlobalIncomingCallPopup />
               
               <Suspense fallback={<PageLoader />}>
-                <div className="min-h-screen bg-background">
+                <div className="flex-1 flex flex-col min-h-0 bg-background">
                   <Header />
                 <Routes>
               <Route path="/auth/login" element={<Login />} />
