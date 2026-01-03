@@ -1,11 +1,10 @@
 import { Bell, X, Loader2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOneSignal } from '@/hooks/useOneSignal';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNajvaSubscription } from '@/hooks/useNajvaSubscription';
 import {
   Dialog,
   DialogContent,
@@ -21,14 +20,15 @@ interface NotificationBannerProps {
 export function NotificationBanner({ variant = 'floating' }: NotificationBannerProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const [dismissed, setDismissed] = useState(() => {
     const dismissedData = localStorage.getItem(DISMISSAL_KEY);
     if (!dismissedData) return false;
-    
+
     try {
       const { timestamp } = JSON.parse(dismissedData);
       const timePassed = Date.now() - timestamp;
-      
+
       if (timePassed > DISMISSAL_DURATION) {
         localStorage.removeItem(DISMISSAL_KEY);
         return false;
@@ -38,20 +38,32 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
       return false;
     }
   });
+
   const [enabling, setEnabling] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [showDeniedHelp, setShowDeniedHelp] = useState(false);
-  const { permission, isSupported, isSubscribed, subscribe } = useOneSignal();
+
+  const [isSupported, setIsSupported] = useState(true);
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+
+  const { isSubscribed, subscribe, isLoading } = useNajvaSubscription();
   const { toast } = useToast();
 
-  // نمایش دیالوگ سفارشی به جای پاپ‌آپ نجوا
   useEffect(() => {
-    if (!user || !isSupported || isSubscribed || dismissed) {
+    if (!('Notification' in window)) {
+      setIsSupported(false);
+      return;
+    }
+    setPermission(Notification.permission);
+  }, []);
+
+  // نمایش دیالوگ سفارشی برای فعال‌سازی اعلان‌ها (نجوا)
+  useEffect(() => {
+    if (!user || !isSupported || isSubscribed || dismissed || isLoading) {
       setShowDialog(false);
       return;
     }
 
-    // اگر permission denied است، نشان دادن راهنما
     if (permission === 'denied') {
       setShowDeniedHelp(true);
     }
@@ -63,40 +75,42 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [user, isSupported, permission, dismissed, isSubscribed]);
+  }, [user, isSupported, permission, dismissed, isSubscribed, isLoading]);
 
   const handleDismiss = () => {
     setDismissed(true);
     setShowDialog(false);
-    localStorage.setItem(DISMISSAL_KEY, JSON.stringify({
-      timestamp: Date.now()
-    }));
+    localStorage.setItem(
+      DISMISSAL_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+      })
+    );
   };
 
   const handleEnable = async () => {
     setEnabling(true);
-    
+
     const timeoutId = setTimeout(() => {
       setEnabling(false);
       toast({
         title: 'خطا',
         description: 'لطفاً صفحه را رفرش کرده و دوباره تلاش کنید.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     }, 15000);
-    
+
     try {
-      console.log('🔔 Starting notification enablement...');
-      
       if (!user) {
         clearTimeout(timeoutId);
         throw new Error('not authenticated');
       }
-      
+
       const result = await subscribe();
       clearTimeout(timeoutId);
-      console.log('🔔 Subscribe result:', result);
-      
+
+      setPermission(Notification.permission);
+
       if (result) {
         toast({
           title: 'اعلان‌ها فعال شد',
@@ -106,22 +120,23 @@ export function NotificationBanner({ variant = 'floating' }: NotificationBannerP
         setShowDialog(false);
         setShowDeniedHelp(false);
       } else {
-        setShowDeniedHelp(true);
+        // اگر subscribe false شد، احتمالاً permission یا SDK/ServiceWorker مشکل دارد
+        setShowDeniedHelp(Notification.permission === 'denied');
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
       console.error('Error enabling notifications:', error);
-      
+
       let errorMessage = 'فعال‌سازی اعلان‌ها با مشکل مواجه شد. لطفاً دوباره تلاش کنید.';
-      
+
       if (error?.message?.includes('not authenticated')) {
         errorMessage = 'لطفاً ابتدا وارد حساب کاربری شوید';
       }
-      
+
       toast({
         title: 'خطا',
         description: errorMessage,
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setEnabling(false);
