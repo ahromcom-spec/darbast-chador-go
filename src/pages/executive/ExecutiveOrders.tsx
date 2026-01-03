@@ -180,10 +180,18 @@ export default function ExecutiveOrders() {
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
   
   // ماژول مدیریت اجرایی - بدون دسترسی به قیمت و تایید
-  const isExecutiveModule = moduleName.includes('مدیریت اجرایی');
+  const isExecutiveModule = moduleName.includes('مدیریت اجرایی') && !moduleName.includes('مدیریت کل');
   
   // ماژول مدیریت کلی - با دسترسی کامل به قیمت و تایید
-  const isGeneralManagerModule = moduleName.includes('مدیریت کلی') || moduleName.includes('مدیریت کل');
+  // اگر moduleKey مربوط به scaffold_execution_with_materials باشد یا نام ماژول شامل "مدیریت کل" باشد
+  // یا اگر بدون moduleKey و در صفحه /executive/all-orders هستیم (دسترسی از سایدبار)
+  const isGeneralManagerModule = 
+    activeModuleKey === 'scaffold_execution_with_materials' ||
+    activeModuleKey.includes('scaffold_execution') ||
+    moduleName.includes('مدیریت کلی') || 
+    moduleName.includes('مدیریت کل') ||
+    // اگر moduleKey خالی باشد و در صفحات executive هستیم، فرض کنیم مدیر کل است
+    (!activeModuleKey && window.location.pathname.includes('/executive/'));
   
   // Check if this is an accounting module - hide order details, only show financial info
   const isAccountingModule = activeModuleKey.includes('حسابداری') ||
