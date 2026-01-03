@@ -92,11 +92,45 @@ export function UserWallet() {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) throw error;
 
-      setTransactions(txs || []);
+      // فیلتر کردن تراکنش‌های سفارشات بایگانی شده
+      let filteredTransactions = txs || [];
+      
+      // پیدا کردن تراکنش‌های مربوط به سفارشات (order_approved یا order_payment)
+      const orderTransactions = filteredTransactions.filter(
+        tx => tx.reference_type === 'order_approved' || tx.reference_type === 'order_payment'
+      );
+      
+      if (orderTransactions.length > 0) {
+        // استخراج order_ids از reference_id ها
+        const orderIds = [...new Set(orderTransactions.map(tx => tx.reference_id).filter(Boolean))];
+        
+        if (orderIds.length > 0) {
+          // گرفتن وضعیت بایگانی سفارشات
+          const { data: orders } = await supabase
+            .from('projects_v3')
+            .select('id, is_archived')
+            .in('id', orderIds);
+          
+          // لیست سفارشات بایگانی شده
+          const archivedOrderIds = new Set(
+            (orders || []).filter(o => o.is_archived === true).map(o => o.id)
+          );
+          
+          // حذف تراکنش‌های مربوط به سفارشات بایگانی شده
+          filteredTransactions = filteredTransactions.filter(tx => {
+            if ((tx.reference_type === 'order_approved' || tx.reference_type === 'order_payment') && tx.reference_id) {
+              return !archivedOrderIds.has(tx.reference_id);
+            }
+            return true;
+          });
+        }
+      }
+
+      setTransactions(filteredTransactions.slice(0, 50));
 
       // Calculate salary earnings from daily reports (same logic as PersonnelAccountingModule)
       let salaryEarnings = 0;
