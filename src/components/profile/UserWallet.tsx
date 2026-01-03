@@ -105,25 +105,36 @@ export function UserWallet() {
       );
       
       if (orderTransactions.length > 0) {
-        // استخراج order_ids از reference_id ها
-        const orderIds = [...new Set(orderTransactions.map(tx => tx.reference_id).filter(Boolean))];
+        // استخراج کد سفارشات از عنوان تراکنش‌ها (فرمت: "پرداخت سفارش 1000180" یا "هزینه سفارش 1000180")
+        const orderCodes: string[] = [];
+        orderTransactions.forEach(tx => {
+          const match = tx.title?.match(/سفارش\s+(\d+)/);
+          if (match && match[1]) {
+            orderCodes.push(match[1]);
+          }
+        });
         
-        if (orderIds.length > 0) {
-          // گرفتن وضعیت بایگانی سفارشات
+        const uniqueOrderCodes = [...new Set(orderCodes)];
+        
+        if (uniqueOrderCodes.length > 0) {
+          // گرفتن وضعیت بایگانی سفارشات بر اساس کد سفارش
           const { data: orders } = await supabase
             .from('projects_v3')
-            .select('id, is_archived')
-            .in('id', orderIds);
+            .select('code, is_archived')
+            .in('code', uniqueOrderCodes);
           
-          // لیست سفارشات بایگانی شده
-          const archivedOrderIds = new Set(
-            (orders || []).filter(o => o.is_archived === true).map(o => o.id)
+          // لیست کدهای سفارشات بایگانی شده
+          const archivedOrderCodes = new Set(
+            (orders || []).filter(o => o.is_archived === true).map(o => o.code)
           );
           
           // حذف تراکنش‌های مربوط به سفارشات بایگانی شده
           filteredTransactions = filteredTransactions.filter(tx => {
-            if ((tx.reference_type === 'order_approved' || tx.reference_type === 'order_payment') && tx.reference_id) {
-              return !archivedOrderIds.has(tx.reference_id);
+            if (tx.reference_type === 'order_approved' || tx.reference_type === 'order_payment') {
+              const match = tx.title?.match(/سفارش\s+(\d+)/);
+              if (match && match[1]) {
+                return !archivedOrderCodes.has(match[1]);
+              }
             }
             return true;
           });
