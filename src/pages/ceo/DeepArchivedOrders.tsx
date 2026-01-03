@@ -81,9 +81,19 @@ export default function DeepArchivedOrders() {
   });
 
   // بازگردانی کامل به جریان سفارشات (حذف هر دو بایگانی)
+  // نکته: ممکن است در زمان بایگانی، آدرس مربوطه غیرفعال شده باشد؛ برای نمایش دوباره روی نقشه، location را فعال می‌کنیم.
   const restoreMutation = useMutation({
     mutationFn: async (orderId: string) => {
-      const { error } = await supabase
+      // ابتدا hierarchy_project_id را می‌گیریم تا بتوانیم location را فعال کنیم
+      const { data: orderRow, error: orderFetchError } = await supabase
+        .from('projects_v3')
+        .select('hierarchy_project_id')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (orderFetchError) throw orderFetchError;
+
+      const { error: restoreError } = await supabase
         .from('projects_v3')
         .update({
           is_archived: false,
@@ -95,7 +105,28 @@ export default function DeepArchivedOrders() {
         })
         .eq('id', orderId);
 
-      if (error) throw error;
+      if (restoreError) throw restoreError;
+
+      const hierarchyProjectId = (orderRow as any)?.hierarchy_project_id as string | null | undefined;
+      if (!hierarchyProjectId) return;
+
+      const { data: projectRow, error: projectFetchError } = await supabase
+        .from('projects_hierarchy')
+        .select('location_id')
+        .eq('id', hierarchyProjectId)
+        .maybeSingle();
+
+      if (projectFetchError) throw projectFetchError;
+
+      const locationId = (projectRow as any)?.location_id as string | null | undefined;
+      if (!locationId) return;
+
+      const { error: locationUpdateError } = await supabase
+        .from('locations')
+        .update({ is_active: true })
+        .eq('id', locationId);
+
+      if (locationUpdateError) throw locationUpdateError;
     },
     onSuccess: () => {
       toast({ title: 'سفارش به جریان سفارشات بازگردانده شد' });

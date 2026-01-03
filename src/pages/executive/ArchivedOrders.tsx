@@ -88,7 +88,16 @@ export default function ArchivedOrders() {
 
   const restoreMutation = useMutation({
     mutationFn: async (orderId: string) => {
-      const { error } = await supabase
+      // برای اینکه بعد از بازگردانی روی نقشه هم نمایش داده شود، location مرتبط را دوباره فعال می‌کنیم.
+      const { data: orderRow, error: orderFetchError } = await supabase
+        .from('projects_v3')
+        .select('hierarchy_project_id')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (orderFetchError) throw orderFetchError;
+
+      const { error: restoreError } = await supabase
         .from('projects_v3')
         .update({
           is_archived: false,
@@ -97,7 +106,28 @@ export default function ArchivedOrders() {
         })
         .eq('id', orderId);
 
-      if (error) throw error;
+      if (restoreError) throw restoreError;
+
+      const hierarchyProjectId = (orderRow as any)?.hierarchy_project_id as string | null | undefined;
+      if (!hierarchyProjectId) return;
+
+      const { data: projectRow, error: projectFetchError } = await supabase
+        .from('projects_hierarchy')
+        .select('location_id')
+        .eq('id', hierarchyProjectId)
+        .maybeSingle();
+
+      if (projectFetchError) throw projectFetchError;
+
+      const locationId = (projectRow as any)?.location_id as string | null | undefined;
+      if (!locationId) return;
+
+      const { error: locationUpdateError } = await supabase
+        .from('locations')
+        .update({ is_active: true })
+        .eq('id', locationId);
+
+      if (locationUpdateError) throw locationUpdateError;
     },
     onSuccess: () => {
       toast({ title: 'سفارش با موفقیت بازگردانده شد' });
