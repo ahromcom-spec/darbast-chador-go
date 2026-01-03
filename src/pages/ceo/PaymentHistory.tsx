@@ -21,6 +21,8 @@ interface PaymentRecord {
   address: string | null;
   status: string;
   created_at: string;
+  source: 'order' | 'cash'; // To differentiate payment source
+  notes?: string | null;
 }
 
 const PaymentHistory = () => {
@@ -34,8 +36,8 @@ const PaymentHistory = () => {
 
   const fetchPayments = async () => {
     try {
-      // Fetch all orders with payment information
-      const { data, error } = await supabase
+      // Fetch ZarinPal/Online payments from projects_v3
+      const { data: orderPayments, error: orderError } = await supabase
         .from('projects_v3')
         .select(`
           id,
@@ -51,15 +53,91 @@ const PaymentHistory = () => {
           created_at
         `)
         .not('payment_amount', 'is', null)
-        .order('payment_confirmed_at', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false });
+        .not('payment_confirmed_at', 'is', null);
 
-      if (error) {
-        console.error('Error fetching payments:', error);
-        return;
+      if (orderError) {
+        console.error('Error fetching order payments:', orderError);
       }
 
-      setPayments(data || []);
+      // Fetch cash/installment payments from order_payments table
+      const { data: cashPayments, error: cashError } = await supabase
+        .from('order_payments')
+        .select(`
+          id,
+          amount,
+          payment_method,
+          receipt_number,
+          notes,
+          created_at,
+          order:projects_v3!order_id (
+            id,
+            code,
+            customer_name,
+            customer_phone,
+            address,
+            status
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (cashError) {
+        console.error('Error fetching cash payments:', cashError);
+      }
+
+      // Combine both payment sources
+      const combinedPayments: PaymentRecord[] = [];
+
+      // Add order-level payments (ZarinPal)
+      if (orderPayments) {
+        orderPayments.forEach((p) => {
+          combinedPayments.push({
+            id: p.id,
+            code: p.code,
+            payment_amount: p.payment_amount,
+            payment_confirmed_at: p.payment_confirmed_at,
+            payment_method: p.payment_method,
+            transaction_reference: p.transaction_reference,
+            customer_name: p.customer_name,
+            customer_phone: p.customer_phone,
+            address: p.address,
+            status: p.status,
+            created_at: p.created_at,
+            source: 'order'
+          });
+        });
+      }
+
+      // Add cash/installment payments
+      if (cashPayments) {
+        cashPayments.forEach((p: any) => {
+          if (p.order) {
+            combinedPayments.push({
+              id: p.id,
+              code: p.order.code,
+              payment_amount: p.amount,
+              payment_confirmed_at: p.created_at, // Cash payments are confirmed immediately
+              payment_method: p.payment_method || 'cash',
+              transaction_reference: p.receipt_number,
+              customer_name: p.order.customer_name,
+              customer_phone: p.order.customer_phone,
+              address: p.order.address,
+              status: p.order.status,
+              created_at: p.created_at,
+              source: 'cash',
+              notes: p.notes
+            });
+          }
+        });
+      }
+
+      // Sort by payment date, most recent first
+      combinedPayments.sort((a, b) => {
+        const dateA = new Date(a.payment_confirmed_at || a.created_at).getTime();
+        const dateB = new Date(b.payment_confirmed_at || b.created_at).getTime();
+        return dateB - dateA;
+      });
+
+      setPayments(combinedPayments);
     } catch (err) {
       console.error('Error:', err);
     } finally {
@@ -123,7 +201,7 @@ const PaymentHistory = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200/50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -149,6 +227,22 @@ const PaymentHistory = () => {
               </div>
               <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
                 <CheckCircle className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-200/50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">پرداخت‌های نقدی</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {payments.filter(p => p.source === 'cash').length}
+                </p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
+                <Banknote className="h-6 w-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
