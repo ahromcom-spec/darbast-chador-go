@@ -1968,7 +1968,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             ${locationHeader}
             <strong style="font-size: 15px; color: #1f2937;">${locationTitle}</strong>
             <span style="font-size: 13px; color: #6b7280; margin-top: 6px; display: block;">${project.locations?.address_line || ''}</span>
-            ${count > 1 ? `<div style="margin-top:10px;padding:6px 10px;background:#f3f4f6;border-radius:8px;text-align:center;font-size:12px;color:#6b7280;">پروژه ${index + 1} از ${count}</div>` : ''}
+            
             ${ordersHTML}
           </div>
         `;
