@@ -29,7 +29,7 @@ export const RecentOrdersList = () => {
     try {
       const { data, error } = await supabase
         .rpc('get_orders_with_customer_info')
-        .order('created_at', { ascending: false })
+        .order('code', { ascending: false })
         .limit(10);
 
       if (error) throw error;
