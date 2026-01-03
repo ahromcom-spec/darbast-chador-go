@@ -28,7 +28,7 @@ import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValida
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NewLocationForm } from '@/components/locations/NewLocationForm';
 import { OrderForOthers, RecipientData } from '@/components/orders/OrderForOthers';
-import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
+import { buildOrderSmsAddress, sendOrderSms, sendCeoNotificationSms } from '@/lib/orderSms';
 import { ExpertPricingRequestDialog } from '@/components/orders/ExpertPricingRequestDialog';
 
 interface Dimension {
@@ -1370,14 +1370,28 @@ export default function ComprehensiveScaffoldingForm({
 
         // ارسال پیامک به مشتری (در پس‌زمینه)
         const customerPhone = user?.user_metadata?.phone_number || user?.phone;
+        const customerName = user?.user_metadata?.full_name || 'مشتری';
+        const smsAddress = buildOrderSmsAddress(createdProject.address, createdProject.detailed_address);
+        
         if (customerPhone) {
           sendOrderSms(customerPhone, createdProject.code, 'submitted', {
             orderId: createdProject.id,
-            address: buildOrderSmsAddress(createdProject.address, createdProject.detailed_address),
+            address: smsAddress,
+            serviceType: serviceTypeName
           }).catch(err => {
             console.error('SMS notification error:', err);
           });
         }
+
+        // ارسال پیامک به مدیرعامل (در پس‌زمینه)
+        sendCeoNotificationSms(createdProject.code, 'submitted', {
+          orderId: createdProject.id,
+          serviceType: serviceTypeName,
+          address: smsAddress,
+          customerName
+        }).catch(err => {
+          console.error('CEO SMS notification error:', err);
+        });
 
         // هدایت کاربر به صفحه جزئیات سفارش بلافاصله
         navigate(`/user/orders/${createdProject.id}`);

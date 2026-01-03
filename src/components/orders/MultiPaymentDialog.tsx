@@ -10,6 +10,7 @@ import { formatPersianDateTimeFull } from '@/lib/dateUtils';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
+import { sendOrderSms, sendCeoNotificationSms, buildOrderSmsAddress } from '@/lib/orderSms';
 
 interface Payment {
   id: string;
@@ -30,6 +31,9 @@ interface MultiPaymentDialogProps {
   customerId: string;
   totalPrice: number | null;
   onPaymentSuccess?: () => void;
+  customerPhone?: string;
+  address?: string;
+  serviceType?: string;
 }
 
 export function MultiPaymentDialog({
@@ -40,7 +44,10 @@ export function MultiPaymentDialog({
   customerName,
   customerId,
   totalPrice,
-  onPaymentSuccess
+  onPaymentSuccess,
+  customerPhone,
+  address,
+  serviceType
 }: MultiPaymentDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -213,6 +220,25 @@ export function MultiPaymentDialog({
           });
         }
       }
+
+      // ارسال پیامک به مشتری
+      if (customerPhone) {
+        sendOrderSms(customerPhone, orderCode, 'paid', {
+          orderId,
+          serviceType: serviceType || 'خدمات',
+          address: address || 'ثبت نشده',
+          amount
+        });
+      }
+
+      // ارسال پیامک به مدیرعامل
+      sendCeoNotificationSms(orderCode, 'paid', {
+        orderId,
+        serviceType: serviceType || 'خدمات',
+        address: address || 'ثبت نشده',
+        amount,
+        customerName
+      });
 
       toast({
         title: '✓ پرداخت ثبت شد',
