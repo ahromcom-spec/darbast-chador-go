@@ -843,6 +843,27 @@ export default function ExecutiveOrders() {
                   type: 'order-stage'
                 }
               });
+              
+              // ارسال SMS برای مراحل کلیدی (اجرا شد و اتمام سفارش)
+              if (newStage === 'order_executed' || newStage === 'closed') {
+                // دریافت شماره مشتری
+                const { data: customerProfile } = await supabase
+                  .from('profiles')
+                  .select('phone_number')
+                  .eq('user_id', customerData.user_id)
+                  .single();
+                
+                if (customerProfile?.phone_number) {
+                  const smsStatus = newStage === 'closed' ? 'completed' : 'executed';
+                  const order = orders.find(o => o.id === orderId);
+                  sendOrderSms(customerProfile.phone_number, orderData.code || '', smsStatus, {
+                    orderId: orderId,
+                    address: buildOrderSmsAddress(order?.address, order?.detailed_address),
+                  }).catch(err => {
+                    console.error('SMS notification error:', err);
+                  });
+                }
+              }
             } catch (notifError) {
               console.error('Error sending notification:', notifError);
             }
