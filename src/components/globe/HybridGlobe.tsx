@@ -2282,23 +2282,21 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             }
           }
           
-          // هندلر افزودن سفارش جدید به پروژه
-          const addNewOrderBtn = popupElement.querySelector('.add-new-order-btn');
-          if (addNewOrderBtn) {
-            addNewOrderBtn.addEventListener('click', async (e) => {
+          // هندلر افزودن سفارش جدید به پروژه - برای همه دکمه‌های سفارش جدید
+          const addNewOrderBtns = popupElement.querySelectorAll('.add-new-order-btn');
+          addNewOrderBtns.forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
               e.stopPropagation();
-              const projectId = (addNewOrderBtn as HTMLElement).dataset.projectId;
-              const locationId = (addNewOrderBtn as HTMLElement).dataset.locationId;
-              const serviceTypeId = (addNewOrderBtn as HTMLElement).dataset.serviceTypeId;
-              const subcategoryId = (addNewOrderBtn as HTMLElement).dataset.subcategoryId;
-              const subcategoryCode = (addNewOrderBtn as HTMLElement).dataset.subcategoryCode;
+              const projectId = (btn as HTMLElement).dataset.projectId;
+              const locationId = (btn as HTMLElement).dataset.locationId;
+              const serviceTypeId = (btn as HTMLElement).dataset.serviceTypeId;
+              const subcategoryId = (btn as HTMLElement).dataset.subcategoryId;
+              const subcategoryCode = (btn as HTMLElement).dataset.subcategoryCode;
               
               console.log('[Map] Adding new order to project:', { projectId, locationId, serviceTypeId, subcategoryId, subcategoryCode });
               
-              // هاردکد اطلاعات قم و نوع خدمات مشخص برای سفارش جدید
-              let addressLine = '';
-              
               // دریافت آدرس پروژه از location
+              let addressLine = '';
               if (locationId) {
                 const { data: locationData } = await supabase
                   .from('locations')
@@ -2325,55 +2323,43 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 .eq('province_id', qomProvince?.id)
                 .maybeSingle();
               
-              // دریافت IDs برای خدمات فلزی و زیرشاخه اجرای داربست
-              const { data: metalService } = await supabase
-                .from('service_types_v3')
-                .select('id, name')
-                .eq('name', 'خدمات فلزی')
-                .single();
-              
-              const { data: scaffoldingSubcategory } = await supabase
-                .from('subcategories')
-                .select('id, name, code')
-                .eq('code', '10')
-                .eq('service_type_id', metalService?.id)
-                .single();
-              
-              // استفاده از اطلاعات هاردکد شده
               const provinceId = qomProvince?.id || null;
               const districtId = qomDistrict?.id || null;
               const provinceName = 'قم';
               const districtName = 'قم';
-              const serviceName = 'خدمات فلزی';
-              const subcategoryName = 'خدمات اجرای داربست به همراه اجناس داربست و حمل و نقل';
-              const finalServiceTypeId = metalService?.id || serviceTypeId;
-              const finalSubcategoryId = scaffoldingSubcategory?.id || subcategoryId;
-              const finalSubcategoryCode = '10';
               
               // بستن popup
               marker.closePopup();
               
-              // هدایت به فرم داربست فلزی اجرا (همیشه)
-              navigate('/scaffolding/form', {
+              // ✅ مسیریابی بر اساس subcategoryCode واقعی
+              // '10' و '15' → /scaffolding/form
+              // '20' → /scaffolding/facade
+              // '30' → /scaffolding/rental-form
+              let targetRoute = '/scaffolding/form'; // default
+              if (subcategoryCode === '20') {
+                targetRoute = '/scaffolding/facade';
+              } else if (subcategoryCode === '30') {
+                targetRoute = '/scaffolding/rental-form';
+              }
+              
+              navigate(targetRoute, {
                 state: {
                   fromMap: true,
                   hierarchyProjectId: projectId,
                   projectId: projectId,
                   locationId: locationId,
-                  serviceTypeId: finalServiceTypeId,
-                  subcategoryId: finalSubcategoryId,
-                  subcategoryCode: finalSubcategoryCode,
+                  serviceTypeId: serviceTypeId,
+                  subcategoryId: subcategoryId,
+                  subcategoryCode: subcategoryCode,
                   provinceId: provinceId,
                   districtId: districtId,
                   locationAddress: addressLine,
                   provinceName: provinceName,
-                  districtName: districtName,
-                  serviceName: serviceName,
-                  subcategoryName: subcategoryName
+                  districtName: districtName
                 }
               });
             });
-          }
+          });
           
           // هندلر افزودن نوع خدمات جدید (خدمات متفاوت) - با پشتیبانی بهتر از touch
           const addNewServiceTypeBtn = popupElement.querySelector('.add-new-service-type-btn');
