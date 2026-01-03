@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users, Archive, RefreshCw, PackageOpen } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users, Archive, RefreshCw, PackageOpen, XCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -165,6 +166,9 @@ export default function ExecutiveOrders() {
   const [cashPaymentDialogOpen, setCashPaymentDialogOpen] = useState(false);
   // Collection request dialog
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
+  // Rejection dialog state
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
   const { toast } = useToast();
 
   // Auto-open order from URL param
@@ -594,7 +598,7 @@ export default function ExecutiveOrders() {
       // دریافت اطلاعات سفارش برای ارسال اعلان
       const { data: orderData } = await supabase
         .from('projects_v3')
-        .select('customer_id, code, notes, payment_amount')
+        .select('customer_id, code, notes, payment_amount, subcategory_id')
         .eq('id', orderId)
         .single();
 
@@ -653,6 +657,21 @@ export default function ExecutiveOrders() {
         updateData.execution_stage = null;
         updateData.execution_confirmed_at = null;
         updateData.closed_at = null;
+        
+        // ثبت تایید در جدول order_approvals برای مدیر کل اجرای داربست به همراه اجناس
+        // بررسی اینکه آیا سفارش مربوط به این زیردسته هست
+        const isExecutionWithMaterials = orderData?.subcategory_id === '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d';
+        if (isExecutionWithMaterials && currentUserId) {
+          // ثبت تایید در جدول order_approvals
+          await supabase
+            .from('order_approvals')
+            .update({
+              approver_user_id: currentUserId,
+              approved_at: new Date().toISOString()
+            })
+            .eq('order_id', orderId)
+            .eq('approver_role', 'executive_manager_scaffold_execution_with_materials');
+        }
         
         // کپی قیمت از notes.estimated_price به payment_amount و total_price اگر خالی هستند
         const notesObj = orderData?.notes && typeof orderData.notes === 'object'
@@ -1047,6 +1066,111 @@ export default function ExecutiveOrders() {
       });
     } finally {
       setBulkArchiving(false);
+    }
+  };
+
+  // رد سفارش توسط مدیر کل
+  const handleRejectOrder = async () => {
+    if (!selectedOrder || !user) return;
+
+    if (!rejectionReason.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'لطفاً دلیل رد سفارش را وارد کنید'
+      });
+      return;
+    }
+
+    try {
+      // به‌روزرسانی وضعیت سفارش به rejected
+      const { error: updateError } = await supabase
+        .from('projects_v3')
+        .update({
+          status: 'rejected',
+          rejected_at: new Date().toISOString(),
+          rejected_by: user.id
+        })
+        .eq('id', selectedOrder.id);
+
+      if (updateError) throw updateError;
+
+      // ذخیره دلیل رد در notes
+      const currentNotesStr = selectedOrder.notes;
+      let currentNotes: Record<string, any> = {};
+      if (currentNotesStr) {
+        try {
+          if (typeof currentNotesStr === 'string') {
+            currentNotes = JSON.parse(currentNotesStr);
+          } else if (typeof currentNotesStr === 'object') {
+            currentNotes = currentNotesStr as Record<string, any>;
+          }
+        } catch {
+          currentNotes = {};
+        }
+      }
+      const updatedNotes = {
+        ...currentNotes,
+        rejection_reason: rejectionReason,
+        rejected_at: new Date().toISOString(),
+        rejected_by: user.id
+      };
+
+      await supabase
+        .from('projects_v3')
+        .update({ notes: JSON.stringify(updatedNotes) as any })
+        .eq('id', selectedOrder.id);
+
+      // ارسال اعلان به مشتری
+      if (selectedOrder.customer_id) {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('user_id')
+          .eq('id', selectedOrder.customer_id)
+          .single();
+
+        if (customerData?.user_id) {
+          try {
+            await supabase.rpc('send_notification', {
+              _user_id: customerData.user_id,
+              _title: '❌ سفارش رد شد',
+              _body: `سفارش ${selectedOrder.code} رد شد. دلیل: ${rejectionReason}`,
+              _link: `/user/orders/${selectedOrder.id}`,
+              _type: 'error'
+            });
+
+            // ارسال Push Notification
+            await supabase.functions.invoke('send-push-notification', {
+              body: {
+                user_id: customerData.user_id,
+                title: '❌ سفارش رد شد',
+                body: `سفارش ${selectedOrder.code} رد شد. دلیل: ${rejectionReason}`,
+                link: `/user/orders/${selectedOrder.id}`,
+                type: 'order-rejected'
+              }
+            });
+          } catch (notifError) {
+            console.error('Error sending rejection notification:', notifError);
+          }
+        }
+      }
+
+      toast({
+        title: 'سفارش رد شد',
+        description: `سفارش ${selectedOrder.code} رد شد و به مشتری اطلاع داده شد.`
+      });
+
+      setRejectDialogOpen(false);
+      setRejectionReason('');
+      setSelectedOrder(null);
+      fetchOrders();
+    } catch (error) {
+      console.error('Error rejecting order:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'رد سفارش با خطا مواجه شد'
+      });
     }
   };
 
@@ -1542,6 +1666,22 @@ export default function ExecutiveOrders() {
                     >
                       <CheckCircle className="h-4 w-4" />
                       تایید سفارش
+                    </Button>
+                  )}
+
+                  {/* دکمه رد سفارش - فقط برای ماژول مدیریت کلی */}
+                  {order.status === 'pending' && isGeneralManagerModule && !isExecutiveModule && (
+                    <Button
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setRejectDialogOpen(true);
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      رد سفارش
                     </Button>
                   )}
 
@@ -2108,6 +2248,63 @@ export default function ExecutiveOrders() {
           onPaymentSuccess={fetchOrders}
         />
       )}
+
+      {/* Rejection Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={(open) => {
+        setRejectDialogOpen(open);
+        if (!open) {
+          setRejectionReason('');
+        }
+      }}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="h-5 w-5" />
+              رد سفارش
+            </DialogTitle>
+            <DialogDescription>
+              آیا مطمئن هستید که می‌خواهید سفارش {selectedOrder?.code} را رد کنید؟
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">
+                دلیل رد سفارش <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="rejection-reason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="لطفاً دلیل رد سفارش را توضیح دهید..."
+                className="min-h-[100px]"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              این پیام به مشتری نمایش داده خواهد شد.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setRejectionReason('');
+              }}
+            >
+              انصراف
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleRejectOrder}
+              disabled={!rejectionReason.trim()}
+            >
+              رد سفارش
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
