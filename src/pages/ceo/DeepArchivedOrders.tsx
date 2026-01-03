@@ -161,12 +161,19 @@ export default function DeepArchivedOrders() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (orderIds: string[]) => {
-      const { error } = await supabase
-        .from('projects_v3')
-        .delete()
-        .in('id', orderIds);
+      // PostgREST delete with .in(...) can hit URL-length limits when many IDs are selected.
+      // حذف را به صورت مرحله‌ای انجام می‌دهیم تا برای لیست‌های بزرگ (مثل ۱۸۵ مورد) هم پایدار باشد.
+      const CHUNK_SIZE = 50;
+      for (let i = 0; i < orderIds.length; i += CHUNK_SIZE) {
+        const chunkIds = orderIds.slice(i, i + CHUNK_SIZE);
+        const { error } = await supabase
+          .from('projects_v3')
+          .delete()
+          .in('id', chunkIds)
+          .eq('is_deep_archived', true);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast({ title: `${selectedOrderIds.size} سفارش به صورت دائمی حذف شدند` });
@@ -174,8 +181,22 @@ export default function DeepArchivedOrders() {
       setShowBulkDeleteDialog(false);
       setSelectedOrderIds(new Set());
     },
-    onError: () => {
-      toast({ title: 'خطا در حذف سفارشات', variant: 'destructive' });
+    onError: (error) => {
+      console.error('Bulk delete deep-archived orders error:', error);
+      const message = String((error as any)?.message ?? '');
+      const lower = message.toLowerCase();
+      const isFk = lower.includes('foreign key') || lower.includes('violates') || lower.includes('constraint');
+      const isRls = lower.includes('row-level security') || lower.includes('permission denied');
+
+      toast({
+        title: 'خطا در حذف سفارشات',
+        description: isRls
+          ? 'شما دسترسی حذف دائمی سفارشات را ندارید'
+          : isFk
+            ? 'به دلیل وجود اطلاعات وابسته، امکان حذف دائمی برخی سفارشات وجود ندارد'
+            : undefined,
+        variant: 'destructive'
+      });
     }
   });
 
