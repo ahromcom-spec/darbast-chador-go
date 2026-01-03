@@ -6,6 +6,7 @@ import { useNajvaSubscription } from '@/hooks/useNajvaSubscription';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function NotificationSettings() {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ export default function NotificationSettings() {
   } = useNajvaSubscription();
 
   const [loading, setLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSupported, setIsSupported] = useState(true);
 
@@ -71,7 +73,37 @@ export default function NotificationSettings() {
         tag: 'test-notification',
         requireInteraction: false
       });
-      toast.success('اعلان آزمایشی ارسال شد!');
+      toast.success('اعلان آزمایشی (داخل مرورگر) نمایش داده شد.');
+    }
+  };
+
+  const sendServerTestPush = async () => {
+    if (!user) return;
+
+    setTestLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          user_id: user.id,
+          title: '🔔 تست پوش',
+          body: 'این یک پوش تستی است. اگر اعلان را می‌بینید یعنی پوش درست کار می‌کند.',
+          link: '/settings/notifications',
+          type: 'test'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.pushSent) {
+        toast.success('پوش تستی ارسال شد ✅');
+      } else {
+        toast.warning('پوش ارسال نشد (احتمالاً توکن دستگاه ذخیره نشده). ابتدا «فعال‌سازی اعلان‌ها» را بزنید.');
+      }
+    } catch (e) {
+      console.error('Server test push error:', e);
+      toast.error('خطا در ارسال پوش تستی');
+    } finally {
+      setTestLoading(false);
     }
   };
 
@@ -201,8 +233,28 @@ export default function NotificationSettings() {
                     className="w-full"
                   >
                     <Bell className="h-4 w-4 mr-2" />
-                    ارسال اعلان آزمایشی
+                    تست اعلان داخل مرورگر
                   </Button>
+
+                  <Button
+                    onClick={sendServerTestPush}
+                    variant="outline"
+                    disabled={testLoading}
+                    className="w-full"
+                  >
+                    {testLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        در حال ارسال پوش...
+                      </>
+                    ) : (
+                      <>
+                        <Bell className="h-4 w-4 mr-2" />
+                        تست پوش واقعی (سرور)
+                      </>
+                    )}
+                  </Button>
+
                   <Button
                     onClick={handleDisableNotifications}
                     disabled={loading}

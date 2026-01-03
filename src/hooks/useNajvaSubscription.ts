@@ -18,6 +18,36 @@ export const useNajvaSubscription = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [subscriberId, setSubscriberId] = useState<string | null>(null);
 
+  const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  const waitForNajva = async (timeoutMs = 8000) => {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (window.najva) return true;
+      await sleep(250);
+    }
+    return false;
+  };
+
+  const getSubscriberIdSafe = async () => {
+    try {
+      const maybe = await Promise.resolve(window.najva?.getSubscriberId?.());
+      return typeof maybe === 'string' && maybe.trim() ? maybe : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const pollSubscriberId = async (timeoutMs = 10000) => {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const subId = await getSubscriberIdSafe();
+      if (subId) return subId;
+      await sleep(500);
+    }
+    return null;
+  };
+
   // بررسی وضعیت اشتراک فعلی
   const checkSubscription = useCallback(async () => {
     if (!user) {
@@ -102,9 +132,10 @@ export const useNajvaSubscription = () => {
     }
 
     try {
-      // بررسی آیا نجوا لود شده
-      if (!window.najva) {
-        console.log('[Najva] SDK not loaded yet');
+      // منتظر لود شدن SDK
+      const loaded = await waitForNajva(8000);
+      if (!loaded) {
+        console.log('[Najva] SDK not loaded (timeout)');
         return false;
       }
 
@@ -116,15 +147,16 @@ export const useNajvaSubscription = () => {
       }
 
       // ثبت کاربر در نجوا
-      await window.najva.subscribeUser();
+      await window.najva!.subscribeUser();
 
-      // دریافت شناسه کاربر
-      const subId = await window.najva.getSubscriberId();
+      // گاهی subId با تاخیر آماده می‌شود، پس Poll می‌کنیم
+      const subId = await pollSubscriberId(10000);
       if (subId) {
         console.log('[Najva] Subscriber ID:', subId);
         return await saveSubscription(subId);
       }
 
+      console.log('[Najva] Subscriber ID not available after subscribe');
       return false;
     } catch (error) {
       console.error('[Najva] Error subscribing:', error);
