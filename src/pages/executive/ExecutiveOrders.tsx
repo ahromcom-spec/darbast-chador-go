@@ -53,6 +53,28 @@ const executionStageToUiKey: Record<string, string> = {
   collected: 'collected',
 };
 
+const SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS = '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d';
+
+const scaffoldingTypeLabels: Record<string, string> = {
+  facade: 'داربست سطحی نما',
+  formwork: 'داربست حجمی کفراژ',
+  ceiling: 'داربست زیربتن سقف',
+  column: 'داربست ستونی',
+  pipe_length: 'داربست به طول لوله مصرفی',
+};
+
+function getOrderServiceLabel(notesObj: any): string | null {
+  const raw =
+    notesObj?.service_type ??
+    notesObj?.serviceType ??
+    notesObj?.scaffoldingType ??
+    notesObj?.scaffold_type;
+
+  if (!raw) return null;
+  if (typeof raw === 'string') return scaffoldingTypeLabels[raw] ?? raw;
+  return null;
+}
+
 // Component to display order technical details with edit capability
 const OrderDetailsContent = ({ order, getStatusBadge, onUpdate, hidePrice = false, hideDetails = false }: { order: Order; getStatusBadge: (status: string) => JSX.Element; onUpdate?: () => void; hidePrice?: boolean; hideDetails?: boolean }) => {
   return (
@@ -178,10 +200,17 @@ export default function ExecutiveOrders() {
   const activeModuleKey = searchParams.get('moduleKey') || '';
   // Also check moduleName for custom copies of the module
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, '', '');
-  
+
+  // آیا این ماژول مربوط به «اجرای داربست به همراه اجناس (101010)» است؟
+  const isExecutionWithMaterialsModule =
+    activeModuleKey === 'scaffold_execution_with_materials' ||
+    activeModuleKey.includes('scaffold_execution_with_materials') ||
+    moduleName.includes('101010') ||
+    (moduleName.includes('اجرای داربست') && moduleName.includes('به همراه اجناس'));
+
   // ماژول مدیریت اجرایی - بدون دسترسی به قیمت و تایید
   const isExecutiveModule = moduleName.includes('مدیریت اجرایی') && !moduleName.includes('مدیریت کل');
-  
+
   // ماژول مدیریت کلی - با دسترسی کامل به قیمت و تایید
   // اگر moduleKey مربوط به scaffold_execution_with_materials باشد یا نام ماژول شامل "مدیریت کل" باشد
   // یا اگر بدون moduleKey و در صفحه /executive/all-orders هستیم (دسترسی از سایدبار)
@@ -192,7 +221,7 @@ export default function ExecutiveOrders() {
     moduleName.includes('مدیریت کل') ||
     // اگر moduleKey خالی باشد و در صفحات executive هستیم، فرض کنیم مدیر کل است
     (!activeModuleKey && window.location.pathname.includes('/executive/'));
-  
+
   // Check if this is an accounting module - hide order details, only show financial info
   const isAccountingModule = activeModuleKey.includes('حسابداری') ||
                               activeModuleKey === 'comprehensive_accounting' ||
@@ -668,7 +697,7 @@ export default function ExecutiveOrders() {
         
         // ثبت تایید در جدول order_approvals برای مدیر کل اجرای داربست به همراه اجناس
         // بررسی اینکه آیا سفارش مربوط به این زیردسته هست
-        const isExecutionWithMaterials = orderData?.subcategory_id === '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d';
+        const isExecutionWithMaterials = orderData?.subcategory_id === SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS;
         if (isExecutionWithMaterials && currentUserId) {
           // ثبت تایید در جدول order_approvals
           await supabase
@@ -1309,6 +1338,14 @@ export default function ExecutiveOrders() {
             // برای درخواست کارشناسی: فقط وقتی قیمت ثبت شده و مشتری تایید کرده باشد، اجازه تایید سفارش بده
             const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount && customerPriceConfirmed);
 
+            const serviceLabel = getOrderServiceLabel(notesObj);
+            const isExecutionWithMaterialsOrder = order.subcategory_id === SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS;
+
+            const canManageInitialApproval =
+              order.status === 'pending' &&
+              ((isGeneralManagerModule && !isExecutiveModule) ||
+                (isExecutiveModule && isExecutionWithMaterialsModule && isExecutionWithMaterialsOrder));
+
             return (
 
             <Card key={order.id} className={`hover:shadow-lg transition-shadow duration-300 ease-in-out ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''} ${
@@ -1339,9 +1376,14 @@ export default function ExecutiveOrders() {
                     </Button>
                   </div>
                   <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
                       {getStatusBadge(order.status, order)}
+                      {serviceLabel && (
+                        <Badge variant="outline" className="text-xs">
+                          {serviceLabel}
+                        </Badge>
+                      )}
                     </div>
                     
                     <div className="space-y-1 text-sm">
@@ -1661,8 +1703,8 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه تایید سفارش - فقط برای ماژول مدیریت کلی */}
-                  {order.status === 'pending' && isGeneralManagerModule && !isExecutiveModule && (
+                  {/* دکمه تایید سفارش */}
+                  {canManageInitialApproval && (
                     <Button
                       onClick={() => handleStageChange(order.id, 'pending_execution')}
                       size="sm"
@@ -1677,8 +1719,8 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه رد سفارش - فقط برای ماژول مدیریت کلی */}
-                  {order.status === 'pending' && isGeneralManagerModule && !isExecutiveModule && (
+                  {/* دکمه رد سفارش */}
+                  {canManageInitialApproval && (
                     <Button
                       onClick={() => {
                         setSelectedOrder(order);
