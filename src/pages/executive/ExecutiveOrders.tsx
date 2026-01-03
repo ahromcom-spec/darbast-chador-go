@@ -2318,6 +2318,9 @@ export default function ExecutiveOrders() {
           customerId={selectedOrder.customer_id || ''}
           totalPrice={selectedOrder.total_price || selectedOrder.payment_amount || 0}
           onPaymentSuccess={fetchOrders}
+          customerPhone={selectedOrder.customer_phone}
+          address={buildOrderSmsAddress(selectedOrder.address, selectedOrder.detailed_address)}
+          serviceType={getOrderServiceLabel(selectedOrder.notes) || 'خدمات'}
         />
       )}
 

@@ -13,7 +13,7 @@ import { ArrowRight, Plus, Trash2, AlertCircle } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
-import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
+import { buildOrderSmsAddress, sendOrderSms, sendCeoNotificationSms } from '@/lib/orderSms';
 
 // Import comprehensive validation schemas
 import { orderDimensionSchema, orderFormSchema } from '@/lib/validations';
@@ -355,12 +355,15 @@ export default function ScaffoldingFacadeForm() {
 
       // ارسال پیامک تایید ثبت سفارش به مشتری (در پس‌زمینه)
       const customerPhone = user?.user_metadata?.phone_number || user?.phone;
+      const customerName = user?.user_metadata?.full_name || 'مشتری';
+      const smsAddress = buildOrderSmsAddress(projectAddress, projectLocation?.address);
+      
       if (customerPhone) {
         console.log('[ScaffoldingFacadeForm] Sending SMS to:', customerPhone);
         sendOrderSms(customerPhone, createdProject.code, 'submitted', {
           orderId: createdProject.id,
           serviceType: 'داربست نما',
-          address: buildOrderSmsAddress(projectAddress, projectLocation?.address)
+          address: smsAddress
         }).then(result => {
           console.log('[ScaffoldingFacadeForm] SMS result:', result);
         }).catch(err => {
@@ -369,6 +372,16 @@ export default function ScaffoldingFacadeForm() {
       } else {
         console.warn('[ScaffoldingFacadeForm] No customer phone found to send SMS');
       }
+
+      // ارسال پیامک به مدیرعامل (در پس‌زمینه)
+      sendCeoNotificationSms(createdProject.code, 'submitted', {
+        orderId: createdProject.id,
+        serviceType: 'داربست نما',
+        address: smsAddress,
+        customerName
+      }).catch(err => {
+        console.error('[ScaffoldingFacadeForm] CEO SMS notification error:', err);
+      });
 
       // ارسال نوتیفیکیشن به مدیران (در پس‌زمینه)
       supabase.functions.invoke('notify-managers-new-order', {

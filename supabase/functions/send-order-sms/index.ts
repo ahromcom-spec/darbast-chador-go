@@ -93,9 +93,12 @@ const SMS_TEMPLATES: Record<string, string> = {
   in_progress: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در حال اجرا است. مشاهده سفارش: {orderLink}",
   executed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} اجرا شد. مشاهده سفارش: {orderLink}",
   awaiting_payment: "سفارش {serviceType} با کد {code} در آدرس {address} در انتظار پرداخت است. مبلغ: {amount} تومان. تاریخ: {dateTime} مشاهده سفارش: {orderLink}",
-  paid: "پرداخت سفارش {serviceType} با کد {code} در تاریخ {dateTime} ثبت شد. آدرس: {address} مشاهده سفارش: {orderLink}",
+  paid: "پرداخت سفارش {serviceType} با کد {code} به مبلغ {amount} تومان در تاریخ {dateTime} ثبت شد. آدرس: {address} مشاهده سفارش: {orderLink}",
   in_collection: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در حال جمع‌آوری است. مشاهده سفارش: {orderLink}",
   completed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} به پایان رسید. از اعتماد شما سپاسگزاریم. مشاهده سفارش: {orderLink}",
+  // پیامک‌های مخصوص مدیرعامل
+  ceo_new_order: "📋 سفارش جدید: کد {code} - {serviceType} - آدرس: {address} - مشتری: {customerName} - تاریخ: {dateTime}",
+  ceo_payment: "💰 پرداخت ثبت شد: کد {code} - مبلغ: {amount} تومان - مشتری: {customerName} - تاریخ: {dateTime}",
 };
 
 interface SmsRequest {
@@ -107,6 +110,7 @@ interface SmsRequest {
   address?: string;
   dateTime?: string;
   amount?: number;
+  customerName?: string; // نام مشتری برای پیامک مدیرعامل
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -116,9 +120,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount }: SmsRequest = await req.json();
+    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName }: SmsRequest = await req.json();
     
-    console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Service: ${serviceType}, Address: ${address}, Amount: ${amount}`);
+    console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Service: ${serviceType}, Address: ${address}, Amount: ${amount}, Customer: ${customerName}`);
 
     // Validate inputs
     if (!phone || !orderCode || !status) {
@@ -209,7 +213,8 @@ const handler = async (req: Request): Promise<Response> => {
       .replace("{address}", address || "ثبت نشده")
       .replace("{dateTime}", persianDateTime)
       .replace("{amount}", formattedAmount)
-      .replace("{orderLink}", orderLink);
+      .replace("{orderLink}", orderLink)
+      .replace("{customerName}", customerName || "مشتری");
     
     console.log(`[send-order-sms] Sending message: ${message}`);
 

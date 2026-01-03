@@ -282,6 +282,8 @@ export default function FinanceAwaitingPayment() {
           customerName={selectedOrder.customer_name}
           totalPrice={selectedOrder.payment_amount || 0}
           onPaymentSuccess={fetchOrders}
+          customerPhone={selectedOrder.customer_phone}
+          address={selectedOrder.address || 'ثبت نشده'}
         />
       )}
     </div>
