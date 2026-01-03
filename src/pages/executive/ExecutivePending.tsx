@@ -296,10 +296,21 @@ export default function ExecutivePending() {
               _user_id: customerData.user_id,
               _title: '✅ سفارش شما تایید شد',
               _body: `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`,
-              _link: '/profile?tab=orders',
+              _link: `/user/orders/${selectedOrder.id}`,
               _type: 'success'
             });
             await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+            
+            // ارسال Push Notification به گوشی کاربر
+            await supabase.functions.invoke('send-push-notification', {
+              body: {
+                user_id: customerData.user_id,
+                title: '✅ سفارش شما تایید شد',
+                body: `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`,
+                link: `/user/orders/${selectedOrder.id}`,
+                type: 'order-stage'
+              }
+            });
           }
         }
       }

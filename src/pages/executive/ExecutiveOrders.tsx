@@ -551,10 +551,21 @@ export default function ExecutiveOrders() {
             _user_id: customerData.user_id,
             _title: '✅ سفارش اجرا شد',
             _body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد.`,
-            _link: '/profile?tab=orders',
+            _link: `/user/orders/${orderId}`,
             _type: 'success'
           });
           await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+          
+          // ارسال Push Notification به گوشی کاربر
+          await supabase.functions.invoke('send-push-notification', {
+            body: {
+              user_id: customerData.user_id,
+              title: '✅ سفارش اجرا شد',
+              body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد.`,
+              link: `/user/orders/${orderId}`,
+              type: 'order-stage'
+            }
+          });
         }
       }
 
@@ -752,10 +763,21 @@ export default function ExecutiveOrders() {
                 _user_id: customerData.user_id,
                 _title: message.title,
                 _body: message.body,
-                _link: '/profile?tab=orders',
+                _link: `/user/orders/${orderId}`,
                 _type: 'info'
               });
               await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+              
+              // ارسال Push Notification به گوشی کاربر
+              await supabase.functions.invoke('send-push-notification', {
+                body: {
+                  user_id: customerData.user_id,
+                  title: message.title,
+                  body: message.body,
+                  link: `/user/orders/${orderId}`,
+                  type: 'order-stage'
+                }
+              });
             } catch (notifError) {
               console.error('Error sending notification:', notifError);
             }
