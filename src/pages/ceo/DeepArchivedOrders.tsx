@@ -142,7 +142,7 @@ export default function DeepArchivedOrders() {
   const deleteMutation = useMutation({
     mutationFn: async (orderId: string) => {
       // ابتدا داده‌های وابسته را حذف می‌کنیم
-      await deleteOrderDependencies(orderId);
+      await deleteBulkDependencies([orderId]);
       
       const { error } = await supabase
         .from('projects_v3')
@@ -163,9 +163,9 @@ export default function DeepArchivedOrders() {
     }
   });
 
-  // حذف تمام داده‌های وابسته یک سفارش
-  const deleteOrderDependencies = async (orderId: string) => {
-    // ترتیب حذف مهم است - ابتدا جداول فرزند، سپس سفارش اصلی
+  // حذف تمام داده‌های وابسته - بهینه شده برای حذف گروهی موازی
+  const deleteBulkDependencies = async (orderIds: string[]) => {
+    // جداول وابسته - همه به صورت موازی حذف می‌شوند
     const dependentTables = [
       { table: 'order_approvals', column: 'order_id' },
       { table: 'order_payments', column: 'order_id' },
@@ -181,41 +181,38 @@ export default function DeepArchivedOrders() {
       { table: 'daily_report_orders', column: 'order_id' },
       { table: 'project_media', column: 'project_id' },
       { table: 'project_progress_media', column: 'project_id' },
+      { table: 'project_progress_stages', column: 'project_id' },
       { table: 'ratings', column: 'project_id' },
       { table: 'services_v3', column: 'project_id' },
     ];
 
-    for (const dep of dependentTables) {
-      const { error } = await supabase
-        .from(dep.table as any)
-        .delete()
-        .eq(dep.column, orderId);
-      // خطاها را نادیده می‌گیریم چون ممکن است رکوردی وجود نداشته باشد یا RLS اجازه ندهد
-      if (error) {
-        console.log(`Could not delete from ${dep.table}:`, error.message);
-      }
-    }
+    // همه جداول را به صورت موازی حذف می‌کنیم
+    await Promise.all(
+      dependentTables.map(dep =>
+        supabase
+          .from(dep.table as any)
+          .delete()
+          .in(dep.column, orderIds)
+          .then(({ error }) => {
+            if (error) console.log(`Could not delete from ${dep.table}:`, error.message);
+          })
+      )
+    );
   };
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (orderIds: string[]) => {
-      // ابتدا تمام داده‌های وابسته را حذف می‌کنیم
-      for (const orderId of orderIds) {
-        await deleteOrderDependencies(orderId);
-      }
+      // حذف تمام داده‌های وابسته - یک درخواست موازی برای همه
+      await deleteBulkDependencies(orderIds);
 
-      // سپس سفارشات را به صورت مرحله‌ای حذف می‌کنیم
-      const CHUNK_SIZE = 50;
-      for (let i = 0; i < orderIds.length; i += CHUNK_SIZE) {
-        const chunkIds = orderIds.slice(i, i + CHUNK_SIZE);
-        const { error } = await supabase
-          .from('projects_v3')
-          .delete()
-          .in('id', chunkIds)
-          .eq('is_deep_archived', true);
+      // سپس سفارشات را حذف می‌کنیم
+      const { error } = await supabase
+        .from('projects_v3')
+        .delete()
+        .in('id', orderIds)
+        .eq('is_deep_archived', true);
 
-        if (error) throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
       toast({ title: `${selectedOrderIds.size} سفارش به صورت دائمی حذف شدند` });
