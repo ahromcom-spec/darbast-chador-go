@@ -165,6 +165,41 @@ export default function DeepArchivedOrders() {
 
   // حذف تمام داده‌های وابسته - بهینه شده برای حذف گروهی موازی
   const deleteBulkDependencies = async (orderIds: string[]) => {
+    // ابتدا شناسه پرداخت‌ها را برای حذف تراکنش‌های کیف پول دریافت می‌کنیم
+    const { data: payments } = await supabase
+      .from('order_payments')
+      .select('id')
+      .in('order_id', orderIds);
+    
+    const paymentIds = payments?.map(p => p.id) || [];
+
+    // حذف تراکنش‌های کیف پول مرتبط با سفارشات و پرداخت‌ها
+    const walletDeletePromises = [
+      // تراکنش‌های مربوط به تایید سفارش (reference_id = order_id)
+      supabase
+        .from('wallet_transactions')
+        .delete()
+        .eq('reference_type', 'order_approved')
+        .in('reference_id', orderIds)
+        .then(({ error }) => {
+          if (error) console.log('Could not delete wallet order_approved transactions:', error.message);
+        }),
+    ];
+    
+    // تراکنش‌های مربوط به پرداخت سفارش (reference_id = payment_id)
+    if (paymentIds.length > 0) {
+      walletDeletePromises.push(
+        supabase
+          .from('wallet_transactions')
+          .delete()
+          .eq('reference_type', 'order_payment')
+          .in('reference_id', paymentIds)
+          .then(({ error }) => {
+            if (error) console.log('Could not delete wallet order_payment transactions:', error.message);
+          })
+      );
+    }
+
     // جداول وابسته - همه به صورت موازی حذف می‌شوند
     const dependentTables = [
       { table: 'order_approvals', column: 'order_id' },
@@ -186,9 +221,10 @@ export default function DeepArchivedOrders() {
       { table: 'services_v3', column: 'project_id' },
     ];
 
-    // همه جداول را به صورت موازی حذف می‌کنیم
-    await Promise.all(
-      dependentTables.map(dep =>
+    // همه را به صورت موازی حذف می‌کنیم (تراکنش‌های کیف پول + جداول وابسته)
+    await Promise.all([
+      ...walletDeletePromises,
+      ...dependentTables.map(dep =>
         supabase
           .from(dep.table as any)
           .delete()
@@ -197,7 +233,7 @@ export default function DeepArchivedOrders() {
             if (error) console.log(`Could not delete from ${dep.table}:`, error.message);
           })
       )
-    );
+    ]);
   };
 
   const bulkDeleteMutation = useMutation({
