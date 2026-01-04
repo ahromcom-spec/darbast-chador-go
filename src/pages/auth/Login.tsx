@@ -117,6 +117,10 @@ export default function Login() {
   // بررسی وجود شماره در لیست سفید (از بک‌اند، برای اینکه وابسته به دسترسی کاربر نباشد)
   const checkWhitelist = async (phone: string): Promise<boolean> => {
     try {
+      // تایم‌اوت ۱۰ ثانیه‌ای برای جلوگیری از گیر کردن صفحه
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const { data, error } = await supabase.functions.invoke('verify-otp', {
         body: {
           phone_number: phone,
@@ -124,9 +128,12 @@ export default function Login() {
         },
       });
 
+      clearTimeout(timeoutId);
+
       if (error || data?.error) return false;
       return !!data?.is_whitelisted;
-    } catch {
+    } catch (e) {
+      console.error('Error checking whitelist:', e);
       return false;
     }
   };
@@ -148,37 +155,52 @@ export default function Login() {
     (document.activeElement as HTMLElement | null)?.blur();
     setLoading(true);
 
-    // بررسی وجود در لیست سفید
-    const isWhitelisted = await checkWhitelist(phoneNumber);
-    
-    if (isWhitelisted) {
-      // شماره در لیست سفید است - نمایش فرم رمز عبور
-      setLoading(false);
+    try {
+      // بررسی وجود در لیست سفید
+      const isWhitelisted = await checkWhitelist(phoneNumber);
+      
+      if (isWhitelisted) {
+        // شماره در لیست سفید است - نمایش فرم رمز عبور
+        setLoading(false);
+        flushSync(() => {
+          setPasswordCountdown(90); // ریست تایمر رمز عبور
+          setStep('password');
+        });
+        return;
+      }
+
+      // شماره عادی است - ارسال OTP
       flushSync(() => {
-        setPasswordCountdown(90); // ریست تایمر رمز عبور
-        setStep('password');
+        setCountdown(90);
+        setStep('otp');
       });
-      return;
-    }
 
-    // شماره عادی است - ارسال OTP
-    flushSync(() => {
-      setCountdown(90);
-      setStep('otp');
-    });
+      // ارسال کد تایید (بک‌اند وضعیت ثبت‌نام را مشخص می‌کند)
+      const { error, userExists } = await sendOTP(phoneNumber, false);
+      
+      setLoading(false);
 
-    // ارسال کد تایید (بک‌اند وضعیت ثبت‌نام را مشخص می‌کند)
-    const { error, userExists } = await sendOTP(phoneNumber, false);
-    
-    setLoading(false);
+      // اگر کاربر ثبت‌نام نکرده باشد (چه در پاسخ موفق چه خطا)، پیام راهنمای ثبت‌نام نمایش دهیم
+      const needsRegistration = userExists === false;
 
-    // اگر کاربر ثبت‌نام نکرده باشد (چه در پاسخ موفق چه خطا)، پیام راهنمای ثبت‌نام نمایش دهیم
-    const needsRegistration = userExists === false;
+      if (error) {
+        const msg = error.message || 'خطا در ارسال کد تایید';
+        const isGenericEdgeError = /non-2xx|Edge Function returned/i.test(msg);
+        if (needsRegistration || isGenericEdgeError || msg.includes('ثبت نشده')) {
+          setStep('not-registered');
+          toast({
+            title: 'نیاز به ثبت‌نام',
+            description: 'برای ورود به اهرم، ابتدا ثبت‌نام کنید.',
+          });
+          return;
+        }
+        // برگشت به مرحله شماره در صورت خطا
+        setStep('phone');
+        toast({ variant: 'destructive', title: 'خطا', description: msg });
+        return;
+      }
 
-    if (error) {
-      const msg = error.message || 'خطا در ارسال کد تایید';
-      const isGenericEdgeError = /non-2xx|Edge Function returned/i.test(msg);
-      if (needsRegistration || isGenericEdgeError || msg.includes('ثبت نشده')) {
+      if (needsRegistration) {
         setStep('not-registered');
         toast({
           title: 'نیاز به ثبت‌نام',
@@ -186,22 +208,14 @@ export default function Login() {
         });
         return;
       }
-      // برگشت به مرحله شماره در صورت خطا
+
+      toast({ title: 'موفق', description: 'کد تایید به شماره شما ارسال شد.' });
+    } catch (e) {
+      console.error('Error in handleSendOTP:', e);
+      setLoading(false);
       setStep('phone');
-      toast({ variant: 'destructive', title: 'خطا', description: msg });
-      return;
+      toast({ variant: 'destructive', title: 'خطا', description: 'خطا در اتصال به سرور. لطفاً مجدداً تلاش کنید.' });
     }
-
-    if (needsRegistration) {
-      setStep('not-registered');
-      toast({
-        title: 'نیاز به ثبت‌نام',
-        description: 'برای ورود به اهرم، ابتدا ثبت‌نام کنید.',
-      });
-      return;
-    }
-
-    toast({ title: 'موفق', description: 'کد تایید به شماره شما ارسال شد.' });
   };
 
 const handleResendOTP = async () => {
