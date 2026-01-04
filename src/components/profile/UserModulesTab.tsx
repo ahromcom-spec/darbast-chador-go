@@ -63,6 +63,15 @@ const MODULE_DETAILS: Record<string, ModuleInfo> = {
     bgColor: 'bg-purple-50',
     icon: 'calculator',
   },
+  my_invoice: {
+    key: 'my_invoice',
+    name: 'صورتحساب من',
+    description: 'مشاهده صورتحساب جامع سفارشات و پرداخت‌های شخصی',
+    href: '/my-invoice',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+    icon: 'receipt',
+  },
 };
 
 export function UserModulesTab() {
