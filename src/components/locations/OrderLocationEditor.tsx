@@ -170,6 +170,14 @@ export function OrderLocationEditor({
   const displayLat = pendingLocation?.lat ?? locationLat;
   const displayLng = pendingLocation?.lng ?? locationLng;
 
+  // فقط یک آدرس در نقشه نمایش داده شود (در صورت وجود آدرس تکمیلی، به آدرس اصلی اضافه می‌شود)
+  const combinedAddress = (() => {
+    const a = (address || '').trim();
+    const d = (detailedAddress || '').trim();
+    if (a && d && d !== a) return `${a}، ${d}`;
+    return a || d;
+  })();
+
   return (
     <Card>
       <CardHeader>
@@ -234,8 +242,7 @@ export function OrderLocationEditor({
           <StaticLocationMap
             lat={displayLat}
             lng={displayLng}
-            address={address}
-            detailedAddress={detailedAddress}
+            address={combinedAddress}
           />
         </div>
         {pendingLocation && (

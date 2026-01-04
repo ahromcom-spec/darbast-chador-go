@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,32 +43,38 @@ export const ExpertPricingEditDialog = ({
 }: ExpertPricingEditDialogProps) => {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  
+
   // Parse existing notes
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
-  
+
   // Form state
   const [description, setDescription] = useState('');
   const [dimensions, setDimensions] = useState<Dimension[]>([{ length: '', width: '', height: '' }]);
   const [requestedDate, setRequestedDate] = useState('');
-  
-  // Address editing state
+
+  // Address editing state (single field)
   const [address, setAddress] = useState('');
-  const [detailedAddress, setDetailedAddress] = useState('');
   const [locationLat, setLocationLat] = useState<number | null>(null);
   const [locationLng, setLocationLng] = useState<number | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
-  
+
   // Initialize form with existing data when dialog opens
   useEffect(() => {
     if (open && parsedNotes) {
       setDescription(parsedNotes.description || '');
       setRequestedDate(parsedNotes.requested_date || '');
-      setAddress(order.address || '');
-      setDetailedAddress(order.detailed_address || '');
+
+      // Combine (address + detailed_address) into ONE address string for display/edit
+      const baseAddress = (order.address || '').trim();
+      const extraAddress = (order.detailed_address || '').trim();
+      const combinedAddress = baseAddress && extraAddress && extraAddress !== baseAddress
+        ? `${baseAddress}، ${extraAddress}`
+        : (baseAddress || extraAddress);
+
+      setAddress(combinedAddress);
       setLocationLat(order.location_lat || null);
       setLocationLng(order.location_lng || null);
-      
+
       // Parse existing dimensions
       if (parsedNotes.dimensions && Array.isArray(parsedNotes.dimensions) && parsedNotes.dimensions.length > 0) {
         setDimensions(parsedNotes.dimensions.map((d: any) => ({
@@ -143,7 +149,7 @@ export const ExpertPricingEditDialog = ({
 
   const handleSave = async () => {
     setSaving(true);
-    
+
     try {
       // Build updated notes - preserve existing fields
       const updatedNotes = {
@@ -155,10 +161,11 @@ export const ExpertPricingEditDialog = ({
         requested_date: requestedDate || null,
       };
 
+      // IMPORTANT: Only ONE address field is stored; detailed_address is cleared
       const updateData: any = {
         notes: updatedNotes,
         address: address,
-        detailed_address: detailedAddress || null,
+        detailed_address: null,
       };
 
       // Update location if changed
@@ -186,7 +193,7 @@ export const ExpertPricingEditDialog = ({
 
       onOpenChange(false);
       onSuccess?.();
-      
+
     } catch (error: any) {
       console.error('Error updating order:', error);
       toast({
@@ -213,7 +220,10 @@ export const ExpertPricingEditDialog = ({
           {/* Service Info */}
           <div className="p-4 bg-muted rounded-lg space-y-2">
             <p className="text-sm text-muted-foreground">
-              نوع خدمات: <span className="font-medium text-foreground">{order.subcategory?.name || parsedNotes?.service_type || 'داربست فلزی'}</span>
+              نوع خدمات:{' '}
+              <span className="font-medium text-foreground">
+                {order.subcategory?.name || parsedNotes?.service_type || 'داربست فلزی'}
+              </span>
             </p>
           </div>
 
@@ -235,22 +245,13 @@ export const ExpertPricingEditDialog = ({
                 ویرایش موقعیت روی نقشه
               </Button>
             </div>
-            
+
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">آدرس کامل</Label>
+              <Label className="text-xs text-muted-foreground">آدرس پروژه</Label>
               <Input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="آدرس کامل را وارد کنید..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">توضیحات آدرس (پلاک، واحد و...)</Label>
-              <Input
-                value={detailedAddress}
-                onChange={(e) => setDetailedAddress(e.target.value)}
-                placeholder="پلاک، واحد، طبقه و..."
+                placeholder="آدرس کامل پروژه را وارد کنید..."
               />
             </div>
 
@@ -281,7 +282,7 @@ export const ExpertPricingEditDialog = ({
                 افزودن ابعاد
               </Button>
             </div>
-            
+
             {dimensions.map((dim, index) => {
               const rowArea = calculateDimensionArea(dim);
               return (
@@ -325,13 +326,16 @@ export const ExpertPricingEditDialog = ({
                   </div>
                   {rowArea > 0 && (
                     <p className="text-xs text-muted-foreground text-left">
-                      متراژ: <span className="font-semibold text-primary">{rowArea.toLocaleString('fa-IR')} متر مربع</span>
+                      متراژ:{' '}
+                      <span className="font-semibold text-primary">
+                        {rowArea.toLocaleString('fa-IR')} متر مربع
+                      </span>
                     </p>
                   )}
                 </div>
               );
             })}
-            
+
             {/* Total area display */}
             {totalArea > 0 && (
               <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
@@ -368,9 +372,9 @@ export const ExpertPricingEditDialog = ({
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4">
-            <Button 
-              onClick={handleSave} 
-              disabled={saving} 
+            <Button
+              onClick={handleSave}
+              disabled={saving}
               className="flex-1"
               size="lg"
             >
@@ -386,8 +390,8 @@ export const ExpertPricingEditDialog = ({
                 </span>
               )}
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={saving}
             >
@@ -396,6 +400,15 @@ export const ExpertPricingEditDialog = ({
           </div>
         </div>
       </DialogContent>
+
+      {/* Location Map Modal */}
+      <LocationMapModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onLocationSelect={handleLocationSelect}
+        initialLat={locationLat || order.location_lat || 35.6892}
+        initialLng={locationLng || order.location_lng || 51.389}
+      />
     </Dialog>
   );
 };

@@ -64,11 +64,17 @@ export const EditExpertPricingDialog = ({
   // Parse notes and load existing data
   useEffect(() => {
     if (open) {
-      // Initialize address field
-      setAddress(orderData?.address || '');
+      // Initialize address field (single field)
+      const baseAddress = (orderData?.address || '').trim();
+      const extraAddress = (orderData?.detailed_address || '').trim();
+      const combinedAddress = baseAddress && extraAddress && extraAddress !== baseAddress
+        ? `${baseAddress}، ${extraAddress}`
+        : (baseAddress || extraAddress);
+
+      setAddress(combinedAddress);
       setLocationLat(orderData?.location_lat || null);
       setLocationLng(orderData?.location_lng || null);
-      
+
       if (orderData?.notes) {
         let notes = orderData.notes;
         try {
@@ -205,7 +211,9 @@ export const EditExpertPricingDialog = ({
       const updateData: any = {
         notes: JSON.stringify(updatedNotes),
         updated_at: new Date().toISOString(),
+        // IMPORTANT: Only ONE address field is stored; detailed_address is cleared
         address: address,
+        detailed_address: null,
       };
 
       // Update location if changed
