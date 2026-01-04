@@ -3081,7 +3081,10 @@ export default function OrderDetail() {
                 address: order.address,
                 detailed_address: order.detailed_address,
                 notes: order.notes,
-                subcategory: order.subcategory
+                subcategory: order.subcategory,
+                location_lat: order.location_lat,
+                location_lng: order.location_lng,
+                hierarchy_project_id: order.hierarchy_project_id
               }}
               onSuccess={fetchOrderDetails}
             />

@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Save, Clock } from 'lucide-react';
+import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Save, Clock, MapPin, Edit } from 'lucide-react';
 import { MediaUploader } from './MediaUploader';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { LocationMapModal } from '@/components/locations/LocationMapModal';
 
 interface EditExpertPricingDialogProps {
   open: boolean;
@@ -25,6 +26,9 @@ interface EditExpertPricingDialogProps {
         name: string;
       };
     };
+    location_lat?: number | null;
+    location_lng?: number | null;
+    hierarchy_project_id?: string | null;
   };
   onSuccess: () => void;
 }
@@ -48,33 +52,48 @@ export const EditExpertPricingDialog = ({
   const [requestedDate, setRequestedDate] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   
+  // Address editing state
+  const [address, setAddress] = useState('');
+  const [detailedAddress, setDetailedAddress] = useState('');
+  const [locationLat, setLocationLat] = useState<number | null>(null);
+  const [locationLng, setLocationLng] = useState<number | null>(null);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  
   const { toast } = useToast();
   const { user } = useAuth();
 
   // Parse notes and load existing data
   useEffect(() => {
-    if (open && orderData?.notes) {
-      let notes = orderData.notes;
-      try {
-        if (typeof notes === 'string') notes = JSON.parse(notes);
-        if (typeof notes === 'string') notes = JSON.parse(notes);
-      } catch (e) {
-        console.error('Error parsing notes:', e);
-      }
-
-      if (notes) {
-        setDescription(notes.description || '');
-        
-        if (notes.dimensions && notes.dimensions.length > 0) {
-          setDimensions(notes.dimensions.map((d: any) => ({
-            length: d.length?.toString() || '',
-            width: d.width?.toString() || '',
-            height: d.height?.toString() || ''
-          })));
+    if (open) {
+      // Initialize address fields
+      setAddress(orderData?.address || '');
+      setDetailedAddress(orderData?.detailed_address || '');
+      setLocationLat(orderData?.location_lat || null);
+      setLocationLng(orderData?.location_lng || null);
+      
+      if (orderData?.notes) {
+        let notes = orderData.notes;
+        try {
+          if (typeof notes === 'string') notes = JSON.parse(notes);
+          if (typeof notes === 'string') notes = JSON.parse(notes);
+        } catch (e) {
+          console.error('Error parsing notes:', e);
         }
-        
-        if (notes.requested_date) {
-          setRequestedDate(notes.requested_date);
+
+        if (notes) {
+          setDescription(notes.description || '');
+          
+          if (notes.dimensions && notes.dimensions.length > 0) {
+            setDimensions(notes.dimensions.map((d: any) => ({
+              length: d.length?.toString() || '',
+              width: d.width?.toString() || '',
+              height: d.height?.toString() || ''
+            })));
+          }
+          
+          if (notes.requested_date) {
+            setRequestedDate(notes.requested_date);
+          }
         }
       }
     }
@@ -184,17 +203,33 @@ export const EditExpertPricingDialog = ({
         requested_date: requestedDate || null
       };
 
-      // Update order notes
+      // Build update data with address
+      const updateData: any = {
+        notes: JSON.stringify(updatedNotes),
+        updated_at: new Date().toISOString(),
+        address: address,
+        detailed_address: detailedAddress || null,
+      };
+
+      // Update location if changed
+      if (locationLat !== null && locationLng !== null) {
+        updateData.location_lat = locationLat;
+        updateData.location_lng = locationLng;
+      }
+
+      // Update order
       const { error: updateError } = await supabase
         .from('projects_v3')
-        .update({ 
-          notes: JSON.stringify(updatedNotes),
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', orderId);
 
       if (updateError) {
         throw updateError;
+      }
+
+      // Sync location to hierarchy for globe map
+      if (locationLat !== null && locationLng !== null) {
+        await syncHierarchyLocation(locationLat, locationLng);
       }
 
       // Upload new media files if any
@@ -227,8 +262,37 @@ export const EditExpertPricingDialog = ({
   };
 
   const serviceTypeName = orderData?.subcategory?.service_type?.name || 'داربست فلزی';
-  const address = orderData?.address || '';
-  const detailedAddress = orderData?.detailed_address;
+
+  // Handle location selection from map modal
+  const handleLocationSelect = (lat: number, lng: number) => {
+    setLocationLat(lat);
+    setLocationLng(lng);
+    setShowLocationModal(false);
+  };
+
+  // Sync location to hierarchy (for globe map)
+  const syncHierarchyLocation = async (lat: number, lng: number) => {
+    const hierarchyProjectId = orderData?.hierarchy_project_id;
+    if (!hierarchyProjectId) return;
+
+    const { data: hierarchy, error: hierarchyError } = await supabase
+      .from('projects_hierarchy')
+      .select('location_id')
+      .eq('id', hierarchyProjectId)
+      .maybeSingle();
+
+    if (hierarchyError) throw hierarchyError;
+
+    const locationId = (hierarchy as any)?.location_id as string | undefined;
+    if (!locationId) return;
+
+    const { error: locationError } = await supabase
+      .from('locations')
+      .update({ lat, lng, address_line: address, updated_at: new Date().toISOString() })
+      .eq('id', locationId);
+
+    if (locationError) throw locationError;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -241,14 +305,55 @@ export const EditExpertPricingDialog = ({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Service Info - Always show */}
-          <div className="p-4 bg-muted rounded-lg space-y-2">
+          {/* Service Info */}
+          <div className="p-4 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground">
               نوع خدمات: <span className="font-medium text-foreground">{serviceTypeName}</span>
             </p>
-            <p className="text-sm text-muted-foreground">
-              آدرس: <span className="font-medium text-foreground">{address}{detailedAddress ? ` - ${detailedAddress}` : ''}</span>
-            </p>
+          </div>
+
+          {/* Address Editing */}
+          <div className="space-y-3 p-4 border rounded-lg bg-background">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                آدرس پروژه
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLocationModal(true)}
+                className="gap-1"
+              >
+                <Edit className="h-3 w-3" />
+                ویرایش موقعیت روی نقشه
+              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">آدرس کامل</Label>
+              <Input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="آدرس کامل را وارد کنید..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">توضیحات آدرس (پلاک، واحد و...)</Label>
+              <Input
+                value={detailedAddress}
+                onChange={(e) => setDetailedAddress(e.target.value)}
+                placeholder="پلاک، واحد، طبقه و..."
+              />
+            </div>
+
+            {locationLat && locationLng && (
+              <p className="text-xs text-muted-foreground text-center">
+                📍 موقعیت: {locationLat.toFixed(5)}, {locationLng.toFixed(5)}
+              </p>
+            )}
           </div>
 
           {/* Description */}
@@ -365,6 +470,15 @@ export const EditExpertPricingDialog = ({
           </Button>
         </div>
       </DialogContent>
+
+      {/* Location Map Modal */}
+      <LocationMapModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onLocationSelect={handleLocationSelect}
+        initialLat={locationLat || orderData?.location_lat || 35.6892}
+        initialLng={locationLng || orderData?.location_lng || 51.389}
+      />
     </Dialog>
   );
 };
