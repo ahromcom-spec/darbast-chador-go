@@ -72,9 +72,11 @@ interface OrderData {
 interface ExecutiveGlobeMapProps {
   onClose: () => void;
   onOrderClick?: (orderId: string) => void;
+  activeModuleKey?: string;
+  moduleName?: string;
 }
 
-export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGlobeMapProps) {
+export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleKey, moduleName }: ExecutiveGlobeMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
@@ -89,7 +91,20 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
   // مختصات مرکز استان قم
   const QOM_CENTER = { lat: 34.6416, lng: 50.8746 };
 
-  // دریافت سفارشات داربست به همراه اجناس (بدون بلاک کردن UI روی عکس‌ها)
+  // تشخیص نوع ماژول برای فیلتر کردن سفارشات
+  const isAllOrdersModule = activeModuleKey === 'all_orders_management' || 
+                             activeModuleKey?.includes('سفارشات کل') ||
+                             moduleName?.includes('سفارشات کل') ||
+                             moduleName?.includes('مدیریت کلی کل');
+
+  const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
+                                         activeModuleKey?.includes('101010') ||
+                                         moduleName?.includes('داربست به همراه اجناس');
+
+  const isRentalItemsModule = moduleName?.includes('کرایه اجناس داربست') ||
+                               moduleName?.includes('کرایه اجناس');
+
+  // دریافت سفارشات بر اساس ماژول فعال
   const {
     data: baseOrders,
     isLoading: isLoadingOrders,
@@ -98,7 +113,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
     error: ordersError,
     refetch: refetchOrders,
   } = useQuery({
-    queryKey: ['executive-globe-map-orders'],
+    queryKey: ['executive-globe-map-orders', activeModuleKey, moduleName],
     queryFn: async (): Promise<OrderData[]> => {
       const { data, error } = await supabase
         .from('projects_v3')
@@ -143,16 +158,36 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
 
       if (error) throw error;
 
-      // فیلتر کردن فقط سفارشات داربست به همراه اجناس
-      const scaffoldOrders =
-        data?.filter((order: any) => {
+      // فیلتر کردن سفارشات بر اساس ماژول فعال
+      let filteredOrders = data || [];
+
+      if (isAllOrdersModule) {
+        // ماژول مدیریت کلی - همه سفارشات
+        filteredOrders = data || [];
+      } else if (isRentalItemsModule) {
+        // ماژول کرایه اجناس داربست - فقط کد 30
+        filteredOrders = data?.filter((order: any) => {
+          const subcategoryCode = order.subcategories?.code;
+          return subcategoryCode === '30';
+        }) || [];
+      } else if (isScaffoldWithMaterialsModule) {
+        // ماژول داربست به همراه اجناس - فقط کد 10
+        filteredOrders = data?.filter((order: any) => {
           const subcategoryCode = order.subcategories?.code;
           const serviceTypeCode = order.subcategories?.service_types_v3?.code;
           return subcategoryCode === '10' && serviceTypeCode === '10';
         }) || [];
+      } else {
+        // پیش‌فرض - داربست به همراه اجناس
+        filteredOrders = data?.filter((order: any) => {
+          const subcategoryCode = order.subcategories?.code;
+          const serviceTypeCode = order.subcategories?.service_types_v3?.code;
+          return subcategoryCode === '10' && serviceTypeCode === '10';
+        }) || [];
+      }
 
       // نرمال‌سازی مختصات: اگر lat/lng روی سفارش خالی بود از پروژه‌ی سلسله‌مراتبی و لوکیشن آن استفاده کن
-      const normalized = (scaffoldOrders as any[])
+      const normalized = (filteredOrders as any[])
         .map((o) => {
           const directLat = typeof o.location_lat === 'number' ? o.location_lat : null;
           const directLng = typeof o.location_lng === 'number' ? o.location_lng : null;

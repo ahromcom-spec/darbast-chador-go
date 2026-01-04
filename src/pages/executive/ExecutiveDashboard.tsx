@@ -230,7 +230,13 @@ export default function ExecutiveDashboard() {
 
   // نمایش کره زمین
   if (showGlobe) {
-    return <ExecutiveGlobeMap onClose={() => setShowGlobe(false)} />;
+    return (
+      <ExecutiveGlobeMap 
+        onClose={() => setShowGlobe(false)} 
+        activeModuleKey={activeModuleKey}
+        moduleName={moduleName}
+      />
+    );
   }
 
   return (
