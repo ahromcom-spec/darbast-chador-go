@@ -153,6 +153,7 @@ interface Order {
   // نوع خدمات و زیرشاخه
   service_type_name?: string | null;
   subcategory_name?: string | null;
+  subcategory_code?: string | null;
   collection_request?: {
     requested_date: string | null;
     status: string;
@@ -230,6 +231,11 @@ export default function ExecutiveOrders() {
                               activeModuleKey === 'comprehensive_accounting' ||
                               activeModuleKey.includes('accounting');
 
+  // ماژول مدیریت کرایه اجناس داربست - فقط سفارشات با subcategory_code = '30'
+  const isRentalItemsModule = 
+    moduleName.includes('کرایه اجناس داربست') ||
+    moduleName.includes('کرایه اجناس');
+
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -248,6 +254,11 @@ export default function ExecutiveOrders() {
 
   useEffect(() => {
     let filtered = orders;
+
+    // فیلتر ماژول کرایه اجناس داربست - فقط سفارشات با کد زیرشاخه 30
+    if (isRentalItemsModule) {
+      filtered = filtered.filter(order => order.subcategory_code === '30');
+    }
 
     // Filter by status
     if (statusFilter !== 'all') {
@@ -271,7 +282,7 @@ export default function ExecutiveOrders() {
     }
 
     setFilteredOrders(filtered);
-  }, [searchTerm, statusFilter, orders]);
+  }, [searchTerm, statusFilter, orders, isRentalItemsModule]);
 
   const fetchOrders = async () => {
     try {
@@ -307,6 +318,7 @@ export default function ExecutiveOrders() {
           rental_start_date,
           subcategories (
             name,
+            code,
             service_types_v3 (
               name
             )
@@ -379,6 +391,7 @@ export default function ExecutiveOrders() {
           // دریافت نام نوع خدمات و زیرشاخه
           const serviceTypeName = order.subcategories?.service_types_v3?.name || null;
           const subcategoryName = order.subcategories?.name || null;
+          const subcategoryCode = order.subcategories?.code || null;
 
           return {
             id: order.id,
@@ -411,6 +424,7 @@ export default function ExecutiveOrders() {
             rental_start_date: order.rental_start_date,
             service_type_name: serviceTypeName,
             subcategory_name: subcategoryName,
+            subcategory_code: subcategoryCode,
             collection_request: collectionRequestData || null,
           } as Order;
         })
