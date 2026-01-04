@@ -141,6 +141,9 @@ export default function DeepArchivedOrders() {
 
   const deleteMutation = useMutation({
     mutationFn: async (orderId: string) => {
+      // ابتدا داده‌های وابسته را حذف می‌کنیم
+      await deleteOrderDependencies(orderId);
+      
       const { error } = await supabase
         .from('projects_v3')
         .delete()
@@ -154,15 +157,54 @@ export default function DeepArchivedOrders() {
       setShowDeleteDialog(false);
       setSelectedOrder(null);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Delete deep-archived order error:', error);
       toast({ title: 'خطا در حذف سفارش', variant: 'destructive' });
     }
   });
 
+  // حذف تمام داده‌های وابسته یک سفارش
+  const deleteOrderDependencies = async (orderId: string) => {
+    // ترتیب حذف مهم است - ابتدا جداول فرزند، سپس سفارش اصلی
+    const dependentTables = [
+      { table: 'order_approvals', column: 'order_id' },
+      { table: 'order_payments', column: 'order_id' },
+      { table: 'order_messages', column: 'order_id' },
+      { table: 'order_collaborators', column: 'order_id' },
+      { table: 'order_transfer_requests', column: 'order_id' },
+      { table: 'order_renewals', column: 'order_id' },
+      { table: 'order_daily_logs', column: 'order_id' },
+      { table: 'collection_requests', column: 'order_id' },
+      { table: 'call_logs', column: 'order_id' },
+      { table: 'voice_call_signals', column: 'order_id' },
+      { table: 'repair_requests', column: 'order_id' },
+      { table: 'daily_report_orders', column: 'order_id' },
+      { table: 'project_media', column: 'project_id' },
+      { table: 'project_progress_media', column: 'project_id' },
+      { table: 'ratings', column: 'project_id' },
+      { table: 'services_v3', column: 'project_id' },
+    ];
+
+    for (const dep of dependentTables) {
+      const { error } = await supabase
+        .from(dep.table as any)
+        .delete()
+        .eq(dep.column, orderId);
+      // خطاها را نادیده می‌گیریم چون ممکن است رکوردی وجود نداشته باشد یا RLS اجازه ندهد
+      if (error) {
+        console.log(`Could not delete from ${dep.table}:`, error.message);
+      }
+    }
+  };
+
   const bulkDeleteMutation = useMutation({
     mutationFn: async (orderIds: string[]) => {
-      // PostgREST delete with .in(...) can hit URL-length limits when many IDs are selected.
-      // حذف را به صورت مرحله‌ای انجام می‌دهیم تا برای لیست‌های بزرگ (مثل ۱۸۵ مورد) هم پایدار باشد.
+      // ابتدا تمام داده‌های وابسته را حذف می‌کنیم
+      for (const orderId of orderIds) {
+        await deleteOrderDependencies(orderId);
+      }
+
+      // سپس سفارشات را به صورت مرحله‌ای حذف می‌کنیم
       const CHUNK_SIZE = 50;
       for (let i = 0; i < orderIds.length; i += CHUNK_SIZE) {
         const chunkIds = orderIds.slice(i, i + CHUNK_SIZE);
