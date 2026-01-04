@@ -801,7 +801,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick }: ExecutiveGl
   }, [handleOrderClick, mapReady, orderMarkers]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-background">
+    <div className="fixed inset-0 z-[100] bg-background">
       {/* دکمه بازگشت */}
       <div className="absolute top-4 right-4 z-[1000]">
         <Button
