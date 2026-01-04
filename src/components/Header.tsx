@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useRef, useCallback } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt, Minus, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -26,42 +26,9 @@ const Header = memo(() => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   
-  // Scroll hide functionality
-  const [isVisible, setIsVisible] = useState(true);
-  const lastScrollY = useRef(0);
-  const ticking = useRef(false);
-  
   // نمایش نام کاربر از پروفایل یا متادیتا
   const displayName = profileName || user?.user_metadata?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
 
-
-  const handleScroll = useCallback(() => {
-    if (!ticking.current) {
-      window.requestAnimationFrame(() => {
-        const currentScrollY = window.scrollY;
-        
-        // If at the top, always show header
-        if (currentScrollY < 50) {
-          setIsVisible(true);
-        } else if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-          // Scrolling down & past threshold - hide
-          setIsVisible(false);
-        } else if (currentScrollY < lastScrollY.current) {
-          // Scrolling up - show
-          setIsVisible(true);
-        }
-        
-        lastScrollY.current = currentScrollY;
-        ticking.current = false;
-      });
-      ticking.current = true;
-    }
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
 
   // Fetch user profile (avatar and name) and subscribe to changes
   useEffect(() => {
@@ -138,8 +105,6 @@ const Header = memo(() => {
     }
   };
 
-  // Calculate the height of the first header for smooth positioning
-  const firstHeaderHeight = isVisible ? 0 : -80; // Approximate height in pixels
   const isGlobeRoute = location.pathname === '/globe';
 
   const handleRefresh = useCallback(() => {
@@ -206,16 +171,9 @@ const Header = memo(() => {
 
   return (
     <>
-      {/* First Header - Logo row - Slides up on scroll */}
-      <div 
-        className="bg-card/95 backdrop-blur-sm border-b border-border/30 shadow-sm transition-transform duration-300 ease-out"
-        style={{ 
-          transform: isVisible ? 'translateY(0)' : 'translateY(-100%)',
-          position: isVisible ? 'relative' : 'absolute',
-          width: '100%',
-          zIndex: 50
-        }}
-      >
+      {/* First Header - Logo row */}
+      <div className="relative z-50 bg-card/95 backdrop-blur-sm border-b border-border/30 shadow-sm">
+
         <div className="container mx-auto px-4 sm:px-6">
           {/* Mobile & Tablet Layout - First Row */}
           <div className="md:hidden">
