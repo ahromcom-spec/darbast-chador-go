@@ -238,6 +238,7 @@ export default function OrderDetail() {
   
   // Get return path from URL params
   const returnTo = searchParams.get('returnTo');
+  const mediaUpload = searchParams.get('mediaUpload');
    
   // معیارهای ثابت امتیازدهی - بدون نیاز به کوئری دیتابیس
   const staffCriteria: RatingCriteria[] = [
@@ -256,17 +257,33 @@ export default function OrderDetail() {
 
   // رفرش خودکار بعد از بارگذاری اولیه برای نمایش فایل‌های تازه آپلود شده
   useEffect(() => {
-    if (id) {
+    if (!id) return;
+
+    fetchOrderDetails();
+
+    // رفرش خودکار بعد از 2 ثانیه برای اطمینان از بارگذاری کامل مدیا
+    const refreshTimer = window.setTimeout(() => {
       fetchOrderDetails();
-      
-      // رفرش خودکار بعد از 2 ثانیه برای اطمینان از بارگذاری کامل مدیا
-      const refreshTimer = setTimeout(() => {
+    }, 2000);
+
+    // اگر از فرم ثبت سفارش آمده‌ایم، تا مدتی polling انجام بده تا ویدیو/عکس‌های در حال آپلود هم نمایش داده شوند
+    let pollInterval: number | undefined;
+    if (mediaUpload === '1') {
+      let attempts = 0;
+      pollInterval = window.setInterval(() => {
+        attempts += 1;
         fetchOrderDetails();
-      }, 2000);
-      
-      return () => clearTimeout(refreshTimer);
+        if (attempts >= 20) {
+          window.clearInterval(pollInterval);
+        }
+      }, 3000);
     }
-  }, [id]);
+
+    return () => {
+      window.clearTimeout(refreshTimer);
+      if (pollInterval) window.clearInterval(pollInterval);
+    };
+  }, [id, mediaUpload]);
 
   // Realtime updates for order status, approvals, and media
   useEffect(() => {

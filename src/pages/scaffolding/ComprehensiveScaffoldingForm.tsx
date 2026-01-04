@@ -777,13 +777,16 @@ export default function ComprehensiveScaffoldingForm({
   // آپلود یک فایل منفرد
   const uploadSingleFile = async (projectId: string, file: File): Promise<boolean> => {
     try {
-      // Enforce backend upload limit: skip oversized videos (>50MB)
-      const isVideo = file.type?.startsWith('video/');
-      const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+      // Enforce upload size limit for videos (matches customer order page)
+      const isVideo =
+        file.type?.startsWith('video/') ||
+        /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name);
+      const MAX_VIDEO_SIZE_MB = 70;
+      const MAX_VIDEO_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
       if (isVideo && file.size > MAX_VIDEO_BYTES) {
         toast({
           title: 'حجم ویدیو زیاد است',
-          description: `حجم ${file.name} بیشتر از 50MB است. لطفاً فایل را کوچکتر کنید.`,
+          description: `حداکثر حجم هر ویدیو ${MAX_VIDEO_SIZE_MB}MB است. لطفاً ${file.name} را کوچکتر کنید.`,
           variant: 'destructive'
         });
         return false;
@@ -1211,7 +1214,8 @@ export default function ComprehensiveScaffoldingForm({
           });
         }
 
-        navigate(`/user/orders/${editOrderId}`);
+        const mediaUploadQuery = mediaFiles && mediaFiles.length > 0 ? '?mediaUpload=1' : '';
+        navigate(`/user/orders/${editOrderId}${mediaUploadQuery}`);
       } else {
         // ایجاد سفارش جدید به‌صورت اتمیک در دیتابیس با لینک به پروژه سلسله‌مراتبی
         // مطمئن شویم که provinceId و districtId UUID معتبر یا null هستند
@@ -1391,7 +1395,8 @@ export default function ComprehensiveScaffoldingForm({
         });
 
         // هدایت کاربر به صفحه جزئیات سفارش بلافاصله
-        navigate(`/user/orders/${createdProject.id}`);
+        const mediaUploadQuery = mediaFiles && mediaFiles.length > 0 ? '?mediaUpload=1' : '';
+        navigate(`/user/orders/${createdProject.id}${mediaUploadQuery}`);
       }
     } catch (e: any) {
       console.error('Error:', e);
@@ -2022,7 +2027,7 @@ export default function ComprehensiveScaffoldingForm({
         maxImages={10}
         maxVideos={10}
         maxImageSize={10}
-        maxVideoSize={100}
+        maxVideoSize={70}
         maxVideoDuration={180}
         disableAutoUpload={false}
       />
