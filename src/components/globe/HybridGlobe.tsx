@@ -2,6 +2,17 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowRight, MapPin, X, Plus, Camera, Video } from 'lucide-react';
+// بررسی وجود بنر impersonation برای تنظیم موقعیت دکمه بازگشت
+const useIsImpersonating = () => {
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  useEffect(() => {
+    const check = () => setIsImpersonating(!!localStorage.getItem('original_admin_session'));
+    check();
+    window.addEventListener('storage', check);
+    return () => window.removeEventListener('storage', check);
+  }, []);
+  return isImpersonating;
+};
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
@@ -45,6 +56,7 @@ interface HybridGlobeProps {
 }
 
 export default function HybridGlobe({ onClose }: HybridGlobeProps) {
+  const isImpersonating = useIsImpersonating();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
@@ -2650,19 +2662,23 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     <div className="fixed inset-0 z-50 bg-background">
       {/* لایه‌ی روی نقشه برای کنترل‌ها */}
       <div className="absolute inset-0 z-[2000] pointer-events-none">
-        {/* دکمه بازگشت */}
+        {/* دکمه بازگشت - با فاصله بیشتر وقتی بنر impersonation فعال است */}
         <Button
           variant="default"
           size="sm"
           onClick={onClose}
-          className="pointer-events-auto absolute top-4 right-4 shadow-2xl border-2 border-primary/20 text-xs px-3 py-1.5 h-8"
+          className={`pointer-events-auto absolute right-4 shadow-2xl border-2 border-primary/20 text-xs px-3 py-1.5 h-8 ${
+            isImpersonating ? 'top-16' : 'top-4'
+          }`}
         >
           <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
           <span className="font-semibold text-xs">بازگشت</span>
         </Button>
 
-        {/* کارت تعداد پروژه‌ها */}
-        <Card className="pointer-events-auto absolute top-16 left-4 bg-card shadow-2xl border-2 border-primary/20 p-2">
+        {/* کارت تعداد پروژه‌ها - با فاصله بیشتر وقتی بنر impersonation فعال است */}
+        <Card className={`pointer-events-auto absolute left-4 bg-card shadow-2xl border-2 border-primary/20 p-2 ${
+          isImpersonating ? 'top-28' : 'top-16'
+        }`}>
           <div className="flex items-center gap-1.5">
             <div className="p-1 bg-primary/10 rounded-lg">
               <MapPin className="h-3.5 w-3.5 text-primary" />
