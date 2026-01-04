@@ -67,7 +67,10 @@ export const EditExpertPricingDialog = ({
     if (open) {
       // Initialize address fields
       setAddress(orderData?.address || '');
-      setDetailedAddress(orderData?.detailed_address || '');
+      // Only use detailed_address if it's different from main address
+      const existingDetailedAddress = orderData?.detailed_address || '';
+      const shouldUseDetailedAddress = existingDetailedAddress && existingDetailedAddress !== orderData?.address;
+      setDetailedAddress(shouldUseDetailedAddress ? existingDetailedAddress : '');
       setLocationLat(orderData?.location_lat || null);
       setLocationLng(orderData?.location_lng || null);
       
