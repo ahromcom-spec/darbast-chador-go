@@ -49,6 +49,7 @@ const PersonnelAccountingModule = lazy(() => import("@/pages/ceo/PersonnelAccoun
 const SiteRegistrationModule = lazy(() => import("@/pages/ceo/SiteRegistrationModule"));
 const AccountingModule = lazy(() => import("@/pages/ceo/AccountingModule"));
 const AllCompanyOrdersModule = lazy(() => import("@/pages/ceo/AllCompanyOrdersModule"));
+const CustomerComprehensiveInvoice = lazy(() => import("@/pages/ceo/CustomerComprehensiveInvoice"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -374,6 +375,12 @@ const App = () => {
               <Route path="/all-company-orders" element={
                 <ProtectedRoute>
                   <AllCompanyOrdersModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر جداگانه برای ماژول صورتحساب جامع مشتریان */}
+              <Route path="/customer-comprehensive-invoice" element={
+                <ProtectedRoute>
+                  <CustomerComprehensiveInvoice />
                 </ProtectedRoute>
               } />
               <Route path="/executive" element={
