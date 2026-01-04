@@ -6,10 +6,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Loader2, Save } from 'lucide-react';
+import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Loader2, Save, MapPin, Edit } from 'lucide-react';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { OrderMediaSection } from './OrderMediaSection';
 import { parseOrderNotes } from './OrderDetailsView';
+import { LocationMapModal } from '@/components/locations/LocationMapModal';
 
 interface Dimension {
   length: string;
@@ -27,6 +28,9 @@ interface ExpertPricingEditDialogProps {
     detailed_address?: string | null;
     notes?: any;
     subcategory?: { name?: string } | null;
+    location_lat?: number | null;
+    location_lng?: number | null;
+    hierarchy_project_id?: string | null;
   };
   onSuccess?: () => void;
 }
@@ -48,11 +52,22 @@ export const ExpertPricingEditDialog = ({
   const [dimensions, setDimensions] = useState<Dimension[]>([{ length: '', width: '', height: '' }]);
   const [requestedDate, setRequestedDate] = useState('');
   
+  // Address editing state
+  const [address, setAddress] = useState('');
+  const [detailedAddress, setDetailedAddress] = useState('');
+  const [locationLat, setLocationLat] = useState<number | null>(null);
+  const [locationLng, setLocationLng] = useState<number | null>(null);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  
   // Initialize form with existing data when dialog opens
   useEffect(() => {
     if (open && parsedNotes) {
       setDescription(parsedNotes.description || '');
       setRequestedDate(parsedNotes.requested_date || '');
+      setAddress(order.address || '');
+      setDetailedAddress(order.detailed_address || '');
+      setLocationLat(order.location_lat || null);
+      setLocationLng(order.location_lng || null);
       
       // Parse existing dimensions
       if (parsedNotes.dimensions && Array.isArray(parsedNotes.dimensions) && parsedNotes.dimensions.length > 0) {
@@ -95,6 +110,37 @@ export const ExpertPricingEditDialog = ({
 
   const totalArea = dimensions.reduce((sum, dim) => sum + calculateDimensionArea(dim), 0);
 
+  // Handle location selection from map modal
+  const handleLocationSelect = (lat: number, lng: number) => {
+    setLocationLat(lat);
+    setLocationLng(lng);
+    setShowLocationModal(false);
+  };
+
+  // Sync location to hierarchy (for globe map)
+  const syncHierarchyLocation = async (lat: number, lng: number) => {
+    const hierarchyProjectId = order.hierarchy_project_id;
+    if (!hierarchyProjectId) return;
+
+    const { data: hierarchy, error: hierarchyError } = await supabase
+      .from('projects_hierarchy')
+      .select('location_id')
+      .eq('id', hierarchyProjectId)
+      .maybeSingle();
+
+    if (hierarchyError) throw hierarchyError;
+
+    const locationId = (hierarchy as any)?.location_id as string | undefined;
+    if (!locationId) return;
+
+    const { error: locationError } = await supabase
+      .from('locations')
+      .update({ lat, lng, address_line: address, updated_at: new Date().toISOString() })
+      .eq('id', locationId);
+
+    if (locationError) throw locationError;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     
@@ -109,14 +155,29 @@ export const ExpertPricingEditDialog = ({
         requested_date: requestedDate || null,
       };
 
+      const updateData: any = {
+        notes: updatedNotes,
+        address: address,
+        detailed_address: detailedAddress || null,
+      };
+
+      // Update location if changed
+      if (locationLat !== null && locationLng !== null) {
+        updateData.location_lat = locationLat;
+        updateData.location_lng = locationLng;
+      }
+
       const { error } = await supabase
         .from('projects_v3')
-        .update({
-          notes: updatedNotes
-        })
+        .update(updateData)
         .eq('id', order.id);
 
       if (error) throw error;
+
+      // Sync location to hierarchy for globe map
+      if (locationLat !== null && locationLng !== null) {
+        await syncHierarchyLocation(locationLat, locationLng);
+      }
 
       toast({
         title: 'ذخیره شد',
@@ -154,9 +215,50 @@ export const ExpertPricingEditDialog = ({
             <p className="text-sm text-muted-foreground">
               نوع خدمات: <span className="font-medium text-foreground">{order.subcategory?.name || parsedNotes?.service_type || 'داربست فلزی'}</span>
             </p>
-            <p className="text-sm text-muted-foreground">
-              آدرس: <span className="font-medium text-foreground">{order.address}{order.detailed_address ? ` - ${order.detailed_address}` : ''}</span>
-            </p>
+          </div>
+
+          {/* Address Editing */}
+          <div className="space-y-3 p-4 border rounded-lg bg-background">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                آدرس پروژه
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLocationModal(true)}
+                className="gap-1"
+              >
+                <Edit className="h-3 w-3" />
+                ویرایش موقعیت روی نقشه
+              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">آدرس کامل</Label>
+              <Input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="آدرس کامل را وارد کنید..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">توضیحات آدرس (پلاک، واحد و...)</Label>
+              <Input
+                value={detailedAddress}
+                onChange={(e) => setDetailedAddress(e.target.value)}
+                placeholder="پلاک، واحد، طبقه و..."
+              />
+            </div>
+
+            {locationLat && locationLng && (
+              <p className="text-xs text-muted-foreground text-center">
+                📍 موقعیت: {locationLat.toFixed(5)}, {locationLng.toFixed(5)}
+              </p>
+            )}
           </div>
 
           {/* Description */}
