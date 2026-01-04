@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowRight, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { notifyManagers } from '@/lib/notifications';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
@@ -384,14 +385,12 @@ export default function ScaffoldingFacadeForm() {
       });
 
       // ارسال نوتیفیکیشن به مدیران (در پس‌زمینه)
-      supabase.functions.invoke('notify-managers-new-order', {
-        body: {
-          order_code: createdProject.code,
-          order_id: createdProject.id,
-          customer_name: user?.user_metadata?.full_name || '',
-          customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
-          service_type: 'داربست نما'
-        }
+      notifyManagers({
+        order_code: createdProject.code,
+        order_id: createdProject.id,
+        customer_name: user?.user_metadata?.full_name || '',
+        customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
+        service_type: 'داربست نما'
       }).catch(err => {
         console.error('Notify managers error:', err);
       });

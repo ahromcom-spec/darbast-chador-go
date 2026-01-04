@@ -26,6 +26,7 @@ import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { Separator } from '@/components/ui/separator';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
+import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 
 // Helper to parse order notes safely - handles double-stringified JSON
@@ -292,24 +293,16 @@ export default function ExecutivePending() {
             .single();
 
           if (customerData?.user_id) {
-            const validated = sendNotificationSchema.parse({
-              _user_id: customerData.user_id,
-              _title: '✅ سفارش شما تایید شد',
-              _body: `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`,
-              _link: `/user/orders/${selectedOrder.id}`,
-              _type: 'success'
-            });
-            await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+            // ارسال اعلان درون‌برنامه‌ای با بررسی impersonation
+            await sendNotificationRpc(customerData.user_id, '✅ سفارش شما تایید شد', `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`, `/user/orders/${selectedOrder.id}`, 'success');
             
             // ارسال Push Notification به گوشی کاربر
-            await supabase.functions.invoke('send-push-notification', {
-              body: {
-                user_id: customerData.user_id,
-                title: '✅ سفارش شما تایید شد',
-                body: `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`,
-                link: `/user/orders/${selectedOrder.id}`,
-                type: 'order-stage'
-              }
+            await sendPushNotification({
+              user_id: customerData.user_id,
+              title: '✅ سفارش شما تایید شد',
+              body: `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`,
+              link: `/user/orders/${selectedOrder.id}`,
+              type: 'order-stage'
             });
           }
         }

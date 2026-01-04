@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { isAdminImpersonating } from './impersonation';
 
 // شماره مدیرعامل برای ارسال پیامک
 export const CEO_PHONE = '09125511494';
@@ -28,6 +29,12 @@ export const sendOrderSms = async (
   status: SmsStatus,
   details?: OrderSmsDetails
 ): Promise<{ success: boolean; error?: string }> => {
+  // اگر مدیر در حال مشاهده حساب کاربر است، پیامک ارسال نشود
+  if (isAdminImpersonating()) {
+    console.log('[sendOrderSms] Skipped - Admin is impersonating user');
+    return { success: true };
+  }
+
   try {
     console.log(`[sendOrderSms] Sending SMS - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Details:`, details);
     
@@ -63,6 +70,12 @@ export const sendCeoNotificationSms = async (
   status: 'submitted' | 'paid',
   details?: OrderSmsDetails
 ): Promise<{ success: boolean; error?: string }> => {
+  // اگر مدیر در حال مشاهده حساب کاربر است، پیامک به مدیرعامل ارسال نشود
+  if (isAdminImpersonating()) {
+    console.log('[sendCeoNotificationSms] Skipped - Admin is impersonating user');
+    return { success: true };
+  }
+
   try {
     // ارسال پیامک با وضعیت خاص برای مدیرعامل
     const ceoStatus = status === 'submitted' ? 'ceo_new_order' : 'ceo_payment';
