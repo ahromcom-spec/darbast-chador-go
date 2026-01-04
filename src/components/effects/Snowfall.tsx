@@ -13,8 +13,16 @@ const Snowfall = () => {
   const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
 
   useEffect(() => {
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (prefersReducedMotion) {
+      setSnowflakes([]);
+      return;
+    }
+
+    const isMobile = window.matchMedia?.('(max-width: 768px)')?.matches;
+
     const flakes: Snowflake[] = [];
-    const count = 50;
+    const count = isMobile ? 18 : 32;
 
     for (let i = 0; i < count; i++) {
       flakes.push({
@@ -31,11 +39,14 @@ const Snowfall = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden" style={{ height: '150vh' }}>
+    <div
+      className="fixed inset-0 pointer-events-none z-40 overflow-hidden"
+      style={{ height: '150vh', contain: 'paint' }}
+    >
       {snowflakes.map((flake) => (
         <div
           key={flake.id}
-          className="absolute rounded-full bg-white animate-snowfall"
+          className="absolute rounded-full animate-snowfall will-change-transform"
           style={{
             left: `${flake.x}%`,
             top: '-20px',
@@ -44,7 +55,7 @@ const Snowfall = () => {
             opacity: flake.opacity,
             animationDuration: `${flake.animationDuration}s`,
             animationDelay: `${flake.animationDelay}s`,
-            boxShadow: '0 0 6px rgba(255, 255, 255, 0.9)',
+            backgroundColor: 'hsl(var(--primary-foreground) / 0.95)',
           }}
         />
       ))}
