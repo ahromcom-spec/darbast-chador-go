@@ -50,6 +50,7 @@ const SiteRegistrationModule = lazy(() => import("@/pages/ceo/SiteRegistrationMo
 const AccountingModule = lazy(() => import("@/pages/ceo/AccountingModule"));
 const AllCompanyOrdersModule = lazy(() => import("@/pages/ceo/AllCompanyOrdersModule"));
 const CustomerComprehensiveInvoice = lazy(() => import("@/pages/ceo/CustomerComprehensiveInvoice"));
+const MyInvoiceModule = lazy(() => import("@/pages/user/MyInvoiceModule"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -381,6 +382,12 @@ const App = () => {
               <Route path="/customer-comprehensive-invoice" element={
                 <ProtectedRoute>
                   <CustomerComprehensiveInvoice />
+                </ProtectedRoute>
+              } />
+              {/* مسیر ماژول صورتحساب شخصی مشتری */}
+              <Route path="/my-invoice" element={
+                <ProtectedRoute>
+                  <MyInvoiceModule />
                 </ProtectedRoute>
               } />
               <Route path="/executive" element={

@@ -93,6 +93,14 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-orange-600',
     bgColor: 'bg-orange-50',
   },
+  {
+    key: 'my_invoice',
+    name: 'صورتحساب من',
+    description: 'مشاهده صورتحساب جامع سفارشات و پرداخت‌های شخصی',
+    href: '/my-invoice',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+  },
 ];
 
 // Convert modules to ModuleItem format
