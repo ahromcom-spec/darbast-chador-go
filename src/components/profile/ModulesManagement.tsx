@@ -85,6 +85,14 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-50',
   },
+  {
+    key: 'customer_comprehensive_invoice',
+    name: 'ماژول صورتحساب جامع مشتریان',
+    description: 'صدور صورتحساب جامع همه خدمات و پرداخت‌ها برای هر مشتری',
+    href: '/customer-comprehensive-invoice',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+  },
 ];
 
 // Convert modules to ModuleItem format
