@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { sendPushNotification, notifyManagers } from '@/lib/notifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box, MapPin } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -1312,13 +1313,11 @@ export default function ComprehensiveScaffoldingForm({
 
                 // ارسال Push Notification
                 try {
-                  await supabase.functions.invoke('send-push-notification', {
-                    body: {
-                      user_id: recipientData.userId,
-                      title: '📦 سفارش جدید برای شما ثبت شد',
-                      body: `${senderName} یک سفارش ${serviceTypeName} با کد ${createdProject.code} برای شما ثبت کرده است.`,
-                      url: '/user/profile'
-                    }
+                  await sendPushNotification({
+                    user_id: recipientData.userId,
+                    title: '📦 سفارش جدید برای شما ثبت شد',
+                    body: `${senderName} یک سفارش ${serviceTypeName} با کد ${createdProject.code} برای شما ثبت کرده است.`,
+                    link: '/user/profile'
                   });
                 } catch (pushErr) {
                   console.log('Push notification skipped');
@@ -1356,14 +1355,12 @@ export default function ComprehensiveScaffoldingForm({
                                 activeService === 'pipe-length' ? 'داربست متراژ' :
                                 activeService.includes('ceiling') ? 'داربست سقف' : 'داربست';
         
-        supabase.functions.invoke('notify-managers-new-order', {
-          body: {
-            order_code: createdProject.code,
-            order_id: createdProject.id,
-            customer_name: user?.user_metadata?.full_name || '',
-            customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
-            service_type: serviceTypeName
-          }
+        notifyManagers({
+          order_code: createdProject.code,
+          order_id: createdProject.id,
+          customer_name: user?.user_metadata?.full_name || '',
+          customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
+          service_type: serviceTypeName
         }).catch(err => {
           console.error('Notify managers error:', err);
         });

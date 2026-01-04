@@ -23,6 +23,7 @@ import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
+import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
@@ -626,24 +627,16 @@ export default function ExecutiveOrders() {
           .single();
 
         if (customerData?.user_id) {
-          const validated = sendNotificationSchema.parse({
-            _user_id: customerData.user_id,
-            _title: '✅ سفارش اجرا شد',
-            _body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد.`,
-            _link: `/user/orders/${orderId}`,
-            _type: 'success'
-          });
-          await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+          // ارسال اعلان درون‌برنامه‌ای با بررسی impersonation
+          await sendNotificationRpc(customerData.user_id, '✅ سفارش اجرا شد', `سفارش شما با کد ${orderCode} با موفقیت اجرا شد.`, `/user/orders/${orderId}`, 'success');
           
           // ارسال Push Notification به گوشی کاربر
-          await supabase.functions.invoke('send-push-notification', {
-            body: {
-              user_id: customerData.user_id,
-              title: '✅ سفارش اجرا شد',
-              body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد.`,
-              link: `/user/orders/${orderId}`,
-              type: 'order-stage'
-            }
+          await sendPushNotification({
+            user_id: customerData.user_id,
+            title: '✅ سفارش اجرا شد',
+            body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد.`,
+            link: `/user/orders/${orderId}`,
+            type: 'order-stage'
           });
         }
       }
@@ -853,24 +846,16 @@ export default function ExecutiveOrders() {
           const message = stageMessages[newStage];
           if (message) {
             try {
-              const validated = sendNotificationSchema.parse({
-                _user_id: customerData.user_id,
-                _title: message.title,
-                _body: message.body,
-                _link: `/user/orders/${orderId}`,
-                _type: 'info'
-              });
-              await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+              // ارسال اعلان درون‌برنامه‌ای با بررسی impersonation
+              await sendNotificationRpc(customerData.user_id, message.title, message.body, `/user/orders/${orderId}`, 'info');
               
               // ارسال Push Notification به گوشی کاربر
-              await supabase.functions.invoke('send-push-notification', {
-                body: {
-                  user_id: customerData.user_id,
-                  title: message.title,
-                  body: message.body,
-                  link: `/user/orders/${orderId}`,
-                  type: 'order-stage'
-                }
+              await sendPushNotification({
+                user_id: customerData.user_id,
+                title: message.title,
+                body: message.body,
+                link: `/user/orders/${orderId}`,
+                type: 'order-stage'
               });
               
               // ارسال SMS برای مراحل کلیدی (اجرا شد و اتمام سفارش)
@@ -1227,23 +1212,16 @@ export default function ExecutiveOrders() {
 
         if (customerData?.user_id) {
           try {
-            await supabase.rpc('send_notification', {
-              _user_id: customerData.user_id,
-              _title: '❌ سفارش رد شد',
-              _body: `سفارش ${selectedOrder.code} رد شد. دلیل: ${rejectionReason}`,
-              _link: `/user/orders/${selectedOrder.id}`,
-              _type: 'error'
-            });
+            // ارسال اعلان درون‌برنامه‌ای با بررسی impersonation
+            await sendNotificationRpc(customerData.user_id, '❌ سفارش رد شد', `سفارش ${selectedOrder.code} رد شد. دلیل: ${rejectionReason}`, `/user/orders/${selectedOrder.id}`, 'error');
 
             // ارسال Push Notification
-            await supabase.functions.invoke('send-push-notification', {
-              body: {
-                user_id: customerData.user_id,
-                title: '❌ سفارش رد شد',
-                body: `سفارش ${selectedOrder.code} رد شد. دلیل: ${rejectionReason}`,
-                link: `/user/orders/${selectedOrder.id}`,
-                type: 'order-rejected'
-              }
+            await sendPushNotification({
+              user_id: customerData.user_id,
+              title: '❌ سفارش رد شد',
+              body: `سفارش ${selectedOrder.code} رد شد. دلیل: ${rejectionReason}`,
+              link: `/user/orders/${selectedOrder.id}`,
+              type: 'order-rejected'
             });
           } catch (notifError) {
             console.error('Error sending rejection notification:', notifError);

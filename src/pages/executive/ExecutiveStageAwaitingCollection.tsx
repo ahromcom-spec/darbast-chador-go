@@ -15,6 +15,7 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
+import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
@@ -217,14 +218,12 @@ export default function ExecutiveStageAwaitingCollection() {
           const message = stageMessages[newStage];
           if (message) {
             try {
-              await supabase.functions.invoke('send-push-notification', {
-                body: {
-                  user_id: customerData.user_id,
-                  title: message.title,
-                  body: message.body,
-                  link: '/profile?tab=orders',
-                  type: 'info'
-                }
+              await sendPushNotification({
+                user_id: customerData.user_id,
+                title: message.title,
+                body: message.body,
+                link: '/profile?tab=orders',
+                type: 'info'
               });
             } catch (e) {
               console.log('Push notification skipped');
@@ -305,23 +304,16 @@ export default function ExecutiveStageAwaitingCollection() {
           const notificationBody = `سفارش ${orderCode} با موفقیت تکمیل و جمع‌آوری شد. از اعتماد شما سپاسگزاریم.`;
           
           try {
-            await supabase.rpc('send_notification', {
-              _user_id: customerData.user_id,
-              _title: notificationTitle,
-              _body: notificationBody,
-              _link: '/profile?tab=orders',
-              _type: 'success'
-            });
+            // ارسال اعلان درون‌برنامه‌ای با بررسی impersonation
+            await sendNotificationRpc(customerData.user_id, notificationTitle, notificationBody, '/profile?tab=orders', 'success');
             
             // ارسال Push Notification به گوشی کاربر
-            await supabase.functions.invoke('send-push-notification', {
-              body: {
-                user_id: customerData.user_id,
-                title: notificationTitle,
-                body: notificationBody,
-                link: '/profile?tab=orders',
-                type: 'success'
-              }
+            await sendPushNotification({
+              user_id: customerData.user_id,
+              title: notificationTitle,
+              body: notificationBody,
+              link: '/profile?tab=orders',
+              type: 'success'
             });
           } catch (e) {
             console.error('Error sending notification:', e);

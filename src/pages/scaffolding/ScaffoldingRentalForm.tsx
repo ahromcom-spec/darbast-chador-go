@@ -14,6 +14,7 @@ import { ArrowRight, Building2, MapPin, Package, Upload } from 'lucide-react';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { notifyManagers } from '@/lib/notifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { MediaUploader } from '@/components/orders/MediaUploader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -328,14 +329,12 @@ export default function ScaffoldingRentalForm() {
       setCreatedOrderId(orderId);
 
       // ارسال نوتیفیکیشن به مدیران (در پس‌زمینه)
-      supabase.functions.invoke('notify-managers-new-order', {
-        body: {
-          order_code: orderCode || orderId,
-          order_id: orderId,
-          customer_name: user?.user_metadata?.full_name || '',
-          customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
-          service_type: 'کرایه اجناس داربست'
-        }
+      notifyManagers({
+        order_code: orderCode || orderId,
+        order_id: orderId,
+        customer_name: user?.user_metadata?.full_name || '',
+        customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
+        service_type: 'کرایه اجناس داربست'
       }).catch(err => {
         console.error('Notify managers error:', err);
       });

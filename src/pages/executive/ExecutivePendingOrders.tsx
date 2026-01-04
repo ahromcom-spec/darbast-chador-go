@@ -29,6 +29,7 @@ import { sendNotificationSchema } from '@/lib/rpcValidation';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
+import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 // Helper to parse order notes safely - handles double-stringified JSON
@@ -704,14 +705,12 @@ export default function ExecutivePendingOrders() {
 
         if (customerData?.user_id) {
           try {
-            await supabase.functions.invoke('send-push-notification', {
-              body: {
-                user_id: customerData.user_id,
-                title: '🔧 اجرای سفارش شروع شد',
-                body: `سفارش شما با کد ${orderCode} وارد مرحله اجرا شد.`,
-                link: '/profile?tab=orders',
-                type: 'info'
-              }
+            await sendPushNotification({
+              user_id: customerData.user_id,
+              title: '🔧 اجرای سفارش شروع شد',
+              body: `سفارش شما با کد ${orderCode} وارد مرحله اجرا شد.`,
+              link: '/profile?tab=orders',
+              type: 'info'
             });
           } catch (pushError) {
             console.log('Push notification skipped');
@@ -764,14 +763,12 @@ export default function ExecutivePendingOrders() {
 
         if (customerData?.user_id) {
           try {
-            await supabase.functions.invoke('send-push-notification', {
-              body: {
-                user_id: customerData.user_id,
-                title: '✅ اجرای سفارش تکمیل شد',
-                body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد و در انتظار پرداخت است.`,
-                link: '/profile?tab=orders',
-                type: 'success'
-              }
+            await sendPushNotification({
+              user_id: customerData.user_id,
+              title: '✅ اجرای سفارش تکمیل شد',
+              body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد و در انتظار پرداخت است.`,
+              link: '/profile?tab=orders',
+              type: 'success'
             });
           } catch (pushError) {
             console.log('Push notification skipped');
@@ -983,24 +980,16 @@ export default function ExecutivePendingOrders() {
           const notificationTitle = '✅ سفارش شما تایید شد';
           const notificationBody = `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`;
           
-          const validated = sendNotificationSchema.parse({
-            _user_id: customerData.user_id,
-            _title: notificationTitle,
-            _body: notificationBody,
-            _link: '/profile?tab=orders',
-            _type: 'success'
-          });
-          await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+          // ارسال اعلان درون‌برنامه‌ای با بررسی impersonation
+          await sendNotificationRpc(customerData.user_id, notificationTitle, notificationBody, '/profile?tab=orders', 'success');
           
           // ارسال Push Notification به گوشی کاربر
           try {
-            await supabase.functions.invoke('send-push-notification', {
-              body: {
-                user_id: customerData.user_id,
-                title: notificationTitle,
-                body: notificationBody,
-                url: '/profile?tab=orders'
-              }
+            await sendPushNotification({
+              user_id: customerData.user_id,
+              title: notificationTitle,
+              body: notificationBody,
+              link: '/profile?tab=orders'
             });
           } catch (pushError) {
             console.log('Push notification skipped (user may not have enabled)');

@@ -16,6 +16,7 @@ import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { sendOrderSms } from '@/lib/orderSms';
+import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
@@ -211,23 +212,16 @@ export default function ExecutiveStageAwaitingPayment() {
           const message = stageMessages[newStage];
           if (message) {
             try {
-              await supabase.rpc('send_notification', {
-                _user_id: customerData.user_id,
-                _title: message.title,
-                _body: message.body,
-                _link: `/user/orders/${orderId}`,
-                _type: 'info'
-              });
+              // ارسال اعلان درون‌برنامه‌ای با بررسی impersonation
+              await sendNotificationRpc(customerData.user_id, message.title, message.body, `/user/orders/${orderId}`, 'info');
               
               // ارسال Push Notification به گوشی کاربر
-              await supabase.functions.invoke('send-push-notification', {
-                body: {
-                  user_id: customerData.user_id,
-                  title: message.title,
-                  body: message.body,
-                  link: `/user/orders/${orderId}`,
-                  type: 'order-stage'
-                }
+              await sendPushNotification({
+                user_id: customerData.user_id,
+                title: message.title,
+                body: message.body,
+                link: `/user/orders/${orderId}`,
+                type: 'order-stage'
               });
             } catch (e) { console.error('Notification error:', e); }
           }

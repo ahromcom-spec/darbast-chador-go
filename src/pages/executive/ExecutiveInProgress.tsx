@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
+import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { useOrderArchive } from '@/hooks/useOrderArchive';
@@ -215,24 +216,16 @@ export default function ExecutiveInProgress() {
           const message = stageMessages[newStage];
           if (message) {
             try {
-              const validated = sendNotificationSchema.parse({
-                _user_id: customerData.user_id,
-                _title: message.title,
-                _body: message.body,
-                _link: '/profile?tab=orders',
-                _type: 'info'
-              });
-              await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+              // ارسال اعلان درون‌برنامه‌ای با بررسی impersonation
+              await sendNotificationRpc(customerData.user_id, message.title, message.body, '/profile?tab=orders', 'info');
               
               // ارسال Push Notification به گوشی کاربر
-              await supabase.functions.invoke('send-push-notification', {
-                body: {
-                  user_id: customerData.user_id,
-                  title: message.title,
-                  body: message.body,
-                  link: '/profile?tab=orders',
-                  type: 'info'
-                }
+              await sendPushNotification({
+                user_id: customerData.user_id,
+                title: message.title,
+                body: message.body,
+                link: '/profile?tab=orders',
+                type: 'info'
               });
             } catch (e) {
               console.error('Error sending notification:', e);
@@ -296,25 +289,17 @@ export default function ExecutiveInProgress() {
         const notificationTitle = '💰 سفارش در انتظار پرداخت و جمع‌آوری';
         const notificationBody = `سفارش با کد ${orderCode} اجرا شد و منتظر پرداخت و جمع‌آوری است. لطفاً برای پرداخت اقدام کنید.`;
         
-        const validated = sendNotificationSchema.parse({
-          _user_id: customerData.user_id,
-          _title: notificationTitle,
-          _body: notificationBody,
-          _link: '/profile?tab=orders',
-          _type: 'success'
-        });
-        await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
+        // ارسال اعلان درون‌برنامه‌ای با بررسی impersonation
+        await sendNotificationRpc(customerData.user_id, notificationTitle, notificationBody, '/profile?tab=orders', 'success');
         
         // ارسال Push Notification به گوشی کاربر
         try {
-          await supabase.functions.invoke('send-push-notification', {
-            body: {
-              user_id: customerData.user_id,
-              title: notificationTitle,
-              body: notificationBody,
-              link: '/profile?tab=orders',
-              type: 'success'
-            }
+          await sendPushNotification({
+            user_id: customerData.user_id,
+            title: notificationTitle,
+            body: notificationBody,
+            link: '/profile?tab=orders',
+            type: 'success'
           });
         } catch (pushError) {
           console.log('Push notification skipped');
