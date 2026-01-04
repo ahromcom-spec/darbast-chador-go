@@ -54,7 +54,6 @@ export const EditExpertPricingDialog = ({
   
   // Address editing state
   const [address, setAddress] = useState('');
-  const [detailedAddress, setDetailedAddress] = useState('');
   const [locationLat, setLocationLat] = useState<number | null>(null);
   const [locationLng, setLocationLng] = useState<number | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -65,12 +64,8 @@ export const EditExpertPricingDialog = ({
   // Parse notes and load existing data
   useEffect(() => {
     if (open) {
-      // Initialize address fields
+      // Initialize address field
       setAddress(orderData?.address || '');
-      // Only use detailed_address if it's different from main address
-      const existingDetailedAddress = orderData?.detailed_address || '';
-      const shouldUseDetailedAddress = existingDetailedAddress && existingDetailedAddress !== orderData?.address;
-      setDetailedAddress(shouldUseDetailedAddress ? existingDetailedAddress : '');
       setLocationLat(orderData?.location_lat || null);
       setLocationLng(orderData?.location_lng || null);
       
@@ -211,7 +206,6 @@ export const EditExpertPricingDialog = ({
         notes: JSON.stringify(updatedNotes),
         updated_at: new Date().toISOString(),
         address: address,
-        detailed_address: detailedAddress || null,
       };
 
       // Update location if changed
@@ -335,20 +329,11 @@ export const EditExpertPricingDialog = ({
             </div>
             
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">آدرس کامل</Label>
+              <Label className="text-xs text-muted-foreground">آدرس پروژه</Label>
               <Input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="آدرس کامل را وارد کنید..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">توضیحات آدرس (پلاک، واحد و...)</Label>
-              <Input
-                value={detailedAddress}
-                onChange={(e) => setDetailedAddress(e.target.value)}
-                placeholder="پلاک، واحد، طبقه و..."
+                placeholder="آدرس کامل پروژه را وارد کنید..."
               />
             </div>
 
