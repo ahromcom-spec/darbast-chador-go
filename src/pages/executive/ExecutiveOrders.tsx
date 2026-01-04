@@ -150,6 +150,9 @@ interface Order {
   approved_by?: string | null;
   subcategory_id?: string | null;
   rental_start_date?: string | null;
+  // نوع خدمات و زیرشاخه
+  service_type_name?: string | null;
+  subcategory_name?: string | null;
   collection_request?: {
     requested_date: string | null;
     status: string;
@@ -301,7 +304,13 @@ export default function ExecutiveOrders() {
           location_lng,
           location_confirmed_by_customer,
           location_confirmed_at,
-          rental_start_date
+          rental_start_date,
+          subcategories (
+            name,
+            service_types_v3 (
+              name
+            )
+          )
         `)
         .in('status', ['pending', 'approved', 'pending_execution', 'in_progress', 'completed', 'closed', 'rejected'])
         // فقط سفارشات غیر بایگانی را نمایش بده
@@ -367,6 +376,10 @@ export default function ExecutiveOrders() {
             .limit(1)
             .maybeSingle();
 
+          // دریافت نام نوع خدمات و زیرشاخه
+          const serviceTypeName = order.subcategories?.service_types_v3?.name || null;
+          const subcategoryName = order.subcategories?.name || null;
+
           return {
             id: order.id,
             code: order.code,
@@ -396,6 +409,8 @@ export default function ExecutiveOrders() {
             approved_by: order.approved_by,
             subcategory_id: order.subcategory_id,
             rental_start_date: order.rental_start_date,
+            service_type_name: serviceTypeName,
+            subcategory_name: subcategoryName,
             collection_request: collectionRequestData || null,
           } as Order;
         })
@@ -1419,6 +1434,21 @@ export default function ExecutiveOrders() {
                     </Button>
                   </div>
                   <div className="flex-1 space-y-2">
+                    {/* نوع خدمات و زیرشاخه در بالای کارت */}
+                    {(order.service_type_name || order.subcategory_name) && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {order.service_type_name && (
+                          <Badge className="bg-primary/10 text-primary border-primary/20 text-xs font-medium">
+                            {order.service_type_name}
+                          </Badge>
+                        )}
+                        {order.subcategory_name && (
+                          <Badge variant="outline" className="text-xs border-amber-400/50 text-amber-700 dark:text-amber-400">
+                            {order.subcategory_name}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 flex-wrap">
                       <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
                       {getStatusBadge(order.status, order)}
