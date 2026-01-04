@@ -96,7 +96,7 @@ export function UserWallet() {
 
       if (error) throw error;
 
-      // فیلتر کردن تراکنش‌های سفارشات بایگانی شده
+      // فیلتر کردن تراکنش‌های سفارشات بایگانی شده یا حذف شده
       let filteredTransactions = txs || [];
       
       // پیدا کردن تراکنش‌های مربوط به سفارشات (order_approved یا order_payment)
@@ -123,17 +123,18 @@ export function UserWallet() {
             .select('code, is_archived')
             .in('code', uniqueOrderCodes);
           
-          // لیست کدهای سفارشات بایگانی شده
-          const archivedOrderCodes = new Set(
-            (orders || []).filter(o => o.is_archived === true).map(o => o.code)
+          // لیست کدهای سفارشات فعال (غیر بایگانی)
+          const activeOrderCodes = new Set(
+            (orders || []).filter(o => o.is_archived !== true).map(o => o.code)
           );
           
-          // حذف تراکنش‌های مربوط به سفارشات بایگانی شده
+          // حذف تراکنش‌های مربوط به سفارشات بایگانی شده یا حذف شده (سفارشاتی که در دیتابیس نیستند)
           filteredTransactions = filteredTransactions.filter(tx => {
             if (tx.reference_type === 'order_approved' || tx.reference_type === 'order_payment') {
               const match = tx.title?.match(/سفارش\s+(\d+)/);
               if (match && match[1]) {
-                return !archivedOrderCodes.has(match[1]);
+                // فقط اگر سفارش فعال باشد نمایش بده
+                return activeOrderCodes.has(match[1]);
               }
             }
             return true;
