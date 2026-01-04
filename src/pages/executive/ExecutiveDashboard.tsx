@@ -81,10 +81,11 @@ export default function ExecutiveDashboard() {
     }
   }, []);
   
-  // Check if this is the "all orders" module
+  // Check if this is the "all orders" module - بررسی اینکه آیا ماژول "همه سفارشات" است
   const isAllOrdersModule = activeModuleKey === 'all_orders_management' || 
                              activeModuleKey.includes('سفارشات کل') ||
-                             moduleName.includes('سفارشات کل');
+                             moduleName.includes('سفارشات کل') ||
+                             moduleName.includes('مدیریت کلی');
 
   // Check if this is the "scaffold execution with materials" module (code 10)
   const isScaffoldWithMaterialsModule = activeModuleKey === 'scaffold_execution_with_materials' ||
