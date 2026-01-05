@@ -1574,6 +1574,33 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             'hasFirstImage:', !!firstOrderImage);
         }
         
+        // عنوان آدرس برای نمایش بالای مارکر (حداکثر 20 کاراکتر)
+        const addressTitle = (project.locations?.title || project.locations?.address_line || 'بدون عنوان').substring(0, 20);
+        const addressLabelHtml = `
+          <div style="
+            position:absolute;
+            bottom:100%;
+            left:50%;
+            transform:translateX(-50%);
+            background:linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%);
+            color:white;
+            padding:4px 8px;
+            border-radius:6px;
+            font-family:Vazirmatn, sans-serif;
+            font-size:10px;
+            font-weight:600;
+            white-space:nowrap;
+            max-width:120px;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            text-align:center;
+            box-shadow:0 2px 8px rgba(0,0,0,0.25);
+            margin-bottom:4px;
+            z-index:10;
+            direction:rtl;
+          ">${addressTitle}</div>
+        `;
+        
         if (firstOrderImage) {
           const url1 = supabase.storage
             .from('project-media')
@@ -1582,36 +1609,42 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           console.debug('[HybridGlobe] Marker thumbnail URL:', url1);
           
           const html = `
-            <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#f0f0f0;position:relative;">
-              <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
-              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:18px;display:flex;align-items:center;justify-content:center;">
-                <span style="color:#fff;font-size:10px;font-weight:bold;">${totalOrderImages}</span>
+            <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+              ${addressLabelHtml}
+              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#f0f0f0;position:relative;">
+                <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
+                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:18px;display:flex;align-items:center;justify-content:center;">
+                  <span style="color:#fff;font-size:10px;font-weight:bold;">${totalOrderImages}</span>
+                </div>
               </div>
             </div>`;
           iconToUse = L.divIcon({
             html,
             className: 'project-thumb-icon',
-            iconSize: [56, 56],
-            iconAnchor: [28, 56],
-            popupAnchor: [0, -56],
+            iconSize: [56, 80],
+            iconAnchor: [28, 80],
+            popupAnchor: [0, -80],
           });
         } else {
           // استفاده از لوگوی اهرم به عنوان تصویر پیش‌فرض برای پروژه‌های بدون عکس
           console.debug('[HybridGlobe] No image found for project, using default logo:', project.id);
           
           const defaultLogoHtml = `
-            <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #d97706;background:linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);position:relative;display:flex;align-items:center;justify-content:center;">
-              <img src="/ahrom-logo.png" alt="لوگوی اهرم" loading="lazy" style="width:44px;height:44px;object-fit:contain" onerror="this.style.display='none'"/>
-              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(217,119,6,0.8));height:16px;display:flex;align-items:center;justify-content:center;">
-                <span style="color:#fff;font-size:9px;font-weight:bold;">بدون عکس</span>
+            <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+              ${addressLabelHtml}
+              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #d97706;background:linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);position:relative;display:flex;align-items:center;justify-content:center;">
+                <img src="/ahrom-logo.png" alt="لوگوی اهرم" loading="lazy" style="width:44px;height:44px;object-fit:contain" onerror="this.style.display='none'"/>
+                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(217,119,6,0.8));height:16px;display:flex;align-items:center;justify-content:center;">
+                  <span style="color:#fff;font-size:9px;font-weight:bold;">بدون عکس</span>
+                </div>
               </div>
             </div>`;
           iconToUse = L.divIcon({
             html: defaultLogoHtml,
             className: 'project-thumb-icon project-no-image',
-            iconSize: [56, 56],
-            iconAnchor: [28, 56],
-            popupAnchor: [0, -56],
+            iconSize: [56, 80],
+            iconAnchor: [28, 80],
+            popupAnchor: [0, -80],
           });
         }
 
