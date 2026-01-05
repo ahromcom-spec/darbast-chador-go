@@ -54,49 +54,57 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
   const [editedBlob, setEditedBlob] = useState<Blob | null>(null);
   const [logMessage, setLogMessage] = useState('');
 
-  // Load FFmpeg on mount - using single-threaded version for browser compatibility
+  // Load FFmpeg on mount - using single-threaded core for maximum browser compatibility
   const loadFFmpeg = useCallback(async () => {
     if (ffmpegLoaded) return true;
-    
+
     setStatus('loading-ffmpeg');
-    setLogMessage('در حال بارگذاری FFmpeg...');
-    
+    setLogMessage('در حال بارگذاری ابزار پردازش...');
+
     try {
       const { FFmpeg } = await import('@ffmpeg/ffmpeg');
       const { toBlobURL } = await import('@ffmpeg/util');
-      
+
+      // Load core assets from our own bundle (avoids blocked CDNs / CORS issues)
+      const [{ default: coreJsUrl }, { default: coreWasmUrl }, { default: coreWorkerUrl }] =
+        await Promise.all([
+          import('@ffmpeg/core-st/dist/ffmpeg-core.js?url'),
+          import('@ffmpeg/core-st/dist/ffmpeg-core.wasm?url'),
+          import('@ffmpeg/core-st/dist/ffmpeg-core.worker.js?url'),
+        ]);
+
       const ffmpeg = new FFmpeg();
       ffmpegRef.current = ffmpeg;
-      
+
       ffmpeg.on('log', ({ message }: { message: string }) => {
         setLogMessage(message);
         console.log('[FFmpeg]', message);
       });
-      
+
       ffmpeg.on('progress', ({ progress: p }: { progress: number }) => {
         setProgress(Math.round(p * 100));
       });
-      
-      // Use the single-threaded version which doesn't require SharedArrayBuffer
-      const baseURL = 'https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/umd';
-      
+
       await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        coreURL: await toBlobURL(coreJsUrl, 'text/javascript'),
+        wasmURL: await toBlobURL(coreWasmUrl, 'application/wasm'),
+        // IMPORTANT: provide workerURL explicitly (blob core URLs can't be auto-derived)
+        workerURL: await toBlobURL(coreWorkerUrl, 'text/javascript'),
       });
-      
+
       setFfmpegLoaded(true);
       setStatus('idle');
       setLogMessage('');
       return true;
     } catch (error) {
       console.error('Error loading FFmpeg:', error);
+      const msg = error instanceof Error ? error.message : String(error);
       setStatus('error');
-      setLogMessage('خطا در بارگذاری FFmpeg - لطفاً صفحه را رفرش کنید');
+      setLogMessage(`خطا در بارگذاری ابزار پردازش (FFmpeg): ${msg}`);
       toast({
         title: 'خطا',
-        description: 'امکان بارگذاری ابزار پردازش ویدیو وجود ندارد. لطفاً صفحه را رفرش کنید.',
-        variant: 'destructive'
+        description: 'امکان بارگذاری ابزار پردازش ویدیو وجود ندارد.',
+        variant: 'destructive',
       });
       return false;
     }
@@ -487,7 +495,7 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
           {status !== 'complete' && (
             <Button 
               onClick={processVideo} 
-              disabled={isProcessing || !ffmpegLoaded && status !== 'idle'}
+              disabled={isProcessing}
               className="gap-2"
             >
               {isProcessing ? (
