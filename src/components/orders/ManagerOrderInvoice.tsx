@@ -151,7 +151,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
     <style>
       @page { 
         size: A4; 
-        margin: 5mm; 
+        margin: 8mm; 
       }
       * {
         box-sizing: border-box;
@@ -161,51 +161,51 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         direction: rtl; 
         padding: 0;
         margin: 0;
-        font-size: 9px;
-        line-height: 1.4;
+        font-size: 12px;
+        line-height: 1.5;
         color: #1a1a1a;
         background: white;
       }
       .invoice-container {
-        max-width: 100%;
-        padding: 8px;
+        max-width: 180mm;
+        margin: 0 auto;
+        padding: 12px;
         border: 2px solid #1e3a5f;
         border-radius: 6px;
-        margin: 3px;
-        min-height: 277mm;
-        max-height: 277mm;
+        min-height: 275mm;
+        max-height: 275mm;
         overflow: hidden;
       }
       
       /* Header Section */
       .header-section {
         text-align: center;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
         border-bottom: 2px solid #1e3a5f;
-        padding-bottom: 8px;
+        padding-bottom: 10px;
       }
       .logo-container {
         display: flex;
         justify-content: center;
-        margin-bottom: 5px;
+        margin-bottom: 6px;
       }
       .logo-container img {
-        height: 50px;
+        height: 55px;
       }
       .company-title {
-        font-size: 13px;
+        font-size: 16px;
         font-weight: bold;
         color: #1e3a5f;
-        margin-bottom: 3px;
+        margin-bottom: 4px;
       }
       .company-website {
-        font-size: 11px;
+        font-size: 13px;
         color: #2563eb;
         font-weight: bold;
-        margin-bottom: 3px;
+        margin-bottom: 4px;
       }
       .company-contacts {
-        font-size: 9px;
+        font-size: 11px;
         color: #374151;
       }
       
@@ -214,34 +214,34 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         display: inline-block;
         background: #1e3a5f;
         color: white;
-        padding: 4px 15px;
+        padding: 5px 18px;
         border-radius: 15px;
-        font-size: 11px;
+        font-size: 13px;
         font-weight: bold;
-        margin: 6px 0;
+        margin: 8px 0;
       }
       
       /* Main Info Table - Professional Style */
       .main-info-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 6px;
-        font-size: 8px;
+        margin-bottom: 8px;
+        font-size: 11px;
         border: 1.5px solid #1e3a5f;
       }
       .main-info-table td {
         border: 1px solid #1e3a5f;
-        padding: 4px 6px;
+        padding: 6px 8px;
         vertical-align: middle;
       }
       .main-info-table .label-cell {
         background: #1e3a5f;
         color: white;
         font-weight: bold;
-        width: 100px;
+        width: 110px;
         text-align: right;
         border: 1px solid #0f2744;
-        font-size: 8px;
+        font-size: 11px;
       }
       .main-info-table .value-cell {
         background: #f8fafc;
@@ -253,8 +253,8 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
       .order-details-table {
         width: 100%;
         border-collapse: collapse;
-        margin: 8px 0;
-        font-size: 8px;
+        margin: 10px 0;
+        font-size: 11px;
         border: 1.5px solid #1e3a5f;
       }
       .order-details-table thead tr {
@@ -262,19 +262,19 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
       }
       .order-details-table th {
         color: white;
-        padding: 5px 3px;
+        padding: 7px 5px;
         border: 1px solid #0f2744;
         text-align: center;
         font-weight: bold;
-        font-size: 7px;
+        font-size: 10px;
         white-space: nowrap;
       }
       .order-details-table td {
         border: 1px solid #1e3a5f;
-        padding: 5px 3px;
+        padding: 7px 5px;
         text-align: center;
         background: white;
-        font-size: 8px;
+        font-size: 11px;
       }
       .order-details-table tbody tr:nth-child(even) td {
         background: #f1f5f9;
@@ -287,14 +287,14 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
       .total-row td {
         background: #fef3c7 !important;
         font-weight: bold;
-        font-size: 10px;
+        font-size: 13px;
         border: 1.5px solid #1e3a5f !important;
       }
       
       /* Bank Info */
       .bank-section {
-        margin: 8px 0;
-        padding: 8px;
+        margin: 10px 0;
+        padding: 10px;
         border: 1.5px solid #1e3a5f;
         border-radius: 4px;
         background: #f1f5f9;
@@ -302,25 +302,25 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
       .bank-title {
         font-weight: bold;
         color: #1e3a5f;
-        margin-bottom: 5px;
-        font-size: 9px;
+        margin-bottom: 6px;
+        font-size: 12px;
         text-align: center;
       }
       .bank-info-table {
         width: 100%;
-        font-size: 8px;
+        font-size: 11px;
         border-collapse: collapse;
         border: 1px solid #1e3a5f;
       }
       .bank-info-table td {
-        padding: 4px 6px;
+        padding: 5px 8px;
         border: 1px solid #1e3a5f;
       }
       .bank-info-table .label-cell {
         background: #1e3a5f;
         color: white;
         font-weight: bold;
-        width: 100px;
+        width: 110px;
       }
       .bank-info-table .value-cell {
         background: #f8fafc;
@@ -330,65 +330,73 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
       .signatures-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-top: 15px;
-        padding: 10px 0;
+        gap: 25px;
+        margin-top: 18px;
+        padding: 12px 0;
       }
       .signature-box {
         text-align: center;
       }
       .signature-label {
-        font-size: 9px;
+        font-size: 11px;
         font-weight: bold;
-        margin-bottom: 25px;
+        margin-bottom: 30px;
         color: #1e3a5f;
       }
       .signature-line {
         border-top: 1px solid #1e3a5f;
-        width: 120px;
+        width: 130px;
         margin: 0 auto;
       }
       
       /* Print Date */
       .print-date {
         text-align: center;
-        font-size: 8px;
+        font-size: 10px;
         color: #64748b;
-        margin-top: 8px;
-        padding-top: 6px;
+        margin-top: 10px;
+        padding-top: 8px;
         border-top: 1px dashed #d1d5db;
       }
       
       /* Images */
       .images-section {
-        margin: 8px 0;
-        padding: 6px;
+        margin: 10px 0;
+        padding: 8px;
         border: 1px solid #d1d5db;
         border-radius: 4px;
       }
       .images-title {
         font-weight: bold;
         color: #1e3a5f;
-        margin-bottom: 5px;
-        font-size: 9px;
+        margin-bottom: 6px;
+        font-size: 11px;
       }
       .images-grid {
         display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 4px;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 5px;
       }
       .image-thumb {
         width: 100%;
-        height: 50px;
+        height: 55px;
         object-fit: cover;
         border-radius: 3px;
         border: 1px solid #e2e8f0;
       }
       
       @media print {
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body { 
+          -webkit-print-color-adjust: exact; 
+          print-color-adjust: exact;
+          font-size: 12px;
+        }
         .no-print { display: none !important; }
-        .invoice-container { border: none; margin: 0; }
+        .invoice-container { 
+          border: 2px solid #1e3a5f; 
+          margin: 0 auto;
+          max-width: 180mm;
+        }
       }
     </style>
   `;
