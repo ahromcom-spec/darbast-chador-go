@@ -184,7 +184,7 @@ export function StaffReportsTable({
                             toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                           }
                         }}
-                        className="min-w-[160px] pl-12 text-left"
+                        className="min-w-[220px] pl-12 text-left tabular-nums"
                         dir="ltr"
                         placeholder="0"
                       />
@@ -219,7 +219,7 @@ export function StaffReportsTable({
                             toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                           }
                         }}
-                        className="min-w-[160px] pl-12 text-left"
+                        className="min-w-[220px] pl-12 text-left tabular-nums"
                         dir="ltr"
                         placeholder="0"
                       />
