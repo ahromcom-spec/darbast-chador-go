@@ -85,6 +85,7 @@ const MediaApprovalModule: React.FC = () => {
   const [addMediaDescription, setAddMediaDescription] = useState('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -441,11 +442,15 @@ const MediaApprovalModule: React.FC = () => {
     }
     
     setUploadingMedia(true);
+    setUploadProgress(0);
     
     try {
+      const totalFiles = selectedFiles.length;
+      let completedFiles = 0;
+      
       for (const file of selectedFiles) {
-        // Check file size (max 50MB for videos)
-        const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+        // Check file size (max 70MB for videos, 10MB for images)
+        const maxSize = file.type.startsWith('video/') ? 70 * 1024 * 1024 : 10 * 1024 * 1024;
         if (file.size > maxSize) {
           throw new Error(`حجم فایل ${file.name} بیش از حد مجاز است`);
         }
@@ -454,18 +459,43 @@ const MediaApprovalModule: React.FC = () => {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
         const filePath = `approved-media/${fileName}`;
         
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from('project-media')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
+        // Upload to storage with XMLHttpRequest for progress tracking
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              const fileProgress = (event.loaded / event.total) * 100;
+              const overallProgress = ((completedFiles / totalFiles) * 100) + (fileProgress / totalFiles);
+              setUploadProgress(Math.round(overallProgress));
+            }
           });
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error(`خطا در آپلود فایل: ${uploadError.message}`);
-        }
+          
+          xhr.addEventListener('load', async () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error(`خطا در آپلود فایل: ${xhr.statusText}`));
+            }
+          });
+          
+          xhr.addEventListener('error', () => {
+            reject(new Error('خطا در اتصال به سرور'));
+          });
+          
+          // Get the upload URL and headers
+          const { data: { session } } = supabase.auth.getSession() as any;
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          
+          xhr.open('POST', `${supabaseUrl}/storage/v1/object/project-media/${filePath}`);
+          xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token || supabaseKey}`);
+          xhr.setRequestHeader('apikey', supabaseKey);
+          xhr.setRequestHeader('x-upsert', 'false');
+          xhr.send(file);
+        });
+        
+        completedFiles++;
 
         // Insert into approved_media
         const { error: insertError } = await supabase
@@ -1004,9 +1034,17 @@ const MediaApprovalModule: React.FC = () => {
                 </p>
               )}
               {uploadingMedia && (
-                <div className="flex items-center gap-2 mt-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  در حال آپلود...
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">در حال آپلود...</span>
+                    <span className="font-medium">{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="bg-primary h-full transition-all duration-300 ease-out rounded-full"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
