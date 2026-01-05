@@ -117,6 +117,19 @@ const convertModulesToItems = (modules: Module[]): ModuleItem[] => {
   }));
 };
 
+const isDeletedHierarchyItem = (item: ModuleItem) => Boolean((item as any).is_deleted);
+
+// Hide deleted modules from UI while keeping their keys in the saved hierarchy
+// so mergeAvailableHierarchy doesn't re-add them after refresh.
+const stripDeletedHierarchyItems = (items: ModuleItem[]): ModuleItem[] =>
+  items
+    .filter((it) => !isDeletedHierarchyItem(it))
+    .map((it) =>
+      it.type === 'folder'
+        ? { ...it, children: stripDeletedHierarchyItems(it.children || []) }
+        : it
+    );
+
 export function ModulesManagement() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -210,6 +223,11 @@ export function ModulesManagement() {
     onModuleNameChange: fetchAssignments,
   });
 
+  const visibleAvailableItems = useMemo(
+    () => stripDeletedHierarchyItems(availableHierarchy.items),
+    [availableHierarchy.items],
+  );
+
   useEffect(() => {
     fetchAssignments();
   }, [fetchAssignments]);
@@ -238,8 +256,8 @@ export function ModulesManagement() {
       }
       return result;
     };
-    return collectModules(availableHierarchy.items);
-  }, [availableHierarchy.items]);
+    return collectModules(visibleAvailableItems);
+  }, [visibleAvailableItems]);
 
   // Get module info for assignment dropdown with custom names
   const getModuleDisplayInfo = (item: ModuleItem) => {
@@ -494,16 +512,20 @@ export function ModulesManagement() {
       }
 
       // OTP verified - proceed with deletion
-      const removeItem = (items: ModuleItem[], id: string): ModuleItem[] => {
-        return items
-          .filter((item) => item.id !== id)
-          .map((item) => {
-            if (!item.children) return item;
-            return { ...item, children: removeItem(item.children, id) };
-          });
+      // IMPORTANT: For base modules, simple removal would be undone on refresh because
+      // mergeAvailableHierarchy re-adds any missing base modules. So we mark it as deleted
+      // (tombstone) and hide it from UI.
+      const markItemDeleted = (items: ModuleItem[], id: string): ModuleItem[] => {
+        return items.map((item) => {
+          if (item.id === id) {
+            return { ...(item as any), is_deleted: true } as ModuleItem;
+          }
+          if (!item.children) return item;
+          return { ...item, children: markItemDeleted(item.children, id) };
+        });
       };
 
-      const newItems = removeItem(availableHierarchy.items, pendingDeleteItemId);
+      const newItems = markItemDeleted(availableHierarchy.items, pendingDeleteItemId);
 
       // Update UI + persist immediately (so refresh won't bring it back)
       availableHierarchy.setItems(() => newItems);
@@ -631,9 +653,9 @@ export function ModulesManagement() {
       if (!grouped[a.module_key]) {
         // First check base modules
         const baseModuleInfo = getModuleInfo(a.module_key);
-        // Then check availableHierarchy for copied/custom modules
+        // Then check availableHierarchy for copied/custom modules (ignore deleted/tombstoned)
         const customModule = !baseModuleInfo
-          ? findModuleInHierarchy(a.module_key, availableHierarchy.items)
+          ? findModuleInHierarchy(a.module_key, visibleAvailableItems)
           : null;
 
         // For copied modules, derive href from original module name pattern
@@ -668,7 +690,7 @@ export function ModulesManagement() {
     }
 
     return Object.values(grouped);
-  }, [assignments, availableHierarchy.items]);
+  }, [assignments, visibleAvailableItems]);
 
   // Create a Map of module data for quick lookup
   const assignedModulesDataMap = useMemo((): Map<string, AssignedModuleData> => {
@@ -931,7 +953,7 @@ export function ModulesManagement() {
               </div>
               <div className="space-y-2">
                 {(() => {
-                  const filteredItems = availableHierarchy.items.filter((item) => {
+                  const filteredItems = visibleAvailableItems.filter((item) => {
                     // Type filter
                     if (availableTypeFilter !== 'all') {
                       if (availableTypeFilter === 'folder' && item.type !== 'folder') return false;
@@ -983,11 +1005,11 @@ export function ModulesManagement() {
                       showDeleteButton={true}
                       showMoveButton={true}
                       canDeleteItem={canDeleteModule}
-                      availableModulesForFolder={availableHierarchy.getAvailableModulesForFolder() as ModuleItemData[]}
+                      availableModulesForFolder={stripDeletedHierarchyItems(availableHierarchy.getAvailableModulesForFolder() as any) as ModuleItemData[]}
                     />
                   ));
                 })()}
-                {(availableSearch || availableTypeFilter !== 'all') && availableHierarchy.items.filter((item) => {
+                {(availableSearch || availableTypeFilter !== 'all') && visibleAvailableItems.filter((item) => {
                   if (availableTypeFilter !== 'all') {
                     if (availableTypeFilter === 'folder' && item.type !== 'folder') return false;
                     if (availableTypeFilter === 'module' && item.type !== 'module') return false;
