@@ -167,6 +167,7 @@ export default function DailyReportModule() {
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
   // Initialize reportDate from URL parameter if available
@@ -1131,6 +1132,7 @@ export default function DailyReportModule() {
   };
 
   const updateOrderRow = (index: number, field: keyof OrderReportRow, value: string) => {
+    setIsSaved(false);
     setOrderReports((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -1199,6 +1201,7 @@ export default function DailyReportModule() {
   };
 
   const updateStaffRow = (index: number, field: keyof StaffReportRow, value: any) => {
+    setIsSaved(false);
     setStaffReports((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -1421,48 +1424,8 @@ export default function DailyReportModule() {
 
       toast.success('گزارش با موفقیت ذخیره شد');
       
-      // Switch to saved reports tab after successful save
-      setActiveTab('saved-reports');
-      
-      // Reset form for new report
-      setExistingReportId(null);
-      setOrderReports([
-        {
-          order_id: '',
-          activity_description: '',
-          service_details: '',
-          team_name: '',
-          notes: '',
-          row_color: ROW_COLORS[0].value,
-        },
-      ]);
-      setStaffReports([
-        {
-          staff_user_id: null,
-          staff_name: 'کارت صندوق اهرم',
-          work_status: 'کارکرده',
-          overtime_hours: 0,
-          amount_received: 0,
-          receiving_notes: '',
-          amount_spent: 0,
-          spending_notes: '',
-          notes: '',
-          is_cash_box: true,
-        },
-        {
-          staff_user_id: null,
-          staff_name: '',
-          work_status: 'غایب',
-          overtime_hours: 0,
-          amount_received: 0,
-          receiving_notes: '',
-          amount_spent: 0,
-          spending_notes: '',
-          notes: '',
-          is_cash_box: false,
-        },
-      ]);
-      setReportDate(new Date());
+      // Show saved state on button - stay on same page
+      setIsSaved(true);
       
       // Refresh saved reports list
       fetchSavedReports();
@@ -2382,17 +2345,22 @@ export default function DailyReportModule() {
                 {/* Save Button */}
                 <div className="flex justify-center">
                   <Button 
-                    onClick={saveReport} 
+                    onClick={() => {
+                      setIsSaved(false);
+                      saveReport();
+                    }} 
                     disabled={saving}
                     size="lg"
-                    className="gap-2 min-w-[200px]"
+                    className={`gap-2 min-w-[200px] ${isSaved ? 'bg-green-600 hover:bg-green-700' : ''}`}
                   >
                     {saving ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : isSaved ? (
+                      <Check className="h-5 w-5" />
                     ) : (
                       <Save className="h-5 w-5" />
                     )}
-                    ذخیره گزارش
+                    {isSaved ? 'ذخیره شده' : 'ذخیره گزارش'}
                   </Button>
                 </div>
               </>
