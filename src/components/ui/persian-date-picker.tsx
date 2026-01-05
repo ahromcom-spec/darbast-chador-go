@@ -123,12 +123,17 @@ export function PersianDatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-auto p-0 z-[9999] fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" 
+        className="p-0 z-[9999] data-[state=open]:animate-none data-[state=closed]:animate-none w-[calc(100vw-1.5rem)] max-w-[22rem] max-h-[calc(100vh-1.5rem)] overflow-auto"
         align="center"
         side="bottom"
         sideOffset={0}
         onOpenAutoFocus={(e) => e.preventDefault()}
-        style={{ position: 'fixed' }}
+        style={{
+          position: 'fixed',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+        }}
       >
         <Calendar
           mode="single"
