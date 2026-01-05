@@ -279,6 +279,37 @@ export function useSiteAnalytics() {
     };
   }, [trackEvent]);
 
+  // Periodic session duration update (every 30 seconds)
+  useEffect(() => {
+    const updateSessionDuration = async () => {
+      if (!isTrackingEnabled.current) return;
+      
+      try {
+        const currentTime = Date.now();
+        const sessionDuration = Math.floor((currentTime - pageLoadTime.current) / 1000);
+        
+        await supabase
+          .from('site_sessions')
+          .update({
+            total_duration_seconds: sessionDuration,
+            updated_at: new Date().toISOString()
+          })
+          .eq('session_id', sessionId.current);
+      } catch (error) {
+        console.debug('Session duration update error:', error);
+      }
+    };
+
+    // Update immediately after 5 seconds, then every 30 seconds
+    const initialTimeout = setTimeout(updateSessionDuration, 5000);
+    const interval = setInterval(updateSessionDuration, 30000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, []);
+
   return {
     trackEvent,
     sessionId: sessionId.current,
