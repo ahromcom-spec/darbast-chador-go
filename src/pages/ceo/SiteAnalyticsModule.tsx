@@ -31,10 +31,14 @@ import {
   RefreshCw,
   TrendingUp,
   Activity,
-  FileText
+  FileText,
+  X
 } from 'lucide-react';
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns-jalali';
 import { faIR } from 'date-fns-jalali/locale';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 interface AnalyticsEvent {
   id: string;
@@ -405,24 +409,120 @@ export default function SiteAnalyticsModule() {
               </Select>
             </div>
 
-            {/* Custom Date Range */}
+            {/* Custom Date Range - Persian Calendar */}
             {dateFilter === 'custom' && (
               <>
                 <div className="space-y-2">
                   <Label className="text-xs">از تاریخ</Label>
-                  <Input 
-                    type="date" 
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-full justify-start text-right font-normal',
+                          !customStartDate && 'text-muted-foreground'
+                        )}
+                      >
+                        <Calendar className="ml-2 h-4 w-4" />
+                        {customStartDate 
+                          ? format(new Date(customStartDate), 'yyyy/MM/dd', { locale: faIR })
+                          : 'انتخاب تاریخ'
+                        }
+                        {customStartDate && (
+                          <X 
+                            className="mr-auto h-4 w-4 text-muted-foreground hover:text-foreground" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCustomStartDate('');
+                            }}
+                          />
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      className="p-0 z-[9999] w-auto"
+                      align="center"
+                      style={{
+                        position: 'fixed',
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    >
+                      <CalendarComponent
+                        mode="single"
+                        selected={customStartDate ? new Date(customStartDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            setCustomStartDate(date.toISOString());
+                          }
+                        }}
+                        disabled={(date) => {
+                          const today = new Date();
+                          const oneYearAgo = new Date();
+                          oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                          return date > today || date < oneYearAgo;
+                        }}
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs">تا تاریخ</Label>
-                  <Input 
-                    type="date" 
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-full justify-start text-right font-normal',
+                          !customEndDate && 'text-muted-foreground'
+                        )}
+                      >
+                        <Calendar className="ml-2 h-4 w-4" />
+                        {customEndDate 
+                          ? format(new Date(customEndDate), 'yyyy/MM/dd', { locale: faIR })
+                          : 'انتخاب تاریخ'
+                        }
+                        {customEndDate && (
+                          <X 
+                            className="mr-auto h-4 w-4 text-muted-foreground hover:text-foreground" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCustomEndDate('');
+                            }}
+                          />
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      className="p-0 z-[9999] w-auto"
+                      align="center"
+                      style={{
+                        position: 'fixed',
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    >
+                      <CalendarComponent
+                        mode="single"
+                        selected={customEndDate ? new Date(customEndDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            setCustomEndDate(date.toISOString());
+                          }
+                        }}
+                        disabled={(date) => {
+                          const today = new Date();
+                          const startDate = customStartDate ? new Date(customStartDate) : new Date();
+                          startDate.setFullYear(startDate.getFullYear() - 1);
+                          return date > today || date < startDate;
+                        }}
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </>
             )}
