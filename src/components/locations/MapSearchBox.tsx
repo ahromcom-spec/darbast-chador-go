@@ -34,19 +34,25 @@ export function MapSearchBox({
   useEffect(() => {
     const cached = sessionStorage.getItem('mapbox_token');
     if (cached) {
+      console.log('[MapSearchBox] Using cached token');
       setMapboxToken(cached);
       return;
     }
 
     const fetchToken = async () => {
       try {
+        console.log('[MapSearchBox] Fetching mapbox token...');
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+        console.log('[MapSearchBox] Response:', { data, error });
         if (!error && data?.token) {
           setMapboxToken(data.token);
           sessionStorage.setItem('mapbox_token', data.token);
+          console.log('[MapSearchBox] Token received and cached');
+        } else {
+          console.error('[MapSearchBox] Failed to get token:', error);
         }
       } catch (err) {
-        console.error('Error fetching Mapbox token:', err);
+        console.error('[MapSearchBox] Error fetching Mapbox token:', err);
       }
     };
 
@@ -66,7 +72,17 @@ export function MapSearchBox({
   }, []);
 
   const searchPlaces = useCallback(async (query: string) => {
-    if (!query.trim() || query.length < 2 || !mapboxToken) {
+    console.log('[MapSearchBox] searchPlaces called:', { query, mapboxToken: !!mapboxToken });
+    
+    if (!query.trim() || query.length < 2) {
+      console.log('[MapSearchBox] Query too short, skipping');
+      setResults([]);
+      setIsOpen(false);
+      return;
+    }
+    
+    if (!mapboxToken) {
+      console.log('[MapSearchBox] No token available');
       setResults([]);
       setIsOpen(false);
       return;
@@ -85,8 +101,12 @@ export function MapSearchBox({
         types: 'place,locality,neighborhood,address,poi'
       });
 
-      const response = await fetch(`${endpoint}?${params}`);
+      const url = `${endpoint}?${params}`;
+      console.log('[MapSearchBox] Fetching:', url.replace(mapboxToken, 'TOKEN_HIDDEN'));
+      
+      const response = await fetch(url);
       const data = await response.json();
+      console.log('[MapSearchBox] API Response:', data);
 
       if (data.features && data.features.length > 0) {
         const searchResults: SearchResult[] = data.features.map((feature: any) => ({
@@ -94,14 +114,16 @@ export function MapSearchBox({
           place_name: feature.place_name,
           center: feature.center
         }));
+        console.log('[MapSearchBox] Results found:', searchResults.length);
         setResults(searchResults);
         setIsOpen(true);
       } else {
+        console.log('[MapSearchBox] No results found');
         setResults([]);
         setIsOpen(false);
       }
     } catch (error) {
-      console.error('Geocoding error:', error);
+      console.error('[MapSearchBox] Geocoding error:', error);
       setResults([]);
     } finally {
       setLoading(false);
