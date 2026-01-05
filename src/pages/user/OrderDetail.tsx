@@ -940,10 +940,19 @@ export default function OrderDetail() {
   const remainingAmountForPayment = Math.max(0, Math.max(0, grandTotalForPayment) - paidAmountForPayment);
   const isFullyPaidForPayment = grandTotalForPayment > 0 && remainingAmountForPayment <= 0;
 
-  const statusInfo =
-    order.status === 'paid' && !isFullyPaidForPayment
-      ? { label: 'پرداخت ناقص', icon: Clock, color: 'text-amber-600' }
-      : getStatusInfo(order.status);
+  // تعیین وضعیت نمایشی بر اساس execution_stage و status
+  const getDisplayStatus = () => {
+    // اگر execution_stage برابر order_executed باشد، وضعیت "اجرا شده" نشان داده شود
+    if (order.execution_stage === 'order_executed' || order.execution_stage === 'awaiting_payment' || order.execution_stage === 'awaiting_collection') {
+      return { label: 'اجرا شده', icon: CheckCircle, color: 'text-green-600' };
+    }
+    if (order.status === 'paid' && !isFullyPaidForPayment) {
+      return { label: 'پرداخت ناقص', icon: Clock, color: 'text-amber-600' };
+    }
+    return getStatusInfo(order.status);
+  };
+  
+  const statusInfo = getDisplayStatus();
   const StatusIcon = statusInfo.icon;
 
   return (
