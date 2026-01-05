@@ -53,6 +53,7 @@ const AllCompanyOrdersModule = lazy(() => import("@/pages/ceo/AllCompanyOrdersMo
 const CustomerComprehensiveInvoice = lazy(() => import("@/pages/ceo/CustomerComprehensiveInvoice"));
 const MyInvoiceModule = lazy(() => import("@/pages/user/MyInvoiceModule"));
 const SiteAnalyticsModule = lazy(() => import("@/pages/ceo/SiteAnalyticsModule"));
+const MediaApprovalModule = lazy(() => import("@/pages/ceo/MediaApprovalModule"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -403,6 +404,12 @@ const App = () => {
               <Route path="/site-analytics" element={
                 <ProtectedRoute>
                   <SiteAnalyticsModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر ماژول مدیریت رسانه‌های سایت */}
+              <Route path="/media-approval" element={
+                <ProtectedRoute>
+                  <MediaApprovalModule />
                 </ProtectedRoute>
               } />
               <Route path="/executive" element={
