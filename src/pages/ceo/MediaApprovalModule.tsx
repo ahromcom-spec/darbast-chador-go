@@ -24,7 +24,9 @@ import {
   EyeOff,
   Clock,
   Filter,
-  Trash2
+  Trash2,
+  FolderOpen,
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -45,15 +47,31 @@ interface MediaItem {
   approved_at: string | null;
 }
 
+interface OrderMediaItem {
+  id: string;
+  project_id: string;
+  user_id: string;
+  file_path: string;
+  file_type: string;
+  file_size: number | null;
+  mime_type: string | null;
+  created_at: string;
+  order_code?: string;
+  order_address?: string;
+  uploader_name?: string;
+}
+
 const MediaApprovalModule: React.FC = () => {
   usePageTitle('مدیریت رسانه‌ها');
   const { user } = useAuth();
   const { toast } = useToast();
 
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [orderMedia, setOrderMedia] = useState<OrderMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [activeTab, setActiveTab] = useState<'orders' | 'pending' | 'approved' | 'rejected'>('orders');
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [selectedOrderMedia, setSelectedOrderMedia] = useState<OrderMediaItem | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -61,10 +79,70 @@ const MediaApprovalModule: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showAddToApprovalDialog, setShowAddToApprovalDialog] = useState(false);
+  const [addMediaTitle, setAddMediaTitle] = useState('');
+  const [addMediaDescription, setAddMediaDescription] = useState('');
 
   useEffect(() => {
-    fetchMedia();
+    if (activeTab === 'orders') {
+      fetchOrderMedia();
+    } else {
+      fetchMedia();
+    }
   }, [activeTab]);
+
+  const fetchOrderMedia = async () => {
+    setLoading(true);
+    try {
+      // Fetch all media from orders with order and uploader info
+      const { data, error } = await supabase
+        .from('project_media')
+        .select(`
+          *,
+          projects_v3:project_id (
+            code,
+            address
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (error) throw error;
+
+      // Get uploader profiles
+      const userIds = [...new Set((data || []).map(m => m.user_id).filter(Boolean))];
+      let profilesMap: Record<string, string> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', userIds);
+        
+        profiles?.forEach(p => {
+          profilesMap[p.user_id] = p.full_name || 'ناشناس';
+        });
+      }
+
+      const enrichedData = (data || []).map(m => ({
+        ...m,
+        order_code: m.projects_v3?.code || 'بدون کد',
+        order_address: m.projects_v3?.address || '',
+        uploader_name: profilesMap[m.user_id] || 'ناشناس'
+      }));
+
+      setOrderMedia(enrichedData);
+    } catch (error) {
+      console.error('Error fetching order media:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در دریافت رسانه‌های سفارشات',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchMedia = async () => {
     setLoading(true);
@@ -260,6 +338,70 @@ const MediaApprovalModule: React.FC = () => {
     setShowEditDialog(true);
   };
 
+  const openAddToApprovalDialog = (item: OrderMediaItem) => {
+    setSelectedOrderMedia(item);
+    setAddMediaTitle('');
+    setAddMediaDescription('');
+    setShowAddToApprovalDialog(true);
+  };
+
+  const handleAddToApproval = async () => {
+    if (!selectedOrderMedia) return;
+    setProcessing(true);
+    try {
+      // Check if already added
+      const { data: existing } = await supabase
+        .from('approved_media')
+        .select('id')
+        .eq('original_media_id', selectedOrderMedia.id)
+        .single();
+
+      if (existing) {
+        toast({
+          title: 'توجه',
+          description: 'این رسانه قبلاً به لیست تایید اضافه شده است',
+          variant: 'destructive'
+        });
+        setProcessing(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('approved_media')
+        .insert({
+          original_media_id: selectedOrderMedia.id,
+          file_path: selectedOrderMedia.file_path,
+          file_type: selectedOrderMedia.file_type === 'video' ? 'video' : 'image',
+          title: addMediaTitle || null,
+          description: addMediaDescription || null,
+          order_id: selectedOrderMedia.project_id,
+          project_name: selectedOrderMedia.order_code,
+          uploaded_by: selectedOrderMedia.user_id,
+          status: 'pending',
+          display_order: 0,
+          is_visible: true
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'افزوده شد',
+        description: 'رسانه به لیست در انتظار تایید اضافه شد'
+      });
+      setShowAddToApprovalDialog(false);
+      setSelectedOrderMedia(null);
+    } catch (error) {
+      console.error('Error adding to approval:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در افزودن رسانه',
+        variant: 'destructive'
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -283,7 +425,11 @@ const MediaApprovalModule: React.FC = () => {
       <Card>
         <CardContent className="p-4">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsList className="grid w-full grid-cols-4 mb-4">
+              <TabsTrigger value="orders" className="gap-2">
+                <FolderOpen className="h-4 w-4" />
+                رسانه‌های سفارشات
+              </TabsTrigger>
               <TabsTrigger value="pending" className="gap-2">
                 <Clock className="h-4 w-4" />
                 در انتظار تایید
@@ -297,6 +443,88 @@ const MediaApprovalModule: React.FC = () => {
                 رد شده
               </TabsTrigger>
             </TabsList>
+
+            {/* Orders Media Tab */}
+            <TabsContent value="orders">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <LoadingSpinner size="lg" />
+                </div>
+              ) : orderMedia.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                  <p>رسانه‌ای در سفارشات وجود ندارد</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {orderMedia.map((item) => (
+                    <Card key={item.id} className="overflow-hidden transition-all hover:shadow-lg">
+                      <div 
+                        className="relative aspect-video cursor-pointer group"
+                        onClick={() => {
+                          setSelectedOrderMedia(item);
+                          setShowPreview(true);
+                        }}
+                      >
+                        {item.file_type === 'video' ? (
+                          <>
+                            <video
+                              src={getMediaUrl(item.file_path)}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <div className="w-12 h-12 rounded-full bg-primary/80 flex items-center justify-center">
+                                <Play className="h-6 w-6 text-white fill-white" />
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <img
+                            src={getMediaUrl(item.file_path)}
+                            alt="تصویر سفارش"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        
+                        <div className="absolute top-2 right-2">
+                          <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/30">
+                            <FolderOpen className="h-3 w-3 ml-1" />
+                            سفارش
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <CardContent className="p-3 space-y-3">
+                        <div>
+                          <p className="font-medium text-sm truncate">کد سفارش: {item.order_code}</p>
+                          {item.order_address && (
+                            <p className="text-xs text-muted-foreground truncate">{item.order_address}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            آپلودکننده: {item.uploader_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(item.created_at).toLocaleDateString('fa-IR')}
+                          </p>
+                        </div>
+
+                        <Button
+                          size="sm"
+                          className="w-full gap-2"
+                          onClick={() => openAddToApprovalDialog(item)}
+                        >
+                          <Plus className="h-4 w-4" />
+                          افزودن به فعالیت‌های اخیر
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
 
             <TabsContent value={activeTab}>
               {loading ? (
@@ -455,22 +683,28 @@ const MediaApprovalModule: React.FC = () => {
       </Card>
 
       {/* Preview Dialog */}
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+      <Dialog open={showPreview} onOpenChange={(open) => {
+        setShowPreview(open);
+        if (!open) {
+          setSelectedMedia(null);
+          setSelectedOrderMedia(null);
+        }
+      }}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95">
-          {selectedMedia && (
+          {(selectedMedia || selectedOrderMedia) && (
             <div className="relative">
               <div className="flex items-center justify-center min-h-[300px] max-h-[80vh]">
-                {selectedMedia.file_type === 'video' ? (
+                {(selectedMedia?.file_type === 'video' || selectedOrderMedia?.file_type === 'video') ? (
                   <video
-                    src={getMediaUrl(selectedMedia.file_path)}
+                    src={getMediaUrl(selectedMedia?.file_path || selectedOrderMedia?.file_path || '')}
                     className="max-w-full max-h-[80vh] object-contain"
                     controls
                     autoPlay
                   />
                 ) : (
                   <img
-                    src={getMediaUrl(selectedMedia.file_path)}
-                    alt={selectedMedia.title || 'تصویر'}
+                    src={getMediaUrl(selectedMedia?.file_path || selectedOrderMedia?.file_path || '')}
+                    alt={selectedMedia?.title || 'تصویر'}
                     className="max-w-full max-h-[80vh] object-contain"
                   />
                 )}
@@ -534,6 +768,61 @@ const MediaApprovalModule: React.FC = () => {
             <Button onClick={handleEditSave} disabled={processing}>
               {processing ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : null}
               ذخیره
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add to Approval Dialog */}
+      <Dialog open={showAddToApprovalDialog} onOpenChange={setShowAddToApprovalDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>افزودن به فعالیت‌های اخیر</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedOrderMedia && (
+              <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+                {selectedOrderMedia.file_type === 'video' ? (
+                  <video
+                    src={getMediaUrl(selectedOrderMedia.file_path)}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                ) : (
+                  <img
+                    src={getMediaUrl(selectedOrderMedia.file_path)}
+                    alt="پیش‌نمایش"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium">عنوان (اختیاری)</label>
+              <Input
+                value={addMediaTitle}
+                onChange={(e) => setAddMediaTitle(e.target.value)}
+                placeholder="عنوان برای نمایش در صفحه اصلی"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">توضیحات (اختیاری)</label>
+              <Textarea
+                value={addMediaDescription}
+                onChange={(e) => setAddMediaDescription(e.target.value)}
+                placeholder="توضیحات کوتاه..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddToApprovalDialog(false)}>
+              انصراف
+            </Button>
+            <Button onClick={handleAddToApproval} disabled={processing}>
+              {processing ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : null}
+              افزودن به لیست تایید
             </Button>
           </DialogFooter>
         </DialogContent>
