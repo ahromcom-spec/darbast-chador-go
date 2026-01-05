@@ -147,6 +147,8 @@ export default function SiteAnalyticsModule() {
     try {
       const { start, end } = getDateRange();
       
+      console.log('Fetching analytics from', start.toISOString(), 'to', end.toISOString());
+      
       // Fetch analytics events
       const { data: analyticsData, error: analyticsError } = await supabase
         .from('site_analytics')
@@ -156,7 +158,12 @@ export default function SiteAnalyticsModule() {
         .order('created_at', { ascending: false })
         .limit(1000);
 
-      if (analyticsError) throw analyticsError;
+      if (analyticsError) {
+        console.error('Analytics error:', analyticsError);
+        throw analyticsError;
+      }
+      
+      console.log('Analytics data count:', analyticsData?.length || 0);
 
       // Fetch sessions
       const { data: sessionsData, error: sessionsError } = await supabase
@@ -167,7 +174,12 @@ export default function SiteAnalyticsModule() {
         .order('started_at', { ascending: false })
         .limit(500);
 
-      if (sessionsError) throw sessionsError;
+      if (sessionsError) {
+        console.error('Sessions error:', sessionsError);
+        throw sessionsError;
+      }
+      
+      console.log('Sessions data count:', sessionsData?.length || 0);
 
       // Get user info for logged in users
       const userIds = [...new Set([
@@ -207,9 +219,17 @@ export default function SiteAnalyticsModule() {
       setEvents(enrichedEvents);
       setSessions(enrichedSessions);
       calculateStats(enrichedEvents, enrichedSessions);
-    } catch (error) {
+      
+      if ((analyticsData?.length || 0) === 0 && (sessionsData?.length || 0) === 0) {
+        toast.info('داده‌ای برای این بازه زمانی یافت نشد');
+      }
+    } catch (error: any) {
       console.error('Error fetching analytics:', error);
-      toast.error('خطا در دریافت آمار');
+      if (error?.message?.includes('permission') || error?.code === '42501') {
+        toast.error('دسترسی به آمار بازدید ندارید. لطفاً با نقش مدیرعامل وارد شوید.');
+      } else {
+        toast.error('خطا در دریافت آمار: ' + (error?.message || 'خطای ناشناخته'));
+      }
     } finally {
       setLoading(false);
     }
