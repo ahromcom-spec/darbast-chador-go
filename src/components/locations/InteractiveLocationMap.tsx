@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Locate, Layers, Map as MapIcon, Satellite } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -6,6 +6,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
 import SimpleLeafletMap from './SimpleLeafletMap';
+import { MapSearchBox } from './MapSearchBox';
 
 interface InteractiveLocationMapProps {
   onLocationSelect: (lat: number, lng: number, distance?: number) => void;
@@ -652,16 +653,67 @@ export function InteractiveLocationMap({
           </div>
         )}
 
-        {/* دکمه موقعیت من */}
-        <Button
-          size="icon"
-          variant="secondary"
-          className="absolute top-4 right-4 bg-background/95 backdrop-blur shadow-lg hover:scale-105 transition-transform z-[1000]"
-          onClick={handleGetUserLocation}
-          title="موقعیت من"
-        >
-          <Locate className="w-4 h-4" />
-        </Button>
+        {/* دکمه موقعیت من - فقط برای Mapbox */}
+        {!useFallback && (
+          <Button
+            size="icon"
+            variant="secondary"
+            className="absolute top-16 right-4 bg-background/95 backdrop-blur shadow-lg hover:scale-105 transition-transform z-[1000]"
+            onClick={handleGetUserLocation}
+            title="موقعیت من"
+          >
+            <Locate className="w-4 h-4" />
+          </Button>
+        )}
+
+        {/* کادر جستجوی آدرس - فقط برای Mapbox (SimpleLeafletMap کادر جستجوی خودش را دارد) */}
+        {!useFallback && (
+          <div className="absolute top-4 left-4 right-4 z-[1001]">
+            <MapSearchBox
+              onLocationSelect={(lat, lng, placeName) => {
+                // پرواز به موقعیت جستجو شده و انتخاب آن
+                if (map.current) {
+                  map.current.flyTo({
+                    center: [lng, lat],
+                    zoom: 17,
+                    duration: 1500,
+                    essential: true
+                  });
+                  
+                  // ایجاد/به‌روزرسانی مارکر
+                  if (marker.current) {
+                    marker.current.setLngLat([lng, lat]);
+                  } else {
+                    const markerEl = document.createElement('div');
+                    markerEl.innerHTML = `<svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 0C8.954 0 0 8.954 0 20c0 15.23 18.116 28.547 18.894 29.105a2 2 0 002.212 0C21.884 48.547 40 35.23 40 20c0-11.046-8.954-20-20-20z" fill="#3b82f6"/>
+                      <circle cx="20" cy="18" r="8" fill="white"/>
+                    </svg>`;
+                    markerEl.className = 'custom-mapbox-marker marker-animation';
+                    marker.current = new mapboxgl.Marker({
+                      element: markerEl,
+                      draggable: true,
+                      anchor: 'bottom'
+                    })
+                      .setLngLat([lng, lat])
+                      .addTo(map.current);
+
+                    marker.current.on('dragend', () => {
+                      const newLngLat = marker.current!.getLngLat();
+                      setSelectedPosition({ lat: newLngLat.lat, lng: newLngLat.lng });
+                      onLocationSelect(newLngLat.lat, newLngLat.lng);
+                    });
+                  }
+                  
+                  setSelectedPosition({ lat, lng });
+                  onLocationSelect(lat, lng);
+                }
+              }}
+              placeholder="جستجوی آدرس..."
+              className="w-full"
+            />
+          </div>
+        )}
 
 
         <style>{`

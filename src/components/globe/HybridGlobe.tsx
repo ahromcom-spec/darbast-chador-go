@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowRight, MapPin, X, Plus, Camera, Video } from 'lucide-react';
+import { ArrowRight, MapPin, X, Plus, Camera, Video, Search } from 'lucide-react';
+import { MapSearchBox } from '@/components/locations/MapSearchBox';
 // بررسی وجود بنر impersonation برای تنظیم موقعیت دکمه بازگشت
 const useIsImpersonating = () => {
   const [isImpersonating, setIsImpersonating] = useState(false);
@@ -2722,6 +2723,25 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             </div>
           </div>
         </Card>
+
+        {/* کادر جستجوی آدرس */}
+        <div className={`pointer-events-auto absolute left-1/2 -translate-x-1/2 w-[90%] max-w-md ${
+          isImpersonating ? 'top-16' : 'top-4'
+        }`}>
+          <MapSearchBox
+            onLocationSelect={(lat, lng, placeName) => {
+              // پرواز به موقعیت جستجو شده
+              if (mapRef.current) {
+                mapRef.current.flyTo([lat, lng], 16, {
+                  duration: 1.5,
+                  easeLinearity: 0.25
+                });
+              }
+            }}
+            placeholder="جستجوی آدرس یا محل..."
+            className="w-full"
+          />
+        </div>
 
       </div>
 
