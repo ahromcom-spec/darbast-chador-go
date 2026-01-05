@@ -26,7 +26,8 @@ import {
   Filter,
   Trash2,
   FolderOpen,
-  Plus
+  Plus,
+  Upload
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -82,6 +83,11 @@ const MediaApprovalModule: React.FC = () => {
   const [showAddToApprovalDialog, setShowAddToApprovalDialog] = useState(false);
   const [addMediaTitle, setAddMediaTitle] = useState('');
   const [addMediaDescription, setAddMediaDescription] = useState('');
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDescription, setUploadDescription] = useState('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (activeTab === 'orders') {
@@ -415,6 +421,73 @@ const MediaApprovalModule: React.FC = () => {
     }
   };
 
+  const handleDirectUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !user) return;
+    
+    setUploadingMedia(true);
+    
+    try {
+      for (const file of Array.from(files)) {
+        const isVideo = file.type.startsWith('video/');
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
+        const filePath = `approved-media/${fileName}`;
+        
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from('project-media')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Insert into approved_media
+        const { error: insertError } = await supabase
+          .from('approved_media')
+          .insert({
+            file_path: filePath,
+            file_type: isVideo ? 'video' : 'image',
+            title: uploadTitle || null,
+            description: uploadDescription || null,
+            uploaded_by: user.id,
+            status: 'approved',
+            display_order: 0,
+            is_visible: true,
+            approved_by: user.id,
+            approved_at: new Date().toISOString()
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      toast({
+        title: 'آپلود موفق',
+        description: 'رسانه با موفقیت به فعالیت‌های اخیر اضافه شد'
+      });
+      
+      setShowUploadDialog(false);
+      setUploadTitle('');
+      setUploadDescription('');
+      setActiveTab('approved');
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error uploading media:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در آپلود فایل',
+        variant: 'destructive'
+      });
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -433,6 +506,12 @@ const MediaApprovalModule: React.FC = () => {
       <ModuleHeader
         title="مدیریت رسانه‌های سایت"
         description="تایید و مدیریت عکس‌ها و فیلم‌هایی که در صفحه اصلی نمایش داده می‌شوند"
+        action={
+          <Button onClick={() => setShowUploadDialog(true)} className="gap-2">
+            <Upload className="h-4 w-4" />
+            افزودن رسانه جدید
+          </Button>
+        }
       />
 
       <Card>
@@ -836,6 +915,61 @@ const MediaApprovalModule: React.FC = () => {
             <Button onClick={handleAddToApproval} disabled={processing}>
               {processing ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : null}
               افزودن به لیست تایید
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Dialog */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>آپلود رسانه جدید</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium">عنوان (اختیاری)</label>
+              <Input
+                value={uploadTitle}
+                onChange={(e) => setUploadTitle(e.target.value)}
+                placeholder="عنوان رسانه..."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">توضیحات (اختیاری)</label>
+              <Textarea
+                value={uploadDescription}
+                onChange={(e) => setUploadDescription(e.target.value)}
+                placeholder="توضیحات کوتاه..."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">انتخاب فایل</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={handleDirectUpload}
+                className="block w-full text-sm text-muted-foreground mt-2
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-medium
+                  file:bg-primary file:text-primary-foreground
+                  hover:file:bg-primary/90 file:cursor-pointer"
+                disabled={uploadingMedia}
+              />
+              {uploadingMedia && (
+                <div className="flex items-center gap-2 mt-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  در حال آپلود...
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUploadDialog(false)} disabled={uploadingMedia}>
+              بستن
             </Button>
           </DialogFooter>
         </DialogContent>
