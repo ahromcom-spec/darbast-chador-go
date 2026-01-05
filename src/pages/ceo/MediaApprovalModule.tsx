@@ -101,23 +101,32 @@ const MediaApprovalModule: React.FC = () => {
   const fetchOrderMedia = async () => {
     setLoading(true);
     try {
-      // Fetch all media from orders with order and uploader info
-      const { data, error } = await supabase
+      // Fetch all media from orders - simple query first
+      const { data: mediaData, error: mediaError } = await supabase
         .from('project_media')
-        .select(`
-          *,
-          projects_v3:project_id (
-            code,
-            address
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(200);
 
-      if (error) throw error;
+      if (mediaError) throw mediaError;
+
+      // Fetch project info separately to avoid RLS join issues
+      const projectIds = [...new Set((mediaData || []).map(m => m.project_id).filter(Boolean))];
+      let projectsMap: Record<string, { code: string; address: string }> = {};
+      
+      if (projectIds.length > 0) {
+        const { data: projects } = await supabase
+          .from('projects_v3')
+          .select('id, code, address')
+          .in('id', projectIds);
+        
+        projects?.forEach(p => {
+          projectsMap[p.id] = { code: p.code || 'بدون کد', address: p.address || '' };
+        });
+      }
 
       // Get uploader profiles
-      const userIds = [...new Set((data || []).map(m => m.user_id).filter(Boolean))];
+      const userIds = [...new Set((mediaData || []).map(m => m.user_id).filter(Boolean))];
       let profilesMap: Record<string, string> = {};
       
       if (userIds.length > 0) {
@@ -131,10 +140,10 @@ const MediaApprovalModule: React.FC = () => {
         });
       }
 
-      const enrichedData = (data || []).map(m => ({
+      const enrichedData = (mediaData || []).map(m => ({
         ...m,
-        order_code: m.projects_v3?.code || 'بدون کد',
-        order_address: m.projects_v3?.address || '',
+        order_code: projectsMap[m.project_id]?.code || 'بدون کد',
+        order_address: projectsMap[m.project_id]?.address || '',
         uploader_name: profilesMap[m.user_id] || 'ناشناس'
       }));
 
