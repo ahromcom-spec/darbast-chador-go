@@ -16,7 +16,7 @@ const persianMonths = [
 
 const persianWeekDays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function Calendar({ className, classNames, showOutsideDays = false, ...props }: CalendarProps) {
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
