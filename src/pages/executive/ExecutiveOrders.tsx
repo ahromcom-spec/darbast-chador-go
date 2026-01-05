@@ -1164,18 +1164,6 @@ export default function ExecutiveOrders() {
     }
 
     try {
-      // به‌روزرسانی وضعیت سفارش به rejected
-      const { error: updateError } = await supabase
-        .from('projects_v3')
-        .update({
-          status: 'rejected',
-          rejected_at: new Date().toISOString(),
-          rejected_by: user.id
-        })
-        .eq('id', selectedOrder.id);
-
-      if (updateError) throw updateError;
-
       // ذخیره دلیل رد در notes
       const currentNotesStr = selectedOrder.notes;
       let currentNotes: Record<string, any> = {};
@@ -1197,10 +1185,16 @@ export default function ExecutiveOrders() {
         rejected_by: user.id
       };
 
-      await supabase
+      // به‌روزرسانی وضعیت سفارش به rejected و ذخیره دلیل رد
+      const { error: updateError } = await supabase
         .from('projects_v3')
-        .update({ notes: JSON.stringify(updatedNotes) as any })
+        .update({
+          status: 'rejected',
+          notes: JSON.stringify(updatedNotes) as any
+        })
         .eq('id', selectedOrder.id);
+
+      if (updateError) throw updateError;
 
       // ارسال اعلان به مشتری
       if (selectedOrder.customer_id) {
