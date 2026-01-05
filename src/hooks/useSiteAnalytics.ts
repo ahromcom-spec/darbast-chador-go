@@ -302,6 +302,11 @@ export function useSiteAnalytics() {
     }
   }, []);
 
+  // Create session immediately on mount
+  useEffect(() => {
+    createSessionImmediately();
+  }, [createSessionImmediately]);
+
   // Track page views on route change
   useEffect(() => {
     pageViewCount.current += 1;
