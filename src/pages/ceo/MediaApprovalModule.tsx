@@ -350,11 +350,15 @@ const MediaApprovalModule: React.FC = () => {
     setProcessing(true);
     try {
       // Check if already added
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from('approved_media')
         .select('id')
         .eq('original_media_id', selectedOrderMedia.id)
-        .single();
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Check error:', checkError);
+      }
 
       if (existing) {
         toast({
@@ -366,30 +370,39 @@ const MediaApprovalModule: React.FC = () => {
         return;
       }
 
+      // Determine file type from mime_type or file_type field
+      const isVideo = selectedOrderMedia.mime_type?.startsWith('video/') || 
+                      selectedOrderMedia.file_type?.toLowerCase().includes('video') ||
+                      selectedOrderMedia.file_path?.toLowerCase().match(/\.(mp4|mov|avi|webm|mkv)$/);
+
       const { error } = await supabase
         .from('approved_media')
         .insert({
           original_media_id: selectedOrderMedia.id,
           file_path: selectedOrderMedia.file_path,
-          file_type: selectedOrderMedia.file_type === 'video' ? 'video' : 'image',
+          file_type: isVideo ? 'video' : 'image',
           title: addMediaTitle || null,
           description: addMediaDescription || null,
           order_id: selectedOrderMedia.project_id,
-          project_name: selectedOrderMedia.order_code,
+          project_name: selectedOrderMedia.order_code || null,
           uploaded_by: selectedOrderMedia.user_id,
-          status: 'pending',
+          status: 'approved',
           display_order: 0,
-          is_visible: true
+          is_visible: true,
+          approved_by: user?.id,
+          approved_at: new Date().toISOString()
         });
 
       if (error) throw error;
 
       toast({
         title: 'افزوده شد',
-        description: 'رسانه به لیست در انتظار تایید اضافه شد'
+        description: 'رسانه با موفقیت به فعالیت‌های اخیر اضافه شد'
       });
       setShowAddToApprovalDialog(false);
       setSelectedOrderMedia(null);
+      // Switch to approved tab to show the result
+      setActiveTab('approved');
     } catch (error) {
       console.error('Error adding to approval:', error);
       toast({
