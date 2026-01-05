@@ -1041,7 +1041,8 @@ export default function OrderDetail() {
                 payment_amount: order.payment_amount,
                 status: order.status,
                 province_id: order.province_id,
-                subcategory_id: order.subcategory_id
+                subcategory_id: order.subcategory_id,
+                rental_start_date: order.rental_start_date
               }}
             />
           </div>
