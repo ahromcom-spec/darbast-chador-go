@@ -1936,7 +1936,7 @@ export default function DailyReportModule() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 bg-muted/30 p-3 rounded-lg">
               <Label className="text-sm font-medium whitespace-nowrap">توضیحات روز:</Label>
               <AutoResizeTextarea
-                placeholder="توضیحات روزانه (مثلاً: امروز تعطیل بودیم...)"
+                placeholder="توضیحات روزانه"
                 value={dailyNotes}
                 onChange={(e) => {
                   setDailyNotes(e.target.value);
