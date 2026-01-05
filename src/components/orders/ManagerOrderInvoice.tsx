@@ -46,6 +46,7 @@ interface ManagerOrderInvoiceProps {
     status?: string;
     province_id?: string;
     subcategory_id?: string;
+    rental_start_date?: string | null;
   };
   hidePrice?: boolean; // Hide price/financial information in invoice
 }
@@ -67,6 +68,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
   const [provinceName, setProvinceName] = useState('');
   const [subcategoryName, setSubcategoryName] = useState('');
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
+  const [collectionRequestDate, setCollectionRequestDate] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -142,6 +144,19 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         .order('created_at', { ascending: true });
       
       if (repairData) setRepairRequests(repairData);
+
+      // Fetch collection request date (latest approved or pending)
+      const { data: collectionData } = await supabase
+        .from('collection_requests')
+        .select('requested_date')
+        .eq('order_id', order.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (collectionData?.requested_date) {
+        setCollectionRequestDate(collectionData.requested_date);
+      }
     };
 
     fetchData();
@@ -541,10 +556,10 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             <td class="label-cell" colspan="4" style="text-align:center; font-size:12px;">📅 تاریخ‌های مهم</td>
           </tr>
           <tr>
-            <td class="label-cell">تاریخ نصب:</td>
-            <td class="value-cell">${installDate ? formatPersianDate(installDate) : '-'}</td>
-            <td class="label-cell">تاریخ پایان:</td>
-            <td class="value-cell">${dueDate ? formatPersianDate(dueDate) : '-'}</td>
+            <td class="label-cell">تاریخ شروع کرایه:</td>
+            <td class="value-cell">${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
+            <td class="label-cell">تاریخ درخواست جمع‌آوری:</td>
+            <td class="value-cell">${collectionRequestDate ? formatPersianDate(collectionRequestDate) : '-'}</td>
           </tr>
           <tr>
             <td class="label-cell">مدت قرارداد:</td>
