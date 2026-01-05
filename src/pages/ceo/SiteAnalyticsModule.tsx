@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { StatCard } from '@/components/common/StatCard';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { 
@@ -360,32 +361,38 @@ export default function SiteAnalyticsModule() {
     return os;
   };
 
+  const refreshButton = (
+    <Button onClick={fetchAnalytics} variant="outline" size="sm" className="gap-2">
+      <RefreshCw className="h-4 w-4" />
+      بروزرسانی
+    </Button>
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <LoadingSpinner />
-      </div>
+      <ModuleLayout
+        defaultModuleKey="site_analytics"
+        defaultTitle="ماژول آمار بازدید سایت اهرم"
+        defaultDescription="تحلیل جامع بازدیدکنندگان و رفتار کاربران"
+        icon={<Activity className="h-5 w-5 text-primary" />}
+        action={refreshButton}
+      >
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner />
+        </div>
+      </ModuleLayout>
     );
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6" dir="rtl">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Activity className="h-6 w-6 text-primary" />
-            ماژول آمار بازدید سایت اهرم
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            تحلیل جامع بازدیدکنندگان و رفتار کاربران
-          </p>
-        </div>
-        <Button onClick={fetchAnalytics} variant="outline" className="gap-2">
-          <RefreshCw className="h-4 w-4" />
-          بروزرسانی
-        </Button>
-      </div>
+    <ModuleLayout
+      defaultModuleKey="site_analytics"
+      defaultTitle="ماژول آمار بازدید سایت اهرم"
+      defaultDescription="تحلیل جامع بازدیدکنندگان و رفتار کاربران"
+      icon={<Activity className="h-5 w-5 text-primary" />}
+      action={refreshButton}
+    >
+      <div className="space-y-6 p-4 md:p-6" dir="rtl">
 
       {/* Filters */}
       <Card>
@@ -939,6 +946,7 @@ export default function SiteAnalyticsModule() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </ModuleLayout>
   );
 }
