@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,6 +18,7 @@ import GlobalIncomingCallPopup from "@/components/calls/GlobalIncomingCallPopup"
 import { ZoomProvider } from "@/contexts/ZoomContext";
 
 import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
+import { useSiteAnalytics } from '@/hooks/useSiteAnalytics';
 
 import Header from "./components/Header";
 import Home from "./pages/Home";
@@ -51,6 +52,7 @@ const AccountingModule = lazy(() => import("@/pages/ceo/AccountingModule"));
 const AllCompanyOrdersModule = lazy(() => import("@/pages/ceo/AllCompanyOrdersModule"));
 const CustomerComprehensiveInvoice = lazy(() => import("@/pages/ceo/CustomerComprehensiveInvoice"));
 const MyInvoiceModule = lazy(() => import("@/pages/user/MyInvoiceModule"));
+const SiteAnalyticsModule = lazy(() => import("@/pages/ceo/SiteAnalyticsModule"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -159,6 +161,12 @@ const PageLoader = () => (
   </div>
 );
 
+// Analytics tracker wrapper component
+const AnalyticsTracker = ({ children }: { children: ReactNode }) => {
+  useSiteAnalytics();
+  return <>{children}</>;
+};
+
 
 const App = () => {
   return (
@@ -176,6 +184,7 @@ const App = () => {
               <GlobalIncomingCallPopup />
               
               <Suspense fallback={<PageLoader />}>
+                <AnalyticsTracker>
                 <div className="flex-1 flex flex-col bg-background">
                   <Header />
                   <Routes>
@@ -390,6 +399,12 @@ const App = () => {
                   <MyInvoiceModule />
                 </ProtectedRoute>
               } />
+              {/* مسیر ماژول آمار بازدید سایت اهرم */}
+              <Route path="/site-analytics" element={
+                <ProtectedRoute>
+                  <SiteAnalyticsModule />
+                </ProtectedRoute>
+              } />
               <Route path="/executive" element={
                 <ProtectedRoute>
                   <ExecutiveLayout />
@@ -486,6 +501,7 @@ const App = () => {
                 </Routes>
               </div>
               <AssistantAvatar />
+              </AnalyticsTracker>
             </Suspense>
               </IncomingCallProvider>
             </ZoomProvider>
