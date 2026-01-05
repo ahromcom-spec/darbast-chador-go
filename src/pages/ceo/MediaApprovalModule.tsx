@@ -421,14 +421,35 @@ const MediaApprovalModule: React.FC = () => {
     }
   };
 
-  const handleDirectUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0 || !user) return;
+    if (files && files.length > 0) {
+      setSelectedFiles(Array.from(files));
+    }
+  };
+
+  const handleDirectUpload = async () => {
+    if (selectedFiles.length === 0 || !user) {
+      toast({
+        title: 'خطا',
+        description: 'لطفاً ابتدا فایلی انتخاب کنید',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     setUploadingMedia(true);
     
     try {
-      for (const file of Array.from(files)) {
+      for (const file of selectedFiles) {
+        // Check file size (max 50MB for videos)
+        const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+          throw new Error(`حجم فایل ${file.name} بیش از حد مجاز است`);
+        }
+
         const isVideo = file.type.startsWith('video/');
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
         const filePath = `approved-media/${fileName}`;
@@ -441,7 +462,10 @@ const MediaApprovalModule: React.FC = () => {
             upsert: false
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error(`خطا در آپلود فایل: ${uploadError.message}`);
+        }
 
         // Insert into approved_media
         const { error: insertError } = await supabase
@@ -459,7 +483,10 @@ const MediaApprovalModule: React.FC = () => {
             approved_at: new Date().toISOString()
           });
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Insert error:', insertError);
+          throw new Error(`خطا در ذخیره اطلاعات: ${insertError.message}`);
+        }
       }
 
       toast({
@@ -470,17 +497,19 @@ const MediaApprovalModule: React.FC = () => {
       setShowUploadDialog(false);
       setUploadTitle('');
       setUploadDescription('');
+      setSelectedFiles([]);
       setActiveTab('approved');
+      fetchMedia();
       
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading media:', error);
       toast({
         title: 'خطا',
-        description: 'خطا در آپلود فایل',
+        description: error.message || 'خطا در آپلود فایل',
         variant: 'destructive'
       });
     } finally {
@@ -921,7 +950,17 @@ const MediaApprovalModule: React.FC = () => {
       </Dialog>
 
       {/* Upload Dialog */}
-      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+      <Dialog open={showUploadDialog} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedFiles([]);
+          setUploadTitle('');
+          setUploadDescription('');
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }
+        setShowUploadDialog(open);
+      }}>
         <DialogContent dir="rtl">
           <DialogHeader>
             <DialogTitle>آپلود رسانه جدید</DialogTitle>
@@ -950,7 +989,7 @@ const MediaApprovalModule: React.FC = () => {
                 type="file"
                 accept="image/*,video/*"
                 multiple
-                onChange={handleDirectUpload}
+                onChange={handleFileSelect}
                 className="block w-full text-sm text-muted-foreground mt-2
                   file:mr-4 file:py-2 file:px-4
                   file:rounded-md file:border-0
@@ -959,6 +998,11 @@ const MediaApprovalModule: React.FC = () => {
                   hover:file:bg-primary/90 file:cursor-pointer"
                 disabled={uploadingMedia}
               />
+              {selectedFiles.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  {selectedFiles.length} فایل انتخاب شده
+                </p>
+              )}
               {uploadingMedia && (
                 <div className="flex items-center gap-2 mt-2 text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -967,9 +1011,13 @@ const MediaApprovalModule: React.FC = () => {
               )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowUploadDialog(false)} disabled={uploadingMedia}>
-              بستن
+              انصراف
+            </Button>
+            <Button onClick={handleDirectUpload} disabled={uploadingMedia || selectedFiles.length === 0}>
+              {uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : <Upload className="h-4 w-4 ml-1" />}
+              آپلود
             </Button>
           </DialogFooter>
         </DialogContent>
