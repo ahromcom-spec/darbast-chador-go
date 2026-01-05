@@ -109,6 +109,14 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-cyan-600',
     bgColor: 'bg-cyan-50',
   },
+  {
+    key: 'media_approval',
+    name: 'ماژول مدیریت رسانه‌های سایت',
+    description: 'تایید و مدیریت عکس‌ها و فیلم‌هایی که در صفحه اصلی فعالیت‌های اخیر نمایش داده می‌شوند',
+    href: '/media-approval',
+    color: 'text-pink-600',
+    bgColor: 'bg-pink-50',
+  },
 ];
 
 // Convert modules to ModuleItem format

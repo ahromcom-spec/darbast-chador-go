@@ -10,6 +10,7 @@ import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSub
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import Snowfall from '@/components/effects/Snowfall';
+import { RecentActivities } from '@/components/home/RecentActivities';
 
 // Lazy load heavy components for better performance
 const PWAInstallBanner = lazy(() => import('@/components/common/PWAInstallBanner').then(m => ({ default: m.PWAInstallBanner })));
@@ -307,6 +308,11 @@ const Home = () => {
                 </button>
               </div>
             )}
+
+            {/* Recent Activities Section */}
+            <div className="mt-6">
+              <RecentActivities />
+            </div>
           </article>
         </main>
         

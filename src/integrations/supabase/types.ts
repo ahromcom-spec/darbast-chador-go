@@ -86,6 +86,77 @@ export type Database = {
         }
         Relationships: []
       }
+      approved_media: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          description: string | null
+          display_order: number | null
+          file_path: string
+          file_type: string
+          id: string
+          is_visible: boolean | null
+          order_id: string | null
+          original_media_id: string | null
+          project_name: string | null
+          rejection_reason: string | null
+          status: string
+          thumbnail_path: string | null
+          title: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          file_path: string
+          file_type: string
+          id?: string
+          is_visible?: boolean | null
+          order_id?: string | null
+          original_media_id?: string | null
+          project_name?: string | null
+          rejection_reason?: string | null
+          status?: string
+          thumbnail_path?: string | null
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          file_path?: string
+          file_type?: string
+          id?: string
+          is_visible?: boolean | null
+          order_id?: string | null
+          original_media_id?: string | null
+          project_name?: string | null
+          rejection_reason?: string | null
+          status?: string
+          thumbnail_path?: string | null
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approved_media_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           assigned_by_user_id: string

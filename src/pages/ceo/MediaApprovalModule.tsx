@@ -1,0 +1,545 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ModuleHeader } from '@/components/common/ModuleHeader';
+import { 
+  CheckCircle, 
+  XCircle, 
+  Play, 
+  Image as ImageIcon, 
+  Loader2, 
+  ArrowUp, 
+  ArrowDown,
+  Eye,
+  EyeOff,
+  Clock,
+  Filter,
+  Trash2
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface MediaItem {
+  id: string;
+  file_path: string;
+  file_type: 'image' | 'video';
+  title: string | null;
+  description: string | null;
+  project_name: string | null;
+  order_id: string | null;
+  uploaded_by: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  rejection_reason: string | null;
+  display_order: number;
+  is_visible: boolean;
+  created_at: string;
+  approved_at: string | null;
+}
+
+const MediaApprovalModule: React.FC = () => {
+  usePageTitle('مدیریت رسانه‌ها');
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
+  useEffect(() => {
+    fetchMedia();
+  }, [activeTab]);
+
+  const fetchMedia = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('approved_media')
+        .select('*')
+        .eq('status', activeTab)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMedia((data || []) as MediaItem[]);
+    } catch (error) {
+      console.error('Error fetching media:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در دریافت لیست رسانه‌ها',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getMediaUrl = (filePath: string) => {
+    if (filePath.startsWith('http')) return filePath;
+    const { data } = supabase.storage.from('project-media').getPublicUrl(filePath);
+    return data?.publicUrl || filePath;
+  };
+
+  const handleApprove = async (item: MediaItem) => {
+    setProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('approved_media')
+        .update({
+          status: 'approved',
+          approved_by: user?.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'تایید شد',
+        description: 'رسانه با موفقیت تایید و در صفحه اصلی نمایش داده خواهد شد'
+      });
+      fetchMedia();
+    } catch (error) {
+      console.error('Error approving media:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در تایید رسانه',
+        variant: 'destructive'
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedMedia) return;
+    setProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('approved_media')
+        .update({
+          status: 'rejected',
+          rejection_reason: rejectionReason
+        })
+        .eq('id', selectedMedia.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'رد شد',
+        description: 'رسانه رد شد'
+      });
+      setShowRejectDialog(false);
+      setRejectionReason('');
+      setSelectedMedia(null);
+      fetchMedia();
+    } catch (error) {
+      console.error('Error rejecting media:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در رد رسانه',
+        variant: 'destructive'
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleToggleVisibility = async (item: MediaItem) => {
+    try {
+      const { error } = await supabase
+        .from('approved_media')
+        .update({ is_visible: !item.is_visible })
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      toast({
+        title: item.is_visible ? 'پنهان شد' : 'نمایش داده شد',
+        description: item.is_visible ? 'رسانه از صفحه اصلی پنهان شد' : 'رسانه در صفحه اصلی نمایش داده می‌شود'
+      });
+      fetchMedia();
+    } catch (error) {
+      console.error('Error toggling visibility:', error);
+    }
+  };
+
+  const handleUpdateOrder = async (item: MediaItem, direction: 'up' | 'down') => {
+    const newOrder = direction === 'up' ? item.display_order - 1 : item.display_order + 1;
+    try {
+      const { error } = await supabase
+        .from('approved_media')
+        .update({ display_order: newOrder })
+        .eq('id', item.id);
+
+      if (error) throw error;
+      fetchMedia();
+    } catch (error) {
+      console.error('Error updating order:', error);
+    }
+  };
+
+  const handleDelete = async (item: MediaItem) => {
+    if (!confirm('آیا از حذف این رسانه اطمینان دارید؟')) return;
+
+    try {
+      const { error } = await supabase
+        .from('approved_media')
+        .delete()
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'حذف شد',
+        description: 'رسانه با موفقیت حذف شد'
+      });
+      fetchMedia();
+    } catch (error) {
+      console.error('Error deleting media:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در حذف رسانه',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!selectedMedia) return;
+    setProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('approved_media')
+        .update({
+          title: editTitle || null,
+          description: editDescription || null
+        })
+        .eq('id', selectedMedia.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'ذخیره شد',
+        description: 'اطلاعات رسانه به‌روزرسانی شد'
+      });
+      setShowEditDialog(false);
+      setSelectedMedia(null);
+      fetchMedia();
+    } catch (error) {
+      console.error('Error updating media:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در ذخیره اطلاعات',
+        variant: 'destructive'
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const openEditDialog = (item: MediaItem) => {
+    setSelectedMedia(item);
+    setEditTitle(item.title || '');
+    setEditDescription(item.description || '');
+    setShowEditDialog(true);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/30"><Clock className="h-3 w-3 ml-1" />در انتظار</Badge>;
+      case 'approved':
+        return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30"><CheckCircle className="h-3 w-3 ml-1" />تایید شده</Badge>;
+      case 'rejected':
+        return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/30"><XCircle className="h-3 w-3 ml-1" />رد شده</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-4 space-y-6">
+      <ModuleHeader
+        title="مدیریت رسانه‌های سایت"
+        description="تایید و مدیریت عکس‌ها و فیلم‌هایی که در صفحه اصلی نمایش داده می‌شوند"
+      />
+
+      <Card>
+        <CardContent className="p-4">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsTrigger value="pending" className="gap-2">
+                <Clock className="h-4 w-4" />
+                در انتظار تایید
+              </TabsTrigger>
+              <TabsTrigger value="approved" className="gap-2">
+                <CheckCircle className="h-4 w-4" />
+                تایید شده
+              </TabsTrigger>
+              <TabsTrigger value="rejected" className="gap-2">
+                <XCircle className="h-4 w-4" />
+                رد شده
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={activeTab}>
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <LoadingSpinner size="lg" />
+                </div>
+              ) : media.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                  <p>رسانه‌ای در این بخش وجود ندارد</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {media.map((item, index) => (
+                    <Card key={item.id} className={cn(
+                      "overflow-hidden transition-all",
+                      !item.is_visible && activeTab === 'approved' && "opacity-50"
+                    )}>
+                      <div 
+                        className="relative aspect-video cursor-pointer group"
+                        onClick={() => {
+                          setSelectedMedia(item);
+                          setShowPreview(true);
+                        }}
+                      >
+                        {item.file_type === 'video' ? (
+                          <>
+                            <video
+                              src={getMediaUrl(item.file_path)}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <div className="w-12 h-12 rounded-full bg-primary/80 flex items-center justify-center">
+                                <Play className="h-6 w-6 text-white fill-white" />
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <img
+                            src={getMediaUrl(item.file_path)}
+                            alt={item.title || 'تصویر'}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        
+                        {/* Status Badge Overlay */}
+                        <div className="absolute top-2 right-2">
+                          {getStatusBadge(item.status)}
+                        </div>
+                      </div>
+
+                      <CardContent className="p-3 space-y-3">
+                        <div>
+                          <p className="font-medium text-sm truncate">{item.title || 'بدون عنوان'}</p>
+                          {item.project_name && (
+                            <p className="text-xs text-muted-foreground truncate">پروژه: {item.project_name}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(item.created_at).toLocaleDateString('fa-IR')}
+                          </p>
+                        </div>
+
+                        {activeTab === 'pending' && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => handleApprove(item)}
+                              disabled={processing}
+                            >
+                              <CheckCircle className="h-4 w-4 ml-1" />
+                              تایید
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="flex-1"
+                              onClick={() => {
+                                setSelectedMedia(item);
+                                setShowRejectDialog(true);
+                              }}
+                              disabled={processing}
+                            >
+                              <XCircle className="h-4 w-4 ml-1" />
+                              رد
+                            </Button>
+                          </div>
+                        )}
+
+                        {activeTab === 'approved' && (
+                          <div className="flex gap-1 flex-wrap">
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => handleToggleVisibility(item)}
+                              title={item.is_visible ? 'پنهان کردن' : 'نمایش'}
+                            >
+                              {item.is_visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => handleUpdateOrder(item, 'up')}
+                              title="اولویت بالاتر"
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => handleUpdateOrder(item, 'down')}
+                              title="اولویت پایین‌تر"
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => openEditDialog(item)}
+                              title="ویرایش"
+                            >
+                              <Filter className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="destructive"
+                              className="h-8 w-8"
+                              onClick={() => handleDelete(item)}
+                              title="حذف"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+
+                        {activeTab === 'rejected' && item.rejection_reason && (
+                          <div className="p-2 bg-red-500/10 rounded text-xs text-red-500">
+                            دلیل رد: {item.rejection_reason}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95">
+          {selectedMedia && (
+            <div className="relative">
+              <div className="flex items-center justify-center min-h-[300px] max-h-[80vh]">
+                {selectedMedia.file_type === 'video' ? (
+                  <video
+                    src={getMediaUrl(selectedMedia.file_path)}
+                    className="max-w-full max-h-[80vh] object-contain"
+                    controls
+                    autoPlay
+                  />
+                ) : (
+                  <img
+                    src={getMediaUrl(selectedMedia.file_path)}
+                    alt={selectedMedia.title || 'تصویر'}
+                    className="max-w-full max-h-[80vh] object-contain"
+                  />
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>دلیل رد رسانه</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            placeholder="دلیل رد کردن این رسانه را وارد کنید..."
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+              انصراف
+            </Button>
+            <Button variant="destructive" onClick={handleReject} disabled={processing}>
+              {processing ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : null}
+              رد کردن
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ویرایش اطلاعات رسانه</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">عنوان</label>
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="عنوان رسانه"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">توضیحات</label>
+              <Textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="توضیحات..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              انصراف
+            </Button>
+            <Button onClick={handleEditSave} disabled={processing}>
+              {processing ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : null}
+              ذخیره
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default MediaApprovalModule;
