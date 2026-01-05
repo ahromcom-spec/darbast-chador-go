@@ -140,10 +140,8 @@ export const RecentActivities: React.FC = () => {
                           video.currentTime = 0.5;
                         }}
                       />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
-                        <div className="w-10 h-10 rounded-full bg-blue-500/80 flex items-center justify-center">
-                          <Play className="h-5 w-5 text-white fill-white" />
-                        </div>
+                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-blue-500/80 flex items-center justify-center">
+                        <Play className="h-2.5 w-2.5 text-white fill-white" />
                       </div>
                     </div>
                   </>
