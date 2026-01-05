@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
+import VideoAudioEditor from '@/components/media/VideoAudioEditor';
 import { 
   CheckCircle, 
   XCircle, 
@@ -27,7 +28,8 @@ import {
   Trash2,
   FolderOpen,
   Plus,
-  Upload
+  Upload,
+  Music
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -89,6 +91,11 @@ const MediaApprovalModule: React.FC = () => {
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  // Video audio editor state
+  const [showVideoAudioEditor, setShowVideoAudioEditor] = useState(false);
+  const [videoToEdit, setVideoToEdit] = useState<string | null>(null);
+  const [videoToEditItem, setVideoToEditItem] = useState<MediaItem | OrderMediaItem | null>(null);
 
   useEffect(() => {
     if (activeTab === 'orders') {
@@ -563,6 +570,88 @@ const MediaApprovalModule: React.FC = () => {
     }
   };
 
+  // Open video audio editor
+  const openVideoAudioEditor = (item: MediaItem | OrderMediaItem) => {
+    const url = getMediaUrl(item.file_path);
+    setVideoToEdit(url);
+    setVideoToEditItem(item);
+    setShowVideoAudioEditor(true);
+  };
+
+  // Handle edited video save
+  const handleEditedVideoSave = async (editedBlob: Blob) => {
+    if (!user || !videoToEditItem) return;
+    
+    setProcessing(true);
+    try {
+      const fileName = `edited-${Date.now()}-${Math.random().toString(36).substring(7)}.mp4`;
+      const filePath = `${user.id}/approved-media/${fileName}`;
+      
+      // Create signed upload URL
+      const { data: signed, error: signError } = await supabase.storage
+        .from('project-media')
+        .createSignedUploadUrl(filePath, { upsert: false });
+
+      if (signError || !signed?.signedUrl) {
+        throw new Error(`خطا در آماده‌سازی آپلود: ${signError?.message || 'نامشخص'}`);
+      }
+
+      // Upload the edited video
+      const xhr = new XMLHttpRequest();
+      await new Promise<void>((resolve, reject) => {
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`خطا در آپلود: ${xhr.status}`));
+          }
+        });
+        xhr.addEventListener('error', () => reject(new Error('خطا در اتصال')));
+        xhr.open('PUT', signed.signedUrl);
+        xhr.setRequestHeader('Content-Type', 'video/mp4');
+        xhr.send(editedBlob);
+      });
+
+      // Insert into approved_media
+      const { error: insertError } = await supabase
+        .from('approved_media')
+        .insert({
+          file_path: filePath,
+          file_type: 'video',
+          title: 'ویدیو ویرایش شده',
+          description: 'ویدیو با صدای ویرایش شده',
+          uploaded_by: user.id,
+          status: 'approved',
+          display_order: 0,
+          is_visible: true,
+          approved_by: user.id,
+          approved_at: new Date().toISOString()
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: 'موفق',
+        description: 'ویدیو ویرایش شده با موفقیت ذخیره شد'
+      });
+      
+      setShowVideoAudioEditor(false);
+      setVideoToEdit(null);
+      setVideoToEditItem(null);
+      setActiveTab('approved');
+      fetchMedia();
+    } catch (error: any) {
+      console.error('Error saving edited video:', error);
+      toast({
+        title: 'خطا',
+        description: error.message || 'خطا در ذخیره ویدیو',
+        variant: 'destructive'
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -678,14 +767,27 @@ const MediaApprovalModule: React.FC = () => {
                           </p>
                         </div>
 
-                        <Button
-                          size="sm"
-                          className="w-full gap-2"
-                          onClick={() => openAddToApprovalDialog(item)}
-                        >
-                          <Plus className="h-4 w-4" />
-                          افزودن به فعالیت‌های اخیر
-                        </Button>
+                        <div className="flex gap-2">
+                          {item.file_type === 'video' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                              onClick={() => openVideoAudioEditor(item)}
+                              title="ویرایش صدای ویدیو"
+                            >
+                              <Music className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            className="flex-1 gap-2"
+                            onClick={() => openAddToApprovalDialog(item)}
+                          >
+                            <Plus className="h-4 w-4" />
+                            افزودن به فعالیت‌ها
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -786,6 +888,17 @@ const MediaApprovalModule: React.FC = () => {
 
                         {activeTab === 'approved' && (
                           <div className="flex gap-1 flex-wrap">
+                            {item.file_type === 'video' && (
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8"
+                                onClick={() => openVideoAudioEditor(item)}
+                                title="ویرایش صدای ویدیو"
+                              >
+                                <Music className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               size="icon"
                               variant="outline"
@@ -1076,6 +1189,22 @@ const MediaApprovalModule: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Video Audio Editor */}
+      {videoToEdit && (
+        <VideoAudioEditor
+          open={showVideoAudioEditor}
+          onOpenChange={(open) => {
+            setShowVideoAudioEditor(open);
+            if (!open) {
+              setVideoToEdit(null);
+              setVideoToEditItem(null);
+            }
+          }}
+          videoUrl={videoToEdit}
+          onSave={handleEditedVideoSave}
+        />
+      )}
     </div>
   );
 };
