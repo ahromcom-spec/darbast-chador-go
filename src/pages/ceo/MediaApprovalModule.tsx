@@ -180,6 +180,10 @@ const MediaApprovalModule: React.FC = () => {
     return data?.publicUrl || filePath;
   };
 
+  const getVideoPreviewUrl = (filePath: string) => {
+    const url = getMediaUrl(filePath);
+    return url.includes('#') ? url : `${url}#t=0.5`;
+  };
   const handleApprove = async (item: MediaItem) => {
     setProcessing(true);
     try {
@@ -633,7 +637,7 @@ const MediaApprovalModule: React.FC = () => {
                         {item.file_type === 'video' ? (
                           <>
                             <video
-                              src={getMediaUrl(item.file_path)}
+                              src={getVideoPreviewUrl(item.file_path)}
                               className="w-full h-full object-cover"
                               muted
                               playsInline
@@ -717,7 +721,7 @@ const MediaApprovalModule: React.FC = () => {
                         {item.file_type === 'video' ? (
                           <>
                             <video
-                              src={getMediaUrl(item.file_path)}
+                              src={getVideoPreviewUrl(item.file_path)}
                               className="w-full h-full object-cover"
                               muted
                               playsInline
@@ -948,7 +952,7 @@ const MediaApprovalModule: React.FC = () => {
               <div className="aspect-video rounded-lg overflow-hidden bg-muted">
                 {selectedOrderMedia.file_type === 'video' ? (
                   <video
-                    src={getMediaUrl(selectedOrderMedia.file_path)}
+                    src={getVideoPreviewUrl(selectedOrderMedia.file_path)}
                     className="w-full h-full object-cover"
                     muted
                     playsInline
