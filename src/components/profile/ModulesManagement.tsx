@@ -495,20 +495,19 @@ export function ModulesManagement() {
 
       // OTP verified - proceed with deletion
       const removeItem = (items: ModuleItem[], id: string): ModuleItem[] => {
-        return items.filter(item => {
-          if (item.id === id) return false;
-          if (item.children) {
-            item.children = removeItem(item.children, id);
-          }
-          return true;
-        });
+        return items
+          .filter((item) => item.id !== id)
+          .map((item) => {
+            if (!item.children) return item;
+            return { ...item, children: removeItem(item.children, id) };
+          });
       };
 
-      // Use setItems which internally calls updateItems -> saveHierarchy for DB persistence
-      availableHierarchy.setItems(prev => {
-        const newItems = removeItem([...prev], pendingDeleteItemId);
-        return newItems;
-      });
+      const newItems = removeItem(availableHierarchy.items, pendingDeleteItemId);
+
+      // Update UI + persist immediately (so refresh won't bring it back)
+      availableHierarchy.setItems(() => newItems);
+      await availableHierarchy.saveNow(newItems);
 
       toast.success('ماژول با موفقیت حذف شد');
       
@@ -557,25 +556,18 @@ export function ModulesManagement() {
       
       // Delete empty folder immediately
       const removeItem = (items: ModuleItem[], id: string): ModuleItem[] => {
-        return items.filter(it => {
-          if (it.id === id) return false;
-          if (it.children) {
-            it.children = removeItem(it.children, id);
-          }
-          return true;
-        });
+        return items
+          .filter((it) => it.id !== id)
+          .map((it) => {
+            if (!it.children) return it;
+            return { ...it, children: removeItem(it.children, id) };
+          });
       };
 
-      availableHierarchy.setItems(prev => {
-        const newItems = removeItem([...prev], itemId);
-        try {
-          localStorage.setItem('module_hierarchy_available', JSON.stringify(newItems));
-        } catch (err) {
-          console.error('Error saving after delete:', err);
-        }
-        return newItems;
-      });
-      
+      const newItems = removeItem(availableHierarchy.items, itemId);
+      availableHierarchy.setItems(() => newItems);
+      await availableHierarchy.saveNow(newItems);
+
       toast.success('پوشه حذف شد');
       return;
     }

@@ -335,7 +335,7 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
         // Skip if nothing changed
         if (lastSavedRef.current === hierarchyStr) return;
 
-        await (supabase as any)
+        const { error } = await (supabase as any)
           .from('module_hierarchy_states')
           .upsert(
             {
@@ -347,11 +347,60 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
             { onConflict: 'owner_user_id,type' }
           );
 
+        if (error) throw error;
+
         lastSavedRef.current = hierarchyStr;
       } catch (error) {
         console.error('Error saving module hierarchy to DB:', error);
       }
     }, 500);
+  }, [storageKey, type, customNames, initialModules]);
+
+  // Force-save hierarchy to DB immediately (used for critical actions like deletions)
+  const saveHierarchyNow = useCallback(async (newItemsRaw: ModuleItem[]) => {
+    const newItems =
+      type === 'assigned' && initialModules.length > 0
+        ? normalizeAssignedHierarchyIds(newItemsRaw, initialModules)
+        : newItemsRaw;
+
+    // Save to localStorage immediately
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(newItems));
+    } catch (error) {
+      console.error('Error saving module hierarchy to localStorage:', error);
+    }
+
+    // Cancel any pending debounced save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+      if (!userId) return;
+
+      const hierarchyStr = JSON.stringify(newItems);
+
+      const { error } = await (supabase as any)
+        .from('module_hierarchy_states')
+        .upsert(
+          {
+            owner_user_id: userId,
+            type,
+            hierarchy: newItems,
+            custom_names: customNames,
+          },
+          { onConflict: 'owner_user_id,type' }
+        );
+
+      if (error) throw error;
+
+      lastSavedRef.current = hierarchyStr;
+    } catch (error) {
+      console.error('Error saving module hierarchy to DB:', error);
+    }
   }, [storageKey, type, customNames, initialModules]);
 
   // When initialModules change (e.g., new assignments), update items
@@ -391,7 +440,7 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
       const userId = session?.session?.user?.id;
       if (!userId) return;
 
-      await (supabase as any)
+      const { error } = await (supabase as any)
         .from('module_hierarchy_states')
         .upsert(
           {
@@ -402,6 +451,8 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
           },
           { onConflict: 'owner_user_id,type' }
         );
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error saving custom names:', error);
     }
@@ -882,6 +933,7 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
     editItem,
     reorderItems,
     setItems: updateItems, // Use updateItems instead of raw setItems to ensure DB persistence
+    saveNow: saveHierarchyNow,
     moveItemUp,
     moveItemDown,
     addModuleToFolder,
