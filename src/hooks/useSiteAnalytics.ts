@@ -134,6 +134,26 @@ const getDeviceModel = (): string => {
   return 'Desktop';
 };
 
+// Track visited pages in session
+const getVisitedPages = (): string[] => {
+  try {
+    const stored = sessionStorage.getItem('visited_pages');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const addVisitedPage = (page: string): string[] => {
+  const pages = getVisitedPages();
+  // Only add if different from last page
+  if (pages.length === 0 || pages[pages.length - 1] !== page) {
+    pages.push(page);
+    sessionStorage.setItem('visited_pages', JSON.stringify(pages));
+  }
+  return pages;
+};
+
 export function useSiteAnalytics() {
   const location = useLocation();
   const sessionId = useRef(getSessionId());
@@ -141,6 +161,63 @@ export function useSiteAnalytics() {
   const pageViewCount = useRef(0);
   const lastEventTime = useRef(Date.now());
   const isTrackingEnabled = useRef(true);
+  const sessionCreated = useRef(false);
+
+  // Create session immediately on first load
+  const createSessionImmediately = useCallback(async () => {
+    if (sessionCreated.current || !isTrackingEnabled.current) return;
+    sessionCreated.current = true;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const osInfo = getOSInfo();
+      const browserInfo = getBrowserInfo();
+      const ipAddress = await getIPAddress();
+      const currentPage = window.location.pathname;
+      
+      // Add first page to visited pages
+      addVisitedPage(currentPage);
+
+      // Set entry page
+      if (!sessionStorage.getItem('entry_page')) {
+        sessionStorage.setItem('entry_page', currentPage);
+      }
+
+      // Get phone number if logged in
+      let phoneNumber: string | null = null;
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('phone_number')
+          .eq('user_id', user.id)
+          .single();
+        phoneNumber = profile?.phone_number || null;
+      }
+
+      // Create session immediately
+      await supabase.from('site_sessions').insert({
+        session_id: sessionId.current,
+        user_id: user?.id || null,
+        started_at: new Date().toISOString(),
+        entry_page: currentPage,
+        device_type: getDeviceType(),
+        os_name: osInfo.name,
+        os_version: osInfo.version,
+        browser_name: browserInfo.name,
+        device_model: getDeviceModel(),
+        is_logged_in: !!user,
+        user_agent: navigator.userAgent,
+        ip_address: ipAddress,
+        phone_number: phoneNumber,
+        visited_pages: [currentPage]
+      });
+
+      console.debug('Session created immediately:', sessionId.current);
+    } catch (error) {
+      console.debug('Session creation error:', error);
+      sessionCreated.current = false; // Allow retry
+    }
+  }, []);
 
   const trackEvent = useCallback(async (eventType: string, additionalData: Record<string, unknown> = {}) => {
     if (!isTrackingEnabled.current) return;
@@ -151,18 +228,33 @@ export function useSiteAnalytics() {
       const browserInfo = getBrowserInfo();
       const currentTime = Date.now();
       const sessionDuration = Math.floor((currentTime - pageLoadTime.current) / 1000);
+      const currentPage = window.location.pathname;
       
-      // Get IP address
+      // Get IP address (cached)
       const ipAddress = await getIPAddress();
+      
+      // Add page to visited pages
+      const visitedPages = addVisitedPage(currentPage);
+
+      // Get phone number if logged in
+      let phoneNumber: string | null = null;
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('phone_number')
+          .eq('user_id', user.id)
+          .single();
+        phoneNumber = profile?.phone_number || null;
+      }
 
       const eventData = {
         user_id: user?.id || null,
         session_id: sessionId.current,
         event_type: eventType,
-        page_url: window.location.pathname,
+        page_url: currentPage,
         page_title: document.title,
         referrer_url: document.referrer || null,
-        entry_page: sessionStorage.getItem('entry_page') || window.location.pathname,
+        entry_page: sessionStorage.getItem('entry_page') || currentPage,
         device_type: getDeviceType(),
         os_name: osInfo.name,
         os_version: osInfo.version,
@@ -180,53 +272,28 @@ export function useSiteAnalytics() {
         is_logged_in: !!user,
         user_agent: navigator.userAgent,
         ip_address: ipAddress,
+        phone_number: phoneNumber,
         ...additionalData
       };
 
-      // Insert event
+      // Insert event immediately
       await supabase.from('site_analytics').insert(eventData);
 
-      // Update or create session
-      const { data: existingSession } = await supabase
+      // Update session with latest data
+      await supabase
         .from('site_sessions')
-        .select('id')
-        .eq('session_id', sessionId.current)
-        .single();
-
-      if (existingSession) {
-        await supabase
-          .from('site_sessions')
-          .update({
-            user_id: user?.id || null,
-            ended_at: new Date().toISOString(),
-            total_duration_seconds: sessionDuration,
-            total_page_views: pageViewCount.current,
-            exit_page: window.location.pathname,
-            is_logged_in: !!user,
-            updated_at: new Date().toISOString()
-          })
-          .eq('session_id', sessionId.current);
-      } else {
-        await supabase.from('site_sessions').insert({
-          session_id: sessionId.current,
+        .update({
           user_id: user?.id || null,
-          started_at: new Date(pageLoadTime.current).toISOString(),
-          entry_page: window.location.pathname,
-          device_type: getDeviceType(),
-          os_name: osInfo.name,
-          os_version: osInfo.version,
-          browser_name: browserInfo.name,
-          device_model: getDeviceModel(),
+          ended_at: new Date().toISOString(),
+          total_duration_seconds: sessionDuration,
+          total_page_views: pageViewCount.current,
+          exit_page: currentPage,
           is_logged_in: !!user,
-          user_agent: navigator.userAgent,
-          ip_address: ipAddress
-        });
-
-        // Set entry page for first visit
-        if (!sessionStorage.getItem('entry_page')) {
-          sessionStorage.setItem('entry_page', window.location.pathname);
-        }
-      }
+          phone_number: phoneNumber,
+          visited_pages: visitedPages,
+          updated_at: new Date().toISOString()
+        })
+        .eq('session_id', sessionId.current);
 
       lastEventTime.current = currentTime;
     } catch (error) {
