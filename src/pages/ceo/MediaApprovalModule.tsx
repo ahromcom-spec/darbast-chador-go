@@ -470,9 +470,9 @@ const MediaApprovalModule: React.FC = () => {
 
         const isVideo = file.type.startsWith('video/');
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
-        const filePath = `approved-media/${fileName}`;
+        const filePath = `${user.id}/approved-media/${fileName}`;
         
-        // Create a signed upload URL so the XHR upload won't fail on RLS/auth
+        // Create a signed upload URL (Storage RLS must allow this path)
         const { data: signed, error: signError } = await supabase.storage
           .from('project-media')
           .createSignedUploadUrl(filePath, { upsert: false });
@@ -480,10 +480,6 @@ const MediaApprovalModule: React.FC = () => {
         if (signError || !signed?.signedUrl) {
           throw new Error(`خطا در آماده‌سازی آپلود: ${signError?.message || 'نامشخص'}`);
         }
-
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData.session?.access_token;
-        const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
         // Upload via XMLHttpRequest for progress tracking
         await new Promise<void>((resolve, reject) => {
@@ -510,15 +506,9 @@ const MediaApprovalModule: React.FC = () => {
             reject(new Error('خطا در اتصال به سرور'));
           });
 
-          const body = new FormData();
-          body.append('cacheControl', '3600');
-          body.append('', file);
-
           xhr.open('PUT', signed.signedUrl);
-          xhr.setRequestHeader('x-upsert', 'false');
-          if (apikey) xhr.setRequestHeader('apikey', apikey);
-          if (accessToken) xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
-          xhr.send(body);
+          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+          xhr.send(file);
         });
         
         completedFiles++;
