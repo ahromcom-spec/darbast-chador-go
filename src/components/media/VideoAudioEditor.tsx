@@ -54,7 +54,7 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
   const [editedBlob, setEditedBlob] = useState<Blob | null>(null);
   const [logMessage, setLogMessage] = useState('');
 
-  // Load FFmpeg on mount
+  // Load FFmpeg on mount - using single-threaded version for browser compatibility
   const loadFFmpeg = useCallback(async () => {
     if (ffmpegLoaded) return true;
     
@@ -77,7 +77,8 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
         setProgress(Math.round(p * 100));
       });
       
-      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
+      // Use the single-threaded version which doesn't require SharedArrayBuffer
+      const baseURL = 'https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/umd';
       
       await ffmpeg.load({
         coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
@@ -91,10 +92,10 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
     } catch (error) {
       console.error('Error loading FFmpeg:', error);
       setStatus('error');
-      setLogMessage('خطا در بارگذاری FFmpeg');
+      setLogMessage('خطا در بارگذاری FFmpeg - لطفاً صفحه را رفرش کنید');
       toast({
         title: 'خطا',
-        description: 'امکان بارگذاری ابزار پردازش ویدیو وجود ندارد',
+        description: 'امکان بارگذاری ابزار پردازش ویدیو وجود ندارد. لطفاً صفحه را رفرش کنید.',
         variant: 'destructive'
       });
       return false;
