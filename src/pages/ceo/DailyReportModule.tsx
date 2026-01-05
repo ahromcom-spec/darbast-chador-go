@@ -185,6 +185,7 @@ export default function DailyReportModule() {
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [orderReports, setOrderReports] = useState<OrderReportRow[]>([]);
   const [staffReports, setStaffReports] = useState<StaffReportRow[]>([]);
+  const [dailyNotes, setDailyNotes] = useState<string>('');
   const [existingReportId, setExistingReportId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>(() => {
     return localStorage.getItem('dailyReportActiveTab') || 'new-report';
@@ -321,6 +322,7 @@ export default function DailyReportModule() {
       // ابتدا فرم را پاک کن تا داده‌های تاریخ قبلی نمایش داده نشود
       setOrderReports([]);
       setStaffReports([]);
+      setDailyNotes('');
       setExistingReportId(null);
       isInitialLoadRef.current = true;
       fetchExistingReport();
@@ -898,7 +900,7 @@ export default function DailyReportModule() {
       // Simply fetch the report for this date (regardless of who created it)
       const { data: existingReport, error: existingError } = await supabase
         .from('daily_reports')
-        .select('id')
+        .select('id, notes')
         .eq('report_date', dateStr)
         .maybeSingle();
 
@@ -924,7 +926,7 @@ export default function DailyReportModule() {
 
       if (reportIdToLoad) {
         setExistingReportId(reportIdToLoad);
-
+        setDailyNotes(existingReport?.notes || '');
         const { data: orderData } = await supabase
           .from('daily_report_orders')
           .select('*')
@@ -1023,6 +1025,7 @@ export default function DailyReportModule() {
         // گزارشی برای این تاریخ در دیتابیس وجود ندارد
         // یک فرم خالی ایجاد کن (localStorage استفاده نشود چون تاریخ جدید است)
         setExistingReportId(null);
+        setDailyNotes('');
         clearLocalStorageBackup(); // پاک کردن localStorage این تاریخ
         
         setOrderReports([
@@ -1307,7 +1310,8 @@ export default function DailyReportModule() {
           .from('daily_reports')
           .insert({
             report_date: dateStr,
-            created_by: user.id
+            created_by: user.id,
+            notes: dailyNotes || null
           })
           .select('id')
           .single();
@@ -1315,6 +1319,12 @@ export default function DailyReportModule() {
         if (createError) throw createError;
         reportId = newReport.id;
         setExistingReportId(reportId);
+      } else {
+        // Update existing report notes
+        await supabase
+          .from('daily_reports')
+          .update({ notes: dailyNotes || null })
+          .eq('id', reportId);
       }
 
       // Delete existing order reports and insert new ones
@@ -1920,6 +1930,20 @@ export default function DailyReportModule() {
                   روز بعد
                 </Button>
               </div>
+            </div>
+
+            {/* Daily Notes */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 bg-muted/30 p-3 rounded-lg">
+              <Label className="text-sm font-medium whitespace-nowrap">توضیحات روز:</Label>
+              <AutoResizeTextarea
+                placeholder="توضیحات روزانه (مثلاً: امروز تعطیل بودیم...)"
+                value={dailyNotes}
+                onChange={(e) => {
+                  setDailyNotes(e.target.value);
+                  setIsSaved(false);
+                }}
+                className="flex-1 min-h-[40px] text-sm resize-none"
+              />
             </div>
 
             {loading ? (
