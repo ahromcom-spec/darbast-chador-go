@@ -504,13 +504,9 @@ export function ModulesManagement() {
         });
       };
 
+      // Use setItems which internally calls updateItems -> saveHierarchy for DB persistence
       availableHierarchy.setItems(prev => {
         const newItems = removeItem([...prev], pendingDeleteItemId);
-        try {
-          localStorage.setItem('module_hierarchy_available', JSON.stringify(newItems));
-        } catch (err) {
-          console.error('Error saving after delete:', err);
-        }
         return newItems;
       });
 
