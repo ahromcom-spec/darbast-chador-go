@@ -8,29 +8,7 @@ import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { requestZoom100 } from '@/lib/zoom';
 
-// لیست ثابت پرسنل اهرم با کد
-const AHROM_STAFF_LIST = [
-  { code: '0101', name: 'داود احمدی', fullCode: '0001۰۱/۹۹۱۰۱۰' },
-  { code: '0104', name: 'حسن صادقی', fullCode: '0001۰۴' },
-  { code: '0105', name: 'حسین محمدی', fullCode: '0001۰۵/۱۰۱۴۱۰' },
-  { code: '0106', name: 'جلال احمدی', fullCode: '0001۰۶/۱۰۱۷۱۰' },
-  { code: '0107', name: 'احمد زاهدلوئی', fullCode: '0001۰۷' },
-  { code: '0108', name: 'مرتضی رضائی', fullCode: '0001۰۸/۹۹۱۹۱۰' },
-  { code: '0103', name: 'مهدی صادقی', fullCode: '0001۰۳/۱۰۱۵۱۰' },
-  { code: '0124', name: 'محمد بهرامی ناصر', fullCode: '0001۲۴' },
-  { code: '0128', name: 'حسین سارجالو جانعلی', fullCode: '0001۲۸، استادکار داربست، قم' },
-  { code: '0129', name: 'حامد قاسمی جواد', fullCode: '0001۲۹، استادکار داربست، قم' },
-  { code: '0133', name: 'مهدی بهرامی زیاد', fullCode: '0001۳۳' },
-  { code: '0134', name: 'علی محمدی', fullCode: '۰۱۳۸۴ (۰۹۱۲۵۵۱۱۶۵۲)مالک' },
-  { code: '0136', name: 'متین قاسمی فرزند جواد', fullCode: '0001۳۶' },
-  { code: '0137', name: 'ابوالفضل ساجدی', fullCode: '0001۳۷' },
-  { code: '0138', name: 'حسین سارجالو رحیم', fullCode: '0001۳۸' },
-  { code: '0139', name: 'سید مصطفی حسینی یزدی', fullCode: '0001۳۹' },
-  { code: '0140', name: 'یاسین طریقی', fullCode: '0001۴۰' },
-  { code: '0142', name: 'علیرضا رضایی', fullCode: '0001۴۲' },
-  { code: '0143', name: 'محمدمهدی چاقری', fullCode: '0001۴۳' },
-  { code: '0147', name: 'محمدرضا سارجالو داربست', fullCode: '0001۴۷' },
-];
+// Staff list now only comes from HR employees and salary settings
 
 interface StaffMember {
   code: string;
@@ -148,16 +126,11 @@ export function StaffSearchSelect({
     fetchStaff();
   }, []);
 
-  // Combine all staff lists, removing duplicates by code
+  // Combine HR and salary staff lists, removing duplicates by code
   const allStaff = useMemo(() => {
-    const staticList: StaffMember[] = AHROM_STAFF_LIST.map((s) => ({
-      ...s,
-      source: 'static' as const,
-    }));
-
     // NOTE: If we have duplicates by code, we prefer the entry that is linked to a real user_id
     // so that wallet/accounting sync can work.
-    const combined = [...salaryStaff, ...hrStaff, ...staticList];
+    const combined = [...salaryStaff, ...hrStaff];
 
     const score = (s: StaffMember) => {
       const sourceScore = s.source === 'hr' ? 3 : s.source === 'salary' ? 2 : 1;
@@ -451,9 +424,7 @@ export function StaffSearchSelect({
                         <span className={`font-bold text-xs px-1.5 py-0.5 rounded ${
                           staff.source === 'salary'
                             ? 'text-green-600 bg-green-100 dark:bg-green-900/30'
-                            : staff.source === 'hr'
-                              ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
-                              : 'text-amber-600 bg-amber-100 dark:bg-amber-900/30'
+                            : 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
                         }`}>
                           {staff.code}
                         </span>
@@ -473,5 +444,3 @@ export function StaffSearchSelect({
     </div>
   );
 }
-
-export { AHROM_STAFF_LIST };
