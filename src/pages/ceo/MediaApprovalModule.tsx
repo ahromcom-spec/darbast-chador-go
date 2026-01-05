@@ -459,40 +459,53 @@ const MediaApprovalModule: React.FC = () => {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
         const filePath = `approved-media/${fileName}`;
         
-        // Upload to storage with XMLHttpRequest for progress tracking
+        // Create a signed upload URL so the XHR upload won't fail on RLS/auth
+        const { data: signed, error: signError } = await supabase.storage
+          .from('project-media')
+          .createSignedUploadUrl(filePath, { upsert: false });
+
+        if (signError || !signed?.signedUrl) {
+          throw new Error(`خطا در آماده‌سازی آپلود: ${signError?.message || 'نامشخص'}`);
+        }
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+
+        // Upload via XMLHttpRequest for progress tracking
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
-          
+
           xhr.upload.addEventListener('progress', (event) => {
             if (event.lengthComputable) {
               const fileProgress = (event.loaded / event.total) * 100;
-              const overallProgress = ((completedFiles / totalFiles) * 100) + (fileProgress / totalFiles);
+              const overallProgress =
+                (completedFiles / totalFiles) * 100 + fileProgress / totalFiles;
               setUploadProgress(Math.round(overallProgress));
             }
           });
-          
-          xhr.addEventListener('load', async () => {
+
+          xhr.addEventListener('load', () => {
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve();
             } else {
-              reject(new Error(`خطا در آپلود فایل: ${xhr.statusText}`));
+              reject(new Error(`خطا در آپلود فایل: ${xhr.status}`));
             }
           });
-          
+
           xhr.addEventListener('error', () => {
             reject(new Error('خطا در اتصال به سرور'));
           });
-          
-          // Get the upload URL and headers
-          const { data: { session } } = supabase.auth.getSession() as any;
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-          
-          xhr.open('POST', `${supabaseUrl}/storage/v1/object/project-media/${filePath}`);
-          xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token || supabaseKey}`);
-          xhr.setRequestHeader('apikey', supabaseKey);
+
+          const body = new FormData();
+          body.append('cacheControl', '3600');
+          body.append('', file);
+
+          xhr.open('PUT', signed.signedUrl);
           xhr.setRequestHeader('x-upsert', 'false');
-          xhr.send(file);
+          if (apikey) xhr.setRequestHeader('apikey', apikey);
+          if (accessToken) xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+          xhr.send(body);
         });
         
         completedFiles++;
