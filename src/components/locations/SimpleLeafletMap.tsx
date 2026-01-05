@@ -1,11 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
+import { MapSearchBox } from './MapSearchBox';
+
+export interface SimpleLeafletMapRef {
+  flyTo: (lat: number, lng: number, zoom?: number) => void;
+  setMarker: (lat: number, lng: number) => void;
+}
+
 interface SimpleLeafletMapProps {
   onLocationSelect: (lat: number, lng: number, distance?: number) => void;
   initialLat?: number;
   initialLng?: number;
+  showSearch?: boolean;
 }
 
 // مختصات مرکز شهر قم
@@ -24,11 +32,12 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * c;
 }
 
-export default function SimpleLeafletMap({
+function SimpleLeafletMapInner({
   onLocationSelect,
   initialLat = 34.6416,
   initialLng = 50.8746,
-}: SimpleLeafletMapProps) {
+  showSearch = true,
+}: SimpleLeafletMapProps, ref: React.Ref<SimpleLeafletMapRef>) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -326,6 +335,56 @@ export default function SimpleLeafletMap({
     };
   }, []);
 
+  // Handler for search box location selection
+  const handleSearchLocationSelect = (lat: number, lng: number, placeName: string) => {
+    if (mapRef.current) {
+      mapRef.current.flyTo([lat, lng], 17, {
+        duration: 1.5,
+        easeLinearity: 0.25
+      });
+      
+      // ایجاد/جابجایی مارکر
+      const distance = calculateDistance(lat, lng, QOM_CENTER.lat, QOM_CENTER.lng);
+      
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng]);
+      } else {
+        const markerIcon = L.divIcon({
+          className: 'custom-marker',
+          html: `<svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 0C8.954 0 0 8.954 0 20c0 15.23 18.116 28.547 18.894 29.105a2 2 0 002.212 0C21.884 48.547 40 35.23 40 20c0-11.046-8.954-20-20-20z" fill="#3b82f6"/>
+            <circle cx="20" cy="18" r="8" fill="white"/>
+          </svg>`,
+          iconSize: [40, 50],
+          iconAnchor: [20, 50],
+        });
+        markerRef.current = L.marker([lat, lng], { icon: markerIcon, draggable: true }).addTo(mapRef.current);
+        
+        markerRef.current.on('dragend', function() {
+          const pos = markerRef.current!.getLatLng();
+          const dist = calculateDistance(pos.lat, pos.lng, QOM_CENTER.lat, QOM_CENTER.lng);
+          setSelectedPos({ lat: pos.lat, lng: pos.lng, distance: dist });
+          onLocationSelect(pos.lat, pos.lng);
+        });
+      }
+      
+      setSelectedPos({ lat, lng, distance });
+      onLocationSelect(lat, lng, distance);
+    }
+  };
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    flyTo: (lat: number, lng: number, zoom = 17) => {
+      if (mapRef.current) {
+        mapRef.current.flyTo([lat, lng], zoom, { duration: 1.5 });
+      }
+    },
+    setMarker: (lat: number, lng: number) => {
+      handleSearchLocationSelect(lat, lng, '');
+    }
+  }));
+
   return (
     <div className="relative w-full">
       <div
@@ -338,6 +397,17 @@ export default function SimpleLeafletMap({
           transform: 'translateZ(0)'
         }}
       />
+
+      {/* کادر جستجوی آدرس */}
+      {showSearch && (
+        <div className="absolute top-4 left-4 right-4 z-[1001]">
+          <MapSearchBox
+            onLocationSelect={handleSearchLocationSelect}
+            placeholder="جستجوی آدرس..."
+            className="w-full"
+          />
+        </div>
+      )}
 
       {selectedPos && (
         <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur border rounded-lg p-3 shadow-lg z-[1000]">
@@ -357,3 +427,6 @@ export default function SimpleLeafletMap({
     </div>
   );
 }
+
+const SimpleLeafletMap = forwardRef(SimpleLeafletMapInner);
+export default SimpleLeafletMap;
