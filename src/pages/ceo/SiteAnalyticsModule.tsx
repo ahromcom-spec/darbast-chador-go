@@ -81,6 +81,7 @@ interface SessionData {
   os_name: string | null;
   browser_name: string | null;
   device_model: string | null;
+  ip_address: string | null;
   is_logged_in: boolean;
   user_info?: {
     full_name: string | null;
@@ -217,6 +218,7 @@ export default function SiteAnalyticsModule() {
 
       const enrichedSessions = (sessionsData || []).map(s => ({
         ...s,
+        ip_address: s.ip_address as string | null,
         user_info: s.user_id ? userInfoMap[s.user_id] : undefined
       }));
 
@@ -759,6 +761,7 @@ export default function SiteAnalyticsModule() {
                     <TableRow>
                       <TableHead className="text-right">کاربر</TableHead>
                       <TableHead className="text-right">شماره تماس</TableHead>
+                      <TableHead className="text-right">آدرس IP</TableHead>
                       <TableHead className="text-right">دستگاه</TableHead>
                       <TableHead className="text-right">سیستم عامل</TableHead>
                       <TableHead className="text-right">مدت حضور</TableHead>
@@ -784,6 +787,9 @@ export default function SiteAnalyticsModule() {
                         <TableCell className="font-mono text-sm">
                           {session.user_info?.phone_number || '-'}
                         </TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {session.ip_address || '-'}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             {getDeviceIcon(session.device_type)}
@@ -806,7 +812,7 @@ export default function SiteAnalyticsModule() {
                     ))}
                     {filteredSessions.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                           داده‌ای موجود نیست
                         </TableCell>
                       </TableRow>

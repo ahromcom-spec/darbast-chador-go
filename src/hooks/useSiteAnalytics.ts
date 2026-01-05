@@ -12,6 +12,29 @@ const getSessionId = (): string => {
   return sessionId;
 };
 
+// Fetch IP address from external API
+const getIPAddress = async (): Promise<string | null> => {
+  // Check cache first
+  const cachedIP = sessionStorage.getItem('user_ip_address');
+  if (cachedIP) return cachedIP;
+  
+  try {
+    const response = await fetch('https://api.ipify.org?format=json', { 
+      signal: AbortSignal.timeout(5000) 
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.ip) {
+        sessionStorage.setItem('user_ip_address', data.ip);
+        return data.ip;
+      }
+    }
+  } catch (error) {
+    console.debug('Could not fetch IP address:', error);
+  }
+  return null;
+};
+
 // Detect device type
 const getDeviceType = (): string => {
   const ua = navigator.userAgent;
@@ -128,6 +151,9 @@ export function useSiteAnalytics() {
       const browserInfo = getBrowserInfo();
       const currentTime = Date.now();
       const sessionDuration = Math.floor((currentTime - pageLoadTime.current) / 1000);
+      
+      // Get IP address
+      const ipAddress = await getIPAddress();
 
       const eventData = {
         user_id: user?.id || null,
@@ -153,6 +179,7 @@ export function useSiteAnalytics() {
         page_count: pageViewCount.current,
         is_logged_in: !!user,
         user_agent: navigator.userAgent,
+        ip_address: ipAddress,
         ...additionalData
       };
 
@@ -191,7 +218,8 @@ export function useSiteAnalytics() {
           browser_name: browserInfo.name,
           device_model: getDeviceModel(),
           is_logged_in: !!user,
-          user_agent: navigator.userAgent
+          user_agent: navigator.userAgent,
+          ip_address: ipAddress
         });
 
         // Set entry page for first visit
