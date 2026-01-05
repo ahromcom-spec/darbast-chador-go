@@ -385,32 +385,9 @@ export function StaffSalarySettingsTab() {
             </div>
 
             <div className="space-y-2">
-              <Label>ضریب اضافه‌کاری (هر ساعت)</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={newOvertimeFraction === 0.167 ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setNewOvertimeFraction(0.167)}
-                >
-                  ۱/۶
-                </Button>
-                <Button
-                  type="button"
-                  variant={newOvertimeFraction === 0.125 ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setNewOvertimeFraction(0.125)}
-                >
-                  ۱/۸
-                </Button>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={newOvertimeFraction}
-                  onChange={(e) => setNewOvertimeFraction(parseFloat(e.target.value) || 0)}
-                  className="w-24"
-                  dir="ltr"
-                />
+              <Label>ضریب اضافه‌کاری</Label>
+              <div className="text-sm text-muted-foreground">
+                ۱/۶ حقوق روزانه
               </div>
             </div>
 
@@ -436,18 +413,10 @@ export function StaffSalarySettingsTab() {
             </div>
           </div>
 
-          {/* Preview calculation */}
+          {/* Preview calculation - only 1 hour */}
           {newBaseSalary > 0 && (
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                <Calculator className="h-4 w-4" />
-                پیش‌نمایش محاسبه اضافه‌کاری:
-              </p>
-              <div className="flex flex-wrap gap-4 text-sm">
-                <span>۱ ساعت: <strong>{calculateOvertimeExamples(newBaseSalary, newOvertimeFraction).oneHour.toLocaleString('fa-IR')}</strong> تومان</span>
-                <span>۲ ساعت: <strong>{calculateOvertimeExamples(newBaseSalary, newOvertimeFraction).twoHours.toLocaleString('fa-IR')}</strong> تومان</span>
-                <span>۴ ساعت: <strong>{calculateOvertimeExamples(newBaseSalary, newOvertimeFraction).fourHours.toLocaleString('fa-IR')}</strong> تومان</span>
-              </div>
+            <div className="mt-3 text-sm text-muted-foreground">
+              هر ساعت اضافه‌کاری: <strong className="text-foreground">{calculateOvertimeExamples(newBaseSalary, 0.167).oneHour.toLocaleString('fa-IR')}</strong> تومان
             </div>
           )}
         </CardContent>
