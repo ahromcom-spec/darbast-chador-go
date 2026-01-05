@@ -126,16 +126,24 @@ export const RecentActivities: React.FC = () => {
               >
                 {item.file_type === 'video' ? (
                   <>
-                    <video
-                      src={getMediaUrl(item.file_path)}
-                      className="w-full h-full object-cover"
-                      muted
-                      playsInline
-                      preload="metadata"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
-                      <div className="w-10 h-10 rounded-full bg-blue-500/80 flex items-center justify-center">
-                        <Play className="h-5 w-5 text-white fill-white" />
+                    {/* Use poster image or thumbnail for video preview on mobile */}
+                    <div className="w-full h-full bg-muted relative">
+                      <video
+                        src={getMediaUrl(item.file_path) + '#t=0.5'}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                        onLoadedData={(e) => {
+                          // Ensure video shows first frame
+                          const video = e.target as HTMLVideoElement;
+                          video.currentTime = 0.5;
+                        }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
+                        <div className="w-10 h-10 rounded-full bg-blue-500/80 flex items-center justify-center">
+                          <Play className="h-5 w-5 text-white fill-white" />
+                        </div>
                       </div>
                     </div>
                   </>
@@ -200,10 +208,14 @@ export const RecentActivities: React.FC = () => {
               <div className="flex items-center justify-center min-h-[300px] max-h-[80vh]">
                 {selectedMedia.file_type === 'video' ? (
                   <video
+                    key={selectedMedia.id}
                     src={getMediaUrl(selectedMedia.file_path)}
                     className="max-w-full max-h-[80vh] object-contain"
                     controls
                     autoPlay
+                    playsInline
+                    webkit-playsinline="true"
+                    controlsList="nodownload"
                   />
                 ) : (
                   <img
