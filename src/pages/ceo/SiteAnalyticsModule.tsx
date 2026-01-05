@@ -82,6 +82,8 @@ interface SessionData {
   browser_name: string | null;
   device_model: string | null;
   ip_address: string | null;
+  phone_number: string | null;
+  visited_pages: string[] | null;
   is_logged_in: boolean;
   user_info?: {
     full_name: string | null;
@@ -219,6 +221,8 @@ export default function SiteAnalyticsModule() {
       const enrichedSessions = (sessionsData || []).map(s => ({
         ...s,
         ip_address: s.ip_address as string | null,
+        phone_number: s.phone_number as string | null,
+        visited_pages: s.visited_pages as string[] | null,
         user_info: s.user_id ? userInfoMap[s.user_id] : undefined
       }));
 
@@ -766,6 +770,7 @@ export default function SiteAnalyticsModule() {
                       <TableHead className="text-right">سیستم عامل</TableHead>
                       <TableHead className="text-right">مدت حضور</TableHead>
                       <TableHead className="text-right">صفحات</TableHead>
+                      <TableHead className="text-right">مسیر صفحات</TableHead>
                       <TableHead className="text-right">زمان ورود</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -785,7 +790,7 @@ export default function SiteAnalyticsModule() {
                           </div>
                         </TableCell>
                         <TableCell className="font-mono text-sm">
-                          {session.user_info?.phone_number || '-'}
+                          {session.phone_number || session.user_info?.phone_number || '-'}
                         </TableCell>
                         <TableCell className="font-mono text-sm text-muted-foreground">
                           {session.ip_address || '-'}
@@ -805,6 +810,24 @@ export default function SiteAnalyticsModule() {
                         <TableCell className="text-sm">
                           {session.total_page_views?.toLocaleString('fa-IR') || '0'}
                         </TableCell>
+                        <TableCell className="text-sm max-w-[200px]">
+                          {session.visited_pages && session.visited_pages.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {session.visited_pages.map((page, idx) => (
+                                <span key={idx} className="inline-flex items-center">
+                                  <span className="font-mono text-xs bg-muted px-1 py-0.5 rounded">
+                                    {page}
+                                  </span>
+                                  {idx < session.visited_pages!.length - 1 && (
+                                    <span className="mx-1 text-muted-foreground">→</span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm">
                           {format(new Date(session.started_at), 'HH:mm - yyyy/MM/dd', { locale: faIR })}
                         </TableCell>
@@ -812,7 +835,7 @@ export default function SiteAnalyticsModule() {
                     ))}
                     {filteredSessions.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                           داده‌ای موجود نیست
                         </TableCell>
                       </TableRow>

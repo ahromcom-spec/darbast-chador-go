@@ -3573,6 +3573,7 @@ export type Database = {
           page_count: number | null
           page_title: string | null
           page_url: string | null
+          phone_number: string | null
           referrer_url: string | null
           screen_height: number | null
           screen_width: number | null
@@ -3606,6 +3607,7 @@ export type Database = {
           page_count?: number | null
           page_title?: string | null
           page_url?: string | null
+          phone_number?: string | null
           referrer_url?: string | null
           screen_height?: number | null
           screen_width?: number | null
@@ -3639,6 +3641,7 @@ export type Database = {
           page_count?: number | null
           page_title?: string | null
           page_url?: string | null
+          phone_number?: string | null
           referrer_url?: string | null
           screen_height?: number | null
           screen_width?: number | null
@@ -3670,6 +3673,7 @@ export type Database = {
           is_logged_in: boolean | null
           os_name: string | null
           os_version: string | null
+          phone_number: string | null
           session_id: string
           started_at: string
           total_data_bytes: number | null
@@ -3678,6 +3682,7 @@ export type Database = {
           updated_at: string
           user_agent: string | null
           user_id: string | null
+          visited_pages: string[] | null
         }
         Insert: {
           browser_name?: string | null
@@ -3694,6 +3699,7 @@ export type Database = {
           is_logged_in?: boolean | null
           os_name?: string | null
           os_version?: string | null
+          phone_number?: string | null
           session_id: string
           started_at?: string
           total_data_bytes?: number | null
@@ -3702,6 +3708,7 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           user_id?: string | null
+          visited_pages?: string[] | null
         }
         Update: {
           browser_name?: string | null
@@ -3718,6 +3725,7 @@ export type Database = {
           is_logged_in?: boolean | null
           os_name?: string | null
           os_version?: string | null
+          phone_number?: string | null
           session_id?: string
           started_at?: string
           total_data_bytes?: number | null
@@ -3726,6 +3734,7 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           user_id?: string | null
+          visited_pages?: string[] | null
         }
         Relationships: []
       }
