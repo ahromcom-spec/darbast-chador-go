@@ -3481,6 +3481,183 @@ export type Database = {
           },
         ]
       }
+      site_analytics: {
+        Row: {
+          browser_name: string | null
+          browser_version: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          data_transferred_bytes: number | null
+          device_model: string | null
+          device_type: string | null
+          entry_page: string | null
+          event_type: string
+          id: string
+          ip_address: unknown
+          is_logged_in: boolean | null
+          language: string | null
+          os_name: string | null
+          os_version: string | null
+          page_count: number | null
+          page_title: string | null
+          page_url: string | null
+          referrer_url: string | null
+          screen_height: number | null
+          screen_width: number | null
+          scroll_depth_percent: number | null
+          session_duration_seconds: number | null
+          session_id: string
+          timezone: string | null
+          updated_at: string
+          user_agent: string | null
+          user_id: string | null
+          viewport_height: number | null
+          viewport_width: number | null
+        }
+        Insert: {
+          browser_name?: string | null
+          browser_version?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          data_transferred_bytes?: number | null
+          device_model?: string | null
+          device_type?: string | null
+          entry_page?: string | null
+          event_type: string
+          id?: string
+          ip_address?: unknown
+          is_logged_in?: boolean | null
+          language?: string | null
+          os_name?: string | null
+          os_version?: string | null
+          page_count?: number | null
+          page_title?: string | null
+          page_url?: string | null
+          referrer_url?: string | null
+          screen_height?: number | null
+          screen_width?: number | null
+          scroll_depth_percent?: number | null
+          session_duration_seconds?: number | null
+          session_id: string
+          timezone?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+          viewport_height?: number | null
+          viewport_width?: number | null
+        }
+        Update: {
+          browser_name?: string | null
+          browser_version?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          data_transferred_bytes?: number | null
+          device_model?: string | null
+          device_type?: string | null
+          entry_page?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown
+          is_logged_in?: boolean | null
+          language?: string | null
+          os_name?: string | null
+          os_version?: string | null
+          page_count?: number | null
+          page_title?: string | null
+          page_url?: string | null
+          referrer_url?: string | null
+          screen_height?: number | null
+          screen_width?: number | null
+          scroll_depth_percent?: number | null
+          session_duration_seconds?: number | null
+          session_id?: string
+          timezone?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+          viewport_height?: number | null
+          viewport_width?: number | null
+        }
+        Relationships: []
+      }
+      site_sessions: {
+        Row: {
+          browser_name: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_model: string | null
+          device_type: string | null
+          ended_at: string | null
+          entry_page: string | null
+          exit_page: string | null
+          id: string
+          ip_address: unknown
+          is_logged_in: boolean | null
+          os_name: string | null
+          os_version: string | null
+          session_id: string
+          started_at: string
+          total_data_bytes: number | null
+          total_duration_seconds: number | null
+          total_page_views: number | null
+          updated_at: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          browser_name?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_model?: string | null
+          device_type?: string | null
+          ended_at?: string | null
+          entry_page?: string | null
+          exit_page?: string | null
+          id?: string
+          ip_address?: unknown
+          is_logged_in?: boolean | null
+          os_name?: string | null
+          os_version?: string | null
+          session_id: string
+          started_at?: string
+          total_data_bytes?: number | null
+          total_duration_seconds?: number | null
+          total_page_views?: number | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          browser_name?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_model?: string | null
+          device_type?: string | null
+          ended_at?: string | null
+          entry_page?: string | null
+          exit_page?: string | null
+          id?: string
+          ip_address?: unknown
+          is_logged_in?: boolean | null
+          os_name?: string | null
+          os_version?: string | null
+          session_id?: string
+          started_at?: string
+          total_data_bytes?: number | null
+          total_duration_seconds?: number | null
+          total_page_views?: number | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       staff_profiles: {
         Row: {
           approved_at: string | null

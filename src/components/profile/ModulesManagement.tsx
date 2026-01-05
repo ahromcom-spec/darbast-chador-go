@@ -101,6 +101,14 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-50',
   },
+  {
+    key: 'site_analytics',
+    name: 'ماژول آمار بازدید سایت اهرم',
+    description: 'تحلیل جامع بازدیدکنندگان، کاربران، دستگاه‌ها و رفتار کاربران در سایت',
+    href: '/site-analytics',
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50',
+  },
 ];
 
 // Convert modules to ModuleItem format
