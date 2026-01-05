@@ -5,11 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface HREmployee {
   id: string;
@@ -27,6 +23,47 @@ interface HRStaffSearchSelectProps {
   filterActive?: boolean;
 }
 
+// ---- Shared cache (prevents repeated fetch on each open across the app) ----
+const EMP_CACHE_TTL_MS = 2 * 60 * 1000;
+
+type EmployeeCacheData = {
+  activeOnly: HREmployee[];
+  all: HREmployee[];
+};
+
+let employeeCache: { fetchedAt: number; data: EmployeeCacheData } | null = null;
+let employeePromise: Promise<EmployeeCacheData> | null = null;
+
+const loadEmployeesCached = async (): Promise<EmployeeCacheData> => {
+  const now = Date.now();
+
+  if (employeeCache && now - employeeCache.fetchedAt < EMP_CACHE_TTL_MS) {
+    return employeeCache.data;
+  }
+
+  if (employeePromise) return employeePromise;
+
+  employeePromise = (async () => {
+    const { data, error } = await supabase
+      .from('hr_employees')
+      .select('id, phone_number, full_name, position, department, status')
+      .order('full_name', { ascending: true });
+
+    if (error) throw error;
+
+    const all = ((data as HREmployee[]) || []).filter((e) => e.phone_number && e.full_name);
+    const activeOnly = all.filter((e) => ['active', 'pending_registration'].includes(e.status));
+
+    const result: EmployeeCacheData = { all, activeOnly };
+    employeeCache = { fetchedAt: Date.now(), data: result };
+    return result;
+  })().finally(() => {
+    employeePromise = null;
+  });
+
+  return employeePromise;
+};
+
 export function HRStaffSearchSelect({
   value,
   onValueChange,
@@ -38,53 +75,42 @@ export function HRStaffSearchSelect({
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<HREmployee[]>([]);
 
-  const fetchEmployees = async () => {
-    setLoading(true);
-    try {
-      let query = supabase
-        .from('hr_employees')
-        .select('id, phone_number, full_name, position, department, status')
-        .order('full_name', { ascending: true });
-      
-      if (filterActive) {
-        query = query.in('status', ['active', 'pending_registration']);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      setEmployees((data as HREmployee[]) || []);
-    } catch (error) {
-      console.error('Error fetching HR employees:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (open) {
-      fetchEmployees();
-    }
-  }, [open]);
+    let cancelled = false;
+    if (!open) return;
 
-  const selectedEmployee = employees.find(e => e.phone_number === value);
+    setLoading(true);
+    loadEmployeesCached()
+      .then((cache) => {
+        if (cancelled) return;
+        setEmployees(filterActive ? cache.activeOnly : cache.all);
+      })
+      .catch((error) => {
+        console.error('Error fetching HR employees:', error);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, filterActive]);
+
+  const selectedEmployee = employees.find((e) => e.phone_number === value);
 
   const filteredEmployees = useMemo(() => {
     if (!search.trim()) return employees;
-    
+
     const searchLower = search.toLowerCase().trim();
-    return employees.filter(emp => {
+    return employees.filter((emp) => {
       const phone = emp.phone_number.toLowerCase();
       const name = emp.full_name.toLowerCase();
       const position = (emp.position || '').toLowerCase();
       const department = (emp.department || '').toLowerCase();
-      
-      return (
-        phone.includes(searchLower) ||
-        name.includes(searchLower) ||
-        position.includes(searchLower) ||
-        department.includes(searchLower)
-      );
+
+      return phone.includes(searchLower) || name.includes(searchLower) || position.includes(searchLower) || department.includes(searchLower);
     });
   }, [search, employees]);
 
@@ -109,22 +135,18 @@ export function HRStaffSearchSelect({
           className="w-full justify-between bg-white/50 hover:bg-white/70 text-right"
         >
           <span className="truncate flex-1 text-right">
-            {selectedEmployee
-              ? `${selectedEmployee.full_name} - ${selectedEmployee.phone_number}`
-              : placeholder}
+            {selectedEmployee ? `${selectedEmployee.full_name} - ${selectedEmployee.phone_number}` : value ? value : placeholder}
           </span>
-          {selectedEmployee ? (
-            <X
-              className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
-              onClick={handleClear}
-            />
+          {selectedEmployee || value ? (
+            <X className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100" onClick={handleClear} />
           ) : (
             <User className="h-4 w-4 shrink-0 opacity-50" />
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-[350px] p-0 z-[9999] bg-background border shadow-lg" 
+
+      <PopoverContent
+        className="w-[350px] p-0 z-[9999] bg-background border shadow-lg"
         align="start"
         side="bottom"
         sideOffset={4}
@@ -142,6 +164,7 @@ export function HRStaffSearchSelect({
             />
           </div>
         </div>
+
         <ScrollArea className="h-[300px] overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-8">
@@ -149,9 +172,7 @@ export function HRStaffSearchSelect({
             </div>
           ) : filteredEmployees.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
-              {employees.length === 0 
-                ? 'هیچ نیرویی در سیستم ثبت نشده است' 
-                : 'نیرویی یافت نشد'}
+              {employees.length === 0 ? 'هیچ نیرویی در سیستم ثبت نشده است' : 'نیرویی یافت نشد'}
             </div>
           ) : (
             <div className="p-1 bg-background">

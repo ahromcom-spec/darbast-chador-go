@@ -14,7 +14,7 @@ interface StaffMember {
   code: string;
   name: string;
   fullCode: string;
-  source?: 'static' | 'hr' | 'salary';
+  source?: 'hr' | 'salary';
   user_id?: string | null;
 }
 
@@ -25,11 +25,127 @@ interface StaffSearchSelectProps {
   excludeCodes?: string[];
 }
 
+// ---- Shared cache (prevents N instances from fetching the same data) ----
+const STAFF_CACHE_TTL_MS = 5 * 60 * 1000;
+let staffCache:
+  | {
+      fetchedAt: number;
+      hrStaff: StaffMember[];
+      salaryStaff: StaffMember[];
+    }
+  | null = null;
+let staffCachePromise: Promise<{
+  hrStaff: StaffMember[];
+  salaryStaff: StaffMember[];
+}> | null = null;
+
+const normalizeStaffName = (code: string, rawName: string) => {
+  const name = (rawName || '').trim();
+  if (!name) return '';
+
+  // If stored as "{code} - {name}", remove the prefix.
+  const prefix = `${code} -`;
+  if (name.startsWith(prefix)) return name.slice(prefix.length).trim();
+
+  // Sometimes phone appears at beginning without dash.
+  if (name.startsWith(code)) return name.slice(code.length).trim().replace(/^[-–—]\s*/, '');
+
+  return name;
+};
+
+const buildPhoneVariants = (phone: string) => {
+  const p = (phone || '').trim();
+  const variants = new Set<string>();
+  if (!p) return variants;
+  variants.add(p);
+  if (p.startsWith('0')) variants.add(p.substring(1));
+  return variants;
+};
+
+const loadStaffDirectoryCached = async () => {
+  const now = Date.now();
+  if (staffCache && now - staffCache.fetchedAt < STAFF_CACHE_TTL_MS) {
+    return { hrStaff: staffCache.hrStaff, salaryStaff: staffCache.salaryStaff };
+  }
+  if (staffCachePromise) return staffCachePromise;
+
+  staffCachePromise = (async () => {
+    // 1) HR employees (best source for user_id)
+    const { data: hrData, error: hrError } = await supabase
+      .from('hr_employees')
+      .select('phone_number, full_name, position, department, user_id')
+      .order('full_name', { ascending: true });
+
+    if (hrError) throw hrError;
+
+    const phoneToUserMap = new Map<string, string>();
+    (hrData || []).forEach((h: any) => {
+      const phone = String(h.phone_number || '').trim();
+      const userId = h.user_id ? String(h.user_id) : '';
+      if (!phone || !userId) return;
+      for (const v of buildPhoneVariants(phone)) phoneToUserMap.set(v, userId);
+    });
+
+    const hrStaff: StaffMember[] = (hrData || [])
+      .map((h: any) => {
+        const code = String(h.phone_number || '').trim();
+        const name = String(h.full_name || '').trim();
+        const fullCode = `${h.position || ''} - ${h.department || ''}`
+          .trim()
+          .replace(/^-\s*|\s*-$/g, '');
+        const userId = h.user_id ? String(h.user_id) : null;
+        return {
+          code,
+          name,
+          fullCode,
+          source: 'hr' as const,
+          user_id: userId,
+        };
+      })
+      .filter((s) => s.code && s.name);
+
+    // 2) Salary settings (helps include staff even if not present in HR yet)
+    const { data: salaryData, error: salaryError } = await supabase
+      .from('staff_salary_settings')
+      .select('staff_code, staff_name');
+
+    if (salaryError) throw salaryError;
+
+    const salaryStaff: StaffMember[] = (salaryData || [])
+      .map((s: any) => {
+        const code = String(s.staff_code || '').trim();
+        const rawName = String(s.staff_name || '').trim();
+        const name = normalizeStaffName(code, rawName);
+
+        // Try to match a phone number inside staff_name to HR -> user_id
+        const phoneMatch = rawName.match(/09\d{9}/);
+        const matchedUserId = phoneMatch ? phoneToUserMap.get(phoneMatch[0]) : undefined;
+
+        return {
+          code,
+          name: name || rawName,
+          fullCode: code,
+          source: 'salary' as const,
+          user_id: matchedUserId || null,
+        };
+      })
+      .filter((s) => s.code && s.name);
+
+    staffCache = { fetchedAt: Date.now(), hrStaff, salaryStaff };
+    return { hrStaff, salaryStaff };
+  })()
+    .finally(() => {
+      staffCachePromise = null;
+    });
+
+  return staffCachePromise;
+};
+
 export function StaffSearchSelect({
   value,
   onValueChange,
   placeholder = 'انتخاب نیرو',
-  excludeCodes = []
+  excludeCodes = [],
 }: StaffSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -49,91 +165,37 @@ export function StaffSearchSelect({
     maxHeight: 520,
   });
 
-  // Fetch HR employees and salary settings staff, and match with profiles for user_id
+  // Fetch staff once (cached across all instances)
   useEffect(() => {
-    const fetchStaff = async () => {
-      setLoading(true);
-      try {
-        // Fetch all profiles to match phone numbers with user_id
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('user_id, phone_number, full_name');
+    let cancelled = false;
+    setLoading(true);
 
-        const phoneToUserMap = new Map<string, string>();
-        profilesData?.forEach(p => {
-          if (p.phone_number && p.user_id) {
-            // Store both normalized and original formats
-            phoneToUserMap.set(p.phone_number, p.user_id);
-            // Also store without leading zero for matching
-            if (p.phone_number.startsWith('0')) {
-              phoneToUserMap.set(p.phone_number.substring(1), p.user_id);
-            }
-          }
-        });
-
-        // Fetch from staff_salary_settings
-        const { data: salaryData } = await supabase
-          .from('staff_salary_settings')
-          .select('staff_code, staff_name');
-
-        if (salaryData) {
-          const salaryList: StaffMember[] = salaryData.map(s => {
-            // Try to find user_id by matching phone number in staff_name
-            const phoneMatch = (s.staff_name || '').match(/09\d{9}/);
-            const matchedUserId = phoneMatch ? phoneToUserMap.get(phoneMatch[0]) : null;
-
-            return {
-              code: s.staff_code || '',
-              name: s.staff_name || '',
-              fullCode: s.staff_code || '',
-              source: 'salary' as const,
-              user_id: matchedUserId || null
-            };
-          }).filter(s => s.code && s.name);
-          setSalaryStaff(salaryList);
-        }
-
-        // Fetch from hr_employees with user_id
-        const { data: hrData } = await supabase
-          .from('hr_employees')
-          .select('phone_number, full_name, position, department, user_id');
-
-        if (hrData) {
-          const hrList: StaffMember[] = hrData.map(h => {
-            // If hr_employee doesn't have user_id, try to find it from profiles by phone
-            let userId = h.user_id;
-            if (!userId && h.phone_number) {
-              userId = phoneToUserMap.get(h.phone_number) || null;
-            }
-
-            return {
-              code: h.phone_number || '',
-              name: h.full_name || '',
-              fullCode: `${h.position || ''} - ${h.department || ''}`.trim().replace(/^- | -$/g, ''),
-              source: 'hr' as const,
-              user_id: userId || null
-            };
-          }).filter(h => h.code && h.name);
-          setHrStaff(hrList);
-        }
-      } catch (error) {
+    loadStaffDirectoryCached()
+      .then(({ hrStaff, salaryStaff }) => {
+        if (cancelled) return;
+        setHrStaff(hrStaff);
+        setSalaryStaff(salaryStaff);
+      })
+      .catch((error) => {
         console.error('Error fetching staff:', error);
-      } finally {
+      })
+      .finally(() => {
+        if (cancelled) return;
         setLoading(false);
-      }
-    };
+      });
 
-    fetchStaff();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Combine HR and salary staff lists, removing duplicates by code
   const allStaff = useMemo(() => {
-    // NOTE: If we have duplicates by code, we prefer the entry that is linked to a real user_id
-    // so that wallet/accounting sync can work.
+    // Prefer the entry linked to real user_id for wallet/accounting sync
     const combined = [...salaryStaff, ...hrStaff];
 
     const score = (s: StaffMember) => {
-      const sourceScore = s.source === 'hr' ? 3 : s.source === 'salary' ? 2 : 1;
+      const sourceScore = s.source === 'hr' ? 3 : 2;
       const hasUserScore = s.user_id ? 100 : 0;
       return hasUserScore + sourceScore;
     };
@@ -149,31 +211,23 @@ export function StaffSearchSelect({
     return Array.from(uniqueMap.values());
   }, [hrStaff, salaryStaff]);
 
-  const selectedStaff = allStaff.find(s => s.code === value);
+  const selectedStaff = allStaff.find((s) => s.code === value);
 
   const filteredStaff = useMemo(() => {
-    // First filter out excluded codes (but allow current value)
-    const availableStaff = allStaff.filter(staff =>
-      staff.code === value || !excludeCodes.includes(staff.code)
-    );
+    const availableStaff = allStaff.filter((staff) => staff.code === value || !excludeCodes.includes(staff.code));
 
     if (!search.trim()) return availableStaff;
 
     const searchLower = search.toLowerCase().trim();
-    return availableStaff.filter(staff => {
+    return availableStaff.filter((staff) => {
       const code = staff.code.toLowerCase();
       const name = staff.name.toLowerCase();
       const fullCode = staff.fullCode.toLowerCase();
 
-      return (
-        code.includes(searchLower) ||
-        name.includes(searchLower) ||
-        fullCode.includes(searchLower)
-      );
+      return code.includes(searchLower) || name.includes(searchLower) || fullCode.includes(searchLower);
     });
   }, [search, allStaff, excludeCodes, value]);
 
-  // Sort by code
   const sortedStaff = useMemo(() => {
     return [...filteredStaff].sort((a, b) => a.code.localeCompare(b.code));
   }, [filteredStaff]);
@@ -201,8 +255,7 @@ export function StaffSearchSelect({
     const boundaryEl = triggerEl.closest('[data-dropdown-boundary]') as HTMLElement | null;
     portalRootRef.current = boundaryEl;
 
-    const isRTL =
-      document.documentElement.dir === 'rtl' || !!triggerEl.closest('[dir="rtl"]');
+    const isRTL = document.documentElement.dir === 'rtl' || !!triggerEl.closest('[dir="rtl"]');
 
     // Position inside boundary (Daily Report cards) to avoid CSS `zoom` coordinate issues.
     if (boundaryEl) {
@@ -212,10 +265,7 @@ export function StaffSearchSelect({
       const width = Math.min(Math.max(rect.width, 320), availableWidth);
 
       let left = isRTL ? rect.right - b.left - width : rect.left - b.left;
-      left = Math.max(
-        VIEWPORT_MARGIN,
-        Math.min(left, b.width - VIEWPORT_MARGIN - width),
-      );
+      left = Math.max(VIEWPORT_MARGIN, Math.min(left, b.width - VIEWPORT_MARGIN - width));
 
       const spaceAbove = rect.top - b.top - OFFSET - VIEWPORT_MARGIN;
       const spaceBelow = b.bottom - rect.bottom - OFFSET - VIEWPORT_MARGIN;
@@ -304,7 +354,6 @@ export function StaffSearchSelect({
     return () => window.clearTimeout(t);
   }, [open, isMobile]);
 
-
   // Keep dropdown anchored when outer scroll happens (table/page) and on resize.
   // We ignore scroll events that originate from inside the dropdown itself so the list can scroll smoothly.
   useEffect(() => {
@@ -357,13 +406,12 @@ export function StaffSearchSelect({
         <span className="truncate flex-1 text-right">
           {selectedStaff
             ? `${selectedStaff.name} - ${selectedStaff.code}`
-            : placeholder}
+            : value
+              ? value
+              : placeholder}
         </span>
-        {selectedStaff ? (
-          <X
-            className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
-            onClick={handleClear}
-          />
+        {selectedStaff || value ? (
+          <X className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100" onClick={handleClear} />
         ) : (
           <User className="h-4 w-4 shrink-0 opacity-50" />
         )}
@@ -373,9 +421,7 @@ export function StaffSearchSelect({
         createPortal(
           <div
             ref={dropdownRef}
-            className={(portalRootRef.current
-              ? 'absolute'
-              : 'fixed') + ' bg-background border rounded-lg shadow-xl overflow-hidden'}
+            className={(portalRootRef.current ? 'absolute' : 'fixed') + ' bg-background border rounded-lg shadow-xl overflow-hidden'}
             style={{
               top: position.top,
               bottom: position.bottom,
@@ -406,9 +452,7 @@ export function StaffSearchSelect({
                   <span>در حال بارگذاری...</span>
                 </div>
               ) : sortedStaff.length === 0 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  پرسنلی یافت نشد
-                </div>
+                <div className="py-6 text-center text-sm text-muted-foreground">پرسنلی یافت نشد</div>
               ) : (
                 <div className="p-1 bg-background">
                   {sortedStaff.map((staff) => (
@@ -421,11 +465,13 @@ export function StaffSearchSelect({
                       }`}
                     >
                       <div className="font-medium flex items-center gap-2">
-                        <span className={`font-bold text-xs px-1.5 py-0.5 rounded ${
-                          staff.source === 'salary'
-                            ? 'text-green-600 bg-green-100 dark:bg-green-900/30'
-                            : 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
-                        }`}>
+                        <span
+                          className={`font-bold text-xs px-1.5 py-0.5 rounded ${
+                            staff.source === 'salary'
+                              ? 'text-green-600 bg-green-100 dark:bg-green-900/30'
+                              : 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
+                          }`}
+                        >
                           {staff.code}
                         </span>
                         <span>{staff.name}</span>
