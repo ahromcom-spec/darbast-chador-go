@@ -5,7 +5,7 @@ import { Play, Image as ImageIcon, Loader2, ChevronLeft, ChevronRight } from 'lu
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-
+import ahromWatermark from '@/assets/ahrom-watermark.png';
 interface ApprovedMedia {
   id: string;
   file_path: string;
@@ -154,6 +154,12 @@ export const RecentActivities: React.FC = () => {
                     <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-blue-500/80 flex items-center justify-center">
                       <Play className="h-2.5 w-2.5 text-white fill-white" />
                     </div>
+                    {/* Watermark logo */}
+                    <img
+                      src={ahromWatermark}
+                      alt=""
+                      className="absolute bottom-1 left-1 w-5 h-5 object-contain opacity-20 pointer-events-none"
+                    />
                   </div>
                 ) : (
                   <div className="w-full h-full bg-muted">
