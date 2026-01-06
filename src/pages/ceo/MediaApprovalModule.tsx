@@ -742,7 +742,12 @@ const MediaApprovalModule: React.FC = () => {
                               className="w-full h-full object-cover"
                               muted
                               playsInline
+                              webkit-playsinline="true"
                               preload="metadata"
+                              onLoadedData={(e) => {
+                                const video = e.target as HTMLVideoElement;
+                                video.currentTime = 0.5;
+                              }}
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                               <div className="w-12 h-12 rounded-full bg-primary/80 flex items-center justify-center">
@@ -839,7 +844,12 @@ const MediaApprovalModule: React.FC = () => {
                               className="w-full h-full object-cover"
                               muted
                               playsInline
+                              webkit-playsinline="true"
                               preload="metadata"
+                              onLoadedData={(e) => {
+                                const video = e.target as HTMLVideoElement;
+                                video.currentTime = 0.5;
+                              }}
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                               <div className="w-12 h-12 rounded-full bg-primary/80 flex items-center justify-center">
@@ -989,10 +999,17 @@ const MediaApprovalModule: React.FC = () => {
               <div className="flex items-center justify-center min-h-[300px] max-h-[80vh]">
                 {(selectedMedia?.file_type === 'video' || selectedOrderMedia?.file_type === 'video') ? (
                   <video
+                    key={selectedMedia?.id || selectedOrderMedia?.id}
                     src={getMediaUrl(selectedMedia?.file_path || selectedOrderMedia?.file_path || '')}
                     className="max-w-full max-h-[80vh] object-contain"
                     controls
                     autoPlay
+                    playsInline
+                    webkit-playsinline="true"
+                    controlsList="nodownload"
+                    onError={(e) => {
+                      console.error('Video playback error:', e);
+                    }}
                   />
                 ) : (
                   <img
