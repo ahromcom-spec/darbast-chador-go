@@ -302,19 +302,28 @@ const MediaApprovalModule: React.FC = () => {
   const handleDelete = async (item: MediaItem) => {
     if (!confirm('آیا از حذف این رسانه اطمینان دارید؟')) return;
 
+    setProcessing(true);
     try {
-      const { error } = await supabase
+      // First delete from database
+      const { error: dbError } = await supabase
         .from('approved_media')
         .delete()
         .eq('id', item.id);
 
-      if (error) throw error;
+      if (dbError) throw dbError;
+
+      // Also try to delete file from storage (optional - might fail due to RLS)
+      if (item.file_path && !item.file_path.startsWith('http')) {
+        await supabase.storage.from('project-media').remove([item.file_path]);
+      }
 
       toast({
         title: 'حذف شد',
         description: 'رسانه با موفقیت حذف شد'
       });
-      fetchMedia();
+      
+      // Update local state immediately for faster UI response
+      setMedia(prevMedia => prevMedia.filter(m => m.id !== item.id));
     } catch (error) {
       console.error('Error deleting media:', error);
       toast({
@@ -322,6 +331,10 @@ const MediaApprovalModule: React.FC = () => {
         description: 'خطا در حذف رسانه',
         variant: 'destructive'
       });
+      // Refresh to sync with actual database state
+      fetchMedia();
+    } finally {
+      setProcessing(false);
     }
   };
 
