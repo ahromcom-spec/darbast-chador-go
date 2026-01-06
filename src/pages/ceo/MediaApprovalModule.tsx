@@ -679,8 +679,8 @@ const MediaApprovalModule: React.FC = () => {
           .insert({
             file_path: filePath,
             file_type: 'video',
-            title: 'ویدیو ویرایش شده',
-            description: 'ویدیو با صدای ویرایش شده',
+            title: null,
+            description: null,
             uploaded_by: user.id,
             status: 'approved',
             display_order: 0,
