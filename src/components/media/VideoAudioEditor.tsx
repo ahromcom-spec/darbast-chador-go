@@ -65,20 +65,22 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
       const { FFmpeg } = await import('@ffmpeg/ffmpeg');
 
       // Load core assets from our own bundle (avoids blocked CDNs / CORS issues)
-      const [{ default: coreJsUrlRaw }, { default: coreWasmUrlRaw }, { default: coreWorkerUrlRaw }] =
+      // IMPORTANT: use ESM build so the internal module-worker can import it.
+      const [{ default: coreJsUrlRaw }, { default: coreWasmUrlRaw }, { default: classWorkerUrlRaw }] =
         await Promise.all([
-          import('@ffmpeg/core-st/dist/ffmpeg-core.js?url'),
-          import('@ffmpeg/core-st/dist/ffmpeg-core.wasm?url'),
-          import('@ffmpeg/core-st/dist/ffmpeg-core.worker.js?url'),
+          import('@ffmpeg/core/dist/esm/ffmpeg-core.js?url'),
+          import('@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url'),
+          // Ensure the FFmpeg class worker itself is bundled & served from same origin
+          import('@ffmpeg/ffmpeg/dist/esm/worker.js?url'),
         ]);
 
-      // IMPORTANT: Avoid converting to Blob URLs to reduce memory usage on mobile.
       // Resolve to absolute URLs to work in PWA/Capacitor environments.
-      const coreURL = new URL(coreJsUrlRaw, window.location.href).toString();
-      const wasmURL = new URL(coreWasmUrlRaw, window.location.href).toString();
-      const workerURL = new URL(coreWorkerUrlRaw, window.location.href).toString();
+      // Use origin as base so it works from any route (avoids /some/route/assets/... 404).
+      const coreURL = new URL(coreJsUrlRaw, window.location.origin).toString();
+      const wasmURL = new URL(coreWasmUrlRaw, window.location.origin).toString();
+      const classWorkerURL = new URL(classWorkerUrlRaw, window.location.origin).toString();
 
-      console.log('[FFmpeg] core assets', { coreURL, wasmURL, workerURL });
+      console.log('[FFmpeg] assets', { coreURL, wasmURL, classWorkerURL });
 
       const ffmpeg = new FFmpeg();
       ffmpegRef.current = ffmpeg;
@@ -95,7 +97,7 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
       await ffmpeg.load({
         coreURL,
         wasmURL,
-        workerURL,
+        classWorkerURL,
       });
 
       setFfmpegLoaded(true);
