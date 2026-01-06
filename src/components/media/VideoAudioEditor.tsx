@@ -64,23 +64,16 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
     try {
       const { FFmpeg } = await import('@ffmpeg/ffmpeg');
 
-      // Load core assets from our own bundle (avoids blocked CDNs / CORS issues)
-      // IMPORTANT: use ESM build so the internal module-worker can import it.
-      const [{ default: coreJsUrlRaw }, { default: coreWasmUrlRaw }, { default: classWorkerUrlRaw }] =
-        await Promise.all([
-          import('@ffmpeg/core/dist/esm/ffmpeg-core.js?url'),
-          import('@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url'),
-          // Ensure the FFmpeg class worker itself is bundled & served from same origin
-          import('@ffmpeg/ffmpeg/dist/esm/worker.js?url'),
-        ]);
+      // Load core assets from installed package (bundled by Vite, no CDN)
+      const [{ default: coreJsUrlRaw }, { default: coreWasmUrlRaw }] = await Promise.all([
+        import('@ffmpeg/core?url'),
+        import('@ffmpeg/core/wasm?url'),
+      ]);
 
-      // Resolve to absolute URLs to work in PWA/Capacitor environments.
-      // Use origin as base so it works from any route (avoids /some/route/assets/... 404).
       const coreURL = new URL(coreJsUrlRaw, window.location.origin).toString();
       const wasmURL = new URL(coreWasmUrlRaw, window.location.origin).toString();
-      const classWorkerURL = new URL(classWorkerUrlRaw, window.location.origin).toString();
 
-      console.log('[FFmpeg] assets', { coreURL, wasmURL, classWorkerURL });
+      console.log('[FFmpeg] assets', { coreURL, wasmURL });
 
       const ffmpeg = new FFmpeg();
       ffmpegRef.current = ffmpeg;
@@ -97,7 +90,6 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
       await ffmpeg.load({
         coreURL,
         wasmURL,
-        classWorkerURL,
       });
 
       setFfmpegLoaded(true);
