@@ -1221,12 +1221,12 @@ const MediaApprovalModule: React.FC = () => {
       </Dialog>
 
       {/* Video Audio Editor */}
-      {videoToEdit && (
+      {showVideoAudioEditor && videoToEdit && (
         <VideoAudioEditor
           open={showVideoAudioEditor}
           onOpenChange={(open) => {
-            setShowVideoAudioEditor(open);
             if (!open) {
+              setShowVideoAudioEditor(false);
               setVideoToEdit(null);
               setVideoToEditItem(null);
             }
