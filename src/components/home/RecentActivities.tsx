@@ -178,9 +178,9 @@ export const RecentActivities: React.FC = () => {
                     )}
                   </div>
                 )}
-                
-                {/* Title overlay */}
-                {(item.title || item.project_name) && (
+
+                {/* Title overlay (images only) */}
+                {!isVideoFile(item) && (item.title || item.project_name) && (
                   <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                     <p className="text-xs text-white truncate">{item.title || item.project_name}</p>
                   </div>
@@ -218,19 +218,30 @@ export const RecentActivities: React.FC = () => {
                 </Button>
               )}
 
+
               {/* Media Content */}
               <div className="flex items-center justify-center min-h-[300px] max-h-[80vh]">
                 {isVideoFile(selectedMedia) ? (
-                  <video
-                    key={selectedMedia.id}
-                    src={getMediaUrl(selectedMedia.file_path)}
-                    className="max-w-full max-h-[80vh] object-contain"
-                    controls
-                    autoPlay
-                    playsInline
-                    webkit-playsinline="true"
-                    controlsList="nodownload"
-                  />
+                  <div className="relative max-w-full max-h-[80vh]">
+                    <video
+                      key={selectedMedia.id}
+                      src={getMediaUrl(selectedMedia.file_path)}
+                      className="max-w-full max-h-[80vh] object-contain"
+                      controls
+                      autoPlay
+                      playsInline
+                      webkit-playsinline="true"
+                      controlsList="nodownload noremoteplayback noplaybackrate"
+                      disablePictureInPicture
+                      disableRemotePlayback
+                      onContextMenu={(e) => e.preventDefault()}
+                    />
+                    <img
+                      src={ahromWatermark}
+                      alt=""
+                      className="absolute bottom-3 left-3 w-5 h-5 object-contain opacity-20 pointer-events-none"
+                    />
+                  </div>
                 ) : (
                   <img
                     src={getMediaUrl(selectedMedia.file_path)}
@@ -240,8 +251,8 @@ export const RecentActivities: React.FC = () => {
                 )}
               </div>
 
-              {/* Title and Description */}
-              {(selectedMedia.title || selectedMedia.description) && (
+              {/* Title and Description (images only) */}
+              {!isVideoFile(selectedMedia) && (selectedMedia.title || selectedMedia.description || selectedMedia.project_name) && (
                 <div className="p-4 bg-card">
                   {selectedMedia.title && (
                     <h3 className="text-lg font-semibold">{selectedMedia.title}</h3>
