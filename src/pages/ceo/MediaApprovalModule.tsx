@@ -96,6 +96,10 @@ const MediaApprovalModule: React.FC = () => {
   const [showVideoAudioEditor, setShowVideoAudioEditor] = useState(false);
   const [videoToEdit, setVideoToEdit] = useState<string | null>(null);
   const [videoToEditItem, setVideoToEditItem] = useState<MediaItem | OrderMediaItem | null>(null);
+  
+  // Delete confirmation dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<MediaItem | null>(null);
 
   useEffect(() => {
     if (activeTab === 'orders') {
@@ -299,8 +303,13 @@ const MediaApprovalModule: React.FC = () => {
     }
   };
 
-  const handleDelete = async (item: MediaItem) => {
-    if (!confirm('آیا از حذف این رسانه اطمینان دارید؟')) return;
+  const openDeleteDialog = (item: MediaItem) => {
+    setItemToDelete(item);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
 
     setProcessing(true);
     try {
@@ -308,13 +317,17 @@ const MediaApprovalModule: React.FC = () => {
       const { error: dbError } = await supabase
         .from('approved_media')
         .delete()
-        .eq('id', item.id);
+        .eq('id', itemToDelete.id);
 
       if (dbError) throw dbError;
 
       // Also try to delete file from storage (optional - might fail due to RLS)
-      if (item.file_path && !item.file_path.startsWith('http')) {
-        await supabase.storage.from('project-media').remove([item.file_path]);
+      if (itemToDelete.file_path && !itemToDelete.file_path.startsWith('http')) {
+        try {
+          await supabase.storage.from('project-media').remove([itemToDelete.file_path]);
+        } catch (storageError) {
+          console.warn('Could not delete file from storage:', storageError);
+        }
       }
 
       toast({
@@ -323,12 +336,16 @@ const MediaApprovalModule: React.FC = () => {
       });
       
       // Update local state immediately for faster UI response
-      setMedia(prevMedia => prevMedia.filter(m => m.id !== item.id));
-    } catch (error) {
+      setMedia(prevMedia => prevMedia.filter(m => m.id !== itemToDelete.id));
+      
+      // Close dialog and reset
+      setShowDeleteDialog(false);
+      setItemToDelete(null);
+    } catch (error: any) {
       console.error('Error deleting media:', error);
       toast({
         title: 'خطا',
-        description: 'خطا در حذف رسانه',
+        description: error?.message || 'خطا در حذف رسانه',
         variant: 'destructive'
       });
       // Refresh to sync with actual database state
@@ -994,7 +1011,7 @@ const MediaApprovalModule: React.FC = () => {
                               size="icon"
                               variant="destructive"
                               className="h-8 w-8"
-                              onClick={() => handleDelete(item)}
+                              onClick={() => openDeleteDialog(item)}
                               title="حذف"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -1268,6 +1285,52 @@ const MediaApprovalModule: React.FC = () => {
           onSave={handleEditedVideoSave}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={(open) => {
+        if (!open) {
+          setItemToDelete(null);
+        }
+        setShowDeleteDialog(open);
+      }}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تایید حذف رسانه</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-muted-foreground">
+              آیا از حذف این رسانه اطمینان دارید؟ این عملیات قابل بازگشت نیست.
+            </p>
+            {itemToDelete && (
+              <div className="mt-4 p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">{itemToDelete.title || 'بدون عنوان'}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  نوع: {itemToDelete.file_type === 'video' ? 'ویدیو' : 'تصویر'}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setItemToDelete(null);
+              }}
+            >
+              انصراف
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteConfirm} 
+              disabled={processing}
+            >
+              {processing ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : <Trash2 className="h-4 w-4 ml-1" />}
+              حذف
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
