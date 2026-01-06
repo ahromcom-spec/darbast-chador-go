@@ -625,28 +625,60 @@ const MediaApprovalModule: React.FC = () => {
         xhr.send(editedBlob);
       });
 
-      // Insert into approved_media
-      const { error: insertError } = await supabase
-        .from('approved_media')
-        .insert({
-          file_path: filePath,
-          file_type: 'video',
-          title: 'ویدیو ویرایش شده',
-          description: 'ویدیو با صدای ویرایش شده',
-          uploaded_by: user.id,
-          status: 'approved',
-          display_order: 0,
-          is_visible: true,
-          approved_by: user.id,
-          approved_at: new Date().toISOString()
+      // Check if this is an existing approved_media item (has 'status' field) or an order media item
+      const isApprovedMediaItem = 'status' in videoToEditItem;
+
+      if (isApprovedMediaItem) {
+        // UPDATE existing record instead of creating new one
+        const oldFilePath = (videoToEditItem as MediaItem).file_path;
+        
+        const { error: updateError } = await supabase
+          .from('approved_media')
+          .update({
+            file_path: filePath,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', videoToEditItem.id);
+
+        if (updateError) throw updateError;
+
+        // Try to delete old file from storage (optional - might fail due to RLS)
+        if (oldFilePath && !oldFilePath.startsWith('http')) {
+          try {
+            await supabase.storage.from('project-media').remove([oldFilePath]);
+          } catch (e) {
+            console.warn('Could not delete old video file:', e);
+          }
+        }
+
+        toast({
+          title: 'موفق',
+          description: 'ویدیو با موفقیت ویرایش شد'
         });
+      } else {
+        // INSERT new record for order media items
+        const { error: insertError } = await supabase
+          .from('approved_media')
+          .insert({
+            file_path: filePath,
+            file_type: 'video',
+            title: 'ویدیو ویرایش شده',
+            description: 'ویدیو با صدای ویرایش شده',
+            uploaded_by: user.id,
+            status: 'approved',
+            display_order: 0,
+            is_visible: true,
+            approved_by: user.id,
+            approved_at: new Date().toISOString()
+          });
 
-      if (insertError) throw insertError;
+        if (insertError) throw insertError;
 
-      toast({
-        title: 'موفق',
-        description: 'ویدیو ویرایش شده با موفقیت ذخیره شد'
-      });
+        toast({
+          title: 'موفق',
+          description: 'ویدیو ویرایش شده با موفقیت ذخیره شد'
+        });
+      }
       
       setShowVideoAudioEditor(false);
       setVideoToEdit(null);
