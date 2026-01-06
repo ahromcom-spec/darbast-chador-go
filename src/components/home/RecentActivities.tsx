@@ -366,13 +366,45 @@ export const RecentActivities: React.FC = () => {
                       alt=""
                       className="absolute bottom-12 left-3 w-5 h-5 object-contain opacity-35 pointer-events-none"
                     />
+                    {/* Title overlay on video */}
+                    {(selectedMedia.title || selectedMedia.description) && (
+                      <div className="absolute bottom-14 right-3 text-right pointer-events-none">
+                        {selectedMedia.title && (
+                          <p className="text-white text-sm font-medium drop-shadow-lg bg-black/40 px-2 py-0.5 rounded">
+                            {selectedMedia.title}
+                          </p>
+                        )}
+                        {selectedMedia.description && (
+                          <p className="text-white/80 text-xs drop-shadow-lg bg-black/40 px-2 py-0.5 rounded mt-1">
+                            {selectedMedia.description}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <img
-                    src={getMediaUrl(selectedMedia.file_path)}
-                    alt={selectedMedia.title || 'تصویر'}
-                    className="max-w-full max-h-[80vh] object-contain"
-                  />
+                  <div className="relative max-w-full max-h-[80vh]">
+                    <img
+                      src={getMediaUrl(selectedMedia.file_path)}
+                      alt={selectedMedia.title || 'تصویر'}
+                      className="max-w-full max-h-[80vh] object-contain"
+                    />
+                    {/* Title overlay on image */}
+                    {(selectedMedia.title || selectedMedia.description) && (
+                      <div className="absolute bottom-3 right-3 text-right pointer-events-none">
+                        {selectedMedia.title && (
+                          <p className="text-white text-sm font-medium drop-shadow-lg bg-black/40 px-2 py-0.5 rounded">
+                            {selectedMedia.title}
+                          </p>
+                        )}
+                        {selectedMedia.description && (
+                          <p className="text-white/80 text-xs drop-shadow-lg bg-black/40 px-2 py-0.5 rounded mt-1">
+                            {selectedMedia.description}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
