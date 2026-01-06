@@ -1223,10 +1223,11 @@ const MediaApprovalModule: React.FC = () => {
       {/* Video Audio Editor */}
       {showVideoAudioEditor && videoToEdit && (
         <VideoAudioEditor
+          key={videoToEditItem?.id || videoToEdit}
           open={showVideoAudioEditor}
           onOpenChange={(open) => {
+            setShowVideoAudioEditor(open);
             if (!open) {
-              setShowVideoAudioEditor(false);
               setVideoToEdit(null);
               setVideoToEditItem(null);
             }

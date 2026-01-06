@@ -41,6 +41,7 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const ffmpegRef = useRef<any>(null);
+  const ffmpegLoadPromiseRef = useRef<Promise<boolean> | null>(null);
 
   const [originalVolume, setOriginalVolume] = useState(100);
   const [musicVolume, setMusicVolume] = useState(80);
@@ -58,56 +59,74 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
   const loadFFmpeg = useCallback(async () => {
     if (ffmpegLoaded) return true;
 
-    setStatus('loading-ffmpeg');
-    setLogMessage('در حال بارگذاری ابزار پردازش...');
+    // Prevent multiple concurrent loads (can cause "stuck" overlays)
+    if (ffmpegLoadPromiseRef.current) return ffmpegLoadPromiseRef.current;
 
-    try {
-      const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+    const promise = (async () => {
+      setStatus('loading-ffmpeg');
+      setLogMessage('در حال بارگذاری ابزار پردازش...');
 
-      // Load core assets from installed package (bundled by Vite, no CDN)
-      const [{ default: coreJsUrlRaw }, { default: coreWasmUrlRaw }] = await Promise.all([
-        import('@ffmpeg/core?url'),
-        import('@ffmpeg/core/wasm?url'),
-      ]);
+      try {
+        const { FFmpeg } = await import('@ffmpeg/ffmpeg');
 
-      const coreURL = new URL(coreJsUrlRaw, window.location.origin).toString();
-      const wasmURL = new URL(coreWasmUrlRaw, window.location.origin).toString();
+        // Load core assets from installed package (bundled by Vite, no CDN)
+        const [{ default: coreJsUrlRaw }, { default: coreWasmUrlRaw }] = await Promise.all([
+          import('@ffmpeg/core?url'),
+          import('@ffmpeg/core/wasm?url'),
+        ]);
 
-      console.log('[FFmpeg] assets', { coreURL, wasmURL });
+        const coreURL = new URL(coreJsUrlRaw, window.location.origin).toString();
+        const wasmURL = new URL(coreWasmUrlRaw, window.location.origin).toString();
 
-      const ffmpeg = new FFmpeg();
-      ffmpegRef.current = ffmpeg;
+        console.log('[FFmpeg] assets', { coreURL, wasmURL });
 
-      ffmpeg.on('log', ({ message }: { message: string }) => {
-        setLogMessage(message);
-        console.log('[FFmpeg]', message);
-      });
+        const ffmpeg = new FFmpeg();
+        ffmpegRef.current = ffmpeg;
 
-      ffmpeg.on('progress', ({ progress: p }: { progress: number }) => {
-        setProgress(Math.round(p * 100));
-      });
+        ffmpeg.on('log', ({ message }: { message: string }) => {
+          setLogMessage(message);
+          console.log('[FFmpeg]', message);
+        });
 
-      await ffmpeg.load({
-        coreURL,
-        wasmURL,
-      });
+        ffmpeg.on('progress', ({ progress: p }: { progress: number }) => {
+          setProgress(Math.round(p * 100));
+        });
 
-      setFfmpegLoaded(true);
-      setStatus('idle');
-      setLogMessage('');
-      return true;
-    } catch (error) {
-      console.error('Error loading FFmpeg:', error);
-      const msg = error instanceof Error ? error.message : String(error);
-      setStatus('error');
-      setLogMessage(`خطا در بارگذاری ابزار پردازش (FFmpeg): ${msg}`);
-      toast({
-        title: 'خطا',
-        description: 'امکان بارگذاری ابزار پردازش ویدیو وجود ندارد.',
-        variant: 'destructive',
-      });
-      return false;
-    }
+        // If loading hangs (mobile/network), fail gracefully so the dialog doesn't get "stuck"
+        const LOAD_TIMEOUT_MS = 25000;
+        await Promise.race([
+          ffmpeg.load({ coreURL, wasmURL }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), LOAD_TIMEOUT_MS),
+          ),
+        ]);
+
+        setFfmpegLoaded(true);
+        setStatus('idle');
+        setLogMessage('');
+        return true;
+      } catch (error) {
+        console.error('Error loading FFmpeg:', error);
+        const msg = error instanceof Error ? error.message : String(error);
+        const friendly = msg === 'timeout'
+          ? 'بارگذاری ابزار پردازش بیش از حد طول کشید. اینترنت/فیلترشکن را بررسی کنید و دوباره تلاش کنید.'
+          : `خطا در بارگذاری ابزار پردازش (FFmpeg): ${msg}`;
+
+        setStatus('error');
+        setLogMessage(friendly);
+        toast({
+          title: 'خطا',
+          description: 'امکان بارگذاری ابزار پردازش ویدیو وجود ندارد.',
+          variant: 'destructive',
+        });
+        return false;
+      } finally {
+        ffmpegLoadPromiseRef.current = null;
+      }
+    })();
+
+    ffmpegLoadPromiseRef.current = promise;
+    return promise;
   }, [ffmpegLoaded, toast]);
 
   useEffect(() => {
@@ -489,14 +508,24 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
         </div>
 
         <DialogFooter className="flex gap-2 pt-4">
+          <Button
+            variant="outline"
+            onClick={() => {
+              resetEditor();
+              onOpenChange(false);
+            }}
+          >
+            بستن
+          </Button>
+
           <Button variant="outline" onClick={resetEditor} disabled={isProcessing}>
             <RotateCcw className="h-4 w-4 ml-2" />
             بازنشانی
           </Button>
-          
+
           {status !== 'complete' && (
-            <Button 
-              onClick={processVideo} 
+            <Button
+              onClick={processVideo}
               disabled={isProcessing}
               className="gap-2"
             >
@@ -508,7 +537,7 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
               پردازش ویدیو
             </Button>
           )}
-          
+
           {status === 'complete' && (
             <>
               <Button variant="outline" onClick={handleDownload} className="gap-2">
