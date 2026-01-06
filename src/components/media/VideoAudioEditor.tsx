@@ -63,15 +63,22 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
 
     try {
       const { FFmpeg } = await import('@ffmpeg/ffmpeg');
-      const { toBlobURL } = await import('@ffmpeg/util');
 
       // Load core assets from our own bundle (avoids blocked CDNs / CORS issues)
-      const [{ default: coreJsUrl }, { default: coreWasmUrl }, { default: coreWorkerUrl }] =
+      const [{ default: coreJsUrlRaw }, { default: coreWasmUrlRaw }, { default: coreWorkerUrlRaw }] =
         await Promise.all([
           import('@ffmpeg/core-st/dist/ffmpeg-core.js?url'),
           import('@ffmpeg/core-st/dist/ffmpeg-core.wasm?url'),
           import('@ffmpeg/core-st/dist/ffmpeg-core.worker.js?url'),
         ]);
+
+      // IMPORTANT: Avoid converting to Blob URLs to reduce memory usage on mobile.
+      // Resolve to absolute URLs to work in PWA/Capacitor environments.
+      const coreURL = new URL(coreJsUrlRaw, window.location.href).toString();
+      const wasmURL = new URL(coreWasmUrlRaw, window.location.href).toString();
+      const workerURL = new URL(coreWorkerUrlRaw, window.location.href).toString();
+
+      console.log('[FFmpeg] core assets', { coreURL, wasmURL, workerURL });
 
       const ffmpeg = new FFmpeg();
       ffmpegRef.current = ffmpeg;
@@ -86,10 +93,9 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
       });
 
       await ffmpeg.load({
-        coreURL: await toBlobURL(coreJsUrl, 'text/javascript'),
-        wasmURL: await toBlobURL(coreWasmUrl, 'application/wasm'),
-        // IMPORTANT: provide workerURL explicitly (blob core URLs can't be auto-derived)
-        workerURL: await toBlobURL(coreWorkerUrl, 'text/javascript'),
+        coreURL,
+        wasmURL,
+        workerURL,
       });
 
       setFfmpegLoaded(true);
@@ -175,53 +181,55 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
 
       const originalVolumeValue = originalVolume / 100;
       const musicVolumeValue = musicVolume / 100;
-      
-      let command: string[] = [];
 
-      if (musicFile && musicUrl) {
+      let command: string[] = [];
+      let musicInputName: string | null = null;
+
+      if (musicFile) {
         // User wants to add background music
         setLogMessage('در حال بارگذاری موسیقی...');
-        const musicData = await fetchFile(musicUrl);
-        await ffmpeg.writeFile('music.mp3', musicData);
+
+        const ext = musicFile.name.split('.').pop()?.toLowerCase();
+        const safeExt = ext && /^[a-z0-9]+$/.test(ext) ? ext : 'mp3';
+        musicInputName = `music.${safeExt}`;
+
+        // IMPORTANT: pass File directly (more reliable than blob URL fetching on some mobiles)
+        const musicData = await fetchFile(musicFile);
+        await ffmpeg.writeFile(musicInputName, musicData);
 
         if (originalVolume === 0) {
           // Mute original and add music only
           command = [
             '-i', 'input.mp4',
-            '-i', 'music.mp3',
-            '-filter_complex', 
+            '-i', musicInputName,
+            '-filter_complex',
             `[1:a]volume=${musicVolumeValue}[music];[music]apad[aout]`,
             '-map', '0:v',
             '-map', '[aout]',
             '-c:v', 'copy',
             '-c:a', 'aac',
             '-shortest',
-            'output.mp4'
+            'output.mp4',
           ];
         } else {
           // Mix original audio with music
           command = [
             '-i', 'input.mp4',
-            '-i', 'music.mp3',
-            '-filter_complex', 
+            '-i', musicInputName,
+            '-filter_complex',
             `[0:a]volume=${originalVolumeValue}[orig];[1:a]volume=${musicVolumeValue}[music];[orig][music]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
             '-map', '0:v',
             '-map', '[aout]',
             '-c:v', 'copy',
             '-c:a', 'aac',
-            'output.mp4'
+            'output.mp4',
           ];
         }
       } else {
         // Just adjust original audio volume
         if (originalVolume === 0) {
           // Mute completely
-          command = [
-            '-i', 'input.mp4',
-            '-an',
-            '-c:v', 'copy',
-            'output.mp4'
-          ];
+          command = ['-i', 'input.mp4', '-an', '-c:v', 'copy', 'output.mp4'];
         } else {
           // Adjust volume
           command = [
@@ -229,7 +237,7 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
             '-filter:a', `volume=${originalVolumeValue}`,
             '-c:v', 'copy',
             '-c:a', 'aac',
-            'output.mp4'
+            'output.mp4',
           ];
         }
       }
@@ -259,7 +267,7 @@ const VideoAudioEditor: React.FC<VideoAudioEditorProps> = ({
       try {
         await ffmpeg.deleteFile('input.mp4');
         await ffmpeg.deleteFile('output.mp4');
-        if (musicFile) await ffmpeg.deleteFile('music.mp3');
+        if (musicInputName) await ffmpeg.deleteFile(musicInputName);
       } catch (e) {
         // Ignore cleanup errors
       }
