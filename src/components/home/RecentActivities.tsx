@@ -155,17 +155,9 @@ export const RecentActivities: React.FC = () => {
         onClick={() => setShowGallery(true)}
       >
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg text-blue-400 flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Play className="h-5 w-5" />
-              فعالیت‌های اخیر
-            </span>
-            {media.length > 4 && (
-              <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full flex items-center gap-1">
-                <Grid3X3 className="h-3 w-3" />
-                {media.length} مورد
-              </span>
-            )}
+          <CardTitle className="text-lg text-blue-400 flex items-center gap-2">
+            <Play className="h-5 w-5" />
+            فعالیت‌های اخیر
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -197,7 +189,7 @@ export const RecentActivities: React.FC = () => {
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-1 left-1 w-4 h-4 object-contain opacity-20 pointer-events-none"
+                      className="absolute bottom-1 left-1 w-4 h-4 object-contain opacity-35 pointer-events-none"
                     />
                   </div>
                 ) : (
@@ -220,11 +212,6 @@ export const RecentActivities: React.FC = () => {
               </div>
             ))}
           </div>
-          {media.length > 4 && (
-            <p className="text-xs text-center text-muted-foreground mt-3">
-              برای مشاهده همه کلیک کنید
-            </p>
-          )}
         </CardContent>
       </Card>
 
@@ -270,7 +257,7 @@ export const RecentActivities: React.FC = () => {
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-1 left-1 w-5 h-5 object-contain opacity-20 pointer-events-none"
+                      className="absolute bottom-1 left-1 w-5 h-5 object-contain opacity-35 pointer-events-none"
                     />
                   </div>
                 ) : (
@@ -377,7 +364,7 @@ export const RecentActivities: React.FC = () => {
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-12 left-3 w-5 h-5 object-contain opacity-20 pointer-events-none"
+                      className="absolute bottom-12 left-3 w-5 h-5 object-contain opacity-35 pointer-events-none"
                     />
                   </div>
                 ) : (
