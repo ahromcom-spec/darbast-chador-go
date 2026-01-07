@@ -146,6 +146,7 @@ Deno.serve(async (req) => {
 
     // Generate 5-digit OTP code
     const code = Math.floor(10000 + Math.random() * 90000).toString();
+    const expiresAt = new Date(Date.now() + 90 * 1000).toISOString();
 
     // Get Parsgreen API key
     const apiKey = Deno.env.get('PARSGREEN_API_KEY');
@@ -166,10 +167,10 @@ Deno.serve(async (req) => {
 
     // Format message with Web OTP binding
     const message = `اهرم: ${code} کد تایید\n\n@ahrom.ir #${code}`;
+    const fallbackMessage = `اهرم: ${code} کد تایید`;
 
-    // Send SMS via Parsgreen
-    let smsSent = false;
-    try {
+    // Start SMS sending AND database insert in PARALLEL for maximum speed
+    const sendSmsPromise = (async () => {
       const apiUrl = 'https://sms.parsgreen.ir/UrlService/sendSMS.ashx';
 
       const sendOnce = async (text: string) => {
@@ -200,55 +201,50 @@ Deno.serve(async (req) => {
       let result = await sendOnce(message);
 
       if (result.okFormat) {
-        smsSent = true;
-        console.log('SMS sent successfully via Parsgreen');
+        console.log('INFO SMS sent successfully via Parsgreen');
+        return { success: true };
       } else if (result.containsFilteration) {
         // Fallback: send simple message without Web OTP binding
-        const fallbackMessage = `اهرم: ${code} کد تایید`;
         const result2 = await sendOnce(fallbackMessage);
         if (result2.okFormat) {
-          smsSent = true;
-          console.log('SMS sent successfully via Parsgreen (fallback content)');
+          console.log('INFO SMS sent successfully via Parsgreen (fallback content)');
+          return { success: true };
         } else {
           console.error('SMS send failed - Parsgreen error. Response:', result2.trimmed.substring(0, 100));
-          return new Response(
-            JSON.stringify({ error: 'خطا در ارسال پیامک. لطفا دوباره تلاش کنید.' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return { success: false, error: 'خطا در ارسال پیامک. لطفا دوباره تلاش کنید.' };
         }
       } else {
         console.error('SMS send failed - Parsgreen error. Response:', result.trimmed.substring(0, 100));
-        return new Response(
-          JSON.stringify({ error: 'خطا در ارسال پیامک. لطفا دوباره تلاش کنید.' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return { success: false, error: 'خطا در ارسال پیامک. لطفا دوباره تلاش کنید.' };
       }
+    })();
 
-    } catch (fetchError) {
-      console.error('Network error sending SMS');
+    // Insert OTP to database in parallel with SMS
+    const dbInsertPromise = supabase.from('otp_codes').insert({
+      phone_number: normalizedPhone,
+      code,
+      expires_at: expiresAt,
+      verified: false,
+    });
+
+    // Wait for both operations
+    const [smsResult, dbResult] = await Promise.all([sendSmsPromise, dbInsertPromise]);
+
+    if (!smsResult.success) {
+      // Delete the OTP code since SMS failed
+      await supabase.from('otp_codes').delete().eq('phone_number', normalizedPhone).eq('code', code);
       return new Response(
-        JSON.stringify({ error: 'خطا در ارسال پیامک. لطفا دوباره تلاش کنید.' }),
+        JSON.stringify({ error: smsResult.error }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Save OTP to database if SMS was sent successfully
-    if (smsSent) {
-      const expiresAt = new Date(Date.now() + 90 * 1000);
-      const { error: dbError } = await supabase.from('otp_codes').insert({
-        phone_number: normalizedPhone,
-        code,
-        expires_at: expiresAt.toISOString(),
-        verified: false,
-      });
-
-      if (dbError) {
-        console.error('Error saving OTP:', dbError);
-        return new Response(
-          JSON.stringify({ error: 'خطا در ذخیره کد تایید' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    if (dbResult.error) {
+      console.error('Error saving OTP:', dbResult.error);
+      return new Response(
+        JSON.stringify({ error: 'خطا در ذخیره کد تایید' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     return new Response(
