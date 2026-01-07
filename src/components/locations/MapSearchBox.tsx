@@ -61,6 +61,15 @@ export function MapSearchBox({
     fetchToken();
   }, []);
 
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
+
   // بستن نتایج با کلیک خارج
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -74,7 +83,7 @@ export function MapSearchBox({
   }, []);
 
   const searchPlaces = useCallback(async (query: string) => {
-    console.log('[MapSearchBox] searchPlaces called:', { query, mapboxToken: !!mapboxToken });
+    console.log('[MapSearchBox] searchPlaces called:', { query, hasToken: !!mapboxToken, tokenLength: mapboxToken?.length });
     
     if (!query.trim() || query.length < 2) {
       console.log('[MapSearchBox] Query too short, skipping');
@@ -84,27 +93,46 @@ export function MapSearchBox({
     }
     
     if (!mapboxToken) {
-      console.log('[MapSearchBox] No token available');
+      console.log('[MapSearchBox] No token available, trying to fetch...');
+      // تلاش مجدد برای دریافت توکن
+      try {
+        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+        if (!error && data?.token) {
+          setMapboxToken(data.token);
+          sessionStorage.setItem('mapbox_token', data.token);
+          console.log('[MapSearchBox] Token fetched on demand');
+          // ادامه جستجو با توکن جدید
+          await performSearch(query, data.token);
+          return;
+        }
+      } catch (err) {
+        console.error('[MapSearchBox] Failed to fetch token on demand:', err);
+      }
       setResults([]);
       setIsOpen(false);
       return;
     }
 
+    await performSearch(query, mapboxToken);
+  }, [mapboxToken]);
+
+  const performSearch = async (query: string, token: string) => {
     setLoading(true);
     try {
       // Mapbox Geocoding API
-      // محدود به ایران و با اولویت فارسی
+      // محدود به ایران و با اولویت فارسی - proximity به قم
       const endpoint = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`;
       const params = new URLSearchParams({
-        access_token: mapboxToken,
+        access_token: token,
         country: 'IR',
         language: 'fa',
-        limit: '5',
-        types: 'place,locality,neighborhood,address,poi'
+        limit: '7',
+        types: 'place,locality,neighborhood,address,poi,region',
+        proximity: '50.8764,34.6403' // نزدیکی به قم
       });
 
       const url = `${endpoint}?${params}`;
-      console.log('[MapSearchBox] Fetching:', url.replace(mapboxToken, 'TOKEN_HIDDEN'));
+      console.log('[MapSearchBox] Fetching:', url.replace(token, 'TOKEN_HIDDEN'));
       
       const response = await fetch(url);
       const data = await response.json();
@@ -130,7 +158,7 @@ export function MapSearchBox({
     } finally {
       setLoading(false);
     }
-  }, [mapboxToken]);
+  };
 
   const handleInputChange = (value: string) => {
     setSearchTerm(value);
@@ -173,9 +201,10 @@ export function MapSearchBox({
     setIsOpen(false);
   };
 
-  if (!mapboxToken) {
-    return null; // اگر توکن موجود نباشد، کادر جستجو نمایش داده نمی‌شود
-  }
+  // نمایش کادر حتی بدون توکن (توکن به صورت on-demand دریافت می‌شود)
+  // if (!mapboxToken) {
+  //   return null;
+  // }
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
