@@ -915,14 +915,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     if (!map) return;
 
-    // لایه تایل با کش و بهینه‌سازی - استفاده از OpenStreetMap HOT که برچسب‌های فارسی را نمایش می‌دهد
+    // لایه تایل مدرن با رنگ‌های روشن و طبیعی - آب آبی، خطوط مشکی، برچسب‌های فارسی
     const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
-      // OpenStreetMap HOT - پشتیبانی از برچسب‌های محلی (فارسی)
+      // OpenStreetMap Carto Positron - استایل مدرن با رنگ‌های روشن و خطوط واضح
       {
-        url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
         options: {
-          attribution: '&copy; OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team',
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
           maxZoom: 22,
+          subdomains: 'abcd',
           updateWhenIdle: false,
           updateWhenZooming: false,
           keepBuffer: 4,
@@ -930,9 +931,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           errorTileUrl: '',
         },
       },
-      // Stadia Maps OSM Bright - پشتیبانی از زبان‌های محلی
+      // Stadia Alidade Smooth - استایل مدرن با رنگ‌های طبیعی و واضح
       {
-        url: 'https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}.png',
+        url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
         options: {
           attribution: '&copy; OpenStreetMap contributors &copy; Stadia Maps',
           maxZoom: 22,
