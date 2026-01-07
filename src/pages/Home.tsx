@@ -307,7 +307,7 @@ const Home = () => {
                   />
                 </button>
                 {/* Text below globe */}
-                <span className="text-blue-400 text-sm font-medium mt-2">
+                <span className="text-blue-400 text-sm font-medium mt-0.5">
                   موقعیت پروژه شما
                 </span>
               </div>
