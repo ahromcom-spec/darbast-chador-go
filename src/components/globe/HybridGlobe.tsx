@@ -2724,10 +2724,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           </div>
         </Card>
 
-        {/* کادر جستجوی آدرس */}
-        <div className={`pointer-events-auto absolute left-1/2 -translate-x-1/2 w-[90%] max-w-md ${
-          isImpersonating ? 'top-16' : 'top-4'
-        }`}>
+        {/* کادر جستجوی آدرس - پایین نقشه */}
+        <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md">
           <MapSearchBox
             onLocationSelect={(lat, lng, placeName) => {
               // پرواز به موقعیت جستجو شده
@@ -2740,6 +2738,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             }}
             placeholder="جستجوی آدرس یا محل..."
             className="w-full"
+            showSearchButton={true}
           />
         </div>
 
