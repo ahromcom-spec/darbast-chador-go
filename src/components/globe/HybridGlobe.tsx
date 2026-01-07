@@ -915,35 +915,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     if (!map) return;
 
-    // لایه تایل با برچسب‌های فارسی و قواره ساختمان‌ها - OpenStreetMap.DE با پشتیبانی از زبان محلی
+    // لایه تایل با برچسب‌های فقط فارسی (بدون متن لاتین) - OpenStreetMap استاندارد
     const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
-      // OpenStreetMap.DE - نمایش برچسب‌های فارسی و قواره ساختمان‌ها
-      {
-        url: 'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 22,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          maxNativeZoom: 19,
-          errorTileUrl: '',
-        },
-      },
-      // OpenStreetMap France - قواره ساختمان‌ها و برچسب‌های محلی
-      {
-        url: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors, Tiles by OpenStreetMap France',
-          maxZoom: 22,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          maxNativeZoom: 20,
-          errorTileUrl: '',
-        },
-      },
-      // OpenStreetMap Standard با برچسب‌های محلی
+      // OpenStreetMap Standard - فقط نام‌های محلی (فارسی برای ایران)
       {
         url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         options: {
@@ -953,6 +927,32 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           updateWhenZooming: false,
           keepBuffer: 4,
           maxNativeZoom: 19,
+          errorTileUrl: '',
+        },
+      },
+      // Wikimedia Maps - نام‌های محلی بدون transliteration
+      {
+        url: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
+        options: {
+          attribution: '&copy; OpenStreetMap contributors, Wikimedia',
+          maxZoom: 22,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
+          maxNativeZoom: 19,
+          errorTileUrl: '',
+        },
+      },
+      // OpenStreetMap HOT - پشتیبانی از نام‌های محلی
+      {
+        url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+        options: {
+          attribution: '&copy; OpenStreetMap contributors, HOT',
+          maxZoom: 22,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
+          maxNativeZoom: 20,
           errorTileUrl: '',
         },
       },
