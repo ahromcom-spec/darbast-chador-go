@@ -15,12 +15,14 @@ interface MapSearchBoxProps {
   onLocationSelect: (lat: number, lng: number, placeName: string) => void;
   placeholder?: string;
   className?: string;
+  showSearchButton?: boolean;
 }
 
 export function MapSearchBox({ 
   onLocationSelect, 
   placeholder = "جستجوی آدرس...",
-  className 
+  className,
+  showSearchButton = false
 }: MapSearchBoxProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -133,7 +135,7 @@ export function MapSearchBox({
   const handleInputChange = (value: string) => {
     setSearchTerm(value);
 
-    // Debounce search
+    // Debounce search - جستجوی خودکار هنگام تایپ
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
@@ -141,6 +143,20 @@ export function MapSearchBox({
     debounceRef.current = setTimeout(() => {
       searchPlaces(value);
     }, 300);
+  };
+
+  const handleSearchClick = () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    searchPlaces(searchTerm);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearchClick();
+    }
   };
 
   const handleSelectResult = (result: SearchResult) => {
@@ -163,29 +179,46 @@ export function MapSearchBox({
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
-      <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <Input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => handleInputChange(e.target.value)}
-          onFocus={() => {
-            if (results.length > 0) setIsOpen(true);
-          }}
-          placeholder={placeholder}
-          className="pr-9 pl-8 bg-background/95 backdrop-blur-sm border-border/50 shadow-md"
-          dir="rtl"
-        />
-        {loading ? (
-          <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-        ) : searchTerm && (
+      <div className="relative flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={() => {
+              if (results.length > 0) setIsOpen(true);
+            }}
+            placeholder={placeholder}
+            className="pr-9 pl-8 bg-background/95 backdrop-blur-sm border-border/50 shadow-md"
+            dir="rtl"
+          />
+          {loading ? (
+            <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+          ) : searchTerm && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6"
+              onClick={handleClear}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+        {showSearchButton && (
           <Button
-            variant="ghost"
+            onClick={handleSearchClick}
+            disabled={loading || !searchTerm.trim()}
             size="icon"
-            className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6"
-            onClick={handleClear}
+            className="h-10 w-10 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
           >
-            <X className="h-3 w-3" />
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4" />
+            )}
           </Button>
         )}
       </div>
