@@ -6,9 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-function badRequest(message: string) {
-  return new Response(JSON.stringify({ error: message }), {
-    status: 400,
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
@@ -18,18 +18,23 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const startedAt = Date.now();
+
   try {
     const body = await req.json().catch(() => ({}));
     const q = (body?.q ?? body?.query ?? "").toString();
 
+    console.log("[geocode-nominatim] request", {
+      q: q?.slice(0, 80),
+      len: q?.length,
+    });
+
     if (!q.trim() || q.trim().length < 2) {
-      return new Response(JSON.stringify({ results: [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ results: [] });
     }
 
     if (q.length > 120) {
-      return badRequest("Query is too long");
+      return json({ error: "Query is too long" }, 400);
     }
 
     const params = new URLSearchParams({
@@ -39,7 +44,6 @@ serve(async (req) => {
       limit: "7",
       countrycodes: "ir",
       "accept-language": "fa",
-      // viewbox برای اولویت‌دهی به منطقه ایران
       viewbox: "44.0,39.8,63.3,25.0",
       bounded: "0",
     });
@@ -54,15 +58,15 @@ serve(async (req) => {
       headers: {
         // Nominatim usage policy: identify your application
         "User-Agent": "AhromApp/1.0 (Lovable Cloud)",
-        "Accept": "application/json",
+        Accept: "application/json",
       },
     }).finally(() => clearTimeout(timeout));
 
+    const status = res.status;
+
     if (!res.ok) {
-      return new Response(JSON.stringify({ results: [], error: "Geocoding failed" }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("[geocode-nominatim] upstream not ok", { status });
+      return json({ results: [], error: "Geocoding failed" }, 502);
     }
 
     const data = (await res.json().catch(() => [])) as any[];
@@ -78,14 +82,20 @@ serve(async (req) => {
           .filter((r) => r.place_name && Number.isFinite(r.lat) && Number.isFinite(r.lng))
       : [];
 
-    return new Response(JSON.stringify({ results }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    console.log("[geocode-nominatim] response", {
+      status,
+      results: results.length,
+      ms: Date.now() - startedAt,
     });
+
+    return json({ results });
   } catch (err) {
-    console.error("[geocode-nominatim] error", err);
-    return new Response(JSON.stringify({ results: [], error: "Internal error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    console.error("[geocode-nominatim] error", {
+      ms: Date.now() - startedAt,
+      message: err instanceof Error ? err.message : String(err),
     });
+
+    // AbortError or any other failure
+    return json({ results: [], error: "Internal error" }, 500);
   }
 });
