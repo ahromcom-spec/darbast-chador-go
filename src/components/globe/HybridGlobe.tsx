@@ -915,26 +915,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     if (!map) return;
 
-    // لایه تایل با کش و بهینه‌سازی - استفاده از OpenStreetMap با برچسب‌های فارسی
+    // لایه تایل با کش و بهینه‌سازی - استفاده از OpenStreetMap France که قواره ساختمان‌ها را بهتر نمایش می‌دهد
     const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
-      // OpenStreetMap HOT - پشتیبانی از زبان‌های محلی شامل فارسی
+      // OpenStreetMap France - بهتر برای نمایش جزئیات ساختمان‌ها
       {
-        url: 'https://tile.openstreetmap.bzh/br/{z}/{x}/{y}.png',
+        url: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
         options: {
           attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 22,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          maxNativeZoom: 19,
-          errorTileUrl: '',
-        },
-      },
-      // Stamen Toner با لیبل‌های محلی
-      {
-        url: 'https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors &copy; Stadia Maps',
           maxZoom: 22,
           updateWhenIdle: false,
           updateWhenZooming: false,
@@ -943,7 +930,20 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           errorTileUrl: '',
         },
       },
-      // OpenStreetMap Standard - fallback
+      // Carto Positron - استایل روشن با قواره ساختمان
+      {
+        url: 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+        options: {
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+          maxZoom: 22,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
+          maxNativeZoom: 20,
+          errorTileUrl: '',
+        },
+      },
+      // OpenStreetMap Standard
       {
         url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         options: {
