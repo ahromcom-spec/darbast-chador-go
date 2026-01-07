@@ -2,13 +2,13 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, X, MapPin, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
   id: string;
   place_name: string;
-  center: [number, number]; // [lng, lat]
+  lat: number;
+  lng: number;
 }
 
 interface MapSearchBoxProps {
@@ -28,38 +28,8 @@ export function MapSearchBox({
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
-
-  // دریافت توکن Mapbox
-  useEffect(() => {
-    const cached = sessionStorage.getItem('mapbox_token');
-    if (cached) {
-      console.log('[MapSearchBox] Using cached token');
-      setMapboxToken(cached);
-      return;
-    }
-
-    const fetchToken = async () => {
-      try {
-        console.log('[MapSearchBox] Fetching mapbox token...');
-        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-        console.log('[MapSearchBox] Response:', { data, error });
-        if (!error && data?.token) {
-          setMapboxToken(data.token);
-          sessionStorage.setItem('mapbox_token', data.token);
-          console.log('[MapSearchBox] Token received and cached');
-        } else {
-          console.error('[MapSearchBox] Failed to get token:', error);
-        }
-      } catch (err) {
-        console.error('[MapSearchBox] Error fetching Mapbox token:', err);
-      }
-    };
-
-    fetchToken();
-  }, []);
 
   // Cleanup debounce on unmount
   useEffect(() => {
@@ -83,7 +53,7 @@ export function MapSearchBox({
   }, []);
 
   const searchPlaces = useCallback(async (query: string) => {
-    console.log('[MapSearchBox] searchPlaces called:', { query, hasToken: !!mapboxToken, tokenLength: mapboxToken?.length });
+    console.log('[MapSearchBox] searchPlaces called:', { query });
     
     if (!query.trim() || query.length < 2) {
       console.log('[MapSearchBox] Query too short, skipping');
@@ -91,58 +61,40 @@ export function MapSearchBox({
       setIsOpen(false);
       return;
     }
-    
-    if (!mapboxToken) {
-      console.log('[MapSearchBox] No token available, trying to fetch...');
-      // تلاش مجدد برای دریافت توکن
-      try {
-        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-        if (!error && data?.token) {
-          setMapboxToken(data.token);
-          sessionStorage.setItem('mapbox_token', data.token);
-          console.log('[MapSearchBox] Token fetched on demand');
-          // ادامه جستجو با توکن جدید
-          await performSearch(query, data.token);
-          return;
-        }
-      } catch (err) {
-        console.error('[MapSearchBox] Failed to fetch token on demand:', err);
-      }
-      setResults([]);
-      setIsOpen(false);
-      return;
-    }
 
-    await performSearch(query, mapboxToken);
-  }, [mapboxToken]);
-
-  const performSearch = async (query: string, token: string) => {
     setLoading(true);
     try {
-      // Mapbox Geocoding API
-      // محدود به ایران و با اولویت فارسی - proximity به قم
-      const endpoint = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`;
+      // استفاده از Nominatim - سرویس رایگان OpenStreetMap
+      // محدود به ایران با viewbox و bounded
       const params = new URLSearchParams({
-        access_token: token,
-        country: 'IR',
-        language: 'fa',
+        q: query,
+        format: 'json',
+        addressdetails: '1',
         limit: '7',
-        types: 'place,locality,neighborhood,address,poi,region',
-        proximity: '50.8764,34.6403' // نزدیکی به قم
+        countrycodes: 'ir',
+        'accept-language': 'fa',
+        // viewbox برای اولویت‌دهی به منطقه ایران
+        viewbox: '44.0,39.8,63.3,25.0',
+        bounded: '0'
       });
 
-      const url = `${endpoint}?${params}`;
-      console.log('[MapSearchBox] Fetching:', url.replace(token, 'TOKEN_HIDDEN'));
+      const url = `https://nominatim.openstreetmap.org/search?${params}`;
+      console.log('[MapSearchBox] Fetching:', url);
       
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'AhromApp/1.0'
+        }
+      });
       const data = await response.json();
       console.log('[MapSearchBox] API Response:', data);
 
-      if (data.features && data.features.length > 0) {
-        const searchResults: SearchResult[] = data.features.map((feature: any) => ({
-          id: feature.id,
-          place_name: feature.place_name,
-          center: feature.center
+      if (data && data.length > 0) {
+        const searchResults: SearchResult[] = data.map((item: any) => ({
+          id: item.place_id.toString(),
+          place_name: item.display_name,
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon)
         }));
         console.log('[MapSearchBox] Results found:', searchResults.length);
         setResults(searchResults);
@@ -158,7 +110,7 @@ export function MapSearchBox({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleInputChange = (value: string) => {
     setSearchTerm(value);
@@ -170,7 +122,7 @@ export function MapSearchBox({
 
     debounceRef.current = setTimeout(() => {
       searchPlaces(value);
-    }, 300);
+    }, 400); // کمی بیشتر برای احترام به rate limit
   };
 
   const handleSearchClick = () => {
@@ -188,9 +140,8 @@ export function MapSearchBox({
   };
 
   const handleSelectResult = (result: SearchResult) => {
-    const [lng, lat] = result.center;
-    onLocationSelect(lat, lng, result.place_name);
-    setSearchTerm(result.place_name);
+    onLocationSelect(result.lat, result.lng, result.place_name);
+    setSearchTerm(result.place_name.split(',')[0]); // فقط بخش اول نام
     setIsOpen(false);
     setResults([]);
   };
@@ -200,11 +151,6 @@ export function MapSearchBox({
     setResults([]);
     setIsOpen(false);
   };
-
-  // نمایش کادر حتی بدون توکن (توکن به صورت on-demand دریافت می‌شود)
-  // if (!mapboxToken) {
-  //   return null;
-  // }
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
