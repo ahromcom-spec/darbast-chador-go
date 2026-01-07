@@ -915,34 +915,37 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     if (!map) return;
 
-    // لایه تایل با کش و بهینه‌سازی - فقط از OSM/Carto برای سازگاری حداکثری استفاده می‌کنیم
+    // لایه تایل با کش و بهینه‌سازی - استفاده از OpenStreetMap France که قواره ساختمان‌ها را بهتر نمایش می‌دهد
     const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
+      // OpenStreetMap France - بهتر برای نمایش جزئیات ساختمان‌ها
+      {
+        url: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+        options: {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 22,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
+          maxNativeZoom: 20,
+          errorTileUrl: '',
+        },
+      },
+      // Carto Positron - استایل روشن با قواره ساختمان
+      {
+        url: 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+        options: {
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+          maxZoom: 22,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
+          maxNativeZoom: 20,
+          errorTileUrl: '',
+        },
+      },
+      // OpenStreetMap Standard
       {
         url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 22,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          maxNativeZoom: 19,
-          errorTileUrl: '',
-        },
-      },
-      {
-        url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 22,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          maxNativeZoom: 19,
-          errorTileUrl: '',
-        },
-      },
-      {
-        url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
         options: {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 22,
@@ -980,6 +983,78 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         variant: 'destructive'
       });
     }
+
+    // اضافه کردن لایه قواره ساختمان‌ها از OpenStreetMap برای ایران و قم
+    const fetchBuildingsLayer = async () => {
+      // بررسی سطح زوم - فقط در زوم بالا قواره‌ها را نمایش بده
+      if (map.getZoom() < 15) return;
+      
+      const bounds = map.getBounds();
+      const center = bounds.getCenter();
+      
+      // بررسی اینکه آیا در محدوده ایران هستیم (تقریبی)
+      const isInIran = center.lat >= 25 && center.lat <= 40 && center.lng >= 44 && center.lng <= 63;
+      if (!isInIran) return;
+      
+      const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
+      
+      // Overpass API برای دریافت قواره ساختمان‌ها
+      const query = `[out:json][timeout:10];
+        (
+          way["building"](${bbox});
+        );
+        out geom;`;
+      
+      try {
+        const response = await fetch('https://overpass-api.de/api/interpreter', {
+          method: 'POST',
+          body: query
+        });
+        
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        
+        // حذف لایه قبلی
+        map.eachLayer((layer) => {
+          if ((layer as any)._buildingLayer) {
+            map.removeLayer(layer);
+          }
+        });
+        
+        // ایجاد polygons برای هر ساختمان
+        if (data.elements && data.elements.length > 0) {
+          data.elements.forEach((element: any) => {
+            if (element.type === 'way' && element.geometry) {
+              const coords = element.geometry.map((node: any) => [node.lat, node.lon]);
+              if (coords.length > 2) {
+                const polygon = L.polygon(coords, {
+                  color: '#999999',
+                  weight: 0.5,
+                  fillColor: '#d4d4d4',
+                  fillOpacity: 0.7,
+                  interactive: false
+                }).addTo(map);
+                (polygon as any)._buildingLayer = true;
+              }
+            }
+          });
+          console.log(`[Map] Added ${data.elements.length} building footprints`);
+        }
+      } catch (error) {
+        console.warn('[Map] Could not fetch buildings:', error);
+      }
+    };
+
+    // فراخوانی اولیه و با تغییر زوم
+    let buildingFetchTimeout: ReturnType<typeof setTimeout>;
+    const debouncedFetchBuildings = () => {
+      clearTimeout(buildingFetchTimeout);
+      buildingFetchTimeout = setTimeout(fetchBuildingsLayer, 500);
+    };
+    
+    map.on('zoomend', debouncedFetchBuildings);
+    map.on('moveend', debouncedFetchBuildings);
 
     // بستن popup با debounce
     let longPressTimer: NodeJS.Timeout;
