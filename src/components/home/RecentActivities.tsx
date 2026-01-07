@@ -17,6 +17,127 @@ interface ApprovedMedia {
   approved_at: string | null;
 }
 
+// Infinite Scroll Gallery Component
+interface InfiniteScrollGalleryProps {
+  media: ApprovedMedia[];
+  imageErrors: Set<string>;
+  isVideoFile: (item: ApprovedMedia) => boolean;
+  getMediaUrl: (filePath: string) => string;
+  handleImageError: (id: string) => void;
+  onSelectItem: (index: number) => void;
+}
+
+const InfiniteScrollGallery: React.FC<InfiniteScrollGalleryProps> = ({
+  media,
+  imageErrors,
+  isVideoFile,
+  getMediaUrl,
+  handleImageError,
+  onSelectItem,
+}) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [displayData, setDisplayData] = useState<{ item: ApprovedMedia; originalIndex: number }[]>([]);
+  
+  // Initialize with 3 copies of data for seamless scrolling
+  useEffect(() => {
+    if (media.length === 0) return;
+    const initialData = [
+      ...media.map((item, index) => ({ item, originalIndex: index })),
+      ...media.map((item, index) => ({ item, originalIndex: index })),
+      ...media.map((item, index) => ({ item, originalIndex: index })),
+    ];
+    setDisplayData(initialData);
+  }, [media]);
+
+  // Handle infinite scroll - append more data when near bottom
+  const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container || media.length === 0) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+    // When user scrolls past 70%, add more items
+    if (scrollPercentage > 0.7) {
+      setDisplayData(prev => [
+        ...prev,
+        ...media.map((item, index) => ({ item, originalIndex: index })),
+      ]);
+    }
+  }, [media]);
+
+  return (
+    <div
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      className="max-h-[70vh] overflow-y-scroll scrollbar-hide"
+      style={{
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+      }}
+    >
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        {displayData.map((data, displayIndex) => (
+          <button
+            key={`${data.item.id}-${displayIndex}`}
+            onClick={() => onSelectItem(data.originalIndex)}
+            className={cn(
+              "relative aspect-square rounded-lg overflow-hidden group",
+              "transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20",
+              "border border-border/50 hover:border-blue-400/50"
+            )}
+          >
+            {isVideoFile(data.item) ? (
+              <div className="w-full h-full bg-muted relative">
+                <video
+                  src={getMediaUrl(data.item.file_path) + '#t=0.5'}
+                  className="w-full h-full object-cover"
+                  muted
+                  playsInline
+                  preload="metadata"
+                  onLoadedData={(e) => {
+                    const video = e.target as HTMLVideoElement;
+                    video.currentTime = 0.5;
+                  }}
+                />
+                <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-blue-500/80 flex items-center justify-center">
+                  <Play className="h-2.5 w-2.5 text-white fill-white" />
+                </div>
+                <img
+                  src={ahromWatermark}
+                  alt=""
+                  className="absolute bottom-1 left-1 w-12 h-12 object-contain opacity-85 pointer-events-none"
+                />
+              </div>
+            ) : (
+              <div className="w-full h-full bg-muted">
+                {imageErrors.has(data.item.id) ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                ) : (
+                  <img
+                    src={getMediaUrl(data.item.file_path)}
+                    alt={data.item.title || 'تصویر پروژه'}
+                    className="w-full h-full object-cover"
+                    onError={() => handleImageError(data.item.id)}
+                    loading="lazy"
+                  />
+                )}
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const RecentActivities: React.FC = () => {
   const [media, setMedia] = useState<ApprovedMedia[]>([]);
   const [loading, setLoading] = useState(true);
@@ -217,71 +338,26 @@ export const RecentActivities: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Full Gallery Dialog */}
+      {/* Full Gallery Dialog with Infinite Scroll */}
       <Dialog open={showGallery} onOpenChange={setShowGallery}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-4 overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] p-4 overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-blue-400 flex items-center gap-2">
               <Play className="h-5 w-5" />
               فعالیت‌های اخیر
             </h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {media.map((item, index) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setSelectedIndex(index);
-                  setShowGallery(false);
-                }}
-                className={cn(
-                  "relative aspect-square rounded-lg overflow-hidden group",
-                  "transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20",
-                  "border border-border/50 hover:border-blue-400/50"
-                )}
-              >
-                {isVideoFile(item) ? (
-                  <div className="w-full h-full bg-muted relative">
-                    <video
-                      src={getMediaUrl(item.file_path) + '#t=0.5'}
-                      className="w-full h-full object-cover"
-                      muted
-                      playsInline
-                      preload="metadata"
-                      onLoadedData={(e) => {
-                        const video = e.target as HTMLVideoElement;
-                        video.currentTime = 0.5;
-                      }}
-                    />
-                    <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-blue-500/80 flex items-center justify-center">
-                      <Play className="h-2.5 w-2.5 text-white fill-white" />
-                    </div>
-                    <img
-                      src={ahromWatermark}
-                      alt=""
-                      className="absolute bottom-1 left-1 w-12 h-12 object-contain opacity-85 pointer-events-none"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-full bg-muted">
-                    {imageErrors.has(item.id) ? (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
-                      </div>
-                    ) : (
-                      <img
-                        src={getMediaUrl(item.file_path)}
-                        alt={item.title || 'تصویر پروژه'}
-                        className="w-full h-full object-cover"
-                        onError={() => handleImageError(item.id)}
-                        loading="lazy"
-                      />
-                    )}
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
+          <InfiniteScrollGallery
+            media={media}
+            imageErrors={imageErrors}
+            isVideoFile={isVideoFile}
+            getMediaUrl={getMediaUrl}
+            handleImageError={handleImageError}
+            onSelectItem={(index) => {
+              setSelectedIndex(index);
+              setShowGallery(false);
+            }}
+          />
         </DialogContent>
       </Dialog>
 
