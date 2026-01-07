@@ -71,14 +71,16 @@ export const RecentActivities: React.FC = () => {
   };
 
   const handlePrev = useCallback(() => {
-    if (selectedIndex !== null && selectedIndex > 0) {
-      setSelectedIndex(selectedIndex - 1);
+    if (selectedIndex !== null && media.length > 0) {
+      // چرخش بی‌نهایت - اگر اول بود به آخر برود
+      setSelectedIndex(selectedIndex === 0 ? media.length - 1 : selectedIndex - 1);
     }
-  }, [selectedIndex]);
+  }, [selectedIndex, media.length]);
 
   const handleNext = useCallback(() => {
-    if (selectedIndex !== null && selectedIndex < media.length - 1) {
-      setSelectedIndex(selectedIndex + 1);
+    if (selectedIndex !== null && media.length > 0) {
+      // چرخش بی‌نهایت - اگر آخر بود به اول برود
+      setSelectedIndex(selectedIndex === media.length - 1 ? 0 : selectedIndex + 1);
     }
   }, [selectedIndex, media.length]);
 
@@ -221,7 +223,7 @@ export const RecentActivities: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-blue-400 flex items-center gap-2">
               <Play className="h-5 w-5" />
-              فعالیت‌های اخیر ({media.length})
+              فعالیت‌های اخیر
             </h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -317,8 +319,8 @@ export const RecentActivities: React.FC = () => {
                 گالری
               </Button>
 
-              {/* Navigation Buttons */}
-              {selectedIndex !== null && selectedIndex > 0 && (
+              {/* Navigation Buttons - همیشه نمایش داده شوند برای چرخش بی‌نهایت */}
+              {media.length > 1 && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -328,7 +330,7 @@ export const RecentActivities: React.FC = () => {
                   <ChevronLeft className="h-6 w-6 text-white" />
                 </Button>
               )}
-              {selectedIndex !== null && selectedIndex < media.length - 1 && (
+              {media.length > 1 && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -338,11 +340,6 @@ export const RecentActivities: React.FC = () => {
                   <ChevronRight className="h-6 w-6 text-white" />
                 </Button>
               )}
-
-              {/* Media counter */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 bg-black/70 text-white text-xs px-3 py-1 rounded-full">
-                {(selectedIndex ?? 0) + 1} / {media.length}
-              </div>
 
               {/* Media Content */}
               <div className="flex items-center justify-center min-h-[300px] max-h-[80vh]">
