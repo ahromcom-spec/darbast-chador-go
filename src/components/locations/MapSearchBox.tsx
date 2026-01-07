@@ -3,6 +3,7 @@ import { Search, X, MapPin, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { geocodeIranNominatim } from '@/lib/geocoding';
 
 interface SearchResult {
   id: string;
@@ -18,11 +19,11 @@ interface MapSearchBoxProps {
   showSearchButton?: boolean;
 }
 
-export function MapSearchBox({ 
-  onLocationSelect, 
-  placeholder = "جستجوی آدرس...",
+export function MapSearchBox({
+  onLocationSelect,
+  placeholder = 'جستجوی آدرس...',
   className,
-  showSearchButton = false
+  showSearchButton = false,
 }: MapSearchBoxProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -54,7 +55,7 @@ export function MapSearchBox({
 
   const searchPlaces = useCallback(async (query: string) => {
     console.log('[MapSearchBox] searchPlaces called:', { query });
-    
+
     if (!query.trim() || query.length < 2) {
       console.log('[MapSearchBox] Query too short, skipping');
       setResults([]);
@@ -64,49 +65,14 @@ export function MapSearchBox({
 
     setLoading(true);
     try {
-      // استفاده از Nominatim - سرویس رایگان OpenStreetMap
-      // محدود به ایران با viewbox و bounded
-      const params = new URLSearchParams({
-        q: query,
-        format: 'json',
-        addressdetails: '1',
-        limit: '7',
-        countrycodes: 'ir',
-        'accept-language': 'fa',
-        // viewbox برای اولویت‌دهی به منطقه ایران
-        viewbox: '44.0,39.8,63.3,25.0',
-        bounded: '0'
-      });
-
-      const url = `https://nominatim.openstreetmap.org/search?${params}`;
-      console.log('[MapSearchBox] Fetching:', url);
-      
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'AhromApp/1.0'
-        }
-      });
-      const data = await response.json();
-      console.log('[MapSearchBox] API Response:', data);
-
-      if (data && data.length > 0) {
-        const searchResults: SearchResult[] = data.map((item: any) => ({
-          id: item.place_id.toString(),
-          place_name: item.display_name,
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon)
-        }));
-        console.log('[MapSearchBox] Results found:', searchResults.length);
-        setResults(searchResults);
-        setIsOpen(true);
-      } else {
-        console.log('[MapSearchBox] No results found');
-        setResults([]);
-        setIsOpen(false);
-      }
+      const searchResults = await geocodeIranNominatim(query);
+      console.log('[MapSearchBox] Results found:', searchResults.length);
+      setResults(searchResults);
+      setIsOpen(searchResults.length > 0);
     } catch (error) {
       console.error('[MapSearchBox] Geocoding error:', error);
       setResults([]);
+      setIsOpen(false);
     } finally {
       setLoading(false);
     }
@@ -153,7 +119,7 @@ export function MapSearchBox({
   };
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
+    <div ref={containerRef} className={cn('relative', className)}>
       <div className="relative flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -171,7 +137,7 @@ export function MapSearchBox({
           />
           {loading ? (
             <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-          ) : searchTerm && (
+          ) : searchTerm ? (
             <Button
               variant="ghost"
               size="icon"
@@ -180,8 +146,9 @@ export function MapSearchBox({
             >
               <X className="h-3 w-3" />
             </Button>
-          )}
+          ) : null}
         </div>
+
         {showSearchButton && (
           <Button
             onClick={handleSearchClick}
@@ -189,11 +156,7 @@ export function MapSearchBox({
             size="icon"
             className="h-10 w-10 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
           >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Search className="h-4 w-4" />
-            )}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           </Button>
         )}
       </div>
