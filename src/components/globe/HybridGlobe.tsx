@@ -915,27 +915,26 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     if (!map) return;
 
-    // لایه تایل مدرن با رنگ‌های روشن و طبیعی - آب آبی، خطوط مشکی، برچسب‌های فارسی
+    // لایه تایل با برچسب‌های فارسی و قواره ساختمان‌ها - OpenStreetMap.DE با پشتیبانی از زبان محلی
     const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
-      // OpenStreetMap Carto Positron - استایل مدرن با رنگ‌های روشن و خطوط واضح
+      // OpenStreetMap.DE - نمایش برچسب‌های فارسی و قواره ساختمان‌ها
       {
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        url: 'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png',
         options: {
-          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+          attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 22,
-          subdomains: 'abcd',
           updateWhenIdle: false,
           updateWhenZooming: false,
           keepBuffer: 4,
-          maxNativeZoom: 20,
+          maxNativeZoom: 19,
           errorTileUrl: '',
         },
       },
-      // Stadia Alidade Smooth - استایل مدرن با رنگ‌های طبیعی و واضح
+      // OpenStreetMap France - قواره ساختمان‌ها و برچسب‌های محلی
       {
-        url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
+        url: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
         options: {
-          attribution: '&copy; OpenStreetMap contributors &copy; Stadia Maps',
+          attribution: '&copy; OpenStreetMap contributors, Tiles by OpenStreetMap France',
           maxZoom: 22,
           updateWhenIdle: false,
           updateWhenZooming: false,
