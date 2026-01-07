@@ -3,6 +3,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
 import { MapSearchBox } from './MapSearchBox';
+import { Button } from '@/components/ui/button';
+import { Satellite, Map as MapIcon } from 'lucide-react';
 
 export interface SimpleLeafletMapRef {
   flyTo: (lat: number, lng: number, zoom?: number) => void;
@@ -45,6 +47,8 @@ function SimpleLeafletMapInner({
   const routeLineRef = useRef<L.Polyline | null>(null);
   const [selectedPos, setSelectedPos] = useState<{ lat: number; lng: number; distance: number; roadDistance?: number } | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
+  const [mapStyle, setMapStyle] = useState<'standard' | 'satellite'>('standard');
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const mapboxTokenRef = useRef<string | null>(null);
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
@@ -153,6 +157,7 @@ function SimpleLeafletMapInner({
     for (const { url, options } of tileConfigs) {
       try {
         const layer = L.tileLayer(url, options).addTo(map);
+        tileLayerRef.current = layer; // ذخیره لایه برای تعویض
         tileLayerAdded = true;
 
         layer.on('tileerror', (e) => {
@@ -335,6 +340,39 @@ function SimpleLeafletMapInner({
     };
   }, []);
 
+  // تغییر نمای نقشه بین استاندارد و ماهواره‌ای
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    const map = mapRef.current;
+    
+    // حذف لایه قبلی
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+    
+    let newLayer: L.TileLayer;
+    
+    if (mapStyle === 'satellite') {
+      // لایه ماهواره‌ای از ESRI World Imagery (رایگان)
+      newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; Esri, Maxar, Earthstar Geographics',
+        maxZoom: 22,
+        maxNativeZoom: 19,
+      });
+    } else {
+      // لایه استاندارد OpenStreetMap
+      newLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 22,
+        maxNativeZoom: 19,
+      });
+    }
+    
+    newLayer.addTo(map);
+    tileLayerRef.current = newLayer;
+  }, [mapStyle]);
+
   // Handler for search box location selection
   const handleSearchLocationSelect = (lat: number, lng: number, placeName: string) => {
     if (mapRef.current) {
@@ -397,6 +435,27 @@ function SimpleLeafletMapInner({
           transform: 'translateZ(0)'
         }}
       />
+
+      {/* دکمه تغییر نمای نقشه */}
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => setMapStyle(prev => prev === 'standard' ? 'satellite' : 'standard')}
+        className="absolute top-4 right-4 z-[1002] shadow-lg border-2 border-primary/20 text-xs px-3 py-1.5 h-8"
+        title={mapStyle === 'standard' ? 'نمای ماهواره‌ای' : 'نمای استاندارد'}
+      >
+        {mapStyle === 'standard' ? (
+          <>
+            <Satellite className="h-3.5 w-3.5 ml-1.5" />
+            <span className="font-semibold text-xs">ماهواره‌ای</span>
+          </>
+        ) : (
+          <>
+            <MapIcon className="h-3.5 w-3.5 ml-1.5" />
+            <span className="font-semibold text-xs">نقشه</span>
+          </>
+        )}
+      </Button>
 
       {/* کادر جستجوی آدرس */}
       {showSearch && (
