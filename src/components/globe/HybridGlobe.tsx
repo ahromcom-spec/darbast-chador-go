@@ -915,13 +915,14 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     if (!map) return;
 
-    // لایه تایل با کش و بهینه‌سازی - استفاده از OpenStreetMap HOT که برچسب‌های فارسی را نمایش می‌دهد
+    // لایه تایل با کش و بهینه‌سازی - استفاده از CARTO Voyager که استایل خلوت با قواره‌های دقیق دارد (مثل اسنپ)
     const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
-      // OpenStreetMap HOT - پشتیبانی از برچسب‌های محلی (فارسی)
+      // CARTO Voyager - استایل خلوت با قواره ساختمان‌ها و خیابان‌ها (مثل نقشه اسنپ)
       {
-        url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
         options: {
-          attribution: '&copy; OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team',
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+          subdomains: 'abcd',
           maxZoom: 22,
           updateWhenIdle: false,
           updateWhenZooming: false,
@@ -930,11 +931,12 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           errorTileUrl: '',
         },
       },
-      // Stadia Maps OSM Bright - پشتیبانی از زبان‌های محلی
+      // CARTO Voyager Labels Under - نسخه جایگزین با برچسب‌های زیر
       {
-        url: 'https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}.png',
+        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}@2x.png',
         options: {
-          attribution: '&copy; OpenStreetMap contributors &copy; Stadia Maps',
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+          subdomains: 'abcd',
           maxZoom: 22,
           updateWhenIdle: false,
           updateWhenZooming: false,
@@ -943,16 +945,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           errorTileUrl: '',
         },
       },
-      // OpenStreetMap Standard با برچسب‌های محلی
+      // OpenStreetMap France - پشتیبان با قواره‌های دقیق
       {
-        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        url: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
         options: {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 22,
           updateWhenIdle: false,
           updateWhenZooming: false,
           keepBuffer: 4,
-          maxNativeZoom: 19,
+          maxNativeZoom: 20,
           errorTileUrl: '',
         },
       },
