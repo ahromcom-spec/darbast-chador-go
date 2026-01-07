@@ -191,7 +191,7 @@ export const RecentActivities: React.FC = () => {
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-1 left-1 w-10 h-10 object-contain opacity-60 pointer-events-none"
+                      className="absolute bottom-1 left-1 w-10 h-10 object-contain opacity-85 pointer-events-none"
                     />
                   </div>
                 ) : (
@@ -259,7 +259,7 @@ export const RecentActivities: React.FC = () => {
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-1 left-1 w-12 h-12 object-contain opacity-60 pointer-events-none"
+                      className="absolute bottom-1 left-1 w-12 h-12 object-contain opacity-85 pointer-events-none"
                     />
                   </div>
                 ) : (
@@ -361,7 +361,7 @@ export const RecentActivities: React.FC = () => {
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-12 left-3 w-12 h-12 object-contain opacity-60 pointer-events-none"
+                      className="absolute bottom-12 left-3 w-12 h-12 object-contain opacity-85 pointer-events-none"
                     />
                     {/* Title overlay on video */}
                     {(selectedMedia.title || selectedMedia.description) && (
