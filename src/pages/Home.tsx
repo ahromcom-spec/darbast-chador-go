@@ -293,10 +293,10 @@ const Home = () => {
 
             {/* Globe Button - Outside Card, Below Dropdown */}
             {user && !servicesLoading && (
-              <div className="flex justify-center mt-6">
+              <div className="flex flex-col items-center mt-3">
                 <button
                   onClick={() => navigate('/globe')}
-                  className="group relative w-[112px] h-[112px] transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-0"
+                  className="group relative w-[168px] h-[168px] transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-0"
                   aria-label="نمایش پروژه‌ها روی کره زمین"
                 >
                   {/* Globe image with gentle swing animation */}
@@ -306,11 +306,15 @@ const Home = () => {
                     className="w-full h-full object-contain animate-globe-swing"
                   />
                 </button>
+                {/* Text below globe */}
+                <span className="text-blue-400 text-sm font-medium mt-2">
+                  موقعیت پروژه شما
+                </span>
               </div>
             )}
 
             {/* Recent Activities Section */}
-            <div className="mt-6">
+            <div className={user ? "mt-24" : "mt-48"}>
               <RecentActivities />
             </div>
           </article>
