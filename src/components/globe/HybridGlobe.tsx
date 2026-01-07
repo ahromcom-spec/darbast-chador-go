@@ -915,14 +915,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     if (!map) return;
 
-    // لایه تایل با کش و بهینه‌سازی - استفاده از CARTO Voyager که استایل خلوت با قواره‌های دقیق دارد (مثل اسنپ)
+    // لایه تایل با کش و بهینه‌سازی - استفاده از OpenStreetMap HOT که برچسب‌های فارسی را نمایش می‌دهد
     const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
-      // CARTO Voyager - استایل خلوت با قواره ساختمان‌ها و خیابان‌ها (مثل نقشه اسنپ)
+      // OpenStreetMap HOT - پشتیبانی از برچسب‌های محلی (فارسی)
       {
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
         options: {
-          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-          subdomains: 'abcd',
+          attribution: '&copy; OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team',
           maxZoom: 22,
           updateWhenIdle: false,
           updateWhenZooming: false,
@@ -931,12 +930,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           errorTileUrl: '',
         },
       },
-      // CARTO Voyager Labels Under - نسخه جایگزین با برچسب‌های زیر
+      // Stadia Maps OSM Bright - پشتیبانی از زبان‌های محلی
       {
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}@2x.png',
+        url: 'https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}.png',
         options: {
-          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-          subdomains: 'abcd',
+          attribution: '&copy; OpenStreetMap contributors &copy; Stadia Maps',
           maxZoom: 22,
           updateWhenIdle: false,
           updateWhenZooming: false,
@@ -945,16 +943,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           errorTileUrl: '',
         },
       },
-      // OpenStreetMap France - پشتیبان با قواره‌های دقیق
+      // OpenStreetMap Standard با برچسب‌های محلی
       {
-        url: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         options: {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 22,
           updateWhenIdle: false,
           updateWhenZooming: false,
           keepBuffer: 4,
-          maxNativeZoom: 20,
+          maxNativeZoom: 19,
           errorTileUrl: '',
         },
       },
