@@ -2739,6 +2739,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             placeholder="جستجوی آدرس یا محل..."
             className="w-full"
             showSearchButton={true}
+            resultsPlacement="top"
           />
         </div>
 

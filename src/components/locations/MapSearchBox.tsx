@@ -12,11 +12,14 @@ interface SearchResult {
   lng: number;
 }
 
+type ResultsPlacement = 'top' | 'bottom';
+
 interface MapSearchBoxProps {
   onLocationSelect: (lat: number, lng: number, placeName: string) => void;
   placeholder?: string;
   className?: string;
   showSearchButton?: boolean;
+  resultsPlacement?: ResultsPlacement;
 }
 
 export function MapSearchBox({
@@ -24,6 +27,7 @@ export function MapSearchBox({
   placeholder = 'جستجوی آدرس...',
   className,
   showSearchButton = false,
+  resultsPlacement = 'bottom',
 }: MapSearchBoxProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -88,7 +92,7 @@ export function MapSearchBox({
 
     debounceRef.current = setTimeout(() => {
       searchPlaces(value);
-    }, 400); // کمی بیشتر برای احترام به rate limit
+    }, 400);
   };
 
   const handleSearchClick = () => {
@@ -107,7 +111,7 @@ export function MapSearchBox({
 
   const handleSelectResult = (result: SearchResult) => {
     onLocationSelect(result.lat, result.lng, result.place_name);
-    setSearchTerm(result.place_name.split(',')[0]); // فقط بخش اول نام
+    setSearchTerm(result.place_name.split(',')[0]);
     setIsOpen(false);
     setResults([]);
   };
@@ -117,6 +121,11 @@ export function MapSearchBox({
     setResults([]);
     setIsOpen(false);
   };
+
+  const resultsPositionClass =
+    resultsPlacement === 'top'
+      ? 'absolute bottom-full mb-1 w-full'
+      : 'absolute top-full mt-1 w-full';
 
   return (
     <div ref={containerRef} className={cn('relative', className)}>
@@ -163,7 +172,12 @@ export function MapSearchBox({
 
       {/* لیست نتایج */}
       {isOpen && results.length > 0 && (
-        <div className="absolute top-full mt-1 w-full bg-background border border-border rounded-md shadow-lg z-[200001] max-h-64 overflow-y-auto">
+        <div
+          className={cn(
+            resultsPositionClass,
+            'bg-background border border-border rounded-md shadow-lg z-[200001] max-h-64 overflow-y-auto'
+          )}
+        >
           {results.map((result) => (
             <button
               key={result.id}
