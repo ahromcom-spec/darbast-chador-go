@@ -5,7 +5,7 @@ import { Play, Image as ImageIcon, Loader2, ChevronLeft, ChevronRight, X, Grid3X
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import ahromWatermark from '@/assets/ahrom-watermark.png';
+import ahromWatermark from '@/assets/ahrom-watermark-new.png';
 
 interface ApprovedMedia {
   id: string;
@@ -191,7 +191,7 @@ export const RecentActivities: React.FC = () => {
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-1 left-1 w-5 h-5 object-contain opacity-50 pointer-events-none"
+                      className="absolute bottom-1 left-1 w-10 h-10 object-contain opacity-60 pointer-events-none"
                     />
                   </div>
                 ) : (
@@ -259,7 +259,7 @@ export const RecentActivities: React.FC = () => {
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-1 left-1 w-6 h-6 object-contain opacity-50 pointer-events-none"
+                      className="absolute bottom-1 left-1 w-12 h-12 object-contain opacity-60 pointer-events-none"
                     />
                   </div>
                 ) : (
@@ -361,7 +361,7 @@ export const RecentActivities: React.FC = () => {
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-12 left-3 w-6 h-6 object-contain opacity-50 pointer-events-none"
+                      className="absolute bottom-12 left-3 w-12 h-12 object-contain opacity-60 pointer-events-none"
                     />
                     {/* Title overlay on video */}
                     {(selectedMedia.title || selectedMedia.description) && (
