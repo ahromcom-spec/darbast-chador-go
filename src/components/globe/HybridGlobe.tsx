@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowRight, MapPin, X, Plus, Camera, Video, Search } from 'lucide-react';
+import { ArrowRight, MapPin, X, Plus, Camera, Video, Search, Satellite, Map as MapIcon } from 'lucide-react';
 import { MapSearchBox } from '@/components/locations/MapSearchBox';
 // بررسی وجود بنر impersonation برای تنظیم موقعیت دکمه بازگشت
 const useIsImpersonating = () => {
@@ -95,6 +95,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [mobileSelectedLocationProjects, setMobileSelectedLocationProjects] = useState<ProjectWithMedia[]>([]);
   const [serviceTypeDialogOpen, setServiceTypeDialogOpen] = useState(false);
   const [serviceTypeDialogLocationId, setServiceTypeDialogLocationId] = useState<string>('');
+  const [mapStyle, setMapStyle] = useState<'standard' | 'satellite'>('standard');
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
   const isMobile = useIsMobile();
   const { projects: allProjects, loading, refetch } = useProjectsHierarchy();
@@ -962,6 +964,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     for (const { url, options } of tileConfigs) {
       try {
         const layer = L.tileLayer(url, options).addTo(map);
+        tileLayerRef.current = layer; // ذخیره لایه برای تعویض بعدی
         tileLayerAdded = true;
 
         layer.on('tileerror', (e) => {
@@ -2767,6 +2770,41 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     }
   }, [projectsWithMedia, loading, mapReady, navigate, selectedProject, expandedClusters]);
 
+  // تغییر نمای نقشه بین استاندارد و ماهواره‌ای
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+    
+    const map = mapRef.current;
+    
+    // حذف لایه قبلی
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+    
+    let newLayer: L.TileLayer;
+    
+    if (mapStyle === 'satellite') {
+      // لایه ماهواره‌ای از ESRI World Imagery (رایگان)
+      newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; Esri, Maxar, Earthstar Geographics',
+        maxZoom: 22,
+        maxNativeZoom: 19,
+      });
+    } else {
+      // لایه استاندارد OpenStreetMap
+      newLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 22,
+        maxNativeZoom: 19,
+      });
+    }
+    
+    newLayer.addTo(map);
+    tileLayerRef.current = newLayer;
+    
+    console.log('[Map] Switched to', mapStyle, 'view');
+  }, [mapStyle, mapReady]);
+
   return (
     <div className="fixed inset-0 z-50 bg-background">
       {/* لایه‌ی روی نقشه برای کنترل‌ها */}
@@ -2798,6 +2836,29 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             </div>
           </div>
         </Card>
+
+        {/* دکمه تغییر نمای نقشه (استاندارد/ماهواره‌ای) */}
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => setMapStyle(prev => prev === 'standard' ? 'satellite' : 'standard')}
+          className={`pointer-events-auto absolute left-4 shadow-2xl border-2 border-primary/20 text-xs px-3 py-1.5 h-8 ${
+            isImpersonating ? 'top-48' : 'top-36'
+          }`}
+          title={mapStyle === 'standard' ? 'نمای ماهواره‌ای' : 'نمای استاندارد'}
+        >
+          {mapStyle === 'standard' ? (
+            <>
+              <Satellite className="h-3.5 w-3.5 ml-1.5" />
+              <span className="font-semibold text-xs">ماهواره‌ای</span>
+            </>
+          ) : (
+            <>
+              <MapIcon className="h-3.5 w-3.5 ml-1.5" />
+              <span className="font-semibold text-xs">نقشه</span>
+            </>
+          )}
+        </Button>
 
         {/* کادر جستجوی آدرس - پایین نقشه */}
         <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md">

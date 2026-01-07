@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { Button } from '@/components/ui/button';
+import { Satellite, Map as MapIcon } from 'lucide-react';
 
 interface LeafletFallbackMapProps {
   onLocationSelect: (lat: number, lng: number) => void;
@@ -58,6 +60,7 @@ export default function LeafletFallbackMap({
   initialLng = 50.8746,
 }: LeafletFallbackMapProps) {
   const [position, setPosition] = useState<[number, number] | null>(null);
+  const [mapStyle, setMapStyle] = useState<'standard' | 'satellite'>('standard');
 
   const center: [number, number] = useMemo(() => [initialLat, initialLng], [initialLat, initialLng]);
   
@@ -90,14 +93,43 @@ export default function LeafletFallbackMap({
           preferCanvas={true}
         >
           <MapInitializer />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maxZoom={22}
-          />
+          {mapStyle === 'satellite' ? (
+            <TileLayer
+              attribution='&copy; Esri, Maxar, Earthstar Geographics'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={22}
+            />
+          ) : (
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              maxZoom={22}
+            />
+          )}
           <ClickHandler onPick={handleLocationPick} />
           {position && <Marker position={position} icon={customIcon} />}
         </MapContainer>
+
+        {/* دکمه تغییر نمای نقشه */}
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => setMapStyle(prev => prev === 'standard' ? 'satellite' : 'standard')}
+          className="absolute top-4 left-4 z-[1000] shadow-lg border-2 border-primary/20 text-xs px-3 py-1.5 h-8"
+          title={mapStyle === 'standard' ? 'نمای ماهواره‌ای' : 'نمای استاندارد'}
+        >
+          {mapStyle === 'standard' ? (
+            <>
+              <Satellite className="h-3.5 w-3.5 ml-1.5" />
+              <span className="font-semibold text-xs">ماهواره‌ای</span>
+            </>
+          ) : (
+            <>
+              <MapIcon className="h-3.5 w-3.5 ml-1.5" />
+              <span className="font-semibold text-xs">نقشه</span>
+            </>
+          )}
+        </Button>
       </div>
     </MapErrorBoundary>
   );
