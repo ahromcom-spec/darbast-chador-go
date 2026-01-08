@@ -117,22 +117,34 @@ export default function Login() {
   // بررسی وجود شماره در لیست سفید (از بک‌اند، برای اینکه وابسته به دسترسی کاربر نباشد)
   const checkWhitelist = async (phone: string): Promise<boolean> => {
     try {
-      // تایم‌اوت ۱۰ ثانیه‌ای برای جلوگیری از گیر کردن صفحه
+      // تایم‌اوت ۱۵ ثانیه‌ای برای جلوگیری از گیر کردن صفحه
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
       
-      const { data, error } = await supabase.functions.invoke('verify-otp', {
-        body: {
-          phone_number: phone,
-          action: 'check_whitelist',
-        },
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-otp`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            phone_number: phone,
+            action: 'check_whitelist',
+          }),
+          signal: controller.signal,
+        }
+      );
 
       clearTimeout(timeoutId);
 
-      if (error || data?.error) return false;
+      if (!response.ok) return false;
+      const data = await response.json();
+      if (data?.error) return false;
       return !!data?.is_whitelisted;
     } catch (e) {
+      // در صورت timeout یا خطا، ادامه بده با OTP عادی
       console.error('Error checking whitelist:', e);
       return false;
     }
