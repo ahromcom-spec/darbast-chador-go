@@ -174,6 +174,19 @@ export const ExpertPricingEditDialog = ({
         updateData.location_lng = locationLng;
       }
 
+      // If unit_price exists and total_area changed, recalculate payment_amount
+      const existingUnitPrice = parsedNotes?.unit_price;
+      if (existingUnitPrice && existingUnitPrice > 0 && totalArea > 0) {
+        const newPaymentAmount = Math.round(existingUnitPrice * totalArea);
+        updateData.payment_amount = newPaymentAmount;
+        updateData.total_price = newPaymentAmount;
+        
+        // Update notes with new calculated price
+        updatedNotes.manager_set_price = newPaymentAmount;
+        updatedNotes.pricing_updated_at = new Date().toISOString();
+        updateData.notes = updatedNotes;
+      }
+
       const { error } = await supabase
         .from('projects_v3')
         .update(updateData)
