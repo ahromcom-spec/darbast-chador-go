@@ -1,0 +1,8 @@
+[
+  {"id": "3fe7f74e-3fbb-47e6-983d-36597697014e", "name": "اصفهان", "code": "12", "is_active": true, "created_at": "2025-10-11T13:38:11.391322+00:00"},
+  {"id": "bac26dbe-fdd2-4c27-8311-14d6e7aaed60", "name": "البرز", "code": "15", "is_active": true, "created_at": "2025-10-17T11:25:39.551702+00:00"},
+  {"id": "c5fd41e2-5799-4298-a6de-c94879a31e13", "name": "فارس", "code": "14", "is_active": true, "created_at": "2025-10-11T13:38:11.391322+00:00"},
+  {"id": "d2243423-4825-4c21-96ed-0ef95d193f7d", "name": "قم", "code": "10", "is_active": true, "created_at": "2025-10-11T13:38:11.391322+00:00"},
+  {"id": "d672406e-b3b7-40ce-a71c-999aae309fad", "name": "خوزستان", "code": "13", "is_active": true, "created_at": "2025-10-11T13:38:11.391322+00:00"},
+  {"id": "effedf3b-d407-422b-b669-e2ea95be67ca", "name": "تهران", "code": "11", "is_active": true, "created_at": "2025-10-11T13:38:11.391322+00:00"}
+]

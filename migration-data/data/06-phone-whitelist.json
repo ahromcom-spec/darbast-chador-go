@@ -1,0 +1,16 @@
+[
+  {"id": "0caed8c4-f465-4d34-9f4c-28bf168b8cad", "phone_number": "09011111111", "allowed_roles": ["executive_manager_scaffold_execution_with_materials"], "notes": "مدیریت خدمات اجرای داربست به همراه اجناس", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "1297924b-5bec-4a0d-91c4-c0d0cbfe8abc", "phone_number": "09000000000", "allowed_roles": ["customer"], "notes": "کاربر تست - مشتری با کد تایید ثابت 12345", "created_at": "2025-11-10T12:16:24.542606+00:00"},
+  {"id": "296ae7a6-c8e9-4d0e-aa69-687b706a2909", "phone_number": "09666666666", "allowed_roles": ["support_security_manager"], "notes": "مدیر پشتیبانی و حراست کل", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "2df8da49-e145-4adb-a3be-0a60798527c1", "phone_number": "09111111111", "allowed_roles": ["general_manager"], "notes": "مدیریت کل", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "847096d6-4d3b-4634-b8e6-486838697810", "phone_number": "09022222222", "allowed_roles": ["rental_executive_manager"], "notes": "مدیر اجرایی خدمات کرایه اجناس داربست از مبدا", "created_at": "2025-12-15T22:03:11.29886+00:00"},
+  {"id": "8bd21e87-b00e-41ad-b455-749c9a136b5b", "phone_number": "09015151515", "allowed_roles": ["warehouse_manager"], "notes": "مدیر انبارداری خدمات اجرای داربست به همراه اجناس", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "95cb09d7-58bb-47ee-9ebb-385caecfd754", "phone_number": "09222222222", "allowed_roles": ["scaffold_executive_manager"], "notes": "مدیر اجرایی کل", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "ade9c902-0970-4be1-88e3-7f3151047575", "phone_number": "09333333333", "allowed_roles": ["sales_manager"], "notes": "مدیر فروش کل", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "cedbecab-c488-46f9-97cf-2e18077d76a2", "phone_number": "09013131313", "allowed_roles": ["sales_manager"], "notes": "مدیر فروش خدمات اجرای داربست به همراه اجناس", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "e226517d-200b-4ac6-bf06-6f48300b5131", "phone_number": "09555555555", "allowed_roles": ["warehouse_manager"], "notes": "مدیر انباردار کل", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "e26ab00a-d7b0-4413-bb82-4457fe012820", "phone_number": "09014141414", "allowed_roles": ["finance_manager"], "notes": "مدیر مالی خدمات اجرای داربست به همراه اجناس", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "e37216b8-404a-4f53-810e-6165d707e700", "phone_number": "09444444444", "allowed_roles": ["finance_manager"], "notes": "مدیر مالی کل", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "e5439eb3-83f2-4694-92f3-3847b6d6022e", "phone_number": "09012121212", "allowed_roles": ["scaffold_executive_manager"], "notes": "مدیر اجرایی خدمات داربست به همراه اجناس", "created_at": "2025-11-05T09:17:50.125009+00:00"},
+  {"id": "fe59cbb9-a865-4bb8-862c-2511e7cabc9b", "phone_number": "09016161616", "allowed_roles": ["support_security_manager"], "notes": "مدیر پشتیبانی و حراست خدمات اجرای داربست به همراه اجناس", "created_at": "2025-11-05T09:17:50.125009+00:00"}
+]
