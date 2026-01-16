@@ -119,6 +119,7 @@ const TestOrderCreator = lazy(() => import("@/pages/admin/TestOrderCreator"));
 const OrderTransferManagement = lazy(() => import("@/pages/admin/OrderTransferManagement"));
 const MapTest = lazy(() => import("@/pages/test/MapTest"));
 const TunnelPage = lazy(() => import("@/pages/tunnel/TunnelPage"));
+const VPSMigrationGuide = lazy(() => import("@/pages/admin/VPSMigrationGuide"));
 // GlobeMap is imported eagerly (see above) to avoid first-load chunk errors on some mobile browsers.
 
 // Redirect component for old orders pages
@@ -331,6 +332,7 @@ const App = () => {
                 <Route path="whitelist" element={<WhitelistManagement />} />
                 <Route path="test-order" element={<TestOrderCreator />} />
                 <Route path="order-transfers" element={<OrderTransferManagement />} />
+                <Route path="vps-guide" element={<VPSMigrationGuide />} />
               </Route>
               <Route path="/ceo" element={<CEOLayout />}>
                 <Route index element={<CEODashboardEnhanced />} />
