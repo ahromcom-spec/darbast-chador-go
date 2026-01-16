@@ -1,0 +1,12 @@
+[
+  {"id": "306a3639-1292-4139-a70c-4fd8173f3e34", "user_id": "55edfafc-6890-4b71-8ddd-4426494bb275", "role": "general_manager", "created_at": "2025-10-08T13:03:38.667005+00:00"},
+  {"id": "244689d2-bb42-4a5e-807b-e462dde5bd23", "user_id": "55edfafc-6890-4b71-8ddd-4426494bb275", "role": "ceo", "created_at": "2025-10-16T16:02:54.607166+00:00"},
+  {"id": "87955581-6d32-4b6b-a450-39261c60e955", "user_id": "24bd509c-d3fc-4d0c-921b-0668503fb2ae", "role": "scaffold_executive_manager", "created_at": "2025-10-21T05:28:18.902457+00:00"},
+  {"id": "775dcec4-a2c9-4557-820a-26bf98d742f9", "user_id": "c7322ba5-4afb-4759-8bbd-161bb545e7b5", "role": "sales_manager", "created_at": "2025-10-21T05:28:18.902457+00:00"},
+  {"id": "ac615fae-2a69-4535-9698-e92339a1a2f3", "user_id": "2136277c-1a14-4b5f-9869-854a885bafaa", "role": "rental_executive_manager", "created_at": "2025-12-15T23:58:39.467751+00:00"},
+  {"id": "0f639014-0a86-4e07-9773-b74458676b2a", "user_id": "973001fd-e15f-4dd6-9a4c-747dea78a37d", "role": "executive_manager_scaffold_execution_with_materials", "created_at": "2025-12-27T05:18:28.43595+00:00"},
+  {"id": "3533d121-54da-4f2d-b841-34a3e6642b46", "user_id": "973001fd-e15f-4dd6-9a4c-747dea78a37d", "role": "scaffold_executive_manager", "created_at": "2025-12-27T15:32:42.443955+00:00"},
+  {"id": "ce637415-cc72-4d63-aaa8-7d01a581f476", "user_id": "b4cbadd0-5f71-458d-b20b-73e5b74ac78c", "role": "executive_manager_scaffold_execution_with_materials", "created_at": "2025-12-28T09:58:50.199575+00:00"},
+  {"id": "87980cdd-8d4e-4176-8a64-c94927d2b8ec", "user_id": "b4cbadd0-5f71-458d-b20b-73e5b74ac78c", "role": "scaffold_executive_manager", "created_at": "2026-01-01T01:59:02.654296+00:00"},
+  {"id": "ba595606-2393-4ed4-ac9c-07f0d2f4dcaf", "user_id": "55edfafc-6890-4b71-8ddd-4426494bb275", "role": "scaffold_executive_manager", "created_at": "2026-01-05T04:17:11.962878+00:00"}
+]
