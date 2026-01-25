@@ -11,16 +11,18 @@ const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Normalize phone helper - defined once
+const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+const toAsciiDigits = (s: string) =>
+  s
+    .replace(/[۰-۹]/g, (d) => String(persianDigits.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String(arabicDigits.indexOf(d)));
+
 const normalizeIranPhone = (input: string) => {
   if (!input) return '';
   if (input.length > 32) return '';
   const limited = input.slice(0, 32);
-  const persian = '۰۱۲۳۴۵۶۷۸۹';
-  const arabic = '٠١٢٣٤٥٦٧٨٩';
-  const toAscii = (s: string) =>
-    s.replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
-     .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)));
-  let raw = toAscii(limited).replace(/[^0-9+]/g, '');
+  let raw = toAsciiDigits(limited).replace(/[^0-9+]/g, '');
   if (raw.startsWith('0098')) raw = '0' + raw.slice(4);
   else if (raw.startsWith('098')) raw = '0' + raw.slice(3);
   else if (raw.startsWith('98')) raw = '0' + raw.slice(2);
@@ -159,7 +161,8 @@ Deno.serve(async (req) => {
     }
     
     // Get sender number
-    const rawSender = Deno.env.get('PARSGREEN_SENDER') || '';
+    // Note: trim + ascii-digit conversion to avoid issues with whitespace/newlines/persian digits
+    const rawSender = toAsciiDigits((Deno.env.get('PARSGREEN_SENDER') || '').trim());
     const senderNumber = /^[0-9]+$/.test(rawSender) ? rawSender : '90000319';
     if (rawSender && !/^[0-9]+$/.test(rawSender)) {
       console.warn('PARSGREEN_SENDER is not numeric; falling back to default 90000319');
@@ -173,6 +176,16 @@ Deno.serve(async (req) => {
     const sendSmsPromise = (async () => {
       const apiUrl = 'https://sms.parsgreen.ir/UrlService/sendSMS.ashx';
 
+      const fetchWithTimeout = async (url: string, timeoutMs = 12000) => {
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          return await fetch(url, { method: 'GET', signal: controller.signal });
+        } finally {
+          clearTimeout(t);
+        }
+      };
+
       const sendOnce = async (text: string) => {
         const params = new URLSearchParams({
           from: senderNumber,
@@ -181,9 +194,18 @@ Deno.serve(async (req) => {
           signature: apiKey
         });
 
-        const resp = await fetch(`${apiUrl}?${params.toString()}`, { method: 'GET' });
-        const body = await resp.text();
-        const trimmed = body.trim();
+        let resp: Response;
+        let trimmed = '';
+        try {
+          resp = await fetchWithTimeout(`${apiUrl}?${params.toString()}`);
+          const body = await resp.text();
+          trimmed = body.trim();
+        } catch (e) {
+          // Network/timeout errors should not crash the whole auth flow
+          console.error('Parsgreen fetch failed:', (e as any)?.message ?? e);
+          return { okFormat: false, containsFilteration: false, trimmed: 'fetch_error' };
+        }
+
         const parts = trimmed.split(';');
 
         const pureNumeric = /^[0-9]+$/.test(trimmed);
@@ -256,7 +278,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Authentication system error');
+    console.error('Authentication system error:', (error as any)?.message ?? error);
     return new Response(
       JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
