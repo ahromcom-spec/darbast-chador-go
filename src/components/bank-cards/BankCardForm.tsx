@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { Loader2 } from 'lucide-react';
 
 interface BankCardFormProps {
@@ -91,12 +92,14 @@ export function BankCardForm({ initialData, onSubmit, onCancel, saving }: BankCa
 
       <div className="space-y-2">
         <Label htmlFor="registration_date">تاریخ ثبت کارت *</Label>
-        <Input
-          id="registration_date"
-          type="date"
-          value={formData.registration_date}
-          onChange={(e) => setFormData({ ...formData, registration_date: e.target.value })}
-          required
+        <PersianDatePicker
+          value={formData.registration_date ? new Date(formData.registration_date).toISOString() : undefined}
+          onChange={(isoString) => {
+            const date = new Date(isoString);
+            setFormData({ ...formData, registration_date: date.toISOString().split('T')[0] });
+          }}
+          placeholder="انتخاب تاریخ ثبت"
+          timeMode="none"
         />
       </div>
 
