@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/select';
 import { CreditCard } from 'lucide-react';
 
+const NONE_VALUE = '__none__';
+
 interface BankCard {
   id: string;
   card_name: string;
@@ -77,8 +79,8 @@ export function BankCardSelect({
 
   return (
     <Select
-      value={value || ''}
-      onValueChange={(v) => onValueChange(v === '' ? null : v)}
+      value={value ?? undefined}
+      onValueChange={(v) => onValueChange(v === NONE_VALUE ? null : v)}
       disabled={disabled}
     >
       <SelectTrigger>
@@ -92,7 +94,7 @@ export function BankCardSelect({
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="">
+        <SelectItem value={NONE_VALUE}>
           <span className="text-muted-foreground">بدون کارت</span>
         </SelectItem>
         {cards.map((card) => (

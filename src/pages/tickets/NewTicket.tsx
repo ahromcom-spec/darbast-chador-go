@@ -16,6 +16,8 @@ interface ServiceRequest {
   created_at: string;
 }
 
+const NONE_VALUE = '__none__';
+
 const departments = [
   { value: "order", label: "ثبت سفارش" },
   { value: "execution", label: "اجرایی" },
@@ -26,7 +28,7 @@ const departments = [
 
 const NewTicket = () => {
   const [department, setDepartment] = useState("");
-  const [serviceRequestId, setServiceRequestId] = useState<string>("");
+  const [serviceRequestId, setServiceRequestId] = useState<string | null>(null);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -151,7 +153,7 @@ const NewTicket = () => {
           department,
           subject,
           message,
-          service_request_id: serviceRequestId || null
+          service_request_id: serviceRequestId
         })
         .select()
         .single();
@@ -245,12 +247,15 @@ const NewTicket = () => {
                 <Label htmlFor="serviceRequest" className="text-base font-semibold">
                   پروژه/سفارش مرتبط (اختیاری)
                 </Label>
-                <Select value={serviceRequestId} onValueChange={setServiceRequestId}>
+                <Select
+                  value={serviceRequestId ?? undefined}
+                  onValueChange={(v) => setServiceRequestId(v === NONE_VALUE ? null : v)}
+                >
                   <SelectTrigger id="serviceRequest" className="h-11">
                     <SelectValue placeholder="می‌توانید یکی از پروژه‌های خود را انتخاب کنید..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">
+                    <SelectItem value={NONE_VALUE}>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <XCircle className="h-4 w-4" />
                         بدون انتخاب پروژه
