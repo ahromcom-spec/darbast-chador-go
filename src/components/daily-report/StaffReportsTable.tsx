@@ -128,6 +128,27 @@ export function StaffReportsTable({
     }
   }, [staffReports.length]);
 
+  // Handler to add a bank card row (cash box row)
+  const handleAddBankCardRow = () => {
+    onSetStaffReports((prev) => {
+      // Add the new cash box row at the beginning
+      const newRow: StaffReportRow = {
+        staff_user_id: null,
+        staff_name: '',
+        work_status: 'غایب',
+        overtime_hours: 0,
+        amount_received: 0,
+        receiving_notes: '',
+        amount_spent: 0,
+        spending_notes: '',
+        notes: '',
+        is_cash_box: true,
+        bank_card_id: null
+      };
+      return [newRow, ...prev];
+    });
+  };
+
   return (
     <Card data-dropdown-boundary className="relative border-2 border-amber-500/30">
       <CardHeader className="pb-3">
@@ -138,10 +159,16 @@ export function StaffReportsTable({
             </div>
             <CardTitle className="text-lg">گزارش پرسنل</CardTitle>
           </div>
-          <Button size="sm" onClick={onAddRow} variant="outline" className="gap-2">
-            <Plus className="h-4 w-4" />
-            افزودن نیرو
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleAddBankCardRow} variant="outline" className="gap-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50">
+              <CreditCard className="h-4 w-4" />
+              افزودن کارت بانکی
+            </Button>
+            <Button size="sm" onClick={onAddRow} variant="outline" className="gap-2">
+              <Plus className="h-4 w-4" />
+              افزودن نیرو
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
