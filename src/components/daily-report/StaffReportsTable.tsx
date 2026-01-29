@@ -311,13 +311,13 @@ export function StaffReportsTable({
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     {row.is_cash_box ? (
-                      <div className="flex items-center gap-2 font-semibold text-amber-700 min-w-[180px]">
-                        <CreditCard className="h-4 w-4 text-amber-600" />
-                        <span>
-                          {row.bank_card_id && getCardName(row.bank_card_id) 
-                            ? getCardName(row.bank_card_id) 
-                            : 'تراکنش کارت بانکی'}
-                        </span>
+                      <div className="min-w-[220px]">
+                        <BankCardSelect
+                          value={row.bank_card_id || null}
+                          onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
+                          placeholder="انتخاب کارت بانکی"
+                          showBalance={true}
+                        />
                       </div>
                     ) : (
                       <StaffSearchSelect
