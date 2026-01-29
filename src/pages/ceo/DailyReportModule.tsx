@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +28,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { OrderSearchSelect } from '@/components/orders/OrderSearchSelect';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { WorkStatusSelect } from '@/components/daily-report/WorkStatusSelect';
+import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { format } from 'date-fns-jalali';
 import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
@@ -87,6 +88,7 @@ interface StaffReportRow {
   receiving_notes: string;
   amount_spent: number;
   spending_notes: string;
+  bank_card_id?: string | null;
   notes: string;
   is_cash_box: boolean;
 }
@@ -473,6 +475,7 @@ export default function DailyReportModule() {
               receiving_notes: s.receiving_notes,
               amount_spent: s.amount_spent,
               spending_notes: s.spending_notes,
+              bank_card_id: s.bank_card_id ?? null,
               notes: s.notes,
               is_cash_box: s.is_cash_box
             }))
@@ -961,21 +964,21 @@ export default function DailyReportModule() {
             receiving_notes: s.receiving_notes || '',
             amount_spent: s.amount_spent || 0,
             spending_notes: s.spending_notes || '',
+            bank_card_id: s.bank_card_id ?? null,
             notes: s.notes || '',
             is_cash_box: s.is_cash_box || false,
           };
         });
 
-        // فقط یک سطر صندوق نگه‌دار و بقیه را فیلتر کن
+        // سطرهای صندوق/کارت بانکی را جدا کن
         const cashBoxRows = allStaff.filter((s) => s.is_cash_box);
         const nonCashBoxRows = allStaff.filter((s) => !s.is_cash_box);
         
-        // فقط اولین سطر صندوق را نگه‌دار (یا یکی جدید بساز)
+        // همه سطرهای صندوق را نگه‌دار (یا یکی جدید بساز)
         const normalizedStaff: StaffReportRow[] = [];
         
         if (cashBoxRows.length > 0) {
-          // فقط اولین سطر صندوق را اضافه کن
-          normalizedStaff.push(cashBoxRows[0]);
+          normalizedStaff.push(...cashBoxRows);
         } else {
           // اگر سطر صندوق وجود نداشت، یکی اضافه کن
           normalizedStaff.push({
@@ -987,6 +990,7 @@ export default function DailyReportModule() {
             receiving_notes: '',
             amount_spent: 0,
             spending_notes: '',
+            bank_card_id: null,
             notes: '',
             is_cash_box: true,
           });
@@ -1006,6 +1010,7 @@ export default function DailyReportModule() {
             receiving_notes: '',
             amount_spent: 0,
             spending_notes: '',
+            bank_card_id: null,
             notes: '',
             is_cash_box: false,
           });
@@ -1048,6 +1053,7 @@ export default function DailyReportModule() {
             receiving_notes: '',
             amount_spent: 0,
             spending_notes: '',
+            bank_card_id: null,
             notes: '',
             is_cash_box: true,
           },
@@ -1060,6 +1066,7 @@ export default function DailyReportModule() {
             receiving_notes: '',
             amount_spent: 0,
             spending_notes: '',
+            bank_card_id: null,
             notes: '',
             is_cash_box: false,
           },
@@ -1093,6 +1100,7 @@ export default function DailyReportModule() {
           receiving_notes: '',
           amount_spent: 0,
           spending_notes: '',
+          bank_card_id: null,
           notes: '',
           is_cash_box: true,
         },
@@ -1105,6 +1113,7 @@ export default function DailyReportModule() {
           receiving_notes: '',
           amount_spent: 0,
           spending_notes: '',
+          bank_card_id: null,
           notes: '',
           is_cash_box: false,
         },
@@ -1190,15 +1199,39 @@ export default function DailyReportModule() {
       receiving_notes: '',
       amount_spent: 0,
       spending_notes: '',
+      bank_card_id: null,
       notes: '',
       is_cash_box: false
     }]);
   };
 
+  const addBankCardRow = () => {
+    setIsSaved(false);
+    setStaffReports((prev) => [
+      {
+        staff_user_id: null,
+        staff_name: '',
+        work_status: 'کارکرده',
+        overtime_hours: 0,
+        amount_received: 0,
+        receiving_notes: '',
+        amount_spent: 0,
+        spending_notes: '',
+        bank_card_id: null,
+        notes: '',
+        is_cash_box: true,
+      },
+      ...prev,
+    ]);
+  };
+
   const removeStaffRow = (index: number) => {
     if (staffReports[index].is_cash_box) {
-      toast.error('ردیف صندوق قابل حذف نیست');
-      return;
+      const cashBoxCount = staffReports.filter((r) => r.is_cash_box).length;
+      if (cashBoxCount <= 1) {
+        toast.error('حداقل یک ردیف کارت بانکی باید باقی بماند');
+        return;
+      }
     }
     setStaffReports(staffReports.filter((_, i) => i !== index));
   };
@@ -1253,6 +1286,7 @@ export default function DailyReportModule() {
           receiving_notes: '',
           amount_spent: 0,
           spending_notes: '',
+          bank_card_id: null,
           notes: '',
           is_cash_box: false
         });
@@ -1418,6 +1452,7 @@ export default function DailyReportModule() {
           receiving_notes: s.receiving_notes || '',
           amount_spent: s.amount_spent || 0,
           spending_notes: s.spending_notes || '',
+          bank_card_id: s.bank_card_id ?? null,
           notes: s.notes || '',
           is_cash_box: s.is_cash_box || false
         }));
@@ -2101,11 +2136,23 @@ export default function DailyReportModule() {
                         </div>
                         <CardTitle className="text-base sm:text-lg">گزارش نیروها</CardTitle>
                       </div>
-                      <Button size="sm" onClick={addStaffRow} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                        <span className="hidden xs:inline">افزودن نیرو</span>
-                        <span className="xs:hidden">نیرو</span>
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={addBankCardRow}
+                          className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
+                        >
+                          <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden xs:inline">افزودن کارت بانکی</span>
+                          <span className="xs:hidden">کارت</span>
+                        </Button>
+                        <Button size="sm" onClick={addStaffRow} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden xs:inline">افزودن نیرو</span>
+                          <span className="xs:hidden">نیرو</span>
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="px-0 sm:px-6">
@@ -2137,7 +2184,14 @@ export default function DailyReportModule() {
                             >
                               <TableCell className="border border-amber-200">
                                 {row.is_cash_box ? (
-                                  <div className="font-semibold text-amber-700">{row.staff_name}</div>
+                                  <div className="min-w-[220px]">
+                                    <BankCardSelect
+                                      value={row.bank_card_id ?? null}
+                                      onValueChange={(value) => updateStaffRow(index, 'bank_card_id', value)}
+                                      placeholder="انتخاب کارت بانکی"
+                                      showBalance={true}
+                                    />
+                                  </div>
                                 ) : (
                                   <StaffSearchSelect
                                     value={row.staff_user_id || ''}
@@ -2177,6 +2231,7 @@ export default function DailyReportModule() {
                                             receiving_notes: '',
                                             amount_spent: 0,
                                             spending_notes: '',
+                                            bank_card_id: null,
                                             notes: '',
                                             is_cash_box: false
                                           });
@@ -2313,7 +2368,7 @@ export default function DailyReportModule() {
                                 />
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                {!row.is_cash_box && (
+                                {(!row.is_cash_box || staffReports.filter((r) => r.is_cash_box).length > 1) && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
