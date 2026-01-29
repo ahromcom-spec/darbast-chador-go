@@ -117,6 +117,14 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-pink-600',
     bgColor: 'bg-pink-50',
   },
+  {
+    key: 'bank_cards',
+    name: 'ماژول ثبت کارت حساب بانکی',
+    description: 'مدیریت کارت‌های بانکی و پیگیری موجودی',
+    href: '/bank-cards',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+  },
 ];
 
 // Convert modules to ModuleItem format
