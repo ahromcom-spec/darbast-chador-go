@@ -15,6 +15,8 @@ interface ServiceRequest {
   created_at: string;
 }
 
+const NONE_VALUE = '__none__';
+
 const departments = [
   { value: "order", label: "ثبت سفارش" },
   { value: "execution", label: "اجرایی" },
@@ -30,7 +32,7 @@ interface TicketFormProps {
 
 export function TicketForm({ userId, onSuccess }: TicketFormProps) {
   const [department, setDepartment] = useState("");
-  const [serviceRequestId, setServiceRequestId] = useState<string>("");
+  const [serviceRequestId, setServiceRequestId] = useState<string | null>(null);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -131,7 +133,7 @@ export function TicketForm({ userId, onSuccess }: TicketFormProps) {
           department,
           subject,
           message,
-          service_request_id: serviceRequestId || null
+          service_request_id: serviceRequestId
         })
         .select()
         .single();
@@ -146,7 +148,7 @@ export function TicketForm({ userId, onSuccess }: TicketFormProps) {
       
       // Reset form
       setDepartment("");
-      setServiceRequestId("");
+      setServiceRequestId(null);
       setSubject("");
       setMessage("");
       setFiles([]);
@@ -205,12 +207,15 @@ export function TicketForm({ userId, onSuccess }: TicketFormProps) {
           {serviceRequests.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="serviceRequest">پروژه مرتبط (اختیاری)</Label>
-              <Select value={serviceRequestId} onValueChange={setServiceRequestId}>
+              <Select
+                value={serviceRequestId ?? undefined}
+                onValueChange={(v) => setServiceRequestId(v === NONE_VALUE ? null : v)}
+              >
                 <SelectTrigger id="serviceRequest">
                   <SelectValue placeholder="انتخاب پروژه..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">
+                  <SelectItem value={NONE_VALUE}>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <XCircle className="h-4 w-4" />
                       بدون پروژه
