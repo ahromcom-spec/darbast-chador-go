@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { StaffReportRow, StaffMember } from '@/hooks/useDailyReport';
 import { WorkStatusSelect } from '@/components/daily-report/WorkStatusSelect';
+import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 
 interface StaffReportsTableProps {
   staffReports: StaffReportRow[];
@@ -116,6 +117,7 @@ export function StaffReportsTable({
               <TableRow className="bg-amber-100 dark:bg-amber-900/30">
                 <TableHead className="w-[50px] border border-amber-300"></TableHead>
                 <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">کارت بانکی</TableHead>
                 <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات مبلغ خرج کرد</TableHead>
                 <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">مبلغ خرج کرده شده در کار</TableHead>
                 <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات دریافتی</TableHead>
@@ -155,6 +157,16 @@ export function StaffReportsTable({
                       className="min-w-[30ch] min-h-[50px]"
                       maxLength={300}
                     />
+                  </TableCell>
+                  <TableCell className="border border-amber-200">
+                    <div className="min-w-[180px]">
+                      <BankCardSelect
+                        value={row.bank_card_id || null}
+                        onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
+                        placeholder="انتخاب کارت"
+                        showBalance={true}
+                      />
+                    </div>
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     <AutoResizeTextarea
@@ -282,7 +294,7 @@ export function StaffReportsTable({
 
               {/* Summary Row */}
               <TableRow className="bg-amber-200 dark:bg-amber-800/40 font-bold">
-                <TableCell className="border border-amber-300" colSpan={3}></TableCell>
+                <TableCell className="border border-amber-300" colSpan={4}></TableCell>
                 <TableCell className="border border-amber-300">{totals.totalSpent.toLocaleString('fa-IR')} تومان</TableCell>
                 <TableCell className="border border-amber-300"></TableCell>
                 <TableCell className="border border-amber-300">{totals.totalReceived.toLocaleString('fa-IR')} تومان</TableCell>
@@ -301,7 +313,7 @@ export function StaffReportsTable({
                       : 'bg-amber-100 dark:bg-amber-900/30'
                 }
               >
-                <TableCell colSpan={9} className="text-center">
+                <TableCell colSpan={10} className="text-center">
                   <Badge
                     variant={balanceState === 'balanced' ? 'default' : balanceState === 'deficit' ? 'destructive' : 'secondary'}
                     className="text-base px-4 py-2"

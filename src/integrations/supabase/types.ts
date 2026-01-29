@@ -270,6 +270,98 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_card_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          bank_card_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          bank_card_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          bank_card_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_card_transactions_bank_card_id_fkey"
+            columns: ["bank_card_id"]
+            isOneToOne: false
+            referencedRelation: "bank_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_cards: {
+        Row: {
+          bank_name: string
+          card_name: string
+          card_number: string | null
+          created_at: string | null
+          created_by: string
+          current_balance: number
+          id: string
+          initial_balance: number
+          is_active: boolean | null
+          notes: string | null
+          registration_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          bank_name: string
+          card_name: string
+          card_number?: string | null
+          created_at?: string | null
+          created_by: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_active?: boolean | null
+          notes?: string | null
+          registration_date?: string
+          updated_at?: string | null
+        }
+        Update: {
+          bank_name?: string
+          card_name?: string
+          card_number?: string | null
+          created_at?: string | null
+          created_by?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_active?: boolean | null
+          notes?: string | null
+          registration_date?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       call_logs: {
         Row: {
           answered_at: string | null
@@ -708,6 +800,7 @@ export type Database = {
         Row: {
           amount_received: number | null
           amount_spent: number | null
+          bank_card_id: string | null
           created_at: string
           daily_report_id: string
           id: string
@@ -724,6 +817,7 @@ export type Database = {
         Insert: {
           amount_received?: number | null
           amount_spent?: number | null
+          bank_card_id?: string | null
           created_at?: string
           daily_report_id: string
           id?: string
@@ -740,6 +834,7 @@ export type Database = {
         Update: {
           amount_received?: number | null
           amount_spent?: number | null
+          bank_card_id?: string | null
           created_at?: string
           daily_report_id?: string
           id?: string
@@ -754,6 +849,13 @@ export type Database = {
           work_status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "daily_report_staff_bank_card_id_fkey"
+            columns: ["bank_card_id"]
+            isOneToOne: false
+            referencedRelation: "bank_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "daily_report_staff_daily_report_id_fkey"
             columns: ["daily_report_id"]
@@ -1562,6 +1664,7 @@ export type Database = {
       order_payments: {
         Row: {
           amount: number
+          bank_card_id: string | null
           created_at: string
           id: string
           notes: string | null
@@ -1572,6 +1675,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bank_card_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -1582,6 +1686,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bank_card_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -1591,6 +1696,13 @@ export type Database = {
           receipt_number?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "order_payments_bank_card_id_fkey"
+            columns: ["bank_card_id"]
+            isOneToOne: false
+            referencedRelation: "bank_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_payments_order_id_fkey"
             columns: ["order_id"]

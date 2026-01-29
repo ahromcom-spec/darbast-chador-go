@@ -28,6 +28,7 @@ export interface StaffReportRow {
   spending_notes: string;
   notes: string;
   is_cash_box: boolean;
+  bank_card_id?: string | null;
 }
 
 export interface Order {
@@ -138,6 +139,7 @@ const createEmptyStaffRow = (): StaffReportRow => ({
   spending_notes: '',
   notes: '',
   is_cash_box: false,
+  bank_card_id: null,
 });
 
 const createCashBoxRow = (): StaffReportRow => ({
@@ -151,6 +153,7 @@ const createCashBoxRow = (): StaffReportRow => ({
   spending_notes: '',
   notes: '',
   is_cash_box: true,
+  bank_card_id: null,
 });
 
 export function useDailyReport() {
@@ -413,6 +416,7 @@ export function useDailyReport() {
             spending_notes: s.spending_notes || '',
             notes: s.notes || '',
             is_cash_box: s.is_cash_box || false,
+            bank_card_id: s.bank_card_id || null,
           };
         });
 
@@ -583,7 +587,8 @@ export function useDailyReport() {
               amount_spent: s.amount_spent,
               spending_notes: s.spending_notes,
               notes: s.notes,
-              is_cash_box: s.is_cash_box
+              is_cash_box: s.is_cash_box,
+              bank_card_id: s.bank_card_id || null
             }))
           );
 
