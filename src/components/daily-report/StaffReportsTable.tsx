@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Plus, Trash2, User } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Plus, Trash2, User, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { StaffReportRow, StaffMember } from '@/hooks/useDailyReport';
 import { WorkStatusSelect } from '@/components/daily-report/WorkStatusSelect';
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
-
+import { supabase } from '@/integrations/supabase/client';
 interface StaffReportsTableProps {
   staffReports: StaffReportRow[];
   staffMembers: StaffMember[];
@@ -27,6 +27,13 @@ interface StaffReportsTableProps {
   onSetStaffReports: (updater: (prev: StaffReportRow[]) => StaffReportRow[]) => void;
 }
 
+// Interface for bank card data
+interface BankCardInfo {
+  id: string;
+  card_name: string;
+  bank_name: string;
+}
+
 export function StaffReportsTable({
   staffReports,
   staffMembers,
@@ -38,6 +45,33 @@ export function StaffReportsTable({
 }: StaffReportsTableProps) {
   const balance = totals.totalReceived - totals.totalSpent;
   const balanceState: 'balanced' | 'deficit' | 'surplus' = balance === 0 ? 'balanced' : balance < 0 ? 'deficit' : 'surplus';
+
+  // Fetch bank cards for displaying names
+  const [bankCards, setBankCards] = useState<BankCardInfo[]>([]);
+  
+  useEffect(() => {
+    const fetchBankCards = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('bank_cards')
+          .select('id, card_name, bank_name')
+          .eq('is_active', true);
+        
+        if (error) throw error;
+        setBankCards((data || []) as BankCardInfo[]);
+      } catch (error) {
+        console.error('Error fetching bank cards:', error);
+      }
+    };
+    fetchBankCards();
+  }, []);
+
+  // Helper to get card name by ID
+  const getCardName = (cardId: string | null | undefined): string => {
+    if (!cardId) return '';
+    const card = bankCards.find(c => c.id === cardId);
+    return card ? `${card.card_name} (${card.bank_name})` : '';
+  };
 
   const handleStaffSelect = (index: number, code: string, name: string, userId?: string) => {
     // Check if this staff is already selected
@@ -277,7 +311,14 @@ export function StaffReportsTable({
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     {row.is_cash_box ? (
-                      <div className="font-semibold text-amber-700">{row.staff_name}</div>
+                      <div className="flex items-center gap-2 font-semibold text-amber-700 min-w-[180px]">
+                        <CreditCard className="h-4 w-4 text-amber-600" />
+                        <span>
+                          {row.bank_card_id && getCardName(row.bank_card_id) 
+                            ? getCardName(row.bank_card_id) 
+                            : 'تراکنش کارت بانکی'}
+                        </span>
+                      </div>
                     ) : (
                       <StaffSearchSelect
                         value={row.staff_user_id || ''}
