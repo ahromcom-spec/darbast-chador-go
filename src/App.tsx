@@ -54,6 +54,7 @@ const CustomerComprehensiveInvoice = lazy(() => import("@/pages/ceo/CustomerComp
 const MyInvoiceModule = lazy(() => import("@/pages/user/MyInvoiceModule"));
 const SiteAnalyticsModule = lazy(() => import("@/pages/ceo/SiteAnalyticsModule"));
 const MediaApprovalModule = lazy(() => import("@/pages/ceo/MediaApprovalModule"));
+const BankCardsModule = lazy(() => import("@/pages/ceo/BankCardsModule"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -412,6 +413,12 @@ const App = () => {
               <Route path="/media-approval" element={
                 <ProtectedRoute>
                   <MediaApprovalModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر ماژول ثبت کارت حساب بانکی */}
+              <Route path="/bank-cards" element={
+                <ProtectedRoute>
+                  <BankCardsModule />
                 </ProtectedRoute>
               } />
               <Route path="/executive" element={

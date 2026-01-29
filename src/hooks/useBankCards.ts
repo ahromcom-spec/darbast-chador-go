@@ -1,0 +1,266 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+
+export interface BankCard {
+  id: string;
+  card_name: string;
+  bank_name: string;
+  card_number: string | null;
+  initial_balance: number;
+  current_balance: number;
+  registration_date: string;
+  notes: string | null;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BankCardTransaction {
+  id: string;
+  bank_card_id: string;
+  transaction_type: 'deposit' | 'withdrawal';
+  amount: number;
+  balance_after: number;
+  description: string | null;
+  reference_type: string | null;
+  reference_id: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CreateBankCardData {
+  card_name: string;
+  bank_name: string;
+  card_number?: string;
+  initial_balance: number;
+  registration_date: string;
+  notes?: string;
+}
+
+export function useBankCards() {
+  const { user } = useAuth();
+  const [cards, setCards] = useState<BankCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const fetchCards = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('bank_cards')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCards((data || []) as BankCard[]);
+    } catch (error) {
+      console.error('Error fetching bank cards:', error);
+      toast.error('خطا در دریافت کارت‌های بانکی');
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const createCard = useCallback(async (cardData: CreateBankCardData) => {
+    if (!user) return null;
+
+    try {
+      setSaving(true);
+      const { data, error } = await supabase
+        .from('bank_cards')
+        .insert({
+          card_name: cardData.card_name,
+          bank_name: cardData.bank_name,
+          card_number: cardData.card_number || null,
+          initial_balance: cardData.initial_balance,
+          current_balance: cardData.initial_balance,
+          registration_date: cardData.registration_date,
+          notes: cardData.notes || null,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      toast.success('کارت بانکی با موفقیت ثبت شد');
+      await fetchCards();
+      return data as BankCard;
+    } catch (error) {
+      console.error('Error creating bank card:', error);
+      toast.error('خطا در ثبت کارت بانکی');
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  }, [user, fetchCards]);
+
+  const updateCard = useCallback(async (id: string, cardData: Partial<CreateBankCardData>) => {
+    if (!user) return false;
+
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('bank_cards')
+        .update({
+          ...cardData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      toast.success('کارت بانکی بروزرسانی شد');
+      await fetchCards();
+      return true;
+    } catch (error) {
+      console.error('Error updating bank card:', error);
+      toast.error('خطا در بروزرسانی کارت بانکی');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [user, fetchCards]);
+
+  const deleteCard = useCallback(async (id: string) => {
+    if (!user) return false;
+
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('bank_cards')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      toast.success('کارت بانکی حذف شد');
+      await fetchCards();
+      return true;
+    } catch (error) {
+      console.error('Error deleting bank card:', error);
+      toast.error('خطا در حذف کارت بانکی');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [user, fetchCards]);
+
+  const toggleCardStatus = useCallback(async (id: string, isActive: boolean) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('bank_cards')
+        .update({ is_active: isActive, updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      toast.success(isActive ? 'کارت فعال شد' : 'کارت غیرفعال شد');
+      await fetchCards();
+      return true;
+    } catch (error) {
+      console.error('Error toggling card status:', error);
+      toast.error('خطا در تغییر وضعیت کارت');
+      return false;
+    }
+  }, [user, fetchCards]);
+
+  const addTransaction = useCallback(async (
+    cardId: string,
+    type: 'deposit' | 'withdrawal',
+    amount: number,
+    description?: string,
+    referenceType?: string,
+    referenceId?: string
+  ) => {
+    if (!user) return false;
+
+    try {
+      // Get current balance
+      const card = cards.find(c => c.id === cardId);
+      if (!card) {
+        toast.error('کارت یافت نشد');
+        return false;
+      }
+
+      const newBalance = type === 'deposit' 
+        ? card.current_balance + amount 
+        : card.current_balance - amount;
+
+      // Insert transaction
+      const { error: txError } = await supabase
+        .from('bank_card_transactions')
+        .insert({
+          bank_card_id: cardId,
+          transaction_type: type,
+          amount,
+          balance_after: newBalance,
+          description,
+          reference_type: referenceType,
+          reference_id: referenceId,
+          created_by: user.id,
+        });
+
+      if (txError) throw txError;
+
+      // Update card balance
+      const { error: updateError } = await supabase
+        .from('bank_cards')
+        .update({ 
+          current_balance: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cardId);
+
+      if (updateError) throw updateError;
+
+      await fetchCards();
+      return true;
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      toast.error('خطا در ثبت تراکنش');
+      return false;
+    }
+  }, [user, cards, fetchCards]);
+
+  const getCardTransactions = useCallback(async (cardId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('bank_card_transactions')
+        .select('*')
+        .eq('bank_card_id', cardId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as BankCardTransaction[];
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      return [];
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCards();
+  }, [fetchCards]);
+
+  return {
+    cards,
+    activeCards: cards.filter(c => c.is_active),
+    loading,
+    saving,
+    fetchCards,
+    createCard,
+    updateCard,
+    deleteCard,
+    toggleCardStatus,
+    addTransaction,
+    getCardTransactions,
+  };
+}
