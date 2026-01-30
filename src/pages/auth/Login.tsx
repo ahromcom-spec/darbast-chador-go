@@ -173,27 +173,27 @@ export default function Login() {
       
       if (isWhitelisted) {
         // شماره در لیست سفید است - نمایش فرم رمز عبور
-        setLoading(false);
-        flushSync(() => {
-          setPasswordCountdown(90); // ریست تایمر رمز عبور
-          setStep('password');
-        });
+        setPasswordCountdown(90); // ریست تایمر رمز عبور
+        setStep('password');
         return;
       }
 
-      // شماره عادی است - ارسال OTP
-      flushSync(() => {
-        setCountdown(90);
-        setStep('otp');
-      });
-
-      // ارسال کد تایید (بک‌اند وضعیت ثبت‌نام را مشخص می‌کند)
-      const { error, userExists } = await sendOTP(phoneNumber, false);
-      
-      setLoading(false);
+      // ارسال کد تایید (بک‌اند وضعیت ثبت‌نام/لیست سفید را مشخص می‌کند)
+      const { error, userExists, whitelisted } = await sendOTP(phoneNumber, false);
 
       // اگر کاربر ثبت‌نام نکرده باشد (چه در پاسخ موفق چه خطا)، پیام راهنمای ثبت‌نام نمایش دهیم
       const needsRegistration = userExists === false;
+
+      // اگر بک‌اند گفت شماره در لیست سفید است، نباید وارد مرحله OTP شویم (برای لیست سفید پیامک ارسال نمی‌شود)
+      if (whitelisted) {
+        setPasswordCountdown(90);
+        setStep('password');
+        toast({
+          title: 'ورود با رمز عبور',
+          description: 'این شماره در لیست سفید است؛ لطفاً با رمز عبور وارد شوید.',
+        });
+        return;
+      }
 
       if (error) {
         const msg = error.message || 'خطا در ارسال کد تایید';
@@ -221,19 +221,34 @@ export default function Login() {
         return;
       }
 
+      // شماره عادی است - ورود با OTP
+      setCountdown(90);
+      setOtpCode('');
+      setStep('otp');
       toast({ title: 'موفق', description: 'کد تایید به شماره شما ارسال شد.' });
     } catch (e) {
       console.error('Error in handleSendOTP:', e);
-      setLoading(false);
       setStep('phone');
       toast({ variant: 'destructive', title: 'خطا', description: 'خطا در اتصال به سرور. لطفاً مجدداً تلاش کنید.' });
+    } finally {
+      setLoading(false);
     }
   };
 
 const handleResendOTP = async () => {
     setLoading(true);
-    const { error, userExists } = await sendOTP(phoneNumber, false);
+    const { error, userExists, whitelisted } = await sendOTP(phoneNumber, false);
     setLoading(false);
+
+    if (whitelisted) {
+      setPasswordCountdown(90);
+      setStep('password');
+      toast({
+        title: 'ورود با رمز عبور',
+        description: 'این شماره در لیست سفید است؛ لطفاً با رمز عبور وارد شوید.',
+      });
+      return;
+    }
 
     if (error) {
       const msg = error.message || 'خطا در ارسال مجدد کد تایید.';

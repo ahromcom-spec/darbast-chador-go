@@ -5,7 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  sendOTP: (phoneNumber: string, isRegistration?: boolean) => Promise<{ error: any; userExists?: boolean }>;
+  sendOTP: (
+    phoneNumber: string,
+    isRegistration?: boolean
+  ) => Promise<{ error: any; userExists?: boolean; whitelisted?: boolean }>;
   verifyOTP: (phoneNumber: string, code: string, fullName?: string, isRegistration?: boolean) => Promise<{ error: any; session?: Session | null }>;
   signOut: () => Promise<void>;
   loading: boolean;
@@ -23,7 +26,7 @@ export const useAuth = () => {
     return {
       user: null,
       session: null,
-      sendOTP: async () => ({ error: { message: 'Auth not initialized' }, userExists: false }),
+      sendOTP: async () => ({ error: { message: 'Auth not initialized' }, userExists: false, whitelisted: false }),
       verifyOTP: async () => ({ error: { message: 'Auth not initialized' }, session: null }),
       signOut: async () => {},
       loading: true,
@@ -77,15 +80,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error };
       }
 
-      // Return potential user existence flag and any error from function
+      // Return potential user existence flag and whitelist flag (if present)
       if (data?.error) {
         return { 
           error: { message: data.error },
-          userExists: data.user_exists
+          userExists: data.user_exists,
+          whitelisted: !!data?.whitelisted,
         };
       }
 
-      return { error: null, userExists: data?.user_exists };
+      return { error: null, userExists: data?.user_exists, whitelisted: !!data?.whitelisted };
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Error sending OTP:', error);
