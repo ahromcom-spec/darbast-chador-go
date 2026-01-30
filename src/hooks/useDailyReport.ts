@@ -28,6 +28,7 @@ export interface StaffReportRow {
   spending_notes: string;
   notes: string;
   is_cash_box: boolean;
+  is_company_expense?: boolean;
   bank_card_id?: string | null;
 }
 
@@ -139,6 +140,7 @@ const createEmptyStaffRow = (): StaffReportRow => ({
   spending_notes: '',
   notes: '',
   is_cash_box: false,
+  is_company_expense: false,
   bank_card_id: null,
 });
 
@@ -153,6 +155,22 @@ const createCashBoxRow = (): StaffReportRow => ({
   spending_notes: '',
   notes: '',
   is_cash_box: true,
+  is_company_expense: false,
+  bank_card_id: null,
+});
+
+const createCompanyExpenseRow = (): StaffReportRow => ({
+  staff_user_id: null,
+  staff_name: 'ماهیت شرکت اهرم',
+  work_status: 'کارکرده',
+  overtime_hours: 0,
+  amount_received: 0,
+  receiving_notes: '',
+  amount_spent: 0,
+  spending_notes: '',
+  notes: '',
+  is_cash_box: false,
+  is_company_expense: true,
   bank_card_id: null,
 });
 
@@ -402,6 +420,8 @@ export function useDailyReport() {
 
         const allStaff: StaffReportRow[] = (staffData || []).map((s: any) => {
           const staffCode = extractStaffCode(s.staff_name || '');
+          // Check if this is a company expense row by staff_name
+          const isCompanyExpense = s.staff_name === 'ماهیت شرکت اهرم';
 
           return {
             id: s.id,
@@ -416,25 +436,36 @@ export function useDailyReport() {
             spending_notes: s.spending_notes || '',
             notes: s.notes || '',
             is_cash_box: s.is_cash_box || false,
+            is_company_expense: isCompanyExpense,
             bank_card_id: s.bank_card_id || null,
           };
         });
 
-        const cashBoxRows = allStaff.filter((s) => s.is_cash_box);
-        const nonCashBoxRows = allStaff.filter((s) => !s.is_cash_box);
+        // Separate rows by type
+        const companyExpenseRows = allStaff.filter((s) => s.is_company_expense);
+        const cashBoxRows = allStaff.filter((s) => s.is_cash_box && !s.is_company_expense);
+        const nonSpecialRows = allStaff.filter((s) => !s.is_cash_box && !s.is_company_expense);
         
         const normalizedStaff: StaffReportRow[] = [];
         
-        if (cashBoxRows.length > 0) {
-          normalizedStaff.push(cashBoxRows[0]);
+        // First: Company expense row (always first)
+        if (companyExpenseRows.length > 0) {
+          normalizedStaff.push(companyExpenseRows[0]);
         } else {
-          normalizedStaff.push(createCashBoxRow());
+          normalizedStaff.push(createCompanyExpenseRow());
         }
         
-        normalizedStaff.push(...nonCashBoxRows);
+        // Second: Cash box rows
+        if (cashBoxRows.length > 0) {
+          normalizedStaff.push(...cashBoxRows);
+        }
+        
+        // Third: Regular staff rows
+        normalizedStaff.push(...nonSpecialRows);
 
-        const hasAnyNonCashRow = normalizedStaff.some((s) => !s.is_cash_box);
-        if (!hasAnyNonCashRow) {
+        // Ensure at least one empty staff row for data entry
+        const hasAnyNonSpecialRow = normalizedStaff.some((s) => !s.is_cash_box && !s.is_company_expense);
+        if (!hasAnyNonSpecialRow) {
           normalizedStaff.push(createEmptyStaffRow());
         }
 
@@ -464,7 +495,7 @@ export function useDailyReport() {
           toast.success('داده‌های ذخیره نشده قبلی بازیابی شدند');
         } else {
           setOrderReports([createEmptyOrderRow(0)]);
-          setStaffReports([createCashBoxRow(), createEmptyStaffRow()]);
+          setStaffReports([createCompanyExpenseRow(), createEmptyStaffRow()]);
         }
       }
     } catch (error) {
