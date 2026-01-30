@@ -9,6 +9,18 @@ const corsHeaders = {
 // CEO phone number (hardcoded for security)
 const CEO_PHONE_NUMBER = '09125511494';
 
+const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+const toAsciiDigits = (s: string) =>
+  s
+    .replace(/[۰-۹]/g, (d) => String(persianDigits.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String(arabicDigits.indexOf(d)));
+
+const maskPhone = (phone: string) => {
+  if (!phone || phone.length < 7) return '***';
+  return `${phone.slice(0, 4)}***${phone.slice(-4)}`;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -58,14 +70,25 @@ serve(async (req) => {
     }
 
     const purposeText = purpose || 'حذف ماژول';
-    const message = `اهرم: ${code} کد تایید برای ${purposeText}\n\n@ahrom.ir #${code}`;
+    // برای عملیات حساس (مثل حذف ماژول) نیازی به Web OTP نیست و متن ساده معمولاً تحویل بهتری دارد
+    const message = `اهرم: ${code} کد تایید برای ${purposeText}`;
     
-    const rawSender = Deno.env.get('PARSGREEN_SENDER') || '';
+    const rawSender = toAsciiDigits((Deno.env.get('PARSGREEN_SENDER') || '').trim());
     const senderNumber = /^[0-9]+$/.test(rawSender) ? rawSender : '90000319';
 
     let smsSent = false;
     try {
       const apiUrl = 'https://sms.parsgreen.ir/UrlService/sendSMS.ashx';
+
+      const fetchWithTimeout = async (url: string, timeoutMs = 12000) => {
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          return await fetch(url, { method: 'GET', signal: controller.signal });
+        } finally {
+          clearTimeout(t);
+        }
+      };
 
       const sendOnce = async (text: string) => {
         const params = new URLSearchParams({
@@ -75,7 +98,7 @@ serve(async (req) => {
           signature: apiKey
         });
 
-        const resp = await fetch(`${apiUrl}?${params.toString()}`, { method: 'GET' });
+        const resp = await fetchWithTimeout(`${apiUrl}?${params.toString()}`);
         const body = await resp.text();
         const trimmed = body.trim();
         const parts = trimmed.split(';');
@@ -96,13 +119,20 @@ serve(async (req) => {
 
       if (result.okFormat) {
         smsSent = true;
-        console.log('CEO OTP SMS sent successfully');
+        console.log('CEO OTP SMS sent successfully', {
+          to: maskPhone(CEO_PHONE_NUMBER),
+          from: senderNumber,
+          provider: result.trimmed.substring(0, 120),
+        });
       } else if (result.containsFilteration) {
-        const fallbackMessage = `اهرم: ${code} کد تایید برای ${purposeText}`;
-        const result2 = await sendOnce(fallbackMessage);
+        const result2 = await sendOnce(message);
         if (result2.okFormat) {
           smsSent = true;
-          console.log('CEO OTP SMS sent successfully (fallback)');
+          console.log('CEO OTP SMS sent successfully (fallback)', {
+            to: maskPhone(CEO_PHONE_NUMBER),
+            from: senderNumber,
+            provider: result2.trimmed.substring(0, 120),
+          });
         } else {
           console.error('SMS send failed:', result2.trimmed.substring(0, 100));
           return new Response(
