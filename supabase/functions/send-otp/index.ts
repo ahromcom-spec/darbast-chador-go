@@ -173,12 +173,10 @@ Deno.serve(async (req) => {
       console.warn('PARSGREEN_SENDER is not numeric; falling back to default 90000319');
     }
 
-    // Format message with Web OTP binding
-    const message = `اهرم: ${code} کد تایید\n\n@ahrom.ir #${code}`;
-    const fallbackMessage = `اهرم: ${code} کد تایید`;
-
-    // برخی اپراتورها/گوشی‌ها نسبت به الگوی Web OTP حساس هستند؛ برای شماره‌های مشکل‌دار متن ساده ارسال می‌کنیم.
-    const forcePlainMessage = normalizedPhone === '09125511494';
+    // پیامک OTP: برای بیشترین نرخ تحویل (Deliverability) در ایران، پیام را «ساده» ارسال می‌کنیم.
+    // تجربه نشان داده الگوی Web OTP (مثل @domain و #code) در برخی اپراتورها/گوشی‌ها ممکن است
+    // تحویل را کاهش دهد (حتی اگر سرویس‌دهنده پاسخ موفق بدهد).
+    const plainMessage = `اهرم: ${code} کد تایید`;
 
     // Start SMS sending AND database insert in PARALLEL for maximum speed
     const sendSmsPromise = (async () => {
@@ -227,20 +225,20 @@ Deno.serve(async (req) => {
         return { okFormat, containsFilteration, trimmed };
       };
 
-      // Try with Web OTP binding first (unless forcePlainMessage)
-      let result = await sendOnce(forcePlainMessage ? fallbackMessage : message);
+       // Send plain content first for maximum deliverability.
+       let result = await sendOnce(plainMessage);
 
       if (result.okFormat) {
         console.log('INFO SMS sent successfully via Parsgreen', {
           to: maskPhone(normalizedPhone),
           from: senderNumber,
           provider: result.trimmed.substring(0, 120),
-          mode: forcePlainMessage ? 'plain' : 'web_otp',
+           mode: 'plain',
         });
         return { success: true };
       } else if (result.containsFilteration) {
-        // Fallback: send simple message without Web OTP binding
-        const result2 = await sendOnce(fallbackMessage);
+         // Fallback: try an even simpler wording (in case provider flags the default string)
+         const result2 = await sendOnce(`کد تایید اهرم: ${code}`);
         if (result2.okFormat) {
           console.log('INFO SMS sent successfully via Parsgreen (fallback content)', {
             to: maskPhone(normalizedPhone),
