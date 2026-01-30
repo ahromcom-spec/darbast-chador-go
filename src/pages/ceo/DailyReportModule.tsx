@@ -91,6 +91,7 @@ interface StaffReportRow {
   bank_card_id?: string | null;
   notes: string;
   is_cash_box: boolean;
+  is_company_expense?: boolean;
 }
 
 const ROW_COLORS = [
@@ -1112,6 +1113,9 @@ export default function DailyReportModule() {
 
         const allStaff: StaffReportRow[] = (staffData || []).map((s: any) => {
           const staffCode = extractStaffCode(s.staff_name || '');
+          // تشخیص سطر ماهیت شرکت اهرم از روی نام یا is_company_expense
+          const isCompanyExpense = s.is_company_expense === true || 
+            (s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'));
 
           return {
             id: s.id,
@@ -1127,23 +1131,24 @@ export default function DailyReportModule() {
             bank_card_id: s.bank_card_id ?? null,
             notes: s.notes || '',
             is_cash_box: s.is_cash_box || false,
+            is_company_expense: isCompanyExpense,
           };
         });
 
-        // سطرهای صندوق/کارت بانکی را جدا کن
-        const cashBoxRows = allStaff.filter((s) => s.is_cash_box);
-        const nonCashBoxRows = allStaff.filter((s) => !s.is_cash_box);
+        // تفکیک سطرها بر اساس نوع
+        const companyExpenseRows = allStaff.filter((s) => s.is_company_expense);
+        const cashBoxRows = allStaff.filter((s) => s.is_cash_box && !s.is_company_expense);
+        const regularStaffRows = allStaff.filter((s) => !s.is_cash_box && !s.is_company_expense);
         
-        // همه سطرهای صندوق را نگه‌دار (یا یکی جدید بساز)
         const normalizedStaff: StaffReportRow[] = [];
         
-        if (cashBoxRows.length > 0) {
-          normalizedStaff.push(...cashBoxRows);
+        // اول: سطر ماهیت شرکت اهرم (همیشه ردیف اول)
+        if (companyExpenseRows.length > 0) {
+          normalizedStaff.push(companyExpenseRows[0]);
         } else {
-          // اگر سطر صندوق وجود نداشت، یکی اضافه کن
           normalizedStaff.push({
             staff_user_id: null,
-            staff_name: 'کارت صندوق اهرم',
+            staff_name: 'ماهیت شرکت اهرم',
             work_status: 'کارکرده',
             overtime_hours: 0,
             amount_received: 0,
@@ -1152,15 +1157,22 @@ export default function DailyReportModule() {
             spending_notes: '',
             bank_card_id: null,
             notes: '',
-            is_cash_box: true,
+            is_cash_box: false,
+            is_company_expense: true,
           });
         }
         
-        // سطرهای غیر صندوق را اضافه کن
-        normalizedStaff.push(...nonCashBoxRows);
+        // دوم: سطرهای کارت بانکی/صندوق
+        if (cashBoxRows.length > 0) {
+          normalizedStaff.push(...cashBoxRows);
+        }
+        
+        // سوم: سطرهای نیروی کار عادی
+        normalizedStaff.push(...regularStaffRows);
 
-        const hasAnyNonCashRow = normalizedStaff.some((s) => !s.is_cash_box);
-        if (!hasAnyNonCashRow) {
+        // اطمینان از وجود حداقل یک سطر خالی برای ورود داده
+        const hasAnyRegularRow = normalizedStaff.some((s) => !s.is_cash_box && !s.is_company_expense);
+        if (!hasAnyRegularRow) {
           normalizedStaff.push({
             staff_user_id: null,
             staff_name: '',
@@ -1173,6 +1185,7 @@ export default function DailyReportModule() {
             bank_card_id: null,
             notes: '',
             is_cash_box: false,
+            is_company_expense: false,
           });
         }
 
@@ -1206,7 +1219,7 @@ export default function DailyReportModule() {
         setStaffReports([
           {
             staff_user_id: null,
-            staff_name: 'کارت صندوق اهرم',
+            staff_name: 'ماهیت شرکت اهرم',
             work_status: 'کارکرده',
             overtime_hours: 0,
             amount_received: 0,
@@ -1215,7 +1228,8 @@ export default function DailyReportModule() {
             spending_notes: '',
             bank_card_id: null,
             notes: '',
-            is_cash_box: true,
+            is_cash_box: false,
+            is_company_expense: true,
           },
           {
             staff_user_id: null,
@@ -1229,6 +1243,7 @@ export default function DailyReportModule() {
             bank_card_id: null,
             notes: '',
             is_cash_box: false,
+            is_company_expense: false,
           },
         ]);
         
@@ -1253,7 +1268,7 @@ export default function DailyReportModule() {
       setStaffReports([
         {
           staff_user_id: null,
-          staff_name: 'کارت صندوق اهرم',
+          staff_name: 'ماهیت شرکت اهرم',
           work_status: 'کارکرده',
           overtime_hours: 0,
           amount_received: 0,
@@ -1262,7 +1277,8 @@ export default function DailyReportModule() {
           spending_notes: '',
           bank_card_id: null,
           notes: '',
-          is_cash_box: true,
+          is_cash_box: false,
+          is_company_expense: true,
         },
         {
           staff_user_id: null,
@@ -1276,6 +1292,7 @@ export default function DailyReportModule() {
           bank_card_id: null,
           notes: '',
           is_cash_box: false,
+          is_company_expense: false,
         },
       ]);
       toast.error('خطا در دریافت گزارش');
