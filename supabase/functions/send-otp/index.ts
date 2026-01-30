@@ -31,6 +31,11 @@ const normalizeIranPhone = (input: string) => {
   return raw;
 };
 
+const maskPhone = (phone: string) => {
+  if (!phone || phone.length < 7) return '***';
+  return `${phone.slice(0, 4)}***${phone.slice(-4)}`;
+};
+
 // Check if production
 const isProduction = supabaseUrl.includes('gclbltatkbwbqxqqrcea');
 
@@ -172,6 +177,9 @@ Deno.serve(async (req) => {
     const message = `اهرم: ${code} کد تایید\n\n@ahrom.ir #${code}`;
     const fallbackMessage = `اهرم: ${code} کد تایید`;
 
+    // برخی اپراتورها/گوشی‌ها نسبت به الگوی Web OTP حساس هستند؛ برای شماره‌های مشکل‌دار متن ساده ارسال می‌کنیم.
+    const forcePlainMessage = normalizedPhone === '09125511494';
+
     // Start SMS sending AND database insert in PARALLEL for maximum speed
     const sendSmsPromise = (async () => {
       const apiUrl = 'https://sms.parsgreen.ir/UrlService/sendSMS.ashx';
@@ -219,17 +227,26 @@ Deno.serve(async (req) => {
         return { okFormat, containsFilteration, trimmed };
       };
 
-      // Try with Web OTP binding first
-      let result = await sendOnce(message);
+      // Try with Web OTP binding first (unless forcePlainMessage)
+      let result = await sendOnce(forcePlainMessage ? fallbackMessage : message);
 
       if (result.okFormat) {
-        console.log('INFO SMS sent successfully via Parsgreen');
+        console.log('INFO SMS sent successfully via Parsgreen', {
+          to: maskPhone(normalizedPhone),
+          from: senderNumber,
+          provider: result.trimmed.substring(0, 120),
+          mode: forcePlainMessage ? 'plain' : 'web_otp',
+        });
         return { success: true };
       } else if (result.containsFilteration) {
         // Fallback: send simple message without Web OTP binding
         const result2 = await sendOnce(fallbackMessage);
         if (result2.okFormat) {
-          console.log('INFO SMS sent successfully via Parsgreen (fallback content)');
+          console.log('INFO SMS sent successfully via Parsgreen (fallback content)', {
+            to: maskPhone(normalizedPhone),
+            from: senderNumber,
+            provider: result2.trimmed.substring(0, 120),
+          });
           return { success: true };
         } else {
           console.error('SMS send failed - Parsgreen error. Response:', result2.trimmed.substring(0, 100));
