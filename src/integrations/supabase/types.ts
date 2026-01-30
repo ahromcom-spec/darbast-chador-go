@@ -805,6 +805,7 @@ export type Database = {
           daily_report_id: string
           id: string
           is_cash_box: boolean | null
+          is_company_expense: boolean | null
           notes: string | null
           overtime_hours: number | null
           receiving_notes: string | null
@@ -822,6 +823,7 @@ export type Database = {
           daily_report_id: string
           id?: string
           is_cash_box?: boolean | null
+          is_company_expense?: boolean | null
           notes?: string | null
           overtime_hours?: number | null
           receiving_notes?: string | null
@@ -839,6 +841,7 @@ export type Database = {
           daily_report_id?: string
           id?: string
           is_cash_box?: boolean | null
+          is_company_expense?: boolean | null
           notes?: string | null
           overtime_hours?: number | null
           receiving_notes?: string | null
