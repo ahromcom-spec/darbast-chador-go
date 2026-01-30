@@ -630,7 +630,8 @@ export default function DailyReportModule() {
               spending_notes: s.spending_notes,
               bank_card_id: s.bank_card_id ?? null,
               notes: s.notes,
-              is_cash_box: s.is_cash_box
+              is_cash_box: s.is_cash_box,
+              is_company_expense: s.is_company_expense ?? false
             }))
           );
 
@@ -1666,7 +1667,8 @@ export default function DailyReportModule() {
           spending_notes: s.spending_notes || '',
           bank_card_id: s.bank_card_id ?? null,
           notes: s.notes || '',
-          is_cash_box: s.is_cash_box || false
+          is_cash_box: s.is_cash_box || false,
+          is_company_expense: s.is_company_expense ?? false
         }));
 
         const { error: staffError } = await supabase
@@ -1805,7 +1807,8 @@ export default function DailyReportModule() {
               amount_spent: s.amountSpent || 0,
               spending_notes: s.spendingNotes || '',
               notes: s.notes || '',
-              is_cash_box: s.isCashBox || false
+              is_cash_box: s.isCashBox || false,
+              is_company_expense: s.isCompanyExpense ?? false
             };
           });
 
