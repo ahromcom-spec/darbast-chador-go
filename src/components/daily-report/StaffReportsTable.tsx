@@ -226,7 +226,7 @@ export function StaffReportsTable({
                     />
                   </TableCell>
                   <TableCell className="border border-amber-200">
-                    {row.is_company_expense ? (
+                    {row.is_company_expense || row.is_cash_box ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       <div className="min-w-[180px]">
