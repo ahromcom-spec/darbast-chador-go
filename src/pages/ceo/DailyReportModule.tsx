@@ -1440,6 +1440,41 @@ export default function DailyReportModule() {
           Boolean(s.notes?.trim())
       );
 
+      // Before inserting new staff, reverse any existing bank card transactions for this report
+      const { data: existingStaffData } = await supabase
+        .from('daily_report_staff')
+        .select('bank_card_id, amount_received, amount_spent')
+        .eq('daily_report_id', reportId)
+        .not('bank_card_id', 'is', null);
+
+      // Reverse existing bank card balances
+      if (existingStaffData && existingStaffData.length > 0) {
+        for (const existing of existingStaffData) {
+          if (!existing.bank_card_id) continue;
+          
+          const { data: cardData } = await supabase
+            .from('bank_cards')
+            .select('current_balance')
+            .eq('id', existing.bank_card_id)
+            .single();
+          
+          if (cardData) {
+            const reversedBalance = cardData.current_balance - (existing.amount_received || 0) + (existing.amount_spent || 0);
+            await supabase
+              .from('bank_cards')
+              .update({ current_balance: reversedBalance, updated_at: new Date().toISOString() })
+              .eq('id', existing.bank_card_id);
+          }
+        }
+        
+        // Delete existing transactions for this report
+        await supabase
+          .from('bank_card_transactions')
+          .delete()
+          .eq('reference_type', 'daily_report_staff')
+          .eq('reference_id', reportId);
+      }
+
       if (staffToSave.length > 0) {
         const staffPayload = staffToSave.map((s) => ({
           daily_report_id: reportId,
@@ -1464,6 +1499,83 @@ export default function DailyReportModule() {
         if (staffError) {
           console.error('Error inserting staff reports:', staffError);
           throw staffError;
+        }
+
+        // Sync bank card balances - update current_balance based on transactions
+        const dateStr = toLocalDateString(reportDate);
+        const bankCardTransactions = staffToSave.filter(s => s.bank_card_id && ((s.amount_received || 0) > 0 || (s.amount_spent || 0) > 0));
+        
+        for (const staffRow of bankCardTransactions) {
+          if (!staffRow.bank_card_id) continue;
+          
+          // Get current card balance
+          const { data: cardData, error: cardError } = await supabase
+            .from('bank_cards')
+            .select('current_balance')
+            .eq('id', staffRow.bank_card_id)
+            .single();
+          
+          if (cardError) {
+            console.error('Error fetching bank card:', cardError);
+            continue;
+          }
+          
+          const currentBalance = cardData?.current_balance || 0;
+          const depositAmount = staffRow.amount_received || 0;
+          const withdrawalAmount = staffRow.amount_spent || 0;
+          const newBalance = currentBalance + depositAmount - withdrawalAmount;
+          
+          // Update bank card balance
+          const { error: updateError } = await supabase
+            .from('bank_cards')
+            .update({ 
+              current_balance: newBalance,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', staffRow.bank_card_id);
+          
+          if (updateError) {
+            console.error('Error updating bank card balance:', updateError);
+          }
+          
+          // Record transactions in bank_card_transactions table
+          const transactionsToInsert = [];
+          
+          if (depositAmount > 0) {
+            transactionsToInsert.push({
+              bank_card_id: staffRow.bank_card_id,
+              transaction_type: 'deposit',
+              amount: depositAmount,
+              balance_after: currentBalance + depositAmount,
+              description: staffRow.receiving_notes || `واریز از گزارش روزانه ${dateStr}`,
+              reference_type: 'daily_report_staff',
+              reference_id: reportId,
+              created_by: user.id
+            });
+          }
+          
+          if (withdrawalAmount > 0) {
+            transactionsToInsert.push({
+              bank_card_id: staffRow.bank_card_id,
+              transaction_type: 'withdrawal',
+              amount: withdrawalAmount,
+              balance_after: newBalance,
+              description: staffRow.spending_notes || `برداشت از گزارش روزانه ${dateStr}`,
+              reference_type: 'daily_report_staff',
+              reference_id: reportId,
+              created_by: user.id
+            });
+          }
+          
+          if (transactionsToInsert.length > 0) {
+            const { error: txError } = await supabase
+              .from('bank_card_transactions')
+              .insert(transactionsToInsert);
+            
+            if (txError) {
+              console.error('Error recording bank card transactions:', txError);
+            }
+          }
         }
       }
 
