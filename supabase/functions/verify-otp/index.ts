@@ -51,17 +51,14 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Security: Block test phones in production - hardcoded check
+    // Security: Block ONLY explicit test prefixes in production (keep behavior consistent with send-otp)
+    // NOTE: We intentionally do NOT block “repeating digit” patterns here because it breaks whitelist checks
+    // and can block real/whitelisted staff numbers.
     const isProduction = supabaseUrl.includes('gclbltatkbwbqxqqrcea');
-    // Test phones include: aaa*, bbb*, and special pattern test numbers (repeating digits)
-    const isTestPhone = (
-      phone_number.startsWith('aaa') || 
-      phone_number.startsWith('bbb') ||
-      /^(091{8}|092{8}|093{8}|094{8}|095{8}|096{8}|0901{8}|09012{8}|09013{8}|09014{8}|09015{8}|09016{8})/.test(phone_number)
-    );
-    
-    // Reject test phones in production
-    if (isProduction && isTestPhone) {
+    const isTestPhone = (phone_number.startsWith('aaa') || phone_number.startsWith('bbb'));
+
+    // Reject test phones in production (but allow whitelist-check action so UI can route correctly)
+    if (action !== 'check_whitelist' && isProduction && isTestPhone) {
       return new Response(
         JSON.stringify({ error: 'شماره تلفن نامعتبر است' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
