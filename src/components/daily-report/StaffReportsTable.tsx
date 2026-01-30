@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, User, CreditCard } from 'lucide-react';
+import { Plus, Trash2, User, CreditCard, Building } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -192,10 +192,16 @@ export function StaffReportsTable({
               {staffReports.map((row, index) => (
                 <TableRow 
                   key={index} 
-                  className={row.is_cash_box ? 'bg-amber-50 dark:bg-amber-900/20' : 'even:bg-amber-50/50'}
+                  className={
+                    row.is_company_expense 
+                      ? 'bg-blue-50 dark:bg-blue-900/20' 
+                      : row.is_cash_box 
+                        ? 'bg-amber-50 dark:bg-amber-900/20' 
+                        : 'even:bg-amber-50/50'
+                  }
                 >
                   <TableCell className="border border-amber-200">
-                    {!row.is_cash_box && (
+                    {!row.is_cash_box && !row.is_company_expense && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -214,20 +220,24 @@ export function StaffReportsTable({
                           onUpdateRow(index, 'notes', e.target.value);
                         }
                       }}
-                      placeholder="توضیحات..."
+                      placeholder={row.is_company_expense ? "هزینه‌های شرکت (نهار، ایاب‌ذهاب و...)" : "توضیحات..."}
                       className="min-w-[30ch] min-h-[50px]"
                       maxLength={300}
                     />
                   </TableCell>
                   <TableCell className="border border-amber-200">
-                    <div className="min-w-[180px]">
-                      <BankCardSelect
-                        value={row.bank_card_id || null}
-                        onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
-                        placeholder="انتخاب کارت"
-                        showBalance={true}
-                      />
-                    </div>
+                    {row.is_company_expense ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <div className="min-w-[180px]">
+                        <BankCardSelect
+                          value={row.bank_card_id || null}
+                          onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
+                          placeholder="انتخاب کارت"
+                          showBalance={true}
+                        />
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     <AutoResizeTextarea
@@ -265,42 +275,50 @@ export function StaffReportsTable({
                     </div>
                   </TableCell>
                   <TableCell className="border border-amber-200">
-                    <AutoResizeTextarea
-                      value={row.receiving_notes}
-                      onChange={(e) => {
-                        if (e.target.value.length <= 300) {
-                          onUpdateRow(index, 'receiving_notes', e.target.value);
-                        }
-                      }}
-                      placeholder="توضیحات..."
-                      className="min-w-[30ch] min-h-[50px]"
-                      maxLength={300}
-                    />
-                  </TableCell>
-                  <TableCell className="border border-amber-200">
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
+                    {row.is_company_expense ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <AutoResizeTextarea
+                        value={row.receiving_notes}
                         onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                          const numVal = parseInt(val) || 0;
-                          if (numVal <= 300000000) {
-                            onUpdateRow(index, 'amount_received', numVal);
-                          } else {
-                            toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                          if (e.target.value.length <= 300) {
+                            onUpdateRow(index, 'receiving_notes', e.target.value);
                           }
                         }}
-                        className="min-w-[220px] pl-12 text-left tabular-nums"
-                        dir="ltr"
-                        placeholder="0"
+                        placeholder="توضیحات..."
+                        className="min-w-[30ch] min-h-[50px]"
+                        maxLength={300}
                       />
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
-                    </div>
+                    )}
                   </TableCell>
                   <TableCell className="border border-amber-200">
-                    {row.is_cash_box ? (
+                    {row.is_company_expense ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+                            const numVal = parseInt(val) || 0;
+                            if (numVal <= 300000000) {
+                              onUpdateRow(index, 'amount_received', numVal);
+                            } else {
+                              toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                            }
+                          }}
+                          className="min-w-[220px] pl-12 text-left tabular-nums"
+                          dir="ltr"
+                          placeholder="0"
+                        />
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="border border-amber-200">
+                    {row.is_cash_box || row.is_company_expense ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       <div className="relative">
@@ -326,7 +344,7 @@ export function StaffReportsTable({
                     )}
                   </TableCell>
                   <TableCell className="border border-amber-200">
-                    {row.is_cash_box ? (
+                    {row.is_cash_box || row.is_company_expense ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       <WorkStatusSelect
@@ -337,7 +355,12 @@ export function StaffReportsTable({
                     )}
                   </TableCell>
                   <TableCell className="border border-amber-200">
-                    {row.is_cash_box ? (
+                    {row.is_company_expense ? (
+                      <div className="min-w-[220px] font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                        <Building className="h-5 w-5" />
+                        ماهیت شرکت اهرم
+                      </div>
+                    ) : row.is_cash_box ? (
                       <div className="min-w-[220px]">
                         <BankCardSelect
                           value={row.bank_card_id || null}
