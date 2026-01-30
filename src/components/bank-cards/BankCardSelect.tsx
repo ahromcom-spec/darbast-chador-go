@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Select,
@@ -7,7 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, RefreshCw } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const NONE_VALUE = '__none__';
 
@@ -35,27 +36,56 @@ export function BankCardSelect({
 }: BankCardSelectProps) {
   const [cards, setCards] = useState<BankCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const fetchCards = useCallback(async (showRefresh = false) => {
+    try {
+      if (showRefresh) setIsRefreshing(true);
+      const { data, error } = await supabase
+        .from('bank_cards')
+        .select('id, card_name, bank_name, current_balance')
+        .eq('is_active', true)
+        .order('card_name');
+
+      if (error) throw error;
+      setCards((data || []) as BankCard[]);
+    } catch (error) {
+      console.error('Error fetching bank cards:', error);
+    } finally {
+      setLoading(false);
+      if (showRefresh) setIsRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchCards = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('bank_cards')
-          .select('id, card_name, bank_name, current_balance')
-          .eq('is_active', true)
-          .order('card_name');
+    fetchCards();
 
-        if (error) throw error;
-        setCards((data || []) as BankCard[]);
-      } catch (error) {
-        console.error('Error fetching bank cards:', error);
-      } finally {
-        setLoading(false);
+    // Subscribe to realtime changes on bank_cards table
+    const channel = supabase
+      .channel('bank-cards-balance-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bank_cards'
+        },
+        () => {
+          // Refetch cards when any change occurs
+          fetchCards();
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
       }
     };
-
-    fetchCards();
-  }, []);
+  }, [fetchCards]);
 
   if (loading) {
     return (
@@ -89,6 +119,16 @@ export function BankCardSelect({
             <div className="flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-emerald-600" />
               <span>{cards.find(c => c.id === value)?.card_name || placeholder}</span>
+              {showBalance && (
+                <span className={cn(
+                  "text-xs font-medium",
+                  (cards.find(c => c.id === value)?.current_balance || 0) >= 0 
+                    ? "text-emerald-600" 
+                    : "text-red-600"
+                )}>
+                  {(cards.find(c => c.id === value)?.current_balance || 0).toLocaleString('fa-IR')} تومان
+                </span>
+              )}
             </div>
           )}
         </SelectValue>
@@ -106,7 +146,10 @@ export function BankCardSelect({
                 <span className="text-xs text-muted-foreground">({card.bank_name})</span>
               </div>
               {showBalance && (
-                <span className="text-xs text-emerald-600 font-medium">
+                <span className={cn(
+                  "text-xs font-medium",
+                  card.current_balance >= 0 ? "text-emerald-600" : "text-red-600"
+                )}>
                   {card.current_balance.toLocaleString('fa-IR')} تومان
                 </span>
               )}
