@@ -1416,17 +1416,6 @@ export default function DailyReportModule() {
         }
       }
 
-      // Delete existing staff reports and insert new ones
-      const { error: deleteStaffError } = await supabase
-        .from('daily_report_staff')
-        .delete()
-        .eq('daily_report_id', reportId);
-
-      if (deleteStaffError) {
-        console.error('Error deleting staff reports:', deleteStaffError);
-        throw deleteStaffError;
-      }
-
       const staffToSave = staffReports.filter(
         (s) =>
           s.is_cash_box ||
@@ -1440,39 +1429,82 @@ export default function DailyReportModule() {
           Boolean(s.notes?.trim())
       );
 
-      // Before inserting new staff, reverse any existing bank card transactions for this report
-      const { data: existingStaffData } = await supabase
+      // IMPORTANT: fetch previous staff rows BEFORE deleting them.
+      // Otherwise we cannot reverse the previous effect and each save would add amounts again.
+      const { data: existingStaffData, error: existingStaffError } = await supabase
         .from('daily_report_staff')
         .select('bank_card_id, amount_received, amount_spent')
         .eq('daily_report_id', reportId)
         .not('bank_card_id', 'is', null);
 
-      // Reverse existing bank card balances
+      if (existingStaffError) {
+        console.error('Error fetching existing staff data for bank card reversal:', existingStaffError);
+        // continue; do not block saving report
+      }
+
+      // Reverse previous bank card balances (grouped per card to avoid double-updating)
       if (existingStaffData && existingStaffData.length > 0) {
-        for (const existing of existingStaffData) {
-          if (!existing.bank_card_id) continue;
-          
-          const { data: cardData } = await supabase
+        const totalsByCard = new Map<string, { received: number; spent: number }>();
+        for (const row of existingStaffData) {
+          const cardId = row.bank_card_id as string | null;
+          if (!cardId) continue;
+
+          const received = Number((row as any).amount_received ?? 0) || 0;
+          const spent = Number((row as any).amount_spent ?? 0) || 0;
+
+          const prev = totalsByCard.get(cardId) ?? { received: 0, spent: 0 };
+          totalsByCard.set(cardId, {
+            received: prev.received + received,
+            spent: prev.spent + spent,
+          });
+        }
+
+        for (const [cardId, totals] of totalsByCard) {
+          const { data: cardData, error: cardError } = await supabase
             .from('bank_cards')
             .select('current_balance')
-            .eq('id', existing.bank_card_id)
+            .eq('id', cardId)
             .single();
-          
-          if (cardData) {
-            const reversedBalance = cardData.current_balance - (existing.amount_received || 0) + (existing.amount_spent || 0);
-            await supabase
-              .from('bank_cards')
-              .update({ current_balance: reversedBalance, updated_at: new Date().toISOString() })
-              .eq('id', existing.bank_card_id);
+
+          if (cardError) {
+            console.error('Error fetching bank card for reversal:', cardError);
+            continue;
+          }
+
+          const currentBalance = Number(cardData?.current_balance ?? 0) || 0;
+          const reversedBalance = currentBalance - totals.received + totals.spent;
+
+          const { error: updateError } = await supabase
+            .from('bank_cards')
+            .update({ current_balance: reversedBalance, updated_at: new Date().toISOString() })
+            .eq('id', cardId);
+
+          if (updateError) {
+            console.error('Error reversing bank card balance:', updateError);
           }
         }
-        
-        // Delete existing transactions for this report
-        await supabase
-          .from('bank_card_transactions')
-          .delete()
-          .eq('reference_type', 'daily_report_staff')
-          .eq('reference_id', reportId);
+      }
+
+      // Best-effort cleanup of previous transactions for this report (balance correctness does NOT depend on this)
+      const { error: deleteTxError } = await supabase
+        .from('bank_card_transactions')
+        .delete()
+        .eq('reference_type', 'daily_report_staff')
+        .eq('reference_id', reportId);
+
+      if (deleteTxError) {
+        console.warn('Could not delete previous bank card transactions for report:', deleteTxError);
+      }
+
+      // Delete existing staff reports and insert new ones
+      const { error: deleteStaffError } = await supabase
+        .from('daily_report_staff')
+        .delete()
+        .eq('daily_report_id', reportId);
+
+      if (deleteStaffError) {
+        console.error('Error deleting staff reports:', deleteStaffError);
+        throw deleteStaffError;
       }
 
       if (staffToSave.length > 0) {
@@ -1538,7 +1570,7 @@ export default function DailyReportModule() {
             console.error('Error updating bank card balance:', updateError);
           }
           
-          // Record transactions in bank_card_transactions table
+           // Record transactions in bank_card_transactions table
           const transactionsToInsert = [];
           
           if (depositAmount > 0) {
