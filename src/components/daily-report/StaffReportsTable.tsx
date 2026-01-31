@@ -275,39 +275,78 @@ export function StaffReportsTable({
                     </div>
                   </TableCell>
                   <TableCell className="border border-amber-200">
-                    <AutoResizeTextarea
-                      value={row.receiving_notes}
-                      onChange={(e) => {
-                        if (e.target.value.length <= 300) {
-                          onUpdateRow(index, 'receiving_notes', e.target.value);
-                        }
-                      }}
-                      placeholder="توضیحات..."
-                      className="min-w-[30ch] min-h-[50px]"
-                      maxLength={300}
-                    />
-                  </TableCell>
-                  <TableCell className="border border-amber-200">
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
+                    {/* فیلد توضیحات دریافتی برای سطرهای شرکت و کارت بانکی فعال است */}
+                    {row.is_cash_box || row.is_company_expense ? (
+                      <AutoResizeTextarea
+                        value={row.receiving_notes}
                         onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                          const numVal = parseInt(val) || 0;
-                          if (numVal <= 300000000) {
-                            onUpdateRow(index, 'amount_received', numVal);
-                          } else {
-                            toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                          if (e.target.value.length <= 300) {
+                            onUpdateRow(index, 'receiving_notes', e.target.value);
                           }
                         }}
-                        className="min-w-[220px] pl-12 text-left tabular-nums"
-                        dir="ltr"
-                        placeholder="0"
+                        placeholder={row.is_company_expense ? "توضیحات دریافتی شرکت..." : "توضیحات..."}
+                        className="min-w-[30ch] min-h-[50px]"
+                        maxLength={300}
                       />
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
-                    </div>
+                    ) : (
+                      <AutoResizeTextarea
+                        value={row.receiving_notes}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 300) {
+                            onUpdateRow(index, 'receiving_notes', e.target.value);
+                          }
+                        }}
+                        placeholder="توضیحات..."
+                        className="min-w-[30ch] min-h-[50px]"
+                        maxLength={300}
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell className="border border-amber-200">
+                    {/* فیلد مبلغ دریافتی برای سطرهای شرکت و کارت بانکی فعال است */}
+                    {row.is_cash_box || row.is_company_expense ? (
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+                            const numVal = parseInt(val) || 0;
+                            if (numVal <= 300000000) {
+                              onUpdateRow(index, 'amount_received', numVal);
+                            } else {
+                              toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                            }
+                          }}
+                          className="min-w-[220px] pl-12 text-left tabular-nums"
+                          dir="ltr"
+                          placeholder="0"
+                        />
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+                            const numVal = parseInt(val) || 0;
+                            if (numVal <= 300000000) {
+                              onUpdateRow(index, 'amount_received', numVal);
+                            } else {
+                              toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                            }
+                          }}
+                          className="min-w-[220px] pl-12 text-left tabular-nums"
+                          dir="ltr"
+                          placeholder="0"
+                        />
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     {row.is_cash_box || row.is_company_expense ? (
