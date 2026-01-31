@@ -333,50 +333,59 @@ const handleResendOTP = async () => {
 
     setLoading(true);
 
-    // استفاده از کانال verify-otp با رمز عبور به جای کد OTP
-    const { data, error } = await supabase.functions.invoke('verify-otp', {
-      body: { 
-        phone_number: phoneNumber,
-        code: password,
-        is_password_login: true
-      }
-    });
-    
-    setLoading(false);
-
-    if (error || data?.error) {
-      const rawMessage = data?.error || error?.message || '';
-      // تبدیل خطاهای عمومی به پیام فارسی مناسب
-      const isGenericError = /non-2xx|Edge Function returned|401|invalid/i.test(rawMessage);
-      const errorMessage = isGenericError ? 'رمز عبور اشتباه است' : (rawMessage || 'رمز عبور اشتباه است');
+    try {
+      // استفاده از manage-password برای ورود با رمز عبور ثابت
+      const { data, error } = await supabase.functions.invoke('manage-password', {
+        body: { 
+          action: 'login_with_password',
+          phone_number: phoneNumber,
+          password: password
+        }
+      });
       
+      setLoading(false);
+
+      if (error || data?.error) {
+        const rawMessage = data?.error || error?.message || '';
+        // تبدیل خطاهای عمومی به پیام فارسی مناسب
+        const isGenericError = /non-2xx|Edge Function returned|401|invalid/i.test(rawMessage);
+        const errorMessage = isGenericError ? 'رمز عبور اشتباه است' : (rawMessage || 'رمز عبور اشتباه است');
+        
+        toast({
+          variant: 'destructive',
+          title: 'رمز عبور اشتباه',
+          description: errorMessage,
+        });
+        setErrors({ password: errorMessage });
+        setPassword(''); // پاک کردن فیلد رمز عبور
+        return;
+      }
+
+      if (data?.session) {
+        const access_token = data.session.access_token as string | undefined;
+        const refresh_token = data.session.refresh_token as string | undefined;
+        if (access_token && refresh_token) {
+          await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+        }
+      }
+
+      toast({
+        title: 'خوش آمدید',
+        description: 'با موفقیت وارد شدید.',
+      });
+
+      navigate(from, { replace: true });
+    } catch (err) {
+      setLoading(false);
       toast({
         variant: 'destructive',
-        title: 'رمز عبور اشتباه',
-        description: 'رمز عبور وارد شده صحیح نمی‌باشد. لطفاً مجدداً تلاش کنید.',
+        title: 'خطا',
+        description: 'خطا در اتصال به سرور',
       });
-      setErrors({ password: 'رمز عبور اشتباه است' });
-      setPassword(''); // پاک کردن فیلد رمز عبور
-      return;
     }
-
-    if (data?.session) {
-      const access_token = data.session.access_token as string | undefined;
-      const refresh_token = data.session.refresh_token as string | undefined;
-      if (access_token && refresh_token) {
-        await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        });
-      }
-    }
-
-    toast({
-      title: 'خوش آمدید',
-      description: 'با موفقیت وارد شدید.',
-    });
-
-    navigate(from, { replace: true });
   };
 
   const handleBackToPhone = () => {
