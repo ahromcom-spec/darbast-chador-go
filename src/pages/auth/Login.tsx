@@ -150,6 +150,24 @@ export default function Login() {
     }
   };
 
+  // بررسی اینکه کاربر رمز عبور ثابت دارد یا نه
+  const checkHasPassword = async (phone: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-password', {
+        body: { 
+          action: 'check_has_password',
+          phone_number: phone
+        }
+      });
+      
+      if (error || data?.error) return false;
+      return !!data?.has_password;
+    } catch (e) {
+      console.error('Error checking password:', e);
+      return false;
+    }
+  };
+
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -175,6 +193,22 @@ export default function Login() {
         // شماره در لیست سفید است - نمایش فرم رمز عبور
         setPasswordCountdown(90); // ریست تایمر رمز عبور
         setStep('password');
+        setLoading(false);
+        return;
+      }
+
+      // بررسی اینکه کاربر رمز عبور ثابت تنظیم کرده است یا نه
+      const hasPassword = await checkHasPassword(phoneNumber);
+      
+      if (hasPassword) {
+        // کاربر رمز عبور ثابت دارد - نمایش فرم رمز عبور
+        setPasswordCountdown(90);
+        setStep('password');
+        setLoading(false);
+        toast({
+          title: 'ورود با رمز عبور',
+          description: 'شما رمز عبور ثابت تنظیم کرده‌اید؛ لطفاً با رمز عبور وارد شوید.',
+        });
         return;
       }
 
