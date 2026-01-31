@@ -1,10 +1,77 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Initialize Resend client
+const resendApiKey = Deno.env.get('RESEND_API_KEY');
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
+
+// Function to send email via Resend
+async function sendVerificationEmail(email: string, code: string, type: 'email_verify' | 'password_reset'): Promise<boolean> {
+  if (!resend) {
+    console.log(`[DEV] Email code for ${email}: ${code}`);
+    return true; // Return true in dev mode so flow continues
+  }
+  
+  const subject = type === 'email_verify' 
+    ? 'تأیید ایمیل - اهرم' 
+    : 'بازیابی رمز عبور - اهرم';
+    
+  const htmlContent = type === 'email_verify' 
+    ? `
+      <div style="direction: rtl; text-align: right; font-family: Tahoma, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #f59e0b;">تأیید ایمیل بازیابی</h2>
+        <p>با سلام،</p>
+        <p>کد تأیید شما برای ثبت ایمیل بازیابی:</p>
+        <div style="background: #fef3c7; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #d97706;">${code}</span>
+        </div>
+        <p>این کد تا ۱۰ دقیقه معتبر است.</p>
+        <p>اگر شما این درخواست را ارسال نکرده‌اید، لطفاً این ایمیل را نادیده بگیرید.</p>
+        <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 20px 0;">
+        <p style="color: #666; font-size: 12px;">© اهرم - سامانه مدیریت خدمات داربست</p>
+      </div>
+    `
+    : `
+      <div style="direction: rtl; text-align: right; font-family: Tahoma, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #f59e0b;">بازیابی رمز عبور</h2>
+        <p>با سلام،</p>
+        <p>کد بازیابی رمز عبور شما:</p>
+        <div style="background: #fef3c7; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #d97706;">${code}</span>
+        </div>
+        <p>این کد تا ۱۰ دقیقه معتبر است.</p>
+        <p>اگر شما این درخواست را ارسال نکرده‌اید، لطفاً این ایمیل را نادیده بگیرید.</p>
+        <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 20px 0;">
+        <p style="color: #666; font-size: 12px;">© اهرم - سامانه مدیریت خدمات داربست</p>
+      </div>
+    `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: 'اهرم <noreply@ahrom.ir>',
+      to: [email],
+      subject,
+      html: htmlContent,
+    });
+    
+    if (error) {
+      console.error('Resend error:', error);
+      return false;
+    }
+    
+    console.log(`Email sent successfully to ${email}`);
+    return true;
+  } catch (err) {
+    console.error('Email sending failed:', err);
+    return false;
+  }
+}
 
 // Simple password hashing using Web Crypto API
 async function hashPassword(password: string): Promise<string> {
@@ -297,16 +364,20 @@ serve(async (req) => {
         purpose: 'email_verify'
       });
 
-      // TODO: Send email with verification code (requires Resend setup)
-      // For now, return the code (in production, this would be sent via email)
-      console.log(`Email verification code for ${email}: ${verificationCode}`);
+      // Send email with verification code
+      const emailSent = await sendVerificationEmail(email, verificationCode, 'email_verify');
+      
+      if (!emailSent) {
+        return new Response(
+          JSON.stringify({ error: 'خطا در ارسال ایمیل. لطفاً مجدداً تلاش کنید.' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'کد تایید به ایمیل شما ارسال شد',
-          // Remove this in production - only for testing
-          debug_code: verificationCode
+          message: 'کد تایید به ایمیل شما ارسال شد'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -457,15 +528,20 @@ serve(async (req) => {
         purpose: 'password_reset'
       });
 
-      // TODO: Send email with reset code (requires Resend setup)
-      console.log(`Password reset code for ${email}: ${resetCode}`);
+      // Send email with reset code
+      const emailSent = await sendVerificationEmail(email, resetCode, 'password_reset');
+      
+      if (!emailSent) {
+        return new Response(
+          JSON.stringify({ error: 'خطا در ارسال ایمیل. لطفاً مجدداً تلاش کنید.' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'کد بازیابی به ایمیل شما ارسال شد',
-          // Remove this in production
-          debug_code: resetCode
+          message: 'کد بازیابی به ایمیل شما ارسال شد'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
