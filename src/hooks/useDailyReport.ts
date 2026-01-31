@@ -540,6 +540,7 @@ export function useDailyReport() {
     const staffToSave = staffReports.filter(
       (s) =>
         s.is_cash_box ||
+        s.is_company_expense ||
         Boolean(s.staff_user_id) ||
         Boolean(s.staff_name?.trim()) ||
         (s.overtime_hours ?? 0) > 0 ||
@@ -612,13 +613,14 @@ export function useDailyReport() {
               staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
               staff_name: s.staff_name || '',
               work_status: toDbWorkStatus(s.work_status),
-              overtime_hours: s.overtime_hours,
-              amount_received: s.amount_received,
-              receiving_notes: s.receiving_notes,
-              amount_spent: s.amount_spent,
-              spending_notes: s.spending_notes,
-              notes: s.notes,
-              is_cash_box: s.is_cash_box,
+              overtime_hours: s.overtime_hours || 0,
+              amount_received: s.amount_received || 0,
+              receiving_notes: s.receiving_notes || '',
+              amount_spent: s.amount_spent || 0,
+              spending_notes: s.spending_notes || '',
+              notes: s.notes || '',
+              is_cash_box: s.is_cash_box === true,
+              is_company_expense: s.is_company_expense === true,
               bank_card_id: s.bank_card_id || null
             }))
           );
@@ -858,6 +860,7 @@ export function useDailyReport() {
       const staffToSave = staffReports.filter(
         (s) =>
           s.is_cash_box ||
+          s.is_company_expense ||
           Boolean(s.staff_user_id) ||
           Boolean(s.staff_name?.trim()) ||
           (s.overtime_hours ?? 0) > 0 ||
@@ -880,7 +883,8 @@ export function useDailyReport() {
           amount_spent: s.amount_spent || 0,
           spending_notes: s.spending_notes || '',
           notes: s.notes || '',
-          is_cash_box: s.is_cash_box || false,
+          is_cash_box: s.is_cash_box === true,
+          is_company_expense: s.is_company_expense === true,
           bank_card_id: s.bank_card_id || null
         }));
 
