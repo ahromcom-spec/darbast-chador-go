@@ -150,6 +150,12 @@ const fromDbWorkStatus = (value: unknown): 'کارکرده' | 'غایب' => {
   return value === 'حاضر' ? 'کارکرده' : 'غایب';
 };
 
+// محافظت در برابر داده‌های قدیمی/ناپاک (مثلاً مقدار "" یا "true" در local state)
+// که باعث خطای Postgres مثل: invalid input syntax for type boolean: "" می‌شود.
+const toDbBoolean = (value: unknown): boolean => {
+  return value === true || value === 'true' || value === 1 || value === '1';
+};
+
 // تبدیل تاریخ به فرمت YYYY-MM-DD با استفاده از تاریخ محلی (نه UTC)
 // این تابع مهم است چون toISOString() از UTC استفاده می‌کند و ممکن است تاریخ را اشتباه نشان دهد
 const toLocalDateString = (date: Date): string => {
@@ -641,8 +647,10 @@ export default function DailyReportModule() {
               spending_notes: s.spending_notes,
               bank_card_id: s.bank_card_id ?? null,
               notes: s.notes,
-              is_cash_box: s.is_cash_box,
-              is_company_expense: s.is_company_expense ?? false
+              is_cash_box: toDbBoolean(s.is_cash_box),
+              is_company_expense:
+                toDbBoolean(s.is_company_expense) ||
+                Boolean(s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'))
             }))
           );
 
@@ -1675,8 +1683,10 @@ export default function DailyReportModule() {
           spending_notes: s.spending_notes || '',
           bank_card_id: s.bank_card_id ?? null,
           notes: s.notes || '',
-          is_cash_box: s.is_cash_box || false,
-          is_company_expense: s.is_company_expense ?? false
+          is_cash_box: toDbBoolean(s.is_cash_box),
+          is_company_expense:
+            toDbBoolean(s.is_company_expense) ||
+            Boolean(s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'))
         }));
 
         const { error: staffError } = await supabase
