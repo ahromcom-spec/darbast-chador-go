@@ -933,6 +933,39 @@ export type Database = {
           },
         ]
       }
+      email_verification_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          email: string
+          expires_at: string | null
+          id: string
+          phone_number: string
+          purpose: string
+          used: boolean | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          email: string
+          expires_at?: string | null
+          id?: string
+          phone_number: string
+          purpose?: string
+          used?: boolean | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          email?: string
+          expires_at?: string | null
+          id?: string
+          phone_number?: string
+          purpose?: string
+          used?: boolean | null
+        }
+        Relationships: []
+      }
       expert_pricing_request_media: {
         Row: {
           created_at: string | null
@@ -2060,9 +2093,13 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          password_set_at: string | null
           phone_number: string | null
+          recovery_email: string | null
+          recovery_email_verified: boolean | null
           updated_at: string
           user_id: string
+          user_password_hash: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -2070,9 +2107,13 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          password_set_at?: string | null
           phone_number?: string | null
+          recovery_email?: string | null
+          recovery_email_verified?: boolean | null
           updated_at?: string
           user_id: string
+          user_password_hash?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -2080,9 +2121,13 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          password_set_at?: string | null
           phone_number?: string | null
+          recovery_email?: string | null
+          recovery_email_verified?: boolean | null
           updated_at?: string
           user_id?: string
+          user_password_hash?: string | null
         }
         Relationships: []
       }
@@ -4477,6 +4522,7 @@ export type Database = {
           is_whitelisted: boolean
         }[]
       }
+      cleanup_expired_email_codes: { Args: never; Returns: undefined }
       cleanup_expired_otps: { Args: never; Returns: undefined }
       create_project_v3: {
         Args: {
@@ -4830,6 +4876,10 @@ export type Database = {
       validate_phone_number: { Args: { _phone: string }; Returns: boolean }
       validate_profile_phone: {
         Args: { _phone_number: string }
+        Returns: boolean
+      }
+      verify_email_code: {
+        Args: { _code: string; _email: string; _purpose: string }
         Returns: boolean
       }
       verify_otp_code: {

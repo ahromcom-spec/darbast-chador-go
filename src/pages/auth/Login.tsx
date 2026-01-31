@@ -621,6 +621,13 @@ const handleResendOTP = async () => {
                     دریافت کد تایید پیامکی
                   </Button>
                   
+                  <Link 
+                    to="/auth/forgot-password" 
+                    className="text-sm text-primary hover:underline text-center block"
+                  >
+                    فراموشی رمز عبور؟
+                  </Link>
+                  
                   <Button
                     type="button"
                     variant="outline"
