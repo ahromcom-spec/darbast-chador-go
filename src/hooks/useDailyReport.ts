@@ -420,8 +420,8 @@ export function useDailyReport() {
 
         const allStaff: StaffReportRow[] = (staffData || []).map((s: any) => {
           const staffCode = extractStaffCode(s.staff_name || '');
-          // Check if this is a company expense row by staff_name
-          const isCompanyExpense = s.staff_name === 'ماهیت شرکت اهرم';
+          // Use the database field is_company_expense, fallback to checking staff_name
+          const isCompanyExpense = s.is_company_expense === true || s.staff_name === 'ماهیت شرکت اهرم';
 
           return {
             id: s.id,
@@ -429,13 +429,13 @@ export function useDailyReport() {
             staff_name: s.staff_name || '',
             real_user_id: s.staff_user_id || null,
             work_status: fromDbWorkStatus(s.work_status),
-            overtime_hours: s.overtime_hours || 0,
-            amount_received: s.amount_received || 0,
+            overtime_hours: Number(s.amount_received) || 0, // Fix: was reading wrong field
+            amount_received: Number(s.amount_received) || 0,
             receiving_notes: s.receiving_notes || '',
-            amount_spent: s.amount_spent || 0,
+            amount_spent: Number(s.amount_spent) || 0,
             spending_notes: s.spending_notes || '',
             notes: s.notes || '',
-            is_cash_box: s.is_cash_box || false,
+            is_cash_box: s.is_cash_box === true,
             is_company_expense: isCompanyExpense,
             bank_card_id: s.bank_card_id || null,
           };
