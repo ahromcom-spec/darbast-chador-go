@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, MessageSquare, Briefcase, FolderKanban, ClipboardList, Receipt, Users, Boxes } from 'lucide-react';
+import { Package, MessageSquare, Briefcase, FolderKanban, ClipboardList, Receipt, Users, Boxes, Lock } from 'lucide-react';
 import { MyOrdersList } from '@/components/profile/MyOrdersList';
 import { CustomerInvoice } from '@/components/profile/CustomerInvoice';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { TicketForm } from '@/components/profile/TicketForm';
 import { ContractorForm } from '@/components/profile/ContractorForm';
 import { NewContractorForm } from '@/components/profile/NewContractorForm';
+import { PasswordManagement } from '@/components/auth/PasswordManagement';
 import { Suspense } from 'react';
 import { useContractorRole } from '@/hooks/useContractorRole';
 import { useCEORole } from '@/hooks/useCEORole';
@@ -28,6 +29,7 @@ import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
 import { useSalesManagerRole } from '@/hooks/useSalesManagerRole';
 import { useFinanceManagerRole } from '@/hooks/useFinanceManagerRole';
 import { useExecutiveManagerRole } from '@/hooks/useExecutiveManagerRole';
+import { usePasswordStatus } from '@/hooks/usePasswordStatus';
 import { CEOManagementSection } from '@/components/profile/CEOManagementSection';
 import { ModulesManagement } from '@/components/profile/ModulesManagement';
 import { UserWallet } from '@/components/profile/UserWallet';
@@ -86,6 +88,7 @@ export default function UserProfile() {
   const { isSalesManager } = useSalesManagerRole();
   const { isFinanceManager } = useFinanceManagerRole();
   const { isExecutiveManager } = useExecutiveManagerRole();
+  const { hasPassword, hasEmail, emailVerified, recoveryEmail, refetch: refetchPasswordStatus } = usePasswordStatus();
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [projectOrders, setProjectOrders] = useState<ProjectOrder[]>([]);
   const [scaffoldingRequests, setScaffoldingRequests] = useState<ScaffoldingRequest[]>([]);
@@ -273,7 +276,7 @@ const fetchOrders = async () => {
           }}
           className="w-full"
         >
-          <TabsList className="grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 sm:grid-cols-5">
+          <TabsList className="grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 sm:grid-cols-6">
             <TabsTrigger 
               value="modules" 
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
@@ -299,6 +302,13 @@ const fetchOrders = async () => {
             >
               <Receipt className="h-4 w-4 ml-1 hidden sm:inline" />
               صورتحساب
+            </TabsTrigger>
+            <TabsTrigger 
+              value="security" 
+              className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
+              <Lock className="h-4 w-4 ml-1 hidden sm:inline" />
+              امنیت
             </TabsTrigger>
             <TabsTrigger 
               value="actions" 
@@ -376,6 +386,18 @@ const fetchOrders = async () => {
 {/* Invoice Tab */}
 <TabsContent value="invoice" className="mt-4">
   <CustomerInvoice />
+</TabsContent>
+
+{/* Security Tab - Password & Email Recovery */}
+<TabsContent value="security" className="mt-4">
+  <PasswordManagement
+    userId={user.id}
+    phoneNumber={phoneNumber}
+    currentEmail={recoveryEmail}
+    emailVerified={emailVerified}
+    hasPassword={hasPassword}
+    onUpdate={refetchPasswordStatus}
+  />
 </TabsContent>
 
 
