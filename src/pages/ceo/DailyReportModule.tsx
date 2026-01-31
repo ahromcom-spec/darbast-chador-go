@@ -508,10 +508,21 @@ export default function DailyReportModule() {
           Boolean(s.notes?.trim()))
     );
 
-    // صندوق همیشه وجود دارد - فقط بررسی می‌کنیم که آیا داده‌ای قابل ذخیره هست
-    const hasCashBox = staffReports.some((s) => s.is_cash_box);
+     // وجود صرفِ «سطر صندوق/کارت بانکی» نباید باعث auto-save شود.
+     // چون در فرآیند لود/رفرش ممکن است state هنوز کامل hydrate نشده باشد و
+     // auto-save با snapshot ناقص، داده‌های قبلی را delete/replace کند.
+     const hasCashBoxData = staffReports.some(
+       (s) =>
+         s.is_cash_box &&
+         (Boolean(s.bank_card_id) ||
+           (s.amount_received ?? 0) > 0 ||
+           (s.amount_spent ?? 0) > 0 ||
+           Boolean(s.receiving_notes?.trim()) ||
+           Boolean(s.spending_notes?.trim()) ||
+           Boolean(s.notes?.trim()))
+     );
 
-    if (!hasOrderData && !hasStaffData && !hasCashBox) return;
+     if (!hasOrderData && !hasStaffData && !hasCashBoxData) return;
 
     const staffToSave = staffReports.filter(
       (s) =>
@@ -661,10 +672,7 @@ export default function DailyReportModule() {
   // Auto-save with debounce when data changes
   useEffect(() => {
     // Skip auto-save on initial load or when form is empty (during date change)
-    if (isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
-      return;
-    }
+    if (isInitialLoadRef.current) return;
     
     // اگر فرم کاملا خالی است، auto-save انجام نده (هنگام تغییر تاریخ)
     if (orderReports.length === 0 && staffReports.length === 0) return;
