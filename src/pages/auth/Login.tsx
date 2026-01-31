@@ -389,6 +389,35 @@ const handleResendOTP = async () => {
     setUserExists(null);
   };
 
+  // سوئیچ از رمز عبور به OTP برای شماره‌های لیست سفید
+  const handleSwitchToOTP = async () => {
+    setLoading(true);
+    setErrors({});
+    
+    try {
+      // ارسال کد تایید به شماره کاربر (حتی اگر در لیست سفید است)
+      const { error } = await sendOTP(phoneNumber, false);
+      
+      if (error) {
+        const msg = error.message || 'خطا در ارسال کد تایید';
+        toast({ variant: 'destructive', title: 'خطا', description: msg });
+        return;
+      }
+      
+      // رفتن به مرحله OTP
+      setCountdown(90);
+      setOtpCode('');
+      setPassword('');
+      setStep('otp');
+      toast({ title: 'موفق', description: 'کد تایید به شماره شما ارسال شد.' });
+    } catch (e) {
+      console.error('Error switching to OTP:', e);
+      toast({ variant: 'destructive', title: 'خطا', description: 'خطا در ارسال کد تایید' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       {/* Hero Background Image */}
@@ -579,7 +608,17 @@ const handleResendOTP = async () => {
                     size="lg"
                     disabled={loading || !password || passwordCountdown === 0}
                   >
-                    {loading ? 'در حال بررسی...' : 'ورود'}
+                  {loading ? 'در حال بررسی...' : 'ورود با رمز عبور'}
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={handleSwitchToOTP}
+                    disabled={loading}
+                  >
+                    دریافت کد تایید پیامکی
                   </Button>
                   
                   <Button
