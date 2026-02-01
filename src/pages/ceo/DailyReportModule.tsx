@@ -520,6 +520,35 @@ export default function DailyReportModule() {
     }
   }, [reportDate, user, activeModuleKey, isAggregated]);
 
+  // Realtime subscription برای ماژول کلی: وقتی گزارشی حذف شود، دوباره واکشی کن
+  useEffect(() => {
+    if (!isAggregated || !user) return;
+
+    const dateStr = toLocalDateString(reportDate);
+
+    const channel = supabase
+      .channel(`daily-reports-realtime-${dateStr}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'daily_reports',
+          filter: `report_date=eq.${dateStr}`,
+        },
+        (payload) => {
+          // هر تغییری (حذف، ویرایش، افزودن) داده‌ها را دوباره واکشی کن
+          console.log('Realtime update received:', payload.eventType);
+          fetchExistingReport();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAggregated, user, reportDate]);
+
   // Auto-save function
   const performAutoSave = useCallback(async () => {
     // جلوگیری از auto-save در ماژول تجمیعی (فقط خواندنی)
