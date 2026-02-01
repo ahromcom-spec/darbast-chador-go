@@ -5,9 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// رمز ثابت برای شماره‌های لیست سفید
-const WHITELIST_FIXED_PASSWORD = 'ffB#469@';
+// رمز ثابت برای شماره‌های لیست سفید - از متغیر محیطی خوانده می‌شود
+const WHITELIST_FIXED_PASSWORD = Deno.env.get('WHITELIST_PASSWORD');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -108,6 +107,15 @@ serve(async (req) => {
     }
     // اگر درخواست ورود با رمز عبور است
     if (is_password_login) {
+      // بررسی وجود رمز عبور لیست سفید در متغیرهای محیطی
+      if (!WHITELIST_FIXED_PASSWORD) {
+        console.error('WHITELIST_PASSWORD environment variable not configured');
+        return new Response(
+          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       // فقط شماره‌های لیست سفید مجاز به ورود با رمز عبور هستند
       if (!isWhitelistedPhone) {
         return new Response(
