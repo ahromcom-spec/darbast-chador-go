@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { BankCardsList } from '@/components/bank-cards/BankCardsList';
 import { BankCardForm } from '@/components/bank-cards/BankCardForm';
 import { BankCardTransactions } from '@/components/bank-cards/BankCardTransactions';
 import { useBankCards, BankCard } from '@/hooks/useBankCards';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditCard, History, Plus } from 'lucide-react';
+import { CreditCard, History, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { recalculateAllBankCardBalances } from '@/hooks/useBankCardRealtimeSync';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -15,10 +18,46 @@ import {
 } from '@/components/ui/dialog';
 
 export default function BankCardsModule() {
-  const { cards, loading, saving, createCard, updateCard, deleteCard, toggleCardStatus, getCardTransactions } = useBankCards();
+  const { cards, loading, saving, createCard, updateCard, deleteCard, toggleCardStatus, getCardTransactions, fetchCards } = useBankCards();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<BankCard | null>(null);
   const [viewingCard, setViewingCard] = useState<BankCard | null>(null);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // Setup realtime subscription for daily_report_staff changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('bank-cards-module-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_report_staff'
+        },
+        (payload) => {
+          // Only process changes that affect bank cards
+          const oldData = payload.old as any;
+          const newData = payload.new as any;
+          
+          if ((oldData?.bank_card_id && oldData?.is_cash_box) || 
+              (newData?.bank_card_id && newData?.is_cash_box)) {
+            // Refetch cards to get updated balances
+            fetchCards();
+          }
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+    };
+  }, [fetchCards]);
 
   const handleCreate = async (data: any) => {
     const result = await createCard(data);
@@ -43,6 +82,21 @@ export default function BankCardsModule() {
     setViewingCard(card);
   };
 
+  // Manual recalculation of all balances
+  const handleRecalculateAll = async () => {
+    setIsRecalculating(true);
+    try {
+      await recalculateAllBankCardBalances();
+      await fetchCards();
+      toast.success('موجودی تمام کارت‌ها بازمحاسبه شد');
+    } catch (error) {
+      console.error('Error recalculating balances:', error);
+      toast.error('خطا در بازمحاسبه موجودی');
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
   return (
     <ModuleLayout
       defaultModuleKey="bank_cards"
@@ -50,7 +104,7 @@ export default function BankCardsModule() {
       defaultDescription="مدیریت کارت‌های بانکی و پیگیری موجودی"
     >
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-emerald-500/10">
               <CreditCard className="h-6 w-6 text-emerald-600" />
@@ -62,10 +116,21 @@ export default function BankCardsModule() {
               </p>
             </div>
           </div>
-          <Button onClick={() => setIsFormOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            ثبت کارت جدید
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleRecalculateAll}
+              disabled={isRecalculating}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRecalculating ? 'animate-spin' : ''}`} />
+              بازمحاسبه موجودی
+            </Button>
+            <Button onClick={() => setIsFormOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              ثبت کارت جدید
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="cards" className="w-full">

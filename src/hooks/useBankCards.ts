@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useBankCardRealtimeSync, recalculateBankCardBalance } from './useBankCardRealtimeSync';
 
 export interface BankCard {
   id: string;
@@ -45,11 +46,13 @@ export function useBankCards() {
   const [cards, setCards] = useState<BankCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const isFetchingRef = useRef(false);
 
   const fetchCards = useCallback(async () => {
-    if (!user) return;
+    if (!user || isFetchingRef.current) return;
 
     try {
+      isFetchingRef.current = true;
       setLoading(true);
       const { data, error } = await supabase
         .from('bank_cards')
@@ -63,8 +66,30 @@ export function useBankCards() {
       toast.error('خطا در دریافت کارت‌های بانکی');
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [user]);
+
+  // Handle balance change from realtime sync
+  const handleBalanceChange = useCallback((cardId: string, newBalance: number) => {
+    setCards((prev) =>
+      prev.map((card) =>
+        card.id === cardId ? { ...card, current_balance: newBalance } : card
+      )
+    );
+  }, []);
+
+  // Handle transaction change - refetch cards
+  const handleTransactionChange = useCallback(() => {
+    fetchCards();
+  }, [fetchCards]);
+
+  // Setup realtime sync
+  useBankCardRealtimeSync({
+    onBalanceChange: handleBalanceChange,
+    onTransactionChange: handleTransactionChange,
+    enabled: !!user,
+  });
 
   const createCard = useCallback(async (cardData: CreateBankCardData) => {
     if (!user) return null;

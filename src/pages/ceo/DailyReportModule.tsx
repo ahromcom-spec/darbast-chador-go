@@ -1638,6 +1638,30 @@ export default function DailyReportModule() {
     
     setClearingToday(true);
     try {
+      // First, get the affected bank card IDs before deletion
+      const { data: affectedStaffRows } = await supabase
+        .from('daily_report_staff')
+        .select('bank_card_id')
+        .eq('daily_report_id', existingReportId)
+        .eq('is_cash_box', true)
+        .not('bank_card_id', 'is', null);
+      
+      const affectedCardIds = new Set<string>(
+        (affectedStaffRows || [])
+          .map((r: any) => r.bank_card_id)
+          .filter(Boolean)
+      );
+
+      // Delete bank card transaction logs for this report
+      const { error: txError } = await supabase
+        .from('bank_card_transactions')
+        .delete()
+        .eq('reference_type', 'daily_report_staff')
+        .eq('reference_id', existingReportId);
+      if (txError) {
+        console.warn('Could not delete bank card transactions:', txError);
+      }
+
       // Delete related records first
       const { error: ordersError } = await supabase
         .from('daily_report_orders')
@@ -1657,6 +1681,14 @@ export default function DailyReportModule() {
         .delete()
         .eq('id', existingReportId);
       if (reportError) throw reportError;
+
+      // CRITICAL: Recalculate bank card balances after deletion
+      // Import dynamically to avoid circular dependencies
+      const { recalculateBankCardBalance } = await import('@/hooks/useBankCardRealtimeSync');
+      
+      for (const cardId of affectedCardIds) {
+        await recalculateBankCardBalance(cardId);
+      }
 
       // Clear localStorage backup
       clearLocalStorageBackup();
