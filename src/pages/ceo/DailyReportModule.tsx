@@ -1613,17 +1613,15 @@ export default function DailyReportModule() {
             .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
             .eq('id', reportId);
         } else {
-          // Create new report with module_key for isolation using upsert
+          // Create new report with module_key for isolation using insert with retry
           const { data: newReport, error: createError } = await supabase
             .from('daily_reports')
-            .upsert({
+            .insert({
               report_date: dateStr,
               created_by: user.id,
               notes: dailyNotes || null,
               module_key: activeModuleKey,
               updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'report_date,created_by'
             })
             .select('id')
             .single();
@@ -1640,6 +1638,11 @@ export default function DailyReportModule() {
               if (retry?.id) {
                 reportId = retry.id;
                 setExistingReportId(reportId);
+                // Update notes
+                await supabase
+                  .from('daily_reports')
+                  .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
+                  .eq('id', reportId);
               } else {
                 throw createError;
               }
