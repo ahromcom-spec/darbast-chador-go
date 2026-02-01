@@ -1384,7 +1384,13 @@ export default function DailyReportModule() {
   };
 
   const removeOrderRow = (index: number) => {
+    // ذخیره موقعیت اسکرول قبل از حذف
+    const scrollY = window.scrollY;
     setOrderReports(orderReports.filter((_, i) => i !== index));
+    // بازگردانی موقعیت اسکرول بعد از حذف
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollY, behavior: 'instant' });
+    });
   };
 
   const updateOrderRow = (index: number, field: keyof OrderReportRow, value: string) => {
@@ -1477,7 +1483,13 @@ export default function DailyReportModule() {
         return;
       }
     }
+    // ذخیره موقعیت اسکرول قبل از حذف
+    const scrollY = window.scrollY;
     setStaffReports(staffReports.filter((_, i) => i !== index));
+    // بازگردانی موقعیت اسکرول بعد از حذف
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollY, behavior: 'instant' });
+    });
   };
 
   const updateStaffRow = (index: number, field: keyof StaffReportRow, value: any) => {
