@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -390,6 +390,10 @@ export default function DailyReportModule() {
   const [reportToArchive, setReportToArchive] = useState<SavedReport | null>(null);
   const [unarchiving, setUnarchiving] = useState(false);
 
+  // Clear today's data dialog state
+  const [clearTodayDialogOpen, setClearTodayDialogOpen] = useState(false);
+  const [clearingToday, setClearingToday] = useState(false);
+
   // Order details dialog state
   const [orderDetailsDialogOpen, setOrderDetailsDialogOpen] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
@@ -518,10 +522,13 @@ export default function DailyReportModule() {
 
   // Auto-save function
   const performAutoSave = useCallback(async () => {
+    // جلوگیری از auto-save در ماژول تجمیعی (فقط خواندنی)
+    if (isAggregated) return;
+    
     // جلوگیری از auto-save در حین لود یا وقتی فرم خالی است (هنگام تغییر تاریخ)
     if (!user || loading || saving || isInitialLoadRef.current) return;
     
-    // اگر فرم کاملا خالی است، auto-save انجام نده
+    // اگر فرم کاملا خالی است، auto-save انجم نده
     if (orderReports.length === 0 && staffReports.length === 0) return;
 
     // Check if there's any meaningful data to save
@@ -1596,6 +1603,93 @@ export default function DailyReportModule() {
     }
   };
 
+  // پاکسازی تمام داده‌های روز جاری
+  const handleClearTodayData = async () => {
+    if (!user || !existingReportId) return;
+    
+    setClearingToday(true);
+    try {
+      // Delete related records first
+      const { error: ordersError } = await supabase
+        .from('daily_report_orders')
+        .delete()
+        .eq('daily_report_id', existingReportId);
+      if (ordersError) throw ordersError;
+
+      const { error: staffError } = await supabase
+        .from('daily_report_staff')
+        .delete()
+        .eq('daily_report_id', existingReportId);
+      if (staffError) throw staffError;
+
+      // Delete the report
+      const { error: reportError } = await supabase
+        .from('daily_reports')
+        .delete()
+        .eq('id', existingReportId);
+      if (reportError) throw reportError;
+
+      // Clear localStorage backup
+      clearLocalStorageBackup();
+      
+      // Reset form to empty state
+      setExistingReportId(null);
+      setDailyNotes('');
+      setOrderReports([
+        {
+          order_id: '',
+          activity_description: '',
+          service_details: '',
+          team_name: '',
+          notes: '',
+          row_color: ROW_COLORS[0].value,
+        },
+      ]);
+      setStaffReports([
+        {
+          staff_user_id: null,
+          staff_name: 'ماهیت شرکت اهرم',
+          work_status: 'کارکرده',
+          overtime_hours: 0,
+          amount_received: 0,
+          receiving_notes: '',
+          amount_spent: 0,
+          spending_notes: '',
+          bank_card_id: null,
+          notes: '',
+          is_cash_box: false,
+          is_company_expense: true,
+        },
+        {
+          staff_user_id: null,
+          staff_name: '',
+          work_status: 'غایب',
+          overtime_hours: 0,
+          amount_received: 0,
+          receiving_notes: '',
+          amount_spent: 0,
+          spending_notes: '',
+          bank_card_id: null,
+          notes: '',
+          is_cash_box: false,
+          is_company_expense: false,
+        },
+      ]);
+      
+      setClearTodayDialogOpen(false);
+      setIsSaved(false);
+      
+      toast.success('داده‌های این روز با موفقیت پاک شدند');
+    } catch (error) {
+      console.error('Error clearing today data:', error);
+      const message = (error as any)?.message ? String((error as any).message) : '';
+      const isRls = message.toLowerCase().includes('row-level security') || message.toLowerCase().includes('permission denied');
+      toast.error(isRls ? 'شما دسترسی پاکسازی داده‌ها را ندارید' : 'خطا در پاکسازی داده‌ها');
+    } finally {
+      setClearingToday(false);
+    }
+  };
+
   const addOrderRow = () => {
     setOrderReports([...orderReports, {
       order_id: '',
@@ -2455,11 +2549,26 @@ export default function DailyReportModule() {
       icon={<FileText className="h-5 w-5 text-primary" />}
       action={
         <div className="flex items-center gap-3">
-          <ExcelImportDialog
-            onImportComplete={handleExcelImport}
-            knownStaffMembers={staffMembers}
-          />
-          {autoSaveStatus !== 'idle' && (
+          {/* دکمه پاکسازی داده‌های روز - فقط برای ماژول‌های غیر تجمیعی */}
+          {!isAggregated && existingReportId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setClearTodayDialogOpen(true)}
+              className="gap-2 text-destructive border-destructive/50 hover:bg-destructive/10"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span className="hidden sm:inline">پاکسازی داده‌های روز</span>
+              <span className="sm:hidden">پاکسازی</span>
+            </Button>
+          )}
+          {!isAggregated && (
+            <ExcelImportDialog
+              onImportComplete={handleExcelImport}
+              knownStaffMembers={staffMembers}
+            />
+          )}
+          {autoSaveStatus !== 'idle' && !isAggregated && (
             <div className="flex items-center gap-2 text-sm">
               {autoSaveStatus === 'saving' && (
                 <>
@@ -2474,6 +2583,12 @@ export default function DailyReportModule() {
                 </>
               )}
             </div>
+          )}
+          {isAggregated && (
+            <Badge variant="secondary" className="gap-1 py-1">
+              <Eye className="h-3 w-3" />
+              فقط خواندنی
+            </Badge>
           )}
         </div>
       }
@@ -2557,15 +2672,21 @@ export default function DailyReportModule() {
             {/* Daily Notes */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 bg-muted/30 p-3 rounded-lg">
               <Label className="text-sm font-medium whitespace-nowrap">توضیحات روز:</Label>
-              <AutoResizeTextarea
-                placeholder="توضیحات روزانه"
-                value={dailyNotes}
-                onChange={(e) => {
-                  setDailyNotes(e.target.value);
-                  setIsSaved(false);
-                }}
-                className="flex-1 min-h-[40px] text-sm resize-none"
-              />
+              {isAggregated ? (
+                <div className="flex-1 min-h-[40px] text-sm bg-background/50 p-2 rounded border">
+                  {dailyNotes || <span className="text-muted-foreground">بدون توضیحات</span>}
+                </div>
+              ) : (
+                <AutoResizeTextarea
+                  placeholder="توضیحات روزانه"
+                  value={dailyNotes}
+                  onChange={(e) => {
+                    setDailyNotes(e.target.value);
+                    setIsSaved(false);
+                  }}
+                  className="flex-1 min-h-[40px] text-sm resize-none"
+                />
+              )}
             </div>
 
             {loading ? (
@@ -2584,11 +2705,13 @@ export default function DailyReportModule() {
                         </div>
                         <CardTitle className="text-base sm:text-lg">گزارش سفارشات مشتری</CardTitle>
                       </div>
-                      <Button size="sm" onClick={addOrderRow} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                        <span className="hidden xs:inline">افزودن ردیف</span>
-                        <span className="xs:hidden">ردیف</span>
-                      </Button>
+                      {!isAggregated && (
+                        <Button size="sm" onClick={addOrderRow} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden xs:inline">افزودن ردیف</span>
+                          <span className="xs:hidden">ردیف</span>
+                        </Button>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="px-0 sm:px-6">
@@ -2621,12 +2744,18 @@ export default function DailyReportModule() {
                               <TableRow key={index} className={`${getRowColorClass(row.row_color)} even:opacity-90`}>
                                 <TableCell className="border border-blue-200">
                                   <div className="flex items-center gap-2">
-                                    <OrderSearchSelect
-                                      orders={orders}
-                                      value={row.order_id}
-                                      onValueChange={(value) => updateOrderRow(index, 'order_id', value)}
-                                      placeholder="انتخاب سفارش"
-                                    />
+                                    {isAggregated ? (
+                                      <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm">
+                                        {orders.find(o => o.id === row.order_id)?.code || '-'}
+                                      </div>
+                                    ) : (
+                                      <OrderSearchSelect
+                                        orders={orders}
+                                        value={row.order_id}
+                                        onValueChange={(value) => updateOrderRow(index, 'order_id', value)}
+                                        placeholder="انتخاب سفارش"
+                                      />
+                                    )}
                                     {row.order_id && (
                                       <Button
                                         variant="ghost"
@@ -2669,41 +2798,61 @@ export default function DailyReportModule() {
                                   })()}
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
-                                  <AutoResizeTextarea
-                                    value={`${row.activity_description || ''}${row.activity_description && row.service_details ? '\n' : ''}${row.service_details || ''}`}
-                                    onChange={(e) => {
-                                      updateOrderRow(index, 'activity_description', e.target.value);
-                                      updateOrderRow(index, 'service_details', '');
-                                    }}
-                                    className="min-h-[50px] min-w-[50ch] bg-background/50"
-                                    placeholder="شرح فعالیت و ابعاد..."
-                                  />
+                                  {isAggregated ? (
+                                    <div className="min-h-[50px] min-w-[50ch] bg-background/50 p-2 rounded border text-sm whitespace-pre-wrap">
+                                      {row.activity_description || row.service_details || '-'}
+                                    </div>
+                                  ) : (
+                                    <AutoResizeTextarea
+                                      value={`${row.activity_description || ''}${row.activity_description && row.service_details ? '\n' : ''}${row.service_details || ''}`}
+                                      onChange={(e) => {
+                                        updateOrderRow(index, 'activity_description', e.target.value);
+                                        updateOrderRow(index, 'service_details', '');
+                                      }}
+                                      className="min-h-[50px] min-w-[50ch] bg-background/50"
+                                      placeholder="شرح فعالیت و ابعاد..."
+                                    />
+                                  )}
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
-                                  <Input
-                                    value={row.team_name}
-                                    onChange={(e) => updateOrderRow(index, 'team_name', e.target.value)}
-                                    className="bg-background/50 min-w-[40ch]"
-                                    placeholder="نام اکیپ"
-                                  />
+                                  {isAggregated ? (
+                                    <div className="min-w-[40ch] bg-background/50 p-2 rounded border text-sm">
+                                      {row.team_name || '-'}
+                                    </div>
+                                  ) : (
+                                    <Input
+                                      value={row.team_name}
+                                      onChange={(e) => updateOrderRow(index, 'team_name', e.target.value)}
+                                      className="bg-background/50 min-w-[40ch]"
+                                      placeholder="نام اکیپ"
+                                    />
+                                  )}
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
-                                  <AutoResizeTextarea
-                                    value={row.notes}
-                                    onChange={(e) => updateOrderRow(index, 'notes', e.target.value)}
-                                    className="min-h-[50px] min-w-[40ch] bg-background/50"
-                                    placeholder="توضیحات..."
-                                  />
+                                  {isAggregated ? (
+                                    <div className="min-h-[50px] min-w-[40ch] bg-background/50 p-2 rounded border text-sm whitespace-pre-wrap">
+                                      {row.notes || '-'}
+                                    </div>
+                                  ) : (
+                                    <AutoResizeTextarea
+                                      value={row.notes}
+                                      onChange={(e) => updateOrderRow(index, 'notes', e.target.value)}
+                                      className="min-h-[50px] min-w-[40ch] bg-background/50"
+                                      placeholder="توضیحات..."
+                                    />
+                                  )}
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => removeOrderRow(index)}
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                                  {!isAggregated && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeOrderRow(index)}
+                                      className="text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -2723,23 +2872,25 @@ export default function DailyReportModule() {
                         </div>
                         <CardTitle className="text-base sm:text-lg">گزارش نیروها</CardTitle>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={addBankCardRow}
-                          className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
-                        >
-                          <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden xs:inline">افزودن کارت بانکی</span>
-                          <span className="xs:hidden">کارت</span>
-                        </Button>
-                        <Button size="sm" onClick={addStaffRow} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden xs:inline">افزودن نیرو</span>
-                          <span className="xs:hidden">نیرو</span>
-                        </Button>
-                      </div>
+                      {!isAggregated && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={addBankCardRow}
+                            className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
+                          >
+                            <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <span className="hidden xs:inline">افزودن کارت بانکی</span>
+                            <span className="xs:hidden">کارت</span>
+                          </Button>
+                          <Button size="sm" onClick={addStaffRow} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+                            <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <span className="hidden xs:inline">افزودن نیرو</span>
+                            <span className="xs:hidden">نیرو</span>
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="px-0 sm:px-6">
@@ -2787,72 +2938,87 @@ export default function DailyReportModule() {
                                      ماهیت شرکت اهرم
                                    </div>
                                  ) : row.is_cash_box ? (
-                                  <div className="min-w-[220px]">
-                                    <BankCardSelect
-                                      value={row.bank_card_id ?? null}
-                                      onValueChange={(value) => updateStaffRow(index, 'bank_card_id', value)}
-                                      placeholder="انتخاب کارت بانکی"
-                                      showBalance={true}
-                                    />
-                                  </div>
-                                ) : (
-                                  <StaffSearchSelect
-                                    value={row.staff_user_id || ''}
-                                    onValueChange={(code, name, userId) => {
-                                      // Check if this staff is already selected
-                                      const alreadySelected = staffReports.some(
-                                        (r, i) => i !== index && r.staff_user_id === code && code
-                                      );
-                                      if (alreadySelected) {
-                                        toast.error('این نیرو قبلاً انتخاب شده است');
-                                        return;
-                                      }
+                                   isAggregated ? (
+                                     <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm flex items-center gap-2">
+                                       <CreditCard className="h-4 w-4 text-amber-600" />
+                                       {row.staff_name || 'کارت بانکی'}
+                                     </div>
+                                   ) : (
+                                     <div className="min-w-[220px]">
+                                       <BankCardSelect
+                                         value={row.bank_card_id ?? null}
+                                         onValueChange={(value) => updateStaffRow(index, 'bank_card_id', value)}
+                                         placeholder="انتخاب کارت بانکی"
+                                         showBalance={true}
+                                       />
+                                     </div>
+                                   )
+                                 ) : isAggregated ? (
+                                   <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm">
+                                     {row.staff_name || '-'}
+                                   </div>
+                                 ) : (
+                                   <StaffSearchSelect
+                                     value={row.staff_user_id || ''}
+                                     onValueChange={(code, name, userId) => {
+                                       // Check if this staff is already selected
+                                       const alreadySelected = staffReports.some(
+                                         (r, i) => i !== index && r.staff_user_id === code && code
+                                       );
+                                       if (alreadySelected) {
+                                         toast.error('این نیرو قبلاً انتخاب شده است');
+                                         return;
+                                       }
 
-                                      // Update all fields at once to avoid multiple renders
-                                      setStaffReports((prev) => {
-                                        const updated = [...prev];
-                                        updated[index] = {
-                                          ...updated[index],
-                                          staff_user_id: code,
-                                          staff_name: code && name ? `${code} - ${name}` : '',
-                                          real_user_id: userId || null
-                                        };
+                                       // Update all fields at once to avoid multiple renders
+                                       setStaffReports((prev) => {
+                                         const updated = [...prev];
+                                         updated[index] = {
+                                           ...updated[index],
+                                           staff_user_id: code,
+                                           staff_name: code && name ? `${code} - ${name}` : '',
+                                           real_user_id: userId || null
+                                         };
 
-                                        // Add new row if this is the last non-cash-box row
-                                        const nonCashBoxRows = updated.filter((r) => !r.is_cash_box);
-                                        const lastNonCashBoxIndex = updated.findIndex(
-                                          (r, i) => !r.is_cash_box && i === updated.lastIndexOf(nonCashBoxRows[nonCashBoxRows.length - 1])
-                                        );
+                                         // Add new row if this is the last non-cash-box row
+                                         const nonCashBoxRows = updated.filter((r) => !r.is_cash_box);
+                                         const lastNonCashBoxIndex = updated.findIndex(
+                                           (r, i) => !r.is_cash_box && i === updated.lastIndexOf(nonCashBoxRows[nonCashBoxRows.length - 1])
+                                         );
 
-                                        if (index === lastNonCashBoxIndex && code) {
-                                          updated.push({
-                                            staff_user_id: null,
-                                            staff_name: '',
-                                            work_status: 'غایب',
-                                            overtime_hours: 0,
-                                            amount_received: 0,
-                                            receiving_notes: '',
-                                            amount_spent: 0,
-                                            spending_notes: '',
-                                            bank_card_id: null,
-                                            notes: '',
-                                            is_cash_box: false
-                                          });
-                                        }
+                                         if (index === lastNonCashBoxIndex && code) {
+                                           updated.push({
+                                             staff_user_id: null,
+                                             staff_name: '',
+                                             work_status: 'غایب',
+                                             overtime_hours: 0,
+                                             amount_received: 0,
+                                             receiving_notes: '',
+                                             amount_spent: 0,
+                                             spending_notes: '',
+                                             bank_card_id: null,
+                                             notes: '',
+                                             is_cash_box: false
+                                           });
+                                         }
 
-                                        return updated;
-                                      });
-                                    }}
-                                    placeholder="انتخاب نیرو"
-                                    excludeCodes={staffReports
-                                      .filter((r, i) => i !== index && r.staff_user_id)
-                                      .map(r => r.staff_user_id as string)}
-                                  />
-                                )}
+                                         return updated;
+                                       });
+                                     }}
+                                     placeholder="انتخاب نیرو"
+                                     excludeCodes={staffReports
+                                       .filter((r, i) => i !== index && r.staff_user_id)
+                                       .map(r => r.staff_user_id as string)}
+                                   />
+                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
                                  {row.is_cash_box || isCompanyExpense ? (
                                   <span className="text-muted-foreground">—</span>
+                                ) : isAggregated ? (
+                                  <div className="min-w-[90px] p-2 bg-background/50 rounded border text-sm">
+                                    {row.work_status}
+                                  </div>
                                 ) : (
                                   <WorkStatusSelect
                                     value={row.work_status}
@@ -2864,6 +3030,10 @@ export default function DailyReportModule() {
                               <TableCell className="border border-amber-200">
                                  {row.is_cash_box || isCompanyExpense ? (
                                   <span className="text-muted-foreground">—</span>
+                                ) : isAggregated ? (
+                                  <div className="min-w-[90px] p-2 bg-background/50 rounded border text-sm text-left" dir="ltr">
+                                    {row.overtime_hours || 0} ساعت
+                                  </div>
                                 ) : (
                                   <div className="relative">
                                     <Input
@@ -2888,94 +3058,124 @@ export default function DailyReportModule() {
                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                <div className="relative">
-                                  <Input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={((row.amount_received ?? 0) === 0)
-                                      ? ''
-                                      : (row.amount_received ?? 0).toLocaleString('en-US')}
+                                {isAggregated ? (
+                                  <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm text-left tabular-nums" dir="ltr">
+                                    {(row.amount_received ?? 0).toLocaleString('fa-IR')} تومان
+                                  </div>
+                                ) : (
+                                  <div className="relative">
+                                    <Input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={((row.amount_received ?? 0) === 0)
+                                        ? ''
+                                        : (row.amount_received ?? 0).toLocaleString('en-US')}
+                                      onChange={(e) => {
+                                        const val = e.target.value
+                                          .replace(/[^0-9۰-۹]/g, '')
+                                          .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+                                        const numVal = parseInt(val) || 0;
+                                        if (numVal <= 300000000) {
+                                          updateStaffRow(index, 'amount_received', numVal);
+                                        } else {
+                                          toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                                        }
+                                      }}
+                                      className="min-w-[220px] pl-12 text-left tabular-nums"
+                                      dir="ltr"
+                                      placeholder="0"
+                                    />
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="border border-amber-200">
+                                {isAggregated ? (
+                                  <div className="min-w-[30ch] min-h-[50px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
+                                    {row.receiving_notes || '-'}
+                                  </div>
+                                ) : (
+                                  <AutoResizeTextarea
+                                    value={row.receiving_notes ?? ''}
                                     onChange={(e) => {
-                                      const val = e.target.value
-                                        .replace(/[^0-9۰-۹]/g, '')
-                                        .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                                      const numVal = parseInt(val) || 0;
-                                      if (numVal <= 300000000) {
-                                        updateStaffRow(index, 'amount_received', numVal);
-                                      } else {
-                                        toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                                      if (e.target.value.length <= 300) {
+                                        updateStaffRow(index, 'receiving_notes', e.target.value);
                                       }
                                     }}
-                                    className="min-w-[220px] pl-12 text-left tabular-nums"
-                                    dir="ltr"
-                                    placeholder="0"
+                                    placeholder={isCompanyExpense ? 'توضیحات دریافتی شرکت...' : 'توضیحات...'}
+                                    className="min-w-[30ch] min-h-[50px]"
+                                    maxLength={300}
                                   />
-                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
-                                </div>
+                                )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                <AutoResizeTextarea
-                                  value={row.receiving_notes ?? ''}
-                                  onChange={(e) => {
-                                    if (e.target.value.length <= 300) {
-                                      updateStaffRow(index, 'receiving_notes', e.target.value);
-                                    }
-                                  }}
-                                  placeholder={isCompanyExpense ? 'توضیحات دریافتی شرکت...' : 'توضیحات...'}
-                                  className="min-w-[30ch] min-h-[50px]"
-                                  maxLength={300}
-                                />
+                                {isAggregated ? (
+                                  <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm text-left tabular-nums" dir="ltr">
+                                    {(row.amount_spent ?? 0).toLocaleString('fa-IR')} تومان
+                                  </div>
+                                ) : (
+                                  <div className="relative">
+                                    <Input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={row.amount_spent === 0 ? '' : row.amount_spent.toLocaleString('en-US')}
+                                      onChange={(e) => {
+                                        const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+                                        const numVal = parseInt(val) || 0;
+                                        if (numVal <= 300000000) {
+                                          updateStaffRow(index, 'amount_spent', numVal);
+                                        } else {
+                                          toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                                        }
+                                      }}
+                                      className="min-w-[220px] pl-12 text-left tabular-nums"
+                                      dir="ltr"
+                                      placeholder="0"
+                                    />
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
+                                  </div>
+                                )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                <div className="relative">
-                                  <Input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={row.amount_spent === 0 ? '' : row.amount_spent.toLocaleString('en-US')}
+                                {isAggregated ? (
+                                  <div className="min-w-[30ch] min-h-[50px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
+                                    {row.spending_notes || '-'}
+                                  </div>
+                                ) : (
+                                  <AutoResizeTextarea
+                                    value={row.spending_notes}
                                     onChange={(e) => {
-                                      const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                                      const numVal = parseInt(val) || 0;
-                                      if (numVal <= 300000000) {
-                                        updateStaffRow(index, 'amount_spent', numVal);
-                                      } else {
-                                        toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                                      if (e.target.value.length <= 300) {
+                                        updateStaffRow(index, 'spending_notes', e.target.value);
                                       }
                                     }}
-                                    className="min-w-[220px] pl-12 text-left tabular-nums"
-                                    dir="ltr"
-                                    placeholder="0"
+                                    placeholder="توضیحات..."
+                                    className="min-w-[30ch] min-h-[50px]"
+                                    maxLength={300}
                                   />
-                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
-                                </div>
+                                )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                <AutoResizeTextarea
-                                  value={row.spending_notes}
-                                  onChange={(e) => {
-                                    if (e.target.value.length <= 300) {
-                                      updateStaffRow(index, 'spending_notes', e.target.value);
-                                    }
-                                  }}
-                                  placeholder="توضیحات..."
-                                  className="min-w-[30ch] min-h-[50px]"
-                                  maxLength={300}
-                                />
+                                {isAggregated ? (
+                                  <div className="min-w-[30ch] min-h-[50px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
+                                    {row.notes || '-'}
+                                  </div>
+                                ) : (
+                                  <AutoResizeTextarea
+                                    value={row.notes}
+                                    onChange={(e) => {
+                                      if (e.target.value.length <= 300) {
+                                        updateStaffRow(index, 'notes', e.target.value);
+                                      }
+                                    }}
+                                     placeholder={isCompanyExpense ? 'هزینه‌های شرکت (نهار، ایاب‌وذهاب و...)' : 'توضیحات...'}
+                                    className="min-w-[30ch] min-h-[50px]"
+                                    maxLength={300}
+                                  />
+                                )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                <AutoResizeTextarea
-                                  value={row.notes}
-                                  onChange={(e) => {
-                                    if (e.target.value.length <= 300) {
-                                      updateStaffRow(index, 'notes', e.target.value);
-                                    }
-                                  }}
-                                   placeholder={isCompanyExpense ? 'هزینه‌های شرکت (نهار، ایاب‌وذهاب و...)' : 'توضیحات...'}
-                                  className="min-w-[30ch] min-h-[50px]"
-                                  maxLength={300}
-                                />
-                              </TableCell>
-                              <TableCell className="border border-amber-200">
-                                 {!isCompanyExpense && (!row.is_cash_box || staffReports.filter((r) => r.is_cash_box).length > 1) && (
+                                 {!isAggregated && !isCompanyExpense && (!row.is_cash_box || staffReports.filter((r) => r.is_cash_box).length > 1) && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -3029,27 +3229,29 @@ export default function DailyReportModule() {
                   </CardContent>
                 </Card>
 
-                {/* Save Button */}
-                <div className="flex justify-center">
-                  <Button 
-                    onClick={() => {
-                      setIsSaved(false);
-                      saveReport();
-                    }} 
-                    disabled={saving}
-                    size="lg"
-                    className={`gap-2 min-w-[200px] ${isSaved ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                  >
-                    {saving ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : isSaved ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <Save className="h-5 w-5" />
-                    )}
-                    {isSaved ? 'ذخیره شده' : 'ذخیره گزارش'}
-                  </Button>
-                </div>
+                {/* Save Button - فقط برای ماژول‌های غیر تجمیعی */}
+                {!isAggregated && (
+                  <div className="flex justify-center">
+                    <Button 
+                      onClick={() => {
+                        setIsSaved(false);
+                        saveReport();
+                      }} 
+                      disabled={saving}
+                      size="lg"
+                      className={`gap-2 min-w-[200px] ${isSaved ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                    >
+                      {saving ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : isSaved ? (
+                        <Check className="h-5 w-5" />
+                      ) : (
+                        <Save className="h-5 w-5" />
+                      )}
+                      {isSaved ? 'ذخیره شده' : 'ذخیره گزارش'}
+                    </Button>
+                  </div>
+                )}
               </>
             )}
           </TabsContent>
@@ -4115,6 +4317,40 @@ export default function DailyReportModule() {
 
             <AlertDialogFooter className="sr-only">
               <AlertDialogCancel>بستن</AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Clear Today Data Dialog */}
+        <AlertDialog open={clearTodayDialogOpen} onOpenChange={setClearTodayDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                پاکسازی داده‌های روز
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-right">
+                آیا مطمئنید که می‌خواهید تمام داده‌های ثبت شده برای تاریخ{' '}
+                <strong>{format(reportDate, 'EEEE d MMMM yyyy')}</strong> را پاک کنید؟
+                <br />
+                <br />
+                این عمل غیرقابل بازگشت است و شامل گزارش سفارشات، نیروها و کارت‌های بانکی می‌شود.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-row-reverse gap-2">
+              <AlertDialogCancel>انصراف</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleClearTodayData}
+                disabled={clearingToday}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {clearingToday ? (
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                ) : (
+                  <Trash2 className="h-4 w-4 ml-2" />
+                )}
+                پاکسازی
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
