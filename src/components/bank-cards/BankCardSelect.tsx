@@ -7,8 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreditCard, RefreshCw } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 
 const NONE_VALUE = '__none__';
 
@@ -36,12 +37,15 @@ export function BankCardSelect({
 }: BankCardSelectProps) {
   const [cards, setCards] = useState<BankCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const isFetchingRef = useRef(false);
 
-  const fetchCards = useCallback(async (showRefresh = false) => {
+  const fetchCards = useCallback(async () => {
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) return;
+    
     try {
-      if (showRefresh) setIsRefreshing(true);
+      isFetchingRef.current = true;
       const { data, error } = await supabase
         .from('bank_cards')
         .select('id, card_name, bank_name, current_balance')
@@ -54,8 +58,17 @@ export function BankCardSelect({
       console.error('Error fetching bank cards:', error);
     } finally {
       setLoading(false);
-      if (showRefresh) setIsRefreshing(false);
+      isFetchingRef.current = false;
     }
+  }, []);
+
+  // Update a single card's balance in state without refetching all
+  const updateCardBalance = useCallback((cardId: string, newBalance: number) => {
+    setCards((prev) =>
+      prev.map((card) =>
+        card.id === cardId ? { ...card, current_balance: newBalance } : card
+      )
+    );
   }, []);
 
   useEffect(() => {
@@ -63,7 +76,7 @@ export function BankCardSelect({
 
     // Subscribe to realtime changes on bank_cards table
     const channel = supabase
-      .channel('bank-cards-balance-changes')
+      .channel('bank-cards-select-realtime')
       .on(
         'postgres_changes',
         {
@@ -71,9 +84,46 @@ export function BankCardSelect({
           schema: 'public',
           table: 'bank_cards'
         },
-        () => {
-          // Refetch cards when any change occurs
-          fetchCards();
+        (payload) => {
+          // Update specific card balance if it's an UPDATE
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const newData = payload.new as any;
+            updateCardBalance(newData.id, newData.current_balance);
+          } else {
+            // For INSERT/DELETE, refetch all
+            fetchCards();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_report_staff'
+        },
+        (payload) => {
+          // Only process changes that affect bank cards (cash box rows)
+          const oldData = payload.old as any;
+          const newData = payload.new as any;
+          
+          const affectedCardIds = new Set<string>();
+          
+          if (oldData?.bank_card_id && oldData?.is_cash_box) {
+            affectedCardIds.add(oldData.bank_card_id);
+          }
+          if (newData?.bank_card_id && newData?.is_cash_box) {
+            affectedCardIds.add(newData.bank_card_id);
+          }
+          
+          // Recalculate balance for each affected card
+          affectedCardIds.forEach((cardId) => {
+            recalculateBankCardBalance(cardId).then((newBalance) => {
+              if (newBalance !== null) {
+                updateCardBalance(cardId, newBalance);
+              }
+            });
+          });
         }
       )
       .subscribe();
@@ -85,7 +135,7 @@ export function BankCardSelect({
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [fetchCards]);
+  }, [fetchCards, updateCardBalance]);
 
   if (loading) {
     return (
