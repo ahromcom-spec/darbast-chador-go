@@ -1596,26 +1596,66 @@ export default function DailyReportModule() {
       let reportId = existingReportId;
 
       if (!reportId) {
-        // Create new report with module_key for isolation
-        const { data: newReport, error: createError } = await supabase
+        // First check if a report already exists for this date AND module_key (fresh DB check)
+        const { data: existingCheck } = await supabase
           .from('daily_reports')
-          .insert({
-            report_date: dateStr,
-            created_by: user.id,
-            notes: dailyNotes || null,
-            module_key: activeModuleKey
-          })
           .select('id')
-          .single();
+          .eq('report_date', dateStr)
+          .eq('module_key', activeModuleKey)
+          .maybeSingle();
 
-        if (createError) throw createError;
-        reportId = newReport.id;
-        setExistingReportId(reportId);
+        if (existingCheck?.id) {
+          reportId = existingCheck.id;
+          setExistingReportId(reportId);
+          // Update notes
+          await supabase
+            .from('daily_reports')
+            .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
+            .eq('id', reportId);
+        } else {
+          // Create new report with module_key for isolation using upsert
+          const { data: newReport, error: createError } = await supabase
+            .from('daily_reports')
+            .upsert({
+              report_date: dateStr,
+              created_by: user.id,
+              notes: dailyNotes || null,
+              module_key: activeModuleKey,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'report_date,created_by'
+            })
+            .select('id')
+            .single();
+
+          if (createError) {
+            // If unique constraint violation, try fetching again
+            if (createError.code === '23505') {
+              const { data: retry } = await supabase
+                .from('daily_reports')
+                .select('id')
+                .eq('report_date', dateStr)
+                .eq('module_key', activeModuleKey)
+                .maybeSingle();
+              if (retry?.id) {
+                reportId = retry.id;
+                setExistingReportId(reportId);
+              } else {
+                throw createError;
+              }
+            } else {
+              throw createError;
+            }
+          } else {
+            reportId = newReport.id;
+            setExistingReportId(reportId);
+          }
+        }
       } else {
         // Update existing report notes
         await supabase
           .from('daily_reports')
-          .update({ notes: dailyNotes || null })
+          .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
           .eq('id', reportId);
       }
 
@@ -1812,21 +1852,36 @@ export default function DailyReportModule() {
         let reportId = existingReport?.id;
 
         if (!reportId) {
-          // Create new report
+          // Create new report using upsert to handle race conditions
           const { data: newReport, error: createError } = await supabase
             .from('daily_reports')
-            .insert({
+            .upsert({
               report_date: dateStr,
-              created_by: user.id
+              created_by: user.id,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'report_date,created_by'
             })
             .select('id')
             .single();
 
           if (createError) {
-            console.error('Error creating report for', dateStr, ':', createError);
-            continue;
+            // If error persists, try fetching again
+            const { data: retry } = await supabase
+              .from('daily_reports')
+              .select('id')
+              .eq('report_date', dateStr)
+              .eq('created_by', user.id)
+              .maybeSingle();
+            if (retry?.id) {
+              reportId = retry.id;
+            } else {
+              console.error('Error creating report for', dateStr, ':', createError);
+              continue;
+            }
+          } else {
+            reportId = newReport.id;
           }
-          reportId = newReport.id;
         }
 
         // Insert staff reports
