@@ -558,18 +558,35 @@ export function useDailyReport() {
       let reportId = existingReportId;
 
       if (!reportId) {
-        const { data: newReport, error: createError } = await supabase
+        // First check if a report already exists for this date/user (fresh DB check)
+        const { data: existingCheck } = await supabase
           .from('daily_reports')
-          .insert({
-            report_date: dateStr,
-            created_by: user.id
-          })
           .select('id')
-          .single();
+          .eq('report_date', dateStr)
+          .eq('created_by', user.id)
+          .maybeSingle();
 
-        if (createError) throw createError;
-        reportId = newReport.id;
-        setExistingReportId(reportId);
+        if (existingCheck?.id) {
+          reportId = existingCheck.id;
+          setExistingReportId(reportId);
+        } else {
+          // Use upsert to handle race conditions
+          const { data: newReport, error: createError } = await supabase
+            .from('daily_reports')
+            .upsert({
+              report_date: dateStr,
+              created_by: user.id,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'report_date,created_by'
+            })
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          reportId = newReport.id;
+          setExistingReportId(reportId);
+        }
       }
 
       const { error: deleteOrdersError } = await supabase
@@ -777,18 +794,35 @@ export function useDailyReport() {
       let reportId = existingReportId;
 
       if (!reportId) {
-        const { data: newReport, error: createError } = await supabase
+        // First check if a report already exists for this date/user (fresh DB check)
+        const { data: existingCheck } = await supabase
           .from('daily_reports')
-          .insert({
-            report_date: dateStr,
-            created_by: user.id
-          })
           .select('id')
-          .single();
+          .eq('report_date', dateStr)
+          .eq('created_by', user.id)
+          .maybeSingle();
 
-        if (createError) throw createError;
-        reportId = newReport.id;
-        setExistingReportId(reportId);
+        if (existingCheck?.id) {
+          reportId = existingCheck.id;
+          setExistingReportId(reportId);
+        } else {
+          // Use upsert to handle race conditions
+          const { data: newReport, error: createError } = await supabase
+            .from('daily_reports')
+            .upsert({
+              report_date: dateStr,
+              created_by: user.id,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'report_date,created_by'
+            })
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          reportId = newReport.id;
+          setExistingReportId(reportId);
+        }
       }
 
       const { error: deleteOrderError } = await supabase
