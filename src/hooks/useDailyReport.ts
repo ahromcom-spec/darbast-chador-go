@@ -749,7 +749,7 @@ export function useDailyReport() {
 
   // Calculate totals
   const calculateTotals = useCallback(() => {
-    const presentCount = staffReports.filter(s => s.work_status === 'کارکرده' && !s.is_cash_box).length;
+    const presentCount = staffReports.filter(s => s.work_status === 'کارکرده' && !s.is_cash_box && !s.is_company_expense).length;
     const totalOvertime = staffReports.reduce((sum, s) => sum + (s.overtime_hours || 0), 0);
     
     const cashBoxSpent = staffReports
