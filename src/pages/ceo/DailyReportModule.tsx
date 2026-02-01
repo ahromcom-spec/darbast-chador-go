@@ -320,10 +320,26 @@ async function syncBankCardBalancesFromLedger(params: {
 const DEFAULT_TITLE = 'گزارش روزانه شرکت اهرم';
 const DEFAULT_DESCRIPTION = 'ثبت گزارش فعالیت‌های روزانه';
 
+// کلیدهای ماژول‌های گزارش روزانه مختلف
+// هر ماژول کپی شده باید کلید یکتای خود را داشته باشد
+const AGGREGATED_MODULE_KEYS = ['daily_report_full', 'daily_report_all', 'daily_report_total'];
+
+// تشخیص ماژول کلی/تجمیعی
+const isAggregatedModule = (moduleKey: string): boolean => {
+  return AGGREGATED_MODULE_KEYS.includes(moduleKey) || 
+         moduleKey.includes('کلی') || 
+         moduleKey.includes('total') ||
+         moduleKey.includes('full');
+};
+
 export default function DailyReportModule() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeModuleKey = searchParams.get('moduleKey') || 'daily_report';
+  
+  // آیا این ماژول تجمیعی است؟ (نمایش همه گزارشات از همه ماژول‌ها)
+  const isAggregated = isAggregatedModule(activeModuleKey);
+  
   const { user } = useAuth();
   
   const [loading, setLoading] = useState(false);
@@ -409,11 +425,11 @@ export default function DailyReportModule() {
     scrollToAnchor(staffTableScrollRef.current, 'staff');
   }, [loading, orderReports.length, staffReports.length]);
 
-  // LocalStorage key for backup
+  // LocalStorage key for backup - includes module key for isolation
   const getLocalStorageKey = useCallback(() => {
     const dateStr = toLocalDateString(reportDate);
-    return `daily_report_backup_${user?.id}_${dateStr}`;
-  }, [reportDate, user]);
+    return `daily_report_backup_${user?.id}_${dateStr}_${activeModuleKey}`;
+  }, [reportDate, user, activeModuleKey]);
 
   // Save to localStorage as backup
   const saveToLocalStorage = useCallback(() => {
@@ -550,11 +566,12 @@ export default function DailyReportModule() {
       let reportId = existingReportId;
 
       if (!reportId) {
-        // First check if a report already exists for this date (unique constraint enforced)
+        // First check if a report already exists for this date AND module_key
         const { data: existingReport } = await supabase
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
+          .eq('module_key', activeModuleKey)
           .maybeSingle();
 
         if (existingReport?.id) {
@@ -562,12 +579,13 @@ export default function DailyReportModule() {
           reportId = existingReport.id;
           setExistingReportId(reportId);
         } else {
-          // Create new report (only if none exists for this date)
+          // Create new report with module_key for isolation
           const { data: newReport, error: createError } = await supabase
             .from('daily_reports')
             .insert({
               report_date: dateStr,
-              created_by: user.id
+              created_by: user.id,
+              module_key: activeModuleKey
             })
             .select('id')
             .single();
@@ -579,6 +597,7 @@ export default function DailyReportModule() {
                 .from('daily_reports')
                 .select('id')
                 .eq('report_date', dateStr)
+                .eq('module_key', activeModuleKey)
                 .single();
               if (retry?.id) {
                 reportId = retry.id;
@@ -725,13 +744,19 @@ export default function DailyReportModule() {
 
       const isManager = await isManagerUser(user.id);
 
-      // Managers: see all reports. Staff: see only reports that include them.
+      // Managers: see all reports for this module. Staff: see only reports that include them.
       // Only show non-archived reports
+      // ماژول تجمیعی: همه گزارشات را نشان بده / ماژول مجزا: فقط گزارشات همین ماژول
       let reportsQuery = supabase
         .from('daily_reports')
-        .select('id, report_date, created_at, notes, is_archived')
+        .select('id, report_date, created_at, notes, is_archived, module_key')
         .or('is_archived.is.null,is_archived.eq.false')
         .order('report_date', { ascending: false });
+
+      // فیلتر بر اساس module_key (مگر ماژول تجمیعی باشد)
+      if (!isAggregated) {
+        reportsQuery = reportsQuery.eq('module_key', activeModuleKey);
+      }
 
       if (!isManager) {
         const { data: myStaffRows, error: staffRowsError } = await supabase
@@ -799,12 +824,17 @@ export default function DailyReportModule() {
 
       const isManager = await isManagerUser(user.id);
 
-      // Only show archived reports
+      // Only show archived reports for this module (or all modules if aggregated)
       let reportsQuery = supabase
         .from('daily_reports')
-        .select('id, report_date, created_at, notes, is_archived, archived_at')
+        .select('id, report_date, created_at, notes, is_archived, archived_at, module_key')
         .eq('is_archived', true)
         .order('archived_at', { ascending: false });
+
+      // فیلتر بر اساس module_key (مگر ماژول تجمیعی باشد)
+      if (!isAggregated) {
+        reportsQuery = reportsQuery.eq('module_key', activeModuleKey);
+      }
 
       if (!isManager) {
         const { data: myStaffRows, error: staffRowsError } = await supabase
@@ -1074,18 +1104,28 @@ export default function DailyReportModule() {
       const dateStr = toLocalDateString(reportDate);
 
       // مهم: وقتی تاریخ عوض می‌شود، نباید داده‌های localStorage تاریخ قبل را بخوانیم
-      // فقط داده‌های دیتابیس برای این تاریخ خاص لود شود
+      // فقط داده‌های دیتابیس برای این تاریخ خاص و ماژول فعلی لود شود
       // localStorage فقط برای بازیابی داده‌های ذخیره‌نشده همین تاریخ استفاده می‌شود
 
-      // With unique constraint on report_date, there's only ONE report per date
-      // Simply fetch the report for this date (regardless of who created it)
-      const { data: existingReport, error: existingError } = await supabase
+      // ماژول تجمیعی: همه گزارشات این تاریخ را می‌بیند (برای نمایش، نه ویرایش)
+      // ماژول‌های مجزا: فقط گزارش خود را می‌بینند
+      let reportQuery = supabase
         .from('daily_reports')
-        .select('id, notes')
-        .eq('report_date', dateStr)
-        .maybeSingle();
+        .select('id, notes, module_key')
+        .eq('report_date', dateStr);
+
+      if (!isAggregated) {
+        // ماژول مجزا: فقط گزارش همین ماژول
+        reportQuery = reportQuery.eq('module_key', activeModuleKey);
+      }
+
+      const { data: existingReports, error: existingError } = await reportQuery;
 
       if (existingError) throw existingError;
+
+      // برای ماژول‌های مجزا، اولین گزارش را لود کن
+      // برای ماژول تجمیعی، اولین گزارش را برای ویرایش لود کن (یا null اگر هیچی نیست)
+      const existingReport = existingReports?.[0] ?? null;
 
       let reportIdToLoad: string | null = existingReport?.id ?? null;
 
@@ -1503,7 +1543,8 @@ export default function DailyReportModule() {
   };
 
   const calculateTotals = () => {
-    const presentCount = staffReports.filter(s => s.work_status === 'کارکرده' && !s.is_cash_box).length;
+    // شمارش نیروهای کارکرده (بدون صندوق و بدون ماهیت شرکت)
+    const presentCount = staffReports.filter(s => s.work_status === 'کارکرده' && !s.is_cash_box && !s.is_company_expense).length;
     const totalOvertime = staffReports.reduce((sum, s) => sum + (s.overtime_hours || 0), 0);
     
     // صندوق: مبلغ خرج کرده = پرداخت به نیروها
@@ -1533,13 +1574,14 @@ export default function DailyReportModule() {
       let reportId = existingReportId;
 
       if (!reportId) {
-        // Create new report
+        // Create new report with module_key for isolation
         const { data: newReport, error: createError } = await supabase
           .from('daily_reports')
           .insert({
             report_date: dateStr,
             created_by: user.id,
-            notes: dailyNotes || null
+            notes: dailyNotes || null,
+            module_key: activeModuleKey
           })
           .select('id')
           .single();
