@@ -83,6 +83,17 @@ const MODULE_DETAILS: Record<string, ModuleInfo> = {
   },
 };
 
+function buildModuleUrl(href: string, moduleKey: string) {
+  try {
+    const url = new URL(href, window.location.origin);
+    url.searchParams.set('moduleKey', moduleKey);
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    const sep = href.includes('?') ? '&' : '?';
+    return `${href}${sep}moduleKey=${encodeURIComponent(moduleKey)}`;
+  }
+}
+
 export function UserModulesTab() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -143,10 +154,35 @@ export function UserModulesTab() {
     }
   };
 
-  const getModuleInfo = (key: string): ModuleInfo => {
-    return MODULE_DETAILS[key] || {
-      key,
-      name: key,
+  const resolveBaseModuleKey = (assignment: ModuleAssignment): string => {
+    if (MODULE_DETAILS[assignment.module_key]) return assignment.module_key;
+
+    const name = assignment.module_name || '';
+    // Heuristics for copied modules (custom-* keys)
+    if (name.includes('گزارش روزانه')) return 'daily_report';
+    if (name.includes('منابع انسانی')) return 'hr_management';
+    if (name.includes('حسابکتاب') || name.includes('کارکرد')) return 'personnel_accounting';
+    if (name.includes('صورتحساب')) return 'my_invoice';
+    if (name.includes('کارت') || name.includes('بانک')) return 'bank_cards';
+    if (name.includes('داربست') || name.includes('اجرایی')) return 'scaffold_execution_with_materials';
+
+    return assignment.module_key;
+  };
+
+  const getModuleInfo = (assignment: ModuleAssignment): ModuleInfo => {
+    const baseKey = resolveBaseModuleKey(assignment);
+    const base = MODULE_DETAILS[baseKey];
+    if (base) {
+      return {
+        ...base,
+        key: assignment.module_key,
+        name: assignment.module_name || base.name,
+      };
+    }
+
+    return {
+      key: assignment.module_key,
+      name: assignment.module_name || assignment.module_key,
       description: '',
       href: '/',
       color: 'text-gray-600',
@@ -192,14 +228,15 @@ export function UserModulesTab() {
 
       <div className="grid gap-4">
       {assignments.map((assignment) => {
-          const moduleInfo = getModuleInfo(assignment.module_key);
+          const moduleInfo = getModuleInfo(assignment);
+          const moduleUrl = buildModuleUrl(moduleInfo.href, assignment.module_key);
           // Use module_name from database (synced by CEO) as primary source
           const displayName = assignment.module_name || MODULE_DETAILS[assignment.module_key]?.name || assignment.module_key;
           return (
                 <Card
                   key={assignment.id}
                   className="border-2 border-primary/20 hover:border-primary/40 transition-all cursor-pointer group"
-                  onClick={() => navigate(moduleInfo.href)}
+                  onClick={() => navigate(moduleUrl)}
                 >
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4">

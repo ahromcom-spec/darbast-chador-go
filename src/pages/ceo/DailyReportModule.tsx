@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import { OrderSearchSelect } from '@/components/orders/OrderSearchSelect';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { WorkStatusSelect } from '@/components/daily-report/WorkStatusSelect';
@@ -325,20 +326,29 @@ const DEFAULT_DESCRIPTION = 'ثبت گزارش فعالیت‌های روزان�
 const AGGREGATED_MODULE_KEYS = ['daily_report_full', 'daily_report_all', 'daily_report_total'];
 
 // تشخیص ماژول کلی/تجمیعی
-const isAggregatedModule = (moduleKey: string): boolean => {
-  return AGGREGATED_MODULE_KEYS.includes(moduleKey) || 
-         moduleKey.includes('کلی') || 
-         moduleKey.includes('total') ||
-         moduleKey.includes('full');
+const isAggregatedModule = (moduleKey: string, moduleName?: string): boolean => {
+  const name = moduleName || '';
+  return (
+    AGGREGATED_MODULE_KEYS.includes(moduleKey) ||
+    moduleKey.includes('کلی') ||
+    moduleKey.includes('total') ||
+    moduleKey.includes('full') ||
+    // اگر کلید ماژول custom باشد ولی نام «کلی/total/full» داشته باشد
+    name.includes('کلی') ||
+    name.includes('total') ||
+    name.includes('full')
+  );
 };
 
 export default function DailyReportModule() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeModuleKey = searchParams.get('moduleKey') || 'daily_report';
+
+  const { moduleName } = useModuleAssignmentInfo(activeModuleKey, DEFAULT_TITLE, DEFAULT_DESCRIPTION);
   
   // آیا این ماژول تجمیعی است؟ (نمایش همه گزارشات از همه ماژول‌ها)
-  const isAggregated = isAggregatedModule(activeModuleKey);
+  const isAggregated = isAggregatedModule(activeModuleKey, moduleName);
   
   const { user } = useAuth();
   
@@ -490,7 +500,7 @@ export default function DailyReportModule() {
     } else if (activeTab === 'archived-reports') {
       fetchArchivedReports();
     }
-  }, [activeTab, user]);
+  }, [activeTab, user, activeModuleKey, isAggregated]);
 
   useEffect(() => {
     // وقتی کاربر هنوز لود نشده باشد، fetchExistingReport اجرا نمی‌شود
@@ -504,7 +514,7 @@ export default function DailyReportModule() {
       isInitialLoadRef.current = true;
       fetchExistingReport();
     }
-  }, [reportDate, user]);
+  }, [reportDate, user, activeModuleKey, isAggregated]);
 
   // Auto-save function
   const performAutoSave = useCallback(async () => {
