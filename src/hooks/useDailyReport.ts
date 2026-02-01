@@ -570,22 +570,39 @@ export function useDailyReport() {
           reportId = existingCheck.id;
           setExistingReportId(reportId);
         } else {
-          // Use upsert to handle race conditions
+          // Try to insert new report
           const { data: newReport, error: createError } = await supabase
             .from('daily_reports')
-            .upsert({
+            .insert({
               report_date: dateStr,
               created_by: user.id,
               updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'report_date,created_by'
             })
             .select('id')
             .single();
 
-          if (createError) throw createError;
-          reportId = newReport.id;
-          setExistingReportId(reportId);
+          if (createError) {
+            // If duplicate key error, try fetching again
+            if (createError.code === '23505') {
+              const { data: retry } = await supabase
+                .from('daily_reports')
+                .select('id')
+                .eq('report_date', dateStr)
+                .eq('created_by', user.id)
+                .maybeSingle();
+              if (retry?.id) {
+                reportId = retry.id;
+                setExistingReportId(reportId);
+              } else {
+                throw createError;
+              }
+            } else {
+              throw createError;
+            }
+          } else {
+            reportId = newReport.id;
+            setExistingReportId(reportId);
+          }
         }
       }
 
@@ -806,22 +823,39 @@ export function useDailyReport() {
           reportId = existingCheck.id;
           setExistingReportId(reportId);
         } else {
-          // Use upsert to handle race conditions
+          // Try to insert new report
           const { data: newReport, error: createError } = await supabase
             .from('daily_reports')
-            .upsert({
+            .insert({
               report_date: dateStr,
               created_by: user.id,
               updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'report_date,created_by'
             })
             .select('id')
             .single();
 
-          if (createError) throw createError;
-          reportId = newReport.id;
-          setExistingReportId(reportId);
+          if (createError) {
+            // If duplicate key error, try fetching again
+            if (createError.code === '23505') {
+              const { data: retry } = await supabase
+                .from('daily_reports')
+                .select('id')
+                .eq('report_date', dateStr)
+                .eq('created_by', user.id)
+                .maybeSingle();
+              if (retry?.id) {
+                reportId = retry.id;
+                setExistingReportId(reportId);
+              } else {
+                throw createError;
+              }
+            } else {
+              throw createError;
+            }
+          } else {
+            reportId = newReport.id;
+            setExistingReportId(reportId);
+          }
         }
       }
 
