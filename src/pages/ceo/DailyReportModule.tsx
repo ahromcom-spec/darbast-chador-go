@@ -1113,12 +1113,8 @@ export default function DailyReportModule() {
       setLoading(true);
       const dateStr = toLocalDateString(reportDate);
 
-      // مهم: وقتی تاریخ عوض می‌شود، نباید داده‌های localStorage تاریخ قبل را بخوانیم
-      // فقط داده‌های دیتابیس برای این تاریخ خاص و ماژول فعلی لود شود
-      // localStorage فقط برای بازیابی داده‌های ذخیره‌نشده همین تاریخ استفاده می‌شود
-
-      // ماژول تجمیعی: همه گزارشات این تاریخ را می‌بیند (برای نمایش، نه ویرایش)
-      // ماژول‌های مجزا: فقط گزارش خود را می‌بینند
+      // ماژول تجمیعی: همه گزارشات این تاریخ را می‌خواند و ادغام می‌کند
+      // ماژول‌های مجزا: فقط گزارش خود را می‌خوانند
       let reportQuery = supabase
         .from('daily_reports')
         .select('id, notes, module_key')
@@ -1133,37 +1129,41 @@ export default function DailyReportModule() {
 
       if (existingError) throw existingError;
 
-      // برای ماژول‌های مجزا، اولین گزارش را لود کن
-      // برای ماژول تجمیعی، اولین گزارش را برای ویرایش لود کن (یا null اگر هیچی نیست)
-      const existingReport = existingReports?.[0] ?? null;
-
-      let reportIdToLoad: string | null = existingReport?.id ?? null;
-
-      // For non-managers, also verify they have access (their staff record in the report)
+      // For non-managers, also verify they have access
       const isManager = await isManagerUser(user.id);
-      if (!isManager && reportIdToLoad) {
-        const { data: staffRow } = await supabase
-          .from('daily_report_staff')
-          .select('id')
-          .eq('daily_report_id', reportIdToLoad)
-          .eq('staff_user_id', user.id)
-          .maybeSingle();
 
-        if (!staffRow) {
-          // Non-manager has no staff record in this report - don't load it
-          reportIdToLoad = null;
-        }
-      }
+      if (isAggregated && existingReports && existingReports.length > 0) {
+        // ماژول کلی: تمام گزارشات سه ماژول دیگر را ادغام کن
+        const allReportIds = existingReports.map((r) => r.id);
+        
+        // اگر ماژول کلی هم گزارش دارد، آن را به عنوان report اصلی استفاده کن
+        // در غیر این صورت، اولین گزارش را به عنوان پایه استفاده کن
+        const aggregatedModuleReport = existingReports.find((r) => 
+          r.module_key === activeModuleKey || 
+          r.module_key?.includes('کلی') ||
+          r.module_key?.includes('total') ||
+          r.module_key?.includes('full')
+        );
+        const primaryReport = aggregatedModuleReport || existingReports[0];
+        setExistingReportId(primaryReport?.id || null);
+        setDailyNotes(primaryReport?.notes || '');
 
-      if (reportIdToLoad) {
-        setExistingReportId(reportIdToLoad);
-        setDailyNotes(existingReport?.notes || '');
-        const { data: orderData } = await supabase
+        // واکشی تمام سفارشات از همه گزارشات
+        const { data: allOrderData } = await supabase
           .from('daily_report_orders')
           .select('*')
-          .eq('daily_report_id', reportIdToLoad);
+          .in('daily_report_id', allReportIds);
 
-        setOrderReports((orderData || []).map((o: any) => ({
+        // حذف سفارشات تکراری (بر اساس order_id) - جدیدترین نسخه را نگه دار
+        const uniqueOrdersMap = new Map<string, any>();
+        for (const o of allOrderData || []) {
+          const existing = uniqueOrdersMap.get(o.order_id);
+          if (!existing || new Date(o.created_at) > new Date(existing.created_at)) {
+            uniqueOrdersMap.set(o.order_id, o);
+          }
+        }
+
+        setOrderReports(Array.from(uniqueOrdersMap.values()).map((o: any) => ({
           id: o.id,
           order_id: o.order_id,
           activity_description: o.activity_description || '',
@@ -1173,18 +1173,23 @@ export default function DailyReportModule() {
           row_color: o.row_color || 'yellow',
         })));
 
-        const { data: staffData } = await supabase
+        // واکشی تمام نیروها از همه گزارشات
+        const { data: allStaffData } = await supabase
           .from('daily_report_staff')
           .select('*')
-          .eq('daily_report_id', reportIdToLoad);
+          .in('daily_report_id', allReportIds);
 
-        const allStaff: StaffReportRow[] = (staffData || []).map((s: any) => {
+        // ادغام نیروها - با تشخیص انواع مختلف
+        const companyExpenseRows: StaffReportRow[] = [];
+        const cashBoxRowsMap = new Map<string, StaffReportRow>(); // بر اساس bank_card_id
+        const regularStaffMap = new Map<string, StaffReportRow>(); // بر اساس staff_user_id یا staff_name
+
+        for (const s of allStaffData || []) {
           const staffCode = extractStaffCode(s.staff_name || '');
-          // تشخیص سطر ماهیت شرکت اهرم از روی نام یا is_company_expense
           const isCompanyExpense = s.is_company_expense === true || 
             (s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'));
 
-          return {
+          const staffRow: StaffReportRow = {
             id: s.id,
             staff_user_id: staffCode || null,
             staff_name: s.staff_name || '',
@@ -1200,16 +1205,75 @@ export default function DailyReportModule() {
             is_cash_box: s.is_cash_box || false,
             is_company_expense: isCompanyExpense,
           };
-        });
 
-        // تفکیک سطرها بر اساس نوع
-        const companyExpenseRows = allStaff.filter((s) => s.is_company_expense);
-        const cashBoxRows = allStaff.filter((s) => s.is_cash_box && !s.is_company_expense);
-        const regularStaffRows = allStaff.filter((s) => !s.is_cash_box && !s.is_company_expense);
-        
+          if (isCompanyExpense) {
+            // ردیف ماهیت شرکت - آخرین نسخه را نگه دار یا مجموع را محاسبه کن
+            const existing = companyExpenseRows[0];
+            if (existing) {
+              // جمع مبالغ
+              existing.amount_received = (existing.amount_received || 0) + (staffRow.amount_received || 0);
+              existing.amount_spent = (existing.amount_spent || 0) + (staffRow.amount_spent || 0);
+              // ادغام توضیحات
+              if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
+                existing.receiving_notes = [existing.receiving_notes, staffRow.receiving_notes].filter(Boolean).join(' | ');
+              }
+              if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
+                existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
+              }
+            } else {
+              companyExpenseRows.push(staffRow);
+            }
+          } else if (s.is_cash_box && s.bank_card_id) {
+            // ردیف کارت بانکی - ادغام بر اساس bank_card_id
+            const cardId = s.bank_card_id;
+            const existing = cashBoxRowsMap.get(cardId);
+            if (existing) {
+              // جمع مبالغ
+              existing.amount_received = (existing.amount_received || 0) + (staffRow.amount_received || 0);
+              existing.amount_spent = (existing.amount_spent || 0) + (staffRow.amount_spent || 0);
+              // ادغام توضیحات
+              if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
+                existing.receiving_notes = [existing.receiving_notes, staffRow.receiving_notes].filter(Boolean).join(' | ');
+              }
+              if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
+                existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
+              }
+            } else {
+              cashBoxRowsMap.set(cardId, staffRow);
+            }
+          } else if (!s.is_cash_box) {
+            // نیروی عادی - بر اساس staff_user_id یا staff_name ادغام کن
+            const key = s.staff_user_id || s.staff_name || s.id;
+            const existing = regularStaffMap.get(key);
+            if (existing) {
+              // جمع مبالغ و ساعات
+              existing.overtime_hours = (existing.overtime_hours || 0) + (staffRow.overtime_hours || 0);
+              existing.amount_received = (existing.amount_received || 0) + (staffRow.amount_received || 0);
+              existing.amount_spent = (existing.amount_spent || 0) + (staffRow.amount_spent || 0);
+              // اگر در هر کدام کارکرده بود، کارکرده نگه دار
+              if (staffRow.work_status === 'کارکرده') {
+                existing.work_status = 'کارکرده';
+              }
+              // ادغام توضیحات
+              if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
+                existing.receiving_notes = [existing.receiving_notes, staffRow.receiving_notes].filter(Boolean).join(' | ');
+              }
+              if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
+                existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
+              }
+              if (staffRow.notes?.trim() && existing.notes !== staffRow.notes) {
+                existing.notes = [existing.notes, staffRow.notes].filter(Boolean).join(' | ');
+              }
+            } else {
+              regularStaffMap.set(key, staffRow);
+            }
+          }
+        }
+
+        // ساختار نهایی
         const normalizedStaff: StaffReportRow[] = [];
         
-        // اول: سطر ماهیت شرکت اهرم (همیشه ردیف اول)
+        // اول: ماهیت شرکت
         if (companyExpenseRows.length > 0) {
           normalizedStaff.push(companyExpenseRows[0]);
         } else {
@@ -1229,15 +1293,13 @@ export default function DailyReportModule() {
           });
         }
         
-        // دوم: سطرهای کارت بانکی/صندوق
-        if (cashBoxRows.length > 0) {
-          normalizedStaff.push(...cashBoxRows);
-        }
+        // دوم: کارت‌های بانکی
+        normalizedStaff.push(...Array.from(cashBoxRowsMap.values()));
         
-        // سوم: سطرهای نیروی کار عادی
-        normalizedStaff.push(...regularStaffRows);
+        // سوم: نیروها
+        normalizedStaff.push(...Array.from(regularStaffMap.values()));
 
-        // اطمینان از وجود حداقل یک سطر خالی برای ورود داده
+        // یک ردیف خالی در انتها
         const hasAnyRegularRow = normalizedStaff.some((s) => !s.is_cash_box && !s.is_company_expense);
         if (!hasAnyRegularRow) {
           normalizedStaff.push({
@@ -1257,21 +1319,186 @@ export default function DailyReportModule() {
         }
 
         setStaffReports(normalizedStaff);
-        
-        // پس از لود از دیتابیس، localStorage این تاریخ را پاک کن
-        // تا داده‌های قدیمی با داده‌های جدید دیتابیس قاطی نشوند
         clearLocalStorageBackup();
         
-        // بعد از لود موفق، اجازه auto-save بده
         setTimeout(() => {
           isInitialLoadRef.current = false;
         }, 500);
+      } else if (!isAggregated && existingReports && existingReports.length > 0) {
+        // ماژول مجزا: یک گزارش خاص لود کن
+        const existingReport = existingReports[0];
+        let reportIdToLoad: string | null = existingReport?.id ?? null;
+
+        if (!isManager && reportIdToLoad) {
+          const { data: staffRow } = await supabase
+            .from('daily_report_staff')
+            .select('id')
+            .eq('daily_report_id', reportIdToLoad)
+            .eq('staff_user_id', user.id)
+            .maybeSingle();
+
+          if (!staffRow) {
+            reportIdToLoad = null;
+          }
+        }
+
+        if (reportIdToLoad) {
+          setExistingReportId(reportIdToLoad);
+          setDailyNotes(existingReport?.notes || '');
+          const { data: orderData } = await supabase
+            .from('daily_report_orders')
+            .select('*')
+            .eq('daily_report_id', reportIdToLoad);
+
+          setOrderReports((orderData || []).map((o: any) => ({
+            id: o.id,
+            order_id: o.order_id,
+            activity_description: o.activity_description || '',
+            service_details: o.service_details || '',
+            team_name: o.team_name || '',
+            notes: o.notes || '',
+            row_color: o.row_color || 'yellow',
+          })));
+
+          const { data: staffData } = await supabase
+            .from('daily_report_staff')
+            .select('*')
+            .eq('daily_report_id', reportIdToLoad);
+
+          const allStaff: StaffReportRow[] = (staffData || []).map((s: any) => {
+            const staffCode = extractStaffCode(s.staff_name || '');
+            const isCompanyExpense = s.is_company_expense === true || 
+              (s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'));
+
+            return {
+              id: s.id,
+              staff_user_id: staffCode || null,
+              staff_name: s.staff_name || '',
+              real_user_id: s.staff_user_id || null,
+              work_status: fromDbWorkStatus(s.work_status),
+              overtime_hours: s.overtime_hours || 0,
+              amount_received: s.amount_received || 0,
+              receiving_notes: s.receiving_notes || '',
+              amount_spent: s.amount_spent || 0,
+              spending_notes: s.spending_notes || '',
+              bank_card_id: s.bank_card_id ?? null,
+              notes: s.notes || '',
+              is_cash_box: s.is_cash_box || false,
+              is_company_expense: isCompanyExpense,
+            };
+          });
+
+          const companyExpenseRows = allStaff.filter((s) => s.is_company_expense);
+          const cashBoxRows = allStaff.filter((s) => s.is_cash_box && !s.is_company_expense);
+          const regularStaffRows = allStaff.filter((s) => !s.is_cash_box && !s.is_company_expense);
+          
+          const normalizedStaff: StaffReportRow[] = [];
+          
+          if (companyExpenseRows.length > 0) {
+            normalizedStaff.push(companyExpenseRows[0]);
+          } else {
+            normalizedStaff.push({
+              staff_user_id: null,
+              staff_name: 'ماهیت شرکت اهرم',
+              work_status: 'کارکرده',
+              overtime_hours: 0,
+              amount_received: 0,
+              receiving_notes: '',
+              amount_spent: 0,
+              spending_notes: '',
+              bank_card_id: null,
+              notes: '',
+              is_cash_box: false,
+              is_company_expense: true,
+            });
+          }
+          
+          if (cashBoxRows.length > 0) {
+            normalizedStaff.push(...cashBoxRows);
+          }
+          
+          normalizedStaff.push(...regularStaffRows);
+
+          const hasAnyRegularRow = normalizedStaff.some((s) => !s.is_cash_box && !s.is_company_expense);
+          if (!hasAnyRegularRow) {
+            normalizedStaff.push({
+              staff_user_id: null,
+              staff_name: '',
+              work_status: 'غایب',
+              overtime_hours: 0,
+              amount_received: 0,
+              receiving_notes: '',
+              amount_spent: 0,
+              spending_notes: '',
+              bank_card_id: null,
+              notes: '',
+              is_cash_box: false,
+              is_company_expense: false,
+            });
+          }
+
+          setStaffReports(normalizedStaff);
+          clearLocalStorageBackup();
+          
+          setTimeout(() => {
+            isInitialLoadRef.current = false;
+          }, 500);
+        } else {
+          // Reset to empty form
+          setExistingReportId(null);
+          setDailyNotes('');
+          clearLocalStorageBackup();
+          
+          setOrderReports([
+            {
+              order_id: '',
+              activity_description: '',
+              service_details: '',
+              team_name: '',
+              notes: '',
+              row_color: ROW_COLORS[0].value,
+            },
+          ]);
+          setStaffReports([
+            {
+              staff_user_id: null,
+              staff_name: 'ماهیت شرکت اهرم',
+              work_status: 'کارکرده',
+              overtime_hours: 0,
+              amount_received: 0,
+              receiving_notes: '',
+              amount_spent: 0,
+              spending_notes: '',
+              bank_card_id: null,
+              notes: '',
+              is_cash_box: false,
+              is_company_expense: true,
+            },
+            {
+              staff_user_id: null,
+              staff_name: '',
+              work_status: 'غایب',
+              overtime_hours: 0,
+              amount_received: 0,
+              receiving_notes: '',
+              amount_spent: 0,
+              spending_notes: '',
+              bank_card_id: null,
+              notes: '',
+              is_cash_box: false,
+              is_company_expense: false,
+            },
+          ]);
+          
+          setTimeout(() => {
+            isInitialLoadRef.current = false;
+          }, 500);
+        }
       } else {
-        // گزارشی برای این تاریخ در دیتابیس وجود ندارد
-        // یک فرم خالی ایجاد کن (localStorage استفاده نشود چون تاریخ جدید است)
+        // گزارشی برای این تاریخ وجود ندارد - فرم خالی
         setExistingReportId(null);
         setDailyNotes('');
-        clearLocalStorageBackup(); // پاک کردن localStorage این تاریخ
+        clearLocalStorageBackup();
         
         setOrderReports([
           {
@@ -1314,14 +1541,12 @@ export default function DailyReportModule() {
           },
         ]);
         
-        // بعد از لود موفق، اجازه auto-save بده
         setTimeout(() => {
           isInitialLoadRef.current = false;
         }, 500);
       }
     } catch (error) {
       console.error('Error fetching report:', error);
-      // در صورت خطا، فرم خالی نشان بده (نه localStorage)
       setOrderReports([
         {
           order_id: '',
@@ -1365,7 +1590,6 @@ export default function DailyReportModule() {
       toast.error('خطا در دریافت گزارش');
     } finally {
       setLoading(false);
-      // بعد از اتمام لود، اجازه auto-save بده
       setTimeout(() => {
         isInitialLoadRef.current = false;
       }, 500);
