@@ -694,7 +694,7 @@ export default function DailyReportModule() {
       // Data is still safe in localStorage
       setAutoSaveStatus('idle');
     }
-  }, [user, loading, saving, reportDate, existingReportId, orderReports, staffReports, clearLocalStorageBackup]);
+  }, [user, loading, saving, reportDate, existingReportId, orderReports, staffReports, clearLocalStorageBackup, activeModuleKey]);
 
   // Auto-save with debounce when data changes
   useEffect(() => {
