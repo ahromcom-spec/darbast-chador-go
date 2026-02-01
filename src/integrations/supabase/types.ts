@@ -876,6 +876,7 @@ export type Database = {
           created_by: string
           id: string
           is_archived: boolean | null
+          module_key: string | null
           notes: string | null
           report_date: string
           updated_at: string
@@ -887,6 +888,7 @@ export type Database = {
           created_by: string
           id?: string
           is_archived?: boolean | null
+          module_key?: string | null
           notes?: string | null
           report_date: string
           updated_at?: string
@@ -898,6 +900,7 @@ export type Database = {
           created_by?: string
           id?: string
           is_archived?: boolean | null
+          module_key?: string | null
           notes?: string | null
           report_date?: string
           updated_at?: string
