@@ -1405,16 +1405,9 @@ export default function DailyReportModule() {
           .select('*')
           .in('daily_report_id', allReportIds);
 
-        // حذف سفارشات تکراری (بر اساس order_id) - جدیدترین نسخه را نگه دار
-        const uniqueOrdersMap = new Map<string, any>();
-        for (const o of allOrderData || []) {
-          const existing = uniqueOrdersMap.get(o.order_id);
-          if (!existing || new Date(o.created_at) > new Date(existing.created_at)) {
-            uniqueOrdersMap.set(o.order_id, o);
-          }
-        }
-
-        setOrderReports(Array.from(uniqueOrdersMap.values()).map((o: any) => {
+        // نمایش تمام سفارشات از همه ماژول‌ها (بدون حذف تکراری‌ها)
+        // هر ماژول ممکن است گزارش متفاوتی برای یک سفارش داشته باشد
+        setOrderReports((allOrderData || []).map((o: any) => {
           const moduleKey = reportToModuleMap.get(o.daily_report_id) || '';
           return {
             id: o.id,
@@ -3049,9 +3042,21 @@ export default function DailyReportModule() {
                                 <TableCell className="border border-blue-200">
                                   <div className="flex items-center gap-2">
                                     {isAggregated ? (
-                                      <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm">
-                                        {orders.find(o => o.id === row.order_id)?.code || '-'}
-                                      </div>
+                                      (() => {
+                                        const selectedOrder = orders.find(o => o.id === row.order_id);
+                                        return (
+                                          <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm">
+                                            {selectedOrder ? (
+                                              <>
+                                                <span className="text-amber-600 font-bold">{selectedOrder.code}</span>
+                                                {selectedOrder.customer_name && (
+                                                  <span className="mr-1">- {selectedOrder.customer_name}</span>
+                                                )}
+                                              </>
+                                            ) : '-'}
+                                          </div>
+                                        );
+                                      })()
                                     ) : (
                                       <OrderSearchSelect
                                         orders={orders}
