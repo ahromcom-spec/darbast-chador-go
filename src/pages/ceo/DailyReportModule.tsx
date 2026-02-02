@@ -76,6 +76,8 @@ interface OrderReportRow {
   team_name: string;
   notes: string;
   row_color: string;
+  source_module_key?: string; // For aggregated view: which module this came from
+  source_module_name?: string; // For aggregated view: readable module name
 }
 
 interface StaffReportRow {
@@ -93,6 +95,16 @@ interface StaffReportRow {
   notes: string;
   is_cash_box: boolean;
   is_company_expense?: boolean;
+  source_module_key?: string; // For aggregated view: which module this came from
+  source_module_name?: string; // For aggregated view: readable module name
+}
+
+// Bank card cache type for aggregated view
+interface BankCardCache {
+  id: string;
+  card_name: string;
+  bank_name: string;
+  current_balance: number;
 }
 
 const ROW_COLORS = [
@@ -389,6 +401,9 @@ export default function DailyReportModule() {
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [reportToArchive, setReportToArchive] = useState<SavedReport | null>(null);
   const [unarchiving, setUnarchiving] = useState(false);
+
+  // Bank cards cache for aggregated view display
+  const [bankCardsCache, setBankCardsCache] = useState<Map<string, BankCardCache>>(new Map());
 
   // Clear today's data dialog state
   const [clearTodayDialogOpen, setClearTodayDialogOpen] = useState(false);
@@ -1233,6 +1248,25 @@ export default function DailyReportModule() {
          // ماژول کلی: تمام گزارشات سه ماژول دیگر را ادغام کن
          const allReportIds = existingReports.map((r) => r.id);
         
+        // ساخت نگاشت reportId به module_key برای نمایش منبع
+        const reportToModuleMap = new Map<string, string>();
+        for (const r of existingReports) {
+          reportToModuleMap.set(r.id, r.module_key || 'default');
+        }
+        
+        // تابع برای تبدیل module_key به نام فارسی
+        const getModuleDisplayName = (key: string): string => {
+          if (key.includes('اجرایی') || key.includes('executive')) return 'اجرایی';
+          if (key.includes('پشتیبانی') || key.includes('support')) return 'پشتیبانی';
+          if (key.includes('مدیریت') || key.includes('management')) return 'مدیریت';
+          if (key.includes('کلی') || key.includes('total') || key.includes('full')) return 'کلی';
+          if (key === 'daily_report') return 'اصلی';
+          // برای custom keys، فقط شماره را نشان بده
+          const customMatch = key.match(/custom-(\d+)/);
+          if (customMatch) return `ماژول ${customMatch[1].slice(-4)}`;
+          return key.slice(0, 10);
+        };
+        
         // اگر ماژول کلی هم گزارش دارد، آن را به عنوان report اصلی استفاده کن
         // در غیر این صورت، اولین گزارش را به عنوان پایه استفاده کن
         const aggregatedModuleReport = existingReports.find((r) => 
@@ -1244,6 +1278,19 @@ export default function DailyReportModule() {
         const primaryReport = aggregatedModuleReport || existingReports[0];
         setExistingReportId(primaryReport?.id || null);
         setDailyNotes(primaryReport?.notes || '');
+
+        // واکشی کارت‌های بانکی برای نمایش در حالت تجمیعی
+        const { data: bankCardsData } = await supabase
+          .from('bank_cards')
+          .select('id, card_name, bank_name, current_balance')
+          .eq('is_active', true);
+        
+        // ذخیره کارت‌ها در کش برای نمایش
+        const cardsMap = new Map<string, BankCardCache>();
+        for (const card of bankCardsData || []) {
+          cardsMap.set(card.id, card);
+        }
+        setBankCardsCache(cardsMap);
 
         // واکشی تمام سفارشات از همه گزارشات
         const { data: allOrderData } = await supabase
@@ -1260,15 +1307,20 @@ export default function DailyReportModule() {
           }
         }
 
-        setOrderReports(Array.from(uniqueOrdersMap.values()).map((o: any) => ({
-          id: o.id,
-          order_id: o.order_id,
-          activity_description: o.activity_description || '',
-          service_details: o.service_details || '',
-          team_name: o.team_name || '',
-          notes: o.notes || '',
-          row_color: o.row_color || 'yellow',
-        })));
+        setOrderReports(Array.from(uniqueOrdersMap.values()).map((o: any) => {
+          const moduleKey = reportToModuleMap.get(o.daily_report_id) || '';
+          return {
+            id: o.id,
+            order_id: o.order_id,
+            activity_description: o.activity_description || '',
+            service_details: o.service_details || '',
+            team_name: o.team_name || '',
+            notes: o.notes || '',
+            row_color: o.row_color || 'yellow',
+            source_module_key: moduleKey,
+            source_module_name: getModuleDisplayName(moduleKey),
+          };
+        }));
 
         // واکشی تمام نیروها از همه گزارشات
         const { data: allStaffData } = await supabase
@@ -1286,6 +1338,10 @@ export default function DailyReportModule() {
           const isCompanyExpense = s.is_company_expense === true || 
             (s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'));
 
+          // دریافت کلید ماژول از نگاشت
+          const sourceModuleKey = reportToModuleMap.get(s.daily_report_id) || '';
+          const sourceModuleName = getModuleDisplayName(sourceModuleKey);
+
           const staffRow: StaffReportRow = {
             id: s.id,
             staff_user_id: staffCode || null,
@@ -1301,6 +1357,8 @@ export default function DailyReportModule() {
             notes: s.notes || '',
             is_cash_box: s.is_cash_box || false,
             is_company_expense: isCompanyExpense,
+            source_module_key: sourceModuleKey,
+            source_module_name: sourceModuleName,
           };
 
           if (isCompanyExpense) {
@@ -1316,6 +1374,10 @@ export default function DailyReportModule() {
               }
               if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
                 existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
+              }
+              // ادغام منابع ماژول
+              if (staffRow.source_module_name && !existing.source_module_name?.includes(staffRow.source_module_name)) {
+                existing.source_module_name = [existing.source_module_name, staffRow.source_module_name].filter(Boolean).join(' + ');
               }
             } else {
               companyExpenseRows.push(staffRow);
@@ -1334,6 +1396,10 @@ export default function DailyReportModule() {
               }
               if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
                 existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
+              }
+              // ادغام منابع ماژول
+              if (staffRow.source_module_name && !existing.source_module_name?.includes(staffRow.source_module_name)) {
+                existing.source_module_name = [existing.source_module_name, staffRow.source_module_name].filter(Boolean).join(' + ');
               }
             } else {
               cashBoxRowsMap.set(cardId, staffRow);
@@ -1360,6 +1426,10 @@ export default function DailyReportModule() {
               }
               if (staffRow.notes?.trim() && existing.notes !== staffRow.notes) {
                 existing.notes = [existing.notes, staffRow.notes].filter(Boolean).join(' | ');
+              }
+              // ادغام منابع ماژول
+              if (staffRow.source_module_name && !existing.source_module_name?.includes(staffRow.source_module_name)) {
+                existing.source_module_name = [existing.source_module_name, staffRow.source_module_name].filter(Boolean).join(' + ');
               }
             } else {
               regularStaffMap.set(key, staffRow);
@@ -2847,6 +2917,9 @@ export default function DailyReportModule() {
                             >
                               سفارش مشتری را انتخاب کنید
                             </TableHead>
+                            {isAggregated && (
+                              <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">منبع</TableHead>
+                            )}
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">مشخصات سفارش</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">شرح فعالیت امروز و ابعاد</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">اکیپ</TableHead>
@@ -2891,6 +2964,21 @@ export default function DailyReportModule() {
                                     )}
                                   </div>
                                 </TableCell>
+                                {/* ستون منبع ماژول در حالت تجمیعی */}
+                                {isAggregated && (
+                                  <TableCell className="border border-blue-200">
+                                    {row.source_module_name ? (
+                                      <Badge 
+                                        variant="outline" 
+                                        className="text-xs bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap"
+                                      >
+                                        {row.source_module_name}
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">—</span>
+                                    )}
+                                  </TableCell>
+                                )}
                                 <TableCell className="border border-blue-200">
                                   {(() => {
                                     const selectedOrder = orders.find(o => o.id === row.order_id);
@@ -3026,6 +3114,9 @@ export default function DailyReportModule() {
                             >
                               نیروها
                             </TableHead>
+                            {isAggregated && (
+                              <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">منبع</TableHead>
+                            )}
                             <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">کارکرد</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">اضافه کاری</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">مبلغ دریافتی</TableHead>
@@ -3061,10 +3152,26 @@ export default function DailyReportModule() {
                                    </div>
                                  ) : row.is_cash_box ? (
                                    isAggregated ? (
-                                     <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm flex items-center gap-2">
-                                       <CreditCard className="h-4 w-4 text-amber-600" />
-                                       {row.staff_name || 'کارت بانکی'}
-                                     </div>
+                                     (() => {
+                                       // نمایش نام و موجودی کارت در حالت تجمیعی
+                                       const cardInfo = row.bank_card_id ? bankCardsCache.get(row.bank_card_id) : null;
+                                       return (
+                                         <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm space-y-1">
+                                           <div className="flex items-center gap-2">
+                                             <CreditCard className="h-4 w-4 text-emerald-600" />
+                                             <span className="font-medium">{cardInfo?.card_name || 'کارت بانکی'}</span>
+                                             {cardInfo?.bank_name && (
+                                               <span className="text-xs text-muted-foreground">({cardInfo.bank_name})</span>
+                                             )}
+                                           </div>
+                                           {cardInfo && (
+                                             <div className={`text-xs font-medium ${(cardInfo.current_balance ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                               موجودی: {(cardInfo.current_balance ?? 0).toLocaleString('fa-IR')} تومان
+                                             </div>
+                                           )}
+                                         </div>
+                                       );
+                                     })()
                                    ) : (
                                      <div className="min-w-[220px]">
                                        <BankCardSelect
@@ -3134,6 +3241,21 @@ export default function DailyReportModule() {
                                    />
                                  )}
                               </TableCell>
+                              {/* ستون منبع ماژول در حالت تجمیعی */}
+                              {isAggregated && (
+                                <TableCell className="border border-amber-200">
+                                  {row.source_module_name ? (
+                                    <Badge 
+                                      variant="outline" 
+                                      className="text-xs bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap"
+                                    >
+                                      {row.source_module_name}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">—</span>
+                                  )}
+                                </TableCell>
+                              )}
                               <TableCell className="border border-amber-200">
                                  {row.is_cash_box || isCompanyExpense ? (
                                   <span className="text-muted-foreground">—</span>
