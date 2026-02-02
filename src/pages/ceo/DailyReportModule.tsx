@@ -1254,17 +1254,48 @@ export default function DailyReportModule() {
           reportToModuleMap.set(r.id, r.module_key || 'default');
         }
         
-        // تابع برای تبدیل module_key به نام فارسی
+        // واکشی نام‌های دقیق ماژول‌ها از جدول module_assignments
+        const uniqueModuleKeys = Array.from(new Set(existingReports.map(r => r.module_key).filter(Boolean)));
+        const moduleNamesCache = new Map<string, string>();
+        
+        if (uniqueModuleKeys.length > 0) {
+          const { data: moduleAssignments } = await supabase
+            .from('module_assignments')
+            .select('module_key, module_name')
+            .in('module_key', uniqueModuleKeys)
+            .eq('is_active', true);
+          
+          if (moduleAssignments) {
+            for (const ma of moduleAssignments) {
+              // از نام کامل ماژول استفاده کن
+              if (ma.module_key && ma.module_name) {
+                moduleNamesCache.set(ma.module_key, ma.module_name);
+              }
+            }
+          }
+        }
+        
+        // تابع برای تبدیل module_key به نام دقیق فارسی از دیتابیس
         const getModuleDisplayName = (key: string): string => {
-          if (key.includes('اجرایی') || key.includes('executive')) return 'اجرایی';
-          if (key.includes('پشتیبانی') || key.includes('support')) return 'پشتیبانی';
-          if (key.includes('مدیریت') || key.includes('management')) return 'مدیریت';
-          if (key.includes('کلی') || key.includes('total') || key.includes('full')) return 'کلی';
-          if (key === 'daily_report') return 'اصلی';
-          // برای custom keys، فقط شماره را نشان بده
-          const customMatch = key.match(/custom-(\d+)/);
-          if (customMatch) return `ماژول ${customMatch[1].slice(-4)}`;
-          return key.slice(0, 10);
+          // اول از کش نام‌های واقعی بخوان
+          const cachedName = moduleNamesCache.get(key);
+          if (cachedName) {
+            // استخراج نام کوتاه از نام کامل (مثلاً "گزارش روزانه اجرایی" → "اجرایی")
+            if (cachedName.includes('اجرایی')) return 'گزارش اجرایی';
+            if (cachedName.includes('پشتیبانی')) return 'گزارش پشتیبانی';
+            if (cachedName.includes('مدیریت')) return 'گزارش مدیریت';
+            if (cachedName.includes('کلی')) return 'گزارش کلی';
+            // اگر نام کامل موجود بود، آن را برگردان
+            return cachedName;
+          }
+          
+          // Fallback به منطق قبلی اگر نام در کش نبود
+          if (key.includes('اجرایی') || key.includes('executive')) return 'گزارش اجرایی';
+          if (key.includes('پشتیبانی') || key.includes('support')) return 'گزارش پشتیبانی';
+          if (key.includes('مدیریت') || key.includes('management')) return 'گزارش مدیریت';
+          if (key.includes('کلی') || key.includes('total') || key.includes('full')) return 'گزارش کلی';
+          if (key === 'daily_report') return 'گزارش اصلی';
+          return key;
         };
         
         // اگر ماژول کلی هم گزارش دارد، آن را به عنوان report اصلی استفاده کن
