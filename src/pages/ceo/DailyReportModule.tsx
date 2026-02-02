@@ -425,6 +425,11 @@ export default function DailyReportModule() {
   const orderTableScrollRef = useRef<HTMLDivElement>(null);
   const staffTableScrollRef = useRef<HTMLDivElement>(null);
 
+  // ماژول تجمیعی باید بداند کدام reportId ها مربوط به همین تاریخ هستند
+  // تا با تغییرات جداول زیرمجموعه (orders/staff) سریع رفرش کند.
+  const aggregatedSourceReportIdsRef = useRef<Set<string>>(new Set());
+  const aggregatedRealtimeRefetchTimerRef = useRef<number | null>(null);
+
   // Ensure tables start from the right side in RTL by scrolling to the rightmost (selection) column
   useEffect(() => {
     if (loading) return;
@@ -526,6 +531,23 @@ export default function DailyReportModule() {
 
     const dateStr = toLocalDateString(reportDate);
 
+    const scheduleRefetch = () => {
+      if (aggregatedRealtimeRefetchTimerRef.current) {
+        window.clearTimeout(aggregatedRealtimeRefetchTimerRef.current);
+      }
+
+      // Debounce کوتاه برای جلوگیری از چندین fetch پشت سر هم (INSERT/DELETE های پشت‌سرهم)
+      aggregatedRealtimeRefetchTimerRef.current = window.setTimeout(() => {
+        fetchExistingReport();
+      }, 120);
+    };
+
+    const isRelevantChildChange = (payload: any): boolean => {
+      const reportId = payload?.new?.daily_report_id || payload?.old?.daily_report_id;
+      if (!reportId) return false;
+      return aggregatedSourceReportIdsRef.current.has(reportId);
+    };
+
     const channel = supabase
       .channel(`daily-reports-realtime-${dateStr}`)
       .on(
@@ -539,13 +561,46 @@ export default function DailyReportModule() {
         (payload) => {
           // هر تغییری (حذف، ویرایش، افزودن) داده‌ها را دوباره واکشی کن
           console.log('Realtime update received:', payload.eventType);
-          fetchExistingReport();
+          scheduleRefetch();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_report_orders',
+        },
+        (payload) => {
+          if (isRelevantChildChange(payload)) {
+            console.log('Realtime daily_report_orders change received:', payload.eventType);
+            scheduleRefetch();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_report_staff',
+        },
+        (payload) => {
+          if (isRelevantChildChange(payload)) {
+            console.log('Realtime daily_report_staff change received:', payload.eventType);
+            scheduleRefetch();
+          }
         }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
+
+      if (aggregatedRealtimeRefetchTimerRef.current) {
+        window.clearTimeout(aggregatedRealtimeRefetchTimerRef.current);
+        aggregatedRealtimeRefetchTimerRef.current = null;
+      }
     };
   }, [isAggregated, user, reportDate]);
 
@@ -1168,9 +1223,15 @@ export default function DailyReportModule() {
       // For non-managers, also verify they have access
       const isManager = await isManagerUser(user.id);
 
-      if (isAggregated && existingReports && existingReports.length > 0) {
-        // ماژول کلی: تمام گزارشات سه ماژول دیگر را ادغام کن
-        const allReportIds = existingReports.map((r) => r.id);
+       if (isAggregated) {
+         // ماژول کلی: لیست گزارش‌های همین تاریخ را نگه دار تا با تغییرات orders/staff سریع رفرش شود
+         const allReportIds = (existingReports || []).map((r) => r.id).filter(Boolean);
+         aggregatedSourceReportIdsRef.current = new Set(allReportIds);
+       }
+
+       if (isAggregated && existingReports && existingReports.length > 0) {
+         // ماژول کلی: تمام گزارشات سه ماژول دیگر را ادغام کن
+         const allReportIds = existingReports.map((r) => r.id);
         
         // اگر ماژول کلی هم گزارش دارد، آن را به عنوان report اصلی استفاده کن
         // در غیر این صورت، اولین گزارش را به عنوان پایه استفاده کن
