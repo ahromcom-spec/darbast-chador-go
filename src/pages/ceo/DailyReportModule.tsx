@@ -437,6 +437,10 @@ export default function DailyReportModule() {
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
+  // جلوگیری از اجرای هم‌زمان auto-save (علت اصلی تکثیر ردیف‌ها بعد از رفرش/بستن)
+  const isAutoSavingRef = useRef(false);
+  // جلوگیری از ذخیره تکراری وقتی داده تغییری نکرده
+  const lastAutoSaveHashRef = useRef<string>('');
   const orderTableScrollRef = useRef<HTMLDivElement>(null);
   const staffTableScrollRef = useRef<HTMLDivElement>(null);
 
@@ -626,6 +630,9 @@ export default function DailyReportModule() {
     
     // جلوگیری از auto-save در حین لود یا وقتی فرم خالی است (هنگام تغییر تاریخ)
     if (!user || loading || saving || isInitialLoadRef.current) return;
+
+    // جلوگیری از اجرای هم‌زمان (timer + beforeunload یا چند رندر)
+    if (isAutoSavingRef.current) return;
     
     // اگر فرم کاملا خالی است، auto-save انجم نده
     if (orderReports.length === 0 && staffReports.length === 0) return;
@@ -662,6 +669,52 @@ export default function DailyReportModule() {
 
      if (!hasOrderData && !hasStaffData && !hasCashBoxData) return;
 
+     // Hash برای جلوگیری از ذخیره تکراری بدون تغییر (و کاهش احتمال مسابقه)
+     const dataHash = JSON.stringify({
+       date: toLocalDateString(reportDate),
+       module: activeModuleKey,
+       orders: orderReports
+         .filter((r) => r.order_id)
+         .map((r) => ({
+           order_id: r.order_id,
+           activity_description: r.activity_description || '',
+           service_details: r.service_details || '',
+           team_name: r.team_name || '',
+           notes: r.notes || '',
+           row_color: r.row_color || '',
+         })),
+       staff: staffReports
+         .filter((s) =>
+           s.is_cash_box ||
+           s.is_company_expense ||
+           Boolean(s.staff_user_id) ||
+           Boolean(s.staff_name?.trim()) ||
+           (s.overtime_hours ?? 0) > 0 ||
+           (s.amount_received ?? 0) > 0 ||
+           (s.amount_spent ?? 0) > 0 ||
+           Boolean(s.receiving_notes?.trim()) ||
+           Boolean(s.spending_notes?.trim()) ||
+           Boolean(s.notes?.trim())
+         )
+         .map((s) => ({
+           staff_user_id: s.staff_user_id,
+           staff_name: s.staff_name || '',
+           work_status: s.work_status,
+           overtime_hours: s.overtime_hours || 0,
+           amount_received: s.amount_received || 0,
+           receiving_notes: s.receiving_notes || '',
+           amount_spent: s.amount_spent || 0,
+           spending_notes: s.spending_notes || '',
+           notes: s.notes || '',
+           is_cash_box: Boolean(s.is_cash_box),
+           is_company_expense: Boolean(s.is_company_expense),
+           bank_card_id: s.bank_card_id || null,
+         })),
+     });
+
+     // اگر داده تغییر نکرده، ذخیره نکن
+     if (dataHash === lastAutoSaveHashRef.current) return;
+
     const staffToSave = staffReports.filter(
       (s) =>
         s.is_cash_box ||
@@ -676,6 +729,7 @@ export default function DailyReportModule() {
     );
 
     try {
+      isAutoSavingRef.current = true;
       setAutoSaveStatus('saving');
       const dateStr = toLocalDateString(reportDate);
 
@@ -687,6 +741,7 @@ export default function DailyReportModule() {
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
+          .eq('created_by', user.id)
           .eq('module_key', activeModuleKey)
           .maybeSingle();
 
@@ -713,6 +768,7 @@ export default function DailyReportModule() {
                 .from('daily_reports')
                 .select('id')
                 .eq('report_date', dateStr)
+                .eq('created_by', user.id)
                 .eq('module_key', activeModuleKey)
                 .single();
               if (retry?.id) {
@@ -802,6 +858,9 @@ export default function DailyReportModule() {
 
       // Clear localStorage backup after successful database save
       clearLocalStorageBackup();
+
+      // ثبت آخرین هش ذخیره شده تا از تکرار جلوگیری شود
+      lastAutoSaveHashRef.current = dataHash;
       
       setAutoSaveStatus('saved');
       setTimeout(() => setAutoSaveStatus('idle'), 2000);
@@ -809,6 +868,8 @@ export default function DailyReportModule() {
       console.error('Auto-save error:', error);
       // Data is still safe in localStorage
       setAutoSaveStatus('idle');
+    } finally {
+      isAutoSavingRef.current = false;
     }
   }, [user, loading, saving, reportDate, existingReportId, orderReports, staffReports, clearLocalStorageBackup, activeModuleKey]);
 
@@ -826,9 +887,10 @@ export default function DailyReportModule() {
     }
 
     // Set new timer for auto-save (debounce 1 second for faster saving)
+    // Debounce بیشتر برای پایداری (و جلوگیری از مسابقه با beforeunload/رفرش)
     autoSaveTimerRef.current = setTimeout(() => {
       performAutoSave();
-    }, 1000);
+    }, 2000);
 
     return () => {
       if (autoSaveTimerRef.current) {
@@ -1227,8 +1289,8 @@ export default function DailyReportModule() {
         .eq('report_date', dateStr);
 
       if (!isAggregated) {
-        // ماژول مجزا: فقط گزارش همین ماژول
-        reportQuery = reportQuery.eq('module_key', activeModuleKey);
+        // ماژول مجزا: فقط گزارش همین ماژول و همین کاربر
+        reportQuery = reportQuery.eq('module_key', activeModuleKey).eq('created_by', user.id);
       }
 
       const { data: existingReports, error: existingError } = await reportQuery;
@@ -2156,6 +2218,7 @@ export default function DailyReportModule() {
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
+          .eq('created_by', user.id)
           .eq('module_key', activeModuleKey)
           .maybeSingle();
 
@@ -2188,6 +2251,7 @@ export default function DailyReportModule() {
                 .from('daily_reports')
                 .select('id')
                 .eq('report_date', dateStr)
+                .eq('created_by', user.id)
                 .eq('module_key', activeModuleKey)
                 .maybeSingle();
               if (retry?.id) {
