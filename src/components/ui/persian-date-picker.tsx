@@ -139,15 +139,6 @@ export function PersianDatePicker({
           mode="single"
           selected={selectedDate}
           onSelect={handleDateSelect}
-          disabled={(date) => {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const minDate = new Date(today);
-            minDate.setDate(minDate.getDate() - 45);
-            const maxDate = new Date(today);
-            maxDate.setDate(maxDate.getDate() + 10);
-            return date < minDate || date > maxDate;
-          }}
           className="p-3 pointer-events-auto"
         />
         {actualTimeMode === 'ampm' && (
