@@ -178,6 +178,9 @@ export function useDailyReport() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   
+  // Get module key from URL for module-specific reports
+  const moduleKey = searchParams.get('moduleKey') || 'daily_report';
+  
   // Core state
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -202,15 +205,17 @@ export function useDailyReport() {
   const [staffReports, setStaffReports] = useState<StaffReportRow[]>([]);
   const [existingReportId, setExistingReportId] = useState<string | null>(null);
   
-  // Refs
+  // Refs - Use ref to track ongoing saves and prevent duplicates
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
+  const isSavingRef = useRef(false);
+  const lastSavedHashRef = useRef<string>('');
 
-  // LocalStorage key for backup
+  // LocalStorage key for backup - include module key for module-specific backups
   const getLocalStorageKey = useCallback(() => {
     const dateStr = toLocalDateString(reportDate);
-    return `daily_report_backup_${user?.id}_${dateStr}`;
-  }, [reportDate, user]);
+    return `daily_report_backup_${user?.id}_${dateStr}_${moduleKey}`;
+  }, [reportDate, user, moduleKey]);
 
   // Save to localStorage as backup
   const saveToLocalStorage = useCallback(() => {
@@ -328,7 +333,7 @@ export function useDailyReport() {
     }
   }, []);
 
-  // Fetch existing report for current date
+  // Fetch existing report for current date and module
   const fetchExistingReport = useCallback(async () => {
     if (!user) return;
 
@@ -341,58 +346,21 @@ export function useDailyReport() {
         ((localBackup.orderReports && localBackup.orderReports.some((r: any) => r.order_id)) ||
          (localBackup.staffReports && localBackup.staffReports.length > 0));
 
-      const isManager = await isManagerUser(user.id);
-
       let reportIdToLoad: string | null = null;
 
-      if (isManager) {
-        const { data: myReport, error: myReportError } = await supabase
-          .from('daily_reports')
-          .select('id')
-          .eq('report_date', dateStr)
-          .eq('created_by', user.id)
-          .maybeSingle();
+      // Fetch report specific to this module_key, user, and date
+      const { data: myReport, error: myReportError } = await supabase
+        .from('daily_reports')
+        .select('id')
+        .eq('report_date', dateStr)
+        .eq('created_by', user.id)
+        .eq('module_key', moduleKey)
+        .maybeSingle();
 
-        if (myReportError) throw myReportError;
+      if (myReportError) throw myReportError;
 
-        if (myReport?.id) {
-          reportIdToLoad = myReport.id;
-        } else {
-          const { data: anyReport, error: anyReportError } = await supabase
-            .from('daily_reports')
-            .select('id')
-            .eq('report_date', dateStr)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (anyReportError) throw anyReportError;
-          reportIdToLoad = anyReport?.id ?? null;
-        }
-      } else {
-        const { data: candidateReports, error: candidatesError } = await supabase
-          .from('daily_reports')
-          .select('id')
-          .eq('report_date', dateStr)
-          .order('created_at', { ascending: false });
-
-        if (candidatesError) throw candidatesError;
-
-        const candidateIds = (candidateReports || []).map((r: any) => r.id);
-
-        if (candidateIds.length > 0) {
-          const { data: staffRow, error: staffRowError } = await supabase
-            .from('daily_report_staff')
-            .select('daily_report_id')
-            .eq('staff_user_id', user.id)
-            .in('daily_report_id', candidateIds)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (staffRowError) throw staffRowError;
-          reportIdToLoad = staffRow?.daily_report_id ?? null;
-        }
+      if (myReport?.id) {
+        reportIdToLoad = myReport.id;
       }
 
       if (reportIdToLoad) {
@@ -510,10 +478,12 @@ export function useDailyReport() {
     } finally {
       setLoading(false);
     }
-  }, [user, reportDate, loadFromLocalStorage]);
+  }, [user, reportDate, moduleKey, loadFromLocalStorage]);
 
-  // Auto-save function
+  // Auto-save function with duplicate prevention
   const performAutoSave = useCallback(async () => {
+    // Guard: prevent concurrent saves
+    if (isSavingRef.current) return;
     if (!user || loading || isInitialLoadRef.current) return;
     
     if (orderReports.length === 0 && staffReports.length === 0) return;
@@ -533,9 +503,34 @@ export function useDailyReport() {
           Boolean(s.notes?.trim()))
     );
 
-    const hasCashBox = staffReports.some((s) => s.is_cash_box);
+    const hasCashBox = staffReports.some((s) => s.is_cash_box && s.bank_card_id);
 
     if (!hasOrderData && !hasStaffData && !hasCashBox) return;
+
+    // Create hash to detect duplicate saves
+    const dataHash = JSON.stringify({
+      orders: orderReports.filter(r => r.order_id).map(r => ({
+        order_id: r.order_id,
+        activity: r.activity_description,
+        service: r.service_details,
+        team: r.team_name,
+        notes: r.notes
+      })),
+      staff: staffReports.filter(s => s.is_cash_box || s.is_company_expense || s.staff_name?.trim()).map(s => ({
+        name: s.staff_name,
+        status: s.work_status,
+        received: s.amount_received,
+        spent: s.amount_spent,
+        is_cash_box: s.is_cash_box,
+        is_company_expense: s.is_company_expense,
+        bank_card_id: s.bank_card_id
+      }))
+    });
+
+    // Skip if data hasn't changed
+    if (dataHash === lastSavedHashRef.current) {
+      return;
+    }
 
     const staffToSave = staffReports.filter(
       (s) =>
@@ -552,30 +547,33 @@ export function useDailyReport() {
     );
 
     try {
+      isSavingRef.current = true;
       setAutoSaveStatus('saving');
       const dateStr = toLocalDateString(reportDate);
 
       let reportId = existingReportId;
 
       if (!reportId) {
-        // First check if a report already exists for this date/user (fresh DB check)
+        // First check if a report already exists for this date/user/module (fresh DB check)
         const { data: existingCheck } = await supabase
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
           .eq('created_by', user.id)
+          .eq('module_key', moduleKey)
           .maybeSingle();
 
         if (existingCheck?.id) {
           reportId = existingCheck.id;
           setExistingReportId(reportId);
         } else {
-          // Try to insert new report
+          // Try to insert new report with module_key
           const { data: newReport, error: createError } = await supabase
             .from('daily_reports')
             .insert({
               report_date: dateStr,
               created_by: user.id,
+              module_key: moduleKey,
               updated_at: new Date().toISOString()
             })
             .select('id')
@@ -589,6 +587,7 @@ export function useDailyReport() {
                 .select('id')
                 .eq('report_date', dateStr)
                 .eq('created_by', user.id)
+                .eq('module_key', moduleKey)
                 .maybeSingle();
               if (retry?.id) {
                 reportId = retry.id;
@@ -664,13 +663,18 @@ export function useDailyReport() {
 
       clearLocalStorageBackup();
       
+      // Update hash to prevent duplicate saves
+      lastSavedHashRef.current = dataHash;
+      
       setAutoSaveStatus('saved');
       setTimeout(() => setAutoSaveStatus('idle'), 2000);
     } catch (error) {
       console.error('Auto-save error:', error);
       setAutoSaveStatus('idle');
+    } finally {
+      isSavingRef.current = false;
     }
-  }, [user, loading, reportDate, existingReportId, orderReports, staffReports, clearLocalStorageBackup]);
+  }, [user, loading, reportDate, moduleKey, existingReportId, orderReports, staffReports, clearLocalStorageBackup]);
 
   // Add order row
   const addOrderRow = useCallback(() => {
@@ -811,24 +815,26 @@ export function useDailyReport() {
       let reportId = existingReportId;
 
       if (!reportId) {
-        // First check if a report already exists for this date/user (fresh DB check)
+        // First check if a report already exists for this date/user/module (fresh DB check)
         const { data: existingCheck } = await supabase
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
           .eq('created_by', user.id)
+          .eq('module_key', moduleKey)
           .maybeSingle();
 
         if (existingCheck?.id) {
           reportId = existingCheck.id;
           setExistingReportId(reportId);
         } else {
-          // Try to insert new report
+          // Try to insert new report with module_key
           const { data: newReport, error: createError } = await supabase
             .from('daily_reports')
             .insert({
               report_date: dateStr,
               created_by: user.id,
+              module_key: moduleKey,
               updated_at: new Date().toISOString()
             })
             .select('id')
@@ -842,6 +848,7 @@ export function useDailyReport() {
                 .select('id')
                 .eq('report_date', dateStr)
                 .eq('created_by', user.id)
+                .eq('module_key', moduleKey)
                 .maybeSingle();
               if (retry?.id) {
                 reportId = retry.id;
@@ -1057,7 +1064,7 @@ export function useDailyReport() {
     } finally {
       setSaving(false);
     }
-  }, [user, reportDate, existingReportId, orderReports, staffReports, clearLocalStorageBackup]);
+  }, [user, reportDate, moduleKey, existingReportId, orderReports, staffReports, clearLocalStorageBackup]);
 
   // Effects
   useEffect(() => {
@@ -1065,15 +1072,17 @@ export function useDailyReport() {
     fetchStaffMembers();
   }, [fetchOrders, fetchStaffMembers]);
 
+  // Reset and fetch when date or module changes
   useEffect(() => {
     if (user && reportDate) {
       setOrderReports([]);
       setStaffReports([]);
       setExistingReportId(null);
       isInitialLoadRef.current = true;
+      lastSavedHashRef.current = ''; // Reset hash on module/date change
       fetchExistingReport();
     }
-  }, [reportDate, user, fetchExistingReport]);
+  }, [reportDate, user, moduleKey, fetchExistingReport]);
 
   // Save to localStorage on every change
   useEffect(() => {
@@ -1082,11 +1091,15 @@ export function useDailyReport() {
     saveToLocalStorage();
   }, [orderReports, staffReports, saveToLocalStorage]);
 
-  // Auto-save with debounce
+  // Auto-save with debounce - wait longer (2 seconds) and prevent during initial load
   useEffect(() => {
+    // Don't trigger auto-save during initial load phase
     if (isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
-      return;
+      // Set flag to false AFTER a delay to ensure hydration is complete
+      const timer = setTimeout(() => {
+        isInitialLoadRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
     }
     
     if (orderReports.length === 0 && staffReports.length === 0) return;
@@ -1095,9 +1108,10 @@ export function useDailyReport() {
       clearTimeout(autoSaveTimerRef.current);
     }
 
+    // Increase debounce delay to 2 seconds to prevent rapid saves
     autoSaveTimerRef.current = setTimeout(() => {
       performAutoSave();
-    }, 1000);
+    }, 2000);
 
     return () => {
       if (autoSaveTimerRef.current) {
