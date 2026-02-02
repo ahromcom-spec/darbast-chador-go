@@ -1254,11 +1254,31 @@ export default function DailyReportModule() {
           reportToModuleMap.set(r.id, r.module_key || 'default');
         }
         
-        // واکشی نام‌های دقیق ماژول‌ها از جدول module_assignments
+        // واکشی نام‌های دقیق ماژول‌ها از جداول مختلف
         const uniqueModuleKeys = Array.from(new Set(existingReports.map(r => r.module_key).filter(Boolean)));
         const moduleNamesCache = new Map<string, string>();
         
         if (uniqueModuleKeys.length > 0) {
+          // اول از module_hierarchy_states واکشی کن (برای custom keys)
+          const { data: hierarchyStates } = await (supabase as any)
+            .from('module_hierarchy_states')
+            .select('custom_names')
+            .eq('type', 'available');
+          
+          if (hierarchyStates) {
+            for (const state of hierarchyStates) {
+              const customNames = state.custom_names as Record<string, { name: string; description?: string }> | null;
+              if (customNames) {
+                for (const key of uniqueModuleKeys) {
+                  if (customNames[key]?.name && !moduleNamesCache.has(key)) {
+                    moduleNamesCache.set(key, customNames[key].name);
+                  }
+                }
+              }
+            }
+          }
+          
+          // سپس از module_assignments برای کلیدهای استاندارد
           const { data: moduleAssignments } = await supabase
             .from('module_assignments')
             .select('module_key, module_name')
@@ -1267,8 +1287,7 @@ export default function DailyReportModule() {
           
           if (moduleAssignments) {
             for (const ma of moduleAssignments) {
-              // از نام کامل ماژول استفاده کن
-              if (ma.module_key && ma.module_name) {
+              if (ma.module_key && ma.module_name && !moduleNamesCache.has(ma.module_key)) {
                 moduleNamesCache.set(ma.module_key, ma.module_name);
               }
             }
@@ -1280,12 +1299,7 @@ export default function DailyReportModule() {
           // اول از کش نام‌های واقعی بخوان
           const cachedName = moduleNamesCache.get(key);
           if (cachedName) {
-            // استخراج نام کوتاه از نام کامل (مثلاً "گزارش روزانه اجرایی" → "اجرایی")
-            if (cachedName.includes('اجرایی')) return 'گزارش اجرایی';
-            if (cachedName.includes('پشتیبانی')) return 'گزارش پشتیبانی';
-            if (cachedName.includes('مدیریت')) return 'گزارش مدیریت';
-            if (cachedName.includes('کلی')) return 'گزارش کلی';
-            // اگر نام کامل موجود بود، آن را برگردان
+            // نام کامل را برگردان
             return cachedName;
           }
           
