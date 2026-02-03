@@ -17,6 +17,7 @@ import { ManagerOrderInvoice } from './ManagerOrderInvoice';
 import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { parseOrderNotes } from './OrderDetailsView';
+import { parseLocalizedNumber } from '@/lib/numberParsing';
 import VoiceCall from './VoiceCall';
 import CallHistory from '@/components/calls/CallHistory';
 import OrderChat from './OrderChat';
@@ -166,30 +167,53 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   // Check if this is an expert pricing request
   const isExpertPricingRequest = parsedNotes?.is_expert_pricing_request === true;
 
-  // Calculate total area from dimensions for expert pricing
-  const calculateTotalArea = () => {
+  // Calculate total measure (m² or m³) from dimensions for expert pricing
+  const calculateExpertPricingTotalMeasure = () => {
     const dims = parsedNotes?.dimensions;
-    if (!dims || !Array.isArray(dims)) return parsedNotes?.total_area || 0;
-    
+
+    const totalFromNotes = parseLocalizedNumber(
+      parsedNotes?.total_volume ??
+        parsedNotes?.totalVolume ??
+        parsedNotes?.total_area ??
+        parsedNotes?.totalArea
+    );
+    if (totalFromNotes > 0) return totalFromNotes;
+
+    if (!dims || !Array.isArray(dims)) return 0;
+
+    const hasAnyWidth = dims.some((d: any) => parseLocalizedNumber(d?.width) > 0);
+    const isVolume = Boolean(parsedNotes?.total_volume ?? parsedNotes?.totalVolume) || hasAnyWidth;
+
     return dims.reduce((sum: number, dim: any) => {
-      const length = parseFloat(dim.length) || 0;
-      const height = parseFloat(dim.height) || 0;
-      if (length > 0 && height > 0) {
-        return sum + (length * height);
+      const length = parseLocalizedNumber(dim?.length);
+      const height = parseLocalizedNumber(dim?.height);
+      if (length <= 0 || height <= 0) return sum;
+
+      if (isVolume) {
+        const width = parseLocalizedNumber(dim?.width);
+        const w = width > 0 ? width : 1;
+        return sum + length * w * height;
       }
-      return sum;
+
+      return sum + length * height;
     }, 0);
   };
 
-  const expertPricingTotalArea = calculateTotalArea();
+  const expertPricingTotalMeasure = calculateExpertPricingTotalMeasure();
+  const expertPricingMeasureUnit = (() => {
+    const dims = parsedNotes?.dimensions;
+    const hasAnyWidth = Array.isArray(dims) && dims.some((d: any) => parseLocalizedNumber(d?.width) > 0);
+    const isVolume = Boolean(parsedNotes?.total_volume ?? parsedNotes?.totalVolume) || hasAnyWidth;
+    return isVolume ? 'متر مکعب' : 'متر مربع';
+  })();
 
   // Auto-calculate total price when unit price changes
   useEffect(() => {
-    if (isExpertPricingRequest && unitPrice && expertPricingTotalArea > 0) {
-      const calculatedTotal = parseFloat(unitPrice) * expertPricingTotalArea;
+    if (isExpertPricingRequest && unitPrice && expertPricingTotalMeasure > 0) {
+      const calculatedTotal = parseFloat(unitPrice) * expertPricingTotalMeasure;
       setPaymentAmount(Math.round(calculatedTotal).toString());
     }
-  }, [unitPrice, expertPricingTotalArea, isExpertPricingRequest]);
+  }, [unitPrice, expertPricingTotalMeasure, isExpertPricingRequest]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -208,7 +232,13 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         // Store unit price if provided
         if (unitPrice && parseFloat(unitPrice) > 0) {
           updatedNotes.unit_price = parseFloat(unitPrice);
-          updatedNotes.total_area = expertPricingTotalArea;
+          if (expertPricingMeasureUnit === 'متر مکعب') {
+            updatedNotes.total_volume = expertPricingTotalMeasure;
+            updatedNotes.pricing_unit = 'm3';
+          } else {
+            updatedNotes.total_area = expertPricingTotalMeasure;
+            updatedNotes.pricing_unit = 'm2';
+          }
         }
       }
 
@@ -369,11 +399,11 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           </div>
           
           {/* Display Total Area from Customer Form */}
-          {expertPricingTotalArea > 0 && (
+          {expertPricingTotalMeasure > 0 && (
             <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
               <p className="text-sm font-medium text-blue-700 dark:text-blue-300 text-center">
                 <Ruler className="h-4 w-4 inline ml-1" />
-                متراژ کل: <span className="font-bold text-lg">{expertPricingTotalArea.toLocaleString('fa-IR')}</span> متر مربع
+                متراژ کل: <span className="font-bold text-lg">{expertPricingTotalMeasure.toLocaleString('fa-IR')}</span> {expertPricingMeasureUnit}
               </p>
             </div>
           )}
@@ -382,7 +412,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600 space-y-4">
             <div>
               <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
-                قیمت فی (تومان به ازای هر متر مربع)
+                قیمت فی (تومان به ازای هر {expertPricingMeasureUnit})
               </Label>
               <Input 
                 type="text"
@@ -399,9 +429,9 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                 className="text-lg font-bold"
                 dir="ltr"
               />
-              {unitPrice && parseFloat(unitPrice) > 0 && expertPricingTotalArea > 0 && (
+              {unitPrice && parseFloat(unitPrice) > 0 && expertPricingTotalMeasure > 0 && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  محاسبه: {parseFloat(unitPrice).toLocaleString('fa-IR')} × {expertPricingTotalArea.toLocaleString('fa-IR')} = {(parseFloat(unitPrice) * expertPricingTotalArea).toLocaleString('fa-IR')} تومان
+                  محاسبه: {parseFloat(unitPrice).toLocaleString('fa-IR')} × {expertPricingTotalMeasure.toLocaleString('fa-IR')} = {(parseFloat(unitPrice) * expertPricingTotalMeasure).toLocaleString('fa-IR')} تومان
                 </p>
               )}
             </div>
@@ -422,8 +452,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                       .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
                     setPaymentAmount(rawValue);
                     // If manually changed, clear unit price
-                    if (unitPrice && parseFloat(unitPrice) > 0 && expertPricingTotalArea > 0) {
-                      const calculated = parseFloat(unitPrice) * expertPricingTotalArea;
+                    if (unitPrice && parseFloat(unitPrice) > 0 && expertPricingTotalMeasure > 0) {
+                      const calculated = parseFloat(unitPrice) * expertPricingTotalMeasure;
                       if (Math.abs(parseFloat(rawValue) - calculated) > 1) {
                         // User is overriding the calculated value
                       }
@@ -455,7 +485,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                 قیمت تعیین شده: {Number(paymentAmount).toLocaleString('fa-IR')} تومان
                 {unitPrice && parseFloat(unitPrice) > 0 && (
                   <span className="block text-xs font-normal mt-1">
-                    (قیمت فی: {parseFloat(unitPrice).toLocaleString('fa-IR')} تومان × {expertPricingTotalArea.toLocaleString('fa-IR')} متر مربع)
+                    (قیمت فی: {parseFloat(unitPrice).toLocaleString('fa-IR')} تومان × {expertPricingTotalMeasure.toLocaleString('fa-IR')} {expertPricingMeasureUnit})
                   </span>
                 )}
               </p>
