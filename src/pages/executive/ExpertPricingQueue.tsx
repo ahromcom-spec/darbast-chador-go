@@ -16,6 +16,7 @@ import { ExpertPricingDialog } from '@/components/orders/ExpertPricingDialog';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { parseLocalizedNumber } from '@/lib/numberParsing';
 
 interface Order {
   id: string;
@@ -174,17 +175,40 @@ export default function ExpertPricingQueue() {
     return dimensions;
   };
 
-  const getTotalArea = (order: Order) => {
+  const getTotalMeasure = (order: Order) => {
     const dimensions = getDimensions(order);
     if (!dimensions.length) return null;
+
+    const parsedNotes = parseOrderNotes(order.notes);
+    const totalFromNotes = parseLocalizedNumber(parsedNotes?.total_volume ?? parsedNotes?.totalVolume);
+    if (totalFromNotes > 0) return totalFromNotes;
+
+    const hasAnyWidth = dimensions.some((d: any) => parseLocalizedNumber(d?.width) > 0);
+    const isVolume = Boolean(parsedNotes?.total_volume ?? parsedNotes?.totalVolume) || hasAnyWidth;
     
     const total = dimensions.reduce((sum: number, dim: any) => {
-      const length = parseFloat(dim.length) || 0;
-      const height = parseFloat(dim.height) || 0;
-      return sum + (length * height);
+      const length = parseLocalizedNumber(dim?.length);
+      const height = parseLocalizedNumber(dim?.height);
+      if (length <= 0 || height <= 0) return sum;
+
+      if (isVolume) {
+        const width = parseLocalizedNumber(dim?.width);
+        const w = width > 0 ? width : 1;
+        return sum + length * w * height;
+      }
+
+      return sum + length * height;
     }, 0);
     
     return total > 0 ? total : null;
+  };
+
+  const getMeasureUnit = (order: Order) => {
+    const parsedNotes = parseOrderNotes(order.notes);
+    const dimensions = getDimensions(order);
+    const hasAnyWidth = dimensions.some((d: any) => parseLocalizedNumber(d?.width) > 0);
+    const isVolume = Boolean(parsedNotes?.total_volume ?? parsedNotes?.totalVolume) || hasAnyWidth;
+    return isVolume ? 'متر مکعب' : 'متر مربع';
   };
 
   // تفکیک سفارشات به قیمت‌گذاری نشده و قیمت‌گذاری شده
@@ -277,8 +301,9 @@ export default function ExpertPricingQueue() {
           <div className="grid gap-4">
             {pendingPricingOrders.map((order) => {
               const status = getOrderStatus(order);
-              const totalArea = getTotalArea(order);
+              const totalMeasure = getTotalMeasure(order);
               const dimensions = getDimensions(order);
+              const measureUnit = getMeasureUnit(order);
               const StatusIcon = status.icon;
 
               return (
@@ -317,18 +342,26 @@ export default function ExpertPricingQueue() {
                           {dimensions.map((dim: any, idx: number) => (
                             <div key={idx} className="text-sm flex items-center gap-2">
                               <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">{idx + 1}</span>
-                              <span>طول: {dim.length || '-'} × ارتفاع: {dim.height || '-'}</span>
+                              {measureUnit === 'متر مکعب' ? (
+                                <span>طول: {dim.length || '-'} × عرض: {dim.width || '-'} × ارتفاع: {dim.height || '-'}</span>
+                              ) : (
+                                <span>طول: {dim.length || '-'} × ارتفاع: {dim.height || '-'}</span>
+                              )}
                               {dim.length && dim.height && (
                                 <span className="text-muted-foreground">
-                                  = {(parseFloat(dim.length) * parseFloat(dim.height)).toFixed(1)} متر مربع
+                                  = {(
+                                    measureUnit === 'متر مکعب'
+                                      ? (parseLocalizedNumber(dim.length) * (parseLocalizedNumber(dim.width) || 1) * parseLocalizedNumber(dim.height))
+                                      : (parseLocalizedNumber(dim.length) * parseLocalizedNumber(dim.height))
+                                  ).toFixed(1)} {measureUnit}
                                 </span>
                               )}
                             </div>
                           ))}
-                          {totalArea && (
+                          {totalMeasure && (
                             <div className="pt-2 border-t mt-2">
                               <span className="font-semibold text-primary">
-                                جمع کل: {totalArea.toFixed(1)} متر مربع
+                                جمع کل: {totalMeasure.toFixed(1)} {measureUnit}
                               </span>
                             </div>
                           )}
@@ -382,7 +415,8 @@ export default function ExpertPricingQueue() {
           <div className="grid gap-4">
             {pricedOrders.map((order) => {
               const status = getOrderStatus(order);
-              const totalArea = getTotalArea(order);
+              const totalMeasure = getTotalMeasure(order);
+              const measureUnit = getMeasureUnit(order);
               const StatusIcon = status.icon;
 
               return (
@@ -417,9 +451,9 @@ export default function ExpertPricingQueue() {
                       </div>
                     </div>
 
-                    {totalArea && (
+                    {totalMeasure && (
                       <div className="text-sm text-muted-foreground">
-                        متراژ کل: {totalArea.toFixed(1)} متر مربع
+                        متراژ کل: {totalMeasure.toFixed(1)} {measureUnit}
                       </div>
                     )}
 
