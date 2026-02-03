@@ -233,9 +233,12 @@ export default function ExecutiveOrders() {
                               activeModuleKey.includes('accounting');
 
   // ماژول مدیریت کرایه اجناس داربست - فقط سفارشات با subcategory_code = '30'
+  // اگر ماژول "مدیریت کلی" باشد، نباید فیلتر شود و همه سفارشات نمایش داده شوند
   const isRentalItemsModule = 
-    moduleName.includes('کرایه اجناس داربست') ||
-    moduleName.includes('کرایه اجناس');
+    !moduleName.includes('مدیریت کلی') && 
+    !moduleName.includes('مدیریت کل') &&
+    (moduleName.includes('کرایه اجناس داربست') ||
+     moduleName.includes('کرایه اجناس'));
 
   useEffect(() => {
     fetchOrders();
