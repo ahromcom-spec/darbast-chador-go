@@ -32,7 +32,8 @@ export const useProjectsHierarchy = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      // 1. دریافت پروژه‌هایی که کاربر مالک آنهاست
+      const { data: ownedProjects, error: ownedError } = await supabase
         .from('projects_hierarchy')
         .select(`
           *,
@@ -51,8 +52,68 @@ export const useProjectsHierarchy = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setProjects(data || []);
+      if (ownedError) throw ownedError;
+
+      // 2. دریافت سفارشاتی که کاربر به عنوان مشتری ثبت کرده (از جدول customers)
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      let customerProjectIds: string[] = [];
+      if (customerData?.id) {
+        // دریافت hierarchy_project_id های سفارشات مشتری
+        const { data: customerOrders } = await supabase
+          .from('projects_v3')
+          .select('hierarchy_project_id')
+          .eq('customer_id', customerData.id)
+          .not('hierarchy_project_id', 'is', null);
+
+        if (customerOrders) {
+          customerProjectIds = [...new Set(customerOrders.map(o => o.hierarchy_project_id).filter(Boolean) as string[])];
+        }
+      }
+
+      // 3. دریافت پروژه‌های مشتری که مالک نیست
+      const ownedIds = new Set((ownedProjects || []).map(p => p.id));
+      const customerOnlyIds = customerProjectIds.filter(id => !ownedIds.has(id));
+
+      let customerProjects: ProjectHierarchy[] = [];
+      if (customerOnlyIds.length > 0) {
+        const { data: custProjects, error: custError } = await supabase
+          .from('projects_hierarchy')
+          .select(`
+            *,
+            locations (
+              title,
+              address_line,
+              lat,
+              lng,
+              is_active,
+              provinces (name),
+              districts (name)
+            ),
+            service_types_v3 (name, code),
+            subcategories (name, code)
+          `)
+          .in('id', customerOnlyIds)
+          .order('created_at', { ascending: false });
+
+        if (!custError && custProjects) {
+          customerProjects = custProjects;
+        }
+      }
+
+      // ترکیب پروژه‌های مالکیتی و پروژه‌های مشتری
+      const allProjects = [...(ownedProjects || []), ...customerProjects];
+      
+      // حذف تکراری‌ها بر اساس id
+      const uniqueProjects = allProjects.filter((project, index, self) =>
+        index === self.findIndex(p => p.id === project.id)
+      );
+
+      setProjects(uniqueProjects);
     } catch (error) {
       console.error('خطا در بارگذاری پروژه‌ها:', error);
     } finally {
