@@ -467,7 +467,7 @@ export const OrderDetailsView = ({ order, showMedia = true, allowMediaEdit = tru
   
   const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
   const dimensions = parsedNotes?.dimensions;
-  const totalArea = parsedNotes?.totalArea || parsedNotes?.total_area;
+  const totalArea = parsedNotes?.totalArea || parsedNotes?.total_area || parsedNotes?.total_volume;
   const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
   const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || parsedNotes?.locationPurpose;
   const estimatedPrice = parsedNotes?.estimated_price || parsedNotes?.price || parsedNotes?.totalPrice || order.payment_amount;
@@ -577,8 +577,8 @@ export const OrderDetailsView = ({ order, showMedia = true, allowMediaEdit = tru
 
           {totalArea && (
             <div>
-              <Label className="text-xs text-muted-foreground">مساحت کل</Label>
-              <p className="font-medium">{totalArea} متر مربع</p>
+              <Label className="text-xs text-muted-foreground">متراژ کل</Label>
+              <p className="font-medium">{typeof totalArea === 'number' ? totalArea.toLocaleString('fa-IR') : totalArea} {parsedNotes?.total_volume ? 'متر مکعب' : 'متر مربع'}</p>
             </div>
           )}
         </div>
