@@ -82,6 +82,10 @@ export function MediaUploader({
   }, [files, onUploadStatusChange]);
 
   // Notify parent about completed uploads
+  // Track previous value to avoid duplicate notifications with same data
+  const prevCompletedCountRef = useRef<number>(-1);
+  const prevCompletedPathsRef = useRef<string>('');
+  
   useEffect(() => {
     if (onMediaUploaded) {
       const completedFiles = files.filter(f => f.status === 'done' && f.storagePath);
@@ -91,7 +95,18 @@ export function MediaUploader({
         fileSize: f.file.size,
         mimeType: f.file.type || (f.type === 'video' ? 'video/mp4' : 'image/jpeg')
       }));
-      onMediaUploaded(mediaInfo);
+      
+      // Create a key from all storage paths to detect actual changes
+      const pathsKey = mediaInfo.map(m => m.storagePath).sort().join('|');
+      
+      // Only notify if the completed files actually changed
+      // This prevents re-renders from triggering duplicate callbacks
+      if (completedFiles.length !== prevCompletedCountRef.current || pathsKey !== prevCompletedPathsRef.current) {
+        prevCompletedCountRef.current = completedFiles.length;
+        prevCompletedPathsRef.current = pathsKey;
+        console.log('MediaUploader: Notifying parent of completed uploads:', mediaInfo.length, 'files');
+        onMediaUploaded(mediaInfo);
+      }
     }
   }, [files, onMediaUploaded]);
 

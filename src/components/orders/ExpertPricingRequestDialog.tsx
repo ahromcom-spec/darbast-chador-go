@@ -93,7 +93,10 @@ export const ExpertPricingRequestDialog = ({
   const totalVolume = dimensions.reduce((sum, dim) => sum + calculateDimensionVolume(dim), 0);
 
   // Called when MediaUploader finishes uploading files
+  // Only update state if we have new uploads - don't reset to empty array
   const handleMediaUploaded = useCallback((mediaList: UploadedMediaInfo[]) => {
+    console.log('handleMediaUploaded called with:', mediaList.length, 'files', mediaList);
+    // Always update - MediaUploader now handles deduplication
     setUploadedMedia(mediaList);
   }, []);
 
@@ -187,6 +190,13 @@ export const ExpertPricingRequestDialog = ({
         setProgressStep(`پیوند ${uploadedMedia.length} فایل به سفارش...`);
         setProgress(60);
         
+        console.log('Linking media to order:', {
+          orderId,
+          userId: user.id,
+          mediaCount: uploadedMedia.length,
+          mediaPaths: uploadedMedia.map(m => m.storagePath)
+        });
+        
         // Insert project_media records for already-uploaded files
         const mediaRecords = uploadedMedia.map(media => ({
           project_id: orderId,
@@ -197,17 +207,25 @@ export const ExpertPricingRequestDialog = ({
           mime_type: media.mimeType
         }));
 
-        const { error: mediaError } = await supabase
+        const { data: insertedMedia, error: mediaError } = await supabase
           .from('project_media')
-          .insert(mediaRecords);
+          .insert(mediaRecords)
+          .select();
 
         if (mediaError) {
           console.error('Error linking media to order:', mediaError);
-          // Don't fail the whole order, just log the error
+          toast({
+            title: 'هشدار',
+            description: `فایل‌ها آپلود شدند اما پیوند به سفارش با خطا مواجه شد: ${mediaError.message}`,
+            variant: 'destructive',
+          });
+        } else {
+          console.log('Media linked successfully:', insertedMedia);
         }
         
         setProgress(80);
       } else {
+        console.log('No media to link to order');
         setProgress(80);
       }
 
