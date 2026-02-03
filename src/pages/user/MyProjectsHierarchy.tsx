@@ -789,11 +789,13 @@ export default function MyProjectsHierarchy() {
 
                                       const totalValue = typeof notes?.totalArea === 'number'
                                         ? notes.totalArea
-                                        : (typeof notes?.total_area === 'number' ? notes.total_area : computedFromDims());
+                                        : (typeof notes?.total_volume === 'number' 
+                                            ? notes.total_volume 
+                                            : (typeof notes?.total_area === 'number' ? notes.total_area : computedFromDims()));
 
-                                      const isArea = (notes && typeof notes === 'object' && notes !== null && ('total_area' in notes)) || (!hasWidth && dims.length > 0);
+                                      const isVolume = (notes && typeof notes === 'object' && notes !== null && ('total_volume' in notes)) || (hasWidth && dims.length > 0);
                                       const metricLabel = 'متراژ:';
-                                      const unit = isArea ? 'متر مربع' : 'متر مکعب';
+                                      const unit = isVolume ? 'متر مکعب' : 'متر مربع';
 
                                       const estimatedPrice = typeof notes?.estimated_price === 'number'
                                         ? notes.estimated_price
