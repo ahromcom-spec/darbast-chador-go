@@ -2021,7 +2021,7 @@ export default function ComprehensiveScaffoldingForm({
         </CardContent>
       </Card>
 
-      {/* Media Upload Section */}
+      {/* Media Upload Section - disableAutoUpload=true so files are uploaded after order creation */}
       <MediaUploader
         onFilesChange={setMediaFiles}
         maxImages={10}
@@ -2029,7 +2029,7 @@ export default function ComprehensiveScaffoldingForm({
         maxImageSize={10}
         maxVideoSize={70}
         maxVideoDuration={180}
-        disableAutoUpload={false}
+        disableAutoUpload={true}
       />
 
       {/* Installation Date & Time */}
