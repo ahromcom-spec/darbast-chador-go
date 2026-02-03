@@ -49,25 +49,26 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
   const dimensions = parsedNotes?.dimensions || [];
   const description = parsedNotes?.description || '';
 
-  // محاسبه متراژ کل
-  const totalArea = dimensions.reduce((sum: number, dim: any) => {
+  // محاسبه حجم کل (طول × عرض × ارتفاع)
+  const totalVolume = dimensions.reduce((sum: number, dim: any) => {
     const length = parseFloat(dim.length) || 0;
+    const width = parseFloat(dim.width) || 0;
     const height = parseFloat(dim.height) || 0;
-    return sum + (length * height);
+    return sum + (length * width * height);
   }, 0);
 
   // محاسبه قیمت کل از فی قیمت
   const calculatedTotalPrice = useUnitPrice && unitPrice 
-    ? (parseFloat(unitPrice.replace(/,/g, '')) || 0) * totalArea 
+    ? (parseFloat(unitPrice.replace(/,/g, '')) || 0) * totalVolume 
     : 0;
 
   // وقتی فی قیمت تغییر می‌کند، قیمت کل را آپدیت کن
   useEffect(() => {
     if (useUnitPrice && unitPrice) {
-      const calculated = (parseFloat(unitPrice.replace(/,/g, '')) || 0) * totalArea;
+      const calculated = (parseFloat(unitPrice.replace(/,/g, '')) || 0) * totalVolume;
       setTotalPrice(Math.round(calculated).toString());
     }
-  }, [unitPrice, useUnitPrice, totalArea]);
+  }, [unitPrice, useUnitPrice, totalVolume]);
 
   // وقتی order تغییر می‌کند، مقادیر را ریست کن
   useEffect(() => {
@@ -218,15 +219,15 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
               </div>
               <div className="space-y-1">
                 {dimensions.map((dim: any, idx: number) => {
-                  const area = (parseFloat(dim.length) || 0) * (parseFloat(dim.height) || 0);
+                  const volume = (parseFloat(dim.length) || 0) * (parseFloat(dim.width) || 0) * (parseFloat(dim.height) || 0);
                   return (
                     <div key={idx} className="flex items-center justify-between text-sm">
                       <span>
                         <Badge variant="outline" className="ml-2">{idx + 1}</Badge>
-                        طول: {dim.length || '-'} × ارتفاع: {dim.height || '-'}
+                        طول: {dim.length || '-'} × عرض: {dim.width || '-'} × ارتفاع: {dim.height || '-'}
                       </span>
                       <span className="text-muted-foreground">
-                        {area.toFixed(1)} متر مربع
+                        {volume.toFixed(1)} متر مکعب
                       </span>
                     </div>
                   );
@@ -236,9 +237,9 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
               <div className="flex items-center justify-between font-semibold text-primary">
                 <span className="flex items-center gap-1">
                   <Calculator className="h-4 w-4" />
-                  جمع کل متراژ:
+                  جمع کل حجم:
                 </span>
-                <span>{totalArea.toFixed(1)} متر مربع</span>
+                <span>{totalVolume.toFixed(1)} متر مکعب</span>
               </div>
             </div>
           )}
@@ -280,7 +281,7 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
               </div>
 
               {/* نمایش محاسبه */}
-              {totalArea > 0 && unitPrice && (
+              {totalVolume > 0 && unitPrice && (
                 <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between text-sm mb-2">
@@ -288,8 +289,8 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
                       <span>{unitPrice} تومان</span>
                     </div>
                     <div className="flex items-center justify-between text-sm mb-2">
-                      <span>متراژ کل:</span>
-                      <span>{totalArea.toFixed(1)} متر مربع</span>
+                      <span>حجم کل:</span>
+                      <span>{totalVolume.toFixed(1)} متر مکعب</span>
                     </div>
                     <Separator className="my-2" />
                     <div className="flex items-center justify-between font-bold text-lg text-green-700 dark:text-green-400">
