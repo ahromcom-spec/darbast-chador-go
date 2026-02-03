@@ -78,20 +78,19 @@ export const ExpertPricingRequestDialog = ({
     setDimensions(updated);
   };
 
-  // Calculate total area for each dimension row (length × width) and total height-based area
-  const calculateDimensionArea = (dim: Dimension) => {
+  // Calculate total volume for each dimension row (length × width × height)
+  const calculateDimensionVolume = (dim: Dimension) => {
     const l = parseFloat(dim.length) || 0;
     const w = parseFloat(dim.width) || 0;
     const h = parseFloat(dim.height) || 0;
-    // For scaffolding: perimeter * height = (2*(l+w)) * h OR (l*h) for single wall
-    // Simple calculation: length × height for wall surface area
-    if (l > 0 && h > 0) {
-      return l * h;
+    // Volume calculation: length × width × height
+    if (l > 0 && w > 0 && h > 0) {
+      return l * w * h;
     }
     return 0;
   };
 
-  const totalArea = dimensions.reduce((sum, dim) => sum + calculateDimensionArea(dim), 0);
+  const totalVolume = dimensions.reduce((sum, dim) => sum + calculateDimensionVolume(dim), 0);
 
   // Called when MediaUploader finishes uploading files
   const handleMediaUploaded = useCallback((mediaList: UploadedMediaInfo[]) => {
@@ -149,7 +148,7 @@ export const ExpertPricingRequestDialog = ({
         is_expert_pricing_request: true,
         description: description,
         dimensions: dimensions.filter(d => d.length || d.width || d.height),
-        total_area: totalArea, // Store calculated total area (length × height for each row)
+        total_volume: totalVolume, // Store calculated total volume (length × width × height for each row)
         requested_date: requestedDate || null,
         service_type: serviceTypeName || 'داربست فلزی'
       });
@@ -314,7 +313,7 @@ export const ExpertPricingRequestDialog = ({
             </div>
             
             {dimensions.map((dim, index) => {
-              const rowArea = calculateDimensionArea(dim);
+              const rowVolume = calculateDimensionVolume(dim);
               return (
                 <div key={index} className="space-y-1">
                   <div className="flex gap-2 items-center">
@@ -354,21 +353,21 @@ export const ExpertPricingRequestDialog = ({
                       </Button>
                     )}
                   </div>
-                  {rowArea > 0 && (
+                  {rowVolume > 0 && (
                     <p className="text-xs text-muted-foreground text-left">
-                      متراژ: <span className="font-semibold text-primary">{rowArea.toLocaleString('fa-IR')} متر مربع</span>
+                      متراژ: <span className="font-semibold text-primary">{rowVolume.toLocaleString('fa-IR')} متر مکعب</span>
                     </p>
                   )}
                 </div>
               );
             })}
             
-            {/* Total area display */}
-            {totalArea > 0 && (
+            {/* Total volume display */}
+            {totalVolume > 0 && (
               <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
                 <p className="text-sm font-semibold text-primary flex items-center justify-between">
                   <span>مجموع متراژ:</span>
-                  <span className="text-lg">{totalArea.toLocaleString('fa-IR')} متر مربع</span>
+                  <span className="text-lg">{totalVolume.toLocaleString('fa-IR')} متر مکعب</span>
                 </p>
               </div>
             )}
