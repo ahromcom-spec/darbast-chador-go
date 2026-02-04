@@ -220,10 +220,10 @@ body {
     /* اجازه Pull-to-Refresh در اندروید - فقط overscroll افقی را محدود می‌کنیم */
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
-    /* Prevent zoom gestures */
-    touch-action: manipulation;
+    /* اجازه pinch-to-zoom در موبایل برای zoom out تا 40% */
+    touch-action: pan-x pan-y pinch-zoom;
     -webkit-text-size-adjust: 100%;
-    -ms-touch-action: manipulation;
+    -ms-touch-action: pan-x pan-y pinch-zoom;
   }
 
   body {
@@ -235,8 +235,8 @@ body {
     /* اجازه اسکرول افقی و عمودی */
     overflow-x: auto;
     overflow-y: auto;
-    /* Prevent zooming on touch devices */
-    touch-action: pan-x pan-y;
+    /* اجازه pinch-to-zoom در موبایل */
+    touch-action: pan-x pan-y pinch-zoom;
     -webkit-text-size-adjust: 100%;
     -moz-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
