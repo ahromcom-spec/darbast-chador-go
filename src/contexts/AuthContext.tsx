@@ -7,7 +7,8 @@ interface AuthContextType {
   session: Session | null;
   sendOTP: (
     phoneNumber: string,
-    isRegistration?: boolean
+    isRegistration?: boolean,
+    forceSms?: boolean
   ) => Promise<{ error: any; userExists?: boolean; whitelisted?: boolean }>;
   verifyOTP: (phoneNumber: string, code: string, fullName?: string, isRegistration?: boolean) => Promise<{ error: any; session?: Session | null }>;
   signOut: () => Promise<void>;
@@ -64,12 +65,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const sendOTP = useCallback(async (phoneNumber: string, isRegistration: boolean = false) => {
+  const sendOTP = useCallback(async (phoneNumber: string, isRegistration: boolean = false, forceSms: boolean = false) => {
     try {
       const { data, error } = await supabase.functions.invoke('send-otp', {
         body: { 
           phone_number: phoneNumber,
-          is_registration: isRegistration
+          is_registration: isRegistration,
+          force_sms: forceSms
         }
       });
 
