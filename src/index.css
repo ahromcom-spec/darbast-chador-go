@@ -246,11 +246,23 @@ body {
   /* Mobile: allow pinch-to-zoom (needed for minimum-scale=0.4 to work) */
   @media (hover: none) and (pointer: coarse) {
     html {
-      touch-action: auto;
+      touch-action: pan-x pan-y pinch-zoom;
       -ms-touch-action: auto;
     }
     body {
-      touch-action: auto;
+      touch-action: pan-x pan-y pinch-zoom;
+    }
+    #root {
+      touch-action: pan-x pan-y pinch-zoom;
+    }
+  }
+
+  /* Fallback for devices that don't match the (hover/pointer) media query but are still mobile-sized */
+  @media (max-width: 768px) {
+    html,
+    body,
+    #root {
+      touch-action: pan-x pan-y pinch-zoom;
     }
   }
 
