@@ -423,7 +423,6 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
 
   const getInvoiceHTML = () => {
     const dimensions = parsedNotes?.dimensions;
-    const totalArea = parsedNotes?.totalArea || parsedNotes?.total_area;
     const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
     const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
     const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || parsedNotes?.locationPurpose;
@@ -463,6 +462,46 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         return dimensions.height || '-';
       }
       return '-';
+    };
+
+    // Calculate total area/volume from dimensions if not provided
+    const calculateTotalMeasurement = () => {
+      // First check if totalArea is explicitly provided
+      const storedArea = parsedNotes?.totalArea || parsedNotes?.total_area;
+      if (storedArea && storedArea !== '-') {
+        return storedArea;
+      }
+      
+      // Calculate from dimensions
+      const lengthVal = getLength();
+      const widthVal = getWidth();
+      const heightVal = getHeight();
+      
+      const l = parseFloat(String(lengthVal).replace(/[^\d.]/g, ''));
+      const w = parseFloat(String(widthVal).replace(/[^\d.]/g, ''));
+      const h = parseFloat(String(heightVal).replace(/[^\d.]/g, ''));
+      
+      if (!isNaN(l) && !isNaN(h)) {
+        // If width exists, calculate volume (L × W × H)
+        if (!isNaN(w) && w > 0) {
+          const volume = l * w * h;
+          return volume > 0 ? volume.toLocaleString('fa-IR') : '-';
+        }
+        // Otherwise calculate area (L × H)
+        const area = l * h;
+        return area > 0 ? area.toLocaleString('fa-IR') : '-';
+      }
+      
+      return '-';
+    };
+
+    const totalArea = calculateTotalMeasurement();
+    
+    // Determine if measurement is volume (cubic) or area (square)
+    const getMeasurementUnit = () => {
+      const widthVal = getWidth();
+      const w = parseFloat(String(widthVal).replace(/[^\d.]/g, ''));
+      return (!isNaN(w) && w > 0) ? 'متر مکعب' : 'متر مربع';
     };
 
     const scaffoldTypeName = scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || subcategoryName || '-';
@@ -546,7 +585,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             <td class="label-cell">زیرنوع:</td>
             <td class="value-cell">${subtypeName}</td>
             <td class="label-cell">متراژ کل:</td>
-            <td class="value-cell">${totalArea || '-'} متر مربع</td>
+            <td class="value-cell">${totalArea || '-'} ${getMeasurementUnit()}</td>
           </tr>
           <tr>
             <td class="label-cell">طول (متر):</td>
@@ -616,7 +655,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             <tr>
               <td>۱</td>
               <td>${scaffoldTypeName} - ${subtypeName}</td>
-              <td>${totalArea || '-'} متر</td>
+              <td>${totalArea || '-'} ${getMeasurementUnit()}</td>
               <td>${conditions?.totalMonths || '۱'}</td>
               <td>${totalArea && orderPrice > 0 ? Math.round(orderPrice / Number(totalArea)).toLocaleString('fa-IR') : '-'}</td>
               <td>${orderPrice > 0 ? orderPrice.toLocaleString('fa-IR') : '-'}</td>
@@ -669,7 +708,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             <tr>
               <td>۱</td>
               <td>${scaffoldTypeName} - ${subtypeName}</td>
-              <td>${totalArea || '-'} متر</td>
+              <td>${totalArea || '-'} ${getMeasurementUnit()}</td>
               <td>${conditions?.totalMonths || '۱'}</td>
             </tr>
             ${repairRequests.map((repair, idx) => `
