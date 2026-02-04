@@ -196,24 +196,42 @@ const getViewportSize = () => {
 
 // مسیرهایی که دستیار در آن‌ها مخفی می‌شود
 const HIDDEN_ROUTES = [
-  '/executive',      // ماژول‌های اجرایی
-  '/sales',          // ماژول‌های فروش
-  '/finance',        // ماژول‌های مالی
-  '/ceo',            // ماژول‌های مدیریت
-  '/admin',          // ماژول‌های ادمین
-  '/scaffolding',    // فرم‌های ثبت سفارش
-  '/globe-map',      // نقشه کره زمین
-  '/projects',       // صفحات پروژه‌ها
-  '/user/order',     // جزئیات سفارش
-  '/user/project',   // جزئیات پروژه
-  '/user/my-orders', // لیست سفارشات من
-  '/user/create',    // ایجاد پروژه
-  '/user/add-service', // افزودن سرویس
-  '/user/select-location', // انتخاب موقعیت
-  '/user/service-selection', // انتخاب خدمات
-  '/user/new-location', // موقعیت جدید
-  '/ratings',        // امتیازات
-  '/tickets',        // تیکت‌ها
+  // پنل‌ها/ماژول‌ها
+  '/admin',
+  '/ceo',
+  '/executive',
+  '/sales',
+  '/finance',
+  '/daily-report',
+  '/hr-management',
+  '/personnel-accounting',
+  '/site-registration',
+  '/comprehensive-accounting',
+  '/all-company-orders',
+  '/site-analytics',
+  '/media-approval',
+  '/bank-cards',
+
+  // فرم‌ها/ثبت سفارش
+  '/scaffolding',
+  '/service',
+  '/select-location',
+  '/user',
+
+  // نقشه
+  '/globe',
+  '/test/map',
+
+  // پروژه/سفارش/فاکتور
+  '/projects',
+  '/orders',
+  '/my-invoice',
+  '/customer-comprehensive-invoice',
+
+  // سایر بخش‌های داده‌محور
+  '/tickets',
+  '/reputation',
+  '/ratings',
 ];
 
 export function AssistantAvatar() {
