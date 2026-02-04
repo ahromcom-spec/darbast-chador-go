@@ -709,7 +709,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             </tr>
             <tr>
               <td class="label-cell">به نام:</td>
-              <td class="value-cell" colspan="3">رضا محمدی</td>
+              <td class="value-cell" colspan="3">رضا محمدی به کد ملی ۵۶۰۹۹۵۸۸۵۷</td>
             </tr>
           </table>
         </div>
