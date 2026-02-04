@@ -7,41 +7,36 @@ import { AuthProvider } from "./contexts/AuthContext";
 // ✅ Import Leaflet CSS globally for all maps
 import 'leaflet/dist/leaflet.css';
 
-// جلوگیری از زوم مرورگر (فقط ویندوز/دسکتاپ) با Ctrl+Wheel / Ctrl +/-
-// در موبایل زوم آزاد است تا کاربر بتواند صفحه را با انگشت زوم کند
+// جلوگیری از زوم مرورگر (ویندوز/PWA) با Ctrl+Wheel / Ctrl +/-
+// نکته: روی دسکتاپ نمی‌توان "Zoom" مرورگر را به‌صورت کامل کنترل کرد، اما می‌توان کلیدها/ژست‌های زوم را بلاک کرد.
 (() => {
   try {
-    // تشخیص موبایل
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
-      || ('ontouchstart' in window) 
-      || (navigator.maxTouchPoints > 0);
+    // Ctrl/Cmd + mouse wheel (trackpad pinch usually triggers ctrl+wheel)
+    window.addEventListener(
+      'wheel',
+      (e) => {
+        if (e.ctrlKey || e.metaKey) e.preventDefault();
+      },
+      { passive: false }
+    );
 
-    // فقط در دسکتاپ زوم با کیبورد/ماوس را محدود کن
-    if (!isMobile) {
-      // Ctrl/Cmd + mouse wheel (trackpad pinch usually triggers ctrl+wheel)
-      window.addEventListener(
-        'wheel',
-        (e) => {
-          if (e.ctrlKey || e.metaKey) e.preventDefault();
-        },
-        { passive: false }
-      );
+    // Ctrl/Cmd + (+/-/0)
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        if (!(e.ctrlKey || e.metaKey)) return;
+        const key = e.key;
+        if (key === '+' || key === '-' || key === '=' || key === '0') {
+          e.preventDefault();
+        }
+      },
+      { passive: false }
+    );
 
-      // Ctrl/Cmd + (+/-/0)
-      window.addEventListener(
-        'keydown',
-        (e) => {
-          if (!(e.ctrlKey || e.metaKey)) return;
-          const key = e.key;
-          if (key === '+' || key === '-' || key === '=' || key === '0') {
-            e.preventDefault();
-          }
-        },
-        { passive: false }
-      );
-    }
-
-    // در موبایل gesture events را بلاک نمی‌کنیم تا pinch-to-zoom کار کند
+    // iOS Safari gesture events (safe no-op elsewhere)
+    window.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false } as AddEventListenerOptions);
+    window.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false } as AddEventListenerOptions);
+    window.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false } as AddEventListenerOptions);
 
   } catch {
     // no-op
