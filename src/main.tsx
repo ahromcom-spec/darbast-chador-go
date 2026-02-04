@@ -8,15 +8,16 @@ import { AuthProvider } from "./contexts/AuthContext";
 import 'leaflet/dist/leaflet.css';
 
 // جلوگیری از زوم مرورگر (فقط ویندوز/دسکتاپ) با Ctrl+Wheel / Ctrl +/-
-// در موبایل زوم آزاد است تا کاربر بتواند صفحه را با انگشت زوم کند
+// در موبایل pinch-to-zoom کاملاً آزاد است تا کاربر بتواند تا 40% zoom out کند
 (() => {
   try {
-    // تشخیص موبایل
+    // تشخیص موبایل - اگر موبایل است هیچ محدودیتی اعمال نمی‌شود
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
       || ('ontouchstart' in window) 
       || (navigator.maxTouchPoints > 0);
 
     // فقط در دسکتاپ زوم با کیبورد/ماوس را محدود کن
+    // در موبایل هیچ محدودیتی نداریم - کاربر می‌تواند آزادانه zoom in/out کند
     if (!isMobile) {
       // Ctrl/Cmd + mouse wheel (trackpad pinch usually triggers ctrl+wheel)
       window.addEventListener(
