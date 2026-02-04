@@ -220,7 +220,7 @@ body {
     /* اجازه Pull-to-Refresh در اندروید - فقط overscroll افقی را محدود می‌کنیم */
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
-    /* Prevent zoom gestures */
+    /* Desktop optimization; mobile override below to allow pinch-to-zoom */
     touch-action: manipulation;
     -webkit-text-size-adjust: 100%;
     -ms-touch-action: manipulation;
@@ -235,12 +235,23 @@ body {
     /* اجازه اسکرول افقی و عمودی */
     overflow-x: auto;
     overflow-y: auto;
-    /* Prevent zooming on touch devices */
+    /* Default: avoid accidental zoom gestures; mobile override below allows pinch-to-zoom */
     touch-action: pan-x pan-y;
     -webkit-text-size-adjust: 100%;
     -moz-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
     text-size-adjust: 100%;
+  }
+
+  /* Mobile: allow pinch-to-zoom (needed for minimum-scale=0.4 to work) */
+  @media (hover: none) and (pointer: coarse) {
+    html {
+      touch-action: auto;
+      -ms-touch-action: auto;
+    }
+    body {
+      touch-action: auto;
+    }
   }
 
 
