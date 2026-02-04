@@ -2882,13 +2882,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       </div>
 
       {/* نقشه */}
-      <div
-        ref={mapContainer}
-        className="w-full h-full"
-        // روی موبایل اجازه pinch-to-zoom مرورگر را می‌دهیم تا زوم تا ۴۰٪ کار کند.
-        // (در غیر اینصورت touch-action: pan-x pan-y باعث بلوکه شدن ژست pinch می‌شود)
-        style={{ touchAction: isMobile ? 'pan-x pan-y pinch-zoom' : 'pan-x pan-y' }}
-      />
+      <div ref={mapContainer} className="w-full h-full" style={{ touchAction: 'pan-x pan-y' }} />
 
       {/* کادر آپلود برای سفارش خاص */}
       {selectedOrderForUpload && (

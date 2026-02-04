@@ -2,31 +2,7 @@
 <html lang="fa" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=0.4, minimum-scale=0.4, maximum-scale=5.0, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover" />
-    <script>
-      // اعمال «نمایش ریزتر (۴۰٪)» فقط روی موبایل.
-      // برای دسکتاپ/لپ‌تاپ همان ۱۰۰٪ نگه می‌داریم تا UX خراب نشود.
-      (function () {
-        try {
-          var isMobile =
-            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-            "ontouchstart" in window ||
-            (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
-
-          var meta = document.querySelector('meta[name="viewport"]');
-          if (!meta) return;
-
-          var mobileContent =
-            "width=device-width, initial-scale=0.4, minimum-scale=0.4, maximum-scale=5.0, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover";
-          var desktopContent =
-            "width=device-width, initial-scale=1.0, minimum-scale=0.4, maximum-scale=5.0, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover";
-
-          meta.setAttribute("content", isMobile ? mobileContent : desktopContent);
-        } catch (e) {
-          // no-op
-        }
-      })();
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.4, maximum-scale=5.0, user-scalable=yes, shrink-to-fit=no, viewport-fit=cover" />
     <!-- Cross-browser text sizing - Edge/Firefox compatibility -->
     <meta name="MobileOptimized" content="width" />
     <meta name="HandheldFriendly" content="true" />
