@@ -194,6 +194,23 @@ const getViewportSize = () => {
   };
 };
 
+// مسیرهایی که دستیار در آن‌ها مخفی می‌شود
+const HIDDEN_ROUTES = [
+  '/profile',           // صفحه پروفایل
+  '/executive',         // ماژول‌های مدیریت اجرایی
+  '/ceo',               // ماژول‌های مدیر عامل
+  '/finance',           // ماژول‌های مالی
+  '/admin',             // پنل مدیریت
+  '/sales',             // ماژول فروش
+  '/hr',                // ماژول منابع انسانی
+  '/contractor',        // پنل پیمانکار
+  '/globe',             // نقشه کره زمین مستقل
+  '/scaffolding',       // فرم‌های ثبت سفارش
+  '/expert-pricing',    // قیمت‌گذاری کارشناسی
+  '/invoice',           // فاکتورها
+  '/map',               // نقشه‌ها
+];
+
 export function AssistantAvatar() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
@@ -811,8 +828,16 @@ export function AssistantAvatar() {
     }
   };
 
-  // Don't render avatar if user is not logged in
-  if (!user) {
+  // بررسی اینکه آیا باید دستیار مخفی شود
+  const shouldHideAssistant = HIDDEN_ROUTES.some(route => 
+    location.pathname.startsWith(route)
+  );
+  
+  // همچنین مخفی شود اگر در صفحه اصلی نقشه کره زمین نمایش داده شود
+  const isHomeWithGlobe = location.pathname === '/' && localStorage.getItem('showGlobe') === 'true';
+
+  // Don't render avatar if user is not logged in or should be hidden
+  if (!user || shouldHideAssistant || isHomeWithGlobe) {
     return null;
   }
 
