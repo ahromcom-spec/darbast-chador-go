@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { phone_number, is_registration } = await req.json();
+    const { phone_number, is_registration, force_sms } = await req.json();
 
     if (!phone_number) {
       return new Response(
@@ -135,8 +135,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // If whitelisted, bypass SMS and use fixed code 12345
-    if (isWhitelistedPhone) {
+    // If whitelisted AND NOT forcing SMS, bypass SMS and use fixed code 12345
+    // When force_sms=true (e.g., CEO selecting "دریافت کد تایید پیامکی"), send real OTP
+    if (isWhitelistedPhone && !force_sms) {
       const fixed = '12345';
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
       await supabase.from('otp_codes').insert({
@@ -149,6 +150,11 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: true, user_exists: userExists, whitelisted: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+    
+    // Log when forcing SMS for whitelisted phone
+    if (isWhitelistedPhone && force_sms) {
+      console.log('INFO: Forcing real SMS for whitelisted phone', maskPhone(normalizedPhone));
     }
 
     // Generate 5-digit OTP code

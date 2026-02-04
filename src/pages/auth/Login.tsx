@@ -438,8 +438,9 @@ const handleResendOTP = async () => {
     setErrors({});
     
     try {
-      // ارسال کد تایید به شماره کاربر (حتی اگر در لیست سفید است)
-      const { error } = await sendOTP(phoneNumber, false);
+      // ارسال کد تایید واقعی به شماره کاربر (حتی اگر در لیست سفید است)
+      // با force_sms=true پیامک واقعی ارسال می‌شود
+      const { error } = await sendOTP(phoneNumber, false, true);
       
       if (error) {
         const msg = error.message || 'خطا در ارسال کد تایید';
