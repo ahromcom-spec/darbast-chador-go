@@ -443,6 +443,8 @@ export default function DailyReportModule() {
   const isInitialLoadRef = useRef(true);
   // جلوگیری از اجرای هم‌زمان auto-save (علت اصلی تکثیر ردیف‌ها بعد از رفرش/بستن)
   const isAutoSavingRef = useRef(false);
+  // جلوگیری از auto-save در حین حذف ردیف (race condition prevention)
+  const isDeletingRowRef = useRef(false);
   // جلوگیری از ذخیره تکراری وقتی داده تغییری نکرده
   const lastAutoSaveHashRef = useRef<string>('');
   const orderTableScrollRef = useRef<HTMLDivElement>(null);
@@ -452,7 +454,6 @@ export default function DailyReportModule() {
   // تا با تغییرات جداول زیرمجموعه (orders/staff) سریع رفرش کند.
   const aggregatedSourceReportIdsRef = useRef<Set<string>>(new Set());
   const aggregatedRealtimeRefetchTimerRef = useRef<number | null>(null);
-
   // Ensure tables start from the right side in RTL by scrolling to the rightmost (selection) column
   useEffect(() => {
     if (loading) return;
@@ -630,14 +631,18 @@ export default function DailyReportModule() {
 
   // Auto-save function
   const performAutoSave = useCallback(async () => {
-    // جلوگیری از auto-save در ماژول تجمیعی یا ماژول مادر با نمایش تجمیعی (فقط خواندنی)
-    if (isAggregated || shouldShowAllUserReports) return;
+    // جلوگیری از auto-save در ماژول تجمیعی (فقط خواندنی)
+    // ماژول مادر با نمایش تجمیعی باید بتواند داده‌های خود را ذخیره کند
+    if (isAggregated) return;
     
     // جلوگیری از auto-save در حین لود یا وقتی فرم خالی است (هنگام تغییر تاریخ)
     if (!user || loading || saving || isInitialLoadRef.current) return;
 
     // جلوگیری از اجرای هم‌زمان (timer + beforeunload یا چند رندر)
     if (isAutoSavingRef.current) return;
+    
+    // جلوگیری از auto-save در حین حذف ردیف (race condition)
+    if (isDeletingRowRef.current) return;
     
     // اگر فرم کاملا خالی است، auto-save انجم نده
     if (orderReports.length === 0 && staffReports.length === 0) return;
@@ -1342,6 +1347,16 @@ export default function DailyReportModule() {
          // ماژول کلی یا ماژول مادر: تمام گزارشات را ادغام کن
          // ماژول کلی: تمام گزارشات سه ماژول دیگر را ادغام کن
          const allReportIds = existingReports.map((r) => r.id);
+         
+         // پیدا کردن گزارش خود کاربر (برای امکان ذخیره)
+         const ownReport = existingReports.find((r: any) => r.created_by === user.id);
+         if (ownReport?.id) {
+           setExistingReportId(ownReport.id);
+           setDailyNotes(ownReport.notes || '');
+         } else {
+           setExistingReportId(null);
+           setDailyNotes('');
+         }
         
         // ساخت نگاشت reportId به module_key و created_by برای نمایش منبع
         const reportToModuleMap = new Map<string, string>();
@@ -2065,12 +2080,27 @@ export default function DailyReportModule() {
   };
 
   const removeOrderRow = (index: number) => {
+    // فعال کردن guard برای جلوگیری از auto-save همزمان
+    isDeletingRowRef.current = true;
+    
+    // لغو timer های auto-save فعال
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    
     // ذخیره موقعیت اسکرول قبل از حذف
     const scrollY = window.scrollY;
     setOrderReports(orderReports.filter((_, i) => i !== index));
-    // بازگردانی موقعیت اسکرول بعد از حذف
+    setIsSaved(false);
+    
+    // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
     requestAnimationFrame(() => {
       window.scrollTo({ top: scrollY, behavior: 'instant' });
+      // تاخیر کوتاه برای اطمینان از به‌روزرسانی state
+      setTimeout(() => {
+        isDeletingRowRef.current = false;
+      }, 100);
     });
   };
 
@@ -2164,12 +2194,28 @@ export default function DailyReportModule() {
         return;
       }
     }
+    
+    // فعال کردن guard برای جلوگیری از auto-save همزمان
+    isDeletingRowRef.current = true;
+    
+    // لغو timer های auto-save فعال
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    
     // ذخیره موقعیت اسکرول قبل از حذف
     const scrollY = window.scrollY;
     setStaffReports(staffReports.filter((_, i) => i !== index));
-    // بازگردانی موقعیت اسکرول بعد از حذف
+    setIsSaved(false);
+    
+    // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
     requestAnimationFrame(() => {
       window.scrollTo({ top: scrollY, behavior: 'instant' });
+      // تاخیر کوتاه برای اطمینان از به‌روزرسانی state
+      setTimeout(() => {
+        isDeletingRowRef.current = false;
+      }, 100);
     });
   };
 
@@ -2269,8 +2315,21 @@ export default function DailyReportModule() {
 
   const saveReport = async () => {
     if (!user) return;
+    
+    // جلوگیری از ذخیره همزمان با auto-save
+    if (isAutoSavingRef.current) {
+      toast.error('لطفاً صبر کنید، در حال ذخیره خودکار...');
+      return;
+    }
 
     try {
+      // غیرفعال کردن auto-save در حین ذخیره دستی
+      isDeletingRowRef.current = true;
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      
       setSaving(true);
       const dateStr = toLocalDateString(reportDate);
 
@@ -2510,6 +2569,8 @@ export default function DailyReportModule() {
       toast.error(`خطا در ذخیره گزارش: ${errorMessage}`);
     } finally {
       setSaving(false);
+      // بازگرداندن امکان auto-save
+      isDeletingRowRef.current = false;
     }
   };
 
@@ -2953,6 +3014,12 @@ export default function DailyReportModule() {
             <Badge variant="secondary" className="gap-1 py-1">
               <Eye className="h-3 w-3" />
               فقط خواندنی
+            </Badge>
+          )}
+          {shouldShowAllUserReports && !isAggregated && (
+            <Badge variant="outline" className="gap-1 py-1">
+              <Eye className="h-3 w-3" />
+              نمای تجمیعی
             </Badge>
           )}
         </div>
