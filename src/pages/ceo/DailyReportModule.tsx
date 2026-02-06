@@ -404,6 +404,10 @@ export default function DailyReportModule() {
 
   // Bank cards cache for aggregated view display
   const [bankCardsCache, setBankCardsCache] = useState<Map<string, BankCardCache>>(new Map());
+  
+  // آیا این ماژول باید گزارشات همه کاربران اختصاص‌یافته را نشان دهد؟
+  // (وقتی مدیر است و ماژول به دیگران اختصاص داده شده)
+  const [shouldShowAllUserReports, setShouldShowAllUserReports] = useState(false);
 
   // Clear today's data dialog state
   const [clearTodayDialogOpen, setClearTodayDialogOpen] = useState(false);
@@ -544,9 +548,10 @@ export default function DailyReportModule() {
     }
   }, [reportDate, user, activeModuleKey, isAggregated]);
 
-  // Realtime subscription برای ماژول کلی: وقتی گزارشی حذف شود، دوباره واکشی کن
+  // Realtime subscription برای ماژول کلی یا ماژول مادر با کاربران اختصاص‌یافته:
+  // وقتی گزارشی حذف شود، دوباره واکشی کن
   useEffect(() => {
-    if (!isAggregated || !user) return;
+    if ((!isAggregated && !shouldShowAllUserReports) || !user) return;
 
     const dateStr = toLocalDateString(reportDate);
 
@@ -621,12 +626,12 @@ export default function DailyReportModule() {
         aggregatedRealtimeRefetchTimerRef.current = null;
       }
     };
-  }, [isAggregated, user, reportDate]);
+  }, [isAggregated, shouldShowAllUserReports, user, reportDate]);
 
   // Auto-save function
   const performAutoSave = useCallback(async () => {
-    // جلوگیری از auto-save در ماژول تجمیعی (فقط خواندنی)
-    if (isAggregated) return;
+    // جلوگیری از auto-save در ماژول تجمیعی یا ماژول مادر با نمایش تجمیعی (فقط خواندنی)
+    if (isAggregated || shouldShowAllUserReports) return;
     
     // جلوگیری از auto-save در حین لود یا وقتی فرم خالی است (هنگام تغییر تاریخ)
     if (!user || loading || saving || isInitialLoadRef.current) return;
@@ -1280,40 +1285,89 @@ export default function DailyReportModule() {
     try {
       setLoading(true);
       const dateStr = toLocalDateString(reportDate);
+      
+      // بررسی اینکه آیا کاربر فعلی مدیر است
+      const isManager = await isManagerUser(user.id);
+      
+      // بررسی اینکه آیا این ماژول به کاربران دیگر اختصاص داده شده
+      // اگر مدیر است و ماژول به دیگران اختصاص داده شده، باید همه گزارشات را ببیند
+      let showAllReports = false;
+      
+      if (isManager && !isAggregated) {
+        // بررسی اینکه آیا این ماژول به کاربران دیگر اختصاص داده شده
+        const { data: assignments } = await supabase
+          .from('module_assignments')
+          .select('assigned_user_id')
+          .eq('module_key', activeModuleKey)
+          .eq('is_active', true);
+        
+        // اگر ماژول به کاربران دیگر (غیر از کاربر فعلی) اختصاص داده شده، نمایش همه گزارشات
+        if (assignments && assignments.some(a => a.assigned_user_id && a.assigned_user_id !== user.id)) {
+          showAllReports = true;
+        }
+      }
+      
+      // به‌روزرسانی state برای استفاده در Realtime و بخش‌های دیگر
+      setShouldShowAllUserReports(showAllReports);
 
       // ماژول تجمیعی: همه گزارشات این تاریخ را می‌خواند و ادغام می‌کند
-      // ماژول‌های مجزا: فقط گزارش خود را می‌خوانند
+      // ماژول‌های مجزا: فقط گزارش خود را می‌خوانند (مگر مدیر باشد و ماژول به دیگران اختصاص داده شده باشد)
       let reportQuery = supabase
         .from('daily_reports')
-        .select('id, notes, module_key')
+        .select('id, notes, module_key, created_by')
         .eq('report_date', dateStr);
 
       if (!isAggregated) {
-        // ماژول مجزا: فقط گزارش همین ماژول و همین کاربر
-        reportQuery = reportQuery.eq('module_key', activeModuleKey).eq('created_by', user.id);
+        // ماژول مجزا: فیلتر بر اساس module_key
+        reportQuery = reportQuery.eq('module_key', activeModuleKey);
+        
+        // اگر مدیر نیست یا ماژول به دیگران اختصاص داده نشده، فقط گزارش خود کاربر
+        if (!showAllReports) {
+          reportQuery = reportQuery.eq('created_by', user.id);
+        }
       }
 
       const { data: existingReports, error: existingError } = await reportQuery;
 
       if (existingError) throw existingError;
 
-      // For non-managers, also verify they have access
-      const isManager = await isManagerUser(user.id);
-
-       if (isAggregated) {
-         // ماژول کلی: لیست گزارش‌های همین تاریخ را نگه دار تا با تغییرات orders/staff سریع رفرش شود
+       if (isAggregated || showAllReports) {
+         // ماژول کلی یا ماژول مادر با گزارشات کاربران اختصاص‌یافته:
+         // لیست گزارش‌های همین تاریخ را نگه دار تا با تغییرات orders/staff سریع رفرش شود
          const allReportIds = (existingReports || []).map((r) => r.id).filter(Boolean);
          aggregatedSourceReportIdsRef.current = new Set(allReportIds);
        }
 
-       if (isAggregated && existingReports && existingReports.length > 0) {
+       if ((isAggregated || showAllReports) && existingReports && existingReports.length > 0) {
+         // ماژول کلی یا ماژول مادر: تمام گزارشات را ادغام کن
          // ماژول کلی: تمام گزارشات سه ماژول دیگر را ادغام کن
          const allReportIds = existingReports.map((r) => r.id);
         
-        // ساخت نگاشت reportId به module_key برای نمایش منبع
+        // ساخت نگاشت reportId به module_key و created_by برای نمایش منبع
         const reportToModuleMap = new Map<string, string>();
+        const reportToCreatorMap = new Map<string, string>();
         for (const r of existingReports) {
           reportToModuleMap.set(r.id, r.module_key || 'default');
+          reportToCreatorMap.set(r.id, (r as any).created_by || '');
+        }
+        
+        // واکشی نام ثبت‌کنندگان گزارشات
+        const creatorIds = Array.from(new Set(existingReports.map(r => (r as any).created_by).filter(Boolean)));
+        const creatorNamesCache = new Map<string, string>();
+        
+        if (creatorIds.length > 0) {
+          const { data: creatorProfiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name')
+            .in('user_id', creatorIds);
+          
+          if (creatorProfiles) {
+            for (const p of creatorProfiles) {
+              if (p.user_id && p.full_name) {
+                creatorNamesCache.set(p.user_id, p.full_name);
+              }
+            }
+          }
         }
         
         // واکشی نام‌های دقیق ماژول‌ها از جداول مختلف
@@ -1374,6 +1428,15 @@ export default function DailyReportModule() {
           return key;
         };
         
+        // تابع برای دریافت نام ثبت‌کننده گزارش بر اساس reportId
+        const getCreatorName = (reportId: string): string => {
+          const creatorId = reportToCreatorMap.get(reportId);
+          if (creatorId) {
+            return creatorNamesCache.get(creatorId) || '';
+          }
+          return '';
+        };
+        
         // اگر ماژول کلی هم گزارش دارد، آن را به عنوان report اصلی استفاده کن
         // در غیر این صورت، اولین گزارش را به عنوان پایه استفاده کن
         const aggregatedModuleReport = existingReports.find((r) => 
@@ -1409,6 +1472,11 @@ export default function DailyReportModule() {
         // هر ماژول ممکن است گزارش متفاوتی برای یک سفارش داشته باشد
         setOrderReports((allOrderData || []).map((o: any) => {
           const moduleKey = reportToModuleMap.get(o.daily_report_id) || '';
+          const creatorName = getCreatorName(o.daily_report_id);
+          // نمایش نام ثبت‌کننده در کنار نام ماژول
+          const displayName = creatorName 
+            ? `${getModuleDisplayName(moduleKey)} (${creatorName})`
+            : getModuleDisplayName(moduleKey);
           return {
             id: o.id,
             order_id: o.order_id,
@@ -1418,7 +1486,7 @@ export default function DailyReportModule() {
             notes: o.notes || '',
             row_color: o.row_color || 'yellow',
             source_module_key: moduleKey,
-            source_module_name: getModuleDisplayName(moduleKey),
+            source_module_name: displayName,
           };
         }));
 
@@ -1438,9 +1506,12 @@ export default function DailyReportModule() {
           const isCompanyExpense = s.is_company_expense === true || 
             (s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'));
 
-          // دریافت کلید ماژول از نگاشت
+          // دریافت کلید ماژول و نام ثبت‌کننده از نگاشت
           const sourceModuleKey = reportToModuleMap.get(s.daily_report_id) || '';
-          const sourceModuleName = getModuleDisplayName(sourceModuleKey);
+          const creatorName = getCreatorName(s.daily_report_id);
+          const sourceModuleName = creatorName 
+            ? `${getModuleDisplayName(sourceModuleKey)} (${creatorName})`
+            : getModuleDisplayName(sourceModuleKey);
 
           const staffRow: StaffReportRow = {
             id: s.id,
@@ -1591,8 +1662,8 @@ export default function DailyReportModule() {
         setTimeout(() => {
           isInitialLoadRef.current = false;
         }, 500);
-      } else if (!isAggregated && existingReports && existingReports.length > 0) {
-        // ماژول مجزا: یک گزارش خاص لود کن
+      } else if (!isAggregated && !showAllReports && existingReports && existingReports.length > 0) {
+        // ماژول مجزا (بدون نمایش تجمیعی): یک گزارش خاص لود کن
         const existingReport = existingReports[0];
         let reportIdToLoad: string | null = existingReport?.id ?? null;
 
