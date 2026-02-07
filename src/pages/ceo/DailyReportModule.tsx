@@ -2548,9 +2548,31 @@ export default function DailyReportModule() {
     }
 
     // گروه‌بندی ردیف‌ها بر اساس daily_report_id
-    // ردیف‌های بدون source_daily_report_id به گزارش خود کاربر فعلی اضافه می‌شوند
+    // نکته مهم: اگر «آخرین ردیف» یک گزارش حذف شود، باید آن reportId همچنان پردازش شود
+    // تا delete روی دیتابیس اجرا شود؛ وگرنه بعد از ذخیره/رفرش سطر دوباره برمی‌گردد.
+    const reportIdsToProcess = new Set<string>();
+
+    // reportId های واکشی‌شده‌ی این تاریخ (برای پاکسازی کامل در صورت حذف همه ردیف‌ها)
+    for (const id of aggregatedSourceReportIdsRef.current) {
+      if (id) reportIdsToProcess.add(id);
+    }
+
+    // گزارش خود کاربر (برای ردیف‌های جدید)
+    if (ownReportId) reportIdsToProcess.add(ownReportId);
+
     const ordersByReportId = new Map<string, OrderReportRow[]>();
     const staffByReportId = new Map<string, StaffReportRow[]>();
+
+    const ensureMapArray = <T,>(map: Map<string, T[]>, reportId: string) => {
+      if (!map.has(reportId)) map.set(reportId, []);
+      return map.get(reportId)!;
+    };
+
+    // مقداردهی اولیه با آرایه خالی تا حذف کامل هم در دیتابیس اعمال شود
+    for (const reportId of reportIdsToProcess) {
+      ensureMapArray(ordersByReportId, reportId);
+      ensureMapArray(staffByReportId, reportId);
+    }
 
     const currentOrderReports = orderReportsRef.current;
     for (const order of currentOrderReports) {
@@ -2558,20 +2580,19 @@ export default function DailyReportModule() {
       // اگر source_daily_report_id ندارد، به گزارش خود کاربر اضافه کن
       const reportId = order.source_daily_report_id || ownReportId;
       if (!reportId) continue;
-      
-      if (!ordersByReportId.has(reportId)) {
-        ordersByReportId.set(reportId, []);
-      }
-      ordersByReportId.get(reportId)!.push(order);
+
+      reportIdsToProcess.add(reportId);
+      ensureMapArray(ordersByReportId, reportId).push(order);
     }
 
     for (const staff of staffReports) {
       // اگر source_daily_report_id ندارد، به گزارش خود کاربر اضافه کن
       const reportId = staff.source_daily_report_id || ownReportId;
       if (!reportId) continue;
-      
+
       // فقط ردیف‌های با داده معتبر
-      const hasData = staff.is_cash_box ||
+      const hasData =
+        staff.is_cash_box ||
         staff.is_company_expense ||
         Boolean(staff.staff_user_id) ||
         Boolean(staff.staff_name?.trim()) ||
@@ -2581,19 +2602,14 @@ export default function DailyReportModule() {
         Boolean(staff.receiving_notes?.trim()) ||
         Boolean(staff.spending_notes?.trim()) ||
         Boolean(staff.notes?.trim());
-      
+
       if (!hasData) continue;
-      
-      if (!staffByReportId.has(reportId)) {
-        staffByReportId.set(reportId, []);
-      }
-      staffByReportId.get(reportId)!.push(staff);
+
+      reportIdsToProcess.add(reportId);
+      ensureMapArray(staffByReportId, reportId).push(staff);
     }
 
-    // تجمیع همه report_id های منحصر به فرد
-    const allReportIds = new Set([...ordersByReportId.keys(), ...staffByReportId.keys()]);
-
-    for (const reportId of allReportIds) {
+    for (const reportId of reportIdsToProcess) {
       const ordersForReport = ordersByReportId.get(reportId) || [];
       const staffForReport = staffByReportId.get(reportId) || [];
 
