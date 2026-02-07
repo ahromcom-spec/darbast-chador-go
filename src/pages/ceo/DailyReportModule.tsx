@@ -2150,49 +2150,64 @@ export default function DailyReportModule() {
   };
 
   const addOrderRow = () => {
-    // استفاده از functional update برای جلوگیری از race condition
-    setOrderReports((prev) => {
-      const next = [
-        ...prev,
+    const prev = orderReportsRef.current;
+    const next: OrderReportRow[] = [
+      ...prev,
+      {
+        order_id: '',
+        activity_description: '',
+        service_details: '',
+        team_name: '',
+        notes: '',
+        row_color: ROW_COLORS[prev.length % ROW_COLORS.length].value,
+      },
+    ];
+
+    // Sync ref immediately to avoid stale state on fast actions
+    orderReportsRef.current = next;
+    setOrderReports(next);
+  };
+
+  const removeOrderRow = (index: number) => {
+    // فعال کردن guard برای جلوگیری از auto-save همزمان
+    isDeletingRowRef.current = true;
+
+    // لغو timer های auto-save فعال
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+
+    // ذخیره موقعیت اسکرول قبل از حذف
+    const scrollY = window.scrollY;
+
+    const prev = orderReportsRef.current;
+    let next = prev.filter((_, i) => i !== index);
+
+    // همیشه یک ردیف خالی در فرم نگه دار تا هم UI پایدار بماند
+    // و هم ذخیره هیچوقت به state قدیمی fallback نکند
+    if (next.length === 0) {
+      next = [
         {
           order_id: '',
           activity_description: '',
           service_details: '',
           team_name: '',
           notes: '',
-          row_color: ROW_COLORS[prev.length % ROW_COLORS.length].value,
+          row_color: ROW_COLORS[0].value,
         },
       ];
-      orderReportsRef.current = next;
-      return next;
-    });
-  };
-
-  const removeOrderRow = (index: number) => {
-    // فعال کردن guard برای جلوگیری از auto-save همزمان
-    isDeletingRowRef.current = true;
-    
-    // لغو timer های auto-save فعال
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-      autoSaveTimerRef.current = null;
     }
-    
-    // ذخیره موقعیت اسکرول قبل از حذف
-    const scrollY = window.scrollY;
-    
-    // استفاده از functional update برای جلوگیری از race condition
-    setOrderReports((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      orderReportsRef.current = next;
-      return next;
-    });
+
+    // Sync ref immediately to avoid stale state on fast delete→save
+    orderReportsRef.current = next;
+    setOrderReports(next);
     setIsSaved(false);
-    
+
     // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
     requestAnimationFrame(() => {
       window.scrollTo({ top: scrollY, behavior: 'instant' });
-      // تاخیر کوتاه برای اطمینان از به‌روزرسانی state
+      // تاخیر کوتاه برای اطمینان از به‌روزرسانی UI
       setTimeout(() => {
         isDeletingRowRef.current = false;
       }, 300);
@@ -2201,49 +2216,52 @@ export default function DailyReportModule() {
 
   const updateOrderRow = (index: number, field: keyof OrderReportRow, value: string) => {
     setIsSaved(false);
-    setOrderReports((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
 
-      // بررسی آیا یک ردیف خالی در انتها وجود دارد
-      const isRowEmpty = (row: OrderReportRow) => 
-        !row.order_id && 
-        !row.activity_description?.trim() && 
-        !row.service_details?.trim() && 
-        !row.team_name?.trim() && 
-        !row.notes?.trim();
+    const prev = orderReportsRef.current;
+    const updated = [...prev];
+    if (!updated[index]) return;
 
-      // تعداد ردیف‌های خالی در انتها را شمارش کن
-      let emptyRowsAtEnd = 0;
-      for (let i = updated.length - 1; i >= 0; i--) {
-        if (isRowEmpty(updated[i])) {
-          emptyRowsAtEnd++;
-        } else {
-          break;
-        }
+    updated[index] = { ...updated[index], [field]: value };
+
+    // بررسی آیا یک ردیف خالی در انتها وجود دارد
+    const isRowEmpty = (row: OrderReportRow) =>
+      !row.order_id &&
+      !row.activity_description?.trim() &&
+      !row.service_details?.trim() &&
+      !row.team_name?.trim() &&
+      !row.notes?.trim();
+
+    // تعداد ردیف‌های خالی در انتها را شمارش کن
+    let emptyRowsAtEnd = 0;
+    for (let i = updated.length - 1; i >= 0; i--) {
+      if (isRowEmpty(updated[i])) {
+        emptyRowsAtEnd++;
+      } else {
+        break;
       }
+    }
 
-      // اگر هیچ ردیف خالی در انتها نیست، یک ردیف خالی اضافه کن
-      if (emptyRowsAtEnd === 0) {
-        updated.push({
-          order_id: '',
-          activity_description: '',
-          service_details: '',
-          team_name: '',
-          notes: '',
-          row_color: ROW_COLORS[updated.length % ROW_COLORS.length].value
-        });
-      }
-      // اگر بیش از یک ردیف خالی در انتها هست، اضافی‌ها را حذف کن
-      else if (emptyRowsAtEnd > 1) {
-        // فقط یک ردیف خالی در انتها نگه دار
-        const rowsToRemove = emptyRowsAtEnd - 1;
-        updated.splice(updated.length - rowsToRemove, rowsToRemove);
-      }
+    // اگر هیچ ردیف خالی در انتها نیست، یک ردیف خالی اضافه کن
+    if (emptyRowsAtEnd === 0) {
+      updated.push({
+        order_id: '',
+        activity_description: '',
+        service_details: '',
+        team_name: '',
+        notes: '',
+        row_color: ROW_COLORS[updated.length % ROW_COLORS.length].value,
+      });
+    }
+    // اگر بیش از یک ردیف خالی در انتها هست، اضافی‌ها را حذف کن
+    else if (emptyRowsAtEnd > 1) {
+      // فقط یک ردیف خالی در انتها نگه دار
+      const rowsToRemove = emptyRowsAtEnd - 1;
+      updated.splice(updated.length - rowsToRemove, rowsToRemove);
+    }
 
-      orderReportsRef.current = updated;
-      return updated;
-    });
+    // Sync ref immediately
+    orderReportsRef.current = updated;
+    setOrderReports(updated);
   };
 
   const addStaffRow = () => {
@@ -2534,8 +2552,7 @@ export default function DailyReportModule() {
     const ordersByReportId = new Map<string, OrderReportRow[]>();
     const staffByReportId = new Map<string, StaffReportRow[]>();
 
-    const currentOrderReports = orderReportsRef.current.length ? orderReportsRef.current : orderReports;
-
+    const currentOrderReports = orderReportsRef.current;
     for (const order of currentOrderReports) {
       if (!order.order_id) continue;
       // اگر source_daily_report_id ندارد، به گزارش خود کاربر اضافه کن
@@ -2746,7 +2763,7 @@ export default function DailyReportModule() {
       throw deleteOrderError;
     }
 
-    const currentOrderReports = orderReportsRef.current.length ? orderReportsRef.current : orderReports;
+    const currentOrderReports = orderReportsRef.current;
     const ordersToInsert = currentOrderReports.filter((r) => r.order_id);
     if (ordersToInsert.length > 0) {
       const { error: orderError } = await supabase
