@@ -3399,12 +3399,6 @@ export default function DailyReportModule() {
               فقط خواندنی
             </Badge>
           )}
-          {shouldShowAllUserReports && !isAggregated && (
-            <Badge variant="outline" className="gap-1 py-1">
-              <Eye className="h-3 w-3" />
-              نمای تجمیعی
-            </Badge>
-          )}
         </div>
       }
     >
