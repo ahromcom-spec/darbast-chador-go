@@ -888,6 +888,9 @@ export default function DailyReportModule() {
     // Skip auto-save on initial load or when form is empty (during date change)
     if (isInitialLoadRef.current) return;
     
+    // Skip auto-save if currently deleting a row (race condition prevention)
+    if (isDeletingRowRef.current) return;
+    
     // اگر فرم کاملا خالی است، auto-save انجام نده (هنگام تغییر تاریخ)
     if (orderReports.length === 0 && staffReports.length === 0) return;
 
@@ -896,11 +899,13 @@ export default function DailyReportModule() {
       clearTimeout(autoSaveTimerRef.current);
     }
 
-    // Set new timer for auto-save (debounce 1 second for faster saving)
-    // Debounce بیشتر برای پایداری (و جلوگیری از مسابقه با beforeunload/رفرش)
+    // Set new timer for auto-save with longer debounce for stability
     autoSaveTimerRef.current = setTimeout(() => {
-      performAutoSave();
-    }, 2000);
+      // Double-check guard before executing (state may have changed)
+      if (!isDeletingRowRef.current && !isAutoSavingRef.current) {
+        performAutoSave();
+      }
+    }, 2500);
 
     return () => {
       if (autoSaveTimerRef.current) {
@@ -2069,13 +2074,14 @@ export default function DailyReportModule() {
   };
 
   const addOrderRow = () => {
-    setOrderReports([...orderReports, {
+    // استفاده از functional update برای جلوگیری از race condition
+    setOrderReports(prev => [...prev, {
       order_id: '',
       activity_description: '',
       service_details: '',
       team_name: '',
       notes: '',
-      row_color: ROW_COLORS[orderReports.length % ROW_COLORS.length].value
+      row_color: ROW_COLORS[prev.length % ROW_COLORS.length].value
     }]);
   };
 
@@ -2091,7 +2097,9 @@ export default function DailyReportModule() {
     
     // ذخیره موقعیت اسکرول قبل از حذف
     const scrollY = window.scrollY;
-    setOrderReports(orderReports.filter((_, i) => i !== index));
+    
+    // استفاده از functional update برای جلوگیری از race condition
+    setOrderReports(prev => prev.filter((_, i) => i !== index));
     setIsSaved(false);
     
     // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
@@ -2100,7 +2108,7 @@ export default function DailyReportModule() {
       // تاخیر کوتاه برای اطمینان از به‌روزرسانی state
       setTimeout(() => {
         isDeletingRowRef.current = false;
-      }, 100);
+      }, 300);
     });
   };
 
@@ -2151,7 +2159,8 @@ export default function DailyReportModule() {
   };
 
   const addStaffRow = () => {
-    setStaffReports([...staffReports, {
+    // استفاده از functional update برای جلوگیری از race condition
+    setStaffReports(prev => [...prev, {
       staff_user_id: null,
       staff_name: '',
       work_status: 'غایب',
@@ -2187,13 +2196,21 @@ export default function DailyReportModule() {
   };
 
   const removeStaffRow = (index: number) => {
-    if (staffReports[index].is_cash_box) {
-      const cashBoxCount = staffReports.filter((r) => r.is_cash_box).length;
-      if (cashBoxCount <= 1) {
-        toast.error('حداقل یک ردیف کارت بانکی باید باقی بماند');
-        return;
+    // استفاده از functional check برای جلوگیری از race condition
+    setStaffReports(prev => {
+      const targetRow = prev[index];
+      if (!targetRow) return prev;
+      
+      if (targetRow.is_cash_box) {
+        const cashBoxCount = prev.filter((r) => r.is_cash_box).length;
+        if (cashBoxCount <= 1) {
+          toast.error('حداقل یک ردیف کارت بانکی باید باقی بماند');
+          return prev; // بدون تغییر
+        }
       }
-    }
+      
+      return prev.filter((_, i) => i !== index);
+    });
     
     // فعال کردن guard برای جلوگیری از auto-save همزمان
     isDeletingRowRef.current = true;
@@ -2206,16 +2223,15 @@ export default function DailyReportModule() {
     
     // ذخیره موقعیت اسکرول قبل از حذف
     const scrollY = window.scrollY;
-    setStaffReports(staffReports.filter((_, i) => i !== index));
     setIsSaved(false);
     
     // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
     requestAnimationFrame(() => {
       window.scrollTo({ top: scrollY, behavior: 'instant' });
-      // تاخیر کوتاه برای اطمینان از به‌روزرسانی state
+      // تاخیر بیشتر برای اطمینان از به‌روزرسانی state
       setTimeout(() => {
         isDeletingRowRef.current = false;
-      }, 100);
+      }, 300);
     });
   };
 
