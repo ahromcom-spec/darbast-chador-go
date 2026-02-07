@@ -3476,7 +3476,7 @@ export default function DailyReportModule() {
             ) : (
               <>
                 {/* Order Reports Table */}
-                <Card className="border-2 border-blue-500/30 -mx-2 sm:mx-0 rounded-none sm:rounded-lg">
+                <Card data-dropdown-boundary className="relative border-2 border-blue-500/30 -mx-2 sm:mx-0 rounded-none sm:rounded-lg">
                   <CardHeader className="pb-3 px-2 sm:px-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 sm:gap-3">
