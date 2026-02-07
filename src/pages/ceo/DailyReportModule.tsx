@@ -78,6 +78,8 @@ interface OrderReportRow {
   row_color: string;
   source_module_key?: string; // For aggregated view: which module this came from
   source_module_name?: string; // For aggregated view: readable module name
+  source_daily_report_id?: string; // For parent module: which daily_report this row belongs to
+  source_created_by?: string; // For parent module: which user created this report
 }
 
 interface StaffReportRow {
@@ -97,6 +99,8 @@ interface StaffReportRow {
   is_company_expense?: boolean;
   source_module_key?: string; // For aggregated view: which module this came from
   source_module_name?: string; // For aggregated view: readable module name
+  source_daily_report_id?: string; // For parent module: which daily_report this row belongs to
+  source_created_by?: string; // For parent module: which user created this report
 }
 
 // Bank card cache type for aggregated view
@@ -1349,8 +1353,8 @@ export default function DailyReportModule() {
        }
 
        if ((isAggregated || showAllReports) && existingReports && existingReports.length > 0) {
-         // ماژول کلی یا ماژول مادر: تمام گزارشات را ادغام کن
-         // ماژول کلی: تمام گزارشات سه ماژول دیگر را ادغام کن
+         // ماژول کلی (isAggregated): داده‌ها ادغام می‌شوند و فقط خواندنی هستند
+         // ماژول مادر (showAllReports): داده‌ها بدون ادغام نمایش داده می‌شوند و قابل ویرایش هستند
          const allReportIds = existingReports.map((r) => r.id);
          
          // پیدا کردن گزارش خود کاربر (برای امکان ذخیره)
@@ -1492,6 +1496,7 @@ export default function DailyReportModule() {
         // هر ماژول ممکن است گزارش متفاوتی برای یک سفارش داشته باشد
         setOrderReports((allOrderData || []).map((o: any) => {
           const moduleKey = reportToModuleMap.get(o.daily_report_id) || '';
+          const creatorId = reportToCreatorMap.get(o.daily_report_id) || '';
           const creatorName = getCreatorName(o.daily_report_id);
           // نمایش نام ثبت‌کننده در کنار نام ماژول
           const displayName = creatorName 
@@ -1507,6 +1512,8 @@ export default function DailyReportModule() {
             row_color: o.row_color || 'yellow',
             source_module_key: moduleKey,
             source_module_name: displayName,
+            source_daily_report_id: o.daily_report_id,
+            source_created_by: creatorId,
           };
         }));
 
@@ -1516,167 +1523,212 @@ export default function DailyReportModule() {
           .select('*')
           .in('daily_report_id', allReportIds);
 
-        // ادغام نیروها - با تشخیص انواع مختلف
-        const companyExpenseRows: StaffReportRow[] = [];
-        const cashBoxRowsMap = new Map<string, StaffReportRow>(); // بر اساس bank_card_id
-        const regularStaffMap = new Map<string, StaffReportRow>(); // بر اساس staff_user_id یا staff_name
+        // در ماژول مادر (showAllReports و نه isAggregated): بدون ادغام نمایش بده
+        // در ماژول کلی (isAggregated): با ادغام نمایش بده
+        if (showAllReports && !isAggregated) {
+          // ماژول مادر: داده‌ها بدون ادغام و قابل ویرایش
+          const allStaffRows: StaffReportRow[] = (allStaffData || []).map((s: any) => {
+            const staffCode = extractStaffCode(s.staff_name || '');
+            const isCompanyExpense = s.is_company_expense === true || 
+              (s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'));
+            const sourceModuleKey = reportToModuleMap.get(s.daily_report_id) || '';
+            const creatorId = reportToCreatorMap.get(s.daily_report_id) || '';
+            const creatorName = getCreatorName(s.daily_report_id);
+            const sourceModuleName = creatorName 
+              ? `${getModuleDisplayName(sourceModuleKey)} (${creatorName})`
+              : getModuleDisplayName(sourceModuleKey);
 
-        for (const s of allStaffData || []) {
-          const staffCode = extractStaffCode(s.staff_name || '');
-          const isCompanyExpense = s.is_company_expense === true || 
-            (s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'));
+            return {
+              id: s.id,
+              staff_user_id: staffCode || null,
+              staff_name: s.staff_name || '',
+              real_user_id: s.staff_user_id || null,
+              work_status: fromDbWorkStatus(s.work_status),
+              overtime_hours: s.overtime_hours || 0,
+              amount_received: s.amount_received || 0,
+              receiving_notes: s.receiving_notes || '',
+              amount_spent: s.amount_spent || 0,
+              spending_notes: s.spending_notes || '',
+              bank_card_id: s.bank_card_id ?? null,
+              notes: s.notes || '',
+              is_cash_box: s.is_cash_box || false,
+              is_company_expense: isCompanyExpense,
+              source_module_key: sourceModuleKey,
+              source_module_name: sourceModuleName,
+              source_daily_report_id: s.daily_report_id,
+              source_created_by: creatorId,
+            };
+          });
 
-          // دریافت کلید ماژول و نام ثبت‌کننده از نگاشت
-          const sourceModuleKey = reportToModuleMap.get(s.daily_report_id) || '';
-          const creatorName = getCreatorName(s.daily_report_id);
-          const sourceModuleName = creatorName 
-            ? `${getModuleDisplayName(sourceModuleKey)} (${creatorName})`
-            : getModuleDisplayName(sourceModuleKey);
+          // مرتب‌سازی: اول ماهیت شرکت، بعد کارت‌ها، بعد نیروها
+          const companyRows = allStaffRows.filter(r => r.is_company_expense);
+          const cashBoxRows = allStaffRows.filter(r => r.is_cash_box && !r.is_company_expense);
+          const regularRows = allStaffRows.filter(r => !r.is_cash_box && !r.is_company_expense);
 
-          const staffRow: StaffReportRow = {
-            id: s.id,
-            staff_user_id: staffCode || null,
-            staff_name: s.staff_name || '',
-            real_user_id: s.staff_user_id || null,
-            work_status: fromDbWorkStatus(s.work_status),
-            overtime_hours: s.overtime_hours || 0,
-            amount_received: s.amount_received || 0,
-            receiving_notes: s.receiving_notes || '',
-            amount_spent: s.amount_spent || 0,
-            spending_notes: s.spending_notes || '',
-            bank_card_id: s.bank_card_id ?? null,
-            notes: s.notes || '',
-            is_cash_box: s.is_cash_box || false,
-            is_company_expense: isCompanyExpense,
-            source_module_key: sourceModuleKey,
-            source_module_name: sourceModuleName,
-          };
+          setStaffReports([...companyRows, ...cashBoxRows, ...regularRows]);
+        } else {
+          // ماژول کلی (isAggregated): ادغام نیروها - با تشخیص انواع مختلف
+          const companyExpenseRows: StaffReportRow[] = [];
+          const cashBoxRowsMap = new Map<string, StaffReportRow>(); // بر اساس bank_card_id
+          const regularStaffMap = new Map<string, StaffReportRow>(); // بر اساس staff_user_id یا staff_name
 
-          if (isCompanyExpense) {
-            // ردیف ماهیت شرکت - آخرین نسخه را نگه دار یا مجموع را محاسبه کن
-            const existing = companyExpenseRows[0];
-            if (existing) {
-              // جمع مبالغ
-              existing.amount_received = (existing.amount_received || 0) + (staffRow.amount_received || 0);
-              existing.amount_spent = (existing.amount_spent || 0) + (staffRow.amount_spent || 0);
-              // ادغام توضیحات
-              if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
-                existing.receiving_notes = [existing.receiving_notes, staffRow.receiving_notes].filter(Boolean).join(' | ');
+          for (const s of allStaffData || []) {
+            const staffCode = extractStaffCode(s.staff_name || '');
+            const isCompanyExpense = s.is_company_expense === true || 
+              (s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'));
+
+            // دریافت کلید ماژول و نام ثبت‌کننده از نگاشت
+            const sourceModuleKey = reportToModuleMap.get(s.daily_report_id) || '';
+            const creatorName = getCreatorName(s.daily_report_id);
+            const sourceModuleName = creatorName 
+              ? `${getModuleDisplayName(sourceModuleKey)} (${creatorName})`
+              : getModuleDisplayName(sourceModuleKey);
+
+            const staffRow: StaffReportRow = {
+              id: s.id,
+              staff_user_id: staffCode || null,
+              staff_name: s.staff_name || '',
+              real_user_id: s.staff_user_id || null,
+              work_status: fromDbWorkStatus(s.work_status),
+              overtime_hours: s.overtime_hours || 0,
+              amount_received: s.amount_received || 0,
+              receiving_notes: s.receiving_notes || '',
+              amount_spent: s.amount_spent || 0,
+              spending_notes: s.spending_notes || '',
+              bank_card_id: s.bank_card_id ?? null,
+              notes: s.notes || '',
+              is_cash_box: s.is_cash_box || false,
+              is_company_expense: isCompanyExpense,
+              source_module_key: sourceModuleKey,
+              source_module_name: sourceModuleName,
+            };
+
+            if (isCompanyExpense) {
+              // ردیف ماهیت شرکت - آخرین نسخه را نگه دار یا مجموع را محاسبه کن
+              const existing = companyExpenseRows[0];
+              if (existing) {
+                // جمع مبالغ
+                existing.amount_received = (existing.amount_received || 0) + (staffRow.amount_received || 0);
+                existing.amount_spent = (existing.amount_spent || 0) + (staffRow.amount_spent || 0);
+                // ادغام توضیحات
+                if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
+                  existing.receiving_notes = [existing.receiving_notes, staffRow.receiving_notes].filter(Boolean).join(' | ');
+                }
+                if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
+                  existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
+                }
+                // ادغام منابع ماژول
+                if (staffRow.source_module_name && !existing.source_module_name?.includes(staffRow.source_module_name)) {
+                  existing.source_module_name = [existing.source_module_name, staffRow.source_module_name].filter(Boolean).join(' + ');
+                }
+              } else {
+                companyExpenseRows.push(staffRow);
               }
-              if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
-                existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
+            } else if (s.is_cash_box && s.bank_card_id) {
+              // ردیف کارت بانکی - ادغام بر اساس bank_card_id
+              const cardId = s.bank_card_id;
+              const existing = cashBoxRowsMap.get(cardId);
+              if (existing) {
+                // جمع مبالغ
+                existing.amount_received = (existing.amount_received || 0) + (staffRow.amount_received || 0);
+                existing.amount_spent = (existing.amount_spent || 0) + (staffRow.amount_spent || 0);
+                // ادغام توضیحات
+                if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
+                  existing.receiving_notes = [existing.receiving_notes, staffRow.receiving_notes].filter(Boolean).join(' | ');
+                }
+                if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
+                  existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
+                }
+                // ادغام منابع ماژول
+                if (staffRow.source_module_name && !existing.source_module_name?.includes(staffRow.source_module_name)) {
+                  existing.source_module_name = [existing.source_module_name, staffRow.source_module_name].filter(Boolean).join(' + ');
+                }
+              } else {
+                cashBoxRowsMap.set(cardId, staffRow);
               }
-              // ادغام منابع ماژول
-              if (staffRow.source_module_name && !existing.source_module_name?.includes(staffRow.source_module_name)) {
-                existing.source_module_name = [existing.source_module_name, staffRow.source_module_name].filter(Boolean).join(' + ');
+            } else if (!s.is_cash_box) {
+              // نیروی عادی - بر اساس staff_user_id یا staff_name ادغام کن
+              const key = s.staff_user_id || s.staff_name || s.id;
+              const existing = regularStaffMap.get(key);
+              if (existing) {
+                // جمع مبالغ و ساعات
+                existing.overtime_hours = (existing.overtime_hours || 0) + (staffRow.overtime_hours || 0);
+                existing.amount_received = (existing.amount_received || 0) + (staffRow.amount_received || 0);
+                existing.amount_spent = (existing.amount_spent || 0) + (staffRow.amount_spent || 0);
+                // اگر در هر کدام کارکرده بود، کارکرده نگه دار
+                if (staffRow.work_status === 'کارکرده') {
+                  existing.work_status = 'کارکرده';
+                }
+                // ادغام توضیحات
+                if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
+                  existing.receiving_notes = [existing.receiving_notes, staffRow.receiving_notes].filter(Boolean).join(' | ');
+                }
+                if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
+                  existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
+                }
+                if (staffRow.notes?.trim() && existing.notes !== staffRow.notes) {
+                  existing.notes = [existing.notes, staffRow.notes].filter(Boolean).join(' | ');
+                }
+                // ادغام منابع ماژول
+                if (staffRow.source_module_name && !existing.source_module_name?.includes(staffRow.source_module_name)) {
+                  existing.source_module_name = [existing.source_module_name, staffRow.source_module_name].filter(Boolean).join(' + ');
+                }
+              } else {
+                regularStaffMap.set(key, staffRow);
               }
-            } else {
-              companyExpenseRows.push(staffRow);
-            }
-          } else if (s.is_cash_box && s.bank_card_id) {
-            // ردیف کارت بانکی - ادغام بر اساس bank_card_id
-            const cardId = s.bank_card_id;
-            const existing = cashBoxRowsMap.get(cardId);
-            if (existing) {
-              // جمع مبالغ
-              existing.amount_received = (existing.amount_received || 0) + (staffRow.amount_received || 0);
-              existing.amount_spent = (existing.amount_spent || 0) + (staffRow.amount_spent || 0);
-              // ادغام توضیحات
-              if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
-                existing.receiving_notes = [existing.receiving_notes, staffRow.receiving_notes].filter(Boolean).join(' | ');
-              }
-              if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
-                existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
-              }
-              // ادغام منابع ماژول
-              if (staffRow.source_module_name && !existing.source_module_name?.includes(staffRow.source_module_name)) {
-                existing.source_module_name = [existing.source_module_name, staffRow.source_module_name].filter(Boolean).join(' + ');
-              }
-            } else {
-              cashBoxRowsMap.set(cardId, staffRow);
-            }
-          } else if (!s.is_cash_box) {
-            // نیروی عادی - بر اساس staff_user_id یا staff_name ادغام کن
-            const key = s.staff_user_id || s.staff_name || s.id;
-            const existing = regularStaffMap.get(key);
-            if (existing) {
-              // جمع مبالغ و ساعات
-              existing.overtime_hours = (existing.overtime_hours || 0) + (staffRow.overtime_hours || 0);
-              existing.amount_received = (existing.amount_received || 0) + (staffRow.amount_received || 0);
-              existing.amount_spent = (existing.amount_spent || 0) + (staffRow.amount_spent || 0);
-              // اگر در هر کدام کارکرده بود، کارکرده نگه دار
-              if (staffRow.work_status === 'کارکرده') {
-                existing.work_status = 'کارکرده';
-              }
-              // ادغام توضیحات
-              if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
-                existing.receiving_notes = [existing.receiving_notes, staffRow.receiving_notes].filter(Boolean).join(' | ');
-              }
-              if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
-                existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
-              }
-              if (staffRow.notes?.trim() && existing.notes !== staffRow.notes) {
-                existing.notes = [existing.notes, staffRow.notes].filter(Boolean).join(' | ');
-              }
-              // ادغام منابع ماژول
-              if (staffRow.source_module_name && !existing.source_module_name?.includes(staffRow.source_module_name)) {
-                existing.source_module_name = [existing.source_module_name, staffRow.source_module_name].filter(Boolean).join(' + ');
-              }
-            } else {
-              regularStaffMap.set(key, staffRow);
             }
           }
-        }
 
-        // ساختار نهایی
-        const normalizedStaff: StaffReportRow[] = [];
-        
-        // اول: ماهیت شرکت
-        if (companyExpenseRows.length > 0) {
-          normalizedStaff.push(companyExpenseRows[0]);
-        } else {
-          normalizedStaff.push({
-            staff_user_id: null,
-            staff_name: 'ماهیت شرکت اهرم',
-            work_status: 'کارکرده',
-            overtime_hours: 0,
-            amount_received: 0,
-            receiving_notes: '',
-            amount_spent: 0,
-            spending_notes: '',
-            bank_card_id: null,
-            notes: '',
-            is_cash_box: false,
-            is_company_expense: true,
-          });
-        }
-        
-        // دوم: کارت‌های بانکی
-        normalizedStaff.push(...Array.from(cashBoxRowsMap.values()));
-        
-        // سوم: نیروها
-        normalizedStaff.push(...Array.from(regularStaffMap.values()));
+          // ساختار نهایی
+          const normalizedStaff: StaffReportRow[] = [];
+          
+          // اول: ماهیت شرکت
+          if (companyExpenseRows.length > 0) {
+            normalizedStaff.push(companyExpenseRows[0]);
+          } else {
+            normalizedStaff.push({
+              staff_user_id: null,
+              staff_name: 'ماهیت شرکت اهرم',
+              work_status: 'کارکرده',
+              overtime_hours: 0,
+              amount_received: 0,
+              receiving_notes: '',
+              amount_spent: 0,
+              spending_notes: '',
+              bank_card_id: null,
+              notes: '',
+              is_cash_box: false,
+              is_company_expense: true,
+            });
+          }
+          
+          // دوم: کارت‌های بانکی
+          normalizedStaff.push(...Array.from(cashBoxRowsMap.values()));
+          
+          // سوم: نیروها
+          normalizedStaff.push(...Array.from(regularStaffMap.values()));
 
-        // یک ردیف خالی در انتها
-        const hasAnyRegularRow = normalizedStaff.some((s) => !s.is_cash_box && !s.is_company_expense);
-        if (!hasAnyRegularRow) {
-          normalizedStaff.push({
-            staff_user_id: null,
-            staff_name: '',
-            work_status: 'غایب',
-            overtime_hours: 0,
-            amount_received: 0,
-            receiving_notes: '',
-            amount_spent: 0,
-            spending_notes: '',
-            bank_card_id: null,
-            notes: '',
-            is_cash_box: false,
-            is_company_expense: false,
-          });
-        }
+          // یک ردیف خالی در انتها
+          const hasAnyRegularRow = normalizedStaff.some((s) => !s.is_cash_box && !s.is_company_expense);
+          if (!hasAnyRegularRow) {
+            normalizedStaff.push({
+              staff_user_id: null,
+              staff_name: '',
+              work_status: 'غایب',
+              overtime_hours: 0,
+              amount_received: 0,
+              receiving_notes: '',
+              amount_spent: 0,
+              spending_notes: '',
+              bank_card_id: null,
+              notes: '',
+              is_cash_box: false,
+              is_company_expense: false,
+            });
+          }
 
-        setStaffReports(normalizedStaff);
+          setStaffReports(normalizedStaff);
+        }
         clearLocalStorageBackup();
         
         setTimeout(() => {
@@ -2349,93 +2401,97 @@ export default function DailyReportModule() {
       setSaving(true);
       const dateStr = toLocalDateString(reportDate);
 
-      let reportId = existingReportId;
-
-      if (!reportId) {
-        // First check if a report already exists for this date AND module_key (fresh DB check)
-        const { data: existingCheck } = await supabase
-          .from('daily_reports')
-          .select('id')
-          .eq('report_date', dateStr)
-          .eq('created_by', user.id)
-          .eq('module_key', activeModuleKey)
-          .maybeSingle();
-
-        if (existingCheck?.id) {
-          reportId = existingCheck.id;
-          setExistingReportId(reportId);
-          // Update notes
-          await supabase
-            .from('daily_reports')
-            .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
-            .eq('id', reportId);
-        } else {
-          // Create new report with module_key for isolation using insert with retry
-          const { data: newReport, error: createError } = await supabase
-            .from('daily_reports')
-            .insert({
-              report_date: dateStr,
-              created_by: user.id,
-              notes: dailyNotes || null,
-              module_key: activeModuleKey,
-              updated_at: new Date().toISOString()
-            })
-            .select('id')
-            .single();
-
-          if (createError) {
-            // If unique constraint violation, try fetching again
-            if (createError.code === '23505') {
-              const { data: retry } = await supabase
-                .from('daily_reports')
-                .select('id')
-                .eq('report_date', dateStr)
-                .eq('created_by', user.id)
-                .eq('module_key', activeModuleKey)
-                .maybeSingle();
-              if (retry?.id) {
-                reportId = retry.id;
-                setExistingReportId(reportId);
-                // Update notes
-                await supabase
-                  .from('daily_reports')
-                  .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
-                  .eq('id', reportId);
-              } else {
-                throw createError;
-              }
-            } else {
-              throw createError;
-            }
-          } else {
-            reportId = newReport.id;
-            setExistingReportId(reportId);
-          }
-        }
+      // در ماژول مادر (shouldShowAllUserReports): ذخیره ردیف‌ها به گزارش‌های اصلی‌شان
+      if (shouldShowAllUserReports && !isAggregated) {
+        await saveParentModuleReport(dateStr);
       } else {
-        // Update existing report notes
-        await supabase
-          .from('daily_reports')
-          .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
-          .eq('id', reportId);
+        // ذخیره معمولی برای ماژول‌های غیر تجمیعی
+        await saveRegularReport(dateStr);
       }
 
-      // Delete existing order reports and insert new ones
-      const { error: deleteOrderError } = await supabase
-        .from('daily_report_orders')
-        .delete()
-        .eq('daily_report_id', reportId);
+      toast.success('گزارش با موفقیت ذخیره شد');
+      
+      // Show saved state on button - stay on same page
+      setIsSaved(true);
+      
+      // Refresh saved reports list
+      fetchSavedReports();
+    } catch (error: any) {
+      console.error('Error saving report:', error);
+      const errorMessage = error?.message || error?.details || 'خطای نامشخص';
+      toast.error(`خطا در ذخیره گزارش: ${errorMessage}`);
+    } finally {
+      setSaving(false);
+      // بازگرداندن امکان auto-save
+      isDeletingRowRef.current = false;
+    }
+  };
 
-      if (deleteOrderError) {
-        console.error('Error deleting order reports:', deleteOrderError);
-        throw deleteOrderError;
+  // ذخیره گزارش در ماژول مادر - هر ردیف به گزارش اصلی‌اش ذخیره می‌شود
+  const saveParentModuleReport = async (dateStr: string) => {
+    if (!user) return;
+
+    // گروه‌بندی ردیف‌ها بر اساس daily_report_id
+    const ordersByReportId = new Map<string, OrderReportRow[]>();
+    const staffByReportId = new Map<string, StaffReportRow[]>();
+
+    for (const order of orderReports) {
+      if (!order.order_id) continue;
+      const reportId = order.source_daily_report_id;
+      if (!reportId) continue;
+      
+      if (!ordersByReportId.has(reportId)) {
+        ordersByReportId.set(reportId, []);
       }
+      ordersByReportId.get(reportId)!.push(order);
+    }
 
-      const ordersToInsert = orderReports.filter(r => r.order_id);
-      if (ordersToInsert.length > 0) {
+    for (const staff of staffReports) {
+      const reportId = staff.source_daily_report_id;
+      if (!reportId) continue;
+      
+      // فقط ردیف‌های با داده معتبر
+      const hasData = staff.is_cash_box ||
+        Boolean(staff.staff_user_id) ||
+        Boolean(staff.staff_name?.trim()) ||
+        (staff.overtime_hours ?? 0) > 0 ||
+        (staff.amount_received ?? 0) > 0 ||
+        (staff.amount_spent ?? 0) > 0 ||
+        Boolean(staff.receiving_notes?.trim()) ||
+        Boolean(staff.spending_notes?.trim()) ||
+        Boolean(staff.notes?.trim());
+      
+      if (!hasData) continue;
+      
+      if (!staffByReportId.has(reportId)) {
+        staffByReportId.set(reportId, []);
+      }
+      staffByReportId.get(reportId)!.push(staff);
+    }
+
+    // تجمیع همه report_id های منحصر به فرد
+    const allReportIds = new Set([...ordersByReportId.keys(), ...staffByReportId.keys()]);
+
+    for (const reportId of allReportIds) {
+      const ordersForReport = ordersByReportId.get(reportId) || [];
+      const staffForReport = staffByReportId.get(reportId) || [];
+
+      // به‌روزرسانی سفارشات - حذف قبلی‌ها و درج جدید
+      if (ordersForReport.length > 0) {
+        // ابتدا سفارشات موجود این گزارش را حذف کن
+        const { error: deleteOrderError } = await supabase
+          .from('daily_report_orders')
+          .delete()
+          .eq('daily_report_id', reportId);
+
+        if (deleteOrderError) {
+          console.error('Error deleting order reports for', reportId, ':', deleteOrderError);
+        }
+
+        // درج سفارشات جدید
         const { error: orderError } = await supabase
           .from('daily_report_orders')
-          .insert(ordersToInsert.map(r => ({
+          .insert(ordersForReport.map(r => ({
             daily_report_id: reportId,
             order_id: r.order_id,
             activity_description: r.activity_description || '',
@@ -2446,98 +2502,25 @@ export default function DailyReportModule() {
           })));
 
         if (orderError) {
-          console.error('Error inserting order reports:', orderError);
-          throw orderError;
-        }
-
-        // همچنین گزارش‌ها را در جدول order_daily_logs ذخیره کنید
-        for (const r of ordersToInsert) {
-          if (r.order_id && user?.id) {
-            const logData = {
-              order_id: r.order_id,
-              report_date: reportDate.toISOString().split('T')[0],
-              activity_description: r.activity_description || null,
-              team_name: r.team_name || null,
-              notes: r.notes || null,
-              created_by: user.id
-            };
-            
-            // استفاده از upsert برای جلوگیری از تکرار
-            const { error: logError } = await supabase
-              .from('order_daily_logs')
-              .upsert(logData, { onConflict: 'order_id,report_date' });
-            
-            if (logError) {
-              console.error('Error saving order daily log:', logError);
-              // ادامه بده حتی اگر خطا داشت
-            }
-          }
+          console.error('Error inserting order reports for', reportId, ':', orderError);
         }
       }
 
-      const staffToSave = staffReports.filter(
-        (s) =>
-          s.is_cash_box ||
-          Boolean(s.staff_user_id) ||
-          Boolean(s.staff_name?.trim()) ||
-          (s.overtime_hours ?? 0) > 0 ||
-          (s.amount_received ?? 0) > 0 ||
-          (s.amount_spent ?? 0) > 0 ||
-          Boolean(s.receiving_notes?.trim()) ||
-          Boolean(s.spending_notes?.trim()) ||
-          Boolean(s.notes?.trim())
-      );
+      // به‌روزرسانی نیروها - حذف قبلی‌ها و درج جدید
+      if (staffForReport.length > 0) {
+        // ابتدا نیروهای موجود این گزارش را حذف کن
+        const { error: deleteStaffError } = await supabase
+          .from('daily_report_staff')
+          .delete()
+          .eq('daily_report_id', reportId);
 
-      // Collect affected bank cards from cash-box rows only (these rows represent the bank card itself)
-      const cashBoxTotalsByCard = new Map<
-        string,
-        { received: number; spent: number; receiveDesc?: string; spendDesc?: string }
-      >();
+        if (deleteStaffError) {
+          console.error('Error deleting staff reports for', reportId, ':', deleteStaffError);
+        }
 
-      for (const s of staffToSave) {
-        if (!s.is_cash_box || !s.bank_card_id) continue;
-        const cardId = s.bank_card_id as string;
-        const prev = cashBoxTotalsByCard.get(cardId) ?? { received: 0, spent: 0 };
-        cashBoxTotalsByCard.set(cardId, {
-          received: prev.received + (Number(s.amount_received ?? 0) || 0),
-          spent: prev.spent + (Number(s.amount_spent ?? 0) || 0),
-          receiveDesc: prev.receiveDesc ?? (s.receiving_notes?.trim() || undefined),
-          spendDesc: prev.spendDesc ?? (s.spending_notes?.trim() || undefined),
-        });
-      }
-
-      const affectedBankCardIds = Array.from(cashBoxTotalsByCard.keys());
-
-      // Best-effort cleanup of previous transaction logs for this report.
-      // Note: balance correctness is computed from daily_report_staff + manual transactions,
-      // so even if this fails, balances will still be corrected.
-      let canReplaceTxLogs = true;
-      const { error: deleteTxError } = await supabase
-        .from('bank_card_transactions')
-        .delete()
-        .eq('reference_type', 'daily_report_staff')
-        .eq('reference_id', reportId);
-
-      if (deleteTxError) {
-        canReplaceTxLogs = false;
-        console.warn('Could not delete previous bank card transactions for report:', deleteTxError);
-      }
-
-      // Delete existing staff reports and insert new ones
-      const { error: deleteStaffError } = await supabase
-        .from('daily_report_staff')
-        .delete()
-        .eq('daily_report_id', reportId);
-
-      if (deleteStaffError) {
-        console.error('Error deleting staff reports:', deleteStaffError);
-        throw deleteStaffError;
-      }
-
-      if (staffToSave.length > 0) {
-        const staffPayload = staffToSave.map((s) => ({
+        // درج نیروهای جدید
+        const staffPayload = staffForReport.map((s) => ({
           daily_report_id: reportId,
-          // Use real_user_id if available, otherwise check if staff_user_id is UUID
           staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
           staff_name: s.staff_name || '',
           work_status: toDbWorkStatus(s.work_status),
@@ -2559,34 +2542,245 @@ export default function DailyReportModule() {
           .insert(staffPayload);
 
         if (staffError) {
-          console.error('Error inserting staff reports:', staffError);
-          throw staffError;
+          console.error('Error inserting staff reports for', reportId, ':', staffError);
         }
 
-        // همگام‌سازی موجودی کارت‌ها (ذخیره دستی)
+        // همگام‌سازی موجودی کارت‌ها
         await syncBankCardBalancesFromLedger({
           reportId,
           reportDate,
           userId: user.id,
-          staffToSave,
+          staffToSave: staffForReport,
         });
       }
+    }
+  };
 
-      toast.success('گزارش با موفقیت ذخیره شد');
-      
-      // Show saved state on button - stay on same page
-      setIsSaved(true);
-      
-      // Refresh saved reports list
-      fetchSavedReports();
-    } catch (error: any) {
-      console.error('Error saving report:', error);
-      const errorMessage = error?.message || error?.details || 'خطای نامشخص';
-      toast.error(`خطا در ذخیره گزارش: ${errorMessage}`);
-    } finally {
-      setSaving(false);
-      // بازگرداندن امکان auto-save
-      isDeletingRowRef.current = false;
+  // ذخیره گزارش معمولی (غیر تجمیعی)
+  const saveRegularReport = async (dateStr: string) => {
+    if (!user) return;
+
+    let reportId = existingReportId;
+
+    if (!reportId) {
+      // First check if a report already exists for this date AND module_key (fresh DB check)
+      const { data: existingCheck } = await supabase
+        .from('daily_reports')
+        .select('id')
+        .eq('report_date', dateStr)
+        .eq('created_by', user.id)
+        .eq('module_key', activeModuleKey)
+        .maybeSingle();
+
+      if (existingCheck?.id) {
+        reportId = existingCheck.id;
+        setExistingReportId(reportId);
+        // Update notes
+        await supabase
+          .from('daily_reports')
+          .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
+          .eq('id', reportId);
+      } else {
+        // Create new report with module_key for isolation using insert with retry
+        const { data: newReport, error: createError } = await supabase
+          .from('daily_reports')
+          .insert({
+            report_date: dateStr,
+            created_by: user.id,
+            notes: dailyNotes || null,
+            module_key: activeModuleKey,
+            updated_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+
+        if (createError) {
+          // If unique constraint violation, try fetching again
+          if (createError.code === '23505') {
+            const { data: retry } = await supabase
+              .from('daily_reports')
+              .select('id')
+              .eq('report_date', dateStr)
+              .eq('created_by', user.id)
+              .eq('module_key', activeModuleKey)
+              .maybeSingle();
+            if (retry?.id) {
+              reportId = retry.id;
+              setExistingReportId(reportId);
+              // Update notes
+              await supabase
+                .from('daily_reports')
+                .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
+                .eq('id', reportId);
+            } else {
+              throw createError;
+            }
+          } else {
+            throw createError;
+          }
+        } else {
+          reportId = newReport.id;
+          setExistingReportId(reportId);
+        }
+      }
+    } else {
+      // Update existing report notes
+      await supabase
+        .from('daily_reports')
+        .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
+        .eq('id', reportId);
+    }
+
+    // Delete existing order reports and insert new ones
+    const { error: deleteOrderError } = await supabase
+      .from('daily_report_orders')
+      .delete()
+      .eq('daily_report_id', reportId);
+
+    if (deleteOrderError) {
+      console.error('Error deleting order reports:', deleteOrderError);
+      throw deleteOrderError;
+    }
+
+    const ordersToInsert = orderReports.filter(r => r.order_id);
+    if (ordersToInsert.length > 0) {
+      const { error: orderError } = await supabase
+        .from('daily_report_orders')
+        .insert(ordersToInsert.map(r => ({
+          daily_report_id: reportId,
+          order_id: r.order_id,
+          activity_description: r.activity_description || '',
+          service_details: r.service_details || '',
+          team_name: r.team_name || '',
+          notes: r.notes || '',
+          row_color: r.row_color || 'yellow'
+        })));
+
+      if (orderError) {
+        console.error('Error inserting order reports:', orderError);
+        throw orderError;
+      }
+
+      // همچنین گزارش‌ها را در جدول order_daily_logs ذخیره کنید
+      for (const r of ordersToInsert) {
+        if (r.order_id && user?.id) {
+          const logData = {
+            order_id: r.order_id,
+            report_date: reportDate.toISOString().split('T')[0],
+            activity_description: r.activity_description || null,
+            team_name: r.team_name || null,
+            notes: r.notes || null,
+            created_by: user.id
+          };
+          
+          // استفاده از upsert برای جلوگیری از تکرار
+          const { error: logError } = await supabase
+            .from('order_daily_logs')
+            .upsert(logData, { onConflict: 'order_id,report_date' });
+          
+          if (logError) {
+            console.error('Error saving order daily log:', logError);
+            // ادامه بده حتی اگر خطا داشت
+          }
+        }
+      }
+    }
+
+    const staffToSave = staffReports.filter(
+      (s) =>
+        s.is_cash_box ||
+        Boolean(s.staff_user_id) ||
+        Boolean(s.staff_name?.trim()) ||
+        (s.overtime_hours ?? 0) > 0 ||
+        (s.amount_received ?? 0) > 0 ||
+        (s.amount_spent ?? 0) > 0 ||
+        Boolean(s.receiving_notes?.trim()) ||
+        Boolean(s.spending_notes?.trim()) ||
+        Boolean(s.notes?.trim())
+    );
+
+    // Collect affected bank cards from cash-box rows only (these rows represent the bank card itself)
+    const cashBoxTotalsByCard = new Map<
+      string,
+      { received: number; spent: number; receiveDesc?: string; spendDesc?: string }
+    >();
+
+    for (const s of staffToSave) {
+      if (!s.is_cash_box || !s.bank_card_id) continue;
+      const cardId = s.bank_card_id as string;
+      const prev = cashBoxTotalsByCard.get(cardId) ?? { received: 0, spent: 0 };
+      cashBoxTotalsByCard.set(cardId, {
+        received: prev.received + (Number(s.amount_received ?? 0) || 0),
+        spent: prev.spent + (Number(s.amount_spent ?? 0) || 0),
+        receiveDesc: prev.receiveDesc ?? (s.receiving_notes?.trim() || undefined),
+        spendDesc: prev.spendDesc ?? (s.spending_notes?.trim() || undefined),
+      });
+    }
+
+    const affectedBankCardIds = Array.from(cashBoxTotalsByCard.keys());
+
+    // Best-effort cleanup of previous transaction logs for this report.
+    // Note: balance correctness is computed from daily_report_staff + manual transactions,
+    // so even if this fails, balances will still be corrected.
+    let canReplaceTxLogs = true;
+    const { error: deleteTxError } = await supabase
+      .from('bank_card_transactions')
+      .delete()
+      .eq('reference_type', 'daily_report_staff')
+      .eq('reference_id', reportId);
+
+    if (deleteTxError) {
+      canReplaceTxLogs = false;
+      console.warn('Could not delete previous bank card transactions for report:', deleteTxError);
+    }
+
+    // Delete existing staff reports and insert new ones
+    const { error: deleteStaffError } = await supabase
+      .from('daily_report_staff')
+      .delete()
+      .eq('daily_report_id', reportId);
+
+    if (deleteStaffError) {
+      console.error('Error deleting staff reports:', deleteStaffError);
+      throw deleteStaffError;
+    }
+
+    if (staffToSave.length > 0) {
+      const staffPayload = staffToSave.map((s) => ({
+        daily_report_id: reportId,
+        // Use real_user_id if available, otherwise check if staff_user_id is UUID
+        staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
+        staff_name: s.staff_name || '',
+        work_status: toDbWorkStatus(s.work_status),
+        overtime_hours: s.overtime_hours || 0,
+        amount_received: s.amount_received || 0,
+        receiving_notes: s.receiving_notes || '',
+        amount_spent: s.amount_spent || 0,
+        spending_notes: s.spending_notes || '',
+        bank_card_id: s.bank_card_id ?? null,
+        notes: s.notes || '',
+        is_cash_box: toDbBoolean(s.is_cash_box),
+        is_company_expense:
+          toDbBoolean(s.is_company_expense) ||
+          Boolean(s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'))
+      }));
+
+      const { error: staffError } = await supabase
+        .from('daily_report_staff')
+        .insert(staffPayload);
+
+      if (staffError) {
+        console.error('Error inserting staff reports:', staffError);
+        throw staffError;
+      }
+
+      // همگام‌سازی موجودی کارت‌ها (ذخیره دستی)
+      await syncBankCardBalancesFromLedger({
+        reportId,
+        reportDate,
+        userId: user.id,
+        staffToSave,
+      });
     }
   };
 
@@ -3741,8 +3935,8 @@ export default function DailyReportModule() {
                   </CardContent>
                 </Card>
 
-                {/* Save Button - فقط برای ماژول‌های غیر تجمیعی */}
-                {!isAggregated && (
+                {/* Save Button - برای ماژول‌های غیر تجمیعی و ماژول مادر */}
+                {(!isAggregated || shouldShowAllUserReports) && (
                   <div className="flex justify-center">
                     <Button 
                       onClick={() => {
