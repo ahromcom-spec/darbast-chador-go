@@ -648,6 +648,10 @@ export default function DailyReportModule() {
     // جلوگیری از auto-save در ماژول تجمیعی (فقط خواندنی)
     // ماژول مادر با نمایش تجمیعی باید بتواند داده‌های خود را ذخیره کند
     if (isAggregated) return;
+
+    // در «ماژول مادر» (نمایش/ویرایش گزارش چند کاربر)، auto-save باعث overwrite بین گزارش‌ها
+    // و ایجاد لوپ Realtime/رفرش می‌شود؛ بنابراین فقط ذخیره دستی مجاز است.
+    if (shouldShowAllUserReports) return;
     
     // جلوگیری از auto-save در حین لود یا وقتی فرم خالی است (هنگام تغییر تاریخ)
     if (!user || loading || saving || isInitialLoadRef.current) return;
@@ -895,12 +899,21 @@ export default function DailyReportModule() {
     } finally {
       isAutoSavingRef.current = false;
     }
-  }, [user, loading, saving, reportDate, existingReportId, orderReports, staffReports, clearLocalStorageBackup, activeModuleKey]);
+  }, [user, loading, saving, reportDate, existingReportId, orderReports, staffReports, clearLocalStorageBackup, activeModuleKey, isAggregated, shouldShowAllUserReports]);
 
   // Auto-save with debounce when data changes
   useEffect(() => {
     // Skip auto-save on initial load or when form is empty (during date change)
     if (isInitialLoadRef.current) return;
+
+    // ماژول مادر: auto-save غیرفعال (صرفاً ذخیره دستی)
+    if (shouldShowAllUserReports) {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      return;
+    }
     
     // Skip auto-save if currently deleting a row (race condition prevention)
     if (isDeletingRowRef.current) return;
@@ -926,7 +939,7 @@ export default function DailyReportModule() {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [orderReports, staffReports, performAutoSave]);
+  }, [orderReports, staffReports, performAutoSave, shouldShowAllUserReports]);
 
   // Save on page unload
   useEffect(() => {
