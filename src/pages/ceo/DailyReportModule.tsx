@@ -458,6 +458,11 @@ export default function DailyReportModule() {
   // تا با تغییرات جداول زیرمجموعه (orders/staff) سریع رفرش کند.
   const aggregatedSourceReportIdsRef = useRef<Set<string>>(new Set());
   const aggregatedRealtimeRefetchTimerRef = useRef<number | null>(null);
+  // Ref برای جلوگیری از رفرش‌های پی‌در‌پی در Realtime
+  const isFetchingReportRef = useRef(false);
+  const lastFetchTimestampRef = useRef(0);
+  // Cache نتیجه بررسی shouldShowAllUserReports تا هربار محاسبه نشود
+  const cachedShowAllReportsRef = useRef<boolean | null>(null);
   // Ensure tables start from the right side in RTL by scrolling to the rightmost (selection) column
   useEffect(() => {
     if (loading) return;
@@ -549,6 +554,11 @@ export default function DailyReportModule() {
       setDailyNotes('');
       setExistingReportId(null);
       isInitialLoadRef.current = true;
+      // پاک کردن کش shouldShowAllUserReports برای محاسبه مجدد در تاریخ/ماژول جدید
+      cachedShowAllReportsRef.current = null;
+      // ریست کردن قفل‌ها
+      isFetchingReportRef.current = false;
+      lastFetchTimestampRef.current = 0;
       fetchExistingReport();
     }
   }, [reportDate, user, activeModuleKey, isAggregated]);
@@ -565,10 +575,10 @@ export default function DailyReportModule() {
         window.clearTimeout(aggregatedRealtimeRefetchTimerRef.current);
       }
 
-      // Debounce کوتاه برای جلوگیری از چندین fetch پشت سر هم (INSERT/DELETE های پشت‌سرهم)
+      // Debounce طولانی‌تر برای جلوگیری از رفرش‌های پی‌در‌پی (حداقل 3 ثانیه)
       aggregatedRealtimeRefetchTimerRef.current = window.setTimeout(() => {
-        fetchExistingReport();
-      }, 120);
+        fetchExistingReport(true); // isRealtimeTrigger = true
+      }, 3000);
     };
 
     const isRelevantChildChange = (payload: any): boolean => {
@@ -1293,8 +1303,22 @@ export default function DailyReportModule() {
     }
   };
 
-  const fetchExistingReport = async () => {
+
+
+  const fetchExistingReport = async (isRealtimeTrigger = false) => {
     if (!user) return;
+
+    // جلوگیری از اجرای همزمان چندین fetch
+    if (isFetchingReportRef.current) return;
+    
+    // جلوگیری از رفرش‌های پی‌در‌پی (حداقل 2 ثانیه بین هر رفرش)
+    const now = Date.now();
+    if (isRealtimeTrigger && now - lastFetchTimestampRef.current < 2000) {
+      return;
+    }
+    
+    isFetchingReportRef.current = true;
+    lastFetchTimestampRef.current = now;
 
     try {
       setLoading(true);
@@ -1308,21 +1332,29 @@ export default function DailyReportModule() {
       let showAllReports = false;
       
       if (isManager && !isAggregated) {
-        // بررسی اینکه آیا این ماژول به کاربران دیگر اختصاص داده شده
-        const { data: assignments } = await supabase
-          .from('module_assignments')
-          .select('assigned_user_id')
-          .eq('module_key', activeModuleKey)
-          .eq('is_active', true);
-        
-        // اگر ماژول به کاربران دیگر (غیر از کاربر فعلی) اختصاص داده شده، نمایش همه گزارشات
-        if (assignments && assignments.some(a => a.assigned_user_id && a.assigned_user_id !== user.id)) {
-          showAllReports = true;
+        // استفاده از کش اگر قبلا محاسبه شده (جلوگیری از کوئری‌های تکراری)
+        if (cachedShowAllReportsRef.current !== null && isRealtimeTrigger) {
+          showAllReports = cachedShowAllReportsRef.current;
+        } else {
+          // بررسی اینکه آیا این ماژول به کاربران دیگر اختصاص داده شده
+          const { data: assignments } = await supabase
+            .from('module_assignments')
+            .select('assigned_user_id')
+            .eq('module_key', activeModuleKey)
+            .eq('is_active', true);
+          
+          // اگر ماژول به کاربران دیگر (غیر از کاربر فعلی) اختصاص داده شده، نمایش همه گزارشات
+          if (assignments && assignments.some(a => a.assigned_user_id && a.assigned_user_id !== user.id)) {
+            showAllReports = true;
+          }
+          cachedShowAllReportsRef.current = showAllReports;
         }
       }
       
-      // به‌روزرسانی state برای استفاده در Realtime و بخش‌های دیگر
-      setShouldShowAllUserReports(showAllReports);
+      // به‌روزرسانی state فقط اگر مقدار تغییر کرده (جلوگیری از رندر اضافی)
+      if (showAllReports !== shouldShowAllUserReports) {
+        setShouldShowAllUserReports(showAllReports);
+      }
 
       // ماژول تجمیعی: همه گزارشات این تاریخ را می‌خواند و ادغام می‌کند
       // ماژول‌های مجزا: فقط گزارش خود را می‌خوانند (مگر مدیر باشد و ماژول به دیگران اختصاص داده شده باشد)
@@ -2000,6 +2032,7 @@ export default function DailyReportModule() {
       toast.error('خطا در دریافت گزارش');
     } finally {
       setLoading(false);
+      isFetchingReportRef.current = false; // آزادسازی قفل
       setTimeout(() => {
         isInitialLoadRef.current = false;
       }, 500);
