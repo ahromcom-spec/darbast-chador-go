@@ -1778,20 +1778,39 @@ export default function DailyReportModule() {
         if (reportIdToLoad) {
           setExistingReportId(reportIdToLoad);
           setDailyNotes(existingReport?.notes || '');
+
           const { data: orderData } = await supabase
             .from('daily_report_orders')
             .select('*')
             .eq('daily_report_id', reportIdToLoad);
 
-          setOrderReports((orderData || []).map((o: any) => ({
+          const loadedOrderRows: OrderReportRow[] = (orderData || []).map((o: any) => ({
             id: o.id,
             order_id: o.order_id,
             activity_description: o.activity_description || '',
             service_details: o.service_details || '',
             team_name: o.team_name || '',
             notes: o.notes || '',
-            row_color: o.row_color || 'yellow',
-          })));
+            row_color: o.row_color || ROW_COLORS[0].value,
+          }));
+
+          const nextOrderRows: OrderReportRow[] =
+            loadedOrderRows.length > 0
+              ? loadedOrderRows
+              : [
+                  {
+                    order_id: '',
+                    activity_description: '',
+                    service_details: '',
+                    team_name: '',
+                    notes: '',
+                    row_color: ROW_COLORS[0].value,
+                  },
+                ];
+
+          // Sync ref immediately so OrderSearchSelect can update row 0 even when DB has no rows yet
+          orderReportsRef.current = nextOrderRows;
+          setOrderReports(nextOrderRows);
 
           const { data: staffData } = await supabase
             .from('daily_report_staff')
