@@ -3336,6 +3336,7 @@ export default function DailyReportModule() {
           id: Date.now().toString(),
           file_path: storagePath,
           file_type: type,
+          mime_type: file.type,
           url: signedData.signedUrl
         }]);
       }
