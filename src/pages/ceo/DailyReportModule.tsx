@@ -643,8 +643,14 @@ export default function DailyReportModule() {
     };
   }, [isAggregated, shouldShowAllUserReports, user, reportDate]);
 
-  // Auto-save function
+  // Auto-save function - DISABLED to prevent duplication issues
+  // Users must manually save their reports using the save button
   const performAutoSave = useCallback(async () => {
+    // AUTO-SAVE COMPLETELY DISABLED
+    // This prevents row duplication issues caused by race conditions between
+    // auto-save, manual save, and realtime updates
+    return;
+    
     // جلوگیری از auto-save در ماژول تجمیعی (فقط خواندنی)
     // ماژول مادر با نمایش تجمیعی باید بتواند داده‌های خود را ذخیره کند
     if (isAggregated) return;
@@ -901,60 +907,24 @@ export default function DailyReportModule() {
     }
   }, [user, loading, saving, reportDate, existingReportId, orderReports, staffReports, clearLocalStorageBackup, activeModuleKey, isAggregated, shouldShowAllUserReports]);
 
-  // Auto-save with debounce when data changes
+  // Auto-save with debounce when data changes - DISABLED
+  // Auto-save is completely disabled to prevent row duplication issues
+  // Users must manually save their reports using the save button
   useEffect(() => {
-    // Skip auto-save on initial load or when form is empty (during date change)
-    if (isInitialLoadRef.current) return;
-
-    // ماژول مادر: auto-save غیرفعال (صرفاً ذخیره دستی)
-    if (shouldShowAllUserReports) {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-        autoSaveTimerRef.current = null;
-      }
-      return;
-    }
-    
-    // Skip auto-save if currently deleting a row (race condition prevention)
-    if (isDeletingRowRef.current) return;
-    
-    // اگر فرم کاملا خالی است، auto-save انجام نده (هنگام تغییر تاریخ)
-    if (orderReports.length === 0 && staffReports.length === 0) return;
-
-    // Clear existing timer
+    // AUTO-SAVE COMPLETELY DISABLED - just clear any existing timers
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
     }
+    return;
+  }, [orderReports, staffReports]);
 
-    // Set new timer for auto-save with longer debounce for stability
-    autoSaveTimerRef.current = setTimeout(() => {
-      // Double-check guard before executing (state may have changed)
-      if (!isDeletingRowRef.current && !isAutoSavingRef.current) {
-        performAutoSave();
-      }
-    }, 2500);
-
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, [orderReports, staffReports, performAutoSave, shouldShowAllUserReports]);
-
-  // Save on page unload
+  // Save on page unload - DISABLED
+  // This was causing race conditions with manual saves
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-      performAutoSave();
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [performAutoSave]);
+    // DISABLED - no auto-save on page unload
+    return;
+  }, []);
 
   const fetchSavedReports = async () => {
     if (!user) return;
