@@ -3125,7 +3125,7 @@ export default function DailyReportModule() {
   };
 
   // Fetch full order details for dialog
-  const [orderMedia, setOrderMedia] = useState<Array<{id: string; file_path: string; file_type: string; url: string; mime_type?: string}>>([]);
+  const [orderMedia, setOrderMedia] = useState<Array<{id: string; file_path: string; file_type: string; url?: string; mime_type?: string}>>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   
   const fetchOrderDetails = async (orderId: string, dailyRow?: OrderReportRow | null) => {
@@ -3247,18 +3247,15 @@ export default function DailyReportModule() {
         .order('created_at', { ascending: true });
 
       if (mediaData && mediaData.length > 0) {
-        const mediaWithUrls = await Promise.all(
-          mediaData.map(async (media) => {
-            const { data: signedData } = await supabase.storage
-              .from('project-media')
-              .createSignedUrl(media.file_path, 3600);
-            return {
-              ...media,
-              url: signedData?.signedUrl || ''
-            };
-          })
+        // URLها را به کامپوننت MediaGallery بسپار تا هم پایدارتر باشد و هم تعداد درخواست‌ها کمتر شود
+        setOrderMedia(
+          mediaData.map((m) => ({
+            id: m.id,
+            file_path: m.file_path,
+            file_type: m.file_type,
+            mime_type: (m as any).mime_type ?? undefined,
+          }))
         );
-        setOrderMedia(mediaWithUrls.filter(m => m.url));
       } else {
         setOrderMedia([]);
       }
@@ -3326,20 +3323,20 @@ export default function DailyReportModule() {
 
       if (dbError) throw dbError;
 
-      // Refresh media list
-      const { data: signedData } = await supabase.storage
-        .from('project-media')
-        .createSignedUrl(storagePath, 3600);
+      // Update UI immediately; MediaGallery will resolve the playable URL
+      const tempId = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
+        ? globalThis.crypto.randomUUID()
+        : Date.now().toString();
 
-      if (signedData?.signedUrl) {
-        setOrderMedia(prev => [...prev, {
-          id: Date.now().toString(),
+      setOrderMedia(prev => [
+        ...prev,
+        {
+          id: tempId,
           file_path: storagePath,
           file_type: type,
           mime_type: file.type,
-          url: signedData.signedUrl
-        }]);
-      }
+        },
+      ]);
 
       toast.success('فایل با موفقیت آپلود شد');
     } catch (error) {
