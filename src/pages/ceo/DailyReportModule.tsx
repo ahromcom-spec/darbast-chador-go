@@ -451,8 +451,16 @@ export default function DailyReportModule() {
   const isDeletingRowRef = useRef(false);
   // جلوگیری از ذخیره تکراری وقتی داده تغییری نکرده
   const lastAutoSaveHashRef = useRef<string>('');
+
+  // Prevent stale state on fast actions (حذف سریع و سپس ذخیره)
+  const orderReportsRef = useRef<OrderReportRow[]>([]);
+
   const orderTableScrollRef = useRef<HTMLDivElement>(null);
   const staffTableScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    orderReportsRef.current = orderReports;
+  }, [orderReports]);
 
   // ماژول تجمیعی باید بداند کدام reportId ها مربوط به همین تاریخ هستند
   // تا با تغییرات جداول زیرمجموعه (orders/staff) سریع رفرش کند.
@@ -2143,14 +2151,21 @@ export default function DailyReportModule() {
 
   const addOrderRow = () => {
     // استفاده از functional update برای جلوگیری از race condition
-    setOrderReports(prev => [...prev, {
-      order_id: '',
-      activity_description: '',
-      service_details: '',
-      team_name: '',
-      notes: '',
-      row_color: ROW_COLORS[prev.length % ROW_COLORS.length].value
-    }]);
+    setOrderReports((prev) => {
+      const next = [
+        ...prev,
+        {
+          order_id: '',
+          activity_description: '',
+          service_details: '',
+          team_name: '',
+          notes: '',
+          row_color: ROW_COLORS[prev.length % ROW_COLORS.length].value,
+        },
+      ];
+      orderReportsRef.current = next;
+      return next;
+    });
   };
 
   const removeOrderRow = (index: number) => {
@@ -2167,7 +2182,11 @@ export default function DailyReportModule() {
     const scrollY = window.scrollY;
     
     // استفاده از functional update برای جلوگیری از race condition
-    setOrderReports(prev => prev.filter((_, i) => i !== index));
+    setOrderReports((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      orderReportsRef.current = next;
+      return next;
+    });
     setIsSaved(false);
     
     // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
@@ -2222,6 +2241,7 @@ export default function DailyReportModule() {
         updated.splice(updated.length - rowsToRemove, rowsToRemove);
       }
 
+      orderReportsRef.current = updated;
       return updated;
     });
   };
@@ -2514,7 +2534,9 @@ export default function DailyReportModule() {
     const ordersByReportId = new Map<string, OrderReportRow[]>();
     const staffByReportId = new Map<string, StaffReportRow[]>();
 
-    for (const order of orderReports) {
+    const currentOrderReports = orderReportsRef.current.length ? orderReportsRef.current : orderReports;
+
+    for (const order of currentOrderReports) {
       if (!order.order_id) continue;
       // اگر source_daily_report_id ندارد، به گزارش خود کاربر اضافه کن
       const reportId = order.source_daily_report_id || ownReportId;
@@ -2724,7 +2746,8 @@ export default function DailyReportModule() {
       throw deleteOrderError;
     }
 
-    const ordersToInsert = orderReports.filter(r => r.order_id);
+    const currentOrderReports = orderReportsRef.current.length ? orderReportsRef.current : orderReports;
+    const ordersToInsert = currentOrderReports.filter((r) => r.order_id);
     if (ordersToInsert.length > 0) {
       const { error: orderError } = await supabase
         .from('daily_report_orders')
