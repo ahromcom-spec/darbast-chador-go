@@ -417,6 +417,10 @@ export default function DailyReportModule() {
   const [clearTodayDialogOpen, setClearTodayDialogOpen] = useState(false);
   const [clearingToday, setClearingToday] = useState(false);
 
+  // Dedupe duplicates dialog state (Mother Module)
+  const [dedupeDialogOpen, setDedupeDialogOpen] = useState(false);
+  const [deduping, setDeduping] = useState(false);
+
   // Order details dialog state
   const [orderDetailsDialogOpen, setOrderDetailsDialogOpen] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
@@ -2141,6 +2145,38 @@ export default function DailyReportModule() {
     }
   };
 
+  // حذف سطرهای کاملاً تکراری در گزارش‌های همین روز/ماژول (برای ماژول مادر)
+  const handleDedupeTodayDuplicates = async () => {
+    if (!user) return;
+
+    setDeduping(true);
+    try {
+      const dateStr = toLocalDateString(reportDate);
+
+      const { data, error } = await supabase.functions.invoke('dedupe-daily-report', {
+        body: { report_date: dateStr, module_key: activeModuleKey },
+      });
+
+      if (error) throw error;
+
+      const staffDeleted = Number((data as any)?.staff_deleted ?? 0) || 0;
+      const ordersDeleted = Number((data as any)?.orders_deleted ?? 0) || 0;
+
+      toast.success(`سطرهای تکراری حذف شد (نیروها: ${staffDeleted}، سفارشات: ${ordersDeleted})`);
+      setDedupeDialogOpen(false);
+
+      // Refresh current view
+      await fetchExistingReport();
+    } catch (error) {
+      console.error('Error deduping duplicates:', error);
+      const message = (error as any)?.message ? String((error as any).message) : '';
+      const isForbidden = message.toLowerCase().includes('forbidden');
+      toast.error(isForbidden ? 'شما دسترسی انجام این عملیات را ندارید' : 'خطا در حذف سطرهای تکراری');
+    } finally {
+      setDeduping(false);
+    }
+  };
+
   const addOrderRow = () => {
     // استفاده از functional update برای جلوگیری از race condition
     setOrderReports(prev => [...prev, {
@@ -3309,10 +3345,27 @@ export default function DailyReportModule() {
             </Badge>
           )}
           {shouldShowAllUserReports && !isAggregated && (
-            <Badge variant="outline" className="gap-1 py-1">
-              <Eye className="h-3 w-3" />
-              نمای تجمیعی
-            </Badge>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDedupeDialogOpen(true)}
+                disabled={deduping}
+                className="gap-2 text-destructive border-destructive/50 hover:bg-destructive/10"
+              >
+                {deduping ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">حذف سطرهای تکراری</span>
+                <span className="sm:hidden">حذف تکراری</span>
+              </Button>
+              <Badge variant="outline" className="gap-1 py-1">
+                <Eye className="h-3 w-3" />
+                نمای تجمیعی
+              </Badge>
+            </>
           )}
         </div>
       }
@@ -5138,6 +5191,40 @@ export default function DailyReportModule() {
                   <Trash2 className="h-4 w-4 ml-2" />
                 )}
                 پاکسازی
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Dedupe Duplicates Dialog (Mother Module) */}
+        <AlertDialog open={dedupeDialogOpen} onOpenChange={setDedupeDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                حذف سطرهای تکراری
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-right">
+                این عملیات فقط «سطرهای کاملاً یکسان» را برای تاریخ{' '}
+                <strong>{format(reportDate, 'EEEE d MMMM yyyy')}</strong> حذف می‌کند و از هر سطر یک نسخه نگه می‌دارد.
+                <br />
+                <br />
+                اگر مطمئنید، ادامه دهید.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-row-reverse gap-2">
+              <AlertDialogCancel>انصراف</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDedupeTodayDuplicates}
+                disabled={deduping}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deduping ? (
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                ) : (
+                  <Trash2 className="h-4 w-4 ml-2" />
+                )}
+                حذف تکراری‌ها
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
