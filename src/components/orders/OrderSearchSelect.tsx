@@ -42,7 +42,7 @@ export function OrderSearchSelect({
     bottom: undefined,
     left: 0,
     width: 0,
-    maxHeight: 520,
+    maxHeight: 800,
   });
 
   const selectedOrder = orders.find(o => o.id === value);
@@ -115,7 +115,7 @@ export function OrderSearchSelect({
       const openBelow = spaceBelow >= 240 || spaceBelow >= spaceAbove;
 
       if (openBelow) {
-        const maxHeight = Math.min(520, Math.max(180, spaceBelow));
+        const maxHeight = Math.min(800, Math.max(180, spaceBelow));
         setPosition({
           top: rect.bottom - b.top + OFFSET,
           bottom: undefined,
@@ -124,7 +124,7 @@ export function OrderSearchSelect({
           maxHeight,
         });
       } else {
-        const maxHeight = Math.min(520, Math.max(180, spaceAbove));
+        const maxHeight = Math.min(800, Math.max(180, spaceAbove));
         setPosition({
           top: undefined,
           bottom: b.bottom - rect.top + OFFSET,
@@ -154,7 +154,7 @@ export function OrderSearchSelect({
     const openBelow = spaceBelow >= 240 || spaceBelow >= spaceAbove;
 
     if (openBelow) {
-      const maxHeight = Math.min(520, Math.max(180, spaceBelow));
+      const maxHeight = Math.min(800, Math.max(180, spaceBelow));
       setPosition({
         top: rect.bottom + OFFSET,
         bottom: undefined,
@@ -163,7 +163,7 @@ export function OrderSearchSelect({
         maxHeight,
       });
     } else {
-      const maxHeight = Math.min(520, Math.max(180, spaceAbove));
+      const maxHeight = Math.min(800, Math.max(180, spaceAbove));
       setPosition({
         top: undefined,
         bottom: window.innerHeight - rect.top + OFFSET,
