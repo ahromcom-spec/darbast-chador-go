@@ -5,7 +5,6 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight, Image as ImageIcon, Play, X, ZoomIn, Download, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CentralizedVideoPlayer } from './CentralizedVideoPlayer';
 
 export interface MediaItem {
   id: string;
@@ -285,47 +284,62 @@ export const MediaGallery = ({
 
   // Fetch signed URLs for all media
   useEffect(() => {
+    let cancelled = false;
+
     const fetchUrls = async () => {
+      setLoading(true);
+
       if (!media || media.length === 0) {
-        setLoading(false);
+        if (!cancelled) {
+          setMediaUrls({});
+          setLoading(false);
+        }
         return;
       }
 
-      const urls: Record<string, string> = {};
-      
-      for (const item of media) {
-        try {
-          // If URL is already provided, use it
-          if (item.url) {
-            urls[item.id] = item.url;
-            continue;
-          }
+      const results = await Promise.all(
+        media.map(async (item) => {
+          try {
+            // If URL is already provided, use it
+            if (item.url) {
+              return [item.id, item.url] as const;
+            }
 
-          // Try to get signed URL first (works better for videos)
-          const { data: signedData, error: signedError } = await supabase.storage
-            .from(bucket)
-            .createSignedUrl(item.file_path, 3600); // 1 hour validity
-          
-          if (signedData?.signedUrl && !signedError) {
-            urls[item.id] = signedData.signedUrl;
-          } else {
+            // Try to get signed URL first (works better for private buckets + videos)
+            const { data: signedData, error: signedError } = await supabase.storage
+              .from(bucket)
+              .createSignedUrl(item.file_path, 3600); // 1 hour validity
+
+            if (signedData?.signedUrl && !signedError) {
+              return [item.id, signedData.signedUrl] as const;
+            }
+
             // Fallback to public URL
-            const { data } = supabase.storage.from(bucket).getPublicUrl(item.file_path);
-            urls[item.id] = data.publicUrl;
+            const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(item.file_path);
+            return [item.id, publicData.publicUrl] as const;
+          } catch (err) {
+            console.error('Error getting URL for', item.file_path, err);
+            const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(item.file_path);
+            return [item.id, publicData.publicUrl] as const;
           }
-        } catch (err) {
-          console.error('Error getting URL for', item.file_path, err);
-          // Fallback to public URL
-          const { data } = supabase.storage.from(bucket).getPublicUrl(item.file_path);
-          urls[item.id] = data.publicUrl;
-        }
+        })
+      );
+
+      if (cancelled) return;
+
+      const urls: Record<string, string> = {};
+      for (const [id, url] of results) {
+        urls[id] = url;
       }
-      
+
       setMediaUrls(urls);
       setLoading(false);
     };
-    
+
     fetchUrls();
+    return () => {
+      cancelled = true;
+    };
   }, [media, bucket]);
 
   const getMediaUrl = (item: MediaItem) => {
@@ -361,18 +375,18 @@ export const MediaGallery = ({
             return (
               <div 
                 key={item.id} 
-                className="relative aspect-video rounded-lg overflow-hidden border bg-black/5 group cursor-pointer"
+                className="relative aspect-video rounded-lg overflow-hidden border bg-muted/30 group cursor-pointer"
                 onClick={() => setFullscreenMedia(item)}
               >
                 {isVideo ? (
-                  <CentralizedVideoPlayer
-                    src={url}
-                    filePath={item.file_path}
-                    bucket={bucket}
-                    className="w-full h-full"
-                    showControls={false}
-                    muted
-                  />
+                  <div className="w-full h-full flex items-center justify-center bg-muted">
+                    <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                      <div className="w-12 h-12 rounded-full bg-background/70 border flex items-center justify-center">
+                        <Play className="h-6 w-6 text-primary" fill="currentColor" />
+                      </div>
+                      <span className="text-xs">ویدیو</span>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <img
@@ -406,13 +420,10 @@ export const MediaGallery = ({
               </button>
               
               {fullscreenMedia && isMediaVideo(fullscreenMedia) ? (
-                <CentralizedVideoPlayer
+                <VideoPlayer
                   src={getMediaUrl(fullscreenMedia)}
-                  filePath={fullscreenMedia.file_path}
-                  bucket={bucket}
                   className="w-full max-h-[80vh]"
                   showControls
-                  autoPlay
                 />
               ) : fullscreenMedia && (
                 <img
@@ -441,10 +452,8 @@ export const MediaGallery = ({
       
       <div className="relative bg-black/5 rounded-lg overflow-hidden">
         {isCurrentVideo ? (
-          <CentralizedVideoPlayer
+          <VideoPlayer
             src={getMediaUrl(currentMedia)}
-            filePath={currentMedia.file_path}
-            bucket={bucket}
             className="w-full max-h-64"
             showControls
           />
