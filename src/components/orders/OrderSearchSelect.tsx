@@ -22,27 +22,32 @@ interface OrderSearchSelectProps {
   value: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
+  /**
+   * حالت فشرده برای لیست‌های پرتعداد (مثل گزارش روزانه)
+   * تا تعداد بیشتری سفارش همزمان قابل مشاهده باشد.
+   */
+  dense?: boolean;
 }
 
 export function OrderSearchSelect({
   orders,
   value,
   onValueChange,
-  placeholder = 'انتخاب سفارش'
+  placeholder = 'انتخاب سفارش',
+  dense = false,
 }: OrderSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const isMobile = useIsMobile();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const portalRootRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [position, setPosition] = useState<{ left: number; width: number; maxHeight: number; top?: number; bottom?: number }>({
     top: 0,
     bottom: undefined,
     left: 0,
     width: 0,
-    maxHeight: 800,
+    maxHeight: dense ? 900 : 800,
   });
 
   const selectedOrder = orders.find(o => o.id === value);
@@ -90,54 +95,10 @@ export function OrderSearchSelect({
     const VIEWPORT_MARGIN = 8;
     const OFFSET = 4;
 
-    const boundaryEl = triggerEl.closest('[data-dropdown-boundary]') as HTMLElement | null;
-    portalRootRef.current = boundaryEl;
-
     const isRTL =
       document.documentElement.dir === 'rtl' || !!triggerEl.closest('[dir="rtl"]');
 
-    // If we're inside a Daily Report "side box" (boundary), position *inside that box*.
-    // This avoids CSS `zoom` coordinate issues at 115%.
-    if (boundaryEl) {
-      const b = boundaryEl.getBoundingClientRect();
-
-      const availableWidth = Math.max(220, b.width - VIEWPORT_MARGIN * 2);
-      const width = Math.min(Math.max(rect.width, 350), availableWidth);
-
-      let left = isRTL ? rect.right - b.left - width : rect.left - b.left;
-      left = Math.max(
-        VIEWPORT_MARGIN,
-        Math.min(left, b.width - VIEWPORT_MARGIN - width),
-      );
-
-      const spaceAbove = rect.top - b.top - OFFSET - VIEWPORT_MARGIN;
-      const spaceBelow = b.bottom - rect.bottom - OFFSET - VIEWPORT_MARGIN;
-      const openBelow = spaceBelow >= 240 || spaceBelow >= spaceAbove;
-
-      if (openBelow) {
-        const maxHeight = Math.min(800, Math.max(180, spaceBelow));
-        setPosition({
-          top: rect.bottom - b.top + OFFSET,
-          bottom: undefined,
-          left,
-          width,
-          maxHeight,
-        });
-      } else {
-        const maxHeight = Math.min(800, Math.max(180, spaceAbove));
-        setPosition({
-          top: undefined,
-          bottom: b.bottom - rect.top + OFFSET,
-          left,
-          width,
-          maxHeight,
-        });
-      }
-
-      return;
-    }
-
-    // Fallback: fixed to viewport (other pages)
+    // Fixed to viewport: avoids clipping by containers and allows taller dropdowns.
     const boundLeft = VIEWPORT_MARGIN;
     const boundRight = window.innerWidth - VIEWPORT_MARGIN;
     const boundTop = VIEWPORT_MARGIN;
@@ -151,10 +112,15 @@ export function OrderSearchSelect({
 
     const spaceAbove = rect.top - boundTop - OFFSET;
     const spaceBelow = boundBottom - rect.bottom - OFFSET;
-    const openBelow = spaceBelow >= 240 || spaceBelow >= spaceAbove;
+
+    const MIN_PANEL_HEIGHT = dense ? 520 : 240;
+    const MAX_PANEL_HEIGHT = dense ? 900 : 800;
+
+    // Prefer the side that can show more items (especially in dense mode)
+    const openBelow = spaceBelow >= MIN_PANEL_HEIGHT || spaceBelow >= spaceAbove;
 
     if (openBelow) {
-      const maxHeight = Math.min(800, Math.max(180, spaceBelow));
+      const maxHeight = Math.min(MAX_PANEL_HEIGHT, Math.max(180, spaceBelow));
       setPosition({
         top: rect.bottom + OFFSET,
         bottom: undefined,
@@ -163,7 +129,7 @@ export function OrderSearchSelect({
         maxHeight,
       });
     } else {
-      const maxHeight = Math.min(800, Math.max(180, spaceAbove));
+      const maxHeight = Math.min(MAX_PANEL_HEIGHT, Math.max(180, spaceAbove));
       setPosition({
         top: undefined,
         bottom: window.innerHeight - rect.top + OFFSET,
@@ -242,7 +208,7 @@ export function OrderSearchSelect({
         role="combobox"
         aria-expanded={open}
         onClick={handleToggle}
-        className="w-full justify-between bg-white/50 hover:bg-white/70 text-right min-w-[200px]"
+        className="w-full justify-between bg-background hover:bg-accent/40 text-right min-w-[200px]"
       >
         <span className="truncate flex-1 text-right">
           {selectedOrder
@@ -263,15 +229,13 @@ export function OrderSearchSelect({
         createPortal(
           <div
             ref={dropdownRef}
-            className={(portalRootRef.current
-              ? 'absolute'
-              : 'fixed') + ' bg-background border rounded-lg shadow-xl overflow-hidden'}
+            className="fixed bg-popover text-popover-foreground border rounded-lg shadow-xl overflow-hidden"
             style={{
               top: position.top,
               bottom: position.bottom,
               left: position.left,
               width: position.width,
-              zIndex: 99999,
+              zIndex: 300000,
               maxHeight: position.maxHeight,
             }}
             dir="rtl"
@@ -296,42 +260,76 @@ export function OrderSearchSelect({
                 </div>
               ) : (
                 <div className="p-1 bg-background">
-                  {filteredOrders.map((order) => (
-                    <button
-                      key={order.id}
-                      onClick={() => handleSelect(order.id)}
-                      className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors ${
-                        value === order.id ? 'bg-amber-100 dark:bg-amber-900/30' : ''
-                      }`}
-                    >
-                      <div className="font-medium">
-                        <span className="text-amber-600 font-bold">{order.code}</span>
-                        {' - '}
-                        {order.customer_name || 'بدون نام'}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                        {order.subcategory_name && (
-                          <span className="text-blue-600 ml-2">{order.subcategory_name}</span>
+                  {filteredOrders.map((order) => {
+                    const isSelected = value === order.id;
+
+                    return (
+                      <button
+                        key={order.id}
+                        onClick={() => handleSelect(order.id)}
+                        className={
+                          `w-full text-right rounded-md transition-colors hover:bg-accent ` +
+                          (dense ? 'px-3 py-1.5 text-xs' : 'px-3 py-2 text-sm') +
+                          (isSelected ? ' bg-accent' : '')
+                        }
+                      >
+                        <div className={dense ? 'flex items-center gap-2' : 'font-medium'}>
+                          <span className="font-bold text-primary tabular-nums">{order.code}</span>
+                          <span className={dense ? 'truncate font-medium' : ''}>
+                            {dense ? (order.customer_name || 'بدون نام') : (
+                              <>
+                                {' - '}
+                                {order.customer_name || 'بدون نام'}
+                              </>
+                            )}
+                          </span>
+                        </div>
+
+                        <div className={dense ? 'text-[11px] text-muted-foreground mt-0.5 line-clamp-1' : 'text-xs text-muted-foreground mt-0.5 line-clamp-1'}>
+                          {order.subcategory_name && (
+                            <span className={dense ? 'text-foreground/80 ml-1' : 'text-foreground/80 ml-2'}>
+                              {order.subcategory_name}
+                              {dense ? ' • ' : ''}
+                            </span>
+                          )}
+                          {order.address}
+                        </div>
+
+                        {dense ? (
+                          <>
+                            {order.activity_description && (
+                              <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                                {order.activity_description}
+                              </div>
+                            )}
+                            {order.customer_phone && (
+                              <div className="text-[11px] text-muted-foreground mt-0.5">
+                                {order.customer_phone}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {order.activity_description && (
+                              <div className="text-xs text-muted-foreground mt-1 p-1.5 bg-muted rounded-md line-clamp-2 border">
+                                <span className="font-medium">شرح محل و فعالیت:</span> {order.activity_description}
+                              </div>
+                            )}
+                            {order.customer_phone && (
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {order.customer_phone}
+                              </div>
+                            )}
+                          </>
                         )}
-                        {order.address}
-                      </div>
-                      {order.activity_description && (
-                        <div className="text-xs text-green-700 dark:text-green-400 mt-1 p-1.5 bg-green-50 dark:bg-green-900/30 rounded-md line-clamp-2 border border-green-200 dark:border-green-800">
-                          <span className="font-medium">شرح محل و فعالیت:</span> {order.activity_description}
-                        </div>
-                      )}
-                      {order.customer_phone && (
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {order.customer_phone}
-                        </div>
-                      )}
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </ScrollArea>
           </div>,
-          portalRootRef.current ?? document.body,
+          document.body,
         )}
     </div>
   );
