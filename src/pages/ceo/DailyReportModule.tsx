@@ -2444,16 +2444,80 @@ export default function DailyReportModule() {
   };
 
   // ذخیره گزارش در ماژول مادر - هر ردیف به گزارش اصلی‌اش ذخیره می‌شود
+  // ردیف‌های جدید (بدون source_daily_report_id) به گزارش خود کاربر فعلی اضافه می‌شوند
   const saveParentModuleReport = async (dateStr: string) => {
     if (!user) return;
 
+    // ابتدا مطمئن شویم که گزارش خود کاربر وجود دارد (برای ردیف‌های جدید)
+    let ownReportId = existingReportId;
+    
+    // اگر گزارش خود کاربر وجود ندارد، ایجاد کن
+    if (!ownReportId) {
+      const { data: existingCheck } = await supabase
+        .from('daily_reports')
+        .select('id')
+        .eq('report_date', dateStr)
+        .eq('created_by', user.id)
+        .eq('module_key', activeModuleKey)
+        .maybeSingle();
+
+      if (existingCheck?.id) {
+        ownReportId = existingCheck.id;
+        setExistingReportId(ownReportId);
+      } else {
+        // ایجاد گزارش جدید برای کاربر فعلی
+        const { data: newReport, error: createError } = await supabase
+          .from('daily_reports')
+          .insert({
+            report_date: dateStr,
+            created_by: user.id,
+            notes: dailyNotes || null,
+            module_key: activeModuleKey,
+            updated_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+
+        if (createError) {
+          if (createError.code === '23505') {
+            const { data: retry } = await supabase
+              .from('daily_reports')
+              .select('id')
+              .eq('report_date', dateStr)
+              .eq('created_by', user.id)
+              .eq('module_key', activeModuleKey)
+              .maybeSingle();
+            if (retry?.id) {
+              ownReportId = retry.id;
+              setExistingReportId(ownReportId);
+            }
+          } else {
+            throw createError;
+          }
+        } else {
+          ownReportId = newReport.id;
+          setExistingReportId(ownReportId);
+        }
+      }
+    }
+
+    // به‌روزرسانی توضیحات گزارش خود کاربر
+    if (ownReportId) {
+      await supabase
+        .from('daily_reports')
+        .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
+        .eq('id', ownReportId);
+    }
+
     // گروه‌بندی ردیف‌ها بر اساس daily_report_id
+    // ردیف‌های بدون source_daily_report_id به گزارش خود کاربر فعلی اضافه می‌شوند
     const ordersByReportId = new Map<string, OrderReportRow[]>();
     const staffByReportId = new Map<string, StaffReportRow[]>();
 
     for (const order of orderReports) {
       if (!order.order_id) continue;
-      const reportId = order.source_daily_report_id;
+      // اگر source_daily_report_id ندارد، به گزارش خود کاربر اضافه کن
+      const reportId = order.source_daily_report_id || ownReportId;
       if (!reportId) continue;
       
       if (!ordersByReportId.has(reportId)) {
@@ -2463,11 +2527,13 @@ export default function DailyReportModule() {
     }
 
     for (const staff of staffReports) {
-      const reportId = staff.source_daily_report_id;
+      // اگر source_daily_report_id ندارد، به گزارش خود کاربر اضافه کن
+      const reportId = staff.source_daily_report_id || ownReportId;
       if (!reportId) continue;
       
       // فقط ردیف‌های با داده معتبر
       const hasData = staff.is_cash_box ||
+        staff.is_company_expense ||
         Boolean(staff.staff_user_id) ||
         Boolean(staff.staff_name?.trim()) ||
         (staff.overtime_hours ?? 0) > 0 ||
@@ -2493,18 +2559,18 @@ export default function DailyReportModule() {
       const staffForReport = staffByReportId.get(reportId) || [];
 
       // به‌روزرسانی سفارشات - حذف قبلی‌ها و درج جدید
+      // ابتدا سفارشات موجود این گزارش را حذف کن
+      const { error: deleteOrderError } = await supabase
+        .from('daily_report_orders')
+        .delete()
+        .eq('daily_report_id', reportId);
+
+      if (deleteOrderError) {
+        console.error('Error deleting order reports for', reportId, ':', deleteOrderError);
+      }
+
+      // درج سفارشات جدید
       if (ordersForReport.length > 0) {
-        // ابتدا سفارشات موجود این گزارش را حذف کن
-        const { error: deleteOrderError } = await supabase
-          .from('daily_report_orders')
-          .delete()
-          .eq('daily_report_id', reportId);
-
-        if (deleteOrderError) {
-          console.error('Error deleting order reports for', reportId, ':', deleteOrderError);
-        }
-
-        // درج سفارشات جدید
         const { error: orderError } = await supabase
           .from('daily_report_orders')
           .insert(ordersForReport.map(r => ({
@@ -2523,18 +2589,18 @@ export default function DailyReportModule() {
       }
 
       // به‌روزرسانی نیروها - حذف قبلی‌ها و درج جدید
+      // ابتدا نیروهای موجود این گزارش را حذف کن
+      const { error: deleteStaffError } = await supabase
+        .from('daily_report_staff')
+        .delete()
+        .eq('daily_report_id', reportId);
+
+      if (deleteStaffError) {
+        console.error('Error deleting staff reports for', reportId, ':', deleteStaffError);
+      }
+
+      // درج نیروهای جدید
       if (staffForReport.length > 0) {
-        // ابتدا نیروهای موجود این گزارش را حذف کن
-        const { error: deleteStaffError } = await supabase
-          .from('daily_report_staff')
-          .delete()
-          .eq('daily_report_id', reportId);
-
-        if (deleteStaffError) {
-          console.error('Error deleting staff reports for', reportId, ':', deleteStaffError);
-        }
-
-        // درج نیروهای جدید
         const staffPayload = staffForReport.map((s) => ({
           daily_report_id: reportId,
           staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
