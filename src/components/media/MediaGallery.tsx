@@ -24,6 +24,11 @@ interface MediaGalleryProps {
   className?: string;
   bucket?: string;
   layout?: 'grid' | 'slider';
+  /**
+   * وقتی گالری داخل یک پاپ‌آپ/دیالوگ دیگر رندر می‌شود، باز شدن Dialog تو در تو
+   * می‌تواند باعث سختی تعامل/پخش شود. با این گزینه نمایش تمام‌صفحه غیرفعال می‌شود.
+   */
+  disableFullscreen?: boolean;
 }
 
 // Helper function to check if media is video
@@ -275,10 +280,11 @@ export const MediaGallery = ({
   emptyMessage = "هنوز تصویر یا ویدیویی ثبت نشده است",
   className,
   bucket = 'project-media',
-  layout = 'grid'
+  layout = 'grid',
+  disableFullscreen = false,
 }: MediaGalleryProps) => {
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
+  const [isFetchingUrls, setIsFetchingUrls] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [fullscreenMedia, setFullscreenMedia] = useState<MediaItem | null>(null);
 
@@ -286,73 +292,108 @@ export const MediaGallery = ({
   useEffect(() => {
     let cancelled = false;
 
-    const fetchUrls = async () => {
-      setLoading(true);
-
+    const resolveUrls = async () => {
       if (!media || media.length === 0) {
         if (!cancelled) {
           setMediaUrls({});
-          setLoading(false);
+          setIsFetchingUrls(false);
         }
         return;
       }
 
-      const results = await Promise.all(
-        media.map(async (item) => {
-          try {
-            // If URL is already provided, use it
-            if (item.url) {
-              return [item.id, item.url] as const;
-            }
+      // Only resolve URLs that are not already available
+      const itemsNeedingUrl = media.filter((item) => !item.url && !mediaUrls[item.id]);
+      if (itemsNeedingUrl.length === 0) return;
 
-            // Try to get signed URL first (works better for private buckets + videos)
-            const { data: signedData, error: signedError } = await supabase.storage
-              .from(bucket)
-              .createSignedUrl(item.file_path, 3600); // 1 hour validity
+      setIsFetchingUrls(true);
 
-            if (signedData?.signedUrl && !signedError) {
-              return [item.id, signedData.signedUrl] as const;
-            }
+      try {
+        const paths = itemsNeedingUrl.map((i) => i.file_path);
 
-            // Fallback to public URL
-            const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(item.file_path);
-            return [item.id, publicData.publicUrl] as const;
-          } catch (err) {
-            console.error('Error getting URL for', item.file_path, err);
-            const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(item.file_path);
-            return [item.id, publicData.publicUrl] as const;
+        // 1) Fast path: batch signed URLs (one request)
+        const { data: signedList, error: signedError } = await supabase.storage
+          .from(bucket)
+          .createSignedUrls(paths, 3600);
+
+        const signedByPath = new Map<string, string>();
+        if (!signedError && signedList) {
+          for (const row of signedList as any[]) {
+            if (row?.path && row?.signedUrl) signedByPath.set(row.path, row.signedUrl);
           }
-        })
-      );
+        }
 
-      if (cancelled) return;
+        // 2) Fallback: per-item signed URL (keeps private buckets working)
+        let perItemFallback: Array<readonly [string, string]> | null = null;
+        if (signedError || signedByPath.size === 0) {
+          perItemFallback = await Promise.all(
+            itemsNeedingUrl.map(async (item) => {
+              try {
+                const { data: signedData, error } = await supabase.storage
+                  .from(bucket)
+                  .createSignedUrl(item.file_path, 3600);
 
-      const urls: Record<string, string> = {};
-      for (const [id, url] of results) {
-        urls[id] = url;
+                if (signedData?.signedUrl && !error) {
+                  return [item.id, signedData.signedUrl] as const;
+                }
+              } catch (err) {
+                console.error('Error getting signed URL for', item.file_path, err);
+              }
+
+              const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(item.file_path);
+              return [item.id, publicData.publicUrl] as const;
+            })
+          );
+        }
+
+        const next: Record<string, string> = {};
+
+        if (perItemFallback) {
+          for (const [id, url] of perItemFallback) next[id] = url;
+        } else {
+          for (const item of itemsNeedingUrl) {
+            const signed = signedByPath.get(item.file_path);
+            if (signed) {
+              next[item.id] = signed;
+              continue;
+            }
+            const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(item.file_path);
+            next[item.id] = publicData.publicUrl;
+          }
+        }
+
+        if (!cancelled) {
+          setMediaUrls((prev) => ({ ...prev, ...next }));
+        }
+      } catch (err) {
+        console.error('Error getting media URLs:', err);
+
+        // Best-effort fallback: public URLs
+        const next: Record<string, string> = {};
+        for (const item of itemsNeedingUrl) {
+          const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(item.file_path);
+          next[item.id] = publicData.publicUrl;
+        }
+
+        if (!cancelled) {
+          setMediaUrls((prev) => ({ ...prev, ...next }));
+        }
+      } finally {
+        if (!cancelled) setIsFetchingUrls(false);
       }
-
-      setMediaUrls(urls);
-      setLoading(false);
     };
 
-    fetchUrls();
+    resolveUrls();
     return () => {
       cancelled = true;
     };
-  }, [media, bucket]);
+  }, [media, bucket, mediaUrls]);
 
   const getMediaUrl = (item: MediaItem) => {
     return item.url || mediaUrls[item.id] || '';
   };
 
-  if (loading) {
-    return (
-      <div className={cn("flex justify-center p-4", className)}>
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  // We intentionally don't block rendering while URLs are being resolved.
+  // Unresolved items render lightweight placeholders; this keeps dialogs responsive.
 
   if (!media || media.length === 0) {
     return (
@@ -371,12 +412,19 @@ export const MediaGallery = ({
           {media.map((item) => {
             const url = getMediaUrl(item);
             const isVideo = isMediaVideo(item);
+            const canOpenFullscreen = !disableFullscreen && Boolean(url);
             
             return (
               <div 
                 key={item.id} 
-                className="relative aspect-video rounded-lg overflow-hidden border bg-muted/30 group cursor-pointer"
-                onClick={() => setFullscreenMedia(item)}
+                className={cn(
+                  "relative aspect-video rounded-lg overflow-hidden border bg-muted/30 group",
+                  canOpenFullscreen && "cursor-pointer"
+                )}
+                onClick={() => {
+                  if (!canOpenFullscreen) return;
+                  setFullscreenMedia(item);
+                }}
               >
                 {isVideo ? (
                   <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -387,7 +435,7 @@ export const MediaGallery = ({
                       <span className="text-xs">ویدیو</span>
                     </div>
                   </div>
-                ) : (
+                ) : url ? (
                   <>
                     <img
                       src={url}
@@ -399,6 +447,10 @@ export const MediaGallery = ({
                       <ZoomIn className="h-6 w-6 text-white drop-shadow-lg" />
                     </div>
                   </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-muted">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                  </div>
                 )}
               </div>
             );
@@ -406,35 +458,37 @@ export const MediaGallery = ({
         </div>
 
         {/* Fullscreen Modal */}
-        <Dialog open={!!fullscreenMedia} onOpenChange={() => setFullscreenMedia(null)}>
-          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-0 overflow-hidden">
-            <DialogHeader className="sr-only">
-              <DialogTitle>نمایش مدیا</DialogTitle>
-            </DialogHeader>
-            <div className="relative bg-black min-h-[300px] flex items-center justify-center">
-              <button
-                onClick={() => setFullscreenMedia(null)}
-                className="absolute top-4 right-4 z-10 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              
-              {fullscreenMedia && isMediaVideo(fullscreenMedia) ? (
-                <VideoPlayer
-                  src={getMediaUrl(fullscreenMedia)}
-                  className="w-full max-h-[80vh]"
-                  showControls
-                />
-              ) : fullscreenMedia && (
-                <img
-                  src={getMediaUrl(fullscreenMedia)}
-                  alt="تصویر بزرگ"
-                  className="max-w-full max-h-[80vh] object-contain"
-                />
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        {!disableFullscreen && (
+          <Dialog open={!!fullscreenMedia} onOpenChange={() => setFullscreenMedia(null)}>
+            <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-0 overflow-hidden">
+              <DialogHeader className="sr-only">
+                <DialogTitle>نمایش مدیا</DialogTitle>
+              </DialogHeader>
+              <div className="relative bg-black min-h-[300px] flex items-center justify-center">
+                <button
+                  onClick={() => setFullscreenMedia(null)}
+                  className="absolute top-4 right-4 z-10 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                
+                {fullscreenMedia && isMediaVideo(fullscreenMedia) ? (
+                  <VideoPlayer
+                    src={getMediaUrl(fullscreenMedia)}
+                    className="w-full max-h-[80vh]"
+                    showControls
+                  />
+                ) : fullscreenMedia && (
+                  <img
+                    src={getMediaUrl(fullscreenMedia)}
+                    alt="تصویر بزرگ"
+                    className="max-w-full max-h-[80vh] object-contain"
+                  />
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </>
     );
   }
@@ -442,28 +496,47 @@ export const MediaGallery = ({
   // Slider Layout
   const currentMedia = media[currentIndex];
   const isCurrentVideo = isMediaVideo(currentMedia);
+  const currentMediaUrl = getMediaUrl(currentMedia);
 
   return (
     <div className={cn("space-y-2", className)}>
       <Label className="text-xs text-muted-foreground flex items-center gap-2">
         <ImageIcon className="h-3 w-3" />
         تصاویر و ویدیوها ({media.length})
+        {isFetchingUrls && (
+          <span className="inline-flex items-center">
+            <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
+          </span>
+        )}
       </Label>
       
       <div className="relative bg-black/5 rounded-lg overflow-hidden">
         {isCurrentVideo ? (
-          <VideoPlayer
-            src={getMediaUrl(currentMedia)}
-            className="w-full max-h-64"
-            showControls
+          currentMediaUrl ? (
+            <VideoPlayer
+              src={currentMediaUrl}
+              className="w-full max-h-64"
+              showControls
+            />
+          ) : (
+            <div className="w-full max-h-64 h-64 flex items-center justify-center bg-muted/30">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+            </div>
+          )
+        ) : currentMediaUrl ? (
+          <img
+            src={currentMediaUrl}
+            alt={`تصویر ${currentIndex + 1}`}
+            className={cn(
+              "w-full max-h-64 object-contain",
+              !disableFullscreen && "cursor-pointer"
+            )}
+            onClick={!disableFullscreen ? () => setFullscreenMedia(currentMedia) : undefined}
           />
         ) : (
-          <img
-            src={getMediaUrl(currentMedia)}
-            alt={`تصویر ${currentIndex + 1}`}
-            className="w-full max-h-64 object-contain cursor-pointer"
-            onClick={() => setFullscreenMedia(currentMedia)}
-          />
+          <div className="w-full max-h-64 h-64 flex items-center justify-center bg-muted/30">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+          </div>
         )}
         
         {media.length > 1 && (
@@ -526,36 +599,38 @@ export const MediaGallery = ({
       )}
 
       {/* Fullscreen Modal */}
-      <Dialog open={!!fullscreenMedia} onOpenChange={() => setFullscreenMedia(null)}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-0 overflow-hidden">
-          <DialogHeader className="sr-only">
-            <DialogTitle>نمایش مدیا</DialogTitle>
-          </DialogHeader>
-          <div className="relative bg-black min-h-[300px] flex items-center justify-center">
-            <button
-              onClick={() => setFullscreenMedia(null)}
-              className="absolute top-4 right-4 z-10 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            
-            {fullscreenMedia && isMediaVideo(fullscreenMedia) ? (
-              <VideoPlayer
-                src={getMediaUrl(fullscreenMedia)}
-                className="w-full max-h-[80vh]"
-                showControls
-                autoPlay
-              />
-            ) : fullscreenMedia && (
-              <img
-                src={getMediaUrl(fullscreenMedia)}
-                alt="تصویر بزرگ"
-                className="max-w-full max-h-[80vh] object-contain"
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {!disableFullscreen && (
+        <Dialog open={!!fullscreenMedia} onOpenChange={() => setFullscreenMedia(null)}>
+          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-0 overflow-hidden">
+            <DialogHeader className="sr-only">
+              <DialogTitle>نمایش مدیا</DialogTitle>
+            </DialogHeader>
+            <div className="relative bg-black min-h-[300px] flex items-center justify-center">
+              <button
+                onClick={() => setFullscreenMedia(null)}
+                className="absolute top-4 right-4 z-10 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              
+              {fullscreenMedia && isMediaVideo(fullscreenMedia) ? (
+                <VideoPlayer
+                  src={getMediaUrl(fullscreenMedia)}
+                  className="w-full max-h-[80vh]"
+                  showControls
+                  autoPlay
+                />
+              ) : fullscreenMedia && (
+                <img
+                  src={getMediaUrl(fullscreenMedia)}
+                  alt="تصویر بزرگ"
+                  className="max-w-full max-h-[80vh] object-contain"
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

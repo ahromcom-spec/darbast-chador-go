@@ -5171,7 +5171,8 @@ export default function DailyReportModule() {
                           mime_type: m.mime_type,
                           url: m.url
                         } as MediaItem))}
-                        layout="grid"
+                        layout="slider"
+                        disableFullscreen
                         emptyMessage="هنوز تصویر یا ویدیویی برای این سفارش ثبت نشده است"
                       />
                     </div>
