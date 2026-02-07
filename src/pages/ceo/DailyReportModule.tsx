@@ -2238,7 +2238,23 @@ export default function DailyReportModule() {
 
     const prev = orderReportsRef.current;
     const updated = [...prev];
-    if (!updated[index]) return;
+
+    const makeEmptyRow = (i: number): OrderReportRow => ({
+      order_id: '',
+      activity_description: '',
+      service_details: '',
+      team_name: '',
+      notes: '',
+      row_color: ROW_COLORS[i % ROW_COLORS.length].value,
+    });
+
+    // اگر UI در حالت fallback یک ردیف نشان می‌دهد ولی state هنوز خالی/کم‌طول است،
+    // اینجا ردیف واقعی می‌سازیم تا انتخاب سفارش ثبت شود.
+    if (!updated[index]) {
+      while (updated.length <= index) {
+        updated.push(makeEmptyRow(updated.length));
+      }
+    }
 
     updated[index] = { ...updated[index], [field]: value };
 
