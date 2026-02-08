@@ -362,12 +362,31 @@ export default function DailyReportModule() {
   const activeModuleKey = searchParams.get('moduleKey') || 'daily_report';
 
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, DEFAULT_TITLE, DEFAULT_DESCRIPTION);
-  
+
   // آیا این ماژول تجمیعی است؟ (نمایش همه گزارشات از همه ماژول‌ها)
   const isAggregated = isAggregatedModule(activeModuleKey, moduleName);
-  
+
   const { user } = useAuth();
-  
+  const userId = user?.id ?? null;
+
+  // جلوگیری از Pull-to-refresh روی این فرم (Android Chrome/PWA)
+  // تا صفحه ناخواسته رفرش نشود و داده‌های ذخیره‌نشده پاک نشوند.
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+
+    const prevHtml = (html.style as any).overscrollBehaviorY as string;
+    const prevBody = (body.style as any).overscrollBehaviorY as string;
+
+    (html.style as any).overscrollBehaviorY = 'contain';
+    (body.style as any).overscrollBehaviorY = 'contain';
+
+    return () => {
+      (html.style as any).overscrollBehaviorY = prevHtml || '';
+      (body.style as any).overscrollBehaviorY = prevBody || '';
+    };
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -452,6 +471,9 @@ export default function DailyReportModule() {
   // جلوگیری از ذخیره تکراری وقتی داده تغییری نکرده
   const lastAutoSaveHashRef = useRef<string>('');
 
+  // جلوگیری از ریست شدن ناخواسته فرم (مثلاً به‌علت refresh سشن/توکن)
+  const lastLoadKeyRef = useRef<string>('');
+
   // Prevent stale state on fast actions (حذف سریع و سپس ذخیره)
   const orderReportsRef = useRef<OrderReportRow[]>([]);
 
@@ -488,8 +510,8 @@ export default function DailyReportModule() {
   // LocalStorage key for backup - includes module key for isolation
   const getLocalStorageKey = useCallback(() => {
     const dateStr = toLocalDateString(reportDate);
-    return `daily_report_backup_${user?.id}_${dateStr}_${activeModuleKey}`;
-  }, [reportDate, user, activeModuleKey]);
+    return `daily_report_backup_${userId ?? 'anon'}_${dateStr}_${activeModuleKey}`;
+  }, [reportDate, userId, activeModuleKey]);
 
   // Save to localStorage as backup
   const saveToLocalStorage = useCallback(() => {
@@ -554,22 +576,29 @@ export default function DailyReportModule() {
 
   useEffect(() => {
     // وقتی کاربر هنوز لود نشده باشد، fetchExistingReport اجرا نمی‌شود
-    // و بعد از login نیز دوباره اجرا نمی‌شد؛ بنابراین user را هم در dependency می‌آوریم.
-    if (user && reportDate) {
-      // ابتدا فرم را پاک کن تا داده‌های تاریخ قبلی نمایش داده نشود
-      setOrderReports([]);
-      setStaffReports([]);
-      setDailyNotes('');
-      setExistingReportId(null);
-      isInitialLoadRef.current = true;
-      // پاک کردن کش shouldShowAllUserReports برای محاسبه مجدد در تاریخ/ماژول جدید
-      cachedShowAllReportsRef.current = null;
-      // ریست کردن قفل‌ها
-      isFetchingReportRef.current = false;
-      lastFetchTimestampRef.current = 0;
-      fetchExistingReport();
-    }
-  }, [reportDate, user, activeModuleKey, isAggregated]);
+    // و بعد از login نیز دوباره اجرا نمی‌شد؛ بنابراین userId را در dependency می‌آوریم.
+    if (!userId || !reportDate) return;
+
+    const dateStr = toLocalDateString(reportDate);
+    const loadKey = `${userId}|${dateStr}|${activeModuleKey}`;
+
+    // جلوگیری از ریست شدن فرم به‌علت تغییرات دوره‌ای آبجکت user (refresh سشن/توکن)
+    if (lastLoadKeyRef.current === loadKey) return;
+    lastLoadKeyRef.current = loadKey;
+
+    // ابتدا فرم را پاک کن تا داده‌های تاریخ قبلی نمایش داده نشود
+    setOrderReports([]);
+    setStaffReports([]);
+    setDailyNotes('');
+    setExistingReportId(null);
+    isInitialLoadRef.current = true;
+    // پاک کردن کش shouldShowAllUserReports برای محاسبه مجدد در تاریخ/ماژول جدید
+    cachedShowAllReportsRef.current = null;
+    // ریست کردن قفل‌ها
+    isFetchingReportRef.current = false;
+    lastFetchTimestampRef.current = 0;
+    fetchExistingReport();
+  }, [reportDate, userId, activeModuleKey]);
 
   // Realtime subscription برای ماژول کلی یا ماژول مادر با کاربران اختصاص‌یافته:
   // وقتی گزارشی حذف شود، دوباره واکشی کن
