@@ -1368,7 +1368,10 @@ export default function ExecutiveOrders() {
             const amountNumber = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
             const hasPaymentAmount = Number.isFinite(amountNumber) && amountNumber > 0;
 
-            // برای درخواست کارشناسی: فقط وقتی قیمت ثبت شده باشد، اجازه تایید سفارش بده
+            const baseAmount = Number(order.payment_amount ?? 0);
+            const totalAmount = Number(order.total_price ?? 0) > 0 ? Number(order.total_price ?? 0) : baseAmount;
+            const addOnsAmount = Math.max(0, totalAmount - baseAmount);
+
             // (بدون نیاز به تایید مشتری - تایید خودکار انجام می‌شود)
             const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount);
 
@@ -1474,6 +1477,30 @@ export default function ExecutiveOrders() {
               </CardHeader>
               <CardContent className="space-y-4 transition-all duration-300 ease-in-out">
                 <Separator />
+
+                {/* Price summary (General Manager module only) */}
+                {!isExecutiveModule && totalAmount > 0 && (
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Banknote className="h-4 w-4" />
+                        <span>مبلغ کل سفارش</span>
+                      </div>
+                      <div className="text-sm font-bold" dir="ltr">
+                        {totalAmount.toLocaleString('fa-IR')} تومان
+                      </div>
+                    </div>
+                    {baseAmount > 0 && addOnsAmount > 0 && (
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        افزوده‌ها (تمدید/تعمیرات):{' '}
+                        <span className="font-medium" dir="ltr">
+                          {addOnsAmount.toLocaleString('fa-IR')}
+                        </span>{' '}
+                        تومان
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* دکمه‌های مدیریتی - جزئیات، انتقال، افزودن پرسنل */}
                 <div className="flex gap-2 flex-wrap">
