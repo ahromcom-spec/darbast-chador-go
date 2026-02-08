@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ImageIcon, ChevronLeft, ChevronRight, Ruler, FileText, Layers, User, Phone, MapPin, 
-  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench, Truck, Home, ExternalLink
+  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench, Truck, Home, ExternalLink, RefreshCw
 } from 'lucide-react';
 import { ManagerOrderInvoice } from './ManagerOrderInvoice';
 import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
@@ -23,6 +23,7 @@ import CallHistory from '@/components/calls/CallHistory';
 import OrderChat from './OrderChat';
 import { RepairRequestDialog } from './RepairRequestDialog';
 import { CollectionRequestDialog } from './CollectionRequestDialog';
+import { RenewalRequestDialog } from './RenewalRequestDialog';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { OrderCollaboratorsList } from './OrderCollaboratorsList';
 import { OrderTimeline } from './OrderTimeline';
@@ -90,6 +91,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const [saving, setSaving] = useState(false);
   const [repairDialogOpen, setRepairDialogOpen] = useState(false);
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
+  const [renewalDialogOpen, setRenewalDialogOpen] = useState(false);
   const [expertPricingEditOpen, setExpertPricingEditOpen] = useState(false);
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [orderApprovals, setOrderApprovals] = useState<Array<{ approver_role: string; approved_at: string | null; approver_user_id: string | null }>>([]);
@@ -956,9 +958,9 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       <Separator />
       <OrderChat orderId={order.id} orderStatus={order.status || 'pending'} />
 
-      {/* Repair & Collection Requests Section for Managers */}
+      {/* Repair, Collection & Renewal Requests Section for Managers */}
       <Separator />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Button 
           variant="outline" 
           className="gap-2"
@@ -977,6 +979,19 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           >
             <Calendar className="h-4 w-4" />
             درخواست جمع‌آوری
+          </Button>
+        )}
+        {/* دکمه تمدید سفارش - برای سفارش‌های اجرا شده یا در حال اجرا با تاریخ شروع کرایه */}
+        {(['in_progress', 'completed', 'paid'].includes(order.status || '') || order.rental_start_date) && (
+          <Button 
+            variant="outline" 
+            className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+            onClick={() => setRenewalDialogOpen(true)}
+            disabled={!order.rental_start_date}
+            title={!order.rental_start_date ? 'ابتدا تاریخ شروع کرایه را ثبت کنید' : 'درخواست تمدید سفارش برای ماه بعدی'}
+          >
+            <RefreshCw className="h-4 w-4" />
+            تمدید سفارش
           </Button>
         )}
       </div>
@@ -999,6 +1014,18 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         orderId={order.id}
         orderCode={order.code}
         customerId={order.customer_id || ''}
+      />
+
+      {/* Renewal Request Dialog - Manager Mode */}
+      <RenewalRequestDialog
+        open={renewalDialogOpen}
+        onOpenChange={setRenewalDialogOpen}
+        orderId={order.id}
+        orderCode={order.code}
+        customerId={order.customer_id || ''}
+        rentalStartDate={order.rental_start_date || null}
+        originalPrice={order.total_price || order.payment_amount || 0}
+        onRenewalComplete={onUpdate}
       />
 
       {/* Expert Pricing Edit Dialog */}
