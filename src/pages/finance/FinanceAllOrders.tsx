@@ -27,6 +27,7 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   payment_amount: number | null;
+  total_price: number | null;
   total_paid: number | null;
   notes: any;
 }
@@ -83,6 +84,7 @@ export default function FinanceAllOrders() {
           detailed_address,
           created_at,
           payment_amount,
+          total_price,
           total_paid,
           notes,
           customer_id
@@ -218,7 +220,8 @@ export default function FinanceAllOrders() {
           </Card>
         ) : (
           filteredOrders.map((order) => {
-            const totalAmount = order.payment_amount || 0;
+            // Use total_price (which includes renewals) if available, otherwise fall back to payment_amount
+            const totalAmount = order.total_price ?? order.payment_amount ?? 0;
             const totalPaid = order.total_paid || 0;
             const remaining = Math.max(0, totalAmount - totalPaid);
 
@@ -322,6 +325,7 @@ export default function FinanceAllOrders() {
                 created_at: selectedOrder.created_at,
                 notes: selectedOrder.notes,
                 payment_amount: selectedOrder.payment_amount,
+                total_price: selectedOrder.total_price,
                 total_paid: selectedOrder.total_paid
               }}
               onUpdate={fetchOrders}
