@@ -509,27 +509,54 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
         popupAnchor: [0, -14],
       });
 
-    const thumbIcon = (url: string, count: number) => {
+    const thumbIcon = (url: string, count: number, orderCode?: string) => {
       const safeUrl = escapeHtml(url);
       const badge = count > 1 ? `<div class="exec-order-marker__thumb-badge">${count}</div>` : '';
+      const labelHtml = orderCode ? `
+        <div class="exec-order-marker__label" style="
+          position:absolute;
+          bottom:100%;
+          left:50%;
+          transform:translateX(-50%);
+          background:linear-gradient(135deg, rgba(217,119,6,0.95) 0%, rgba(180,83,9,0.95) 100%);
+          color:white;
+          padding:3px 8px;
+          border-radius:6px;
+          font-family:Vazirmatn, sans-serif;
+          font-size:10px;
+          font-weight:700;
+          white-space:nowrap;
+          max-width:100px;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          text-align:center;
+          box-shadow:0 2px 8px rgba(0,0,0,0.3);
+          margin-bottom:4px;
+          z-index:10;
+          direction:rtl;
+        ">${escapeHtml(orderCode)}</div>
+      ` : '';
       return L.divIcon({
         className: 'exec-order-marker',
         html: `
-          <div class="exec-order-marker__thumb">
-            <img
-              src="${safeUrl}"
-              alt="عکس سفارش"
-              loading="lazy"
-              decoding="async"
-              style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;"
-            />
-            ${badge}
-            <div class="exec-order-marker__pin" aria-hidden="true"></div>
+          <div class="exec-order-marker__thumb" style="position:relative;display:flex;flex-direction:column;align-items:center;">
+            ${labelHtml}
+            <div style="position:relative;width:56px;height:56px;">
+              <img
+                src="${safeUrl}"
+                alt="عکس سفارش"
+                loading="lazy"
+                decoding="async"
+                style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;border-radius:8px;"
+              />
+              ${badge}
+              <div class="exec-order-marker__pin" aria-hidden="true"></div>
+            </div>
           </div>
         `,
-        iconSize: [56, 63],
-        iconAnchor: [28, 56],
-        popupAnchor: [0, -54],
+        iconSize: [56, 80],
+        iconAnchor: [28, 73],
+        popupAnchor: [0, -71],
       });
     };
 
@@ -635,26 +662,53 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
     };
 
     // آیکون پیش‌فرض برای سفارشات بدون عکس
-    const defaultThumbIcon = (count: number) => {
+    const defaultThumbIcon = (count: number, orderCode?: string) => {
       const badge = count > 1 ? `<div class="exec-order-marker__thumb-badge">${count}</div>` : '';
+      const labelHtml = orderCode ? `
+        <div class="exec-order-marker__label" style="
+          position:absolute;
+          bottom:100%;
+          left:50%;
+          transform:translateX(-50%);
+          background:linear-gradient(135deg, rgba(217,119,6,0.95) 0%, rgba(180,83,9,0.95) 100%);
+          color:white;
+          padding:3px 8px;
+          border-radius:6px;
+          font-family:Vazirmatn, sans-serif;
+          font-size:10px;
+          font-weight:700;
+          white-space:nowrap;
+          max-width:100px;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          text-align:center;
+          box-shadow:0 2px 8px rgba(0,0,0,0.3);
+          margin-bottom:4px;
+          z-index:10;
+          direction:rtl;
+        ">${escapeHtml(orderCode)}</div>
+      ` : '';
       return L.divIcon({
         className: 'exec-order-marker',
         html: `
-          <div class="exec-order-marker__thumb exec-order-marker__thumb--default">
-            <div class="exec-order-marker__default-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
+          <div class="exec-order-marker__thumb exec-order-marker__thumb--default" style="position:relative;display:flex;flex-direction:column;align-items:center;">
+            ${labelHtml}
+            <div style="position:relative;width:56px;height:56px;">
+              <div class="exec-order-marker__default-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </div>
+              ${badge}
+              <div class="exec-order-marker__pin" aria-hidden="true"></div>
             </div>
-            ${badge}
-            <div class="exec-order-marker__pin" aria-hidden="true"></div>
           </div>
         `,
-        iconSize: [56, 63],
-        iconAnchor: [28, 56],
-        popupAnchor: [0, -54],
+        iconSize: [56, 80],
+        iconAnchor: [28, 73],
+        popupAnchor: [0, -71],
       });
     };
 
@@ -664,11 +718,16 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
       // پیدا کردن اولین سفارش با عکس
       const orderWithImage = group.orders.find(o => o.first_image_url);
       const representative = orderWithImage || group.orders[0];
+      
+      // استخراج کد سفارش برای نمایش بالای مارکر
+      const orderLabel = count > 1 
+        ? `${count} سفارش` 
+        : representative.code;
 
       // همه مارکرها با عکس نمایش داده میشن
       const icon = representative.first_image_url
-        ? thumbIcon(representative.first_image_url, count)
-        : defaultThumbIcon(count);
+        ? thumbIcon(representative.first_image_url, count, orderLabel)
+        : defaultThumbIcon(count, orderLabel);
 
       const popupContent = `
         <div class="exec-popup" data-popup-id="${group.orders[0].id}">

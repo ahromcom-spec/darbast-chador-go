@@ -84,6 +84,11 @@ function OrderMarkers({ orders, onOrderClick }: { orders: OrderMarker[], onOrder
                 }`}
                 onClick={() => onOrderClick && onOrderClick(order.orderId)}
               >
+                {/* برچسب کد سفارش بالای کادر */}
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-md whitespace-nowrap">
+                  {hasMultiple ? `${order.count} سفارش` : order.code}
+                </div>
+                
                 {hasMultiple && (
                   <div className="font-bold text-amber-500 mb-1.5 flex items-center gap-1">
                     <Package className="w-3 h-3" />
