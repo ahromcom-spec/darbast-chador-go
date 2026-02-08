@@ -155,18 +155,23 @@ export default function ExpertPricingQueue() {
     const parsedNotes = parseOrderNotes(order.notes);
     const priceSetByManager = parsedNotes?.price_set_by_manager === true;
     const hasPaymentAmount = order.payment_amount && order.payment_amount > 0;
-    const customerConfirmed = parsedNotes?.customer_price_confirmed === true;
 
     if (!priceSetByManager && !hasPaymentAmount) {
       return { label: 'در انتظار تعیین قیمت', variant: 'destructive' as const, icon: AlertCircle };
     }
-    if (priceSetByManager && hasPaymentAmount && !customerConfirmed) {
-      return { label: 'در انتظار تایید مشتری', variant: 'secondary' as const, icon: DollarSign };
+    
+    // بعد از تعیین قیمت توسط کارشناس، سفارش مستقیماً به مرحله تایید مدیر می‌رود
+    if (order.status === 'pending') {
+      return { label: 'در انتظار تایید مدیران', variant: 'secondary' as const, icon: DollarSign };
     }
-    if (customerConfirmed) {
-      return { label: 'تایید شده توسط مشتری', variant: 'default' as const, icon: CheckCircle };
+    if (['approved', 'pending_execution'].includes(order.status)) {
+      return { label: 'تایید شده - در انتظار اجرا', variant: 'default' as const, icon: CheckCircle };
     }
-    return { label: 'نامشخص', variant: 'outline' as const, icon: AlertCircle };
+    if (['in_progress', 'completed', 'paid', 'closed'].includes(order.status)) {
+      return { label: 'در حال اجرا یا تکمیل شده', variant: 'default' as const, icon: CheckCircle };
+    }
+    
+    return { label: 'قیمت‌گذاری شده', variant: 'default' as const, icon: CheckCircle };
   };
 
   const getDimensions = (order: Order) => {

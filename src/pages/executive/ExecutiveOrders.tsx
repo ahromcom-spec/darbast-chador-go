@@ -673,7 +673,7 @@ export default function ExecutiveOrders() {
         .eq('id', orderId)
         .single();
 
-      // جلوگیری از تایید سفارش «درخواست قیمت کارشناسی» قبل از ثبت و تایید قیمت
+      // جلوگیری از تایید سفارش «درخواست قیمت کارشناسی» قبل از ثبت قیمت
       if (newStage === 'pending_execution') {
         const notesObj =
           (orderData as any)?.notes && typeof (orderData as any).notes === 'object'
@@ -686,15 +686,15 @@ export default function ExecutiveOrders() {
           const amountRaw = (orderData as any)?.payment_amount ?? notesObj?.manager_set_price;
           const amountNumber = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
           const hasPaymentAmount = Number.isFinite(amountNumber) && amountNumber > 0;
-          const customerPriceConfirmed = notesObj?.customer_price_confirmed === true;
 
-          const canApprove = priceSetByManager && hasPaymentAmount && customerPriceConfirmed;
+          // بعد از تعیین قیمت توسط کارشناس، سفارش قابل تایید است (بدون نیاز به تایید مشتری)
+          const canApprove = priceSetByManager && hasPaymentAmount;
           if (!canApprove) {
             toast({
               variant: 'destructive',
               title: 'امکان تایید سفارش نیست',
               description:
-                'این سفارش «درخواست قیمت کارشناسی» است؛ ابتدا قیمت را ثبت کنید و پس از تایید مشتری، تایید سفارش فعال می‌شود.'
+                'این سفارش «درخواست قیمت کارشناسی» است؛ ابتدا قیمت را ثبت کنید.'
             });
             return;
           }
@@ -1367,10 +1367,10 @@ export default function ExecutiveOrders() {
             const amountRaw = (order as any)?.payment_amount ?? notesObj?.manager_set_price;
             const amountNumber = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
             const hasPaymentAmount = Number.isFinite(amountNumber) && amountNumber > 0;
-            const customerPriceConfirmed = notesObj?.customer_price_confirmed === true;
 
-            // برای درخواست کارشناسی: فقط وقتی قیمت ثبت شده و مشتری تایید کرده باشد، اجازه تایید سفارش بده
-            const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount && customerPriceConfirmed);
+            // برای درخواست کارشناسی: فقط وقتی قیمت ثبت شده باشد، اجازه تایید سفارش بده
+            // (بدون نیاز به تایید مشتری - تایید خودکار انجام می‌شود)
+            const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount);
 
             const serviceLabel = getOrderServiceLabel(notesObj);
             const isExecutionWithMaterialsOrder = order.subcategory_id === SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS;
