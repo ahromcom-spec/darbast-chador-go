@@ -298,9 +298,26 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
   // For accounting module, show only financial info
   if (hideDetails) {
-    const paymentAmountValue = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0;
-    const totalPaidValue = (order as any).total_paid || 0;
-    const remainingValue = Math.max(0, paymentAmountValue - totalPaidValue);
+    const estimatedFromNotes =
+      typeof parsedNotes?.estimated_price === 'number'
+        ? parsedNotes.estimated_price
+        : typeof parsedNotes?.estimatedPrice === 'number'
+          ? parsedNotes.estimatedPrice
+          : 0;
+
+    const baseOrderAmount = (() => {
+      const tp = Number(order.total_price);
+      if (Number.isFinite(tp) && tp > 0) return tp;
+
+      const pa = Number(order.payment_amount ?? estimatedFromNotes ?? 0);
+      if (Number.isFinite(pa) && pa > 0) return pa;
+
+      return 0;
+    })();
+
+    const totalPaidValue = Number((order as any).total_paid || 0);
+    const totalOrderAmount = Number(baseOrderAmount) + Number(approvedRepairCost || 0);
+    const remainingValue = Math.max(0, totalOrderAmount - totalPaidValue);
 
     return (
       <div className="space-y-4">
@@ -327,7 +344,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             <div className="bg-background p-4 rounded-lg border">
               <Label className="text-xs text-muted-foreground block mb-1">مبلغ کل سفارش</Label>
               <p className="font-bold text-xl text-green-700 dark:text-green-300">
-                {Number(paymentAmountValue + approvedRepairCost).toLocaleString('fa-IR')} تومان
+                {Number(totalOrderAmount).toLocaleString('fa-IR')} تومان
               </p>
             </div>
             
@@ -345,6 +362,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
               </p>
             </div>
           </div>
+
 
           {approvedRepairCost > 0 && (
             <div className="flex justify-between text-sm p-2 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">

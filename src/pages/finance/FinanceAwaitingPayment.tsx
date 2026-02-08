@@ -26,9 +26,25 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   payment_amount: number | null;
+  total_price: number | null;
   total_paid: number | null;
   notes: any;
 }
+
+const toNumber = (value: unknown) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (value === null || value === undefined) return 0;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const getOrderTotalAmount = (order: Pick<Order, 'total_price' | 'payment_amount'>) => {
+  const tp = toNumber(order.total_price);
+  if (tp > 0) return tp;
+  const pa = toNumber(order.payment_amount);
+  if (pa > 0) return pa;
+  return 0;
+};
 
 export default function FinanceAwaitingPayment() {
   const [searchParams] = useSearchParams();
@@ -46,15 +62,28 @@ export default function FinanceAwaitingPayment() {
   }, []);
 
   useEffect(() => {
+    // searchParams فعلاً استفاده‌ای ندارد ولی نگهش می‌داریم برای فیلترهای احتمالی بعدی
+    void searchParams;
+  }, [searchParams]);
+
+  useEffect(() => {
+    // اگر لیست سفارش‌ها رفرش شد، selectedOrder را همگام کن
+    if (!selectedOrder) return;
+    const updated = orders.find((o) => o.id === selectedOrder.id);
+    if (updated) setSelectedOrder(updated);
+  }, [orders, selectedOrder?.id]);
+
+  useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredOrders(orders);
     } else {
       const term = searchTerm.toLowerCase();
-      const filtered = orders.filter(order => 
-        order.code.toLowerCase().includes(term) ||
-        order.customer_name.toLowerCase().includes(term) ||
-        order.customer_phone.includes(term) ||
-        order.address.toLowerCase().includes(term)
+      const filtered = orders.filter(
+        (order) =>
+          order.code.toLowerCase().includes(term) ||
+          order.customer_name.toLowerCase().includes(term) ||
+          order.customer_phone.includes(term) ||
+          order.address.toLowerCase().includes(term),
       );
       setFilteredOrders(filtered);
     }
@@ -64,7 +93,8 @@ export default function FinanceAwaitingPayment() {
     try {
       const { data, error } = await supabase
         .from('projects_v3')
-        .select(`
+        .select(
+          `
           id,
           code,
           status,
@@ -72,10 +102,12 @@ export default function FinanceAwaitingPayment() {
           detailed_address,
           created_at,
           payment_amount,
+          total_price,
           total_paid,
           notes,
           customer_id
-        `)
+        `,
+        )
         .eq('execution_stage', 'awaiting_payment')
         .or('is_archived.is.null,is_archived.eq.false')
         .order('code', { ascending: false });
@@ -107,9 +139,9 @@ export default function FinanceAwaitingPayment() {
           return {
             ...order,
             customer_name: customerName,
-            customer_phone: customerPhone
+            customer_phone: customerPhone,
           };
-        })
+        }),
       );
 
       setOrders(ordersWithCustomer);
@@ -118,7 +150,7 @@ export default function FinanceAwaitingPayment() {
       toast({
         variant: 'destructive',
         title: 'خطا',
-        description: 'دریافت سفارشات با خطا مواجه شد'
+        description: 'دریافت سفارشات با خطا مواجه شد',
       });
     } finally {
       setLoading(false);
@@ -129,10 +161,7 @@ export default function FinanceAwaitingPayment() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="سفارشات در انتظار پرداخت"
-        description={`${orders.length} سفارش در انتظار دریافت مبلغ`}
-      />
+      <PageHeader title="سفارشات در انتظار پرداخت" description={`${orders.length} سفارش در انتظار دریافت مبلغ`} />
 
       {orders.length > 0 && (
         <Card>
@@ -160,8 +189,8 @@ export default function FinanceAwaitingPayment() {
           </Card>
         ) : (
           filteredOrders.map((order) => {
-            const totalAmount = order.payment_amount || 0;
-            const totalPaid = order.total_paid || 0;
+            const totalAmount = getOrderTotalAmount(order);
+            const totalPaid = toNumber(order.total_paid);
             const remaining = Math.max(0, totalAmount - totalPaid);
 
             return (
@@ -173,7 +202,7 @@ export default function FinanceAwaitingPayment() {
                         <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
                         <StatusBadge status="pending" />
                       </div>
-                      
+
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <User className="h-4 w-4" />
                         <span>{order.customer_name}</span>
@@ -184,14 +213,14 @@ export default function FinanceAwaitingPayment() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Separator />
-                  
+
                   {/* Financial Summary */}
                   <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
                     <div className="flex items-center gap-2 mb-3">
                       <Banknote className="h-5 w-5 text-orange-600" />
                       <span className="font-bold text-orange-800 dark:text-orange-200">اطلاعات مالی</span>
                     </div>
-                    
+
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
                         <Label className="text-xs text-muted-foreground">مبلغ کل</Label>
@@ -211,24 +240,24 @@ export default function FinanceAwaitingPayment() {
                   </div>
 
                   <div className="flex gap-2 flex-wrap">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => { 
-                        setSelectedOrder(order); 
-                        setDetailsOpen(true); 
-                      }} 
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setDetailsOpen(true);
+                      }}
                       className="gap-2"
                     >
                       <Eye className="h-4 w-4" />
                       جزئیات
                     </Button>
 
-                    <Button 
+                    <Button
                       size="sm"
-                      onClick={() => { 
-                        setSelectedOrder(order); 
-                        setPaymentDialogOpen(true); 
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setPaymentDialogOpen(true);
                       }}
                       className="gap-2 bg-green-600 hover:bg-green-700"
                     >
@@ -250,7 +279,7 @@ export default function FinanceAwaitingPayment() {
             <DialogTitle>جزئیات مالی سفارش {selectedOrder?.code}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <EditableOrderDetails 
+            <EditableOrderDetails
               order={{
                 id: selectedOrder.id,
                 code: selectedOrder.code,
@@ -262,7 +291,8 @@ export default function FinanceAwaitingPayment() {
                 created_at: selectedOrder.created_at,
                 notes: selectedOrder.notes,
                 payment_amount: selectedOrder.payment_amount,
-                total_paid: selectedOrder.total_paid
+                total_price: selectedOrder.total_price,
+                total_paid: selectedOrder.total_paid,
               }}
               onUpdate={fetchOrders}
               hideDetails={true}
@@ -280,7 +310,7 @@ export default function FinanceAwaitingPayment() {
           orderCode={selectedOrder.code}
           customerId={selectedOrder.customer_id}
           customerName={selectedOrder.customer_name}
-          totalPrice={selectedOrder.payment_amount || 0}
+          totalPrice={getOrderTotalAmount(selectedOrder)}
           onPaymentSuccess={fetchOrders}
           customerPhone={selectedOrder.customer_phone}
           address={selectedOrder.address || 'ثبت نشده'}
