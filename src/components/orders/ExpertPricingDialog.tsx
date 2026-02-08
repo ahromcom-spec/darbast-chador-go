@@ -126,13 +126,19 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
         ? parseFloat(unitPrice.replace(/,/g, '')) || 0 
         : null;
 
+      // مهم: وقتی کارشناس قیمت را ثبت می‌کند، مرحله تایید مشتری حذف شده
+      // و سفارش مستقیماً برای تایید مدیران ارسال می‌شود
       const updatedNotes = {
         ...parsedNotes,
         price_set_by_manager: true,
         manager_set_price: finalPrice,
         unit_price: unitPriceValue,
         pricing_method: useUnitPrice ? 'unit_price' : 'total_price',
-        pricing_date: new Date().toISOString()
+        pricing_date: new Date().toISOString(),
+        // تایید خودکار قیمت توسط سیستم (بدون نیاز به تایید دستی مشتری)
+        customer_price_confirmed: true,
+        customer_price_confirmed_at: new Date().toISOString(),
+        auto_confirmed_by_expert: true
       };
 
       const { error } = await supabase
@@ -145,9 +151,24 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
 
       if (error) throw error;
 
+      // ارسال نوتیفیکیشن به مدیران برای تایید سفارش
+      try {
+        await supabase.functions.invoke('notify-managers-new-order', {
+          body: {
+            orderCode: order.code,
+            orderId: order.id,
+            customerName: order.customer_name,
+            address: order.address,
+            messageType: 'expert_price_set' // قیمت کارشناسی تعیین شد - آماده تایید مدیر
+          }
+        });
+      } catch (notifErr) {
+        console.log('Manager notification skipped:', notifErr);
+      }
+
       toast({
         title: '✓ قیمت ثبت شد',
-        description: `قیمت ${finalPrice.toLocaleString('fa-IR')} تومان برای سفارش ${order.code} ثبت شد`
+        description: `قیمت ${finalPrice.toLocaleString('fa-IR')} تومان برای سفارش ${order.code} ثبت شد. سفارش برای تایید مدیران ارسال شد.`
       });
 
       onSuccess();

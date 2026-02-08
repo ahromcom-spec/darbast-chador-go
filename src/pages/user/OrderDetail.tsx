@@ -1165,73 +1165,59 @@ export default function OrderDetail() {
                       </p>
                     </div>
                   </div>
-                ) : !customerHasConfirmedPrice ? (
-                  // Manager has set price, waiting for customer confirmation
+                ) : (
+                  // Manager has set price - show price and status
+                  // نمایش قیمت تعیین شده و وضعیت سفارش (بدون نیاز به تایید دستی مشتری)
                   <div className="space-y-4">
                     <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-xl border-2 border-green-200 dark:border-green-800">
                       <div className="text-center space-y-2">
+                        <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400 mx-auto" />
                         <p className="text-sm text-green-700 dark:text-green-300">
-                          قیمت تعیین شده توسط کارشناس
+                          قیمت تعیین شده
                         </p>
                         <p className="text-3xl font-extrabold text-green-700 dark:text-green-300">
                           {(order.payment_amount || parsedNotes?.manager_set_price)?.toLocaleString('fa-IR')} تومان
                         </p>
                         
                         {/* Show unit price and area breakdown if available */}
-                        {parsedNotes?.unit_price && parsedNotes?.total_area && (
+                        {parsedNotes?.unit_price && (parsedNotes?.total_area || parsedNotes?.total_volume) && (
                           <div className="pt-2 border-t border-green-200 dark:border-green-700 mt-3">
                             <p className="text-sm text-green-600 dark:text-green-400">
                               قیمت فی: {parsedNotes.unit_price.toLocaleString('fa-IR')} تومان
                               <span className="mx-2">×</span>
-                              متراژ: {parsedNotes.total_area.toLocaleString('fa-IR')} متر مربع
+                              متراژ: {(parsedNotes.total_area || parsedNotes.total_volume)?.toLocaleString('fa-IR')} {parsedNotes.total_volume ? 'متر مکعب' : 'متر مربع'}
                             </p>
                           </div>
                         )}
                       </div>
                     </div>
                     
-                    <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
-                      <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                        آیا قیمت تعیین شده را تایید می‌کنید؟ با تایید قیمت، سفارش شما وارد روال عادی بررسی و اجرا خواهد شد.
-                      </p>
-                      <Button
-                        onClick={handleConfirmExpertPrice}
-                        disabled={isConfirmingPrice}
-                        className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-                        size="lg"
-                      >
-                        {isConfirmingPrice ? (
-                          <>
-                            <Clock className="h-5 w-5 animate-spin" />
-                            در حال ثبت...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="h-5 w-5" />
-                            تایید قیمت و ادامه سفارش
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  // Customer has confirmed price
-                  <div className="flex items-center gap-3 p-4 bg-green-100/50 dark:bg-green-900/30 rounded-xl">
-                    <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
-                    <div>
-                      <p className="font-medium text-green-800 dark:text-green-200">
-                        قیمت تایید شده
-                      </p>
-                      <p className="text-sm text-green-700 dark:text-green-300">
-                        سفارش شما با قیمت {(order.payment_amount || parsedNotes?.manager_set_price)?.toLocaleString('fa-IR')} تومان تایید شده و در روال عادی قرار گرفته است.
-                      </p>
-                      {/* Show unit price and area breakdown if available */}
-                      {parsedNotes?.unit_price && parsedNotes?.total_area && (
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                          (قیمت فی: {parsedNotes.unit_price.toLocaleString('fa-IR')} تومان × متراژ: {parsedNotes.total_area.toLocaleString('fa-IR')} متر مربع)
-                        </p>
-                      )}
-                    </div>
+                    {/* نمایش وضعیت سفارش */}
+                    {order.status === 'pending' ? (
+                      <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800">
+                        <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <p className="font-medium text-blue-800 dark:text-blue-200">
+                            در انتظار تایید مدیران
+                          </p>
+                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                            سفارش شما قیمت‌گذاری شده و در انتظار بررسی و تایید مدیران است.
+                          </p>
+                        </div>
+                      </div>
+                    ) : ['approved', 'pending_execution', 'in_progress', 'completed', 'paid', 'closed'].includes(order.status) ? (
+                      <div className="flex items-center gap-3 p-4 bg-green-100/50 dark:bg-green-900/30 rounded-xl">
+                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                        <div>
+                          <p className="font-medium text-green-800 dark:text-green-200">
+                            سفارش تایید شده
+                          </p>
+                          <p className="text-sm text-green-700 dark:text-green-300">
+                            سفارش شما توسط مدیران تایید شده و در حال پیگیری است.
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 )}
 

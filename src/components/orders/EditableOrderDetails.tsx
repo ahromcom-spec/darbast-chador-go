@@ -225,10 +225,15 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         service_type: scaffoldingType
       };
 
-      // If manager is setting price on expert pricing request, mark it
+      // If manager is setting price on expert pricing request, mark it and auto-confirm
       if (isExpertPricingRequest && paymentAmount && parseFloat(paymentAmount) > 0) {
         updatedNotes.price_set_by_manager = true;
         updatedNotes.manager_set_price = parseFloat(paymentAmount);
+        updatedNotes.pricing_date = new Date().toISOString();
+        // تایید خودکار قیمت (بدون نیاز به تایید دستی مشتری)
+        updatedNotes.customer_price_confirmed = true;
+        updatedNotes.customer_price_confirmed_at = new Date().toISOString();
+        updatedNotes.auto_confirmed_by_expert = true;
         // Store unit price if provided
         if (unitPrice && parseFloat(unitPrice) > 0) {
           updatedNotes.unit_price = parseFloat(unitPrice);
