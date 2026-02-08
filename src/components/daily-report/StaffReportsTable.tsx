@@ -201,7 +201,9 @@ export function StaffReportsTable({
                   }
                 >
                   <TableCell className="border border-amber-200">
-                    {!row.is_cash_box && !row.is_company_expense && (
+                    {/* Show delete button for regular rows OR if there are duplicate company expense rows */}
+                    {(!row.is_cash_box && !row.is_company_expense) || 
+                     (row.is_company_expense && staffReports.filter(r => r.is_company_expense).length > 1) ? (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -210,7 +212,7 @@ export function StaffReportsTable({
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
+                    ) : null}
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     <AutoResizeTextarea
