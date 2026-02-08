@@ -36,6 +36,7 @@ interface Order {
   location_lng?: number | null;
   notes?: string | null;
   payment_amount?: number | null;
+  total_price?: number | null;
   payment_method?: string | null;
   transaction_reference?: string | null;
   customer_id?: string;
@@ -49,6 +50,22 @@ interface Order {
   transferred_from_user_id?: string | null;
   transferred_from_phone?: string | null;
 }
+
+const toNumber = (value: unknown) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (value === null || value === undefined) return 0;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+
+// total_price در برخی سفارش‌ها ممکن است 0 باشد (یعنی هنوز ست نشده)، پس فقط وقتی >0 است از آن استفاده می‌کنیم
+const getOrderTotalAmount = (order: Pick<Order, 'total_price' | 'payment_amount'>) => {
+  const tp = toNumber(order.total_price);
+  if (tp > 0) return tp;
+  const pa = toNumber(order.payment_amount);
+  if (pa > 0) return pa;
+  return 0;
+};
 
 export default function SalesOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -87,6 +104,13 @@ export default function SalesOrders() {
       }
     }
   }, [urlOrderId, orders, loading]);
+
+  // Keep selectedOrder in sync after any refresh (e.g. renewal/price updates)
+  useEffect(() => {
+    if (!selectedOrder) return;
+    const updated = orders.find((o) => o.id === selectedOrder.id);
+    if (updated) setSelectedOrder(updated);
+  }, [orders, selectedOrder?.id]);
 
   useEffect(() => {
     let filtered = orders;
@@ -129,7 +153,7 @@ export default function SalesOrders() {
           customer_id,
           hierarchy_project_id,
           notes,
-          payment_amount,
+          payment_amount, total_price,
           payment_method,
           transaction_reference,
           executed_by,
@@ -212,7 +236,7 @@ export default function SalesOrders() {
             location_lat: projectLat,
             location_lng: projectLng,
             notes: order.notes,
-            payment_amount: order.payment_amount,
+            payment_amount: order.payment_amount, total_price: order.total_price,
             payment_method: order.payment_method,
             transaction_reference: order.transaction_reference,
             customer_id: order.customer_id,
@@ -480,13 +504,20 @@ export default function SalesOrders() {
                   </div>
                 </div>
 
-                {order.payment_amount && (
+                {getOrderTotalAmount(order) > 0 && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm text-muted-foreground">مبلغ پرداخت</Label>
+                      <Label className="text-sm text-muted-foreground">مبلغ کل سفارش</Label>
                       <p className="text-sm font-medium">
-                        {order.payment_amount.toLocaleString('fa-IR')} تومان
+                        {getOrderTotalAmount(order).toLocaleString('fa-IR')} تومان
                       </p>
+                      {toNumber(order.payment_amount) > 0 &&
+                        getOrderTotalAmount(order) > toNumber(order.payment_amount) && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            افزوده ها (تمدید/تعمیرات):{' '}
+                            {(getOrderTotalAmount(order) - toNumber(order.payment_amount)).toLocaleString('fa-IR')} تومان
+                          </p>
+                        )}
                     </div>
                     {order.payment_method && (
                       <div>
