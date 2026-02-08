@@ -532,8 +532,14 @@ export function useDailyReport() {
       return;
     }
 
-    const staffToSave = staffReports.filter(
-      (s) =>
+    // Deduplicate: only allow ONE company expense row per report
+    let hasCompanyExpense = false;
+    const staffToSave = staffReports.filter((s) => {
+      if (s.is_company_expense) {
+        if (hasCompanyExpense) return false; // skip duplicates
+        hasCompanyExpense = true;
+      }
+      return (
         s.is_cash_box ||
         s.is_company_expense ||
         Boolean(s.staff_user_id) ||
@@ -544,7 +550,8 @@ export function useDailyReport() {
         Boolean(s.receiving_notes?.trim()) ||
         Boolean(s.spending_notes?.trim()) ||
         Boolean(s.notes?.trim())
-    );
+      );
+    });
 
     try {
       isSavingRef.current = true;

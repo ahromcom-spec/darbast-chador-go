@@ -786,9 +786,22 @@ export default function DailyReportModule() {
      // اگر داده تغییر نکرده، ذخیره نکن
      if (dataHash === lastAutoSaveHashRef.current) return;
 
-    const staffToSave = staffReports.filter(
+    // Deduplicate: only allow ONE company expense row per report
+    const deduplicatedStaff = (() => {
+      let hasCompanyExpense = false;
+      return staffReports.filter((s) => {
+        if (s.is_company_expense) {
+          if (hasCompanyExpense) return false; // skip duplicates
+          hasCompanyExpense = true;
+        }
+        return true;
+      });
+    })();
+
+    const staffToSave = deduplicatedStaff.filter(
       (s) =>
         s.is_cash_box ||
+        s.is_company_expense || // always include company expense row
         Boolean(s.staff_user_id) ||
         Boolean(s.staff_name?.trim()) ||
         (s.overtime_hours ?? 0) > 0 ||
@@ -2720,7 +2733,18 @@ export default function DailyReportModule() {
 
       // درج نیروهای جدید
       if (staffForReport.length > 0) {
-        const staffPayload = staffForReport.map((s) => ({
+        // Deduplicate: only allow ONE company expense row per report
+        let hasCompanyExpense = false;
+        const deduplicatedStaff = staffForReport.filter((s) => {
+          const isCompanyRow = s.is_company_expense || (s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'));
+          if (isCompanyRow) {
+            if (hasCompanyExpense) return false; // skip duplicates
+            hasCompanyExpense = true;
+          }
+          return true;
+        });
+
+        const staffPayload = deduplicatedStaff.map((s) => ({
           daily_report_id: reportId,
           staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
           staff_name: s.staff_name || '',
