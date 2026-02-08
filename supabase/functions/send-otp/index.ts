@@ -179,10 +179,10 @@ Deno.serve(async (req) => {
       console.warn('PARSGREEN_SENDER is not numeric; falling back to default 90000319');
     }
 
-    // پیامک OTP: برای بیشترین نرخ تحویل (Deliverability) در ایران، پیام را «ساده» ارسال می‌کنیم.
-    // تجربه نشان داده الگوی Web OTP (مثل @domain و #code) در برخی اپراتورها/گوشی‌ها ممکن است
-    // تحویل را کاهش دهد (حتی اگر سرویس‌دهنده پاسخ موفق بدهد).
-    const plainMessage = `اهرم: ${code} کد تایید`;
+    // پیامک OTP با فرمت Web OTP API برای autofill خودکار در مرورگر و گوشی
+    // فرمت استاندارد: متن + خط جدید + @domain #code
+    // این فرمت به مرورگر اجازه می‌دهد کد را اتوماتیک شناسایی و پر کند
+    const plainMessage = `اهرم: ${code} کد تایید\n\n@ahrom.ir #${code}`;
 
     // Start SMS sending AND database insert in PARALLEL for maximum speed
     const sendSmsPromise = (async () => {
