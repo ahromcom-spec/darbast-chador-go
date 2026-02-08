@@ -43,6 +43,8 @@ interface ManagerOrderInvoiceProps {
     created_at?: string;
     notes?: any;
     payment_amount?: number | null;
+    total_price?: number | null;
+    total_paid?: number | null;
     status?: string;
     province_id?: string;
     subcategory_id?: string;
@@ -60,6 +62,21 @@ interface RepairRequest {
   created_at: string;
 }
 
+interface OrderRenewal {
+  id: string;
+  renewal_number: number | null;
+  status: string | null;
+  renewal_price: number | null;
+  new_start_date: string | null;
+  new_end_date: string | null;
+}
+
+interface FreshFinancials {
+  payment_amount: number | null;
+  total_price: number | null;
+  total_paid: number | null;
+}
+
 export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderInvoiceProps) => {
   const [open, setOpen] = useState(false);
   const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string }>>([]);
@@ -68,6 +85,8 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
   const [provinceName, setProvinceName] = useState('');
   const [subcategoryName, setSubcategoryName] = useState('');
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
+  const [renewals, setRenewals] = useState<OrderRenewal[]>([]);
+  const [freshFinancials, setFreshFinancials] = useState<FreshFinancials | null>(null);
   const [collectionRequestDate, setCollectionRequestDate] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
@@ -144,6 +163,25 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         .order('created_at', { ascending: true });
       
       if (repairData) setRepairRequests(repairData);
+
+      // Fetch approved renewals (additional monthly costs)
+      const { data: renewalData } = await supabase
+        .from('order_renewals')
+        .select('id, renewal_number, status, renewal_price, new_start_date, new_end_date')
+        .eq('order_id', order.id)
+        .eq('status', 'approved')
+        .order('renewal_number', { ascending: true });
+
+      if (renewalData) setRenewals(renewalData as OrderRenewal[]);
+
+      // Fetch latest financial snapshot (avoid stale values in printed invoice)
+      const { data: financialData } = await supabase
+        .from('projects_v3')
+        .select('payment_amount, total_price, total_paid')
+        .eq('id', order.id)
+        .maybeSingle();
+
+      if (financialData) setFreshFinancials(financialData as FreshFinancials);
 
       // Fetch collection request date (latest approved or pending)
       const { data: collectionData } = await supabase
@@ -300,6 +338,10 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         background: #f1f5f9;
         border: 1px solid #1e3a5f;
       }
+      .renewal-row td {
+        background: #e0f2fe !important;
+        border: 1px solid #1e3a5f !important;
+      }
       .repair-row td {
         background: #fef3c7 !important;
         border: 1px solid #1e3a5f !important;
@@ -430,9 +472,24 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
     const dueDate = parsedNotes?.dueDateTime || parsedNotes?.due_date || parsedNotes?.dueDate;
     const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
     
-    const orderPrice = order.payment_amount ? Number(order.payment_amount) : (parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0);
+    const basePrice =
+      freshFinancials?.payment_amount !== null && freshFinancials?.payment_amount !== undefined
+        ? Number(freshFinancials.payment_amount)
+        : order.payment_amount !== null && order.payment_amount !== undefined
+          ? Number(order.payment_amount)
+          : (parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0);
+
+    const renewalTotal = renewals.reduce((sum, r) => sum + Number(r.renewal_price || 0), 0);
+    const renewalCount = renewals.length;
+    const renewalUnitPrice = renewalCount > 0 ? Math.round(renewalTotal / renewalCount) : 0;
+
     const repairTotal = repairRequests.reduce((sum, r) => sum + (r.final_cost || r.estimated_cost || 0), 0);
-    const grandTotal = orderPrice + repairTotal;
+    const computedTotal = basePrice + renewalTotal + repairTotal;
+
+    const totalFromDb = Number(freshFinancials?.total_price ?? order.total_price ?? 0);
+    const grandTotal = Math.max(totalFromDb, computedTotal);
+
+    const paidTotal = Number(freshFinancials?.total_paid ?? order.total_paid ?? parsedNotes?.total_paid ?? 0);
 
     const getLength = () => {
       if (dimensions && Array.isArray(dimensions) && dimensions.length > 0) {
@@ -657,12 +714,22 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
               <td>${scaffoldTypeName} - ${subtypeName}</td>
               <td>${totalArea || '-'} ${getMeasurementUnit()}</td>
               <td>${conditions?.totalMonths || '۱'}</td>
-              <td>${totalArea && orderPrice > 0 ? Math.round(orderPrice / Number(totalArea)).toLocaleString('fa-IR') : '-'}</td>
-              <td>${orderPrice > 0 ? orderPrice.toLocaleString('fa-IR') : '-'}</td>
+              <td>${totalArea && basePrice > 0 ? Math.round(basePrice / Number(totalArea)).toLocaleString('fa-IR') : '-'}</td>
+              <td>${basePrice > 0 ? basePrice.toLocaleString('fa-IR') : '-'}</td>
             </tr>
+            ${renewalTotal > 0 ? `
+              <tr class="renewal-row">
+                <td>۲</td>
+                <td>تمدید کرایه (${renewalCount.toLocaleString('fa-IR')} ماه)</td>
+                <td>-</td>
+                <td>${renewalCount.toLocaleString('fa-IR')}</td>
+                <td>${renewalUnitPrice > 0 ? renewalUnitPrice.toLocaleString('fa-IR') : '-'}</td>
+                <td>${renewalTotal.toLocaleString('fa-IR')}</td>
+              </tr>
+            ` : ''}
             ${repairRequests.map((repair, idx) => `
               <tr class="repair-row">
-                <td>${(idx + 2).toLocaleString('fa-IR')}</td>
+                <td>${(idx + (renewalTotal > 0 ? 3 : 2)).toLocaleString('fa-IR')}</td>
                 <td>تعمیر داربست${repair.description ? ` - ${repair.description}` : ''}</td>
                 <td>-</td>
                 <td>-</td>
@@ -684,13 +751,13 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
           </tr>
           <tr>
             <td class="label-cell">وضعیت:</td>
-            <td class="value-cell" style="font-weight:bold; ${parsedNotes?.total_paid >= grandTotal ? 'color:#16a34a;' : parsedNotes?.total_paid > 0 ? 'color:#ca8a04;' : 'color:#dc2626;'}">
-              ${parsedNotes?.total_paid >= grandTotal ? '✅ پرداخت کامل' : parsedNotes?.total_paid > 0 ? '⏳ علی‌الحساب پرداخت شده' : '❌ پرداخت نشده'}
+            <td class="value-cell" style="font-weight:bold; ${paidTotal >= grandTotal ? 'color:#16a34a;' : paidTotal > 0 ? 'color:#ca8a04;' : 'color:#dc2626;'}">
+              ${paidTotal >= grandTotal ? '✅ پرداخت کامل' : paidTotal > 0 ? '⏳ علی‌الحساب پرداخت شده' : '❌ پرداخت نشده'}
             </td>
             <td class="label-cell">مبلغ پرداخت شده:</td>
-            <td class="value-cell" style="color:#16a34a; font-weight:bold;">${(parsedNotes?.total_paid || 0).toLocaleString('fa-IR')} تومان</td>
+            <td class="value-cell" style="color:#16a34a; font-weight:bold;">${paidTotal.toLocaleString('fa-IR')} تومان</td>
             <td class="label-cell">مانده:</td>
-            <td class="value-cell" style="color:#dc2626; font-weight:bold;">${Math.max(0, grandTotal - (parsedNotes?.total_paid || 0)).toLocaleString('fa-IR')} تومان</td>
+            <td class="value-cell" style="color:#dc2626; font-weight:bold;">${Math.max(0, grandTotal - paidTotal).toLocaleString('fa-IR')} تومان</td>
           </tr>
         </table>
         ` : `
@@ -711,9 +778,17 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
               <td>${totalArea || '-'} ${getMeasurementUnit()}</td>
               <td>${conditions?.totalMonths || '۱'}</td>
             </tr>
+            ${renewalTotal > 0 ? `
+              <tr class="renewal-row">
+                <td>۲</td>
+                <td>تمدید کرایه (${renewalCount.toLocaleString('fa-IR')} ماه)</td>
+                <td>-</td>
+                <td>${renewalCount.toLocaleString('fa-IR')}</td>
+              </tr>
+            ` : ''}
             ${repairRequests.map((repair, idx) => `
               <tr class="repair-row">
-                <td>${(idx + 2).toLocaleString('fa-IR')}</td>
+                <td>${(idx + (renewalTotal > 0 ? 3 : 2)).toLocaleString('fa-IR')}</td>
                 <td>تعمیر داربست${repair.description ? ` - ${repair.description}` : ''}</td>
                 <td>-</td>
                 <td>-</td>
