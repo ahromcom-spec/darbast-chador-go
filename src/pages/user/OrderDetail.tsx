@@ -220,6 +220,7 @@ export default function OrderDetail() {
   const [showRepairDialog, setShowRepairDialog] = useState(false);
   const [repairCost, setRepairCost] = useState(0);
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
+  const [approvedRenewalCost, setApprovedRenewalCost] = useState(0);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
   const [showEditExpertPricingDialog, setShowEditExpertPricingDialog] = useState(false);
@@ -438,7 +439,7 @@ export default function OrderDetail() {
       }
 
       // Fetch all related data in parallel for speed
-      const [subcategoryRes, provinceRes, districtRes, mediaRes, approvalsRes, repairRes, collectionRes] = await Promise.all([
+      const [subcategoryRes, provinceRes, districtRes, mediaRes, approvalsRes, repairRes, collectionRes, renewalsRes] = await Promise.all([
         orderData.subcategory_id 
           ? supabase.from('subcategories').select('name, code, service_types_v3:service_type_id(name, code)').eq('id', orderData.subcategory_id).maybeSingle()
           : Promise.resolve({ data: null }),
@@ -451,7 +452,8 @@ export default function OrderDetail() {
         supabase.from('project_media').select('*').eq('project_id', id).order('created_at', { ascending: false }),
         supabase.from('order_approvals').select('approver_role, approved_at, approver_user_id').eq('order_id', id).order('created_at', { ascending: true }),
         supabase.from('repair_requests').select('final_cost, status').eq('order_id', id).in('status', ['approved', 'completed']),
-        supabase.from('collection_requests').select('requested_date, status').eq('order_id', id).eq('status', 'approved').order('created_at', { ascending: false }).limit(1).maybeSingle()
+        supabase.from('collection_requests').select('requested_date, status').eq('order_id', id).eq('status', 'approved').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('order_renewals').select('renewal_price, status').eq('order_id', id).eq('status', 'approved')
       ]);
 
       // Build enriched order
@@ -525,6 +527,14 @@ export default function OrderDetail() {
         setApprovedRepairCost(totalRepairCost);
       } else {
         setApprovedRepairCost(0);
+      }
+
+      // محاسبه مجموع تمدیدهای تایید شده
+      if (renewalsRes.data && renewalsRes.data.length > 0) {
+        const totalRenewalCost = renewalsRes.data.reduce((sum: number, r: any) => sum + (r.renewal_price || 0), 0);
+        setApprovedRenewalCost(totalRenewalCost);
+      } else {
+        setApprovedRenewalCost(0);
       }
 
       if (collectionRes.data?.requested_date) {
@@ -934,7 +944,7 @@ export default function OrderDetail() {
   }
 
   const basePriceForPayment = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
-  const grandTotalForPayment = basePriceForPayment + approvedRepairCost;
+  const grandTotalForPayment = basePriceForPayment + approvedRepairCost + approvedRenewalCost;
   const rawPaidForPayment = totalPaid || order.total_paid || 0;
   const paidAmountForPayment = Math.min(Math.max(0, rawPaidForPayment), Math.max(0, grandTotalForPayment));
   const remainingAmountForPayment = Math.max(0, Math.max(0, grandTotalForPayment) - paidAmountForPayment);
@@ -1687,9 +1697,9 @@ export default function OrderDetail() {
                 )}
 
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
-                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
+                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || approvedRenewalCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
                   const basePrice = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
-                  const grandTotal = basePrice + approvedRepairCost;
+                  const grandTotal = basePrice + approvedRepairCost + approvedRenewalCost;
                   const rawPaidAmount = totalPaid || order.total_paid || 0;
                   const paidAmount = Math.min(Math.max(0, rawPaidAmount), Math.max(0, grandTotal));
                   const remainingAmount = Math.max(0, Math.max(0, grandTotal) - paidAmount);
@@ -1725,6 +1735,34 @@ export default function OrderDetail() {
                         </div>
                       </div>
 
+                      {/* نمایش تفکیک قیمت‌ها: پایه + تمدید + تعمیر */}
+                      {(approvedRenewalCost > 0 || approvedRepairCost > 0) && (
+                        <div className="space-y-2 pt-2 border-t border-emerald-200 dark:border-emerald-800">
+                          <div className="flex items-center justify-between p-2 bg-background/50 rounded-lg">
+                            <span className="text-sm text-muted-foreground">قیمت پایه:</span>
+                            <span className="font-medium">{basePrice.toLocaleString('fa-IR')} تومان</span>
+                          </div>
+                          {approvedRenewalCost > 0 && (
+                            <div className="flex items-center justify-between p-2 bg-primary/10 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <RefreshCw className="h-4 w-4 text-primary" />
+                                <span className="text-sm text-primary font-medium">هزینه تمدید:</span>
+                              </div>
+                              <span className="font-bold text-primary">{approvedRenewalCost.toLocaleString('fa-IR')} تومان</span>
+                            </div>
+                          )}
+                          {approvedRepairCost > 0 && (
+                            <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <Edit className="h-4 w-4 text-amber-600" />
+                                <span className="text-sm text-amber-700 dark:text-amber-300 font-medium">هزینه تعمیر:</span>
+                              </div>
+                              <span className="font-bold text-amber-700 dark:text-amber-300">{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* نمایش مبلغ پرداخت شده و الباقی */}
                       {paidAmount > 0 && (
                         <div className="grid grid-cols-2 gap-3 mt-3">
@@ -1759,21 +1797,6 @@ export default function OrderDetail() {
                                   {item}
                                 </div>
                               ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* نمایش هزینه تعمیر تایید شده */}
-                        {approvedRepairCost > 0 && (
-                          <div className="pt-3 border-t border-emerald-200 dark:border-emerald-800">
-                            <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                              <div className="flex items-center gap-2">
-                                <Edit className="h-4 w-4 text-amber-600" />
-                                <span className="text-sm font-medium text-amber-700 dark:text-amber-300">هزینه تعمیر</span>
-                              </div>
-                              <span className="font-bold text-amber-700 dark:text-amber-300">
-                                {approvedRepairCost.toLocaleString('fa-IR')} تومان
-                              </span>
                             </div>
                           </div>
                         )}
