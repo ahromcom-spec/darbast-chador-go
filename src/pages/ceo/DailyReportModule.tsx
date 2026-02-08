@@ -2380,10 +2380,14 @@ export default function DailyReportModule() {
 
   const removeStaffRow = (index: number) => {
     // استفاده از functional check برای جلوگیری از race condition
-    setStaffReports(prev => {
+    setStaffReports((prev) => {
       const targetRow = prev[index];
       if (!targetRow) return prev;
-      
+
+      const isCompanyExpenseRow = (row: StaffReportRow | undefined) =>
+        row?.is_company_expense === true ||
+        (typeof row?.staff_name === 'string' && row.staff_name.includes('ماهیت شرکت اهرم'));
+
       if (targetRow.is_cash_box) {
         const cashBoxCount = prev.filter((r) => r.is_cash_box).length;
         if (cashBoxCount <= 1) {
@@ -2391,13 +2395,22 @@ export default function DailyReportModule() {
           return prev; // بدون تغییر
         }
       }
-      
+
+      if (isCompanyExpenseRow(targetRow)) {
+        const companyExpenseCount = prev.filter((r) => isCompanyExpenseRow(r)).length;
+        // فقط در صورت تکراری بودن اجازه حذف بده
+        if (companyExpenseCount <= 1) {
+          toast.error('ردیف ماهیت شرکت قابل حذف نیست');
+          return prev; // بدون تغییر
+        }
+      }
+
       return prev.filter((_, i) => i !== index);
     });
-    
+
     // فعال کردن guard برای جلوگیری از auto-save همزمان
     isDeletingRowRef.current = true;
-    
+
     // لغو timer های auto-save فعال
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
@@ -4100,16 +4113,26 @@ export default function DailyReportModule() {
                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                 {!isAggregated && !isCompanyExpense && (!row.is_cash_box || staffReports.filter((r) => r.is_cash_box).length > 1) && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => removeStaffRow(index)}
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                {!isAggregated &&
+                                  (
+                                    (!isCompanyExpense &&
+                                      (!row.is_cash_box || staffReports.filter((r) => r.is_cash_box).length > 1)) ||
+                                    (isCompanyExpense &&
+                                      staffReports.filter(
+                                        (r) =>
+                                          r.is_company_expense === true ||
+                                          (typeof r.staff_name === 'string' && r.staff_name.includes('ماهیت شرکت اهرم'))
+                                      ).length > 1)
+                                  ) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeStaffRow(index)}
+                                      className="text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
                               </TableCell>
                             </TableRow>
                             );
