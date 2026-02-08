@@ -23,7 +23,7 @@ import CallHistory from '@/components/calls/CallHistory';
 import OrderChat from './OrderChat';
 import { RepairRequestDialog } from './RepairRequestDialog';
 import { CollectionRequestDialog } from './CollectionRequestDialog';
-import { RenewalRequestDialog } from './RenewalRequestDialog';
+import { ManagerRenewalDialog } from './ManagerRenewalDialog';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { OrderCollaboratorsList } from './OrderCollaboratorsList';
 import { OrderTimeline } from './OrderTimeline';
@@ -1016,8 +1016,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         customerId={order.customer_id || ''}
       />
 
-      {/* Renewal Request Dialog - Manager Mode */}
-      <RenewalRequestDialog
+      {/* Renewal Dialog - Manager Mode with approval capability */}
+      <ManagerRenewalDialog
         open={renewalDialogOpen}
         onOpenChange={setRenewalDialogOpen}
         orderId={order.id}
