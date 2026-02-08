@@ -94,49 +94,58 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const [renewalDialogOpen, setRenewalDialogOpen] = useState(false);
   const [expertPricingEditOpen, setExpertPricingEditOpen] = useState(false);
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
+  const [approvedRenewalCost, setApprovedRenewalCost] = useState(0);
   const [orderApprovals, setOrderApprovals] = useState<Array<{ approver_role: string; approved_at: string | null; approver_user_id: string | null }>>([]);
   const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
   const { toast } = useToast();
   
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
 
-  // Fetch approved/completed repair costs, approvals, and collection date
+  // Fetch approved/completed repair costs, renewals, approvals, and collection date
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch repair costs
-      const { data: repairData } = await supabase
-        .from('repair_requests')
-        .select('final_cost, status')
-        .eq('order_id', order.id)
-        .in('status', ['approved', 'completed']);
+      // Fetch repair costs, renewals, approvals, and collection date in parallel
+      const [repairRes, renewalsRes, approvalsRes, collectionRes] = await Promise.all([
+        supabase
+          .from('repair_requests')
+          .select('final_cost, status')
+          .eq('order_id', order.id)
+          .in('status', ['approved', 'completed']),
+        supabase
+          .from('order_renewals')
+          .select('renewal_price, status')
+          .eq('order_id', order.id)
+          .eq('status', 'approved'),
+        supabase
+          .from('order_approvals')
+          .select('approver_role, approved_at, approver_user_id')
+          .eq('order_id', order.id),
+        supabase
+          .from('collection_requests')
+          .select('requested_date, status')
+          .eq('order_id', order.id)
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      ]);
 
-      if (repairData) {
-        const totalRepairCost = repairData.reduce((sum, r) => sum + (r.final_cost || 0), 0);
+      if (repairRes.data) {
+        const totalRepairCost = repairRes.data.reduce((sum, r) => sum + (r.final_cost || 0), 0);
         setApprovedRepairCost(totalRepairCost);
       }
 
-      // Fetch order approvals
-      const { data: approvalsData } = await supabase
-        .from('order_approvals')
-        .select('approver_role, approved_at, approver_user_id')
-        .eq('order_id', order.id);
-
-      if (approvalsData) {
-        setOrderApprovals(approvalsData);
+      if (renewalsRes.data) {
+        const totalRenewalCost = renewalsRes.data.reduce((sum: number, r: any) => sum + (r.renewal_price || 0), 0);
+        setApprovedRenewalCost(totalRenewalCost);
       }
 
-      // Fetch approved collection request date
-      const { data: collectionData } = await supabase
-        .from('collection_requests')
-        .select('requested_date, status')
-        .eq('order_id', order.id)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (approvalsRes.data) {
+        setOrderApprovals(approvalsRes.data);
+      }
 
-      if (collectionData?.requested_date) {
-        setApprovedCollectionDate(collectionData.requested_date);
+      if (collectionRes.data?.requested_date) {
+        setApprovedCollectionDate(collectionRes.data.requested_date);
       } else {
         setApprovedCollectionDate(null);
       }
@@ -306,9 +315,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           : 0;
 
     const baseOrderAmount = (() => {
-      const tp = Number(order.total_price);
-      if (Number.isFinite(tp) && tp > 0) return tp;
-
+      // اگر total_price بزرگتر از صفر باشد، یعنی شامل تمدیدها است - اما تمدید باید جدا حساب شود
+      // از payment_amount به عنوان قیمت پایه استفاده می‌کنیم
       const pa = Number(order.payment_amount ?? estimatedFromNotes ?? 0);
       if (Number.isFinite(pa) && pa > 0) return pa;
 
@@ -316,7 +324,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
     })();
 
     const totalPaidValue = Number((order as any).total_paid || 0);
-    const totalOrderAmount = Number(baseOrderAmount) + Number(approvedRepairCost || 0);
+    // مبلغ کل = قیمت پایه + تعمیرات + تمدیدها
+    const totalOrderAmount = Number(baseOrderAmount) + Number(approvedRepairCost || 0) + Number(approvedRenewalCost || 0);
     const remainingValue = Math.max(0, totalOrderAmount - totalPaidValue);
 
     return (
@@ -363,14 +372,33 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             </div>
           </div>
 
+          {/* تفکیک هزینه‌ها */}
+          {(approvedRenewalCost > 0 || approvedRepairCost > 0) && (
+            <div className="space-y-2 pt-3 border-t border-green-200 dark:border-green-700">
+              <div className="flex justify-between text-sm p-2 bg-background/50 rounded">
+                <span className="text-muted-foreground">قیمت پایه:</span>
+                <span className="font-medium">{baseOrderAmount.toLocaleString('fa-IR')} تومان</span>
+              </div>
+              
+              {approvedRenewalCost > 0 && (
+                <div className="flex justify-between text-sm p-2 bg-primary/10 rounded border border-primary/20">
+                  <span className="flex items-center gap-1 text-primary">
+                    <RefreshCw className="h-3 w-3" />
+                    هزینه تمدید:
+                  </span>
+                  <span className="font-bold text-primary">{approvedRenewalCost.toLocaleString('fa-IR')} تومان</span>
+                </div>
+              )}
 
-          {approvedRepairCost > 0 && (
-            <div className="flex justify-between text-sm p-2 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
-              <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
-                <Wrench className="h-3 w-3" />
-                هزینه تعمیرات:
-              </span>
-              <span className="font-bold text-orange-700 dark:text-orange-300">{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+              {approvedRepairCost > 0 && (
+                <div className="flex justify-between text-sm p-2 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
+                  <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                    <Wrench className="h-3 w-3" />
+                    هزینه تعمیرات:
+                  </span>
+                  <span className="font-bold text-orange-700 dark:text-orange-300">{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+                </div>
+              )}
             </div>
           )}
 
