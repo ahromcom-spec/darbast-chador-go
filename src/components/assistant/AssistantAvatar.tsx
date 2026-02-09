@@ -196,19 +196,26 @@ const getViewportSize = () => {
 
 // مسیرهایی که دستیار در آن‌ها مخفی می‌شود
 const HIDDEN_ROUTES = [
-  '/profile',           // صفحه پروفایل
-  '/executive',         // ماژول‌های مدیریت اجرایی
-  '/ceo',               // ماژول‌های مدیر عامل
-  '/finance',           // ماژول‌های مالی
-  '/admin',             // پنل مدیریت
-  '/sales',             // ماژول فروش
-  '/hr',                // ماژول منابع انسانی
-  '/contractor',        // پنل پیمانکار
-  '/globe',             // نقشه کره زمین مستقل
-  '/scaffolding',       // فرم‌های ثبت سفارش
-  '/expert-pricing',    // قیمت‌گذاری کارشناسی
-  '/invoice',           // فاکتورها
-  '/map',               // نقشه‌ها
+  '/profile',              // صفحه پروفایل
+  '/executive',            // ماژول‌های مدیریت اجرایی
+  '/ceo',                  // ماژول‌های مدیر عامل
+  '/finance',              // ماژول‌های مالی
+  '/admin',                // پنل مدیریت
+  '/sales',                // ماژول فروش
+  '/hr',                   // ماژول منابع انسانی
+  '/contractor',           // پنل پیمانکار
+  '/globe',                // نقشه کره زمین مستقل
+  '/scaffolding',          // فرم‌های ثبت سفارش
+  '/expert-pricing',       // قیمت‌گذاری کارشناسی
+  '/invoice',              // فاکتورها
+  '/map',                  // نقشه‌ها
+  '/daily-report',         // ماژول گزارش روزانه
+  '/personnel-accounting', // ماژول حسابکتاب پرسنل
+  '/site-registration',    // ماژول ثبت‌نام سایت
+  '/my-invoice',           // ماژول صورتحساب شخصی
+  '/site-analytics',       // ماژول آمار بازدید
+  '/bank-cards',           // ماژول کارت بانکی
+  '/customer-invoice',     // صورتحساب جامع مشتری
 ];
 
 export function AssistantAvatar() {
