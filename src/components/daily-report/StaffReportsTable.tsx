@@ -173,19 +173,19 @@ export function StaffReportsTable({
       </CardHeader>
       <CardContent>
         <div ref={scrollContainerRef} className="overflow-x-auto" dir="rtl">
-          <Table className="table-auto border-collapse border border-amber-300">
+          <Table className="table-fixed border-collapse border border-amber-300 w-[900px]">
             <TableHeader>
               <TableRow className="bg-amber-100 dark:bg-amber-900/30">
-                <TableHead className="w-[50px] border border-amber-300"></TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">کارت بانکی</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات مبلغ خرج کرد</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">مبلغ خرج کرده شده در کار</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">توضیحات دریافتی</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">مبلغ دریافتی</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">اضافه کاری</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">کارکرد</TableHead>
-                <TableHead className="text-right whitespace-nowrap px-2 border border-amber-300">نیروها</TableHead>
+                <TableHead className="w-[40px] border border-amber-300"></TableHead>
+                <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">توضیحات</TableHead>
+                <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">کارت بانکی</TableHead>
+                <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">توضیحات خرج</TableHead>
+                <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">مبلغ خرج</TableHead>
+                <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">توضیحات دریافتی</TableHead>
+                <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">مبلغ دریافتی</TableHead>
+                <TableHead className="w-[70px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">اضافه کاری</TableHead>
+                <TableHead className="w-[70px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">کارکرد</TableHead>
+                <TableHead className="w-[120px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">نیروها</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -269,7 +269,7 @@ export function StaffReportsTable({
                              toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                            }
                          }}
-                            className="w-[90px] pl-10 text-left tabular-nums text-sm"
+                            className="w-full pl-10 text-left tabular-nums text-sm"
                          dir="ltr"
                          placeholder="0"
                        />
@@ -321,7 +321,7 @@ export function StaffReportsTable({
                               toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                             }
                           }}
-                            className="w-[90px] pl-10 text-left tabular-nums text-sm"
+                            className="w-full pl-10 text-left tabular-nums text-sm"
                             dir="ltr"
                             placeholder="0"
                           />
@@ -342,7 +342,7 @@ export function StaffReportsTable({
                                toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                              }
                            }}
-                            className="w-[90px] pl-10 text-left tabular-nums text-sm"
+                            className="w-full pl-10 text-left tabular-nums text-sm"
                            dir="ltr"
                            placeholder="0"
                          />
