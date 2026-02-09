@@ -653,18 +653,15 @@ export default function DailyReportModule() {
   const markCurrentDateDirty = useCallback(() => {
     if (isAggregated) return;
     const currentDateStr = toLocalDateString(reportDate);
+    // همیشه داده‌های فعلی از refs را در کش ذخیره کن (نه داده‌های قدیمی کش)
+    // این تضمین می‌کند که حذف ردیف‌ها در کش منعکس شود
     const existingCache = dateCache.getCachedDate(currentDateStr);
-    if (existingCache) {
-      dateCache.cacheDate(currentDateStr, existingCache, true);
-    } else {
-      // ایجاد کش جدید با داده‌های فعلی و علامت dirty
-      dateCache.cacheDate(currentDateStr, {
-        orderReports: orderReportsRef.current,
-        staffReports: staffReportsRef.current,
-        dailyNotes: dailyNotesRef.current,
-        existingReportId: existingReportIdRef.current,
-      }, true);
-    }
+    dateCache.cacheDate(currentDateStr, {
+      orderReports: orderReportsRef.current,
+      staffReports: staffReportsRef.current,
+      dailyNotes: dailyNotesRef.current,
+      existingReportId: existingCache?.existingReportId ?? existingReportIdRef.current,
+    }, true);
   }, [reportDate, isAggregated, dateCache]);
 
   useEffect(() => {
@@ -2552,15 +2549,9 @@ export default function DailyReportModule() {
       return next;
     });
 
-    // فقط اگر واقعاً حذف شد، علامت dirty بزن
-    // Note: wasActuallyDeleted ممکن است در این لحظه هنوز false باشد
-    // بنابراین از setTimeout استفاده می‌کنیم
-    setTimeout(() => {
-      if (staffReportsRef.current.length < staffReports.length || wasActuallyDeleted) {
-        setIsSaved(false);
-        markCurrentDateDirty();
-      }
-    }, 0);
+    // علامت dirty بدون تأخیر - ref داخل updater به‌روز شده
+    setIsSaved(false);
+    markCurrentDateDirty();
 
     // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
     requestAnimationFrame(() => {
