@@ -294,6 +294,9 @@ export function ModuleLayout({
             onReleaseControl={releaseLock}
             versions={mappedVersions}
             onRestoreVersion={onRestoreVersion ? handleRestoreVersion : undefined}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onSaveBeforeRelease={onSaveBeforeLeave}
+            isSaving={isSaving}
           />
         </div>
       )}
