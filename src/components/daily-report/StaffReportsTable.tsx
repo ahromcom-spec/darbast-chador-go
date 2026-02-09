@@ -223,7 +223,7 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder={row.is_company_expense ? "هزینه‌های شرکت (نهار، ایاب‌ذهاب و...)" : "توضیحات..."}
-                      className="min-w-[30ch] min-h-[50px]"
+                      className="min-w-[18ch] min-h-[70px]"
                       maxLength={300}
                     />
                   </TableCell>
@@ -250,7 +250,7 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder="توضیحات..."
-                      className="min-w-[30ch] min-h-[50px]"
+                      className="min-w-[18ch] min-h-[70px]"
                       maxLength={300}
                     />
                   </TableCell>
@@ -269,7 +269,7 @@ export function StaffReportsTable({
                             toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                           }
                         }}
-                        className="min-w-[220px] pl-12 text-left tabular-nums"
+                          className="min-w-[150px] pl-12 text-left tabular-nums"
                         dir="ltr"
                         placeholder="0"
                       />
@@ -287,7 +287,7 @@ export function StaffReportsTable({
                           }
                         }}
                         placeholder={row.is_company_expense ? "توضیحات دریافتی شرکت..." : "توضیحات..."}
-                        className="min-w-[30ch] min-h-[50px]"
+                        className="min-w-[18ch] min-h-[70px]"
                         maxLength={300}
                       />
                     ) : (
@@ -299,7 +299,7 @@ export function StaffReportsTable({
                           }
                         }}
                         placeholder="توضیحات..."
-                        className="min-w-[30ch] min-h-[50px]"
+                        className="min-w-[18ch] min-h-[70px]"
                         maxLength={300}
                       />
                     )}
@@ -321,28 +321,28 @@ export function StaffReportsTable({
                               toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                             }
                           }}
-                          className="min-w-[220px] pl-12 text-left tabular-nums"
-                          dir="ltr"
-                          placeholder="0"
-                        />
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                            const numVal = parseInt(val) || 0;
-                            if (numVal <= 300000000) {
-                              onUpdateRow(index, 'amount_received', numVal);
-                            } else {
-                              toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
-                            }
-                          }}
-                          className="min-w-[220px] pl-12 text-left tabular-nums"
+                           className="min-w-[150px] pl-12 text-left tabular-nums"
+                           dir="ltr"
+                           placeholder="0"
+                         />
+                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
+                       </div>
+                     ) : (
+                       <div className="relative">
+                         <Input
+                           type="text"
+                           inputMode="numeric"
+                           value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
+                           onChange={(e) => {
+                             const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+                             const numVal = parseInt(val) || 0;
+                             if (numVal <= 300000000) {
+                               onUpdateRow(index, 'amount_received', numVal);
+                             } else {
+                               toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                             }
+                           }}
+                           className="min-w-[150px] pl-12 text-left tabular-nums"
                           dir="ltr"
                           placeholder="0"
                         />
