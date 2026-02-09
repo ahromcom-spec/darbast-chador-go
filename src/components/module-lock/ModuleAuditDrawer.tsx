@@ -75,16 +75,16 @@ export function ModuleAuditDrawer({
         return;
       }
 
-      // Fetch user names for all saved_by IDs
+      // Fetch user names for all saved_by IDs (saved_by contains user_id, not profile id)
       const userIds = [...new Set(versions.map((v) => v.saved_by))];
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, full_name')
-        .in('id', userIds);
+        .select('user_id, full_name')
+        .in('user_id', userIds);
 
       const userNameMap: Record<string, string> = {};
       profiles?.forEach((p) => {
-        userNameMap[p.id] = p.full_name || 'کاربر ناشناس';
+        userNameMap[p.user_id] = p.full_name || 'کاربر ناشناس';
       });
 
       // Map versions to audit records
