@@ -271,7 +271,9 @@ export function useModuleLock({
     };
   }, [lockStatus.isMine, refreshLock]);
 
-  const isReadOnly = !lockStatus.canEdit;
+  // فقط‌خواندنی اگر کاربر کنترل ویرایش را نداشته باشد
+  // (حتی اگر ماژول قفل نشده، کاربر باید ابتدا کنترل را بگیرد)
+  const isReadOnly = !lockStatus.isMine;
 
   return {
     lockStatus,
