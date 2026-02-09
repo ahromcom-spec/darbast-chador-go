@@ -1433,6 +1433,42 @@ export type Database = {
         }
         Relationships: []
       }
+      module_edit_locks: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          last_activity_at: string
+          locked_at: string
+          locked_by: string
+          module_date: string
+          module_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_activity_at?: string
+          locked_at?: string
+          locked_by: string
+          module_date?: string
+          module_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_activity_at?: string
+          locked_at?: string
+          locked_by?: string
+          module_date?: string
+          module_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       module_hierarchy_states: {
         Row: {
           created_at: string
@@ -1460,6 +1496,36 @@ export type Database = {
           owner_user_id?: string
           type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      module_version_history: {
+        Row: {
+          created_at: string
+          data_snapshot: Json
+          id: string
+          module_date: string
+          module_key: string
+          saved_by: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          data_snapshot: Json
+          id?: string
+          module_date: string
+          module_key: string
+          saved_by: string
+          version_number?: number
+        }
+        Update: {
+          created_at?: string
+          data_snapshot?: Json
+          id?: string
+          module_date?: string
+          module_key?: string
+          saved_by?: string
+          version_number?: number
         }
         Relationships: []
       }
@@ -4453,6 +4519,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_module_lock: {
+        Args: { p_module_date?: string; p_module_key: string }
+        Returns: Json
+      }
       add_wallet_transaction: {
         Args: {
           _amount: number
@@ -4659,6 +4729,10 @@ export type Database = {
           to_user_id: string
         }[]
       }
+      get_module_lock_status: {
+        Args: { p_module_date?: string; p_module_key: string }
+        Returns: Json
+      }
       get_my_projects_v3: {
         Args: never
         Returns: {
@@ -4824,9 +4898,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      refresh_module_lock: {
+        Args: { p_module_date?: string; p_module_key: string }
+        Returns: boolean
+      }
       reject_order_as_sales_manager: {
         Args: { _order_id: string; _rejection_reason: string }
         Returns: undefined
+      }
+      release_module_lock: {
+        Args: { p_module_date?: string; p_module_key: string }
+        Returns: boolean
       }
       remove_role_from_user: {
         Args: {
@@ -4834,6 +4916,14 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      save_module_version: {
+        Args: {
+          p_data_snapshot: Json
+          p_module_date: string
+          p_module_key: string
+        }
+        Returns: number
       }
       send_notification: {
         Args: {
