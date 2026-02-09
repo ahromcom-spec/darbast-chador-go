@@ -4,6 +4,7 @@ import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import { useModuleLock } from '@/hooks/useModuleLock';
 import { useModuleVersionHistory } from '@/hooks/useModuleVersionHistory';
 import { ModuleLockStatusBar } from '@/components/module-lock/ModuleLockStatusBar';
+import { ModuleAuditDrawer } from '@/components/module-lock/ModuleAuditDrawer';
 import { ArrowRight, Package, Save, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -243,6 +244,14 @@ export function ModuleLayout({
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                 {action}
+                {/* Audit Drawer - only visible to authorized roles */}
+                {enableLock && (
+                  <ModuleAuditDrawer
+                    moduleKey={activeModuleKey}
+                    moduleDate={moduleDate}
+                    moduleName={moduleName}
+                  />
+                )}
                 <Button
                   variant="outline"
                   size="sm"
