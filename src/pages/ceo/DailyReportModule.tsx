@@ -2703,15 +2703,16 @@ export default function DailyReportModule() {
       
       // ابتدا داده‌های تاریخ فعلی را در کش به‌روزرسانی کن
       const currentDateStr = toLocalDateString(reportDate);
+      // استفاده از refs برای دسترسی به آخرین داده‌ها و جلوگیری از stale state
       const hasCurrentData = orderReportsRef.current.some(r => r.order_id) || 
-        staffReports.some(s => s.staff_user_id || s.staff_name?.trim() || s.is_cash_box || s.is_company_expense);
+        staffReportsRef.current.some(s => s.staff_user_id || s.staff_name?.trim() || s.is_cash_box || s.is_company_expense);
       
       if (hasCurrentData && !isAggregated) {
         dateCache.cacheDate(currentDateStr, {
           orderReports: orderReportsRef.current,
-          staffReports,
-          dailyNotes,
-          existingReportId,
+          staffReports: staffReportsRef.current,
+          dailyNotes: dailyNotesRef.current,
+          existingReportId: existingReportIdRef.current,
         }, true);
       }
 
