@@ -2652,10 +2652,16 @@ export default function DailyReportModule() {
     return JSON.stringify(dataToHash);
   }, [orderReports, staffReports, dailyNotes]);
 
-  // بررسی وجود تغییرات ذخیره نشده
+  // بررسی وجود تغییرات ذخیره نشده - شامل همه روزهای کش شده
   const hasUnsavedChanges = useMemo(() => {
     // در ماژول تجمیعی، تغییرات مهم نیست (فقط خواندنی)
     if (isAggregated) return false;
+    
+    // ابتدا بررسی روزهای dirty در کش (سایر روزها)
+    const dirtyDates = dateCache.getDirtyDates();
+    if (dirtyDates.length > 0) return true;
+    
+    // سپس بررسی تاریخ فعلی
     // اگر هنوز لود نشده، تغییری نداریم
     if (isInitialLoadRef.current) return false;
     // اگر داده‌ای نداریم، تغییری نداریم
@@ -2663,7 +2669,7 @@ export default function DailyReportModule() {
     // مقایسه هش فعلی با هش اولیه
     const currentHash = computeDataHash();
     return currentHash !== initialDataHashRef.current;
-  }, [isAggregated, orderReports, staffReports, dailyNotes, computeDataHash]);
+  }, [isAggregated, dateCache, orderReports, staffReports, dailyNotes, computeDataHash]);
 
   // به‌روزرسانی هش اولیه بعد از ذخیره موفق
   const updateInitialDataHash = useCallback(() => {
