@@ -2920,7 +2920,19 @@ export default function DailyReportModule() {
       throw deleteOrderError;
     }
 
-    const ordersToInsert = cachedEntry.orderReports.filter((r) => r.order_id);
+    // Deduplication: فیلتر کردن سفارشات تکراری بر اساس order_id
+    const seenOrderIds = new Set<string>();
+    const ordersToInsert = cachedEntry.orderReports
+      .filter((r) => r.order_id)
+      .filter((r) => {
+        if (seenOrderIds.has(r.order_id)) {
+          console.warn(`Duplicate order_id detected and skipped: ${r.order_id}`);
+          return false;
+        }
+        seenOrderIds.add(r.order_id);
+        return true;
+      });
+    
     if (ordersToInsert.length > 0) {
       const { error: orderError } = await supabase
         .from('daily_report_orders')
