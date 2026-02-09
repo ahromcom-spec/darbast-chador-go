@@ -395,6 +395,9 @@ export default function DailyReportModule() {
   // Lock control state - controls whether inputs are disabled
   const [isLockReadOnly, setIsLockReadOnly] = useState(false);
   
+  // Ref to access saveVersion from ModuleLayout for version tracking
+  const saveVersionRef = useRef<((data: any) => Promise<number | null>) | null>(null);
+  
   // Track initial state for unsaved changes detection
   const initialDataHashRef = useRef<string>('');
   
@@ -2651,6 +2654,17 @@ export default function DailyReportModule() {
       // به‌روزرسانی هش اولیه برای تشخیص تغییرات بعدی
       updateInitialDataHash();
       
+      // Save version for audit trail (if lock is enabled and saveVersion is available)
+      if (saveVersionRef.current && !isAggregated) {
+        try {
+          const currentData = getCurrentData();
+          await saveVersionRef.current(currentData);
+        } catch (versionError) {
+          console.error('Error saving version history:', versionError);
+          // Don't fail the save - version history is supplementary
+        }
+      }
+      
       // Refresh saved reports list
       fetchSavedReports();
       return true;
@@ -3544,6 +3558,7 @@ export default function DailyReportModule() {
       onLockStatusChange={setIsLockReadOnly}
       getCurrentData={getCurrentData}
       onRestoreVersion={handleRestoreVersion}
+      saveVersionRef={saveVersionRef}
       action={
         <div className="flex items-center gap-3">
           {/* دکمه پاکسازی داده‌های روز - فقط برای ماژول‌های غیر تجمیعی */}
