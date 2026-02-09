@@ -223,15 +223,15 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder={row.is_company_expense ? "هزینه‌های شرکت (نهار، ایاب‌ذهاب و...)" : "توضیحات..."}
-                      className="min-w-[18ch] min-h-[70px]"
-                      maxLength={300}
-                    />
-                  </TableCell>
-                  <TableCell className="border border-amber-200">
-                    {row.is_company_expense || row.is_cash_box ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <div className="min-w-[180px]">
+                       className="w-[14ch] min-h-[70px]"
+                       maxLength={300}
+                     />
+                   </TableCell>
+                   <TableCell className="border border-amber-200">
+                     {row.is_company_expense || row.is_cash_box ? (
+                       <span className="text-muted-foreground">—</span>
+                     ) : (
+                       <div className="w-[140px]">
                         <BankCardSelect
                           value={row.bank_card_id || null}
                           onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
@@ -250,26 +250,26 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder="توضیحات..."
-                      className="min-w-[18ch] min-h-[70px]"
-                      maxLength={300}
-                    />
-                  </TableCell>
-                  <TableCell className="border border-amber-200">
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={row.amount_spent === 0 ? '' : row.amount_spent.toLocaleString('en-US')}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                          const numVal = parseInt(val) || 0;
-                          if (numVal <= 300000000) {
-                            onUpdateRow(index, 'amount_spent', numVal);
-                          } else {
-                            toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
-                          }
-                        }}
-                          className="min-w-[150px] pl-12 text-left tabular-nums"
+                       className="w-[14ch] min-h-[70px]"
+                       maxLength={300}
+                     />
+                   </TableCell>
+                   <TableCell className="border border-amber-200">
+                     <div className="relative">
+                       <Input
+                         type="text"
+                         inputMode="numeric"
+                         value={row.amount_spent === 0 ? '' : row.amount_spent.toLocaleString('en-US')}
+                         onChange={(e) => {
+                           const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+                           const numVal = parseInt(val) || 0;
+                           if (numVal <= 300000000) {
+                             onUpdateRow(index, 'amount_spent', numVal);
+                           } else {
+                             toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
+                           }
+                         }}
+                           className="w-[120px] pl-12 text-left tabular-nums"
                         dir="ltr"
                         placeholder="0"
                       />
@@ -287,19 +287,19 @@ export function StaffReportsTable({
                           }
                         }}
                         placeholder={row.is_company_expense ? "توضیحات دریافتی شرکت..." : "توضیحات..."}
-                        className="min-w-[18ch] min-h-[70px]"
-                        maxLength={300}
-                      />
-                    ) : (
-                      <AutoResizeTextarea
-                        value={row.receiving_notes}
-                        onChange={(e) => {
-                          if (e.target.value.length <= 300) {
-                            onUpdateRow(index, 'receiving_notes', e.target.value);
-                          }
-                        }}
-                        placeholder="توضیحات..."
-                        className="min-w-[18ch] min-h-[70px]"
+                         className="w-[14ch] min-h-[70px]"
+                         maxLength={300}
+                       />
+                     ) : (
+                       <AutoResizeTextarea
+                         value={row.receiving_notes}
+                         onChange={(e) => {
+                           if (e.target.value.length <= 300) {
+                             onUpdateRow(index, 'receiving_notes', e.target.value);
+                           }
+                         }}
+                         placeholder="توضیحات..."
+                         className="w-[14ch] min-h-[70px]"
                         maxLength={300}
                       />
                     )}
@@ -321,7 +321,7 @@ export function StaffReportsTable({
                               toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                             }
                           }}
-                           className="min-w-[150px] pl-12 text-left tabular-nums"
+                            className="w-[120px] pl-12 text-left tabular-nums"
                            dir="ltr"
                            placeholder="0"
                          />
@@ -342,7 +342,7 @@ export function StaffReportsTable({
                                toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                              }
                            }}
-                           className="min-w-[150px] pl-12 text-left tabular-nums"
+                           className="w-[120px] pl-12 text-left tabular-nums"
                           dir="ltr"
                           placeholder="0"
                         />
@@ -368,7 +368,7 @@ export function StaffReportsTable({
                               toast.error('اضافه‌کاری نمی‌تواند بیشتر از ۱۵ ساعت باشد');
                             }
                           }}
-                          className="min-w-[90px] pl-10 text-left"
+                          className="w-[80px] pl-10 text-left"
                           dir="ltr"
                           placeholder="0"
                         />
@@ -383,18 +383,18 @@ export function StaffReportsTable({
                       <WorkStatusSelect
                         value={row.work_status}
                         onValueChange={(value) => onUpdateRow(index, 'work_status', value)}
-                        className="min-w-[90px] w-auto"
+                        className="w-[80px]"
                       />
                     )}
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     {row.is_company_expense ? (
-                      <div className="min-w-[220px] font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                        <Building className="h-5 w-5" />
-                        ماهیت شرکت اهرم
-                      </div>
-                    ) : row.is_cash_box ? (
-                      <div className="min-w-[220px]">
+                       <div className="w-[160px] font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                         <Building className="h-5 w-5" />
+                         ماهیت شرکت اهرم
+                       </div>
+                     ) : row.is_cash_box ? (
+                       <div className="w-[160px]">
                         <BankCardSelect
                           value={row.bank_card_id || null}
                           onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
