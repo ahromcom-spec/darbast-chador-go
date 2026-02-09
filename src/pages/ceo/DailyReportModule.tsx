@@ -643,6 +643,24 @@ export default function DailyReportModule() {
     existingReportIdRef.current = existingReportId;
   }, [existingReportId]);
 
+  // تابع علامت‌گذاری تاریخ فعلی به عنوان dirty (وقتی کاربر داده‌ها را تغییر می‌دهد)
+  const markCurrentDateDirty = useCallback(() => {
+    if (isAggregated) return;
+    const currentDateStr = toLocalDateString(reportDate);
+    const existingCache = dateCache.getCachedDate(currentDateStr);
+    if (existingCache) {
+      dateCache.cacheDate(currentDateStr, existingCache, true);
+    } else {
+      // ایجاد کش جدید با داده‌های فعلی و علامت dirty
+      dateCache.cacheDate(currentDateStr, {
+        orderReports: orderReportsRef.current,
+        staffReports: staffReportsRef.current,
+        dailyNotes: dailyNotesRef.current,
+        existingReportId: existingReportIdRef.current,
+      }, true);
+    }
+  }, [reportDate, isAggregated, dateCache]);
+
   useEffect(() => {
     if (!userId || !reportDate) return;
 
@@ -651,19 +669,23 @@ export default function DailyReportModule() {
 
     if (lastLoadKeyRef.current === loadKey) return;
 
-    // ابتدا داده‌های تاریخ قبلی را در کش ذخیره کن
+    // ابتدا داده‌های تاریخ قبلی را در کش ذخیره کن (بدون تغییر وضعیت dirty)
     const oldDateStr = prevDateStrRef.current;
     if (oldDateStr && oldDateStr !== newDateStr && !isAggregated) {
       const hasData = orderReportsRef.current.some(r => r.order_id) || 
         staffReportsRef.current.some(s => s.staff_user_id || s.staff_name?.trim() || s.is_cash_box || s.is_company_expense);
       
       if (hasData) {
+        // حفظ وضعیت dirty موجود (اگر کاربر تغییری ایجاد نکرده، dirty نشود)
+        const existingCache = dateCache.getCachedDate(oldDateStr);
+        const isDirty = existingCache?.isDirty ?? false;
+        
         dateCache.cacheDate(oldDateStr, {
           orderReports: orderReportsRef.current,
           staffReports: staffReportsRef.current,
           dailyNotes: dailyNotesRef.current,
           existingReportId: existingReportIdRef.current,
-        }, true);
+        }, isDirty);
       }
     }
 
@@ -2361,6 +2383,7 @@ export default function DailyReportModule() {
     orderReportsRef.current = next;
     setOrderReports(next);
     setIsSaved(false);
+    markCurrentDateDirty();
 
     // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
     requestAnimationFrame(() => {
@@ -2374,6 +2397,7 @@ export default function DailyReportModule() {
 
   const updateOrderRow = (index: number, field: keyof OrderReportRow, value: string) => {
     setIsSaved(false);
+    markCurrentDateDirty();
 
     const prev = orderReportsRef.current;
     const updated = [...prev];
@@ -2457,6 +2481,7 @@ export default function DailyReportModule() {
 
   const addBankCardRow = () => {
     setIsSaved(false);
+    markCurrentDateDirty();
     setStaffReports((prev) => [
       {
         staff_user_id: null,
@@ -2517,6 +2542,7 @@ export default function DailyReportModule() {
     // ذخیره موقعیت اسکرول قبل از حذف
     const scrollY = window.scrollY;
     setIsSaved(false);
+    markCurrentDateDirty();
     
     // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
     requestAnimationFrame(() => {
@@ -2530,6 +2556,7 @@ export default function DailyReportModule() {
 
   const updateStaffRow = (index: number, field: keyof StaffReportRow, value: any) => {
     setIsSaved(false);
+    markCurrentDateDirty();
     setStaffReports((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -3990,6 +4017,7 @@ export default function DailyReportModule() {
                   onChange={(e) => {
                     setDailyNotes(e.target.value);
                     setIsSaved(false);
+                    markCurrentDateDirty();
                   }}
                   className="flex-1 min-h-[40px] text-sm resize-none"
                 />
