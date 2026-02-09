@@ -100,15 +100,15 @@ export function OrderReportsTable({
                     <AutoResizeTextarea
                       value={row.notes}
                       onChange={(e) => onUpdateRow(index, 'notes', e.target.value)}
-                      className="min-h-[70px] min-w-[18ch] bg-background/50"
-                      placeholder="توضیحات..."
+                       className="min-h-[70px] w-[14ch] bg-background/50"
+                       placeholder="توضیحات..."
                     />
                   </TableCell>
                   <TableCell className="border border-blue-200">
                     <Input
                       value={row.team_name}
                       onChange={(e) => onUpdateRow(index, 'team_name', e.target.value)}
-                      className="bg-background/50 min-w-[18ch]"
+                      className="bg-background/50 w-[14ch]"
                       placeholder="نام اکیپ"
                     />
                   </TableCell>
@@ -116,16 +116,16 @@ export function OrderReportsTable({
                     <AutoResizeTextarea
                       value={row.service_details}
                       onChange={(e) => onUpdateRow(index, 'service_details', e.target.value)}
-                      className="min-h-[70px] min-w-[18ch] bg-background/50"
-                      placeholder="جزئیات خدمات..."
+                       className="min-h-[70px] w-[14ch] bg-background/50"
+                       placeholder="جزئیات خدمات..."
                     />
                   </TableCell>
                   <TableCell className="border border-blue-200">
                     <AutoResizeTextarea
                       value={row.activity_description}
                       onChange={(e) => onUpdateRow(index, 'activity_description', e.target.value)}
-                      className="min-h-[70px] min-w-[18ch] bg-background/50"
-                      placeholder="شرح فعالیت..."
+                       className="min-h-[70px] w-[14ch] bg-background/50"
+                       placeholder="شرح فعالیت..."
                     />
                   </TableCell>
                   <TableCell className="border border-blue-200">
