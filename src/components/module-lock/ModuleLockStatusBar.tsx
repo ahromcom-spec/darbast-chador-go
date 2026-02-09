@@ -111,7 +111,9 @@ export function ModuleLockStatusBar({
           'flex items-center justify-between gap-2 px-4 py-2 rounded-lg border text-sm',
           isReadOnly
             ? 'bg-destructive/10 border-destructive/30'
-            : 'bg-primary/10 border-primary/30'
+            : isMine 
+              ? 'bg-primary/10 border-primary/30'
+              : 'bg-amber-50 border-amber-200'
         )}
       >
         <div className="flex items-center gap-2">
@@ -135,7 +137,7 @@ export function ModuleLockStatusBar({
                 فقط خواندنی
               </Badge>
             </>
-          ) : (
+          ) : isMine ? (
             <>
               <Users className="h-4 w-4 text-primary" />
               <span className="text-primary">
@@ -150,6 +152,17 @@ export function ModuleLockStatusBar({
                   تغییرات ذخیره نشده
                 </Badge>
               )}
+            </>
+          ) : (
+            <>
+              <LockOpen className="h-4 w-4 text-amber-600" />
+              <span className="text-amber-700">
+                برای ویرایش، کنترل را بگیرید
+              </span>
+              <Badge variant="outline" className="border-amber-400 text-amber-700">
+                <LockOpen className="h-3 w-3 ml-1" />
+                آماده ویرایش
+              </Badge>
             </>
           )}
         </div>
@@ -184,7 +197,7 @@ export function ModuleLockStatusBar({
           )}
 
           {/* Take/Release Control Button */}
-          {isReadOnly ? (
+          {isReadOnly || !isMine ? (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
