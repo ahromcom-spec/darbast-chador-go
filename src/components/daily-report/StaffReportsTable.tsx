@@ -269,11 +269,11 @@ export function StaffReportsTable({
                              toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                            }
                          }}
-                           className="w-[120px] pl-12 text-left tabular-nums"
-                        dir="ltr"
-                        placeholder="0"
-                      />
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
+                            className="w-[90px] pl-10 text-left tabular-nums text-sm"
+                         dir="ltr"
+                         placeholder="0"
+                       />
+                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">تومان</span>
                     </div>
                   </TableCell>
                   <TableCell className="border border-amber-200">
@@ -321,11 +321,11 @@ export function StaffReportsTable({
                               toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                             }
                           }}
-                            className="w-[120px] pl-12 text-left tabular-nums"
-                           dir="ltr"
-                           placeholder="0"
-                         />
-                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
+                            className="w-[90px] pl-10 text-left tabular-nums text-sm"
+                            dir="ltr"
+                            placeholder="0"
+                          />
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">تومان</span>
                        </div>
                      ) : (
                        <div className="relative">
@@ -342,11 +342,11 @@ export function StaffReportsTable({
                                toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
                              }
                            }}
-                           className="w-[120px] pl-12 text-left tabular-nums"
-                          dir="ltr"
-                          placeholder="0"
-                        />
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">تومان</span>
+                            className="w-[90px] pl-10 text-left tabular-nums text-sm"
+                           dir="ltr"
+                           placeholder="0"
+                         />
+                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">تومان</span>
                       </div>
                     )}
                   </TableCell>
