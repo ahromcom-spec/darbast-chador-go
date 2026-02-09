@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
+import { useDailyReportDateCache } from '@/hooks/useDailyReportDateCache';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -369,6 +370,9 @@ export default function DailyReportModule() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
+  // هوک کش چند-روزه برای نگهداری داده‌های ذخیره‌نشده هنگام جابجایی بین روزها
+  const dateCache = useDailyReportDateCache();
+
   // جلوگیری از Pull-to-refresh روی این فرم (Android Chrome/PWA)
   // تا صفحه ناخواسته رفرش نشود و داده‌های ذخیره‌نشده پاک نشوند.
   useEffect(() => {
@@ -619,31 +623,79 @@ export default function DailyReportModule() {
     }
   }, [activeTab, user, activeModuleKey, isAggregated]);
 
+  // ذخیره تاریخ قبلی برای مقایسه
+  const prevDateStrRef = useRef<string | null>(null);
+  // Refs for caching without causing re-renders
+  const staffReportsRef = useRef<StaffReportRow[]>([]);
+  const dailyNotesRef = useRef<string>('');
+  const existingReportIdRef = useRef<string | null>(null);
+
+  // Keep refs in sync with state
   useEffect(() => {
-    // وقتی کاربر هنوز لود نشده باشد، fetchExistingReport اجرا نمی‌شود
-    // و بعد از login نیز دوباره اجرا نمی‌شد؛ بنابراین userId را در dependency می‌آوریم.
+    staffReportsRef.current = staffReports;
+  }, [staffReports]);
+
+  useEffect(() => {
+    dailyNotesRef.current = dailyNotes;
+  }, [dailyNotes]);
+
+  useEffect(() => {
+    existingReportIdRef.current = existingReportId;
+  }, [existingReportId]);
+
+  useEffect(() => {
     if (!userId || !reportDate) return;
 
-    const dateStr = toLocalDateString(reportDate);
-    const loadKey = `${userId}|${dateStr}|${activeModuleKey}`;
+    const newDateStr = toLocalDateString(reportDate);
+    const loadKey = `${userId}|${newDateStr}|${activeModuleKey}`;
 
-    // جلوگیری از ریست شدن فرم به‌علت تغییرات دوره‌ای آبجکت user (refresh سشن/توکن)
     if (lastLoadKeyRef.current === loadKey) return;
+
+    // ابتدا داده‌های تاریخ قبلی را در کش ذخیره کن
+    const oldDateStr = prevDateStrRef.current;
+    if (oldDateStr && oldDateStr !== newDateStr && !isAggregated) {
+      const hasData = orderReportsRef.current.some(r => r.order_id) || 
+        staffReportsRef.current.some(s => s.staff_user_id || s.staff_name?.trim() || s.is_cash_box || s.is_company_expense);
+      
+      if (hasData) {
+        dateCache.cacheDate(oldDateStr, {
+          orderReports: orderReportsRef.current,
+          staffReports: staffReportsRef.current,
+          dailyNotes: dailyNotesRef.current,
+          existingReportId: existingReportIdRef.current,
+        }, true);
+      }
+    }
+
+    prevDateStrRef.current = newDateStr;
     lastLoadKeyRef.current = loadKey;
 
-    // ابتدا فرم را پاک کن تا داده‌های تاریخ قبلی نمایش داده نشود
+    // بررسی کش
+    const cachedData = dateCache.getCachedDate(newDateStr);
+    if (cachedData) {
+      orderReportsRef.current = cachedData.orderReports;
+      setOrderReports(cachedData.orderReports);
+      setStaffReports(cachedData.staffReports);
+      setDailyNotes(cachedData.dailyNotes);
+      setExistingReportId(cachedData.existingReportId);
+      isInitialLoadRef.current = false;
+      cachedShowAllReportsRef.current = null;
+      isFetchingReportRef.current = false;
+      lastFetchTimestampRef.current = 0;
+      return;
+    }
+
+    // از دیتابیس لود کن
     setOrderReports([]);
     setStaffReports([]);
     setDailyNotes('');
     setExistingReportId(null);
     isInitialLoadRef.current = true;
-    // پاک کردن کش shouldShowAllUserReports برای محاسبه مجدد در تاریخ/ماژول جدید
     cachedShowAllReportsRef.current = null;
-    // ریست کردن قفل‌ها
     isFetchingReportRef.current = false;
     lastFetchTimestampRef.current = 0;
     fetchExistingReport();
-  }, [reportDate, userId, activeModuleKey]);
+  }, [reportDate, userId, activeModuleKey, isAggregated, dateCache]);
 
   // Realtime subscription برای ماژول کلی یا ماژول مادر با کاربران اختصاص‌یافته:
   // وقتی گزارشی حذف شود، دوباره واکشی کن
@@ -2618,6 +2670,12 @@ export default function DailyReportModule() {
     initialDataHashRef.current = computeDataHash();
   }, [computeDataHash]);
 
+  // محاسبه تعداد روزهای ذخیره‌نشده در کش
+  const dirtyDatesCount = useMemo(() => {
+    const dirtyDates = dateCache.getDirtyDates();
+    return dirtyDates.length;
+  }, [dateCache, orderReports, staffReports, dailyNotes]); // Re-calculate when data changes
+
   const saveReport = async (): Promise<boolean> => {
     if (!user) return false;
     
@@ -2636,17 +2694,78 @@ export default function DailyReportModule() {
       }
       
       setSaving(true);
-      const dateStr = toLocalDateString(reportDate);
-
-      // در ماژول مادر (shouldShowAllUserReports): ذخیره ردیف‌ها به گزارش‌های اصلی‌شان
-      if (shouldShowAllUserReports && !isAggregated) {
-        await saveParentModuleReport(dateStr);
-      } else {
-        // ذخیره معمولی برای ماژول‌های غیر تجمیعی
-        await saveRegularReport(dateStr);
+      
+      // ابتدا داده‌های تاریخ فعلی را در کش به‌روزرسانی کن
+      const currentDateStr = toLocalDateString(reportDate);
+      const hasCurrentData = orderReportsRef.current.some(r => r.order_id) || 
+        staffReports.some(s => s.staff_user_id || s.staff_name?.trim() || s.is_cash_box || s.is_company_expense);
+      
+      if (hasCurrentData && !isAggregated) {
+        dateCache.cacheDate(currentDateStr, {
+          orderReports: orderReportsRef.current,
+          staffReports,
+          dailyNotes,
+          existingReportId,
+        }, true);
       }
 
-      toast.success('گزارش با موفقیت ذخیره شد');
+      // همه روزهای dirty را جمع‌آوری کن
+      const allCachedData = dateCache.getAllCachedData();
+      const dirtyDates = dateCache.getDirtyDates();
+      
+      let savedCount = 0;
+      let errors: string[] = [];
+
+      // ذخیره تمام روزهای dirty
+      for (const [cachedDateStr, cachedEntry] of allCachedData) {
+        if (!cachedEntry.isDirty) continue;
+
+        try {
+          // موقتاً state ها را به داده‌های این تاریخ تغییر بده برای ذخیره
+          const originalOrderReports = orderReportsRef.current;
+          const originalStaffReports = staffReports;
+          const originalDailyNotes = dailyNotes;
+          const originalExistingReportId = existingReportId;
+          const originalReportDate = reportDate;
+
+          // ست کردن داده‌های موقت برای ذخیره
+          orderReportsRef.current = cachedEntry.orderReports;
+          
+          // ایجاد reportDate موقت برای این تاریخ
+          const tempReportDate = new Date(cachedDateStr);
+
+          // در ماژول مادر (shouldShowAllUserReports): ذخیره ردیف‌ها به گزارش‌های اصلی‌شان
+          if (shouldShowAllUserReports && !isAggregated) {
+            // For parent module, we need to handle staff differently
+            // For now, just save to regular report
+            await saveRegularReportForDate(cachedDateStr, cachedEntry, tempReportDate);
+          } else {
+            await saveRegularReportForDate(cachedDateStr, cachedEntry, tempReportDate);
+          }
+
+          // بازگرداندن state های اصلی
+          orderReportsRef.current = originalOrderReports;
+
+          // علامت‌گذاری به عنوان ذخیره شده
+          dateCache.markDateAsSaved(cachedDateStr);
+          savedCount++;
+        } catch (error: any) {
+          console.error(`Error saving report for ${cachedDateStr}:`, error);
+          errors.push(cachedDateStr);
+        }
+      }
+
+      if (savedCount > 0) {
+        if (savedCount === 1) {
+          toast.success('گزارش با موفقیت ذخیره شد');
+        } else {
+          toast.success(`${savedCount} گزارش با موفقیت ذخیره شدند`);
+        }
+      }
+
+      if (errors.length > 0) {
+        toast.error(`خطا در ذخیره گزارشات: ${errors.join(', ')}`);
+      }
       
       // Show saved state on button - stay on same page
       setIsSaved(true);
@@ -2667,7 +2786,7 @@ export default function DailyReportModule() {
       
       // Refresh saved reports list
       fetchSavedReports();
-      return true;
+      return errors.length === 0;
     } catch (error: any) {
       console.error('Error saving report:', error);
       const errorMessage = error?.message || error?.details || 'خطای نامشخص';
@@ -2677,6 +2796,175 @@ export default function DailyReportModule() {
       setSaving(false);
       // بازگرداندن امکان auto-save
       isDeletingRowRef.current = false;
+    }
+  };
+
+  // تابع ذخیره برای یک تاریخ خاص با داده‌های کش‌شده
+  const saveRegularReportForDate = async (
+    dateStr: string, 
+    cachedEntry: { orderReports: OrderReportRow[]; staffReports: StaffReportRow[]; dailyNotes: string; existingReportId: string | null },
+    tempReportDate: Date
+  ) => {
+    if (!user) return;
+
+    let reportId = cachedEntry.existingReportId;
+
+    if (!reportId) {
+      // First check if a report already exists for this date AND module_key (fresh DB check)
+      const { data: existingCheck } = await supabase
+        .from('daily_reports')
+        .select('id')
+        .eq('report_date', dateStr)
+        .eq('created_by', user.id)
+        .eq('module_key', activeModuleKey)
+        .maybeSingle();
+
+      if (existingCheck?.id) {
+        reportId = existingCheck.id;
+        // Update notes
+        await supabase
+          .from('daily_reports')
+          .update({ notes: cachedEntry.dailyNotes || null, updated_at: new Date().toISOString() })
+          .eq('id', reportId);
+      } else {
+        // Create new report with module_key for isolation using insert with retry
+        const { data: newReport, error: createError } = await supabase
+          .from('daily_reports')
+          .insert({
+            report_date: dateStr,
+            created_by: user.id,
+            notes: cachedEntry.dailyNotes || null,
+            module_key: activeModuleKey,
+            updated_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+
+        if (createError) {
+          // If unique constraint violation, try fetching again
+          if (createError.code === '23505') {
+            const { data: retry } = await supabase
+              .from('daily_reports')
+              .select('id')
+              .eq('report_date', dateStr)
+              .eq('created_by', user.id)
+              .eq('module_key', activeModuleKey)
+              .maybeSingle();
+            if (retry?.id) {
+              reportId = retry.id;
+              // Update notes
+              await supabase
+                .from('daily_reports')
+                .update({ notes: cachedEntry.dailyNotes || null, updated_at: new Date().toISOString() })
+                .eq('id', reportId);
+            } else {
+              throw createError;
+            }
+          } else {
+            throw createError;
+          }
+        } else {
+          reportId = newReport.id;
+        }
+      }
+    } else {
+      // Update existing report notes
+      await supabase
+        .from('daily_reports')
+        .update({ notes: cachedEntry.dailyNotes || null, updated_at: new Date().toISOString() })
+        .eq('id', reportId);
+    }
+
+    // Delete existing order reports and insert new ones
+    const { error: deleteOrderError } = await supabase
+      .from('daily_report_orders')
+      .delete()
+      .eq('daily_report_id', reportId);
+
+    if (deleteOrderError) {
+      console.error('Error deleting order reports:', deleteOrderError);
+      throw deleteOrderError;
+    }
+
+    const ordersToInsert = cachedEntry.orderReports.filter((r) => r.order_id);
+    if (ordersToInsert.length > 0) {
+      const { error: orderError } = await supabase
+        .from('daily_report_orders')
+        .insert(ordersToInsert.map(r => ({
+          daily_report_id: reportId,
+          order_id: r.order_id,
+          activity_description: r.activity_description || '',
+          service_details: r.service_details || '',
+          team_name: r.team_name || '',
+          notes: r.notes || '',
+          row_color: r.row_color || 'yellow'
+        })));
+
+      if (orderError) {
+        console.error('Error inserting order reports:', orderError);
+        throw orderError;
+      }
+    }
+
+    const staffToSave = cachedEntry.staffReports.filter(
+      (s) =>
+        s.is_cash_box ||
+        Boolean(s.staff_user_id) ||
+        Boolean(s.staff_name?.trim()) ||
+        (s.overtime_hours ?? 0) > 0 ||
+        (s.amount_received ?? 0) > 0 ||
+        (s.amount_spent ?? 0) > 0 ||
+        Boolean(s.receiving_notes?.trim()) ||
+        Boolean(s.spending_notes?.trim()) ||
+        Boolean(s.notes?.trim())
+    );
+
+    // Delete existing staff reports and insert new ones
+    const { error: deleteStaffError } = await supabase
+      .from('daily_report_staff')
+      .delete()
+      .eq('daily_report_id', reportId);
+
+    if (deleteStaffError) {
+      console.error('Error deleting staff reports:', deleteStaffError);
+      throw deleteStaffError;
+    }
+
+    if (staffToSave.length > 0) {
+      const staffPayload = staffToSave.map((s) => ({
+        daily_report_id: reportId,
+        staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
+        staff_name: s.staff_name || '',
+        work_status: toDbWorkStatus(s.work_status),
+        overtime_hours: s.overtime_hours || 0,
+        amount_received: s.amount_received || 0,
+        receiving_notes: s.receiving_notes || '',
+        amount_spent: s.amount_spent || 0,
+        spending_notes: s.spending_notes || '',
+        bank_card_id: s.bank_card_id ?? null,
+        notes: s.notes || '',
+        is_cash_box: toDbBoolean(s.is_cash_box),
+        is_company_expense:
+          toDbBoolean(s.is_company_expense) ||
+          Boolean(s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'))
+      }));
+
+      const { error: staffError } = await supabase
+        .from('daily_report_staff')
+        .insert(staffPayload);
+
+      if (staffError) {
+        console.error('Error inserting staff reports:', staffError);
+        throw staffError;
+      }
+
+      // همگام‌سازی موجودی کارت‌ها
+      await syncBankCardBalancesFromLedger({
+        reportId,
+        reportDate: tempReportDate,
+        userId: user.id,
+        staffToSave,
+      });
     }
   };
 
@@ -4318,7 +4606,16 @@ export default function DailyReportModule() {
 
                 {/* Save Button - برای ماژول‌های غیر تجمیعی و ماژول مادر */}
                 {(!isAggregated || shouldShowAllUserReports) && (
-                  <div className="flex justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    {/* نشانگر روزهای ذخیره‌نشده */}
+                    {dirtyDatesCount > 0 && (
+                      <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-4 py-2 rounded-lg border border-amber-200">
+                        <Clock className="h-4 w-4" />
+                        <span className="text-sm font-medium">
+                          {dirtyDatesCount} روز تغییرات ذخیره‌نشده دارد
+                        </span>
+                      </div>
+                    )}
                     <Button 
                       onClick={() => {
                         setIsSaved(false);
@@ -4326,7 +4623,7 @@ export default function DailyReportModule() {
                       }} 
                       disabled={saving}
                       size="lg"
-                      className={`gap-2 min-w-[200px] ${isSaved ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                      className={`gap-2 min-w-[200px] ${isSaved ? 'bg-green-600 hover:bg-green-700' : ''} ${dirtyDatesCount > 0 ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}
                     >
                       {saving ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -4335,7 +4632,7 @@ export default function DailyReportModule() {
                       ) : (
                         <Save className="h-5 w-5" />
                       )}
-                      {isSaved ? 'ذخیره شده' : 'ذخیره گزارش'}
+                      {saving ? 'در حال ذخیره...' : isSaved ? 'ذخیره شده' : dirtyDatesCount > 1 ? `ذخیره همه (${dirtyDatesCount} روز)` : 'ذخیره گزارش'}
                     </Button>
                   </div>
                 )}
