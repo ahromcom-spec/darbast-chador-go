@@ -15,6 +15,12 @@ interface ModuleLockWrapperProps {
   onAutoSave?: (data: any) => Promise<void>;
   getCurrentData?: () => any;
   onDataRestore?: (data: any) => void;
+  /** Whether there are unsaved changes */
+  hasUnsavedChanges?: boolean;
+  /** Callback to save all data before releasing control */
+  onSaveBeforeRelease?: () => Promise<boolean>;
+  /** Whether save is in progress */
+  isSaving?: boolean;
 }
 
 export function ModuleLockWrapper({
@@ -24,6 +30,9 @@ export function ModuleLockWrapper({
   onAutoSave,
   getCurrentData,
   onDataRestore,
+  hasUnsavedChanges = false,
+  onSaveBeforeRelease,
+  isSaving = false,
 }: ModuleLockWrapperProps) {
   // Handle force takeover - auto-save previous user's data
   const handleForceTakeover = useCallback(
@@ -120,6 +129,9 @@ export function ModuleLockWrapper({
         onReleaseControl={releaseLock}
         versions={mappedVersions}
         onRestoreVersion={handleRestoreVersion}
+        hasUnsavedChanges={hasUnsavedChanges}
+        onSaveBeforeRelease={onSaveBeforeRelease}
+        isSaving={isSaving}
       />
 
       {children({
