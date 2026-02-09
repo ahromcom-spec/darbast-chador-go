@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 
-const ZOOM_LEVELS = [0.85, 1, 1.15] as const;
+const ZOOM_LEVELS = [0.5, 0.6, 0.7, 0.85, 1, 1.15, 1.3, 1.5] as const;
 const STORAGE_KEY = 'site-zoom-level';
 
 export const useInternalZoom = () => {
-  const [zoomIndex, setZoomIndex] = useState(1); // Default to 100% (index 1)
+  const [zoomIndex, setZoomIndex] = useState(4); // Default to 100% (index 4)
   const [isWindows, setIsWindows] = useState(false);
 
   // Detect Windows OS
@@ -64,7 +64,7 @@ export const useInternalZoom = () => {
   }, []);
 
   const resetZoom = useCallback(() => {
-    setZoomIndex(1);
+    setZoomIndex(4);
   }, []);
 
   // Allow dropdowns/popovers to permanently force 100% zoom (Windows only)
@@ -72,7 +72,7 @@ export const useInternalZoom = () => {
     if (!isWindows) return;
 
     const handleForceZoom100 = () => {
-      setZoomIndex((prev) => (prev === 1 ? prev : 1));
+      setZoomIndex((prev) => (prev === 4 ? prev : 4));
     };
 
     window.addEventListener('app:force-zoom-100', handleForceZoom100);
