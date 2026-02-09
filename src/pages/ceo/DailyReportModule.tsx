@@ -367,6 +367,9 @@ export default function DailyReportModule() {
   // آیا این ماژول تجمیعی است؟ (نمایش همه گزارشات از همه ماژول‌ها)
   const isAggregated = isAggregatedModule(activeModuleKey, moduleName);
 
+  // حالت فقط‌خواندنی واقعی: ترکیب ماژول تجمیعی و وضعیت قفل
+  // اگر ماژول تجمیعی باشد یا کاربر کنترل ویرایش را نداشته باشد، فرم فقط‌خواندنی است
+
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
@@ -398,6 +401,9 @@ export default function DailyReportModule() {
   
   // Lock control state - controls whether inputs are disabled
   const [isLockReadOnly, setIsLockReadOnly] = useState(false);
+  
+  // حالت فقط‌خواندنی مؤثر: ترکیب ماژول تجمیعی و وضعیت قفل
+  const effectiveReadOnly = isAggregated || isLockReadOnly;
   
   // Ref to access saveVersion from ModuleLayout for version tracking
   const saveVersionRef = useRef<((data: any) => Promise<number | null>) | null>(null);
@@ -4078,7 +4084,7 @@ export default function DailyReportModule() {
             {/* Daily Notes */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 bg-muted/30 p-3 rounded-lg">
               <Label className="text-sm font-medium whitespace-nowrap">توضیحات روز:</Label>
-              {isAggregated ? (
+              {effectiveReadOnly ? (
                 <div className="flex-1 min-h-[40px] text-sm bg-background/50 p-2 rounded border">
                   {dailyNotes || <span className="text-muted-foreground">بدون توضیحات</span>}
                 </div>
@@ -4112,7 +4118,7 @@ export default function DailyReportModule() {
                         </div>
                         <CardTitle className="text-base sm:text-lg">گزارش سفارشات مشتری</CardTitle>
                       </div>
-                      {!isAggregated && (
+                      {!effectiveReadOnly && (
                         <Button size="sm" onClick={addOrderRow} className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
                           <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                           <span className="hidden xs:inline">افزودن ردیف</span>
@@ -4154,7 +4160,7 @@ export default function DailyReportModule() {
                               <TableRow key={index} className={`${getRowColorClass(row.row_color)} even:opacity-90`}>
                                 <TableCell className="border border-blue-200">
                                   <div className="flex items-center gap-2">
-                                    {isAggregated ? (
+                                    {effectiveReadOnly ? (
                                       (() => {
                                         const selectedOrder = orders.find(o => o.id === row.order_id);
                                         return (
@@ -4236,7 +4242,7 @@ export default function DailyReportModule() {
                                   })()}
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
-                                  {isAggregated ? (
+                                  {effectiveReadOnly ? (
                                     <div className="min-h-[50px] min-w-[50ch] bg-background/50 p-2 rounded border text-sm whitespace-pre-wrap">
                                       {row.activity_description || row.service_details || '-'}
                                     </div>
@@ -4253,7 +4259,7 @@ export default function DailyReportModule() {
                                   )}
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
-                                  {isAggregated ? (
+                                  {effectiveReadOnly ? (
                                     <div className="min-w-[40ch] bg-background/50 p-2 rounded border text-sm">
                                       {row.team_name || '-'}
                                     </div>
@@ -4267,7 +4273,7 @@ export default function DailyReportModule() {
                                   )}
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
-                                  {isAggregated ? (
+                                  {effectiveReadOnly ? (
                                     <div className="min-h-[50px] min-w-[40ch] bg-background/50 p-2 rounded border text-sm whitespace-pre-wrap">
                                       {row.notes || '-'}
                                     </div>
@@ -4281,7 +4287,7 @@ export default function DailyReportModule() {
                                   )}
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
-                                  {!isAggregated && (
+                                  {!effectiveReadOnly && (
                                     <Button
                                       variant="ghost"
                                       size="icon"
@@ -4310,7 +4316,7 @@ export default function DailyReportModule() {
                         </div>
                         <CardTitle className="text-base sm:text-lg">گزارش نیروها</CardTitle>
                       </div>
-                      {!isAggregated && (
+                      {!effectiveReadOnly && (
                         <div className="flex items-center gap-2">
                           <Button
                             size="sm"
@@ -4379,7 +4385,7 @@ export default function DailyReportModule() {
                                      ماهیت شرکت اهرم
                                    </div>
                                  ) : row.is_cash_box ? (
-                                   isAggregated ? (
+                                   effectiveReadOnly ? (
                                      (() => {
                                        // نمایش نام و موجودی کارت در حالت تجمیعی
                                        const cardInfo = row.bank_card_id ? bankCardsCache.get(row.bank_card_id) : null;
@@ -4410,7 +4416,7 @@ export default function DailyReportModule() {
                                        />
                                      </div>
                                    )
-                                 ) : isAggregated ? (
+                                 ) : effectiveReadOnly ? (
                                    <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm">
                                      {row.staff_name || '-'}
                                    </div>
@@ -4487,7 +4493,7 @@ export default function DailyReportModule() {
                               <TableCell className="border border-amber-200">
                                  {row.is_cash_box || isCompanyExpense ? (
                                   <span className="text-muted-foreground">—</span>
-                                ) : isAggregated ? (
+                                ) : effectiveReadOnly ? (
                                   <div className="min-w-[90px] p-2 bg-background/50 rounded border text-sm">
                                     {row.work_status}
                                   </div>
@@ -4502,7 +4508,7 @@ export default function DailyReportModule() {
                               <TableCell className="border border-amber-200">
                                  {row.is_cash_box || isCompanyExpense ? (
                                   <span className="text-muted-foreground">—</span>
-                                ) : isAggregated ? (
+                                ) : effectiveReadOnly ? (
                                   <div className="min-w-[90px] p-2 bg-background/50 rounded border text-sm text-left" dir="ltr">
                                     {row.overtime_hours || 0} ساعت
                                   </div>
@@ -4530,7 +4536,7 @@ export default function DailyReportModule() {
                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                {isAggregated ? (
+                                {effectiveReadOnly ? (
                                   <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm text-left tabular-nums" dir="ltr">
                                     {(row.amount_received ?? 0).toLocaleString('fa-IR')} تومان
                                   </div>
@@ -4562,7 +4568,7 @@ export default function DailyReportModule() {
                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                {isAggregated ? (
+                                {effectiveReadOnly ? (
                                   <div className="min-w-[30ch] min-h-[50px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
                                     {row.receiving_notes || '-'}
                                   </div>
@@ -4581,7 +4587,7 @@ export default function DailyReportModule() {
                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                {isAggregated ? (
+                                {effectiveReadOnly ? (
                                   <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm text-left tabular-nums" dir="ltr">
                                     {(row.amount_spent ?? 0).toLocaleString('fa-IR')} تومان
                                   </div>
@@ -4609,7 +4615,7 @@ export default function DailyReportModule() {
                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                {isAggregated ? (
+                                {effectiveReadOnly ? (
                                   <div className="min-w-[30ch] min-h-[50px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
                                     {row.spending_notes || '-'}
                                   </div>
@@ -4628,7 +4634,7 @@ export default function DailyReportModule() {
                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                {isAggregated ? (
+                                {effectiveReadOnly ? (
                                   <div className="min-w-[30ch] min-h-[50px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
                                     {row.notes || '-'}
                                   </div>
@@ -4647,7 +4653,7 @@ export default function DailyReportModule() {
                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
-                                {!isAggregated &&
+                                {!effectiveReadOnly &&
                                   (
                                     (!isCompanyExpense &&
                                       (!row.is_cash_box || staffReports.filter((r) => r.is_cash_box).length > 1)) ||

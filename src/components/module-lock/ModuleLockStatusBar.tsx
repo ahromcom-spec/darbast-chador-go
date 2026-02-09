@@ -109,34 +109,16 @@ export function ModuleLockStatusBar({
       <div
         className={cn(
           'flex items-center justify-between gap-2 px-4 py-2 rounded-lg border text-sm',
-          isReadOnly
-            ? 'bg-destructive/10 border-destructive/30'
-            : isMine 
-              ? 'bg-primary/10 border-primary/30'
+          isMine 
+            ? 'bg-primary/10 border-primary/30'
+            : lockedByName
+              ? 'bg-destructive/10 border-destructive/30'
               : 'bg-amber-50 border-amber-200'
         )}
       >
         <div className="flex items-center gap-2">
           {isLoading ? (
             <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
-          ) : isReadOnly ? (
-            <>
-              <Lock className="h-4 w-4 text-destructive" />
-              <span className="text-destructive">
-                {lockedByName ? (
-                  <>
-                    در حال ویرایش توسط:{' '}
-                    <strong className="font-semibold">{lockedByName}</strong>
-                  </>
-                ) : (
-                  'این ماژول فقط خواندنی است'
-                )}
-              </span>
-              <Badge variant="secondary">
-                <LockOpen className="h-3 w-3 ml-1" />
-                فقط خواندنی
-              </Badge>
-            </>
           ) : isMine ? (
             <>
               <Users className="h-4 w-4 text-primary" />
@@ -153,15 +135,27 @@ export function ModuleLockStatusBar({
                 </Badge>
               )}
             </>
+          ) : lockedByName ? (
+            <>
+              <Lock className="h-4 w-4 text-destructive" />
+              <span className="text-destructive">
+                در حال ویرایش توسط:{' '}
+                <strong className="font-semibold">{lockedByName}</strong>
+              </span>
+              <Badge variant="secondary" className="bg-destructive/10 text-destructive border-destructive/30">
+                <Lock className="h-3 w-3 ml-1" />
+                فقط خواندنی
+              </Badge>
+            </>
           ) : (
             <>
               <LockOpen className="h-4 w-4 text-amber-600" />
               <span className="text-amber-700">
                 برای ویرایش، کنترل را بگیرید
               </span>
-              <Badge variant="outline" className="border-amber-400 text-amber-700">
+              <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50">
                 <LockOpen className="h-3 w-3 ml-1" />
-                آماده ویرایش
+                فقط خواندنی
               </Badge>
             </>
           )}
@@ -197,7 +191,7 @@ export function ModuleLockStatusBar({
           )}
 
           {/* Take/Release Control Button */}
-          {isReadOnly || !isMine ? (
+          {!isMine ? (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
