@@ -42,6 +42,8 @@ interface ModuleLayoutProps {
   getCurrentData?: () => any;
   /** Callback when a version is restored */
   onRestoreVersion?: (data: any) => void;
+  /** Ref to expose saveVersion function to parent component for version tracking on save */
+  saveVersionRef?: React.MutableRefObject<((data: any) => Promise<number | null>) | null>;
 }
 
 export function ModuleLayout({
@@ -61,6 +63,7 @@ export function ModuleLayout({
   onLockStatusChange,
   getCurrentData,
   onRestoreVersion,
+  saveVersionRef,
 }: ModuleLayoutProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -118,6 +121,18 @@ export function ModuleLayout({
       onLockStatusChange(isReadOnly);
     }
   }, [enableLock, isReadOnly, onLockStatusChange]);
+
+  // Expose saveVersion to parent component via ref
+  useEffect(() => {
+    if (saveVersionRef && enableLock) {
+      saveVersionRef.current = saveVersion;
+    }
+    return () => {
+      if (saveVersionRef) {
+        saveVersionRef.current = null;
+      }
+    };
+  }, [saveVersionRef, saveVersion, enableLock]);
 
   // Fetch versions when lock is acquired
   useEffect(() => {
