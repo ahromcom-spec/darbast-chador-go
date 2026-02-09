@@ -5,16 +5,22 @@ const STORAGE_KEY = 'site-zoom-level';
 
 export const useInternalZoom = () => {
   const [zoomIndex, setZoomIndex] = useState(4); // Default to 100% (index 4)
-  const [isWindows, setIsWindows] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
-  // Detect Windows OS
+  // Detect desktop environment (Windows, macOS, Linux, or mobile "Desktop site" mode)
   useEffect(() => {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isWin = userAgent.includes('windows');
-    setIsWindows(isWin);
+    const ua = navigator.userAgent.toLowerCase();
+    const desktop =
+      ua.includes('windows') ||
+      ua.includes('macintosh') ||
+      ua.includes('linux x86') ||
+      ua.includes('cros') ||
+      // "Desktop site" on mobile Chrome often sets a desktop UA or renders wide viewport
+      (window.innerWidth >= 980 && !ua.includes('mobile'));
+    setIsDesktop(desktop);
 
     // Load saved zoom level
-    if (isWin) {
+    if (desktop) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved !== null) {
         const savedIndex = parseInt(saved, 10);
@@ -27,7 +33,7 @@ export const useInternalZoom = () => {
 
   // Apply zoom to document using CSS transform instead of CSS zoom for better dropdown positioning
   useEffect(() => {
-    if (!isWindows) return;
+    if (!isDesktop) return;
 
     const zoomValue = ZOOM_LEVELS[zoomIndex];
     const root = document.documentElement;
@@ -53,7 +59,7 @@ export const useInternalZoom = () => {
       root.style.removeProperty('--app-zoom');
       document.body.style.removeProperty('zoom');
     };
-  }, [zoomIndex, isWindows]);
+  }, [zoomIndex, isDesktop]);
 
   const zoomIn = useCallback(() => {
     setZoomIndex(prev => Math.min(prev + 1, ZOOM_LEVELS.length - 1));
@@ -69,7 +75,7 @@ export const useInternalZoom = () => {
 
   // Allow dropdowns/popovers to permanently force 100% zoom (Windows only)
   useEffect(() => {
-    if (!isWindows) return;
+    if (!isDesktop) return;
 
     const handleForceZoom100 = () => {
       setZoomIndex((prev) => (prev === 4 ? prev : 4));
@@ -77,11 +83,11 @@ export const useInternalZoom = () => {
 
     window.addEventListener('app:force-zoom-100', handleForceZoom100);
     return () => window.removeEventListener('app:force-zoom-100', handleForceZoom100);
-  }, [isWindows]);
+  }, [isDesktop]);
 
   // Handle keyboard and mouse wheel events
   useEffect(() => {
-    if (!isWindows) return;
+    if (!isDesktop) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.ctrlKey) return;
@@ -129,13 +135,13 @@ export const useInternalZoom = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('wheel', handleWheel);
     };
-  }, [isWindows, zoomIn, zoomOut, resetZoom]);
+  }, [isDesktop, zoomIn, zoomOut, resetZoom]);
 
 
   return {
     zoomLevel: ZOOM_LEVELS[zoomIndex],
     zoomPercentage: Math.round(ZOOM_LEVELS[zoomIndex] * 100),
-    isWindows,
+    isDesktop,
     zoomIn,
     zoomOut,
     resetZoom

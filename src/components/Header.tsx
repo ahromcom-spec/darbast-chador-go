@@ -17,7 +17,7 @@ const Header = memo(() => {
   const auth = useAuth();
   const user = auth?.user || null;
   const { toast } = useToast();
-  const { isWindows, zoomIn, zoomOut, resetZoom, zoomPercentage } = useZoom();
+  const { isDesktop, zoomIn, zoomOut, resetZoom, zoomPercentage } = useZoom();
   
   const [contactDropdownOpenMobile, setContactDropdownOpenMobile] = useState(false);
   const [contactDropdownOpenDesktop, setContactDropdownOpenDesktop] = useState(false);
@@ -126,7 +126,7 @@ const Header = memo(() => {
     </Button>
   );
 
-  const ZoomControls = isWindows ? (
+  const ZoomControls = isDesktop ? (
     <div className="flex items-center gap-1 rounded-full border border-border/60 bg-background/40 p-1">
       <Button
         type="button"
