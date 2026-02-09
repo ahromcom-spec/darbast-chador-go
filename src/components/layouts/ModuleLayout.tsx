@@ -1,8 +1,16 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useCallback, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
-import { ArrowRight, Package } from 'lucide-react';
+import { ArrowRight, Package, Save, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ModuleLayoutProps {
   children: ReactNode;
@@ -13,6 +21,12 @@ interface ModuleLayoutProps {
   backTo?: string;
   showHeader?: boolean;
   action?: ReactNode;
+  /** Whether there are unsaved changes */
+  hasUnsavedChanges?: boolean;
+  /** Callback to save changes before leaving */
+  onSaveBeforeLeave?: () => Promise<boolean>;
+  /** Whether save is in progress */
+  isSaving?: boolean;
 }
 
 export function ModuleLayout({
@@ -23,7 +37,10 @@ export function ModuleLayout({
   icon,
   backTo = '/profile?tab=modules',
   showHeader = true,
-  action
+  action,
+  hasUnsavedChanges = false,
+  onSaveBeforeLeave,
+  isSaving = false,
 }: ModuleLayoutProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -33,6 +50,64 @@ export function ModuleLayout({
     defaultTitle,
     defaultDescription
   );
+
+  const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
+  const [savingBeforeLeave, setSavingBeforeLeave] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+
+  // Handle back button click
+  const handleBackClick = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setPendingNavigation(backTo);
+      setUnsavedDialogOpen(true);
+    } else {
+      navigate(backTo);
+    }
+  }, [hasUnsavedChanges, backTo, navigate]);
+
+  // Handle save and leave
+  const handleSaveAndLeave = useCallback(async () => {
+    if (!onSaveBeforeLeave || !pendingNavigation) return;
+    
+    setSavingBeforeLeave(true);
+    try {
+      const success = await onSaveBeforeLeave();
+      if (success) {
+        setUnsavedDialogOpen(false);
+        navigate(pendingNavigation);
+      }
+    } finally {
+      setSavingBeforeLeave(false);
+    }
+  }, [onSaveBeforeLeave, pendingNavigation, navigate]);
+
+  // Handle leave without saving
+  const handleLeaveWithoutSaving = useCallback(() => {
+    if (pendingNavigation) {
+      setUnsavedDialogOpen(false);
+      navigate(pendingNavigation);
+    }
+  }, [pendingNavigation, navigate]);
+
+  // Handle cancel
+  const handleCancel = useCallback(() => {
+    setUnsavedDialogOpen(false);
+    setPendingNavigation(null);
+  }, []);
+
+  // Browser beforeunload event
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'تغییرات ذخیره نشده دارید. آیا مطمئن هستید؟';
+      return e.returnValue;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,7 +133,7 @@ export function ModuleLayout({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(backTo)}
+                  onClick={handleBackClick}
                   className="gap-2"
                 >
                   بازگشت
@@ -70,6 +145,56 @@ export function ModuleLayout({
         </div>
       )}
       {children}
+
+      {/* Unsaved Changes Dialog */}
+      <AlertDialog open={unsavedDialogOpen} onOpenChange={setUnsavedDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Save className="h-5 w-5 text-primary" />
+              تغییرات ذخیره نشده
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              شما تغییراتی در این صفحه انجام داده‌اید که ذخیره نشده‌اند.
+              <br />
+              آیا می‌خواهید قبل از خروج آن‌ها را ذخیره کنید؟
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={savingBeforeLeave}
+              className="w-full sm:w-auto"
+            >
+              انصراف
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLeaveWithoutSaving}
+              disabled={savingBeforeLeave}
+              className="w-full sm:w-auto gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              خروج بدون ذخیره
+            </Button>
+            {onSaveBeforeLeave && (
+              <Button
+                onClick={handleSaveAndLeave}
+                disabled={savingBeforeLeave || isSaving}
+                className="w-full sm:w-auto gap-2"
+              >
+                {savingBeforeLeave ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                ذخیره و خروج
+              </Button>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

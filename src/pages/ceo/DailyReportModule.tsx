@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
@@ -392,6 +392,9 @@ export default function DailyReportModule() {
   const [isSaved, setIsSaved] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
+  // Track initial state for unsaved changes detection
+  const initialDataHashRef = useRef<string>('');
+  
   // Initialize reportDate from URL parameter if available
   const [reportDate, setReportDate] = useState<Date>(() => {
     const dateParam = searchParams.get('date');
@@ -560,6 +563,42 @@ export default function DailyReportModule() {
     if (orderReports.length === 0 && staffReports.length === 0) return;
     saveToLocalStorage();
   }, [orderReports, staffReports, saveToLocalStorage]);
+
+  // به‌روزرسانی هش اولیه بعد از پایان لود
+  // این برای تشخیص تغییرات ذخیره نشده استفاده می‌شود
+  useEffect(() => {
+    if (!loading && !isInitialLoadRef.current) {
+      // یک تاخیر کوتاه برای اطمینان از به‌روزرسانی state
+      const timer = setTimeout(() => {
+        initialDataHashRef.current = JSON.stringify({
+          orders: orderReports.map(r => ({
+            order_id: r.order_id,
+            activity_description: r.activity_description,
+            service_details: r.service_details,
+            team_name: r.team_name,
+            notes: r.notes,
+            row_color: r.row_color,
+          })),
+          staff: staffReports.map(s => ({
+            staff_user_id: s.staff_user_id,
+            staff_name: s.staff_name,
+            work_status: s.work_status,
+            overtime_hours: s.overtime_hours,
+            amount_received: s.amount_received,
+            receiving_notes: s.receiving_notes,
+            amount_spent: s.amount_spent,
+            spending_notes: s.spending_notes,
+            bank_card_id: s.bank_card_id,
+            notes: s.notes,
+            is_cash_box: s.is_cash_box,
+            is_company_expense: s.is_company_expense,
+          })),
+          dailyNotes,
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
 
   useEffect(() => {
     fetchOrders();
@@ -2525,13 +2564,61 @@ export default function DailyReportModule() {
     return { presentCount, totalOvertime, totalReceived, totalSpent, cashBoxSpent, staffReceived };
   };
 
-  const saveReport = async () => {
-    if (!user) return;
+  // تابع محاسبه هش داده‌ها برای تشخیص تغییرات ذخیره نشده
+  const computeDataHash = useCallback(() => {
+    const dataToHash = {
+      orders: orderReports.map(r => ({
+        order_id: r.order_id,
+        activity_description: r.activity_description,
+        service_details: r.service_details,
+        team_name: r.team_name,
+        notes: r.notes,
+        row_color: r.row_color,
+      })),
+      staff: staffReports.map(s => ({
+        staff_user_id: s.staff_user_id,
+        staff_name: s.staff_name,
+        work_status: s.work_status,
+        overtime_hours: s.overtime_hours,
+        amount_received: s.amount_received,
+        receiving_notes: s.receiving_notes,
+        amount_spent: s.amount_spent,
+        spending_notes: s.spending_notes,
+        bank_card_id: s.bank_card_id,
+        notes: s.notes,
+        is_cash_box: s.is_cash_box,
+        is_company_expense: s.is_company_expense,
+      })),
+      dailyNotes,
+    };
+    return JSON.stringify(dataToHash);
+  }, [orderReports, staffReports, dailyNotes]);
+
+  // بررسی وجود تغییرات ذخیره نشده
+  const hasUnsavedChanges = useMemo(() => {
+    // در ماژول تجمیعی، تغییرات مهم نیست (فقط خواندنی)
+    if (isAggregated) return false;
+    // اگر هنوز لود نشده، تغییری نداریم
+    if (isInitialLoadRef.current) return false;
+    // اگر داده‌ای نداریم، تغییری نداریم
+    if (orderReports.length === 0 && staffReports.length === 0 && !dailyNotes) return false;
+    // مقایسه هش فعلی با هش اولیه
+    const currentHash = computeDataHash();
+    return currentHash !== initialDataHashRef.current;
+  }, [isAggregated, orderReports, staffReports, dailyNotes, computeDataHash]);
+
+  // به‌روزرسانی هش اولیه بعد از ذخیره موفق
+  const updateInitialDataHash = useCallback(() => {
+    initialDataHashRef.current = computeDataHash();
+  }, [computeDataHash]);
+
+  const saveReport = async (): Promise<boolean> => {
+    if (!user) return false;
     
     // جلوگیری از ذخیره همزمان با auto-save
     if (isAutoSavingRef.current) {
       toast.error('لطفاً صبر کنید، در حال ذخیره خودکار...');
-      return;
+      return false;
     }
 
     try {
@@ -2558,18 +2645,28 @@ export default function DailyReportModule() {
       // Show saved state on button - stay on same page
       setIsSaved(true);
       
+      // به‌روزرسانی هش اولیه برای تشخیص تغییرات بعدی
+      updateInitialDataHash();
+      
       // Refresh saved reports list
       fetchSavedReports();
+      return true;
     } catch (error: any) {
       console.error('Error saving report:', error);
       const errorMessage = error?.message || error?.details || 'خطای نامشخص';
       toast.error(`خطا در ذخیره گزارش: ${errorMessage}`);
+      return false;
     } finally {
       setSaving(false);
       // بازگرداندن امکان auto-save
       isDeletingRowRef.current = false;
     }
   };
+
+  // تابع ذخیره برای استفاده در دیالوگ خروج
+  const handleSaveBeforeLeave = useCallback(async (): Promise<boolean> => {
+    return await saveReport();
+  }, [saveReport]);
 
   // ذخیره گزارش در ماژول مادر - هر ردیف به گزارش اصلی‌اش ذخیره می‌شود
   // ردیف‌های جدید (بدون source_daily_report_id) به گزارش خود کاربر فعلی اضافه می‌شوند
@@ -3420,6 +3517,9 @@ export default function DailyReportModule() {
       defaultTitle={DEFAULT_TITLE}
       defaultDescription={DEFAULT_DESCRIPTION}
       icon={<FileText className="h-5 w-5 text-primary" />}
+      hasUnsavedChanges={hasUnsavedChanges}
+      onSaveBeforeLeave={handleSaveBeforeLeave}
+      isSaving={saving}
       action={
         <div className="flex items-center gap-3">
           {/* دکمه پاکسازی داده‌های روز - فقط برای ماژول‌های غیر تجمیعی */}
