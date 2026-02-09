@@ -104,7 +104,8 @@ export function useDailyReportDateCache(): UseDailyReportDateCacheReturn {
       const existing = cacheRef.current.get(dateStr);
       cacheRef.current.set(dateStr, {
         ...data,
-        isDirty: isDirty || existing?.isDirty || false,
+        // فقط اگر isDirty صریحاً true پاس داده شده باشد، یا قبلاً dirty بوده باشد
+        isDirty: isDirty,
         loadedFromDb: existing?.loadedFromDb ?? true,
       });
     },
