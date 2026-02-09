@@ -392,6 +392,9 @@ export default function DailyReportModule() {
   const [isSaved, setIsSaved] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
+  // Lock control state - controls whether inputs are disabled
+  const [isLockReadOnly, setIsLockReadOnly] = useState(false);
+  
   // Track initial state for unsaved changes detection
   const initialDataHashRef = useRef<string>('');
   
@@ -3511,6 +3514,22 @@ export default function DailyReportModule() {
     }
   };
 
+  // Get current data for version history
+  const getCurrentData = useCallback(() => {
+    return {
+      orderReports,
+      staffReports,
+      dailyNotes,
+    };
+  }, [orderReports, staffReports, dailyNotes]);
+
+  // Restore data from version history
+  const handleRestoreVersion = useCallback((data: any) => {
+    if (data.orderReports) setOrderReports(data.orderReports);
+    if (data.staffReports) setStaffReports(data.staffReports);
+    if (data.dailyNotes !== undefined) setDailyNotes(data.dailyNotes);
+  }, []);
+
   return (
     <ModuleLayout
       defaultModuleKey={activeModuleKey}
@@ -3520,6 +3539,11 @@ export default function DailyReportModule() {
       hasUnsavedChanges={hasUnsavedChanges}
       onSaveBeforeLeave={handleSaveBeforeLeave}
       isSaving={saving}
+      enableLock={!isAggregated}
+      moduleDate={toLocalDateString(reportDate)}
+      onLockStatusChange={setIsLockReadOnly}
+      getCurrentData={getCurrentData}
+      onRestoreVersion={handleRestoreVersion}
       action={
         <div className="flex items-center gap-3">
           {/* دکمه پاکسازی داده‌های روز - فقط برای ماژول‌های غیر تجمیعی */}

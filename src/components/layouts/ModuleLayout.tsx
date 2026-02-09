@@ -1,6 +1,9 @@
-import { ReactNode, useState, useCallback, useEffect } from 'react';
+import { ReactNode, useState, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { useModuleLock } from '@/hooks/useModuleLock';
+import { useModuleVersionHistory } from '@/hooks/useModuleVersionHistory';
+import { ModuleLockStatusBar } from '@/components/module-lock/ModuleLockStatusBar';
 import { ArrowRight, Package, Save, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 interface ModuleLayoutProps {
   children: ReactNode;
@@ -27,6 +31,16 @@ interface ModuleLayoutProps {
   onSaveBeforeLeave?: () => Promise<boolean>;
   /** Whether save is in progress */
   isSaving?: boolean;
+  /** Enable multi-user lock control */
+  enableLock?: boolean;
+  /** Date for the module (YYYY-MM-DD format, defaults to today) */
+  moduleDate?: string;
+  /** Callback when lock status changes - provides isReadOnly state */
+  onLockStatusChange?: (isReadOnly: boolean) => void;
+  /** Callback to get current data for auto-save on takeover */
+  getCurrentData?: () => any;
+  /** Callback when a version is restored */
+  onRestoreVersion?: (data: any) => void;
 }
 
 export function ModuleLayout({
@@ -41,6 +55,11 @@ export function ModuleLayout({
   hasUnsavedChanges = false,
   onSaveBeforeLeave,
   isSaving = false,
+  enableLock = false,
+  moduleDate,
+  onLockStatusChange,
+  getCurrentData,
+  onRestoreVersion,
 }: ModuleLayoutProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -55,15 +74,97 @@ export function ModuleLayout({
   const [savingBeforeLeave, setSavingBeforeLeave] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
+  // Handle force takeover - auto-save current user's data
+  const handleForceTakeover = useCallback(
+    async (previousOwnerId: string) => {
+      if (onSaveBeforeLeave && hasUnsavedChanges) {
+        try {
+          const success = await onSaveBeforeLeave();
+          if (success) {
+            toast.info('داده‌های کاربر قبلی ذخیره شد');
+          }
+        } catch (error) {
+          console.error('Error auto-saving on takeover:', error);
+        }
+      }
+    },
+    [onSaveBeforeLeave, hasUnsavedChanges]
+  );
+
+  // Module lock hook (only active if enableLock is true)
+  const {
+    lockStatus,
+    isLoading: lockLoading,
+    isReadOnly,
+    acquireLock,
+    releaseLock,
+  } = useModuleLock({
+    moduleKey: activeModuleKey,
+    moduleDate,
+    onForceTakeover: handleForceTakeover,
+    autoAcquire: false,
+  });
+
+  // Version history hook
+  const { versions, saveVersion, loadVersion, fetchVersions } = useModuleVersionHistory({
+    moduleKey: activeModuleKey,
+    moduleDate,
+  });
+
+  // Notify parent about lock status changes
+  useEffect(() => {
+    if (enableLock && onLockStatusChange) {
+      onLockStatusChange(isReadOnly);
+    }
+  }, [enableLock, isReadOnly, onLockStatusChange]);
+
+  // Fetch versions when lock is acquired
+  useEffect(() => {
+    if (enableLock && lockStatus.isMine) {
+      fetchVersions();
+    }
+  }, [enableLock, lockStatus.isMine, fetchVersions]);
+
+  // Handle version restore
+  const handleRestoreVersion = useCallback(
+    async (versionNumber: number) => {
+      if (isReadOnly) {
+        toast.error('برای بازیابی نسخه ابتدا کنترل ویرایش را بگیرید');
+        return;
+      }
+      const data = await loadVersion(versionNumber);
+      if (data && onRestoreVersion) {
+        onRestoreVersion(data);
+        toast.success(`نسخه ${versionNumber} بازیابی شد`);
+      }
+    },
+    [isReadOnly, loadVersion, onRestoreVersion]
+  );
+
+  // Mapped versions for display
+  const mappedVersions = useMemo(
+    () =>
+      versions.map((v) => ({
+        id: v.id,
+        versionNumber: v.versionNumber,
+        createdAt: v.createdAt,
+      })),
+    [versions]
+  );
+
   // Handle back button click
   const handleBackClick = useCallback(() => {
     if (hasUnsavedChanges) {
       setPendingNavigation(backTo);
       setUnsavedDialogOpen(true);
     } else {
+      // Release lock before leaving
+      if (enableLock && lockStatus.isMine) {
+        releaseLock();
+      }
       navigate(backTo);
     }
-  }, [hasUnsavedChanges, backTo, navigate]);
+  }, [hasUnsavedChanges, backTo, navigate, enableLock, lockStatus.isMine, releaseLock]);
 
   // Handle save and leave
   const handleSaveAndLeave = useCallback(async () => {
@@ -73,21 +174,33 @@ export function ModuleLayout({
     try {
       const success = await onSaveBeforeLeave();
       if (success) {
+        // Also save a version if lock is enabled
+        if (enableLock && getCurrentData) {
+          await saveVersion(getCurrentData());
+        }
+        // Release lock
+        if (enableLock && lockStatus.isMine) {
+          await releaseLock();
+        }
         setUnsavedDialogOpen(false);
         navigate(pendingNavigation);
       }
     } finally {
       setSavingBeforeLeave(false);
     }
-  }, [onSaveBeforeLeave, pendingNavigation, navigate]);
+  }, [onSaveBeforeLeave, pendingNavigation, navigate, enableLock, getCurrentData, saveVersion, lockStatus.isMine, releaseLock]);
 
   // Handle leave without saving
   const handleLeaveWithoutSaving = useCallback(() => {
     if (pendingNavigation) {
+      // Release lock
+      if (enableLock && lockStatus.isMine) {
+        releaseLock();
+      }
       setUnsavedDialogOpen(false);
       navigate(pendingNavigation);
     }
-  }, [pendingNavigation, navigate]);
+  }, [pendingNavigation, navigate, enableLock, lockStatus.isMine, releaseLock]);
 
   // Handle cancel
   const handleCancel = useCallback(() => {
@@ -144,6 +257,23 @@ export function ModuleLayout({
           </div>
         </div>
       )}
+
+      {/* Lock Status Bar - only show when enableLock is true */}
+      {enableLock && (
+        <div className="container mx-auto px-4 py-2">
+          <ModuleLockStatusBar
+            isReadOnly={isReadOnly}
+            isLoading={lockLoading}
+            isMine={lockStatus.isMine}
+            lockedByName={lockStatus.lockedByName}
+            onTakeControl={acquireLock}
+            onReleaseControl={releaseLock}
+            versions={mappedVersions}
+            onRestoreVersion={onRestoreVersion ? handleRestoreVersion : undefined}
+          />
+        </div>
+      )}
+
       {children}
 
       {/* Unsaved Changes Dialog */}
