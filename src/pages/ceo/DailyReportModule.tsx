@@ -2348,7 +2348,7 @@ export default function DailyReportModule() {
     setOrderReports(next);
   };
 
-  const removeOrderRow = (index: number) => {
+  const removeOrderRow = useCallback((index: number) => {
     // فعال کردن guard برای جلوگیری از auto-save همزمان
     isDeletingRowRef.current = true;
 
@@ -2361,39 +2361,39 @@ export default function DailyReportModule() {
     // ذخیره موقعیت اسکرول قبل از حذف
     const scrollY = window.scrollY;
 
-    const prev = orderReportsRef.current;
-    let next = prev.filter((_, i) => i !== index);
+    setOrderReports((prev) => {
+      let next = prev.filter((_, i) => i !== index);
 
-    // همیشه یک ردیف خالی در فرم نگه دار تا هم UI پایدار بماند
-    // و هم ذخیره هیچوقت به state قدیمی fallback نکند
-    if (next.length === 0) {
-      next = [
-        {
-          order_id: '',
-          activity_description: '',
-          service_details: '',
-          team_name: '',
-          notes: '',
-          row_color: ROW_COLORS[0].value,
-        },
-      ];
-    }
+      // همیشه یک ردیف خالی در فرم نگه دار تا هم UI پایدار بماند
+      if (next.length === 0) {
+        next = [
+          {
+            order_id: '',
+            activity_description: '',
+            service_details: '',
+            team_name: '',
+            notes: '',
+            row_color: ROW_COLORS[0].value,
+          },
+        ];
+      }
 
-    // Sync ref immediately to avoid stale state on fast delete→save
-    orderReportsRef.current = next;
-    setOrderReports(next);
+      // Sync ref immediately inside the updater for consistency
+      orderReportsRef.current = next;
+      return next;
+    });
+
     setIsSaved(false);
     markCurrentDateDirty();
 
     // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
     requestAnimationFrame(() => {
       window.scrollTo({ top: scrollY, behavior: 'instant' });
-      // تاخیر کوتاه برای اطمینان از به‌روزرسانی UI
       setTimeout(() => {
         isDeletingRowRef.current = false;
       }, 300);
     });
-  };
+  }, [markCurrentDateDirty]);
 
   const updateOrderRow = (index: number, field: keyof OrderReportRow, value: string) => {
     setIsSaved(false);
@@ -2500,8 +2500,21 @@ export default function DailyReportModule() {
     ]);
   };
 
-  const removeStaffRow = (index: number) => {
-    // استفاده از functional check برای جلوگیری از race condition
+  const removeStaffRow = useCallback((index: number) => {
+    // فعال کردن guard برای جلوگیری از auto-save همزمان
+    isDeletingRowRef.current = true;
+
+    // لغو timer های auto-save فعال
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+
+    // ذخیره موقعیت اسکرول قبل از حذف
+    const scrollY = window.scrollY;
+
+    let wasActuallyDeleted = false;
+
     setStaffReports((prev) => {
       const targetRow = prev[index];
       if (!targetRow) return prev;
@@ -2520,39 +2533,37 @@ export default function DailyReportModule() {
 
       if (isCompanyExpenseRow(targetRow)) {
         const companyExpenseCount = prev.filter((r) => isCompanyExpenseRow(r)).length;
-        // فقط در صورت تکراری بودن اجازه حذف بده
         if (companyExpenseCount <= 1) {
           toast.error('ردیف ماهیت شرکت قابل حذف نیست');
           return prev; // بدون تغییر
         }
       }
 
-      return prev.filter((_, i) => i !== index);
+      wasActuallyDeleted = true;
+      const next = prev.filter((_, i) => i !== index);
+      // Sync ref immediately inside the updater
+      staffReportsRef.current = next;
+      return next;
     });
 
-    // فعال کردن guard برای جلوگیری از auto-save همزمان
-    isDeletingRowRef.current = true;
+    // فقط اگر واقعاً حذف شد، علامت dirty بزن
+    // Note: wasActuallyDeleted ممکن است در این لحظه هنوز false باشد
+    // بنابراین از setTimeout استفاده می‌کنیم
+    setTimeout(() => {
+      if (staffReportsRef.current.length < staffReports.length || wasActuallyDeleted) {
+        setIsSaved(false);
+        markCurrentDateDirty();
+      }
+    }, 0);
 
-    // لغو timer های auto-save فعال
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-      autoSaveTimerRef.current = null;
-    }
-    
-    // ذخیره موقعیت اسکرول قبل از حذف
-    const scrollY = window.scrollY;
-    setIsSaved(false);
-    markCurrentDateDirty();
-    
     // بازگردانی موقعیت اسکرول بعد از حذف و غیرفعال کردن guard
     requestAnimationFrame(() => {
       window.scrollTo({ top: scrollY, behavior: 'instant' });
-      // تاخیر بیشتر برای اطمینان از به‌روزرسانی state
       setTimeout(() => {
         isDeletingRowRef.current = false;
       }, 300);
     });
-  };
+  }, [markCurrentDateDirty, staffReports.length]);
 
   const updateStaffRow = (index: number, field: keyof StaffReportRow, value: any) => {
     setIsSaved(false);
@@ -2952,9 +2963,25 @@ export default function DailyReportModule() {
       }
     }
 
-    const staffToSave = cachedEntry.staffReports.filter(
+    // Deduplication: فقط یک ردیف ماهیت شرکت نگه دار
+    let hasCompanyExpense = false;
+    const deduplicatedStaff = cachedEntry.staffReports.filter((s) => {
+      const isCompanyExpense = s.is_company_expense === true || 
+        (s.staff_name && s.staff_name.includes('ماهیت شرکت اهرم'));
+      if (isCompanyExpense) {
+        if (hasCompanyExpense) {
+          console.warn('Duplicate company expense row detected and skipped');
+          return false;
+        }
+        hasCompanyExpense = true;
+      }
+      return true;
+    });
+
+    const staffToSave = deduplicatedStaff.filter(
       (s) =>
         s.is_cash_box ||
+        s.is_company_expense ||
         Boolean(s.staff_user_id) ||
         Boolean(s.staff_name?.trim()) ||
         (s.overtime_hours ?? 0) > 0 ||
@@ -2964,6 +2991,39 @@ export default function DailyReportModule() {
         Boolean(s.spending_notes?.trim()) ||
         Boolean(s.notes?.trim())
     );
+
+    // Deduplication: حذف پرسنل تکراری بر اساس staff_name
+    const seenStaffKeys = new Set<string>();
+    const uniqueStaffToSave = staffToSave.filter((s) => {
+      // برای صندوق‌ها از bank_card_id استفاده کن
+      if (s.is_cash_box) {
+        const key = `cashbox_${s.bank_card_id || 'no_card'}_${s.amount_received}_${s.amount_spent}`;
+        if (seenStaffKeys.has(key)) {
+          console.warn(`Duplicate cash box row detected and skipped: ${key}`);
+          return false;
+        }
+        seenStaffKeys.add(key);
+        return true;
+      }
+      // برای ماهیت شرکت
+      if (s.is_company_expense) {
+        const key = 'company_expense';
+        if (seenStaffKeys.has(key)) {
+          console.warn('Duplicate company expense row detected and skipped');
+          return false;
+        }
+        seenStaffKeys.add(key);
+        return true;
+      }
+      // برای پرسنل معمولی از نام استفاده کن
+      const staffKey = (s.staff_name || '').trim().toLowerCase();
+      if (staffKey && seenStaffKeys.has(staffKey)) {
+        console.warn(`Duplicate staff row detected and skipped: ${staffKey}`);
+        return false;
+      }
+      if (staffKey) seenStaffKeys.add(staffKey);
+      return true;
+    });
 
     // Delete existing staff reports and insert new ones
     const { error: deleteStaffError } = await supabase
@@ -2976,8 +3036,8 @@ export default function DailyReportModule() {
       throw deleteStaffError;
     }
 
-    if (staffToSave.length > 0) {
-      const staffPayload = staffToSave.map((s) => ({
+    if (uniqueStaffToSave.length > 0) {
+      const staffPayload = uniqueStaffToSave.map((s) => ({
         daily_report_id: reportId,
         staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
         staff_name: s.staff_name || '',
@@ -3009,7 +3069,7 @@ export default function DailyReportModule() {
         reportId,
         reportDate: tempReportDate,
         userId: user.id,
-        staffToSave,
+        staffToSave: uniqueStaffToSave,
       });
     }
   };
