@@ -222,6 +222,8 @@ export default function OrderDetail() {
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [approvedRenewalCost, setApprovedRenewalCost] = useState(0);
   const [approvedRenewals, setApprovedRenewals] = useState<any[]>([]);
+  const [repairRequests, setRepairRequests] = useState<any[]>([]);
+  const [collectionRequestInfo, setCollectionRequestInfo] = useState<{requested_date: string | null; status: string} | null>(null);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
   const [showEditExpertPricingDialog, setShowEditExpertPricingDialog] = useState(false);
@@ -452,8 +454,8 @@ export default function OrderDetail() {
           : Promise.resolve({ data: null }),
         supabase.from('project_media').select('*').eq('project_id', id).order('created_at', { ascending: false }),
         supabase.from('order_approvals').select('approver_role, approved_at, approver_user_id').eq('order_id', id).order('created_at', { ascending: true }),
-        supabase.from('repair_requests').select('final_cost, status').eq('order_id', id).in('status', ['approved', 'completed']),
-        supabase.from('collection_requests').select('requested_date, status').eq('order_id', id).eq('status', 'approved').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('repair_requests').select('final_cost, status, created_at, description').eq('order_id', id),
+        supabase.from('collection_requests').select('requested_date, status').eq('order_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('order_renewals').select('renewal_price, renewal_number, new_start_date, new_end_date, status').eq('order_id', id).eq('status', 'approved').order('renewal_number', { ascending: true })
       ]);
 
@@ -524,9 +526,12 @@ export default function OrderDetail() {
       if (approvalsRes.data) setApprovals(approvalsRes.data as Approval[]);
       
       if (repairRes.data && repairRes.data.length > 0) {
-        const totalRepairCost = repairRes.data.reduce((sum, r) => sum + (r.final_cost || 0), 0);
+        setRepairRequests(repairRes.data);
+        const approvedRepairs = repairRes.data.filter((r: any) => ['approved', 'completed'].includes(r.status));
+        const totalRepairCost = approvedRepairs.reduce((sum: number, r: any) => sum + (r.final_cost || 0), 0);
         setApprovedRepairCost(totalRepairCost);
       } else {
+        setRepairRequests([]);
         setApprovedRepairCost(0);
       }
 
@@ -540,9 +545,15 @@ export default function OrderDetail() {
         setApprovedRenewals([]);
       }
 
-      if (collectionRes.data?.requested_date) {
-        setApprovedCollectionDate(collectionRes.data.requested_date);
+      if (collectionRes.data) {
+        setCollectionRequestInfo(collectionRes.data as any);
+        if (collectionRes.data.status === 'approved' && collectionRes.data.requested_date) {
+          setApprovedCollectionDate(collectionRes.data.requested_date);
+        } else {
+          setApprovedCollectionDate(null);
+        }
       } else {
+        setCollectionRequestInfo(null);
         setApprovedCollectionDate(null);
       }
 
@@ -1615,7 +1626,7 @@ export default function OrderDetail() {
                  ['in_progress', 'completed', 'paid', 'closed'].includes(order.status) &&
                  order.execution_stage && 
                  ['in_progress', 'awaiting_collection', 'in_collection', 'closed'].includes(order.execution_stage) && (
-                  <section className="rounded-2xl border-2 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+                  <section className="rounded-2xl border-2 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-3">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-start gap-3">
                         <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
@@ -1638,13 +1649,37 @@ export default function OrderDetail() {
                         نیاز به تعمیر سفارش انجام شده داریم
                       </Button>
                     </div>
+                    {/* نمایش خلاصه درخواست‌های تعمیر */}
+                    {repairRequests.length > 0 && (
+                      <div className="border-t border-amber-200 dark:border-amber-700 pt-3 space-y-2">
+                        {repairRequests.map((req: any, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between p-2 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg text-sm">
+                            <div className="flex items-center gap-2">
+                              <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                              <span className="text-amber-800 dark:text-amber-200">
+                                درخواست تعمیر {formatPersianDate(req.created_at)}
+                              </span>
+                            </div>
+                            <Badge variant="outline" className={
+                              req.status === 'approved' || req.status === 'completed' 
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300' 
+                                : req.status === 'rejected'
+                                ? 'bg-red-100 text-red-700 border-red-300'
+                                : 'bg-amber-100 text-amber-700 border-amber-300'
+                            }>
+                              {req.status === 'approved' ? 'تایید شده' : req.status === 'completed' ? 'انجام شده' : req.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </section>
                 )}
 
                 {/* دکمه درخواست جمع‌آوری - برای سفارش‌های در حال اجرا، اجرا شده و پرداخت شده خدمات اجرای داربست به همراه اجناس */}
                 {order.subcategory?.code === '10' && 
                  ['in_progress', 'completed', 'paid'].includes(order.status) && (
-                  <section className="rounded-2xl border-2 border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 p-4">
+                  <section className="rounded-2xl border-2 border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 p-4 space-y-3">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-start gap-3">
                         <div className="h-10 w-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center flex-shrink-0">
@@ -1667,13 +1702,35 @@ export default function OrderDetail() {
                         درخواست جمع‌آوری
                       </Button>
                     </div>
+                    {/* نمایش تاریخ جمع‌آوری ثبت شده */}
+                    {collectionRequestInfo && collectionRequestInfo.requested_date && (
+                      <div className="border-t border-teal-200 dark:border-teal-700 pt-3">
+                        <div className="flex items-center justify-between p-2 bg-teal-100/50 dark:bg-teal-900/30 rounded-lg text-sm">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                            <span className="text-teal-800 dark:text-teal-200">
+                              تاریخ درخواست جمع‌آوری: {formatPersianDate(collectionRequestInfo.requested_date)}
+                            </span>
+                          </div>
+                          <Badge variant="outline" className={
+                            collectionRequestInfo.status === 'approved'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300'
+                              : collectionRequestInfo.status === 'rejected'
+                              ? 'bg-red-100 text-red-700 border-red-300'
+                              : 'bg-teal-100 text-teal-700 border-teal-300'
+                          }>
+                            {collectionRequestInfo.status === 'approved' ? 'تایید شده' : collectionRequestInfo.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
                   </section>
                 )}
 
                 {/* دکمه تمدید سفارش - برای سفارش‌های اجرا شده یا کارشناسی قیمت تایید شده */}
                 {(order.execution_stage === 'order_executed' || 
                  (isExpertPricingRequest && customerHasConfirmedPrice && ['in_progress', 'completed', 'paid'].includes(order.status))) && (
-                  <section className="rounded-2xl border-2 border-primary/50 dark:border-primary/30 bg-primary/5 dark:bg-primary/10 p-4">
+                  <section className="rounded-2xl border-2 border-primary/50 dark:border-primary/30 bg-primary/5 dark:bg-primary/10 p-4 space-y-3">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-start gap-3">
                         <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -1696,6 +1753,31 @@ export default function OrderDetail() {
                         درخواست تمدید
                       </Button>
                     </div>
+                    {/* نمایش خلاصه تمدیدها */}
+                    {approvedRenewals.length > 0 && (
+                      <div className="border-t border-primary/20 pt-3 space-y-2">
+                        {approvedRenewals.map((renewal: any) => (
+                          <div key={renewal.renewal_number} className="flex items-center justify-between p-2 bg-primary/10 rounded-lg text-sm">
+                            <div className="flex items-center gap-2">
+                              <RefreshCw className="h-4 w-4 text-primary" />
+                              <span className="text-foreground">
+                                تمدید ماه {renewal.renewal_number + 1}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {renewal.new_start_date && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatPersianDate(renewal.new_start_date)} - {renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '...'}
+                                </span>
+                              )}
+                              <span className="font-medium text-primary">
+                                {(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </section>
                 )}
 
