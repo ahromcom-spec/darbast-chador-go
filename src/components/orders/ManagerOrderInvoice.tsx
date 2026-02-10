@@ -702,9 +702,9 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             <tr>
               <th>ردیف</th>
               <th>شرح خدمات</th>
+              <th>تاریخ شروع</th>
+              <th>تاریخ پایان</th>
               <th>متراژ/تعداد</th>
-              <th>مدت (ماه)</th>
-              <th>قیمت واحد</th>
               <th>مبلغ کل (تومان)</th>
             </tr>
           </thead>
@@ -712,24 +712,24 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             <tr>
               <td>۱</td>
               <td>${scaffoldTypeName} - ${subtypeName}</td>
+              <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
+              <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
               <td>${totalArea || '-'} ${getMeasurementUnit()}</td>
-              <td>${conditions?.totalMonths || '۱'}</td>
-              <td>${totalArea && basePrice > 0 ? Math.round(basePrice / Number(totalArea)).toLocaleString('fa-IR') : '-'}</td>
               <td>${basePrice > 0 ? basePrice.toLocaleString('fa-IR') : '-'}</td>
             </tr>
-            ${renewalTotal > 0 ? `
+            ${renewals.map((renewal, idx) => `
               <tr class="renewal-row">
-                <td>۲</td>
-                <td>تمدید کرایه (${renewalCount.toLocaleString('fa-IR')} ماه)</td>
+                <td>${(idx + 2).toLocaleString('fa-IR')}</td>
+                <td>تمدید کرایه سری ${renewal.renewal_number?.toLocaleString('fa-IR') || (idx + 1).toLocaleString('fa-IR')}</td>
+                <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
+                <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
                 <td>-</td>
-                <td>${renewalCount.toLocaleString('fa-IR')}</td>
-                <td>${renewalUnitPrice > 0 ? renewalUnitPrice.toLocaleString('fa-IR') : '-'}</td>
-                <td>${renewalTotal.toLocaleString('fa-IR')}</td>
+                <td>${Number(renewal.renewal_price || 0).toLocaleString('fa-IR')}</td>
               </tr>
-            ` : ''}
+            `).join('')}
             ${repairRequests.map((repair, idx) => `
               <tr class="repair-row">
-                <td>${(idx + (renewalTotal > 0 ? 3 : 2)).toLocaleString('fa-IR')}</td>
+                <td>${(idx + renewals.length + 2).toLocaleString('fa-IR')}</td>
                 <td>تعمیر داربست${repair.description ? ` - ${repair.description}` : ''}</td>
                 <td>-</td>
                 <td>-</td>
@@ -767,29 +767,33 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             <tr>
               <th>ردیف</th>
               <th>شرح خدمات</th>
+              <th>تاریخ شروع</th>
+              <th>تاریخ پایان</th>
               <th>متراژ/تعداد</th>
-              <th>مدت (ماه)</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>۱</td>
               <td>${scaffoldTypeName} - ${subtypeName}</td>
+              <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
+              <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
               <td>${totalArea || '-'} ${getMeasurementUnit()}</td>
-              <td>${conditions?.totalMonths || '۱'}</td>
             </tr>
-            ${renewalTotal > 0 ? `
+            ${renewals.map((renewal, idx) => `
               <tr class="renewal-row">
-                <td>۲</td>
-                <td>تمدید کرایه (${renewalCount.toLocaleString('fa-IR')} ماه)</td>
+                <td>${(idx + 2).toLocaleString('fa-IR')}</td>
+                <td>تمدید کرایه سری ${renewal.renewal_number?.toLocaleString('fa-IR') || (idx + 1).toLocaleString('fa-IR')}</td>
+                <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
+                <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
                 <td>-</td>
-                <td>${renewalCount.toLocaleString('fa-IR')}</td>
               </tr>
-            ` : ''}
+            `).join('')}
             ${repairRequests.map((repair, idx) => `
               <tr class="repair-row">
-                <td>${(idx + (renewalTotal > 0 ? 3 : 2)).toLocaleString('fa-IR')}</td>
+                <td>${(idx + renewals.length + 2).toLocaleString('fa-IR')}</td>
                 <td>تعمیر داربست${repair.description ? ` - ${repair.description}` : ''}</td>
+                <td>-</td>
                 <td>-</td>
                 <td>-</td>
               </tr>
