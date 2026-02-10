@@ -308,7 +308,7 @@ export function ManagerRenewalDialog({
   };
 
   const handleDeleteRenewal = async (renewal: RenewalRecord) => {
-    const ok = window.confirm(`آیا از حذف «تمدید سری ${renewal.renewal_number}» مطمئن هستید؟`);
+    const ok = window.confirm(`آیا از حذف «تمدید ماه ${renewal.renewal_number + 1}» مطمئن هستید؟`);
     if (!ok) return;
 
     setDeleteLoadingId(renewal.id);
@@ -486,7 +486,7 @@ export function ManagerRenewalDialog({
                     className="bg-yellow-50 dark:bg-yellow-950 p-4 rounded-lg border border-yellow-200 space-y-3"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">تمدید سری {renewal.renewal_number}</span>
+                      <span className="font-medium">تمدید ماه {renewal.renewal_number + 1}</span>
                       {getStatusBadge(renewal.status)}
                     </div>
 
@@ -603,7 +603,7 @@ export function ManagerRenewalDialog({
                 <div className="bg-primary/5 p-4 rounded-lg space-y-3 border border-primary/20">
                   <h4 className="font-medium flex items-center gap-2 text-primary">
                     <RefreshCw className="h-4 w-4" />
-                    ایجاد تمدید سری {renewals.length + 1}
+                    ایجاد تمدید ماه {renewals.length + 2}
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -748,7 +748,7 @@ export function ManagerRenewalDialog({
                         ) : (
                           <>
                             <div className="flex items-center justify-between">
-                              <span className="font-medium">تمدید سری {renewal.renewal_number}</span>
+                              <span className="font-medium">تمدید ماه {renewal.renewal_number + 1}</span>
                               <span className="text-green-700 font-medium">
                                 {toNumber(renewal.renewal_price)?.toLocaleString('fa-IR')} تومان
                               </span>

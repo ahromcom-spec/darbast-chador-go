@@ -711,7 +711,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
           <tbody>
             <tr>
               <td>۱</td>
-              <td>${scaffoldTypeName} - ${subtypeName}</td>
+              <td>کرایه ماه اول - ${scaffoldTypeName} - ${subtypeName}</td>
               <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
               <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
               <td>${totalArea || '-'} ${getMeasurementUnit()}</td>
@@ -720,7 +720,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             ${renewals.map((renewal, idx) => `
               <tr class="renewal-row">
                 <td>${(idx + 2).toLocaleString('fa-IR')}</td>
-                <td>تمدید کرایه سری ${renewal.renewal_number?.toLocaleString('fa-IR') || (idx + 1).toLocaleString('fa-IR')}</td>
+                <td>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + 2).toLocaleString('fa-IR')}</td>
                 <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
                 <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
                 <td>-</td>
@@ -775,7 +775,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
           <tbody>
             <tr>
               <td>۱</td>
-              <td>${scaffoldTypeName} - ${subtypeName}</td>
+              <td>کرایه ماه اول - ${scaffoldTypeName} - ${subtypeName}</td>
               <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
               <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
               <td>${totalArea || '-'} ${getMeasurementUnit()}</td>
@@ -783,7 +783,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             ${renewals.map((renewal, idx) => `
               <tr class="renewal-row">
                 <td>${(idx + 2).toLocaleString('fa-IR')}</td>
-                <td>تمدید کرایه سری ${renewal.renewal_number?.toLocaleString('fa-IR') || (idx + 1).toLocaleString('fa-IR')}</td>
+                <td>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + 2).toLocaleString('fa-IR')}</td>
                 <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
                 <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
                 <td>-</td>

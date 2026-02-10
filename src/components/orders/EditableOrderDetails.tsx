@@ -95,6 +95,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const [expertPricingEditOpen, setExpertPricingEditOpen] = useState(false);
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [approvedRenewalCost, setApprovedRenewalCost] = useState(0);
+  const [approvedRenewals, setApprovedRenewals] = useState<any[]>([]);
   const [orderApprovals, setOrderApprovals] = useState<Array<{ approver_role: string; approved_at: string | null; approver_user_id: string | null }>>([]);
   const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
   const { toast } = useToast();
@@ -113,9 +114,10 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           .in('status', ['approved', 'completed']),
         supabase
           .from('order_renewals')
-          .select('renewal_price, status')
+          .select('renewal_price, renewal_number, new_start_date, new_end_date, status')
           .eq('order_id', order.id)
-          .eq('status', 'approved'),
+          .eq('status', 'approved')
+          .order('renewal_number', { ascending: true }),
         supabase
           .from('order_approvals')
           .select('approver_role, approved_at, approver_user_id')
@@ -138,6 +140,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       if (renewalsRes.data) {
         const totalRenewalCost = renewalsRes.data.reduce((sum: number, r: any) => sum + (r.renewal_price || 0), 0);
         setApprovedRenewalCost(totalRenewalCost);
+        setApprovedRenewals(renewalsRes.data);
       }
 
       if (approvalsRes.data) {
@@ -383,19 +386,19 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           {(approvedRenewalCost > 0 || approvedRepairCost > 0) && (
             <div className="space-y-2 pt-3 border-t border-green-200 dark:border-green-700">
               <div className="flex justify-between text-sm p-2 bg-background/50 rounded">
-                <span className="text-muted-foreground">قیمت پایه:</span>
+                <span className="text-muted-foreground">کرایه ماه اول:</span>
                 <span className="font-medium">{baseOrderAmount.toLocaleString('fa-IR')} تومان</span>
               </div>
               
-              {approvedRenewalCost > 0 && (
-                <div className="flex justify-between text-sm p-2 bg-primary/10 rounded border border-primary/20">
+              {approvedRenewals.map((renewal: any) => (
+                <div key={renewal.renewal_number} className="flex justify-between text-sm p-2 bg-primary/10 rounded border border-primary/20">
                   <span className="flex items-center gap-1 text-primary">
                     <RefreshCw className="h-3 w-3" />
-                    هزینه تمدید:
+                    تمدید ماه {renewal.renewal_number + 1}:
                   </span>
-                  <span className="font-bold text-primary">{approvedRenewalCost.toLocaleString('fa-IR')} تومان</span>
+                  <span className="font-bold text-primary">{(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان</span>
                 </div>
-              )}
+              ))}
 
               {approvedRepairCost > 0 && (
                 <div className="flex justify-between text-sm p-2 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
@@ -542,7 +545,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           {paymentAmount && Number(paymentAmount) > 0 ? (
             <div className="bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-700 rounded-lg p-3">
               <p className="text-sm font-bold text-green-700 dark:text-green-400 text-center">
-                قیمت پایه تعیین شده: {Number(basePriceNumber).toLocaleString('fa-IR')} تومان
+                قیمت ماه اول: {Number(basePriceNumber).toLocaleString('fa-IR')} تومان
                 {unitPrice && parseFloat(unitPrice) > 0 && (
                   <span className="block text-xs font-normal mt-1">
                     (قیمت فی: {parseFloat(unitPrice).toLocaleString('fa-IR')} تومان × {expertPricingTotalMeasure.toLocaleString('fa-IR')} {expertPricingMeasureUnit})
@@ -552,15 +555,15 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
               {(approvedRenewalCost > 0 || approvedRepairCost > 0 || displayAddOnsAmount > 0) && (
                 <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-800 text-center space-y-1">
-                  {approvedRenewalCost > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      هزینه تمدید کرایه:{' '}
+                  {approvedRenewals.map((renewal: any) => (
+                    <p key={renewal.renewal_number} className="text-xs text-muted-foreground">
+                      تمدید ماه {renewal.renewal_number + 1}:{' '}
                       <span className="font-medium" dir="ltr">
-                        {Number(approvedRenewalCost).toLocaleString('fa-IR')}
+                        {Number(renewal.renewal_price || 0).toLocaleString('fa-IR')}
                       </span>{' '}
                       تومان
                     </p>
-                  )}
+                  ))}
                   {approvedRepairCost > 0 && (
                     <p className="text-xs text-muted-foreground">
                       هزینه تعمیرات:{' '}

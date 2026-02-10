@@ -221,6 +221,7 @@ export default function OrderDetail() {
   const [repairCost, setRepairCost] = useState(0);
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
   const [approvedRenewalCost, setApprovedRenewalCost] = useState(0);
+  const [approvedRenewals, setApprovedRenewals] = useState<any[]>([]);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
   const [showEditExpertPricingDialog, setShowEditExpertPricingDialog] = useState(false);
@@ -453,7 +454,7 @@ export default function OrderDetail() {
         supabase.from('order_approvals').select('approver_role, approved_at, approver_user_id').eq('order_id', id).order('created_at', { ascending: true }),
         supabase.from('repair_requests').select('final_cost, status').eq('order_id', id).in('status', ['approved', 'completed']),
         supabase.from('collection_requests').select('requested_date, status').eq('order_id', id).eq('status', 'approved').order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('order_renewals').select('renewal_price, status').eq('order_id', id).eq('status', 'approved')
+        supabase.from('order_renewals').select('renewal_price, renewal_number, new_start_date, new_end_date, status').eq('order_id', id).eq('status', 'approved').order('renewal_number', { ascending: true })
       ]);
 
       // Build enriched order
@@ -533,8 +534,10 @@ export default function OrderDetail() {
       if (renewalsRes.data && renewalsRes.data.length > 0) {
         const totalRenewalCost = renewalsRes.data.reduce((sum: number, r: any) => sum + (r.renewal_price || 0), 0);
         setApprovedRenewalCost(totalRenewalCost);
+        setApprovedRenewals(renewalsRes.data);
       } else {
         setApprovedRenewalCost(0);
+        setApprovedRenewals([]);
       }
 
       if (collectionRes.data?.requested_date) {
@@ -1739,18 +1742,18 @@ export default function OrderDetail() {
                       {(approvedRenewalCost > 0 || approvedRepairCost > 0) && (
                         <div className="space-y-2 pt-2 border-t border-emerald-200 dark:border-emerald-800">
                           <div className="flex items-center justify-between p-2 bg-background/50 rounded-lg">
-                            <span className="text-sm text-muted-foreground">قیمت پایه:</span>
+                            <span className="text-sm text-muted-foreground">کرایه ماه اول:</span>
                             <span className="font-medium">{basePrice.toLocaleString('fa-IR')} تومان</span>
                           </div>
-                          {approvedRenewalCost > 0 && (
-                            <div className="flex items-center justify-between p-2 bg-primary/10 rounded-lg">
+                          {approvedRenewals.length > 0 && approvedRenewals.map((renewal: any) => (
+                            <div key={renewal.renewal_number} className="flex items-center justify-between p-2 bg-primary/10 rounded-lg">
                               <div className="flex items-center gap-2">
                                 <RefreshCw className="h-4 w-4 text-primary" />
-                                <span className="text-sm text-primary font-medium">هزینه تمدید:</span>
+                                <span className="text-sm text-primary font-medium">تمدید ماه {renewal.renewal_number + 1}:</span>
                               </div>
-                              <span className="font-bold text-primary">{approvedRenewalCost.toLocaleString('fa-IR')} تومان</span>
+                              <span className="font-bold text-primary">{(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان</span>
                             </div>
-                          )}
+                          ))}
                           {approvedRepairCost > 0 && (
                             <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
                               <div className="flex items-center gap-2">
