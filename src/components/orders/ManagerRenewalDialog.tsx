@@ -80,15 +80,15 @@ export function ManagerRenewalDialog({
     return addMonths(startDate, 1);
   };
 
-  // محاسبه تاریخ شروع تمدید بعدی
+  // محاسبه تاریخ شروع تمدید بعدی - زنجیره‌ای از تمام تمدیدها (تایید شده و در انتظار)
   const calculateNewStartDate = () => {
-    // اگر تمدید تایید شده‌ای وجود دارد، شروع بعدی = پایان آخرین تمدید
-    const approvedRenewals = renewals.filter((r) => r.status === 'approved');
-    if (approvedRenewals.length > 0) {
-      const lastApproved = approvedRenewals.reduce((prev, current) =>
+    // از بین تمام تمدیدها (approved + pending) آخرین تمدید بر اساس شماره سری را پیدا کن
+    const activeRenewals = renewals.filter((r) => r.status === 'approved' || r.status === 'pending');
+    if (activeRenewals.length > 0) {
+      const lastRenewal = activeRenewals.reduce((prev, current) =>
         prev.renewal_number > current.renewal_number ? prev : current,
       );
-      return new Date(lastApproved.new_end_date);
+      return new Date(lastRenewal.new_end_date);
     }
 
     // برای سری اول: یک ماه بعد از rental_start_date
@@ -514,6 +514,17 @@ export function ManagerRenewalDialog({
                               }}
                             />
                           </div>
+                          <div>
+                            <Label>تاریخ پایان</Label>
+                            <PersianDatePicker
+                              value={editEndDate || undefined}
+                              onChange={(dateStr) => {
+                                if (dateStr) {
+                                  setEditEndDate(dateStr);
+                                }
+                              }}
+                            />
+                          </div>
                         </div>
                         <div>
                           <Label>یادداشت مدیر</Label>
@@ -617,10 +628,15 @@ export function ManagerRenewalDialog({
                     </div>
                   </div>
                   <div>
-                    <Label>تاریخ پایان (یک ماه بعد)</Label>
-                    <p className="text-sm font-medium mt-1">
-                      {newRenewalEndDate ? format(new Date(newRenewalEndDate), 'yyyy/MM/dd') : 'تعیین نشده'}
-                    </p>
+                    <Label>تاریخ پایان</Label>
+                    <PersianDatePicker
+                      value={newRenewalEndDate || undefined}
+                      onChange={(dateStr) => {
+                        if (dateStr) {
+                          setNewRenewalEndDate(dateStr);
+                        }
+                      }}
+                    />
                   </div>
                   <div>
                     <Label>یادداشت (اختیاری)</Label>
@@ -690,6 +706,17 @@ export function ManagerRenewalDialog({
                                     if (dateStr) {
                                       setEditStartDate(dateStr);
                                       setEditEndDate(addMonths(new Date(dateStr), 1).toISOString());
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <Label>تاریخ پایان</Label>
+                                <PersianDatePicker
+                                  value={editEndDate || undefined}
+                                  onChange={(dateStr) => {
+                                    if (dateStr) {
+                                      setEditEndDate(dateStr);
                                     }
                                   }}
                                 />
