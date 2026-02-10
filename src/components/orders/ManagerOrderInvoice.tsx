@@ -574,7 +574,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
           <div class="company-title">فاکتور نصب و کرایه داربست فلزی اهرُم</div>
           <div class="company-website">www.ahrom.ir</div>
           <div class="company-contacts">
-            دفتر: ۰۲۵ ۳۸۸۶ ۵۰۴۰ &nbsp;|&nbsp; همراه محمدی: ۰۹۱۲ ۵۵۱ ۱۴۹۴ &nbsp;|&nbsp; تلفن گویا: ۹۰۰۰۰۰۳۱۹
+            دفتر: <span dir="ltr">025 3886 5040</span> &nbsp;|&nbsp; همراه محمدی: <span dir="ltr">0912 551 1494</span> &nbsp;|&nbsp; تلفن گویا: <span dir="ltr">900000319</span>
           </div>
           <div class="company-address">
             آدرس دفتر: استان قم، شهر قم، خیابان سواران، خیابان معصومیه شمالی، بین کوچه دو چهار دفتر اهرم
