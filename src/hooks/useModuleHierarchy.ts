@@ -205,6 +205,16 @@ function mergeAssignedHierarchy(savedRaw: ModuleItem[], initialModules: ModuleIt
   return [...updatedHierarchy, ...newModules];
 }
 
+/** Recursively close all folders so they start collapsed on page load */
+function closeAllFolders(items: ModuleItem[]): ModuleItem[] {
+  return items.map(item => {
+    if (item.type === 'folder') {
+      return { ...item, isOpen: false, children: item.children ? closeAllFolders(item.children) : [] };
+    }
+    return item;
+  });
+}
+
 export function useModuleHierarchy({ type, initialModules, isInitialModulesReady = true, onModuleNameChange }: UseModuleHierarchyProps) {
   const storageKey = type === 'available' ? STORAGE_KEY_AVAILABLE : STORAGE_KEY_ASSIGNED;
 
@@ -270,14 +280,12 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
 
         if (hierarchy && hierarchy.length > 0) {
           if (type === 'available') {
-            setItems(mergeAvailableHierarchy(hierarchy, initialModules));
+            setItems(closeAllFolders(mergeAvailableHierarchy(hierarchy, initialModules)));
           } else {
-            // For assigned modules: during first render, initialModules can be empty until assignments load.
-            // In that case, keep DB hierarchy as-is (folders + module placement) and reconcile later.
             if (initialModules.length === 0) {
-              setItems(hierarchy);
+              setItems(closeAllFolders(hierarchy));
             } else {
-              setItems(mergeAssignedHierarchy(hierarchy, initialModules));
+              setItems(closeAllFolders(mergeAssignedHierarchy(hierarchy, initialModules)));
             }
           }
         } else {
