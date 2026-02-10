@@ -644,7 +644,7 @@ export default function ComprehensiveScaffoldingForm({
       }
     }
 
-    breakdown.push(`قیمت پایه: ${basePrice.toLocaleString('fa-IR')} تومان`);
+    breakdown.push(`قیمت ماه اول: ${basePrice.toLocaleString('fa-IR')} تومان`);
 
     // اگر شرایط قبلاً روی فی اعمال شده، دوباره اعمال نشود
     if (conditions.currentMonth === 1 && !conditionsAppliedToUnitPrice) {

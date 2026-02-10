@@ -281,7 +281,7 @@ export function RenewalRequestDialog({
               <div className="bg-primary/5 p-4 rounded-lg space-y-3 border border-primary/20">
                 <h4 className="font-medium flex items-center gap-2 text-primary">
                   <RefreshCw className="h-4 w-4" />
-                  درخواست تمدید سری {renewals.length + 1}
+                  درخواست تمدید ماه {renewals.length + 2}
                 </h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
@@ -356,7 +356,7 @@ export function RenewalRequestDialog({
                           ) : (
                             <Clock className="h-4 w-4 text-red-600" />
                           )}
-                          <span className="font-medium">تمدید سری {renewal.renewal_number}</span>
+                          <span className="font-medium">تمدید ماه {renewal.renewal_number + 1}</span>
                         </div>
                         {getStatusBadge(renewal.status)}
                       </div>
@@ -400,7 +400,7 @@ export function RenewalRequestDialog({
             <div className="bg-yellow-50 dark:bg-yellow-950 p-4 rounded-lg space-y-3">
               <p className="text-sm text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                درخواست تمدید سری {pendingRenewal.renewal_number} در انتظار تایید مدیر است
+                درخواست تمدید ماه {pendingRenewal.renewal_number + 1} در انتظار تایید مدیر است
               </p>
               <Button
                 variant="destructive"
