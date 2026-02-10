@@ -552,11 +552,20 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
               {(approvedRenewalCost > 0 || approvedRepairCost > 0 || displayAddOnsAmount > 0) && (
                 <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-800 text-center space-y-1">
-                  {displayAddOnsAmount > 0 && (
+                  {approvedRenewalCost > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      افزوده‌ها (تمدید/تعمیرات):{' '}
+                      هزینه تمدید کرایه:{' '}
                       <span className="font-medium" dir="ltr">
-                        {Number(displayAddOnsAmount).toLocaleString('fa-IR')}
+                        {Number(approvedRenewalCost).toLocaleString('fa-IR')}
+                      </span>{' '}
+                      تومان
+                    </p>
+                  )}
+                  {approvedRepairCost > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      هزینه تعمیرات:{' '}
+                      <span className="font-medium" dir="ltr">
+                        {Number(approvedRepairCost).toLocaleString('fa-IR')}
                       </span>{' '}
                       تومان
                     </p>
