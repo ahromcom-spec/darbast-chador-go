@@ -1403,6 +1403,8 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean | null
+          module_description: string | null
+          module_href: string | null
           module_key: string
           module_name: string
           updated_at: string
@@ -1415,6 +1417,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          module_description?: string | null
+          module_href?: string | null
           module_key: string
           module_name: string
           updated_at?: string
@@ -1427,6 +1431,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          module_description?: string | null
+          module_href?: string | null
           module_key?: string
           module_name?: string
           updated_at?: string

@@ -13,6 +13,8 @@ interface ModuleAssignment {
   id: string;
   module_key: string;
   module_name: string;
+  module_href: string | null;
+  module_description: string | null;
   assigned_phone_number: string;
   assigned_at: string;
   is_active: boolean;
@@ -82,6 +84,51 @@ const MODULE_DETAILS: Record<string, ModuleInfo> = {
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-50',
     icon: 'credit-card',
+  },
+  site_registration: {
+    key: 'site_registration',
+    name: 'ماژول ثبت‌نام در سایت اهرم',
+    description: 'ثبت‌نام کاربران جدید بدون نیاز به کد تایید',
+    href: '/site-registration',
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-50',
+    icon: 'user-plus',
+  },
+  comprehensive_accounting: {
+    key: 'comprehensive_accounting',
+    name: 'ماژول حسابداری جامع',
+    description: 'مدیریت حساب‌های مشتریان، نیروها و پرسنل',
+    href: '/comprehensive-accounting',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+    icon: 'calculator',
+  },
+  customer_comprehensive_invoice: {
+    key: 'customer_comprehensive_invoice',
+    name: 'ماژول صورتحساب جامع مشتریان',
+    description: 'صدور صورتحساب جامع همه خدمات و پرداخت‌ها برای هر مشتری',
+    href: '/customer-comprehensive-invoice',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    icon: 'receipt',
+  },
+  site_analytics: {
+    key: 'site_analytics',
+    name: 'ماژول آمار بازدید سایت اهرم',
+    description: 'تحلیل جامع بازدیدکنندگان و رفتار کاربران',
+    href: '/site-analytics',
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50',
+    icon: 'chart',
+  },
+  media_approval: {
+    key: 'media_approval',
+    name: 'ماژول مدیریت رسانه‌های سایت',
+    description: 'تایید و مدیریت عکس‌ها و فیلم‌های سایت',
+    href: '/media-approval',
+    color: 'text-pink-600',
+    bgColor: 'bg-pink-50',
+    icon: 'image',
   },
 };
 
@@ -167,6 +214,34 @@ export function UserModulesTab() {
     }
   }, [userPhone]);
 
+  // Subscribe to realtime changes on module_assignments so new assignments show immediately
+  useEffect(() => {
+    if (!userPhone) return;
+
+    const channel = supabase
+      .channel('user-module-assignments')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'module_assignments',
+        },
+        (payload: any) => {
+          // Re-fetch when any change involves this user's phone
+          const row = payload.new || payload.old;
+          if (row?.assigned_phone_number === userPhone) {
+            fetchUserModules();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userPhone]);
+
   const fetchUserPhone = async () => {
     if (!user) return;
 
@@ -220,7 +295,12 @@ export function UserModulesTab() {
     if (name.includes('حسابکتاب') || name.includes('کارکرد')) return 'personnel_accounting';
     if (name.includes('صورتحساب')) return 'my_invoice';
     if (name.includes('کارت') || name.includes('بانک')) return 'bank_cards';
-    if (name.includes('داربست') || name.includes('اجرایی')) return 'scaffold_execution_with_materials';
+    if (name.includes('ثبت‌نام') || name.includes('ثبت نام')) return 'site_registration';
+    if (name.includes('حسابداری جامع')) return 'comprehensive_accounting';
+    if (name.includes('صورتحساب جامع مشتری')) return 'customer_comprehensive_invoice';
+    if (name.includes('آمار') || name.includes('بازدید')) return 'site_analytics';
+    if (name.includes('رسانه')) return 'media_approval';
+    if (name.includes('سفارشات') || name.includes('داربست') || name.includes('اجرایی')) return 'scaffold_execution_with_materials';
 
     return assignment.module_key;
   };
@@ -233,14 +313,17 @@ export function UserModulesTab() {
         ...base,
         key: assignment.module_key,
         name: assignment.module_name || base.name,
+        // Use stored href/description from DB if available (for custom modules)
+        href: assignment.module_href || base.href,
+        description: assignment.module_description || base.description,
       };
     }
 
     return {
       key: assignment.module_key,
       name: assignment.module_name || assignment.module_key,
-      description: '',
-      href: '/',
+      description: assignment.module_description || '',
+      href: assignment.module_href || '/',
       color: 'text-gray-600',
       bgColor: 'bg-gray-50',
       icon: 'default',
