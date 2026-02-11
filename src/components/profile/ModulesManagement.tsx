@@ -329,12 +329,14 @@ export function ModulesManagement() {
         .eq('phone_number', newPhoneNumber)
         .single();
 
-      // Insert the assignment
+      // Insert the assignment with href and description
       const { error } = await supabase
         .from('module_assignments')
         .insert({
           module_key: selectedItem.key,
           module_name: moduleInfo.name,
+          module_href: moduleInfo.href,
+          module_description: moduleInfo.description,
           assigned_phone_number: newPhoneNumber,
           assigned_user_id: profile?.user_id || null,
           assigned_by: user?.id,
