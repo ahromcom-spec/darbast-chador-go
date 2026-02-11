@@ -22,12 +22,13 @@ export function useModuleShortcuts() {
       setIsLoading(false);
       return;
     }
-    const { data } = await (supabase as any)
+    const { data, error } = await supabase
       .from('module_shortcuts')
       .select('*')
       .eq('user_id', user.id)
       .order('display_order', { ascending: true });
 
+    if (error) console.error('Error fetching shortcuts:', error);
     setShortcuts(data || []);
     setIsLoading(false);
   }, [user]);
@@ -39,7 +40,7 @@ export function useModuleShortcuts() {
   const addShortcut = useCallback(
     async (moduleKey: string, moduleName: string, moduleDescription?: string, moduleHref?: string) => {
       if (!user) return false;
-      const { error } = await (supabase as any).from('module_shortcuts').upsert(
+      const { error } = await supabase.from('module_shortcuts').upsert(
         {
           user_id: user.id,
           module_key: moduleKey,
@@ -50,11 +51,12 @@ export function useModuleShortcuts() {
         },
         { onConflict: 'user_id,module_key' }
       );
-      if (!error) {
-        await fetchShortcuts();
-        return true;
+      if (error) {
+        console.error('Error adding shortcut:', error);
+        return false;
       }
-      return false;
+      await fetchShortcuts();
+      return true;
     },
     [user, shortcuts.length, fetchShortcuts]
   );
@@ -62,16 +64,17 @@ export function useModuleShortcuts() {
   const removeShortcut = useCallback(
     async (moduleKey: string) => {
       if (!user) return false;
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('module_shortcuts')
         .delete()
         .eq('user_id', user.id)
         .eq('module_key', moduleKey);
-      if (!error) {
-        await fetchShortcuts();
-        return true;
+      if (error) {
+        console.error('Error removing shortcut:', error);
+        return false;
       }
-      return false;
+      await fetchShortcuts();
+      return true;
     },
     [user, fetchShortcuts]
   );
