@@ -230,7 +230,7 @@ const Home = () => {
         </script>
       </div>
 
-      <div className="min-h-screen flex flex-col relative" style={{ backgroundColor: '#1a1a2e' }}>
+      <div className="min-h-[120vh] md:min-h-screen flex flex-col relative" style={{ backgroundColor: '#1a1a2e' }}>
         {/* Background Image - Full screen coverage */}
         <div 
           className="fixed inset-0 z-0" 
