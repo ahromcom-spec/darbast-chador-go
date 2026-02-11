@@ -1499,6 +1499,39 @@ export type Database = {
         }
         Relationships: []
       }
+      module_shortcuts: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          module_description: string | null
+          module_href: string | null
+          module_key: string
+          module_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          module_description?: string | null
+          module_href?: string | null
+          module_key: string
+          module_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          module_description?: string | null
+          module_href?: string | null
+          module_key?: string
+          module_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       module_version_history: {
         Row: {
           created_at: string
