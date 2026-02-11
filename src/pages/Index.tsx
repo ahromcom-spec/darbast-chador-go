@@ -13,7 +13,7 @@ const Index = () => {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
+    <div className="relative w-full overflow-hidden min-h-[120vh] md:min-h-screen">
       {/* افکت برف‌ریزی زمستانی */}
       <Snowfall />
       {/* آواتار دستیار هوشمند */}
