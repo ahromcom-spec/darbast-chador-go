@@ -135,26 +135,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // If whitelisted AND NOT forcing SMS, bypass SMS and use fixed code 12345
-    // When force_sms=true (e.g., CEO selecting "دریافت کد تایید پیامکی"), send real OTP
-    if (isWhitelistedPhone && !force_sms) {
-      const fixed = '12345';
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-      await supabase.from('otp_codes').insert({
-        phone_number: normalizedPhone,
-        code: fixed,
-        expires_at: expiresAt,
-        verified: false,
-      });
-      return new Response(
-        JSON.stringify({ success: true, user_exists: userExists, whitelisted: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Log when forcing SMS for whitelisted phone
-    if (isWhitelistedPhone && force_sms) {
-      console.log('INFO: Forcing real SMS for whitelisted phone', maskPhone(normalizedPhone));
+    // All phones (including whitelisted) get real random OTP via SMS for security
+    if (isWhitelistedPhone) {
+      console.log('INFO: Sending real SMS OTP for whitelisted phone', maskPhone(normalizedPhone));
     }
 
     // Generate 5-digit OTP code
@@ -277,23 +260,8 @@ Deno.serve(async (req) => {
       // Delete the failed OTP code
       await supabase.from('otp_codes').delete().eq('phone_number', normalizedPhone).eq('code', code);
       
-      // FALLBACK: If this is a whitelisted phone and SMS failed (e.g. DNS error),
-      // silently fall back to fixed code so the user can still log in
-      if (isWhitelistedPhone) {
-        console.log('INFO: SMS failed for whitelisted phone, falling back to fixed code', maskPhone(normalizedPhone));
-        const fixedCode = '12345';
-        const fixedExpires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-        await supabase.from('otp_codes').insert({
-          phone_number: normalizedPhone,
-          code: fixedCode,
-          expires_at: fixedExpires,
-          verified: false,
-        });
-        return new Response(
-          JSON.stringify({ success: true, user_exists: userExists, whitelisted: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      // No fallback to fixed codes - always require real SMS delivery
+      console.error('SMS delivery failed for phone', maskPhone(normalizedPhone));
       
       return new Response(
         JSON.stringify({ error: smsResult.error }),
