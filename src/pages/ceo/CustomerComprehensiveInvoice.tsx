@@ -633,7 +633,7 @@ export default function CustomerComprehensiveInvoice() {
           </div>
           <div class="signature-box">
             <div class="signature-line"></div>
-            <p>امضاء و مهر شرکت</p>
+            <p>امضاء و مهر اهرم</p>
           </div>
         </div>
         
