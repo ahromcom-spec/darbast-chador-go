@@ -125,6 +125,7 @@ export const CustomerInvoice = () => {
           address,
           status,
           payment_amount,
+          total_price,
           payment_confirmed_at,
           created_at,
           notes,
@@ -160,7 +161,8 @@ export const CustomerInvoice = () => {
       }
 
       const processedOrders: OrderInvoice[] = (data || []).map(order => {
-        const totalAmount = Number(order.payment_amount || 0);
+        // اولویت با total_price (شامل تمدیدها و تعمیرات) سپس payment_amount
+        const totalAmount = Number((order as any).total_price || order.payment_amount || 0);
 
         // مبالغ پرداختی از منابع مختلف
         const cashPaid = Number(paymentsMap[order.id] || 0);
@@ -190,7 +192,7 @@ export const CustomerInvoice = () => {
           code: order.code,
           address: order.address,
           status: order.status || 'pending',
-          payment_amount: order.payment_amount,
+          payment_amount: totalAmount,
           payment_confirmed_at: order.payment_confirmed_at,
           created_at: order.created_at,
           subcategory: order.subcategories,
