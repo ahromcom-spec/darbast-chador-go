@@ -111,10 +111,13 @@ export function UserModulesTab() {
     moduleHref: string;
   }>({ open: false, moduleKey: '', moduleName: '', moduleDescription: '', moduleHref: '' });
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
 
   const handleLongPressStart = useCallback(
     (moduleKey: string, moduleName: string, moduleDescription: string, moduleHref: string) => {
+      longPressFiredRef.current = false;
       longPressTimerRef.current = setTimeout(() => {
+        longPressFiredRef.current = true;
         if (hasShortcut(moduleKey)) {
           toast.info('این ماژول قبلاً به صفحه نخست اضافه شده است');
         } else {
@@ -131,6 +134,16 @@ export function UserModulesTab() {
       longPressTimerRef.current = null;
     }
   }, []);
+
+  const handleCardClick = useCallback((e: React.MouseEvent, moduleUrl: string) => {
+    if (longPressFiredRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      longPressFiredRef.current = false;
+      return;
+    }
+    navigate(moduleUrl);
+  }, [navigate]);
 
   const handleConfirmShortcut = useCallback(async () => {
     const { moduleKey, moduleName, moduleDescription, moduleHref } = shortcutDialog;
@@ -278,7 +291,7 @@ export function UserModulesTab() {
             <Card
                   key={assignment.id}
                   className="border-2 border-primary/20 hover:border-primary/40 transition-all cursor-pointer group select-none"
-                  onClick={() => navigate(moduleUrl)}
+                  onClick={(e) => handleCardClick(e, moduleUrl)}
                   onMouseDown={() =>
                     handleLongPressStart(assignment.module_key, displayName, moduleInfo.description, moduleInfo.href)
                   }
