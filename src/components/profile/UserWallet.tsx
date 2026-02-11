@@ -433,7 +433,7 @@ export function UserWallet() {
                     </Badge>
                   </CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {summary.balance >= 0 ? 'مانده حساب' : 'بدهی به شرکت'}
+                    {summary.balance >= 0 ? 'مانده حساب' : 'بدهی به اهرم'}
                   </p>
                 </div>
               </div>
@@ -467,7 +467,7 @@ export function UserWallet() {
                       {summary.cashBalance >= 0 ? '+' : ''}{formatCurrency(summary.cashBalance)}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {summary.cashBalance >= 0 ? 'طلب از شرکت' : 'بدهی به شرکت'}
+                      {summary.cashBalance >= 0 ? 'طلب از اهرم' : 'بدهی به اهرم'}
                     </div>
                   </div>
                 </>
@@ -493,7 +493,7 @@ export function UserWallet() {
                   <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 col-span-2">
                     <div className="flex items-center gap-2 mb-1">
                       <TrendingDown className="h-4 w-4 text-red-600" />
-                      <span className="text-sm text-muted-foreground">بدهی سفارشات به شرکت</span>
+                      <span className="text-sm text-muted-foreground">بدهی سفارشات به اهرم</span>
                     </div>
                     <div className="font-bold text-red-600 text-lg">{formatCurrency(summary.orderDebt)}</div>
                   </div>
