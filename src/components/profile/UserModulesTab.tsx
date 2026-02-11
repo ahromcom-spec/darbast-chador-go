@@ -118,6 +118,7 @@ export function UserModulesTab() {
       longPressFiredRef.current = false;
       longPressTimerRef.current = setTimeout(() => {
         longPressFiredRef.current = true;
+        console.log('Long press fired for module:', moduleKey);
         if (hasShortcut(moduleKey)) {
           toast.info('این ماژول قبلاً به صفحه نخست اضافه شده است');
         } else {
@@ -292,6 +293,7 @@ export function UserModulesTab() {
                   key={assignment.id}
                   className="border-2 border-primary/20 hover:border-primary/40 transition-all cursor-pointer group select-none"
                   onClick={(e) => handleCardClick(e, moduleUrl)}
+                  onContextMenu={(e) => e.preventDefault()}
                   onMouseDown={() =>
                     handleLongPressStart(assignment.module_key, displayName, moduleInfo.description, moduleInfo.href)
                   }
@@ -301,6 +303,7 @@ export function UserModulesTab() {
                     handleLongPressStart(assignment.module_key, displayName, moduleInfo.description, moduleInfo.href)
                   }
                   onTouchEnd={handleLongPressEnd}
+                  onTouchCancel={handleLongPressEnd}
                 >
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4">
