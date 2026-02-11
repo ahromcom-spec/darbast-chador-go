@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
 
     // Generate 5-digit OTP code
     const code = Math.floor(10000 + Math.random() * 90000).toString();
-    const expiresAt = new Date(Date.now() + 90 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + 120 * 1000).toISOString();
 
     // Get Parsgreen API key
     const apiKey = Deno.env.get('PARSGREEN_API_KEY');
@@ -274,8 +274,27 @@ Deno.serve(async (req) => {
     const [smsResult, dbResult] = await Promise.all([sendSmsPromise, dbInsertPromise]);
 
     if (!smsResult.success) {
-      // Delete the OTP code since SMS failed
+      // Delete the failed OTP code
       await supabase.from('otp_codes').delete().eq('phone_number', normalizedPhone).eq('code', code);
+      
+      // FALLBACK: If this is a whitelisted phone and SMS failed (e.g. DNS error),
+      // silently fall back to fixed code so the user can still log in
+      if (isWhitelistedPhone) {
+        console.log('INFO: SMS failed for whitelisted phone, falling back to fixed code', maskPhone(normalizedPhone));
+        const fixedCode = '12345';
+        const fixedExpires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+        await supabase.from('otp_codes').insert({
+          phone_number: normalizedPhone,
+          code: fixedCode,
+          expires_at: fixedExpires,
+          verified: false,
+        });
+        return new Response(
+          JSON.stringify({ success: true, user_exists: userExists, whitelisted: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: smsResult.error }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
