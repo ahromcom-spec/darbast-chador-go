@@ -180,7 +180,7 @@ export function UserWallet() {
       if (customer) {
         const { data: orders } = await supabase
           .from('projects_v3')
-          .select('payment_amount, payment_confirmed_at, notes, total_paid, status, is_archived')
+          .select('payment_amount, total_price, payment_confirmed_at, notes, total_paid, status, is_archived')
           .eq('customer_id', customer.id)
           // فقط سفارشات غیر بایگانی را در نظر بگیر
           .or('is_archived.is.null,is_archived.eq.false')
@@ -189,7 +189,8 @@ export function UserWallet() {
 
         if (orders) {
           orders.forEach(order => {
-            const totalAmount = order.payment_amount || 0;
+            // اولویت با total_price (شامل تمدیدها) سپس payment_amount
+            const totalAmount = Number(order.total_price || order.payment_amount || 0);
             orderTotal += totalAmount;
             
             if (order.payment_confirmed_at) {
