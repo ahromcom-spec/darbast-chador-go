@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Boxes, Building2, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useModuleShortcuts } from '@/hooks/useModuleShortcuts';
+import { AddShortcutDialog } from '@/components/module-shortcut/AddShortcutDialog';
 
 interface ModuleAssignment {
   id: string;
@@ -100,6 +102,46 @@ export function UserModulesTab() {
   const [assignments, setAssignments] = useState<ModuleAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [userPhone, setUserPhone] = useState<string | null>(null);
+  const { addShortcut, hasShortcut } = useModuleShortcuts();
+  const [shortcutDialog, setShortcutDialog] = useState<{
+    open: boolean;
+    moduleKey: string;
+    moduleName: string;
+    moduleDescription: string;
+    moduleHref: string;
+  }>({ open: false, moduleKey: '', moduleName: '', moduleDescription: '', moduleHref: '' });
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleLongPressStart = useCallback(
+    (moduleKey: string, moduleName: string, moduleDescription: string, moduleHref: string) => {
+      longPressTimerRef.current = setTimeout(() => {
+        if (hasShortcut(moduleKey)) {
+          toast.info('این ماژول قبلاً به صفحه نخست اضافه شده است');
+        } else {
+          setShortcutDialog({ open: true, moduleKey, moduleName, moduleDescription, moduleHref });
+        }
+      }, 3000);
+    },
+    [hasShortcut]
+  );
+
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleConfirmShortcut = useCallback(async () => {
+    const { moduleKey, moduleName, moduleDescription, moduleHref } = shortcutDialog;
+    const ok = await addShortcut(moduleKey, moduleName, moduleDescription, moduleHref);
+    if (ok) {
+      toast.success('میانبر ماژول به صفحه نخست اضافه شد');
+    } else {
+      toast.error('خطا در افزودن میانبر');
+    }
+    setShortcutDialog((prev) => ({ ...prev, open: false }));
+  }, [shortcutDialog, addShortcut]);
 
   useEffect(() => {
     fetchUserPhone();
@@ -233,10 +275,19 @@ export function UserModulesTab() {
           // Use module_name from database (synced by CEO) as primary source
           const displayName = assignment.module_name || MODULE_DETAILS[assignment.module_key]?.name || assignment.module_key;
           return (
-                <Card
+            <Card
                   key={assignment.id}
-                  className="border-2 border-primary/20 hover:border-primary/40 transition-all cursor-pointer group"
+                  className="border-2 border-primary/20 hover:border-primary/40 transition-all cursor-pointer group select-none"
                   onClick={() => navigate(moduleUrl)}
+                  onMouseDown={() =>
+                    handleLongPressStart(assignment.module_key, displayName, moduleInfo.description, moduleInfo.href)
+                  }
+                  onMouseUp={handleLongPressEnd}
+                  onMouseLeave={handleLongPressEnd}
+                  onTouchStart={() =>
+                    handleLongPressStart(assignment.module_key, displayName, moduleInfo.description, moduleInfo.href)
+                  }
+                  onTouchEnd={handleLongPressEnd}
                 >
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -267,6 +318,17 @@ export function UserModulesTab() {
           );
         })}
       </div>
+
+      <AddShortcutDialog
+        open={shortcutDialog.open}
+        onOpenChange={(open) => setShortcutDialog((prev) => ({ ...prev, open }))}
+        moduleName={shortcutDialog.moduleName}
+        onConfirm={handleConfirmShortcut}
+      />
+
+      <p className="text-xs text-muted-foreground text-center mt-4">
+        💡 برای افزودن میانبر ماژول به صفحه نخست، ۳ ثانیه روی ماژول فشار دهید و نگه دارید
+      </p>
     </div>
   );
 }

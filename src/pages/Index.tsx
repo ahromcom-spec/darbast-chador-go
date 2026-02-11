@@ -3,6 +3,7 @@ import InteractiveGlobe from '@/components/globe/InteractiveGlobe';
 import goldenGlobe from '@/assets/golden-globe-rotating.png';
 import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
 import Snowfall from '@/components/effects/Snowfall';
+import { ModuleShortcuts } from '@/components/home/ModuleShortcuts';
 
 const Index = () => {
   const [showGlobe, setShowGlobe] = useState(false);
@@ -47,6 +48,9 @@ const Index = () => {
             />
           </div>
           
+          {/* Module Shortcuts */}
+          <ModuleShortcuts />
+
           {/* Globe Button */}
           <button
             onClick={() => setShowGlobe(true)}
