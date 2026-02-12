@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { sendPushNotification, notifyManagers } from '@/lib/notifications';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box, MapPin } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box, MapPin, ArrowRight } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -1420,6 +1420,17 @@ export default function ComprehensiveScaffoldingForm({
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       <div className="space-y-6">
+
+      {/* دکمه بازگشت */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate(-1)}
+        className="gap-2"
+      >
+        <ArrowRight className="h-4 w-4" />
+        بازگشت
+      </Button>
 
       {/* Header with order info if editing */}
       {editOrderId && orderData && (
