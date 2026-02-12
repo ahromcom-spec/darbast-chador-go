@@ -42,11 +42,11 @@ type RentalFormValues = z.infer<typeof rentalFormSchema>;
 const RENTAL_ITEMS: Record<string, { label: string; price: number }> = {
   cross_screw: {
     label: 'پیچ تنظیم صلیبی یک متری',
-    price: 60000,
+    price: 80000,
   },
   bowl_screw: {
     label: 'پیچ تنظیم کاسه‌ای 70 سانتی',
-    price: 40000,
+    price: 60000,
   },
 };
 
