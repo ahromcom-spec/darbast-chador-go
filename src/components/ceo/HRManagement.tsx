@@ -64,6 +64,8 @@ const DEFAULT_POSITIONS = [
 
 const STORAGE_KEY_POSITIONS = 'hr_custom_positions';
 const STORAGE_KEY_DEPARTMENTS = 'hr_custom_departments';
+const STORAGE_KEY_REMOVED_POSITIONS = 'hr_removed_positions';
+const STORAGE_KEY_REMOVED_DEPARTMENTS = 'hr_removed_departments';
 
 function loadCustomItems(key: string): string[] {
   try {
@@ -77,7 +79,7 @@ function saveCustomItems(key: string, items: string[]) {
 }
 
 // Multi-select dropdown component with add/remove
-function MultiSelectDropdown({ options, selected, onChange, placeholder, className, customItems, onCustomItemsChange }: {
+function MultiSelectDropdown({ options, selected, onChange, placeholder, className, customItems, onCustomItemsChange, removedDefaults, onRemovedDefaultsChange }: {
   options: readonly string[];
   selected: string[];
   onChange: (vals: string[]) => void;
@@ -85,9 +87,12 @@ function MultiSelectDropdown({ options, selected, onChange, placeholder, classNa
   className?: string;
   customItems?: string[];
   onCustomItemsChange?: (items: string[]) => void;
+  removedDefaults?: string[];
+  onRemovedDefaultsChange?: (items: string[]) => void;
 }) {
   const [newItem, setNewItem] = useState('');
-  const allOptions = [...options, ...(customItems || [])];
+  const visibleDefaults = options.filter(o => !(removedDefaults || []).includes(o));
+  const allOptions = [...visibleDefaults, ...(customItems || [])];
 
   const toggle = (val: string) => {
     onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]);
@@ -96,12 +101,23 @@ function MultiSelectDropdown({ options, selected, onChange, placeholder, classNa
   const handleAdd = () => {
     const trimmed = newItem.trim();
     if (!trimmed || allOptions.includes(trimmed)) return;
-    onCustomItemsChange?.([...(customItems || []), trimmed]);
+    // If it was a previously removed default, restore it
+    if ((options as readonly string[]).includes(trimmed) && (removedDefaults || []).includes(trimmed)) {
+      onRemovedDefaultsChange?.((removedDefaults || []).filter(i => i !== trimmed));
+    } else {
+      onCustomItemsChange?.([...(customItems || []), trimmed]);
+    }
     setNewItem('');
   };
 
-  const handleRemoveCustom = (item: string) => {
-    onCustomItemsChange?.((customItems || []).filter(i => i !== item));
+  const handleRemove = (item: string) => {
+    const isCustom = (customItems || []).includes(item);
+    if (isCustom) {
+      onCustomItemsChange?.((customItems || []).filter(i => i !== item));
+    } else {
+      // It's a default item - add to removed defaults
+      onRemovedDefaultsChange?.([...(removedDefaults || []), item]);
+    }
     // Also remove from selected if present
     if (selected.includes(item)) {
       onChange(selected.filter(v => v !== item));
@@ -137,9 +153,7 @@ function MultiSelectDropdown({ options, selected, onChange, placeholder, classNa
           </div>
         )}
         <div className="space-y-1 max-h-60 overflow-y-auto">
-          {allOptions.map(opt => {
-            const isCustom = (customItems || []).includes(opt);
-            return (
+          {allOptions.map(opt => (
               <div key={opt} className="flex items-center gap-1">
                 <label className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent cursor-pointer text-sm flex-1">
                   <Checkbox
@@ -148,14 +162,13 @@ function MultiSelectDropdown({ options, selected, onChange, placeholder, classNa
                   />
                   <span>{opt}</span>
                 </label>
-                {isCustom && onCustomItemsChange && (
-                  <Button size="sm" variant="ghost" onClick={() => handleRemoveCustom(opt)} className="h-6 w-6 p-0 text-destructive shrink-0">
+                {(onCustomItemsChange || onRemovedDefaultsChange) && (
+                  <Button size="sm" variant="ghost" onClick={() => handleRemove(opt)} className="h-6 w-6 p-0 text-destructive shrink-0">
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 )}
               </div>
-            );
-          })}
+          ))}
         </div>
         {selected.length > 0 && (
           <div className="border-t mt-2 pt-2">
@@ -197,6 +210,8 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
   // Custom items for positions and departments
   const [customPositions, setCustomPositions] = useState<string[]>(() => loadCustomItems(STORAGE_KEY_POSITIONS));
   const [customDepartments, setCustomDepartments] = useState<string[]>(() => loadCustomItems(STORAGE_KEY_DEPARTMENTS));
+  const [removedPositions, setRemovedPositions] = useState<string[]>(() => loadCustomItems(STORAGE_KEY_REMOVED_POSITIONS));
+  const [removedDepartments, setRemovedDepartments] = useState<string[]>(() => loadCustomItems(STORAGE_KEY_REMOVED_DEPARTMENTS));
 
   const handleCustomPositionsChange = (items: string[]) => {
     setCustomPositions(items);
@@ -205,6 +220,14 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
   const handleCustomDepartmentsChange = (items: string[]) => {
     setCustomDepartments(items);
     saveCustomItems(STORAGE_KEY_DEPARTMENTS, items);
+  };
+  const handleRemovedPositionsChange = (items: string[]) => {
+    setRemovedPositions(items);
+    saveCustomItems(STORAGE_KEY_REMOVED_POSITIONS, items);
+  };
+  const handleRemovedDepartmentsChange = (items: string[]) => {
+    setRemovedDepartments(items);
+    saveCustomItems(STORAGE_KEY_REMOVED_DEPARTMENTS, items);
   };
   
   // User lookup state
@@ -513,6 +536,8 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 placeholder="انتخاب سمت‌ها"
                 customItems={customPositions}
                 onCustomItemsChange={handleCustomPositionsChange}
+                removedDefaults={removedPositions}
+                onRemovedDefaultsChange={handleRemovedPositionsChange}
               />
             </div>
 
@@ -528,6 +553,8 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 placeholder="انتخاب واحدها"
                 customItems={customDepartments}
                 onCustomItemsChange={handleCustomDepartmentsChange}
+                removedDefaults={removedDepartments}
+                onRemovedDefaultsChange={handleRemovedDepartmentsChange}
               />
             </div>
 
@@ -630,6 +657,8 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                             className="w-36"
                             customItems={customPositions}
                             onCustomItemsChange={handleCustomPositionsChange}
+                            removedDefaults={removedPositions}
+                            onRemovedDefaultsChange={handleRemovedPositionsChange}
                           />
                         ) : (
                           employee.position ? (
@@ -651,6 +680,8 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                             className="w-36"
                             customItems={customDepartments}
                             onCustomItemsChange={handleCustomDepartmentsChange}
+                            removedDefaults={removedDepartments}
+                            onRemovedDefaultsChange={handleRemovedDepartmentsChange}
                           />
                         ) : (
                           employee.department ? (
