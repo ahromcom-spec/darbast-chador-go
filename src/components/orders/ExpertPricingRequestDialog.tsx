@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Loader2, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { MediaUploader, UploadedMediaInfo } from './MediaUploader';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { useNavigate } from 'react-router-dom';
@@ -26,11 +27,16 @@ interface ExpertPricingRequestDialogProps {
   hierarchyProjectId?: string;
 }
 
-interface Dimension {
-  length: string;
-  width: string;
-  height: string;
-}
+const EXPERT_RENTAL_ITEMS: Record<string, { label: string; price: number }> = {
+  cross_screw: {
+    label: 'پیچ تنظیم صلیبی یک متری',
+    price: 60000,
+  },
+  bowl_screw: {
+    label: 'پیچ تنظیم کاسه‌ای 70 سانتی',
+    price: 40000,
+  },
+};
 
 export const ExpertPricingRequestDialog = ({
   subcategoryId,
@@ -46,7 +52,10 @@ export const ExpertPricingRequestDialog = ({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState('');
-  const [dimensions, setDimensions] = useState<Dimension[]>([{ length: '', width: '', height: '' }]);
+  const [selectedItem1, setSelectedItem1] = useState('');
+  const [quantity1, setQuantity1] = useState(1);
+  const [selectedItem2, setSelectedItem2] = useState('');
+  const [quantity2, setQuantity2] = useState(1);
   const [requestedDate, setRequestedDate] = useState('');
   
   // Track uploaded media files (already uploaded to storage by MediaUploader)
@@ -62,35 +71,9 @@ export const ExpertPricingRequestDialog = ({
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const addDimension = () => {
-    setDimensions([...dimensions, { length: '', width: '', height: '' }]);
-  };
-
-  const removeDimension = (index: number) => {
-    if (dimensions.length > 1) {
-      setDimensions(dimensions.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateDimension = (index: number, field: keyof Dimension, value: string) => {
-    const updated = [...dimensions];
-    updated[index][field] = value;
-    setDimensions(updated);
-  };
-
-  // Calculate total volume for each dimension row (length × width × height)
-  const calculateDimensionVolume = (dim: Dimension) => {
-    const l = parseFloat(dim.length) || 0;
-    const w = parseFloat(dim.width) || 0;
-    const h = parseFloat(dim.height) || 0;
-    // Volume calculation: length × width × height
-    if (l > 0 && w > 0 && h > 0) {
-      return l * w * h;
-    }
-    return 0;
-  };
-
-  const totalVolume = dimensions.reduce((sum, dim) => sum + calculateDimensionVolume(dim), 0);
+  const availableItemsForSecond = Object.entries(EXPERT_RENTAL_ITEMS).filter(
+    ([key]) => key !== selectedItem1
+  );
 
   // Called when MediaUploader finishes uploading files
   // Only update state if we have new uploads - don't reset to empty array
@@ -150,8 +133,10 @@ export const ExpertPricingRequestDialog = ({
       const notes = JSON.stringify({
         is_expert_pricing_request: true,
         description: description,
-        dimensions: dimensions.filter(d => d.length || d.width || d.height),
-        total_volume: totalVolume, // Store calculated total volume (length × width × height for each row)
+        item_type: selectedItem1 ? EXPERT_RENTAL_ITEMS[selectedItem1]?.label : null,
+        quantity: selectedItem1 ? quantity1 : null,
+        item_type_2: selectedItem2 ? EXPERT_RENTAL_ITEMS[selectedItem2]?.label : null,
+        quantity_2: selectedItem2 ? quantity2 : null,
         requested_date: requestedDate || null,
         service_type: serviceTypeName || 'داربست فلزی'
       });
@@ -259,7 +244,10 @@ export const ExpertPricingRequestDialog = ({
       setOpen(false);
       // Reset form
       setDescription('');
-      setDimensions([{ length: '', width: '', height: '' }]);
+      setSelectedItem1('');
+      setQuantity1(1);
+      setSelectedItem2('');
+      setQuantity2(1);
       setRequestedDate('');
       setUploadedMedia([]);
       setProgress(0);
@@ -320,73 +308,83 @@ export const ExpertPricingRequestDialog = ({
             />
           </div>
 
-          {/* Dimensions */}
+          {/* Item Selection */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>ابعاد کار (متر)</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addDimension}>
-                <Plus className="h-4 w-4 ml-1" />
-                افزودن ابعاد
-              </Button>
-            </div>
+            <Label>انتخاب اقلام مورد نظر</Label>
             
-            {dimensions.map((dim, index) => {
-              const rowVolume = calculateDimensionVolume(dim);
-              return (
-                <div key={index} className="space-y-1">
-                  <div className="flex gap-2 items-center">
-                    <div className="flex-1">
-                      <Input
-                        type="number"
-                        placeholder="طول"
-                        value={dim.length}
-                        onChange={(e) => updateDimension(index, 'length', e.target.value)}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        type="number"
-                        placeholder="عرض"
-                        value={dim.width}
-                        onChange={(e) => updateDimension(index, 'width', e.target.value)}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        type="number"
-                        placeholder="ارتفاع"
-                        value={dim.height}
-                        onChange={(e) => updateDimension(index, 'height', e.target.value)}
-                      />
-                    </div>
-                    {dimensions.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeDimension(index)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {rowVolume > 0 && (
-                    <p className="text-xs text-muted-foreground text-left">
-                      متراژ: <span className="font-semibold text-primary">{rowVolume.toLocaleString('fa-IR')} متر مکعب</span>
-                    </p>
+            {/* First item */}
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">نوع جنس داربست فلزی</Label>
+              <div className="flex gap-2 items-center">
+                <Select value={selectedItem1} onValueChange={(val) => {
+                  setSelectedItem1(val);
+                  if (selectedItem2 === val) {
+                    setSelectedItem2('');
+                    setQuantity2(1);
+                  }
+                }}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="انتخاب کنید..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(EXPERT_RENTAL_ITEMS).map(([key, item]) => (
+                      <SelectItem key={key} value={key}>
+                        {item.label} - {item.price.toLocaleString('fa-IR')} تومان
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedItem1 && (
+                  <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                    setSelectedItem1('');
+                    setQuantity1(1);
+                    setSelectedItem2('');
+                    setQuantity2(1);
+                  }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {selectedItem1 && (
+                <div>
+                  <Label className="text-sm text-muted-foreground">تعداد (حداکثر 600)</Label>
+                  <Input type="number" min={1} max={600} value={quantity1} onChange={(e) => setQuantity1(parseInt(e.target.value) || 1)} />
+                </div>
+              )}
+            </div>
+
+            {/* Second item */}
+            {selectedItem1 && (
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">نوع جنس داربست فلزی (دوم - اختیاری)</Label>
+                <div className="flex gap-2 items-center">
+                  <Select value={selectedItem2} onValueChange={setSelectedItem2}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="انتخاب کنید..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableItemsForSecond.map(([key, item]) => (
+                        <SelectItem key={key} value={key}>
+                          {item.label} - {item.price.toLocaleString('fa-IR')} تومان
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedItem2 && (
+                    <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                      setSelectedItem2('');
+                      setQuantity2(1);
+                    }}>
+                      <X className="h-4 w-4" />
+                    </Button>
                   )}
                 </div>
-              );
-            })}
-            
-            {/* Total volume display */}
-            {totalVolume > 0 && (
-              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
-                <p className="text-sm font-semibold text-primary flex items-center justify-between">
-                  <span>مجموع متراژ:</span>
-                  <span className="text-lg">{totalVolume.toLocaleString('fa-IR')} متر مکعب</span>
-                </p>
+                {selectedItem2 && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">تعداد آیتم دوم (حداکثر 600)</Label>
+                    <Input type="number" min={1} max={600} value={quantity2} onChange={(e) => setQuantity2(parseInt(e.target.value) || 1)} />
+                  </div>
+                )}
               </div>
             )}
           </div>
