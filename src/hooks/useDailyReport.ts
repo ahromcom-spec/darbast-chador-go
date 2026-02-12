@@ -256,6 +256,32 @@ export function useDailyReport() {
     }
   }, [user, getLocalStorageKey]);
 
+  // Deduplicate staff rows from backup/restore
+  const deduplicateStaffRows = (rows: StaffReportRow[]): StaffReportRow[] => {
+    let hasCompExp = false;
+    const seenStaffIds = new Set<string>();
+    return rows.filter((s) => {
+      // Only one company expense row
+      if (s.is_company_expense) {
+        if (hasCompExp) return false;
+        hasCompExp = true;
+        return true;
+      }
+      // Cash box rows: deduplicate by bank_card_id
+      if (s.is_cash_box && s.bank_card_id) {
+        if (seenStaffIds.has(`cashbox_${s.bank_card_id}`)) return false;
+        seenStaffIds.add(`cashbox_${s.bank_card_id}`);
+        return true;
+      }
+      // Regular rows: deduplicate by staff_user_id
+      if (s.staff_user_id) {
+        if (seenStaffIds.has(s.staff_user_id)) return false;
+        seenStaffIds.add(s.staff_user_id);
+      }
+      return true;
+    });
+  };
+
   // Extract activity description from notes JSON
   const extractActivityDescription = (notes: any): string => {
     if (!notes) return '';
@@ -449,16 +475,7 @@ export function useDailyReport() {
             
             if (backupOrdersWithData.length > dbOrdersCount) {
               setOrderReports(localBackup.orderReports);
-              // Deduplicate company expense rows from backup
-              let hasCompExp = false;
-              const dedupedStaff = (localBackup.staffReports || []).filter((s: any) => {
-                if (s.is_company_expense) {
-                  if (hasCompExp) return false;
-                  hasCompExp = true;
-                }
-                return true;
-              });
-              setStaffReports(dedupedStaff);
+              setStaffReports(deduplicateStaffRows(localBackup.staffReports || []));
               toast.success('داده‌های ذخیره نشده بازیابی شدند');
             }
           }
@@ -467,17 +484,8 @@ export function useDailyReport() {
         setExistingReportId(null);
         
         if (hasLocalBackup) {
-          // Deduplicate company expense rows from backup
-          let hasCompExp = false;
-          const dedupedStaff = (localBackup.staffReports || []).filter((s: any) => {
-            if (s.is_company_expense) {
-              if (hasCompExp) return false;
-              hasCompExp = true;
-            }
-            return true;
-          });
           setOrderReports(localBackup.orderReports);
-          setStaffReports(dedupedStaff);
+          setStaffReports(deduplicateStaffRows(localBackup.staffReports || []));
           toast.success('داده‌های ذخیره نشده قبلی بازیابی شدند');
         } else {
           setOrderReports([createEmptyOrderRow(0)]);
@@ -758,9 +766,20 @@ export function useDailyReport() {
         toast.error('ردیف صندوق قابل حذف نیست');
         return prev;
       }
-      return prev.filter((_, i) => i !== index);
+      const updated = prev.filter((_, i) => i !== index);
+      
+      // Immediately clear localStorage backup so stale data doesn't restore
+      try {
+        const dateStr = toLocalDateString(reportDate);
+        const key = `daily_report_backup_${user?.id}_${dateStr}_${moduleKey}`;
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.error('Error clearing localStorage on row remove:', e);
+      }
+      
+      return updated;
     });
-  }, []);
+  }, [reportDate, user, moduleKey]);
 
   // Update staff row
   const updateStaffRow = useCallback((index: number, field: keyof StaffReportRow, value: any) => {
