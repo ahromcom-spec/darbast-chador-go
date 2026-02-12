@@ -98,7 +98,7 @@ export function HRStaffSearchSelect({
     };
   }, [open, filterActive]);
 
-  const selectedEmployee = employees.find((e) => e.phone_number === value);
+  const selectedEmployee = employees.find((e) => (e.phone_number || e.id) === value);
 
   const filteredEmployees = useMemo(() => {
     if (!search.trim()) return employees;
@@ -114,8 +114,10 @@ export function HRStaffSearchSelect({
     });
   }, [search, employees]);
 
-  const handleSelect = (phone: string, name: string) => {
-    onValueChange(phone, name);
+  const handleSelect = (employee: HREmployee) => {
+    // Use phone_number as identifier; fall back to employee id if no phone
+    const identifier = employee.phone_number || employee.id;
+    onValueChange(identifier, employee.full_name);
     setOpen(false);
     setSearch('');
   };
@@ -135,7 +137,7 @@ export function HRStaffSearchSelect({
           className="w-full justify-between bg-white/50 hover:bg-white/70 text-right"
         >
           <span className="truncate flex-1 text-right">
-            {selectedEmployee ? `${selectedEmployee.full_name} - ${selectedEmployee.phone_number}` : value ? value : placeholder}
+            {selectedEmployee ? `${selectedEmployee.full_name}${selectedEmployee.phone_number ? ` - ${selectedEmployee.phone_number}` : ''}` : value ? value : placeholder}
           </span>
           {selectedEmployee || value ? (
             <X className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100" onClick={handleClear} />
@@ -180,9 +182,9 @@ export function HRStaffSearchSelect({
                 <button
                   key={employee.id}
                   type="button"
-                  onClick={() => handleSelect(employee.phone_number, employee.full_name)}
+                  onClick={() => handleSelect(employee)}
                   className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer ${
-                    value === employee.phone_number ? 'bg-amber-100 dark:bg-amber-900/30' : ''
+                    value === (employee.phone_number || employee.id) ? 'bg-amber-100 dark:bg-amber-900/30' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
