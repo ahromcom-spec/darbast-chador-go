@@ -19,6 +19,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { MediaUploader } from '@/components/orders/MediaUploader';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { sendOrderSms } from '@/lib/orderSms';
+import { OrderForOthers, RecipientData } from '@/components/orders/OrderForOthers';
+import { ExpertPricingRequestDialog } from '@/components/orders/ExpertPricingRequestDialog';
 
 const rentalFormSchema = z.object({
   itemType: z.string().min(1, 'لطفا نوع جنس را انتخاب کنید'),
@@ -61,6 +63,7 @@ export default function ScaffoldingRentalForm() {
   const [loading, setLoading] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [resolvedLocation, setResolvedLocation] = useState<any>(null);
+  const [recipientData, setRecipientData] = useState<RecipientData | null>(null);
   
   // Extract service selection data
   const stateData = location.state || {};
@@ -328,6 +331,41 @@ export default function ScaffoldingRentalForm() {
       const orderCode = Array.isArray(newOrderData) ? newOrderData[0]?.code : null;
       setCreatedOrderId(orderId);
 
+      // اگر سفارش برای شخص دیگری ثبت شده باشد، درخواست انتقال ایجاد می‌کنیم
+      if (recipientData) {
+        try {
+          const { error: transferError } = await supabase
+            .from('order_transfer_requests')
+            .insert({
+              order_id: orderId,
+              from_user_id: user!.id,
+              to_phone_number: recipientData.phoneNumber,
+              to_user_id: recipientData.userId,
+              status: recipientData.isRegistered ? 'pending_recipient' : 'pending_registration'
+            });
+
+          if (transferError) {
+            console.error('Transfer request error:', transferError);
+          } else if (recipientData.isRegistered && recipientData.userId) {
+            await supabase.rpc('send_notification', {
+              _user_id: recipientData.userId,
+              _title: '📦 سفارش جدید برای شما ثبت شد',
+              _body: `یک سفارش کرایه اجناس داربست با کد ${orderCode} برای شما ثبت شده است.`,
+              _link: `/profile?tab=orders`
+            });
+          }
+
+          toast({
+            title: 'سفارش ثبت شد',
+            description: recipientData.isRegistered 
+              ? `سفارش برای ${recipientData.fullName || recipientData.phoneNumber} ثبت شد و در انتظار تایید ایشان است`
+              : `سفارش ثبت شد. پس از ثبت‌نام کاربر با شماره ${recipientData.phoneNumber}، سفارش به او منتقل خواهد شد`,
+          });
+        } catch (err) {
+          console.error('Transfer error:', err);
+        }
+      }
+
       notifyManagers({
         order_code: orderCode || orderId,
         order_id: orderId,
@@ -349,10 +387,12 @@ export default function ScaffoldingRentalForm() {
         });
       }
 
-      toast({
-        title: '✅ سفارش ثبت شد',
-        description: 'سفارش کرایه اجناس شما با موفقیت ثبت شد. می‌توانید تصاویر مرتبط را آپلود کنید.',
-      });
+      if (!recipientData) {
+        toast({
+          title: '✅ سفارش ثبت شد',
+          description: 'سفارش کرایه اجناس شما با موفقیت ثبت شد. می‌توانید تصاویر مرتبط را آپلود کنید.',
+        });
+      }
     } catch (error: any) {
       console.error('خطا در ثبت سفارش:', error);
       toast({
@@ -460,6 +500,44 @@ export default function ScaffoldingRentalForm() {
                 </Alert>
               </div>
             </CardContent>
+
+            {/* دکمه‌های ثبت سفارش برای دیگری و درخواست قیمت‌گذاری - فقط برای سفارش جدید */}
+            {!editOrderId && subcategoryId && provinceId && (
+              <CardContent className="pt-0 pb-4">
+                <div className="flex flex-col gap-3">
+                  <div className={`${recipientData ? 'w-full' : 'flex flex-wrap justify-center gap-3'}`}>
+                    <OrderForOthers 
+                      onRecipientSelected={setRecipientData}
+                      disabled={loading}
+                    />
+                    {!recipientData && (
+                      <ExpertPricingRequestDialog
+                        subcategoryId={subcategoryId}
+                        provinceId={provinceId}
+                        districtId={districtId || undefined}
+                        address={locationAddress || ''}
+                        detailedAddress={locationTitle || undefined}
+                        serviceTypeName="کرایه اجناس داربست"
+                        hierarchyProjectId={hierarchyProjectId || undefined}
+                      />
+                    )}
+                  </div>
+                  {recipientData && (
+                    <div className="flex justify-center">
+                      <ExpertPricingRequestDialog
+                        subcategoryId={subcategoryId}
+                        provinceId={provinceId}
+                        districtId={districtId || undefined}
+                        address={locationAddress || ''}
+                        detailedAddress={locationTitle || undefined}
+                        serviceTypeName="کرایه اجناس داربست"
+                        hierarchyProjectId={hierarchyProjectId || undefined}
+                      />
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            )}
 
             <CardContent className="p-6">
               <Form {...form}>
@@ -682,10 +760,15 @@ export default function ScaffoldingRentalForm() {
                         <Button
                           type="submit"
                           size="lg"
-                          className="flex-1"
+                          className={`flex-1 ${recipientData ? 'bg-green-600 hover:bg-green-700' : ''}`}
                           disabled={loading}
                         >
-                          {loading ? 'در حال ثبت...' : 'ثبت سفارش'}
+                          {loading 
+                            ? 'در حال ثبت...' 
+                            : recipientData 
+                              ? `ثبت سفارش برای ${recipientData.fullName || recipientData.phoneNumber}`
+                              : 'ثبت سفارش'
+                          }
                         </Button>
                         <Button
                           type="button"
