@@ -22,10 +22,14 @@ import { sendOrderSms } from '@/lib/orderSms';
 
 const rentalFormSchema = z.object({
   itemType: z.string().min(1, 'لطفا نوع جنس را انتخاب کنید'),
-  itemSubType: z.string().min(1, 'لطفا زیرمجموعه را انتخاب کنید'),
   quantity: z.number()
     .min(1, 'تعداد حداقل باید 1 باشد')
     .max(600, 'تعداد حداکثر باید 600 باشد'),
+  itemType2: z.string().optional(),
+  quantity2: z.number()
+    .min(1, 'تعداد حداقل باید 1 باشد')
+    .max(600, 'تعداد حداکثر باید 600 باشد')
+    .optional(),
   rentalStartDate: z.string().min(1, 'تاریخ شروع اجاره را انتخاب کنید'),
   rentalEndDate: z.string().min(1, 'تاریخ پایان اجاره را انتخاب کنید'),
   additionalNotes: z.string().optional(),
@@ -33,17 +37,15 @@ const rentalFormSchema = z.object({
 
 type RentalFormValues = z.infer<typeof rentalFormSchema>;
 
-const ITEM_TYPES = {
+const RENTAL_ITEMS: Record<string, { label: string; price: number }> = {
   cross_screw: {
     label: 'پیچ تنظیم صلیبی یک متری',
     price: 60000,
-    subTypes: {
-      bowl_screw: {
-        label: 'پیچ تنظیم کاسه‌ای 70 سانتی',
-        price: 40000,
-      }
-    }
-  }
+  },
+  bowl_screw: {
+    label: 'پیچ تنظیم کاسه‌ای 70 سانتی',
+    price: 40000,
+  },
 };
 
 export default function ScaffoldingRentalForm() {
@@ -57,7 +59,6 @@ export default function ScaffoldingRentalForm() {
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [orderData, setOrderData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [selectedItemType, setSelectedItemType] = useState<string>('');
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [resolvedLocation, setResolvedLocation] = useState<any>(null);
   
@@ -66,10 +67,8 @@ export default function ScaffoldingRentalForm() {
   const serviceSelection = stateData?.serviceSelection || stateData;
   const {
     hierarchyProjectId: stateHierarchyProjectId,
-    // ✅ داده‌های لازم برای ساخت/یافتن پروژه سلسله‌مراتبی وقتی مستقیم از نقشه می‌آید
     locationId: stateLocationId = serviceSelection?.locationId,
     serviceTypeId: stateServiceTypeId = serviceSelection?.serviceTypeId,
-
     provinceId: stateProvinceId,
     districtId: stateDistrictId,
     subcategoryId: stateSubcategoryId = serviceSelection?.subcategoryId,
@@ -85,8 +84,9 @@ export default function ScaffoldingRentalForm() {
     resolver: zodResolver(rentalFormSchema),
     defaultValues: {
       itemType: '',
-      itemSubType: '',
       quantity: 1,
+      itemType2: '',
+      quantity2: 1,
       rentalStartDate: '',
       rentalEndDate: '',
       additionalNotes: '',
@@ -94,8 +94,9 @@ export default function ScaffoldingRentalForm() {
   });
 
   const itemType = form.watch('itemType');
-  const itemSubType = form.watch('itemSubType');
+  const itemType2 = form.watch('itemType2');
   const quantity = form.watch('quantity');
+  const quantity2 = form.watch('quantity2');
 
   // Fetch order data if editing
   useEffect(() => {
@@ -104,7 +105,7 @@ export default function ScaffoldingRentalForm() {
     }
   }, [editOrderId]);
 
-  // ✅ اگر کاربر مستقیم از نقشه وارد شده و آدرس در state نیامده، از جدول locations بخوان
+  // Resolve location from DB if not in state
   useEffect(() => {
     if (editOrderId) return;
     if (!stateLocationId) return;
@@ -132,7 +133,6 @@ export default function ScaffoldingRentalForm() {
         if (cancelled) return;
         setResolvedLocation(data || null);
       } catch (e) {
-        // اگر به هر دلیلی نتوانستیم بخوانیم، فقط از fallback های موجود استفاده می‌کنیم
         if (cancelled) return;
         setResolvedLocation(null);
       }
@@ -174,36 +174,33 @@ export default function ScaffoldingRentalForm() {
       if (data && data.notes) {
         setOrderData(data);
         
-        // Parse notes to populate form
         const notes = typeof data.notes === 'string' ? JSON.parse(data.notes) : data.notes;
         
-        // Find matching item type
+        // Find matching item types
         let foundItemType = '';
-        let foundSubType = '';
+        let foundItemType2 = '';
         
         if (notes.item_type) {
-          Object.entries(ITEM_TYPES).forEach(([key, value]) => {
+          Object.entries(RENTAL_ITEMS).forEach(([key, value]) => {
             if (value.label === notes.item_type) {
               foundItemType = key;
             }
           });
         }
         
-        if (notes.item_sub_type && foundItemType) {
-          const itemTypeData = ITEM_TYPES[foundItemType as keyof typeof ITEM_TYPES];
-          if (itemTypeData?.subTypes) {
-            Object.entries(itemTypeData.subTypes).forEach(([key, value]) => {
-              if (value.label === notes.item_sub_type) {
-                foundSubType = key;
-              }
-            });
-          }
+        if (notes.item_type_2) {
+          Object.entries(RENTAL_ITEMS).forEach(([key, value]) => {
+            if (value.label === notes.item_type_2) {
+              foundItemType2 = key;
+            }
+          });
         }
         
         form.reset({
           itemType: foundItemType,
-          itemSubType: foundSubType,
           quantity: notes.quantity || 1,
+          itemType2: foundItemType2,
+          quantity2: notes.quantity_2 || 1,
           rentalStartDate: notes.rental_start_date || '',
           rentalEndDate: notes.rental_end_date || '',
           additionalNotes: notes.additional_notes || '',
@@ -232,8 +229,23 @@ export default function ScaffoldingRentalForm() {
   const locationTitle = orderData?.detailed_address || stateLocationTitle || resolvedLocation?.title;
   const provinceName = orderData?.province?.name || stateProvinceName || resolvedLocation?.provinces?.name;
   const districtName = orderData?.district?.name || stateDistrictName || resolvedLocation?.districts?.name;
-  const customerName = orderData?.customer_name;
-  const customerPhone = orderData?.customer_phone;
+
+  // Calculate total price
+  const calculateTotal = () => {
+    let total = 0;
+    if (itemType && quantity) {
+      total += (RENTAL_ITEMS[itemType]?.price || 0) * quantity;
+    }
+    if (itemType2 && quantity2) {
+      total += (RENTAL_ITEMS[itemType2]?.price || 0) * quantity2;
+    }
+    return total;
+  };
+
+  // Available items for second dropdown (exclude first selection)
+  const availableItemsForSecond = Object.entries(RENTAL_ITEMS).filter(
+    ([key]) => key !== itemType
+  );
 
   // Show loading spinner while fetching order data
   if (loadingOrder) {
@@ -243,16 +255,6 @@ export default function ScaffoldingRentalForm() {
       </div>
     );
   }
-
-  // Calculate total price
-  const calculateTotal = () => {
-    if (!itemType || !quantity) return 0;
-    
-    const mainItemPrice = ITEM_TYPES[itemType as keyof typeof ITEM_TYPES]?.price || 0;
-    const subItemPrice = itemSubType && ITEM_TYPES[itemType as keyof typeof ITEM_TYPES]?.subTypes?.[itemSubType as keyof typeof ITEM_TYPES.cross_screw.subTypes]?.price || 0;
-    
-    return (mainItemPrice + subItemPrice) * quantity;
-  };
 
   const onSubmit = async (values: RentalFormValues) => {
     if (!user) {
@@ -267,7 +269,6 @@ export default function ScaffoldingRentalForm() {
 
     setLoading(true);
     try {
-      // Get customer ID
       const { data: customerData, error: customerError } = await supabase
         .from('customers')
         .select('id')
@@ -281,16 +282,16 @@ export default function ScaffoldingRentalForm() {
 
       const orderNotes = {
         service_type: 'کرایه اجناس داربست',
-        item_type: ITEM_TYPES[values.itemType as keyof typeof ITEM_TYPES]?.label,
-        item_sub_type: values.itemSubType ? ITEM_TYPES[values.itemType as keyof typeof ITEM_TYPES]?.subTypes?.[values.itemSubType as keyof typeof ITEM_TYPES.cross_screw.subTypes]?.label : null,
+        item_type: RENTAL_ITEMS[values.itemType]?.label,
         quantity: values.quantity,
+        item_type_2: values.itemType2 ? RENTAL_ITEMS[values.itemType2]?.label : null,
+        quantity_2: values.itemType2 ? values.quantity2 : null,
         rental_start_date: values.rentalStartDate,
         rental_end_date: values.rentalEndDate,
         total_price: calculateTotal(),
         additional_notes: values.additionalNotes,
       };
 
-      // ✅ اطمینان از وجود hierarchyProjectId (در حالت جدید ممکن است فقط locationId داشته باشیم)
       let finalHierarchyProjectId = hierarchyProjectId;
 
       if (!finalHierarchyProjectId && user && stateLocationId && stateServiceTypeId && subcategoryId) {
@@ -309,13 +310,13 @@ export default function ScaffoldingRentalForm() {
         throw new Error('شناسه پروژه یافت نشد. لطفاً مجدداً تلاش کنید.');
       }
 
-      const { data: orderData, error: orderError } = await supabase
+      const { data: newOrderData, error: orderError } = await supabase
         .rpc('create_project_v3', {
           _customer_id: customerData.id,
           _province_id: provinceId || null,
           _district_id: districtId || null,
           _subcategory_id: subcategoryId,
-          _hierarchy_project_id: finalHierarchyProjectId, // ✅ حتماً باید مقدار داشته باشد
+          _hierarchy_project_id: finalHierarchyProjectId,
           _address: locationAddress || 'آدرس ثبت نشده - کرایه اجناس',
           _detailed_address: locationTitle || null,
           _notes: orderNotes,
@@ -323,12 +324,10 @@ export default function ScaffoldingRentalForm() {
 
       if (orderError) throw orderError;
 
-      // Save order ID for media upload (orderData is the order ID string)
-      const orderId = Array.isArray(orderData) ? orderData[0]?.id : orderData;
-      const orderCode = Array.isArray(orderData) ? orderData[0]?.code : null;
+      const orderId = Array.isArray(newOrderData) ? newOrderData[0]?.id : newOrderData;
+      const orderCode = Array.isArray(newOrderData) ? newOrderData[0]?.code : null;
       setCreatedOrderId(orderId);
 
-      // ارسال نوتیفیکیشن به مدیران (در پس‌زمینه)
       notifyManagers({
         order_code: orderCode || orderId,
         order_id: orderId,
@@ -339,7 +338,6 @@ export default function ScaffoldingRentalForm() {
         console.error('Notify managers error:', err);
       });
 
-      // ارسال پیامک به مشتری (در پس‌زمینه)
       const customerPhone = user?.user_metadata?.phone_number || user?.phone;
       if (customerPhone && orderCode) {
         sendOrderSms(customerPhone, orderCode, 'submitted', {
@@ -413,7 +411,7 @@ export default function ScaffoldingRentalForm() {
             <CardHeader className="text-center border-b">
               <CardTitle className="text-2xl flex items-center justify-center gap-2">
                 <Building2 className="h-6 w-6" />
-                {editOrderId ? `جزئیات سفارش - کد: ${orderData?.code}` : `فرم ثبت سفارش ${serviceName || 'کرایه اجناس داربست'}`}
+                {editOrderId ? `جزئیات سفارش - کد: ${orderData?.code}` : 'فرم ثبت سفارش کرایه اجناس داربست'}
               </CardTitle>
               {editOrderId && orderData && (
                 <CardDescription className="text-base font-semibold">
@@ -472,17 +470,20 @@ export default function ScaffoldingRentalForm() {
                       <CardTitle className="text-lg">نوع اجناس خود را انتخاب کنید</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      {/* First item dropdown */}
                       <FormField
                         control={form.control}
                         name="itemType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>نوع جنس اصلی *</FormLabel>
+                            <FormLabel>نوع جنس داربست فلزی *</FormLabel>
                             <Select
                               onValueChange={(value) => {
                                 field.onChange(value);
-                                setSelectedItemType(value);
-                                form.setValue('itemSubType', '');
+                                // If second dropdown has the same value, reset it
+                                if (form.getValues('itemType2') === value) {
+                                  form.setValue('itemType2', '');
+                                }
                               }}
                               value={field.value}
                             >
@@ -492,7 +493,7 @@ export default function ScaffoldingRentalForm() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {Object.entries(ITEM_TYPES).map(([key, item]) => (
+                                {Object.entries(RENTAL_ITEMS).map(([key, item]) => (
                                   <SelectItem key={key} value={key}>
                                     {item.label} - {item.price.toLocaleString('fa-IR')} تومان
                                   </SelectItem>
@@ -504,13 +505,37 @@ export default function ScaffoldingRentalForm() {
                         )}
                       />
 
-                      {selectedItemType && (
+                      {/* First item quantity */}
+                      {itemType && (
                         <FormField
                           control={form.control}
-                          name="itemSubType"
+                          name="quantity"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>زیرمجموعه *</FormLabel>
+                              <FormLabel>تعداد (حداکثر 600) *</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={600}
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {/* Second item dropdown - shows after first item is selected */}
+                      {itemType && (
+                        <FormField
+                          control={form.control}
+                          name="itemType2"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>نوع جنس داربست فلزی (دوم - اختیاری)</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
@@ -521,9 +546,9 @@ export default function ScaffoldingRentalForm() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {Object.entries(ITEM_TYPES[selectedItemType as keyof typeof ITEM_TYPES]?.subTypes || {}).map(([key, subItem]) => (
+                                  {availableItemsForSecond.map(([key, item]) => (
                                     <SelectItem key={key} value={key}>
-                                      {subItem.label} - {subItem.price.toLocaleString('fa-IR')} تومان
+                                      {item.label} - {item.price.toLocaleString('fa-IR')} تومان
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -534,25 +559,29 @@ export default function ScaffoldingRentalForm() {
                         />
                       )}
 
-                      <FormField
-                        control={form.control}
-                        name="quantity"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>تعداد (حداکثر 600) *</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min={1}
-                                max={600}
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {/* Second item quantity */}
+                      {itemType2 && (
+                        <FormField
+                          control={form.control}
+                          name="quantity2"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>تعداد آیتم دوم (حداکثر 600)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={600}
+                                  {...field}
+                                  value={field.value ?? 1}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
 
                       {/* Total Price Display */}
                       {quantity > 0 && itemType && (
