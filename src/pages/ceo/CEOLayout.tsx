@@ -133,6 +133,15 @@ export const CEOLayout = () => {
   const activeModuleKey = searchParams.get('moduleKey') || 'ceo_module';
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, 'ماژول مدیریت CEO', '');
 
+  // Redirect "مدیریت کلی" modules to orders instead of dashboard
+  useEffect(() => {
+    const isGeneralModule = moduleName.includes('مدیریت کلی') || moduleName.includes('مدیریت کل');
+    const isOnIndex = location.pathname === '/ceo' || location.pathname === '/ceo/';
+    if (isGeneralModule && isOnIndex) {
+      navigate(`/ceo/orders?moduleKey=${activeModuleKey}`, { replace: true });
+    }
+  }, [moduleName, location.pathname, activeModuleKey, navigate]);
+
   useEffect(() => {
     const checkRoles = async () => {
       if (!user) {

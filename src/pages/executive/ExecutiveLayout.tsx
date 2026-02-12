@@ -113,6 +113,15 @@ export function ExecutiveLayout() {
   const activeModuleKey = searchParams.get('moduleKey') || 'scaffold_execution_with_materials';
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, 'ماژول مدیریت اجرای داربست', '');
 
+  // Redirect "مدیریت کلی" modules to all-orders instead of dashboard
+  useEffect(() => {
+    const isGeneralModule = moduleName.includes('مدیریت کلی') || moduleName.includes('مدیریت کل');
+    const isOnIndex = location.pathname === '/executive' || location.pathname === '/executive/';
+    if (isGeneralModule && isOnIndex) {
+      navigate(`/executive/all-orders?moduleKey=${activeModuleKey}`, { replace: true });
+    }
+  }, [moduleName, location.pathname, activeModuleKey, navigate]);
+
   useEffect(() => {
     const checkExecutiveRole = async () => {
       if (!user) {
@@ -131,7 +140,6 @@ export function ExecutiveLayout() {
           console.error('Error checking executive role:', error);
           setHasAccess(false);
         } else {
-          // بررسی اینکه آیا کاربر حداقل یکی از نقش‌های مجاز را دارد
           const userRoles = data?.map(r => r.role) || [];
           const hasAllowedRole = userRoles.some(role => ALLOWED_ROLES.includes(role));
           setHasAccess(hasAllowedRole);
