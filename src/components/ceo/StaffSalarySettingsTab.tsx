@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { Loader2, Plus, Save, Trash2, Settings, Info, Calculator, DollarSign, Edit, X, CalendarDays } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { formatPersianDate } from '@/lib/dateUtils';
 
 interface SalarySetting {
   id: string;
@@ -382,21 +384,33 @@ export function StaffSalarySettingsTab() {
 
             <div className="space-y-2">
               <Label className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> تاریخ شروع اعتبار</Label>
-              <Input
-                type="date"
-                value={newEffectiveFrom}
-                onChange={(e) => setNewEffectiveFrom(e.target.value)}
-                dir="ltr"
+              <PersianDatePicker
+                value={newEffectiveFrom ? new Date(newEffectiveFrom + 'T12:00:00').toISOString() : undefined}
+                onChange={(iso) => {
+                  const d = new Date(iso);
+                  const yyyy = d.getFullYear();
+                  const mm = String(d.getMonth() + 1).padStart(2, '0');
+                  const dd = String(d.getDate()).padStart(2, '0');
+                  setNewEffectiveFrom(`${yyyy}-${mm}-${dd}`);
+                }}
+                placeholder="انتخاب تاریخ شروع"
+                timeMode="none"
               />
             </div>
 
             <div className="space-y-2">
               <Label className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> تاریخ پایان اعتبار</Label>
-              <Input
-                type="date"
-                value={newEffectiveTo}
-                onChange={(e) => setNewEffectiveTo(e.target.value)}
-                dir="ltr"
+              <PersianDatePicker
+                value={newEffectiveTo ? new Date(newEffectiveTo + 'T12:00:00').toISOString() : undefined}
+                onChange={(iso) => {
+                  const d = new Date(iso);
+                  const yyyy = d.getFullYear();
+                  const mm = String(d.getMonth() + 1).padStart(2, '0');
+                  const dd = String(d.getDate()).padStart(2, '0');
+                  setNewEffectiveTo(`${yyyy}-${mm}-${dd}`);
+                }}
+                placeholder="انتخاب تاریخ پایان"
+                timeMode="none"
               />
             </div>
 
@@ -506,28 +520,38 @@ export function StaffSalarySettingsTab() {
                       </TableCell>
                       <TableCell>
                         {editingId === setting.id ? (
-                          <Input
-                            type="date"
-                            value={setting.effective_from || ''}
-                            onChange={(e) => updateSettingField(setting.id, 'effective_from', e.target.value || null)}
-                            className="w-32"
-                            dir="ltr"
+                          <PersianDatePicker
+                            value={setting.effective_from ? new Date(setting.effective_from + 'T12:00:00').toISOString() : undefined}
+                            onChange={(iso) => {
+                              const d = new Date(iso);
+                              const yyyy = d.getFullYear();
+                              const mm = String(d.getMonth() + 1).padStart(2, '0');
+                              const dd = String(d.getDate()).padStart(2, '0');
+                              updateSettingField(setting.id, 'effective_from', `${yyyy}-${mm}-${dd}`);
+                            }}
+                            placeholder="از تاریخ"
+                            timeMode="none"
                           />
                         ) : (
-                          <span className="text-xs">{setting.effective_from || '—'}</span>
+                          <span className="text-xs">{setting.effective_from ? formatPersianDate(setting.effective_from + 'T12:00:00') : '—'}</span>
                         )}
                       </TableCell>
                       <TableCell>
                         {editingId === setting.id ? (
-                          <Input
-                            type="date"
-                            value={setting.effective_to || ''}
-                            onChange={(e) => updateSettingField(setting.id, 'effective_to', e.target.value || null)}
-                            className="w-32"
-                            dir="ltr"
+                          <PersianDatePicker
+                            value={setting.effective_to ? new Date(setting.effective_to + 'T12:00:00').toISOString() : undefined}
+                            onChange={(iso) => {
+                              const d = new Date(iso);
+                              const yyyy = d.getFullYear();
+                              const mm = String(d.getMonth() + 1).padStart(2, '0');
+                              const dd = String(d.getDate()).padStart(2, '0');
+                              updateSettingField(setting.id, 'effective_to', `${yyyy}-${mm}-${dd}`);
+                            }}
+                            placeholder="تا تاریخ"
+                            timeMode="none"
                           />
                         ) : (
-                          <span className="text-xs">{setting.effective_to || '—'}</span>
+                          <span className="text-xs">{setting.effective_to ? formatPersianDate(setting.effective_to + 'T12:00:00') : '—'}</span>
                         )}
                       </TableCell>
                       <TableCell className="max-w-[150px]">
