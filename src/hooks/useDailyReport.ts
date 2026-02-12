@@ -408,7 +408,7 @@ export function useDailyReport() {
           .select('*')
           .eq('daily_report_id', reportIdToLoad);
 
-        setOrderReports((orderData || []).map((o: any) => ({
+        const mappedOrders = (orderData || []).map((o: any) => ({
           id: o.id,
           order_id: o.order_id,
           activity_description: o.activity_description || '',
@@ -416,7 +416,8 @@ export function useDailyReport() {
           team_name: o.team_name || '',
           notes: o.notes || '',
           row_color: o.row_color || 'yellow',
-        })));
+        }));
+        setOrderReports(deduplicateOrderRows(mappedOrders));
 
         const { data: staffData } = await supabase
           .from('daily_report_staff')
@@ -730,6 +731,14 @@ export function useDailyReport() {
     setOrderReports((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
+
+      // Prevent duplicate order_ids - if the same order_id exists in another row, reject it
+      if (field === 'order_id' && value) {
+        const isDuplicate = updated.some((r, i) => i !== index && r.order_id === value);
+        if (isDuplicate) {
+          return prev; // Don't update, order already exists
+        }
+      }
 
       const isRowEmpty = (row: OrderReportRow) => 
         !row.order_id && 
