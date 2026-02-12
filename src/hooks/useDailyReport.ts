@@ -256,6 +256,17 @@ export function useDailyReport() {
     }
   }, [user, getLocalStorageKey]);
 
+  // Deduplicate order rows by order_id
+  const deduplicateOrderRows = (rows: OrderReportRow[]): OrderReportRow[] => {
+    const seenOrderIds = new Set<string>();
+    return rows.filter((r) => {
+      if (!r.order_id) return true; // keep empty rows
+      if (seenOrderIds.has(r.order_id)) return false;
+      seenOrderIds.add(r.order_id);
+      return true;
+    });
+  };
+
   // Deduplicate staff rows from backup/restore
   const deduplicateStaffRows = (rows: StaffReportRow[]): StaffReportRow[] => {
     let hasCompExp = false;
@@ -465,26 +476,13 @@ export function useDailyReport() {
 
         setStaffReports(normalizedStaff);
         
-        if (hasLocalBackup && localBackup.savedAt) {
-          const backupTime = new Date(localBackup.savedAt).getTime();
-          const oneMinuteAgo = Date.now() - 60000;
-          
-          if (backupTime > oneMinuteAgo) {
-            const backupOrdersWithData = (localBackup.orderReports || []).filter((r: any) => r.order_id);
-            const dbOrdersCount = orderData?.length || 0;
-            
-            if (backupOrdersWithData.length > dbOrdersCount) {
-              setOrderReports(localBackup.orderReports);
-              setStaffReports(deduplicateStaffRows(localBackup.staffReports || []));
-              toast.success('داده‌های ذخیره نشده بازیابی شدند');
-            }
-          }
-        }
+        // Clear any stale localStorage backup since we have DB data
+        clearLocalStorageBackup();
       } else {
         setExistingReportId(null);
         
         if (hasLocalBackup) {
-          setOrderReports(localBackup.orderReports);
+          setOrderReports(deduplicateOrderRows(localBackup.orderReports));
           setStaffReports(deduplicateStaffRows(localBackup.staffReports || []));
           toast.success('داده‌های ذخیره نشده قبلی بازیابی شدند');
         } else {
@@ -497,8 +495,8 @@ export function useDailyReport() {
       
       const localBackup = loadFromLocalStorage();
       if (localBackup) {
-        setOrderReports(localBackup.orderReports || []);
-        setStaffReports(localBackup.staffReports || []);
+        setOrderReports(deduplicateOrderRows(localBackup.orderReports || []));
+        setStaffReports(deduplicateStaffRows(localBackup.staffReports || []));
         toast.info('داده‌ها از حافظه محلی بازیابی شدند');
       }
     } finally {
@@ -717,7 +715,15 @@ export function useDailyReport() {
   // Remove order row
   const removeOrderRow = useCallback((index: number) => {
     setOrderReports(prev => prev.filter((_, i) => i !== index));
-  }, []);
+    // Clear localStorage to prevent stale data restoration
+    try {
+      const dateStr = toLocalDateString(reportDate);
+      const key = `daily_report_backup_${user?.id}_${dateStr}_${moduleKey}`;
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.error('Error clearing localStorage on order remove:', e);
+    }
+  }, [reportDate, user, moduleKey]);
 
   // Update order row
   const updateOrderRow = useCallback((index: number, field: keyof OrderReportRow, value: string) => {
