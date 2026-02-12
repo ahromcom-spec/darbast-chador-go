@@ -4943,6 +4943,11 @@ export type Database = {
         }
         Returns: undefined
       }
+      recalculate_all_bank_card_balances: { Args: never; Returns: undefined }
+      recalculate_bank_card_balance: {
+        Args: { p_card_id: string }
+        Returns: undefined
+      }
       refresh_module_lock: {
         Args: { p_module_date?: string; p_module_key: string }
         Returns: boolean
