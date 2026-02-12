@@ -378,10 +378,8 @@ export function useDailyReport() {
       setLoading(true);
       const dateStr = toLocalDateString(reportDate);
 
-      const localBackup = loadFromLocalStorage();
-      const hasLocalBackup = localBackup && 
-        ((localBackup.orderReports && localBackup.orderReports.some((r: any) => r.order_id)) ||
-         (localBackup.staffReports && localBackup.staffReports.length > 0));
+      // ALWAYS clear localStorage backup first to prevent stale data from causing duplicates
+      clearLocalStorageBackup();
 
       let reportIdToLoad: string | null = null;
 
@@ -481,25 +479,14 @@ export function useDailyReport() {
         clearLocalStorageBackup();
       } else {
         setExistingReportId(null);
-        
-        if (hasLocalBackup) {
-          setOrderReports(deduplicateOrderRows(localBackup.orderReports));
-          setStaffReports(deduplicateStaffRows(localBackup.staffReports || []));
-          toast.success('داده‌های ذخیره نشده قبلی بازیابی شدند');
-        } else {
-          setOrderReports([createEmptyOrderRow(0)]);
-          setStaffReports([createCompanyExpenseRow(), createEmptyStaffRow()]);
-        }
+        setOrderReports([createEmptyOrderRow(0)]);
+        setStaffReports([createCompanyExpenseRow(), createEmptyStaffRow()]);
       }
     } catch (error) {
       console.error('Error fetching report:', error);
-      
-      const localBackup = loadFromLocalStorage();
-      if (localBackup) {
-        setOrderReports(deduplicateOrderRows(localBackup.orderReports || []));
-        setStaffReports(deduplicateStaffRows(localBackup.staffReports || []));
-        toast.info('داده‌ها از حافظه محلی بازیابی شدند');
-      }
+      // On error, start fresh - don't restore from localStorage to avoid duplicates
+      setOrderReports([createEmptyOrderRow(0)]);
+      setStaffReports([createCompanyExpenseRow(), createEmptyStaffRow()]);
     } finally {
       setLoading(false);
     }
