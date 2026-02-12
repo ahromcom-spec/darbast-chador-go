@@ -164,7 +164,7 @@ function MultiSelectDropdown({ options, selected, onChange, placeholder, classNa
                 </label>
                 {(onCustomItemsChange || onRemovedDefaultsChange) && (
                   <Button size="sm" variant="ghost" onClick={() => handleRemove(opt)} className="h-6 w-6 p-0 text-destructive shrink-0">
-                    <Trash2 className="h-3 w-3" />
+                    <X className="h-3 w-3" />
                   </Button>
                 )}
               </div>
