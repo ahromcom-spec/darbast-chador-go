@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { Loader2 } from 'lucide-react';
+import { parseLocalizedNumber } from '@/lib/numberParsing';
 
 interface BankCardFormProps {
   initialData?: BankCard;
@@ -23,6 +24,23 @@ export function BankCardForm({ initialData, onSubmit, onCancel, saving }: BankCa
     registration_date: initialData?.registration_date || new Date().toISOString().split('T')[0],
     notes: initialData?.notes || '',
   });
+
+  // Display value for formatted balance input
+  const [balanceDisplay, setBalanceDisplay] = useState<string>(
+    initialData?.initial_balance ? initialData.initial_balance.toLocaleString('en-US') : '0'
+  );
+
+  const formatWithCommas = (num: number) => {
+    return num.toLocaleString('en-US');
+  };
+
+  const handleBalanceChange = (rawValue: string) => {
+    // Remove non-digit characters except minus
+    const cleaned = rawValue.replace(/[^0-9-]/g, '');
+    const num = parseLocalizedNumber(cleaned);
+    setBalanceDisplay(cleaned ? formatWithCommas(num) : '');
+    setFormData({ ...formData, initial_balance: num });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,11 +98,12 @@ export function BankCardForm({ initialData, onSubmit, onCancel, saving }: BankCa
           <Label htmlFor="initial_balance">موجودی اولیه (تومان) *</Label>
           <Input
             id="initial_balance"
-            type="number"
-            value={formData.initial_balance}
-            onChange={(e) => setFormData({ ...formData, initial_balance: Number(e.target.value) })}
+            type="text"
+            inputMode="numeric"
+            value={balanceDisplay}
+            onChange={(e) => handleBalanceChange(e.target.value)}
             placeholder="0"
-            min={0}
+            dir="ltr"
             required
           />
         </div>
