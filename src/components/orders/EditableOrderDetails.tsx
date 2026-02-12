@@ -184,31 +184,22 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   // Calculate total measure (m² or m³) from dimensions for expert pricing
   const calculateExpertPricingTotalMeasure = () => {
     const dims = parsedNotes?.dimensions;
-
     const totalFromNotes = parseLocalizedNumber(
-      parsedNotes?.total_volume ??
-        parsedNotes?.totalVolume ??
-        parsedNotes?.total_area ??
-        parsedNotes?.totalArea
+      parsedNotes?.total_volume ?? parsedNotes?.totalVolume ?? parsedNotes?.total_area ?? parsedNotes?.totalArea
     );
     if (totalFromNotes > 0) return totalFromNotes;
-
     if (!dims || !Array.isArray(dims)) return 0;
-
     const hasAnyWidth = dims.some((d: any) => parseLocalizedNumber(d?.width) > 0);
     const isVolume = Boolean(parsedNotes?.total_volume ?? parsedNotes?.totalVolume) || hasAnyWidth;
-
     return dims.reduce((sum: number, dim: any) => {
       const length = parseLocalizedNumber(dim?.length);
       const height = parseLocalizedNumber(dim?.height);
       if (length <= 0 || height <= 0) return sum;
-
       if (isVolume) {
         const width = parseLocalizedNumber(dim?.width);
         const w = width > 0 ? width : 1;
         return sum + length * w * height;
       }
-
       return sum + length * height;
     }, 0);
   };
@@ -224,17 +215,71 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   // Display totals including renewals/repairs (manager-facing)
   const basePriceNumber = parseLocalizedNumber(paymentAmount);
   const totalFromDb = Number(order.total_price ?? 0);
-  const totalFromParts =
-    Number(basePriceNumber || 0) + Number(approvedRenewalCost || 0) + Number(approvedRepairCost || 0);
+  const totalFromParts = Number(basePriceNumber || 0) + Number(approvedRenewalCost || 0) + Number(approvedRepairCost || 0);
   const displayTotalOrderAmount = Math.max(totalFromDb, totalFromParts);
   const displayAddOnsAmount = Math.max(0, displayTotalOrderAmount - Number(basePriceNumber || 0));
 
+  // Check if this is a rental expert pricing order (has item_type in notes)
+  const isRentalExpertPricing = isExpertPricingRequest && !!parsedNotes?.item_type;
+
+  // Auto-calculate payment from unit price for non-rental expert pricing
   useEffect(() => {
-    if (isExpertPricingRequest && unitPrice && expertPricingTotalMeasure > 0) {
+    if (isExpertPricingRequest && !isRentalExpertPricing && unitPrice && expertPricingTotalMeasure > 0) {
       const calculatedTotal = parseFloat(unitPrice) * expertPricingTotalMeasure;
       setPaymentAmount(Math.round(calculatedTotal).toString());
     }
-  }, [unitPrice, expertPricingTotalMeasure, isExpertPricingRequest]);
+  }, [unitPrice, expertPricingTotalMeasure, isExpertPricingRequest, isRentalExpertPricing]);
+
+  
+  // Rental item pricing states
+  const [rentalItem1UnitPrice, setRentalItem1UnitPrice] = useState(parsedNotes?.item_1_unit_price?.toString() || '');
+  const [rentalItem1TotalPrice, setRentalItem1TotalPrice] = useState(parsedNotes?.item_1_total_price?.toString() || '');
+  const [rentalItem2UnitPrice, setRentalItem2UnitPrice] = useState(parsedNotes?.item_2_unit_price?.toString() || '');
+  const [rentalItem2TotalPrice, setRentalItem2TotalPrice] = useState(parsedNotes?.item_2_total_price?.toString() || '');
+  const [savedRentalPrices, setSavedRentalPrices] = useState({
+    item1Unit: parsedNotes?.item_1_unit_price?.toString() || '',
+    item1Total: parsedNotes?.item_1_total_price?.toString() || '',
+    item2Unit: parsedNotes?.item_2_unit_price?.toString() || '',
+    item2Total: parsedNotes?.item_2_total_price?.toString() || '',
+  });
+  const isRentalPriceChanged = 
+    rentalItem1UnitPrice !== savedRentalPrices.item1Unit ||
+    rentalItem1TotalPrice !== savedRentalPrices.item1Total ||
+    rentalItem2UnitPrice !== savedRentalPrices.item2Unit ||
+    rentalItem2TotalPrice !== savedRentalPrices.item2Total;
+
+  const rentalItem1Name = parsedNotes?.item_type || '';
+  const rentalItem1Qty = parseLocalizedNumber(parsedNotes?.quantity) || 0;
+  const rentalItem2Name = parsedNotes?.item_type_2 || '';
+  const rentalItem2Qty = parseLocalizedNumber(parsedNotes?.quantity_2) || 0;
+
+  // Auto-calculate rental item totals when unit price changes
+  useEffect(() => {
+    if (!isRentalExpertPricing) return;
+    
+    // Item 1: if unit price entered, calculate total = unitPrice * qty
+    if (rentalItem1UnitPrice && parseFloat(rentalItem1UnitPrice) > 0 && rentalItem1Qty > 0) {
+      const total1 = Math.round(parseFloat(rentalItem1UnitPrice) * rentalItem1Qty);
+      setRentalItem1TotalPrice(total1.toString());
+    }
+    
+    // Item 2
+    if (rentalItem2UnitPrice && parseFloat(rentalItem2UnitPrice) > 0 && rentalItem2Qty > 0) {
+      const total2 = Math.round(parseFloat(rentalItem2UnitPrice) * rentalItem2Qty);
+      setRentalItem2TotalPrice(total2.toString());
+    }
+  }, [rentalItem1UnitPrice, rentalItem2UnitPrice, isRentalExpertPricing, rentalItem1Qty, rentalItem2Qty]);
+
+  // Auto-calculate grand total for rental items
+  useEffect(() => {
+    if (!isRentalExpertPricing) return;
+    const total1 = parseFloat(rentalItem1TotalPrice) || 0;
+    const total2 = parseFloat(rentalItem2TotalPrice) || 0;
+    const grandTotal = total1 + total2;
+    if (grandTotal > 0) {
+      setPaymentAmount(grandTotal.toString());
+    }
+  }, [rentalItem1TotalPrice, rentalItem2TotalPrice, isRentalExpertPricing]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -255,8 +300,17 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         updatedNotes.customer_price_confirmed = true;
         updatedNotes.customer_price_confirmed_at = new Date().toISOString();
         updatedNotes.auto_confirmed_by_expert = true;
-        // Store unit price if provided
-        if (unitPrice && parseFloat(unitPrice) > 0) {
+        
+        // Store rental item prices if this is a rental order
+        if (isRentalExpertPricing) {
+          if (rentalItem1UnitPrice) updatedNotes.item_1_unit_price = parseFloat(rentalItem1UnitPrice);
+          if (rentalItem1TotalPrice) updatedNotes.item_1_total_price = parseFloat(rentalItem1TotalPrice);
+          if (rentalItem2UnitPrice) updatedNotes.item_2_unit_price = parseFloat(rentalItem2UnitPrice);
+          if (rentalItem2TotalPrice) updatedNotes.item_2_total_price = parseFloat(rentalItem2TotalPrice);
+        }
+        
+        // Store unit price if provided (for area-based orders)
+        if (!isRentalExpertPricing && unitPrice && parseFloat(unitPrice) > 0) {
           updatedNotes.unit_price = parseFloat(unitPrice);
           if (expertPricingMeasureUnit === 'متر مکعب') {
             updatedNotes.total_volume = expertPricingTotalMeasure;
@@ -285,6 +339,14 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       // بعد از ذخیره موفق، مقدار ذخیره شده قیمت را آپدیت کن تا دکمه غیرفعال شود
       setSavedPaymentAmount(paymentAmount);
       setSavedUnitPrice(unitPrice);
+      if (isRentalExpertPricing) {
+        setSavedRentalPrices({
+          item1Unit: rentalItem1UnitPrice,
+          item1Total: rentalItem1TotalPrice,
+          item2Unit: rentalItem2UnitPrice,
+          item2Total: rentalItem2TotalPrice,
+        });
+      }
 
       toast({ title: 'موفق', description: 'اطلاعات سفارش به‌روزرسانی شد' });
       setIsEditing(false);
@@ -461,92 +523,231 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             </div>
           </div>
           
-          {/* Display Total Area from Customer Form */}
-          {expertPricingTotalMeasure > 0 && (
-            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
-              <p className="text-sm font-medium text-blue-700 dark:text-blue-300 text-center">
-                <Ruler className="h-4 w-4 inline ml-1" />
-                متراژ کل: <span className="font-bold text-lg">{expertPricingTotalMeasure.toLocaleString('fa-IR')}</span> {expertPricingMeasureUnit}
-              </p>
-            </div>
-          )}
-          
-          {/* Unit Price Input for Expert Pricing */}
-          <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600 space-y-4">
-            <div>
-              <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
-                قیمت فی (تومان به ازای هر {expertPricingMeasureUnit})
-              </Label>
-              <Input 
-                type="text"
-                inputMode="numeric"
-                value={unitPrice ? Number(unitPrice).toLocaleString('fa-IR') : ''} 
-                onChange={(e) => {
-                  // Remove all non-digit characters and convert Persian digits to English
-                  const rawValue = e.target.value
-                    .replace(/[^\d۰-۹]/g, '')
-                    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
-                  setUnitPrice(rawValue);
-                }}
-                placeholder="قیمت فی را وارد کنید"
-                className="text-lg font-bold"
-                dir="ltr"
-              />
-              {unitPrice && parseFloat(unitPrice) > 0 && expertPricingTotalMeasure > 0 && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  محاسبه: {parseFloat(unitPrice).toLocaleString('fa-IR')} × {expertPricingTotalMeasure.toLocaleString('fa-IR')} = {(parseFloat(unitPrice) * expertPricingTotalMeasure).toLocaleString('fa-IR')} تومان
-                </p>
+          {/* Rental Item Pricing - for rental expert pricing orders */}
+          {isRentalExpertPricing ? (
+            <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600 space-y-4">
+              {/* Item 1 */}
+              {rentalItem1Name && (
+                <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-bold">{rentalItem1Name}</Label>
+                    <Badge variant="outline">تعداد: {rentalItem1Qty.toLocaleString('fa-IR')}</Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">قیمت واحد (تومان)</Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={rentalItem1UnitPrice ? Number(rentalItem1UnitPrice).toLocaleString('fa-IR') : ''}
+                        onChange={(e) => {
+                          const rawValue = e.target.value
+                            .replace(/[^\d۰-۹]/g, '')
+                            .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                          setRentalItem1UnitPrice(rawValue);
+                        }}
+                        placeholder="قیمت واحد"
+                        dir="ltr"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">قیمت کل آیتم (تومان)</Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={rentalItem1TotalPrice ? Number(rentalItem1TotalPrice).toLocaleString('fa-IR') : ''}
+                        onChange={(e) => {
+                          const rawValue = e.target.value
+                            .replace(/[^\d۰-۹]/g, '')
+                            .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                          setRentalItem1TotalPrice(rawValue);
+                          // Clear unit price since user is overriding
+                          setRentalItem1UnitPrice('');
+                        }}
+                        placeholder="قیمت کل"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+                  {rentalItem1UnitPrice && parseFloat(rentalItem1UnitPrice) > 0 && rentalItem1Qty > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      محاسبه: {parseFloat(rentalItem1UnitPrice).toLocaleString('fa-IR')} × {rentalItem1Qty.toLocaleString('fa-IR')} = {(parseFloat(rentalItem1UnitPrice) * rentalItem1Qty).toLocaleString('fa-IR')} تومان
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
-            
-            <div className="border-t pt-4">
-              <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
-                قیمت کل (تومان)
-              </Label>
-              <div className="flex gap-2">
-                <Input 
-                  type="text"
-                  inputMode="numeric"
-                  value={paymentAmount ? Number(paymentAmount).toLocaleString('fa-IR') : ''} 
-                  onChange={(e) => {
-                    // Remove all non-digit characters and convert Persian digits to English
-                    const rawValue = e.target.value
-                      .replace(/[^\d۰-۹]/g, '')
-                      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
-                    setPaymentAmount(rawValue);
-                    // If manually changed, clear unit price
-                    if (unitPrice && parseFloat(unitPrice) > 0 && expertPricingTotalMeasure > 0) {
-                      const calculated = parseFloat(unitPrice) * expertPricingTotalMeasure;
-                      if (Math.abs(parseFloat(rawValue) - calculated) > 1) {
-                        // User is overriding the calculated value
-                      }
-                    }
-                  }}
-                  placeholder="مبلغ کل را به تومان وارد کنید"
-                  className="flex-1 text-lg font-bold"
-                  dir="ltr"
-                />
-                <Button 
-                  onClick={handleSave} 
-                  disabled={saving || !paymentAmount || (!isPriceChanged && !isUnitPriceChanged)}
-                  title={(!isPriceChanged && !isUnitPriceChanged) ? 'قیمت ذخیره شده است' : 'ذخیره قیمت'}
-                  className={`bg-amber-600 hover:bg-amber-700 text-white px-6 ${
-                    (!isPriceChanged && !isUnitPriceChanged) ? 'opacity-50 cursor-not-allowed hover:bg-amber-600' : ''
-                  }`}
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
-                  {(!isPriceChanged && !isUnitPriceChanged) ? 'ذخیره شده ✓' : 'ذخیره قیمت'}
-                </Button>
+
+              {/* Item 2 */}
+              {rentalItem2Name && (
+                <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-bold">{rentalItem2Name}</Label>
+                    <Badge variant="outline">تعداد: {rentalItem2Qty.toLocaleString('fa-IR')}</Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">قیمت واحد (تومان)</Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={rentalItem2UnitPrice ? Number(rentalItem2UnitPrice).toLocaleString('fa-IR') : ''}
+                        onChange={(e) => {
+                          const rawValue = e.target.value
+                            .replace(/[^\d۰-۹]/g, '')
+                            .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                          setRentalItem2UnitPrice(rawValue);
+                        }}
+                        placeholder="قیمت واحد"
+                        dir="ltr"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">قیمت کل آیتم (تومان)</Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={rentalItem2TotalPrice ? Number(rentalItem2TotalPrice).toLocaleString('fa-IR') : ''}
+                        onChange={(e) => {
+                          const rawValue = e.target.value
+                            .replace(/[^\d۰-۹]/g, '')
+                            .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                          setRentalItem2TotalPrice(rawValue);
+                          setRentalItem2UnitPrice('');
+                        }}
+                        placeholder="قیمت کل"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+                  {rentalItem2UnitPrice && parseFloat(rentalItem2UnitPrice) > 0 && rentalItem2Qty > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      محاسبه: {parseFloat(rentalItem2UnitPrice).toLocaleString('fa-IR')} × {rentalItem2Qty.toLocaleString('fa-IR')} = {(parseFloat(rentalItem2UnitPrice) * rentalItem2Qty).toLocaleString('fa-IR')} تومان
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Grand Total + Save */}
+              <div className="border-t pt-4">
+                <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
+                  قیمت کل سفارش (تومان)
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={paymentAmount ? Number(paymentAmount).toLocaleString('fa-IR') : ''}
+                    onChange={(e) => {
+                      const rawValue = e.target.value
+                        .replace(/[^\d۰-۹]/g, '')
+                        .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                      setPaymentAmount(rawValue);
+                    }}
+                    placeholder="مجموع قیمت کل"
+                    className="flex-1 text-lg font-bold"
+                    dir="ltr"
+                    readOnly
+                  />
+                  <Button 
+                    onClick={handleSave} 
+                    disabled={saving || !paymentAmount || (!isPriceChanged && !isRentalPriceChanged)}
+                    className={`bg-amber-600 hover:bg-amber-700 text-white px-6 ${
+                      (!isPriceChanged && !isRentalPriceChanged) ? 'opacity-50 cursor-not-allowed hover:bg-amber-600' : ''
+                    }`}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
+                    {(!isPriceChanged && !isRentalPriceChanged) ? 'ذخیره شده ✓' : 'ذخیره قیمت'}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Display Total Area from Customer Form */}
+              {expertPricingTotalMeasure > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300 text-center">
+                    <Ruler className="h-4 w-4 inline ml-1" />
+                    متراژ کل: <span className="font-bold text-lg">{expertPricingTotalMeasure.toLocaleString('fa-IR')}</span> {expertPricingMeasureUnit}
+                  </p>
+                </div>
+              )}
+              
+              {/* Unit Price Input for Expert Pricing */}
+              <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600 space-y-4">
+                <div>
+                  <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
+                    قیمت فی (تومان به ازای هر {expertPricingMeasureUnit})
+                  </Label>
+                  <Input 
+                    type="text"
+                    inputMode="numeric"
+                    value={unitPrice ? Number(unitPrice).toLocaleString('fa-IR') : ''} 
+                    onChange={(e) => {
+                      const rawValue = e.target.value
+                        .replace(/[^\d۰-۹]/g, '')
+                        .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                      setUnitPrice(rawValue);
+                    }}
+                    placeholder="قیمت فی را وارد کنید"
+                    className="text-lg font-bold"
+                    dir="ltr"
+                  />
+                  {unitPrice && parseFloat(unitPrice) > 0 && expertPricingTotalMeasure > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      محاسبه: {parseFloat(unitPrice).toLocaleString('fa-IR')} × {expertPricingTotalMeasure.toLocaleString('fa-IR')} = {(parseFloat(unitPrice) * expertPricingTotalMeasure).toLocaleString('fa-IR')} تومان
+                    </p>
+                  )}
+                </div>
+                
+                <div className="border-t pt-4">
+                  <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
+                    قیمت کل (تومان)
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type="text"
+                      inputMode="numeric"
+                      value={paymentAmount ? Number(paymentAmount).toLocaleString('fa-IR') : ''} 
+                      onChange={(e) => {
+                        const rawValue = e.target.value
+                          .replace(/[^\d۰-۹]/g, '')
+                          .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                        setPaymentAmount(rawValue);
+                      }}
+                      placeholder="مبلغ کل را به تومان وارد کنید"
+                      className="flex-1 text-lg font-bold"
+                      dir="ltr"
+                    />
+                    <Button 
+                      onClick={handleSave} 
+                      disabled={saving || !paymentAmount || (!isPriceChanged && !isUnitPriceChanged)}
+                      title={(!isPriceChanged && !isUnitPriceChanged) ? 'قیمت ذخیره شده است' : 'ذخیره قیمت'}
+                      className={`bg-amber-600 hover:bg-amber-700 text-white px-6 ${
+                        (!isPriceChanged && !isUnitPriceChanged) ? 'opacity-50 cursor-not-allowed hover:bg-amber-600' : ''
+                      }`}
+                    >
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
+                      {(!isPriceChanged && !isUnitPriceChanged) ? 'ذخیره شده ✓' : 'ذخیره قیمت'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Price Status Card */}
           {paymentAmount && Number(paymentAmount) > 0 ? (
             <div className="bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-700 rounded-lg p-3">
               <p className="text-sm font-bold text-green-700 dark:text-green-400 text-center">
                 قیمت ماه اول: {Number(basePriceNumber).toLocaleString('fa-IR')} تومان
-                {unitPrice && parseFloat(unitPrice) > 0 && (
+                {isRentalExpertPricing && (
+                  <span className="block text-xs font-normal mt-1">
+                    {rentalItem1Name && rentalItem1TotalPrice ? `${rentalItem1Name}: ${Number(rentalItem1TotalPrice).toLocaleString('fa-IR')} تومان` : ''}
+                    {rentalItem2Name && rentalItem2TotalPrice ? ` + ${rentalItem2Name}: ${Number(rentalItem2TotalPrice).toLocaleString('fa-IR')} تومان` : ''}
+                  </span>
+                )}
+                {!isRentalExpertPricing && unitPrice && parseFloat(unitPrice) > 0 && (
                   <span className="block text-xs font-normal mt-1">
                     (قیمت فی: {parseFloat(unitPrice).toLocaleString('fa-IR')} تومان × {expertPricingTotalMeasure.toLocaleString('fa-IR')} {expertPricingMeasureUnit})
                   </span>
