@@ -401,11 +401,11 @@ export function StaffSearchSelect({
         role="combobox"
         aria-expanded={open}
         onClick={handleToggle}
-        className="w-full justify-between bg-white/50 hover:bg-white/70 text-right min-w-[180px]"
+        className="w-full justify-between bg-white/50 hover:bg-white/70 text-right min-w-[100px] h-auto min-h-[36px] py-1"
       >
-        <span className="truncate flex-1 text-right">
+        <span className="truncate flex-1 text-right text-xs leading-snug whitespace-normal line-clamp-2">
           {selectedStaff
-            ? `${selectedStaff.name} - ${selectedStaff.code}`
+            ? selectedStaff.code.length > 20 ? selectedStaff.name : `${selectedStaff.name} - ${selectedStaff.code}`
             : value
               ? value
               : placeholder}

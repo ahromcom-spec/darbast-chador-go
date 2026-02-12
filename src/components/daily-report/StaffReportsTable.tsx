@@ -185,7 +185,7 @@ export function StaffReportsTable({
                 <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">مبلغ دریافتی</TableHead>
                 <TableHead className="w-[70px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">اضافه کاری</TableHead>
                 <TableHead className="w-[70px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">کارکرد</TableHead>
-                <TableHead className="w-[120px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">نیروها</TableHead>
+                <TableHead className="w-[80px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">نیروها</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -389,12 +389,12 @@ export function StaffReportsTable({
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     {row.is_company_expense ? (
-                       <div className="w-[160px] font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                         <Building className="h-5 w-5" />
-                         ماهیت شرکت اهرم
-                       </div>
-                     ) : row.is_cash_box ? (
-                       <div className="w-[160px]">
+                       <div className="w-[120px] font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2 text-xs leading-tight">
+                         <Building className="h-4 w-4 shrink-0" />
+                         <span>ماهیت شرکت اهرم</span>
+                        </div>
+                      ) : row.is_cash_box ? (
+                        <div className="w-[120px]">
                         <BankCardSelect
                           value={row.bank_card_id || null}
                           onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
