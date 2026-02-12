@@ -308,7 +308,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
       return;
     }
 
-    if (!isValidPhone) {
+    if (newPhoneNumber && !isValidPhone) {
       toast.error('شماره موبایل نامعتبر است');
       return;
     }
@@ -320,38 +320,44 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
 
     setSaving(true);
     try {
-      // Check if phone already exists
-      const { data: existing } = await supabase
-        .from('hr_employees')
-        .select('id')
-        .eq('phone_number', newPhoneNumber)
-        .single();
+      let profileUserId: string | null = null;
 
-      if (existing) {
-        toast.error('این شماره موبایل قبلاً ثبت شده است');
-        setSaving(false);
-        return;
+      if (newPhoneNumber) {
+        // Check if phone already exists
+        const { data: existing } = await supabase
+          .from('hr_employees')
+          .select('id')
+          .eq('phone_number', newPhoneNumber)
+          .single();
+
+        if (existing) {
+          toast.error('این شماره موبایل قبلاً ثبت شده است');
+          setSaving(false);
+          return;
+        }
+
+        // Check if user exists in profiles
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('phone_number', newPhoneNumber)
+          .single();
+
+        profileUserId = profileData?.user_id || null;
       }
-
-      // Check if user exists in profiles
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('phone_number', newPhoneNumber)
-        .single();
 
       const { error } = await supabase
         .from('hr_employees')
         .insert({
-          phone_number: newPhoneNumber,
+          phone_number: newPhoneNumber || '',
           full_name: newFullName.trim(),
           position: newPositions.length > 0 ? newPositions.join('،') : null,
           department: newDepartments.length > 0 ? newDepartments.join('،') : null,
           hire_date: newHireDate || null,
           notes: newNotes.trim() || null,
           created_by: user.id,
-          user_id: profileData?.user_id || null,
-          status: profileData?.user_id ? 'active' : 'pending_registration',
+          user_id: profileUserId,
+          status: profileUserId ? 'active' : 'pending_registration',
         });
 
       if (error) throw error;
@@ -476,7 +482,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
             <div className="space-y-2">
               <Label className="flex items-center gap-1">
                 <Phone className="h-4 w-4" />
-                شماره موبایل <span className="text-destructive">*</span>
+                شماره موبایل
               </Label>
               <div className="relative">
                 <Input
@@ -584,7 +590,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
             <div className="flex items-end lg:col-span-3">
               <Button
                 onClick={handleAddEmployee}
-                disabled={saving || !isValidPhone || !newFullName.trim()}
+                disabled={saving || (newPhoneNumber !== '' && !isValidPhone) || !newFullName.trim()}
                 className="gap-2 w-full md:w-auto"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
