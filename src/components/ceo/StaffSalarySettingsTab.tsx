@@ -9,7 +9,7 @@ import { HRStaffSearchSelect } from '@/components/staff/HRStaffSearchSelect';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Loader2, Plus, Save, Trash2, Settings, Info, Calculator, DollarSign, Edit, X } from 'lucide-react';
+import { Loader2, Plus, Save, Trash2, Settings, Info, Calculator, DollarSign, Edit, X, CalendarDays } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -20,6 +20,8 @@ interface SalarySetting {
   base_daily_salary: number;
   overtime_rate_fraction: number;
   notes: string | null;
+  effective_from: string | null;
+  effective_to: string | null;
 }
 
 export function StaffSalarySettingsTab() {
@@ -37,6 +39,8 @@ export function StaffSalarySettingsTab() {
   const [newBaseSalary, setNewBaseSalary] = useState<number>(0);
   const [newOvertimeFraction, setNewOvertimeFraction] = useState<number>(0.167);
   const [newNotes, setNewNotes] = useState('');
+  const [newEffectiveFrom, setNewEffectiveFrom] = useState('');
+  const [newEffectiveTo, setNewEffectiveTo] = useState('');
 
   const copyDebugToClipboard = async (debugText: string) => {
     try {
@@ -113,6 +117,8 @@ export function StaffSalarySettingsTab() {
       overtime_rate_fraction: newOvertimeFraction,
       notes: newNotes || null,
       created_by: user?.id ?? null,
+      effective_from: newEffectiveFrom || null,
+      effective_to: newEffectiveTo || null,
     };
 
     if (authLoading) {
@@ -146,6 +152,8 @@ export function StaffSalarySettingsTab() {
           overtime_rate_fraction: newOvertimeFraction,
           notes: newNotes || null,
           created_by: user.id,
+          effective_from: newEffectiveFrom || null,
+          effective_to: newEffectiveTo || null,
         });
 
       if (error) {
@@ -191,6 +199,8 @@ export function StaffSalarySettingsTab() {
       setNewBaseSalary(0);
       setNewOvertimeFraction(0.167);
       setNewNotes('');
+      setNewEffectiveFrom('');
+      setNewEffectiveTo('');
       setLastSaveDebug(null);
 
       // Refresh list
@@ -208,6 +218,8 @@ export function StaffSalarySettingsTab() {
       base_daily_salary: setting.base_daily_salary,
       overtime_rate_fraction: setting.overtime_rate_fraction,
       notes: setting.notes,
+      effective_from: setting.effective_from,
+      effective_to: setting.effective_to,
     };
 
     if (authLoading) {
@@ -228,6 +240,8 @@ export function StaffSalarySettingsTab() {
           base_daily_salary: setting.base_daily_salary,
           overtime_rate_fraction: setting.overtime_rate_fraction,
           notes: setting.notes,
+          effective_from: setting.effective_from,
+          effective_to: setting.effective_to,
         })
         .eq('id', setting.id);
 
@@ -366,6 +380,26 @@ export function StaffSalarySettingsTab() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> تاریخ شروع اعتبار</Label>
+              <Input
+                type="date"
+                value={newEffectiveFrom}
+                onChange={(e) => setNewEffectiveFrom(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> تاریخ پایان اعتبار</Label>
+              <Input
+                type="date"
+                value={newEffectiveTo}
+                onChange={(e) => setNewEffectiveTo(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+
             <div className="space-y-2 md:col-span-2">
               <Label>توضیحات</Label>
               <AutoResizeTextarea
@@ -426,6 +460,8 @@ export function StaffSalarySettingsTab() {
                     <TableHead className="text-right">کد پرسنلی</TableHead>
                     <TableHead className="text-right">حقوق روزانه</TableHead>
                     <TableHead className="text-right">ضریب</TableHead>
+                    <TableHead className="text-right">از تاریخ</TableHead>
+                    <TableHead className="text-right">تا تاریخ</TableHead>
                     <TableHead className="text-right">توضیحات</TableHead>
                     <TableHead className="text-center w-[100px]">عملیات</TableHead>
                   </TableRow>
@@ -466,6 +502,32 @@ export function StaffSalarySettingsTab() {
                           />
                         ) : (
                           <span>{setting.overtime_rate_fraction === 0.167 ? '۱/۶' : setting.overtime_rate_fraction}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === setting.id ? (
+                          <Input
+                            type="date"
+                            value={setting.effective_from || ''}
+                            onChange={(e) => updateSettingField(setting.id, 'effective_from', e.target.value || null)}
+                            className="w-32"
+                            dir="ltr"
+                          />
+                        ) : (
+                          <span className="text-xs">{setting.effective_from || '—'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === setting.id ? (
+                          <Input
+                            type="date"
+                            value={setting.effective_to || ''}
+                            onChange={(e) => updateSettingField(setting.id, 'effective_to', e.target.value || null)}
+                            className="w-32"
+                            dir="ltr"
+                          />
+                        ) : (
+                          <span className="text-xs">{setting.effective_to || '—'}</span>
                         )}
                       </TableCell>
                       <TableCell className="max-w-[150px]">
