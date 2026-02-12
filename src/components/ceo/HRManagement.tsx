@@ -10,6 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -18,13 +20,6 @@ import {
   ChevronDown, ChevronUp, User, Phone, Briefcase,
   Building, Calendar, Check, Clock, X, Edit, UserCheck
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useDebounce } from '@/hooks/useDebounce';
 
 interface HREmployee {
@@ -67,6 +62,59 @@ const POSITIONS = [
   'حسابدار',
 ];
 
+// Multi-select dropdown component
+function MultiSelectDropdown({ options, selected, onChange, placeholder, className }: {
+  options: readonly string[];
+  selected: string[];
+  onChange: (vals: string[]) => void;
+  placeholder: string;
+  className?: string;
+}) {
+  const toggle = (val: string) => {
+    onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className={`justify-between font-normal ${className || 'w-full'}`}>
+          {selected.length > 0 ? (
+            <span className="truncate text-right flex-1">{selected.length} مورد انتخاب شده</span>
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
+          <ChevronDown className="h-4 w-4 shrink-0 opacity-50 mr-2" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-2 z-[99999] bg-popover" align="start">
+        <div className="space-y-1 max-h-60 overflow-y-auto">
+          {options.map(opt => (
+            <label key={opt} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent cursor-pointer text-sm">
+              <Checkbox
+                checked={selected.includes(opt)}
+                onCheckedChange={() => toggle(opt)}
+              />
+              <span>{opt}</span>
+            </label>
+          ))}
+        </div>
+        {selected.length > 0 && (
+          <div className="border-t mt-2 pt-2">
+            <div className="flex flex-wrap gap-1">
+              {selected.map(s => (
+                <Badge key={s} variant="secondary" className="text-xs gap-1">
+                  {s}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => toggle(s)} />
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 interface HRManagementProps {
   showAsCard?: boolean;
 }
@@ -82,8 +130,8 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
   // New employee form state
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [newFullName, setNewFullName] = useState('');
-  const [newPosition, setNewPosition] = useState('');
-  const [newDepartment, setNewDepartment] = useState('');
+  const [newPositions, setNewPositions] = useState<string[]>([]);
+  const [newDepartments, setNewDepartments] = useState<string[]>([]);
   const [newHireDate, setNewHireDate] = useState('');
   const [newNotes, setNewNotes] = useState('');
   
@@ -202,8 +250,8 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
         .insert({
           phone_number: newPhoneNumber,
           full_name: newFullName.trim(),
-          position: newPosition || null,
-          department: newDepartment || null,
+          position: newPositions.length > 0 ? newPositions.join('،') : null,
+          department: newDepartments.length > 0 ? newDepartments.join('،') : null,
           hire_date: newHireDate || null,
           notes: newNotes.trim() || null,
           created_by: user.id,
@@ -218,8 +266,8 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
       // Reset form
       setNewPhoneNumber('');
       setNewFullName('');
-      setNewPosition('');
-      setNewDepartment('');
+      setNewPositions([]);
+      setNewDepartments([]);
       setNewHireDate('');
       setNewNotes('');
 
@@ -386,16 +434,12 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 <Briefcase className="h-4 w-4" />
                 سمت
               </Label>
-              <Select value={newPosition} onValueChange={setNewPosition}>
-                <SelectTrigger>
-                  <SelectValue placeholder="انتخاب سمت" />
-                </SelectTrigger>
-                <SelectContent>
-                  {POSITIONS.map(pos => (
-                    <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelectDropdown
+                options={POSITIONS}
+                selected={newPositions}
+                onChange={setNewPositions}
+                placeholder="انتخاب سمت‌ها"
+              />
             </div>
 
             <div className="space-y-2">
@@ -403,16 +447,12 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 <Building className="h-4 w-4" />
                 واحد سازمانی
               </Label>
-              <Select value={newDepartment} onValueChange={setNewDepartment}>
-                <SelectTrigger>
-                  <SelectValue placeholder="انتخاب واحد" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEPARTMENTS.map(dep => (
-                    <SelectItem key={dep} value={dep}>{dep}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelectDropdown
+                options={DEPARTMENTS}
+                selected={newDepartments}
+                onChange={setNewDepartments}
+                placeholder="انتخاب واحدها"
+              />
             </div>
 
             <div className="space-y-2">
@@ -506,40 +546,40 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                       </TableCell>
                       <TableCell>
                         {editingId === employee.id ? (
-                          <Select
-                            value={employee.position || ''}
-                            onValueChange={(v) => updateEmployeeField(employee.id, 'position', v || null)}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue placeholder="انتخاب" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {POSITIONS.map(pos => (
-                                <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <MultiSelectDropdown
+                            options={POSITIONS}
+                            selected={employee.position ? employee.position.split('،') : []}
+                            onChange={(vals) => updateEmployeeField(employee.id, 'position', vals.length > 0 ? vals.join('،') : null)}
+                            placeholder="انتخاب"
+                            className="w-36"
+                          />
                         ) : (
-                          employee.position || '-'
+                          employee.position ? (
+                            <div className="flex flex-wrap gap-1">
+                              {employee.position.split('،').map((p, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">{p.trim()}</Badge>
+                              ))}
+                            </div>
+                          ) : '-'
                         )}
                       </TableCell>
                       <TableCell>
                         {editingId === employee.id ? (
-                          <Select
-                            value={employee.department || ''}
-                            onValueChange={(v) => updateEmployeeField(employee.id, 'department', v || null)}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue placeholder="انتخاب" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {DEPARTMENTS.map(dep => (
-                                <SelectItem key={dep} value={dep}>{dep}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <MultiSelectDropdown
+                            options={DEPARTMENTS}
+                            selected={employee.department ? employee.department.split('،') : []}
+                            onChange={(vals) => updateEmployeeField(employee.id, 'department', vals.length > 0 ? vals.join('،') : null)}
+                            placeholder="انتخاب"
+                            className="w-36"
+                          />
                         ) : (
-                          employee.department || '-'
+                          employee.department ? (
+                            <div className="flex flex-wrap gap-1">
+                              {employee.department.split('،').map((d, i) => (
+                                <Badge key={i} variant="outline" className="text-xs">{d.trim()}</Badge>
+                              ))}
+                            </div>
+                          ) : '-'
                         )}
                       </TableCell>
                       <TableCell>{getStatusBadge(employee.status)}</TableCell>
