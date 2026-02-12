@@ -329,7 +329,7 @@ export const ExpertPricingRequestDialog = ({
                   <SelectContent>
                     {Object.entries(EXPERT_RENTAL_ITEMS).map(([key, item]) => (
                       <SelectItem key={key} value={key}>
-                        {item.label} - {item.price.toLocaleString('fa-IR')} تومان
+                        {item.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -365,7 +365,7 @@ export const ExpertPricingRequestDialog = ({
                     <SelectContent>
                       {availableItemsForSecond.map(([key, item]) => (
                         <SelectItem key={key} value={key}>
-                          {item.label} - {item.price.toLocaleString('fa-IR')} تومان
+                          {item.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
