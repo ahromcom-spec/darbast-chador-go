@@ -180,9 +180,9 @@ export function StaffReportsTable({
                 <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">توضیحات</TableHead>
                 <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">کارت بانکی</TableHead>
                 <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">توضیحات خرج</TableHead>
-                <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">مبلغ خرج</TableHead>
+                <TableHead className="w-[50px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">مبلغ خرج</TableHead>
                 <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">توضیحات دریافتی</TableHead>
-                <TableHead className="w-[100px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">مبلغ دریافتی</TableHead>
+                <TableHead className="w-[50px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">مبلغ دریافتی</TableHead>
                 <TableHead className="w-[70px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">اضافه کاری</TableHead>
                 <TableHead className="w-[70px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">کارکرد</TableHead>
                 <TableHead className="w-[80px] text-right whitespace-nowrap px-1 border border-amber-300 text-xs">نیروها</TableHead>
