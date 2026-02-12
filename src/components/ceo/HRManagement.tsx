@@ -357,7 +357,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
           notes: newNotes.trim() || null,
           created_by: user.id,
           user_id: profileUserId,
-          status: profileUserId ? 'active' : 'pending_registration',
+          status: (profileUserId || !newPhoneNumber) ? 'active' : 'pending_registration',
         });
 
       if (error) throw error;

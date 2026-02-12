@@ -51,7 +51,7 @@ const loadEmployeesCached = async (): Promise<EmployeeCacheData> => {
 
     if (error) throw error;
 
-    const all = ((data as HREmployee[]) || []).filter((e) => e.phone_number && e.full_name);
+    const all = ((data as HREmployee[]) || []).filter((e) => e.full_name);
     const activeOnly = all.filter((e) => ['active', 'pending_registration'].includes(e.status));
 
     const result: EmployeeCacheData = { all, activeOnly };
