@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Banknote, User, Plus, History, Calendar, FileText, Wallet } from 'lucide-react';
+import { Banknote, User, Plus, History, Calendar, FileText, Wallet, CreditCard } from 'lucide-react';
 import { formatPersianDateTimeFull } from '@/lib/dateUtils';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendOrderSms, sendCeoNotificationSms, buildOrderSmsAddress } from '@/lib/orderSms';
+import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 
 interface Payment {
   id: string;
@@ -57,6 +58,7 @@ export function MultiPaymentDialog({
   const [paymentAmount, setPaymentAmount] = useState('');
   const [receiptNumber, setReceiptNumber] = useState('');
   const [notes, setNotes] = useState('');
+  const [selectedBankCardId, setSelectedBankCardId] = useState<string | null>(null);
   const [totalPaid, setTotalPaid] = useState(0);
 
   useEffect(() => {
@@ -155,10 +157,11 @@ export function MultiPaymentDialog({
         .insert({
           order_id: orderId,
           amount,
-          payment_method: 'cash',
+          payment_method: selectedBankCardId ? 'card_transfer' : 'cash',
           receipt_number: receiptNumber || null,
-          notes: notes || 'پرداخت نقدی / علی‌الحساب',
-          paid_by: user.id
+          notes: notes || (selectedBankCardId ? 'واریز به کارت بانکی' : 'پرداخت نقدی / علی‌الحساب'),
+          paid_by: user.id,
+          bank_card_id: selectedBankCardId || null,
         })
         .select('id')
         .single();
@@ -197,6 +200,43 @@ export function MultiPaymentDialog({
       if (updateError) {
         console.error('Order update error:', updateError);
         // Still continue - payment was recorded
+      }
+
+      // Update bank card balance if a card was selected (deposit)
+      if (selectedBankCardId) {
+        try {
+          // Get current card balance
+          const { data: cardData } = await supabase
+            .from('bank_cards')
+            .select('current_balance')
+            .eq('id', selectedBankCardId)
+            .single();
+
+          if (cardData) {
+            const newCardBalance = Number(cardData.current_balance) + amount;
+
+            // Insert bank card transaction
+            await supabase.from('bank_card_transactions').insert({
+              bank_card_id: selectedBankCardId,
+              transaction_type: 'deposit',
+              amount,
+              balance_after: newCardBalance,
+              description: `واریز پرداخت سفارش ${orderCode} - ${customerName}`,
+              reference_type: 'order_payment',
+              reference_id: insertedPayment.id,
+              created_by: user.id,
+            });
+
+            // Update card balance
+            await supabase
+              .from('bank_cards')
+              .update({ current_balance: newCardBalance, updated_at: new Date().toISOString() })
+              .eq('id', selectedBankCardId);
+          }
+        } catch (cardError) {
+          console.error('Error updating bank card balance:', cardError);
+          // Don't fail the whole payment for this
+        }
       }
 
       // Send notification to customer
@@ -249,6 +289,7 @@ export function MultiPaymentDialog({
       setPaymentAmount('');
       setReceiptNumber('');
       setNotes('');
+      setSelectedBankCardId(null);
       
       // Refresh payments
       fetchPayments();
@@ -377,6 +418,25 @@ export function MultiPaymentDialog({
                   این سفارش تسویه شده است
                 </p>
               )}
+            </div>
+
+            <div>
+              <Label className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                واریز به کارت بانکی (اختیاری)
+              </Label>
+              <div className="mt-1.5">
+                <BankCardSelect
+                  value={selectedBankCardId}
+                  onValueChange={setSelectedBankCardId}
+                  placeholder="انتخاب کارت بانکی"
+                  disabled={isSettled}
+                  showBalance={true}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                با انتخاب کارت، مبلغ پرداختی به موجودی آن اضافه می‌شود
+              </p>
             </div>
 
             <div>
