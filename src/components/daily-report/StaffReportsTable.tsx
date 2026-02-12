@@ -93,13 +93,12 @@ export function StaffReportsTable({
         real_user_id: userId || null
       };
       
-      // Add new row if this is the last non-cash-box row
-      const nonCashBoxRows = updated.filter((r) => !r.is_cash_box);
-      const lastNonCashBoxIndex = updated.findIndex(
-        (r, i) => !r.is_cash_box && i === updated.lastIndexOf(nonCashBoxRows[nonCashBoxRows.length - 1])
-      );
+      // Add new row if this is the last regular (non-cash-box, non-company-expense) row
+      const regularRows = updated.filter((r) => !r.is_cash_box && !r.is_company_expense);
+      const lastRegularRow = regularRows[regularRows.length - 1];
+      const lastRegularIndex = lastRegularRow ? updated.lastIndexOf(lastRegularRow) : -1;
       
-      if (index === lastNonCashBoxIndex && code) {
+      if (index === lastRegularIndex && code) {
         updated.push({
           staff_user_id: null,
           staff_name: '',

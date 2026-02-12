@@ -449,7 +449,16 @@ export function useDailyReport() {
             
             if (backupOrdersWithData.length > dbOrdersCount) {
               setOrderReports(localBackup.orderReports);
-              setStaffReports(localBackup.staffReports);
+              // Deduplicate company expense rows from backup
+              let hasCompExp = false;
+              const dedupedStaff = (localBackup.staffReports || []).filter((s: any) => {
+                if (s.is_company_expense) {
+                  if (hasCompExp) return false;
+                  hasCompExp = true;
+                }
+                return true;
+              });
+              setStaffReports(dedupedStaff);
               toast.success('داده‌های ذخیره نشده بازیابی شدند');
             }
           }
@@ -458,8 +467,17 @@ export function useDailyReport() {
         setExistingReportId(null);
         
         if (hasLocalBackup) {
+          // Deduplicate company expense rows from backup
+          let hasCompExp = false;
+          const dedupedStaff = (localBackup.staffReports || []).filter((s: any) => {
+            if (s.is_company_expense) {
+              if (hasCompExp) return false;
+              hasCompExp = true;
+            }
+            return true;
+          });
           setOrderReports(localBackup.orderReports);
-          setStaffReports(localBackup.staffReports);
+          setStaffReports(dedupedStaff);
           toast.success('داده‌های ذخیره نشده قبلی بازیابی شدند');
         } else {
           setOrderReports([createEmptyOrderRow(0)]);
@@ -733,12 +751,16 @@ export function useDailyReport() {
 
   // Remove staff row
   const removeStaffRow = useCallback((index: number) => {
-    if (staffReports[index]?.is_cash_box) {
-      toast.error('ردیف صندوق قابل حذف نیست');
-      return;
-    }
-    setStaffReports(prev => prev.filter((_, i) => i !== index));
-  }, [staffReports]);
+    setStaffReports(prev => {
+      const row = prev[index];
+      if (!row) return prev;
+      if (row.is_cash_box) {
+        toast.error('ردیف صندوق قابل حذف نیست');
+        return prev;
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
 
   // Update staff row
   const updateStaffRow = useCallback((index: number, field: keyof StaffReportRow, value: any) => {
@@ -755,6 +777,7 @@ export function useDailyReport() {
 
       const isRowEmpty = (row: StaffReportRow) => 
         !row.is_cash_box &&
+        !row.is_company_expense &&
         !row.staff_user_id &&
         !row.staff_name?.trim() &&
         !row.receiving_notes?.trim() &&
@@ -764,11 +787,12 @@ export function useDailyReport() {
         (row.amount_received ?? 0) === 0 &&
         (row.amount_spent ?? 0) === 0;
 
-      const nonCashBoxRows = updated.filter((r) => !r.is_cash_box);
+      // Only consider regular rows (not cash box or company expense) for auto-add logic
+      const regularRows = updated.filter((r) => !r.is_cash_box && !r.is_company_expense);
       
       let emptyRowsAtEnd = 0;
-      for (let i = nonCashBoxRows.length - 1; i >= 0; i--) {
-        if (isRowEmpty(nonCashBoxRows[i])) {
+      for (let i = regularRows.length - 1; i >= 0; i--) {
+        if (isRowEmpty(regularRows[i])) {
           emptyRowsAtEnd++;
         } else {
           break;
