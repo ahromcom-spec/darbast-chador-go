@@ -4125,6 +4125,8 @@ export type Database = {
           created_at: string
           created_by: string
           deductions: number | null
+          effective_from: string | null
+          effective_to: string | null
           id: string
           notes: string | null
           overtime_rate_fraction: number
@@ -4140,6 +4142,8 @@ export type Database = {
           created_at?: string
           created_by?: string
           deductions?: number | null
+          effective_from?: string | null
+          effective_to?: string | null
           id?: string
           notes?: string | null
           overtime_rate_fraction?: number
@@ -4155,6 +4159,8 @@ export type Database = {
           created_at?: string
           created_by?: string
           deductions?: number | null
+          effective_from?: string | null
+          effective_to?: string | null
           id?: string
           notes?: string | null
           overtime_rate_fraction?: number
